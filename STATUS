@@ -323,7 +323,7 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1581305, 1581315
+ * r1581305, r1581315
    Increase timestamp sleep from 1ms to 10ms for hi-res filesystems.
    Justification:
      Missed text changes on some Linux systems.
@@ -339,7 +339,7 @@ Approved changes:
    Votes:
      +1: brane, ivan, rhuijben
 
- * 1577200
+ * r1577200
    Fix libmagic detection with custom LDFLAGS.
    Justification:
      Fixes libmagic detection where configure relies on LDFLAGS
