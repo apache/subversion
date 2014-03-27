@@ -27,7 +27,7 @@ cd ../obj
 grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
 
 echo "============ configure"
-../build/configure CC='cc -m64' \
+../build/configure CC='cc -m64 -v' \
   --with-apr=/export/home/wandisco/buildbot/install \
   --with-apr-util=/export/home/wandisco/buildbot/install \
   --with-serf=/export/home/wandisco/buildbot/install \
