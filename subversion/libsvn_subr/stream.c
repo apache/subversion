@@ -953,7 +953,8 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
 
   pfd.desc_type = APR_POLL_FILE;
   pfd.desc.f = btn->file;
-  pfd.p = btn->pool;
+  pfd.p = btn->pool; /* If we had a scratch pool... Luckily apr doesn't
+                        store anything in this pool at this time */
   pfd.reqevents = APR_POLLIN;
 
   status = apr_poll(&pfd, 1, &n, 0);
