@@ -23,7 +23,7 @@ set -x
 cd ../obj
 
 echo "============ make extraclean"
-test -f Makefile && make extraclean || exit $?
+test -f Makefile && (make extraclean || exit $?)
 
 grep obj/subversion/tests /etc/mnttab > /dev/null && umount-tmpfs
 
