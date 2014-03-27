@@ -24,7 +24,7 @@ echo "============ autogen.sh"
 ./autogen.sh || exit $?
 
 cd ../obj
-grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
+#grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
 
 echo "============ configure"
 ../build/configure CC='cc -m64 -v' \
