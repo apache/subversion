@@ -1066,8 +1066,7 @@ get_props(apr_hash_t **props,
       /* Hardcode the values for the committed revision, date, and author. */
       SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
                                            path, pool));
-      str = svn_string_create(apr_psprintf(pool, "%ld", crev),
-                              pool);
+      str = svn_string_createf(pool, "%ld", crev);
       svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV, str);
       str = (cdate) ? svn_string_create(cdate, pool) : NULL;
       svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, str);

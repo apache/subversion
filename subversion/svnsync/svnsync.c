@@ -1342,7 +1342,7 @@ replay_rev_finished(svn_revnum_t revision,
 
   svn_pool_clear(subpool);
 
-  rev_str = svn_string_create(apr_psprintf(pool, "%ld", revision), subpool);
+  rev_str = svn_string_createf(subpool, "%ld", revision);
 
   /* Ok, we're done, bring the last-merged-rev property up to date. */
   SVN_ERR(svn_ra_change_rev_prop2(
