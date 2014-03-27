@@ -1045,7 +1045,7 @@ unlock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(ub->targets, i,
                                                     svn_sort__item_t);
       const char *token = item->value;
-      struct unlock_info_t info;
+      struct unlock_info_t info = { 0 };
 
       svn_pool_clear(iterpool);
 
