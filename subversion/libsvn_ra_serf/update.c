@@ -1789,6 +1789,18 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
 
       case FETCH_PROPS:
         {
+          /* Subversion <= 1.6 servers will return a fetch-props element on
+             open-file and open-dir when non entry props were changed in
+             !send-all mode. In turn we fetch the full set of properties
+             and send all of those as *changes* to the editor. So these
+             editors have to be aware that they receive-non property changes.
+             (In case of incomplete directories they have to be aware anyway)
+
+             In r1063337 this behavior was changed in mod_dav_svn to always
+             send property changes inline in these cases. (See issue #3657)
+
+             Note that before that change the property changes to the last_*
+             entry props were already inlined via specific xml elements. */
           if (ctx->cur_file)
             ctx->cur_file->fetch_props = TRUE;
           else if (ctx->cur_dir)
@@ -2073,6 +2085,20 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
       case CREATIONDATE:
       case CREATOR_DISPLAYNAME:
         {
+          /* Subversion <= 1.6 servers would return a fetch-props element on
+             open-file and open-dir when non entry props were changed in
+             !send-all mode. In turn we fetch the full set of properties and
+             send those as *changes* to the editor. So these editors have to
+             be aware that they receive non property changes.
+             (In case of incomplete directories they have to be aware anyway)
+
+             In that case the last_* entry props are posted as 3 specific xml
+             elements, which we handle here.
+
+             In r1063337 this behavior was changed in mod_dav_svn to always
+             send property changes inline in these cases. (See issue #3657)
+           */
+
           const char *propname;
 
           if (ctx->cur_file)
