@@ -171,8 +171,11 @@ large_string_table_body(svn_boolean_t do_load_store,
   builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
-      strings[i] = generate_string(0x1234567876543210ull * (i + 1), 73000 + 1000 * i,  pool);
-      indexes[i] = svn_fs_x__string_table_builder_add(builder, strings[i]->data, strings[i]->len);
+      strings[i] = generate_string(APR_UINT64_C(0x1234567876543210) * (i + 1),
+                                   73000 + 1000 * i,  pool);
+      indexes[i] = svn_fs_x__string_table_builder_add(builder,
+                                                      strings[i]->data,
+                                                      strings[i]->len);
     }
 
   table = svn_fs_x__string_table_create(builder, pool);
@@ -210,7 +213,7 @@ many_strings_table_body(svn_boolean_t do_load_store,
   builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
-      strings[i] = generate_string(0x1234567876543210ull * (i + 1),
+      strings[i] = generate_string(APR_UINT64_C(0x1234567876543210) * (i + 1),
                                    (i * i) % 23000,  pool);
       indexes[i] = svn_fs_x__string_table_builder_add(builder,
                                                       strings[i]->data,
