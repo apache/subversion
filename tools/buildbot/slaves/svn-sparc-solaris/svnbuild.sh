@@ -23,8 +23,11 @@ set -x
 echo "============ autogen.sh"
 ./autogen.sh || exit $?
 
+cd ../obj
+grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
+
 echo "============ configure"
-./configure CC='cc -m64' \
+../build/configure CC='cc -m64' \
   --with-apr=/export/home/wandisco/buildbot/install \
   --with-apr-util=/export/home/wandisco/buildbot/install \
   --with-serf=/export/home/wandisco/buildbot/install \
