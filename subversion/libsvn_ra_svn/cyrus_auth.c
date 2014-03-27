@@ -709,7 +709,8 @@ static svn_error_t *
 sasl_data_available_cb(void *baton, svn_boolean_t *data_available)
 {
   sasl_baton_t *sasl_baton = baton;
-  return svn_ra_svn__stream_data_available(sasl_baton->stream, data_available);
+  return svn_error_trace(svn_ra_svn__stream_data_available(sasl_baton->stream,
+                                                         data_available));
 }
 
 svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
@@ -945,8 +946,8 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                  the CRAM-MD5 or ANONYMOUS plugins, in which case we can simply use
                  the built-in implementation. In all other cases this call will be
                  useless, but hey, at least we'll get consistent error messages. */
-              return svn_ra_svn__do_internal_auth(sess, mechlist,
-                                                  realm, pool);
+              return svn_error_trace(svn_ra_svn__do_internal_auth(sess, mechlist,
+                                                                realm, pool));
             }
           return err;
         }

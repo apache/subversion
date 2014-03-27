@@ -200,7 +200,7 @@ svn_error_t *
 svn_ra_svn__stream_write(svn_ra_svn__stream_t *stream,
                          const char *data, apr_size_t *len)
 {
-  return svn_stream_write(stream->out_stream, data, len);
+  return svn_error_trace(svn_stream_write(stream->out_stream, data, len));
 }
 
 svn_error_t *
