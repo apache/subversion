@@ -25,7 +25,7 @@
 # This script simplifies preparation of environment for Subversion client
 # communicating with a server via DAV protocol. The prerequisites of such
 # testing are:
-#   - Subversion built using --enable-shared --enable-dso --with-apxs options,
+#   - Subversion built using --enable-shared --with-apxs options,
 #   - Working Apache 2 HTTPD Server with the apxs program reachable through
 #     PATH or specified via the APXS Makefile variable or environment variable,
 #   - Modules dav_module and log_config_module compiled as DSO or built into
@@ -232,11 +232,11 @@ else
 fi
 
 [ -r "$MOD_DAV_SVN" ] \
-  || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+  || fail "dav_svn_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
 [ -r "$MOD_AUTHZ_SVN" ] \
-  || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+  || fail "authz_svn_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
 [ -r "$MOD_DONTDOTHAT" ] \
-  || fail "dontdothat_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+  || fail "dontdothat_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
 
 for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
   if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
