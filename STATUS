@@ -323,15 +323,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1581305, r1581315
-   Increase timestamp sleep from 1ms to 10ms for hi-res filesystems.
-   Justification:
-     Missed text changes on some Linux systems.
-   Branch:
-     ^/subversion/branches/1.8.x-r1581305
-   Votes:
-     +1: philip, rhuijben, ivan
-
  * r1555403
    Update copyright years in NOTICE and subversion/libsvn_subr/version.c.
    Justification:

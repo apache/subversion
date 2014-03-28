@@ -114,6 +114,12 @@ typedef apr_uint32_t apr_uintptr_t;
 #define SVN_LOCK_IS_BUSY(x) APR_STATUS_IS_EBUSY(x)
 #endif
 
+#if !APR_VERSION_AT_LEAST(1,4,0)
+#ifndef apr_time_from_msec
+#define apr_time_from_msec(msec) ((apr_time_t)(msec) * 1000)
+#endif
+#endif
+
 /**
  * Check at compile time if the Serf version is at least a certain
  * level.
