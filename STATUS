@@ -323,13 +323,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1555403
-   Update copyright years in NOTICE and subversion/libsvn_subr/version.c.
-   Justification:
-     We're not in 2013 any more.
-   Votes:
-     +1: brane, ivan, rhuijben
-
  * r1577200
    Fix libmagic detection with custom LDFLAGS.
    Justification:
