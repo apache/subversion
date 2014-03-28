@@ -118,8 +118,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1544597
    Votes:
-     +1: rhuijben
-     -0 (before branch): philip (Doesn't build, needs a branch due to r1539279)
+     +1: (without r1582555 on branch): rhuijben
+     +1: philip
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
