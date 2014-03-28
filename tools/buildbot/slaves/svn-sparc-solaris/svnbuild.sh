@@ -29,9 +29,8 @@ cd ../obj
 grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
 
 if [ $SVN_VER_MINOR -eq 8 ]; then
-  # A bug causes --enable-optimize to add -flto which isn't supported,
-  # adding --enable-debug reduces optimization and skips -flto.
-  OPTIONS_1_8='--enable-debug'
+  # A bug causes 1.8 --enable-optimize to add -flto which isn't supported
+  OPTIONS_1_8='--disable-optimize'
 fi
 
 echo "============ configure"
