@@ -23,8 +23,16 @@ set -x
 echo "============ autogen.sh"
 ./autogen.sh || exit $?
 
+SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h`
+
 cd ../obj
 grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
+
+if [ $SVN_VER_MINOR -eq 8 ]; then
+  # A bug causes --enable-optimize to add -flto which isn't supported,
+  # adding --enable-debug reduces optimization and skips -flto.
+  OPTIONS_1_8='--enable-debug'
+fi
 
 echo "============ configure"
 ../build/configure CC='cc -m64 -v' \
@@ -35,6 +43,7 @@ echo "============ configure"
   --with-sqlite=/export/home/wandisco/buildbot/sqlite-amalgamation-3071501/sqlite3.c \
   --enable-optimize \
   --disable-shared \
+  $OPTIONS_1_8 \
   || exit $?
 
 echo "============ make"
