@@ -294,6 +294,13 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+ * r1573106, r1573209
+   A more stringent test for whether the compiler accepts a given option.
+   Justification:
+     Avoid adding unsupported -flto with --enable-optimize on Solaris.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
