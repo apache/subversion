@@ -2545,7 +2545,7 @@ typedef struct svn_fs_lock_result_t
  *
  * @a fs must have a username associated with it (see
  * #svn_fs_access_t), else return #SVN_ERR_FS_NO_USER.  Set the
- * 'owner' field in the new lock to the fs username.
+ * 'owner' field in each new lock to the fs username.
  *
  * @a comment is optional: it's either an xml-escapable UTF8 string
  * which describes the lock, or it is @c NULL.
@@ -2566,7 +2566,7 @@ typedef struct svn_fs_lock_result_t
  * that existing lock.  If current_rev is a valid revnum, then do an
  * out-of-dateness check.  If the revnum is less than the
  * last-changed-revision of the path (or if the path doesn't exist in
- * HEAD), return * #SVN_ERR_FS_OUT_OF_DATE.
+ * HEAD), yeild an #SVN_ERR_FS_OUT_OF_DATE error for this path.
  *
  * If a path is already locked, then return #SVN_ERR_FS_PATH_ALREADY_LOCKED,
  * unless @a steal_lock is TRUE, in which case "steal" the existing
@@ -2580,10 +2580,11 @@ typedef struct svn_fs_lock_result_t
  * The results are returned in @a *results hash where the keys are
  * <tt>const char *</tt> paths and the values are
  * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err.  The caller must
- * ensure that all such errors are handled to avoid leaks.  The lock
- * associated with each path is returned as #svn_fs_lock_result_t->lock,
- * this will be @c NULL if no lock was created.
+ * path is returned as #svn_fs_lock_result_t->err. The lock associated
+ * with each path is returned as #svn_fs_lock_result_t->lock; this
+ * will be @c NULL if no lock was created. @a *results will always be
+ * a valid hash and in all cases the caller must ensure that all
+ * errors it contains are handled to avoid leaks.
  *
  * Allocate @a *results in @a result_pool. Use @a scratch_pool for
  * temporary allocations.
@@ -2637,25 +2638,26 @@ svn_fs_generate_lock_token(const char **token,
  * the results in @a *results.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
- * of the @a targets hash with <tt>svn_fs_lock_target_t *</tt> values.
- * #svn_fs_lock_target_t->token provides the token to be unlocked for
- * each path. If the the token doesn't point to a lock, return
- * #SVN_ERR_FS_BAD_LOCK_TOKEN.  If the token points to an expired
- * lock, return #SVN_ERR_FS_LOCK_EXPIRED.  If @a fs has no username
- * associated with it, return #SVN_ERR_FS_NO_USER unless @a break_lock
- * is specified.
+ * of the @a targets hash with the corresponding lock tokens as
+ * <tt>const char *</tt> values.  If the the token doesn't point to a
+ * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN errot for this path.  If
+ * the token points to an expired lock, yield an
+ * #SVN_ERR_FS_LOCK_EXPIRED error for this path.  If @a fs has no
+ * username associated with it, yield an #SVN_ERR_FS_NO_USER unless @a
+ * break_lock is specified.
  *
  * If the token points to a lock, but the username of @a fs's access
- * context doesn't match the lock's owner, return
- * #SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @a break_lock is TRUE, however, don't
- * return error;  allow the lock to be "broken" in any case.  In the latter
- * case, the token shall be @c NULL.
+ * context doesn't match the lock's owner, yield an
+ * #SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @a break_lock is TRUE,
+ * however, don't return error; allow the lock to be "broken" in any
+ * case.  In the latter case, the token shall be @c NULL.
  *
  * The results are returned in @a *results hash where the keys are
  * <tt>const char *</tt> paths and the values are
  * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err.  The caller must
- * ensure that all such errors are handled to avoid leaks.
+ * path is returned as #svn_fs_lock_result_t->err.  @a *results will
+ * always be a valid hash and in all cases the caller must ensure that
+ * all errors it contains are handled to avoid leaks.
  *
  * @note #svn_fs_lock_target_t is used to allow @c NULL tokens to be
  * passed (it is not possible to pass @c NULL as a hash value
