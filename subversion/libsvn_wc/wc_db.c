@@ -8836,6 +8836,13 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 }
 
 static svn_error_t *
+db_read_props(apr_hash_t **props,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
+static svn_error_t *
 read_single_info(const struct svn_wc__db_info_t **info,
                  svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
@@ -8950,9 +8957,9 @@ read_single_info(const struct svn_wc__db_info_t **info,
       apr_hash_t *properties;
 
       if (mtb->props_mod)
-        SVN_ERR(db_read_props_internal(&properties,
-                                       wcroot, local_relpath,
-                                       scratch_pool, scratch_pool));
+        SVN_ERR(db_read_props(&properties,
+                              wcroot, local_relpath,
+                              scratch_pool, scratch_pool));
       else
         SVN_ERR(db_read_pristine_props(&properties, wcroot, local_relpath,
                                        TRUE /* deleted_ok */,
