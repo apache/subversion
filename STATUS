@@ -297,7 +297,7 @@ Candidate changes:
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
    Justification:
-     Avoid adding unsupported -flto with --enable-optimize on Solaris.
+     Makes --enable-optimize and --enable-debug work with Solaris CC.
    Votes:
      +1: philip
 
