@@ -935,6 +935,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
               remote_only_status_receiver, results, pool));
 
   SVN_TEST_ASSERT(result_rev == 2);
+  SVN_TEST_ASSERT(results->nelts == 3);
 
   qsort(results->elts, results->nelts, results->elt_size,
         compare_status_paths);
@@ -965,7 +966,6 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
       SVN_TEST_ASSERT(st->revision == 1);
       SVN_TEST_ASSERT(st->ood_changed_rev == 2);
       SVN_TEST_ASSERT(st->node_status == svn_wc_status_normal);
-      /* FIXME:                          svn_wc_status_none? */
       if (0 == strcmp(relpath, "iota"))
         SVN_TEST_ASSERT(st->repos_node_status == svn_wc_status_modified);
       else
@@ -997,9 +997,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
     SVN_TEST_OPTS_PASS(test_suggest_mergesources,
                        "test svn_client_suggest_merge_sources"),
-    SVN_TEST_OPTS_WIMP(test_remote_only_status,
-                       "test svn_client_status6 with ignore_local_mods",
-                       "status editor does not ignore local mods yet"),
+    SVN_TEST_OPTS_PASS(test_remote_only_status,
+                       "test svn_client_status6 with ignore_local_mods"),
     SVN_TEST_NULL
   };
 
