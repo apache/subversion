@@ -184,7 +184,7 @@ Java_org_apache_subversion_javahl_SVNClient_list
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_status
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
- jboolean jonServer, jboolean jignoreLocal, jboolean jgetAll,
+ jboolean jonServer, jboolean jonDisk, jboolean jgetAll,
  jboolean jnoIgnore, jboolean jignoreExternals,
  jboolean jdepthAsSticky, jobject jchangelists,
  jobject jstatusCallback)
@@ -204,7 +204,7 @@ Java_org_apache_subversion_javahl_SVNClient_status
 
   StatusCallback callback(jstatusCallback);
   cl->status(path, EnumMapper::toDepth(jdepth),
-             bool(jonServer), bool(jignoreLocal), bool(jgetAll),
+             bool(jonServer), bool(jonDisk), bool(jgetAll),
              bool(jnoIgnore), bool(jignoreExternals),
              bool(jdepthAsSticky), changelists, &callback);
 }

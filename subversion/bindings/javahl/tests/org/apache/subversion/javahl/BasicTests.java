@@ -316,7 +316,7 @@ public class BasicTests extends SVNTests
 
         MyStatusCallback statusCallback = new MyStatusCallback();
         client.status(fileToSVNPath(fileC, false), Depth.unknown,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
 
         final int statusCount = statusCallback.getStatusArray().length;
@@ -402,7 +402,7 @@ public class BasicTests extends SVNTests
 
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/G/rho", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long rhoCommitDate = status.getLastChangedDate().getTime();
@@ -440,7 +440,7 @@ public class BasicTests extends SVNTests
                 + "modification to tau");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/G/tau", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long tauCommitDate = status.getLastChangedDate().getTime();
@@ -470,7 +470,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/B/I", null);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/B/I", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long ICommitDate = status.getLastChangedDate().getTime();
@@ -506,7 +506,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/nu", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long nuCommitDate = status.getLastChangedDate().getTime();
@@ -524,7 +524,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemWorkingCopyRevision("A/B/F", rev);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/B/F", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long FCommitDate = status.getLastChangedDate().getTime();
@@ -556,7 +556,7 @@ public class BasicTests extends SVNTests
                                  "This is the replacement file 'chi'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/chi", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long chiCommitDate = status.getLastChangedDate().getTime();
@@ -608,7 +608,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/psi", Depth.immediates,
-                      false, false, true, false, false, false,
+                      false, true, true, false, false, false,
                       null, statusCallback);
         status = statusCallback.getStatusArray()[0];
         long psiCommitDate = status.getLastChangedDate().getTime();
@@ -1084,7 +1084,7 @@ public class BasicTests extends SVNTests
         MyStatusCallback statusCallback = new MyStatusCallback();
         String statusPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A/B"), true);
         client.status(statusPath, Depth.infinity,
-                      false, false, false, false, true, false,
+                      false, true, false, false, true, false,
                       null, statusCallback);
         Status[] statusList = statusCallback.getStatusArray();
         assertEquals(statusPath + "/F/alpha",
@@ -2355,7 +2355,7 @@ public class BasicTests extends SVNTests
         // Does status report this changelist?
         MyStatusCallback statusCallback = new MyStatusCallback();
         client.status(path, Depth.immediates,
-                      false, false, false, false, false, false,
+                      false, true, false, false, false, false,
                       null, statusCallback);
         Status[] status = statusCallback.getStatusArray();
         assertEquals(status[0].getChangelist(), changelistName);

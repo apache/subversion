@@ -187,7 +187,7 @@ void SVNClient::list(const char *url, Revision &revision,
 
 void
 SVNClient::status(const char *path, svn_depth_t depth,
-                  bool onServer, bool ignoreLocal, bool getAll,
+                  bool onServer, bool onDisk, bool getAll,
                   bool noIgnore, bool ignoreExternals,
                   bool depthAsSticky, StringArray &changelists,
                   StatusCallback *callback)
@@ -210,7 +210,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     SVN_JNI_ERR(svn_client_status6(&youngest, ctx, checkedPath.c_str(),
                                    &rev, depth,
-                                   getAll, onServer, ignoreLocal,
+                                   getAll, onServer, onDisk,
                                    noIgnore, ignoreExternals, depthAsSticky,
                                    changelists.array(subPool),
                                    StatusCallback::callback, callback,

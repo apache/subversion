@@ -852,7 +852,6 @@ status_to_char(enum svn_wc_status_kind status)
     }
 }
 
-/* FIXME: temporary */
 static int
 compare_status_paths(const void *a, const void *b)
 {
@@ -875,20 +874,40 @@ remote_only_status_receiver(void *baton, const char *path,
 static svn_error_t *
 test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
+  static const struct remote_only_status_result
+  {
+    const char *relpath;
+    svn_revnum_t revision;
+    enum svn_wc_status_kind node_status;
+    svn_revnum_t ood_changed_rev;
+    enum svn_wc_status_kind repos_node_status;
+  } expected[] = {
+    { ".",        1, svn_wc_status_normal,   2, svn_wc_status_modified },
+    { "B",        1, svn_wc_status_normal,   2, svn_wc_status_none },
+    { "C",        1, svn_wc_status_normal,   2, svn_wc_status_deleted },
+    { "D",        1, svn_wc_status_normal,   2, svn_wc_status_none },
+    { "epsilon", -1, svn_wc_status_none,     2, svn_wc_status_added },
+    { "mu",       1, svn_wc_status_normal,   2, svn_wc_status_modified },
+
+    { NULL }
+  };
+
   const char *repos_url;
   const char *wc_path;
-  const char *zeta_path;
+  const char *local_path;
+  apr_file_t *local_file;
   svn_client_ctx_t *ctx;
   svn_client_mtcc_t *mtcc;
-  apr_array_header_t *results;
   svn_opt_revision_t rev;
   svn_revnum_t result_rev;
-  svn_stream_t *contents = svn_stream_from_string(
-      svn_string_create("modified\n", pool), pool);
+  svn_string_t *contents = svn_string_create("modified\n", pool);
+  svn_stream_t *contentstream = svn_stream_from_string(contents, pool);
+  const struct remote_only_status_result *ex;
   svn_stream_mark_t *start;
+  apr_array_header_t *results;
   int i;
 
-  SVN_ERR(svn_stream_mark(contents, &start, pool));
+  SVN_ERR(svn_stream_mark(contentstream, &start, pool));
 
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-remote-only-status", opts, pool));
@@ -897,14 +916,21 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Make some modifications in the repository, creating revision 2. */
   SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
-  SVN_ERR(svn_stream_seek(contents, start));
-  SVN_ERR(svn_client_mtcc_add_update_file("iota",
-                                          contents, NULL, NULL, NULL,
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client_mtcc_add_add_file("A/epsilon", contentstream, NULL,
+                                       mtcc, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client_mtcc_add_update_file("A/mu",
+                                          contentstream, NULL, NULL, NULL,
                                           mtcc, pool));
-  SVN_ERR(svn_stream_seek(contents, start));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client_mtcc_add_add_file("A/D/epsilon", contentstream, NULL,
+                                       mtcc, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
   SVN_ERR(svn_client_mtcc_add_update_file("A/B/lambda",
-                                          contents, NULL, NULL, NULL,
+                                          contentstream, NULL, NULL, NULL,
                                           mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_delete("A/C", mtcc, pool));
   SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
 
   /* Check out a sparse root @r1 of the repository */
@@ -914,31 +940,48 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   rev.kind = svn_opt_revision_number;
   rev.value.number = 1;
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
-                               &rev, &rev, svn_depth_immediates,
+  SVN_ERR(svn_client_checkout3(NULL,
+                               apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL),
+                               wc_path, &rev, &rev, svn_depth_immediates,
                                FALSE, FALSE, ctx, pool));
 
   /* Add a local file; this is a double-check to make sure that
      remote-only status ignores local changes. */
-  zeta_path = svn_dirent_join(wc_path, "zeta", pool);
-  SVN_ERR(svn_io_file_create_empty(zeta_path, pool));
-  SVN_ERR(svn_client_add5(zeta_path, svn_depth_unknown,
+  local_path = svn_dirent_join(wc_path, "zeta", pool);
+  SVN_ERR(svn_io_file_create_empty(local_path, pool));
+  SVN_ERR(svn_client_add5(local_path, svn_depth_unknown,
                           FALSE, FALSE, FALSE, FALSE,
                           ctx, pool));
 
-  /* Now run the remote-only status. */
+  /* Modify a local file, but don't tell the working copy about it. */
+  local_path = svn_dirent_join(wc_path, "mu", pool);
+  SVN_ERR(svn_io_file_open(&local_file, local_path,
+                           APR_FOPEN_WRITE | APR_FOPEN_TRUNCATE,
+                           0, pool));
+  SVN_ERR(svn_io_file_write_full(local_file,
+                                 contents->data, contents->len,
+                                 NULL, pool));
+  SVN_ERR(svn_io_file_close(local_file, pool));
+
+  /* Run the remote-only status. */
   results = apr_array_make(pool, 3, sizeof(const svn_client_status_t *));
   rev.kind = svn_opt_revision_head;
   SVN_ERR(svn_client_status6(
               &result_rev, ctx, wc_path, &rev, svn_depth_unknown,
-              TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, NULL,
+              TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, NULL,
               remote_only_status_receiver, results, pool));
 
   SVN_TEST_ASSERT(result_rev == 2);
-  SVN_TEST_ASSERT(results->nelts == 3);
 
-  qsort(results->elts, results->nelts, results->elt_size,
-        compare_status_paths);
+  /* Compare the number of results with the expected results */
+  for (i = 0, ex = expected; ex->relpath; ++ex, ++i)
+    ;
+  SVN_TEST_ASSERT(results->nelts == i);
+
+  if (opts->verbose)
+    qsort(results->elts, results->nelts, results->elt_size,
+          compare_status_paths);
+
   for (i = 0; i < results->nelts; ++i)
     {
       const svn_client_status_t *st =
@@ -948,28 +991,32 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
         svn_dirent_skip_ancestor(wc_path, st->local_abspath);
       if (!relpath)
         relpath = st->local_abspath;
+      if (!*relpath)
+        relpath = ".";
 
-      /* FIXME: temporary */
-      printf("%c%c%c %2ld  %c%c%c %2ld  %s\n",
-             status_to_char(st->node_status),
-             status_to_char(st->text_status),
-             status_to_char(st->prop_status),
-             (long)st->revision,
+      for (ex = expected; ex->relpath; ++ex)
+        {
+          if (0 == strcmp(relpath, ex->relpath))
+            break;
+        }
+      SVN_TEST_ASSERT(ex->relpath != NULL);
 
-             status_to_char(st->repos_node_status),
-             status_to_char(st->repos_text_status),
-             status_to_char(st->repos_prop_status),
-             (long)st->ood_changed_rev,
+      if (opts->verbose)
+        printf("%c%c%c %2ld  %c%c%c %2ld  %s\n",
+               status_to_char(st->node_status),
+               status_to_char(st->text_status),
+               status_to_char(st->prop_status),
+               (long)st->revision,
+               status_to_char(st->repos_node_status),
+               status_to_char(st->repos_text_status),
+               status_to_char(st->repos_prop_status),
+               (long)st->ood_changed_rev,
+               relpath);
 
-             (*relpath ? relpath : "."));
-
-      SVN_TEST_ASSERT(st->revision == 1);
-      SVN_TEST_ASSERT(st->ood_changed_rev == 2);
-      SVN_TEST_ASSERT(st->node_status == svn_wc_status_normal);
-      if (0 == strcmp(relpath, "iota"))
-        SVN_TEST_ASSERT(st->repos_node_status == svn_wc_status_modified);
-      else
-        SVN_TEST_ASSERT(st->repos_node_status == svn_wc_status_none);
+      SVN_TEST_ASSERT(st->revision == ex->revision);
+      SVN_TEST_ASSERT(st->ood_changed_rev == ex->ood_changed_rev);
+      SVN_TEST_ASSERT(st->node_status == ex->node_status);
+      SVN_TEST_ASSERT(st->repos_node_status == ex->repos_node_status);
     }
 
   return SVN_NO_ERROR;

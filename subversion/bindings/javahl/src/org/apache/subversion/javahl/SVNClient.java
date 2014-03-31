@@ -122,7 +122,7 @@ public class SVNClient implements ISVNClient
     public native String getLastPath();
 
     public native void status(String path, Depth depth,
-                              boolean onServer, boolean ignoreLocal,
+                              boolean onServer, boolean onDisk,
                               boolean getAll, boolean noIgnore,
                               boolean ignoreExternals, boolean depthAsSticky,
                               Collection<String> changelists,
@@ -137,7 +137,7 @@ public class SVNClient implements ISVNClient
                        StatusCallback callback)
             throws ClientException
     {
-        status(path, depth, onServer, false, getAll, noIgnore,
+        status(path, depth, onServer, true, getAll, noIgnore,
                ignoreExternals, false, changelists, callback);
     }
 

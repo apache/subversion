@@ -2509,9 +2509,9 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  *      *result_rev is not meaningful unless @a check_out_of_date is
  *      set).
  *
- *    - If @a ignore_local_mods is set, do not take local
- *      modifications into account. This parameter will be ignored
- *      unless @a check_out_of_date is also set.
+ *    - If @a check_working_copy is not set, do not scan the working
+ *      copy for locally modified and missing files. This parameter
+ *      will be ignored unless @a check_out_of_date is set.
  *
  * If @a no_ignore is @c FALSE, don't report any file or directory (or
  * recurse into any directory) that is found by recursion (as opposed to
@@ -2551,8 +2551,8 @@ svn_client_status6(svn_revnum_t *result_rev,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
-                   svn_boolean_t check_out_of_date, /* RENAMED FROM: 'update' */
-                   svn_boolean_t ignore_local_mods, /* NEW */
+                   svn_boolean_t check_out_of_date,
+                   svn_boolean_t check_working_copy,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t depth_as_sticky,
@@ -2564,7 +2564,7 @@ svn_client_status6(svn_revnum_t *result_rev,
 
 /**
  * Same as svn_client_status6(), but with @a check_out_of_date set to
- * @a update and @a ignore_local_mods set to @c FALSE.
+ * @a update and @a check_working_copy set to @c TRUE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
