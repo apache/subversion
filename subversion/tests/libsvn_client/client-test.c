@@ -879,15 +879,31 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
     const char *relpath;
     svn_revnum_t revision;
     enum svn_wc_status_kind node_status;
+    enum svn_wc_status_kind text_status;
+    enum svn_wc_status_kind prop_status;
     svn_revnum_t ood_changed_rev;
     enum svn_wc_status_kind repos_node_status;
+    enum svn_wc_status_kind repos_text_status;
+    enum svn_wc_status_kind repos_prop_status;
   } expected[] = {
-    { ".",        1, svn_wc_status_normal,   2, svn_wc_status_modified },
-    { "B",        1, svn_wc_status_normal,   2, svn_wc_status_none },
-    { "C",        1, svn_wc_status_normal,   2, svn_wc_status_deleted },
-    { "D",        1, svn_wc_status_normal,   2, svn_wc_status_none },
-    { "epsilon", -1, svn_wc_status_none,     2, svn_wc_status_added },
-    { "mu",       1, svn_wc_status_normal,   2, svn_wc_status_modified },
+    { ".",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_modified, svn_wc_status_modified, svn_wc_status_none },
+    { "B",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none },
+    { "C",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_deleted,  svn_wc_status_none,     svn_wc_status_none },
+    { "D",
+      +1, svn_wc_status_modified, svn_wc_status_normal,   svn_wc_status_modified,
+      +2, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none },
+    { "epsilon",
+      -1, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none,
+      +2, svn_wc_status_added,    svn_wc_status_modified, svn_wc_status_none },
+    { "mu",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_modified, svn_wc_status_normal,   svn_wc_status_none },
 
     { NULL }
   };
@@ -904,6 +920,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   svn_stream_t *contentstream = svn_stream_from_string(contents, pool);
   const struct remote_only_status_result *ex;
   svn_stream_mark_t *start;
+  apr_array_header_t *targets;
   apr_array_header_t *results;
   int i;
 
@@ -953,7 +970,15 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
                           FALSE, FALSE, FALSE, FALSE,
                           ctx, pool));
 
-  /* Modify a local file, but don't tell the working copy about it. */
+  /* Modify a local dir's props */
+  local_path = svn_dirent_join(wc_path, "D", pool);
+  targets = apr_array_make(pool, 1, sizeof(const char*));
+  APR_ARRAY_PUSH(targets, const char*) = local_path;
+  SVN_ERR(svn_client_propset_local("prop", contents, targets,
+                                   svn_depth_empty, FALSE, NULL,
+                                   ctx, pool));
+
+  /* Modify a local file's contents */
   local_path = svn_dirent_join(wc_path, "mu", pool);
   SVN_ERR(svn_io_file_open(&local_file, local_path,
                            APR_FOPEN_WRITE | APR_FOPEN_TRUNCATE,
