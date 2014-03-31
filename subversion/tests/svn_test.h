@@ -109,6 +109,7 @@ typedef struct svn_test_opts_t
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;
+  svn_boolean_t verbose;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 

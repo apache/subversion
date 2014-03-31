@@ -84,8 +84,10 @@ public interface ISVNClient
      * @param path        Path to explore.
      * @param depth       How deep to recurse into subdirectories.
      * @param onServer    Request status information from server.
-     * @param ignoreLocal Ignore local modifications; only used when
-     *                    <code>onServer</code> is set.
+     * @param onDisk       Check the working copy for modified or missing
+     *                    items. A value of <code>false</code> only
+     *                    has effect when <code>onServer</code> is
+     *                    <code>true</code>.
      * @param getAll      get status for uninteresting (unchanged) files.
      * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
@@ -106,7 +108,7 @@ public interface ISVNClient
      * maybe repository.
      * <p>
      * Behaves like the 1.9 version with
-     *     <code>ignoreLocal = * false</code> and
+     *     <code>onDisk = true</code> and
      *     <code>depthAsSticky = false</code>.
      * @deprecated
      */

@@ -248,7 +248,7 @@ do_external_status(svn_client_ctx_t *ctx,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t check_out_of_date,
-                   svn_boolean_t ignore_local_mods,
+                   svn_boolean_t check_working_copy,
                    svn_boolean_t no_ignore,
                    const apr_array_header_t *changelists,
                    const char *anchor_abspath,
@@ -318,7 +318,7 @@ do_external_status(svn_client_ctx_t *ctx,
       /* And then do the status. */
       SVN_ERR(svn_client_status6(NULL, ctx, status_path, &opt_rev, depth,
                                  get_all, check_out_of_date,
-                                 ignore_local_mods, no_ignore,
+                                 check_working_copy, no_ignore,
                                  FALSE /* ignore_exernals */,
                                  FALSE /* depth_as_sticky */,
                                  changelists, status_func, status_baton,
@@ -342,7 +342,7 @@ svn_client_status6(svn_revnum_t *result_rev,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t check_out_of_date,
-                   svn_boolean_t ignore_local_mods,
+                   svn_boolean_t check_working_copy,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t depth_as_sticky,
@@ -358,6 +358,9 @@ svn_client_status6(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
+
+  if (!check_out_of_date)
+    check_working_copy = TRUE;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -477,7 +480,7 @@ svn_client_status6(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc__get_status_editor(&editor, &edit_baton, &set_locks_baton,
                                         &edit_revision, ctx->wc_ctx,
                                         dir_abspath, target_basename,
-                                        depth, get_all, ignore_local_mods,
+                                        depth, get_all, check_working_copy,
                                         no_ignore, depth_as_sticky,
                                         server_supports_depth,
                                         ignores, tweak_status, &sb,
@@ -617,7 +620,7 @@ svn_client_status6(svn_revnum_t *result_rev,
 
       SVN_ERR(do_external_status(ctx, external_map,
                                  depth, get_all,
-                                 check_out_of_date, ignore_local_mods,
+                                 check_out_of_date, check_working_copy,
                                  no_ignore, changelists,
                                  sb.anchor_abspath, sb.anchor_relpath,
                                  status_func, status_baton, pool));

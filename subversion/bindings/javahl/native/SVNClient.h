@@ -170,7 +170,7 @@ class SVNClient :public SVNBase
   void getChangelists(const char *path, StringArray *changelists,
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth,
-              bool onServer, bool ignoreLocal, bool getAll,
+              bool onServer, bool onDisk, bool getAll,
               bool noIgnore, bool ignoreExternals,
               bool depthAsSticky, StringArray &changelists,
               StatusCallback *callback);
