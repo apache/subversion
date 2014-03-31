@@ -96,14 +96,14 @@ dgb__log_access(svn_fs_t *fs,
       const char *data_rep
         = node->data_rep
         ? apr_psprintf(scratch_pool, " d=%ld/%" APR_UINT64_T_FMT,
-                       node->data_rep->revision,
-                       node->data_rep->item_index)
+                       svn_fs_x__get_revnum(node->data_rep->id.change_set),
+                       node->data_rep->id.number)
         : "";
       const char *prop_rep
         = node->prop_rep
         ? apr_psprintf(scratch_pool, " p=%ld/%" APR_UINT64_T_FMT,
-                       node->prop_rep->revision,
-                       node->prop_rep->item_index)
+                       svn_fs_x__get_revnum(node->prop_rep->id.change_set),
+                       node->prop_rep->id.number)
         : "";
       description = apr_psprintf(scratch_pool, "%s   (pc=%d%s%s)",
                                  node->created_path,

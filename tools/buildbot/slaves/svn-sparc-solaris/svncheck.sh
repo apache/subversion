@@ -20,8 +20,17 @@
 set -x
 . ../svnenv.sh
 
-echo "============ make check"
-make check CLEANUP=1 PARALLEL=30
+SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h`
+
+cd ../obj
+
+if [ $SVN_VER_MINOR -eq 9 ]; then
+  echo "============ make svnserveautocheck"
+  make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1
+else
+  echo "============ make check"
+  make check CLEANUP=1 PARALLEL=30 THREADED=1
+fi
 
 # 'make check' will FAIL due to lack of UTF-8 conversion, so whitelist
 # those known failures.
@@ -40,6 +49,9 @@ known="${known} prop_tests.py 41: svn:author with XML unsafe chars"
 known="${known}|"
 known="${known} svnsync_tests.py 24: copy and reencode non-UTF-8 svn:. props"
 known="${known})"
+
+# tests.log must exist
+test -f tests.log || exit 1
 
 # No FAIL other than the known ones.
 egrep -v "$known" tests.log | grep '^FAIL' && exit 1

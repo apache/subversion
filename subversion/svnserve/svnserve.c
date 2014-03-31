@@ -441,9 +441,9 @@ static apr_status_t redirect_stdout(void *arg)
 static svn_error_t *
 accept_connection(connection_t **connection,
                   apr_socket_t *sock,
-                  svn_root_pools__t *connection_pools,
                   serve_params_t *params,
-                  enum connection_handling_mode handling_mode)
+                  enum connection_handling_mode handling_mode,
+                  apr_pool_t *pool)
 {
   apr_status_t status;
   
@@ -451,11 +451,10 @@ accept_connection(connection_t **connection,
    *         the connection threads so it cannot clean up after each one.  So
    *         separate pools that can be cleared at thread exit are used. */
   
-  apr_pool_t *pool = svn_root_pools__acquire_pool(connection_pools);
-  *connection = apr_pcalloc(pool, sizeof(**connection));
-  (*connection)->pool = pool;
+  apr_pool_t *connection_pool = svn_pool_create(pool);
+  *connection = apr_pcalloc(connection_pool, sizeof(**connection));
+  (*connection)->pool = connection_pool;
   (*connection)->params = params;
-  (*connection)->root_pools = connection_pools;
   (*connection)->ref_count = 1;
   
   do
@@ -465,14 +464,15 @@ accept_connection(connection_t **connection,
         exit(0);
       #endif
       
-      status = apr_socket_accept(&(*connection)->usock, sock, pool);
+      status = apr_socket_accept(&(*connection)->usock, sock,
+                                 connection_pool);
       if (handling_mode == connection_mode_fork)
         {
           apr_proc_t proc;
           
           /* Collect any zombie child processes. */
           while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
-            pool) == APR_CHILD_DONE)
+            connection_pool) == APR_CHILD_DONE)
             ;
         }
     }
@@ -502,7 +502,7 @@ close_connection(connection_t *connection)
 {
   /* this will automatically close USOCK */
   if (svn_atomic_dec(&connection->ref_count) == 0)
-    svn_root_pools__release_pool(connection->pool, connection->root_pools);
+    svn_pool_destroy(connection->pool);
 }
 
 /* Wrapper around serve() that takes a socket instead of a connection.
@@ -638,7 +638,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 #endif
   svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
-  apr_hash_t *fs_config = NULL;
   svn_boolean_t cache_fulltexts = TRUE;
   svn_boolean_t cache_txdeltas = TRUE;
   svn_boolean_t cache_revprops = FALSE;
@@ -657,7 +656,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *pid_filename = NULL;
   const char *log_filename = NULL;
   svn_node_kind_t kind;
-  svn_root_pools__t *socket_pools;
 
 #ifdef SVN_HAVE_SASL
   SVN_ERR(cyrus_init(pool));
@@ -681,7 +679,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.logger = NULL;
   params.config_pool = NULL;
   params.authz_pool = NULL;
-  params.repos_pool = NULL;
+  params.fs_config = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -922,12 +920,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* construct object pools */
   is_multi_threaded = handling_mode == connection_mode_thread;
-  fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+  params.fs_config = apr_hash_make(pool);
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                 cache_txdeltas ? "1" :"0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                 cache_fulltexts ? "1" :"0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
 
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
@@ -935,10 +933,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                         pool));
   SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
                                        params.config_pool,
-                                       is_multi_threaded,
-                                       pool));
-  SVN_ERR(svn_repos__repos_pool_create(&params.repos_pool,
-                                       fs_config,
                                        is_multi_threaded,
                                        pool));
 
@@ -1182,10 +1176,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     svn_cache_config_set(&settings);
   }
 
-  /* we use (and recycle) separate pools for sockets (many small ones)
-     and connections (fewer but larger ones) */
-  SVN_ERR(svn_root_pools__create(&socket_pools));
-
 #if APR_HAS_THREADS
   SVN_ERR(svn_root_pools__create(&connection_pools));
 
@@ -1217,8 +1207,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   while (1)
     {
       connection_t *connection = NULL;
-      SVN_ERR(accept_connection(&connection, sock, socket_pools, &params,
-                                handling_mode));
+      SVN_ERR(accept_connection(&connection, sock, &params, handling_mode,
+                                pool));
       if (run_mode == run_mode_listen_once)
         {
           err = serve_socket(connection, connection->pool);
@@ -1290,7 +1280,7 @@ main(int argc, const char *argv[])
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */
-  pool = svn_pool_create(NULL);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(TRUE));
 
   err = sub_main(&exit_code, argc, argv, pool);
 

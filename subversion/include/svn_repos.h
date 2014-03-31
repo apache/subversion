@@ -2185,24 +2185,27 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  */
 
 /** Like svn_fs_lock2(), but invoke the @a repos's pre- and
- * post-lock hooks before and after the locking action.  Use @a pool
- * for any necessary allocations.
+ * post-lock hooks before and after the locking action.
  *
- * The pre-lock is run for every path in @a targets. Those entries in
- * @a targets for which the pre-lock is successful are passed to
- * svn_fs_lock2 and the post-lock is run for those that are
- * successfully locked.
+ * The pre-lock is run for every path in @a targets. Those targets for
+ * which the pre-lock is successful are passed to svn_fs_lock2 and the
+ * post-lock is run for those that are successfully locked.
  *
- * @a results contains the result of running the pre-lock and
- * svn_fs_lock2 if the pre-lock was successful.  If an error occurs
- * when running the post-lock hook the error is returned wrapped with
- * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
- * error, it knows that the some locks succeeded.  In all cases the
- * caller must handle all errors in @a results to avoid leaks.
+ * @a results contains the result for each target of running the
+ * pre-lock and svn_fs_lock2 if the pre-lock was successful.
+ *
+ * If an error occurs when running the post-lock hook the error is
+ * returned wrapped with SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
+ * caller sees this error, it knows that the some locks succeeded.  In
+ * all cases the caller must handle all errors in @a results to avoid
+ * leaks.
  *
  * The pre-lock hook may cause a different token to be used for the
- * lock, instead of @a token; see the pre-lock-hook documentation for
- * more.
+ * lock, instead of the token supplied; see the pre-lock-hook
+ * documentation for more.
+ *
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -2235,16 +2238,26 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
 
 /** Like svn_fs_unlock(), but invoke the @a repos's pre- and
- * post-unlock hooks before and after the unlocking action.  Use @a
- * pool for any necessary allocations.
+ * post-unlock hooks before and after the unlocking action.
  *
- * If the pre-unlock hook or svn_fs_unlock() fails, throw the original
- * error to caller.  If an error occurs when running the post-unlock
- * hook, return the original error wrapped with
- * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
- * error, it knows that the unlock succeeded anyway.
+ * The pre-unlock hook is run for every path in @a targets. Those
+ * targets for which the pre-unlock is successful are passed to
+ * svn_fs_unlock2 and the post-unlock is run for those that are
+ * successfully unlocked.
  *
- * @since New in 1.2.
+ * @a results contains the result for each target of running the
+ * pre-unlock and svn_fs_unlock2 if the pre-unlock was successful.
+
+ * If an error occurs when running the post-unlock hook, return the
+ * original error wrapped with SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
+ * If the caller sees this error, it knows that some unlocks
+ * succeeded.  In all cases the caller must handle all error in @a
+ * results to avoid leaks.
+ *
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_fs_unlock2(apr_hash_t **results,
@@ -2254,6 +2267,10 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Similar to svn_repos_fs_unlock2 but only unlocks a single path.
+ *
+ * @since New in 1.2.
+ */
 svn_error_t *
 svn_repos_fs_unlock(svn_repos_t *repos,
                     const char *path,

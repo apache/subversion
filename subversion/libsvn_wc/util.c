@@ -272,8 +272,8 @@ svn_wc__conflict_description3_dup(const svn_wc_conflict_description3_t *conflict
     new_conflict->their_abspath = apr_pstrdup(pool, conflict->their_abspath);
   if (conflict->my_abspath)
     new_conflict->my_abspath = apr_pstrdup(pool, conflict->my_abspath);
-  if (conflict->merged_file)
-    new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
+  if (conflict->merged_abspath)
+    new_conflict->merged_abspath = apr_pstrdup(pool, conflict->merged_abspath);
   if (conflict->src_left_version)
     new_conflict->src_left_version =
       svn_wc_conflict_version_dup(conflict->src_left_version, pool);
@@ -407,9 +407,9 @@ svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
         new_conflict->their_abspath = apr_pstrdup(result_pool,
                                                   conflict->their_abspath);
 
-      if (conflict->merged_file)
+      if (conflict->merged_abspath)
         new_conflict->merged_file = apr_pstrdup(result_pool,
-                                                conflict->merged_file);
+                                                conflict->merged_abspath);
     }
   if (conflict->my_abspath)
     new_conflict->my_abspath = apr_pstrdup(result_pool, conflict->my_abspath);

@@ -1058,11 +1058,12 @@ print_diff_tree(svn_stream_t *out_stream,
                     SVN_ERR(generate_label(&orig_label, base_root,
                                            base_path, pool));
                   SVN_ERR(generate_label(&new_label, root, path, pool));
-                  SVN_ERR(svn_diff_file_output_unified3
-                          (out_stream, diff, orig_path, new_path,
+                  SVN_ERR(svn_diff_file_output_unified4(
+                           out_stream, diff, orig_path, new_path,
                            orig_label, new_label,
                            svn_cmdline_output_encoding(pool), NULL,
-                           opts->show_c_function, pool));
+                           opts->show_c_function, 
+                           check_cancel, NULL, pool));
                   SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                       "\n"));
                   diff_header_printed = TRUE;

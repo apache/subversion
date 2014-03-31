@@ -1677,21 +1677,30 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
 {
   apr_hash_t *targets = apr_hash_make(pool), *results;
   svn_fs_lock_target_t target; 
-  svn_fs_lock_result_t *result;
+  svn_error_t *err;
 
   target.token = token;
   target.current_rev = current_rev;
   svn_hash_sets(targets, path, &target);
 
-  SVN_ERR(svn_fs_lock2(&results, fs, targets, comment, is_dav_comment,
-                       expiration_date, steal_lock, pool, pool));
+  err = svn_fs_lock2(&results, fs, targets, comment, is_dav_comment,
+                     expiration_date, steal_lock, pool, pool);
 
-  SVN_ERR_ASSERT(apr_hash_count(results));
-  result = svn__apr_hash_index_val(apr_hash_first(pool, results));
-  if (result->lock)
-    *lock = result->lock;
+  if (apr_hash_count(results))
+    {
+      svn_fs_lock_result_t *result
+        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+
+      if (result->lock)
+        *lock = result->lock;
+
+      if (err && result->err)
+        svn_error_compose(err, result->err);
+      else if (!err)
+        err = result->err;
+    }
   
-  return result->err;
+  return err;
 }
 
 svn_error_t *
@@ -1717,18 +1726,26 @@ svn_fs_unlock(svn_fs_t *fs, const char *path, const char *token,
               svn_boolean_t break_lock, apr_pool_t *pool)
 {
   apr_hash_t *targets = apr_hash_make(pool), *results;
-  svn_fs_lock_result_t *result;
+  svn_error_t *err;
 
   if (!token)
     token = "";
   svn_hash_sets(targets, path, token);
 
-  SVN_ERR(svn_fs_unlock2(&results, fs, targets, break_lock, pool, pool));
+  err = svn_fs_unlock2(&results, fs, targets, break_lock, pool, pool);
 
-  SVN_ERR_ASSERT(apr_hash_count(results));
-  result = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (apr_hash_count(results))
+    {
+      svn_fs_lock_result_t *result
+        = svn__apr_hash_index_val(apr_hash_first(pool, results));
 
-  return result->err;
+      if (err && result->err)
+        svn_error_compose(err, result->err);
+      else if (!err)
+        err = result->err;
+    }
+
+  return err;
 }
 
 svn_error_t *
