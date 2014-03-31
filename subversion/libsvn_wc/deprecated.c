@@ -2898,7 +2898,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                               anchor_abspath,
                               target_basename,
                               depth, get_all,
-                              FALSE, /* ignore_local_mods */
+                              TRUE, /* check_working_copy */
                               no_ignore, depth_as_sticky,
                               server_performs_filtering,
                               ignore_patterns,
