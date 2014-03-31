@@ -345,9 +345,10 @@ struct dir_baton
      and reinstall it. */
   apr_hash_t *deletion_conflicts;
 
-  /* A hash of file names (only the hash key matters) seen by add_file
-     and not yet added to the database by close_file. */
-  apr_hash_t *not_present_files;
+  /* A hash of file names (only the hash key matters) seen by add_file and
+     add_directory and not yet added to the database, mapping to a const
+     char * node kind (via svn_node_kind_to_word(). */
+  apr_hash_t *not_present_nodes;
 
   /* Set if an unversioned dir of the same name already existed in
      this directory. */
@@ -608,7 +609,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->old_revision = SVN_INVALID_REVNUM;
   d->adding_dir   = adding;
   d->changed_rev  = SVN_INVALID_REVNUM;
-  d->not_present_files = apr_hash_make(dir_pool);
+  d->not_present_nodes = apr_hash_make(dir_pool);
 
   /* Copy some flags from the parent baton */
   if (pb)
@@ -1974,6 +1975,7 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
   svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_node_kind_t wc_kind;
@@ -1987,7 +1989,7 @@ add_directory(const char *path,
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
-                                  NULL, eb, pb, db->pool, pool));
+                                  NULL, eb, pb, db->pool, scratch_pool));
   *child_baton = db;
 
   if (db->skip_this)
@@ -2022,13 +2024,26 @@ add_directory(const char *path,
          "administrative directory"),
        svn_dirent_local_style(db->local_abspath, pool));
 
-  SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
+  if (!eb->clean_checkout)
+    {
+      SVN_ERR(svn_io_check_path(db->local_abspath, &kind, db->pool));
 
-  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
-                             &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
-                             eb->db, db->local_abspath, db->pool, db->pool);
+      err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
+                                &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
+                                eb->db, db->local_abspath,
+                                scratch_pool, scratch_pool);
+    }
+  else
+    {
+      kind = svn_node_none;
+      status = svn_wc__db_status_not_present;
+      wc_kind = svn_node_unknown;
+      conflicted = FALSE;
+      err = NULL;
+    }
+
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2041,63 +2056,55 @@ add_directory(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
-  else if (wc_kind == svn_node_dir
-           && status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal && wc_kind == svn_node_unknown)
     {
-      /* !! We found the root of a separate working copy obstructing the wc !!
+      SVN_ERR_ASSERT(conflicted);
+      versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
+    }
+  else if (status == svn_wc__db_status_normal)
+    {
+      if (wc_kind == svn_node_dir)
+        {
+          /* !! We found the root of a working copy obstructing the wc !!
 
-         If the directory would be part of our own working copy then
-         we wouldn't have been called as an add_directory().
+             If the directory would be part of our own working copy then
+             we wouldn't have been called as an add_directory().
 
-         The only thing we can do is add a not-present node, to allow
-         a future update to bring in the new files when the problem is
-         resolved.  Note that svn_wc__db_base_add_not_present_node()
-         explicitly adds the node into the parent's node database. */
+             The only thing we can do is add a not-present node, to allow
+             a future update to bring in the new files when the problem is
+             resolved.  Note that svn_wc__db_base_add_not_present_node()
+             explicitly adds the node into the parent's node database. */
 
-      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
-                                                   db->new_repos_relpath,
-                                                   eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   *eb->target_revision,
-                                                   svn_node_file,
-                                                   NULL, NULL,
-                                                   pool));
+          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, db->name),
+                        svn_node_kind_to_word(svn_node_dir));
+        }
+      else
+        {
+          /* We found a file external occupating the place we need in BASE.
 
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
+            We can't add a not-present node in this case as that would overwrite
+            the file external. Luckily the file external itself stops us from
+            forgetting a child of this parent directory like an obstructing
+            working copy would.
+
+            The reason we get here is that the adm crawler doesn't report
+            file externals.
+          */
+          SVN_ERR_ASSERT(wc_kind == svn_node_file
+                         || wc_kind == svn_node_symlink);
+        }
+
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, scratch_pool));
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 
-      do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_update_skip_obstruction, pool);
+      do_notification(eb, db->local_abspath, wc_kind,
+                      svn_wc_notify_update_skip_obstruction, scratch_pool);
+
+      svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
     }
-  else if (status == svn_wc__db_status_normal
-           && (wc_kind == svn_node_file
-               || wc_kind == svn_node_symlink))
-    {
-      /* We found a file external occupating the place we need in BASE.
-
-         We can't add a not-present node in this case as that would overwrite
-         the file external. Luckily the file external itself stops us from
-         forgetting a child of this parent directory like an obstructing
-         working copy would.
-
-         The reason we get here is that the adm crawler doesn't report
-         file externals.
-      */
-
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
-      db->skip_this = TRUE;
-      db->already_notified = TRUE;
-
-      do_notification(eb, db->local_abspath, svn_node_file,
-                      svn_wc_notify_update_skip_obstruction, pool);
-
-      return SVN_NO_ERROR;
-    }
-  else if (wc_kind == svn_node_unknown)
-    versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
     versioned_locally_and_present = IS_NODE_PRESENT(status);
 
@@ -2120,7 +2127,7 @@ add_directory(const char *path,
                                                       eb->db,
                                                       db->local_abspath,
                                                       tree_conflict,
-                                                      db->pool, db->pool));
+                                                      db->pool, scratch_pool));
 
           tree_conflict = svn_wc__conflict_skel_create(db->pool);
 
@@ -2129,7 +2136,7 @@ add_directory(const char *path,
                                         eb->db, db->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
                                         NULL,
-                                        db->pool, db->pool));
+                                        db->pool, scratch_pool));
 
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
@@ -2140,7 +2147,8 @@ add_directory(const char *path,
         }
       else
         SVN_ERR(node_already_conflicted(&conflicted, &conflict_ignored,
-                                        eb->db, db->local_abspath, pool));
+                                        eb->db, db->local_abspath,
+                                        scratch_pool));
     }
 
   /* Now the "usual" behaviour if already conflicted. Skip it. */
@@ -2163,18 +2171,13 @@ add_directory(const char *path,
          Note that we can safely assume that no present base node exists,
          because then we would not have received an add_directory.
        */
-      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
-                                                   db->new_repos_relpath,
-                                                   eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   *eb->target_revision,
-                                                   svn_node_dir,
-                                                   NULL, NULL,
-                                                   pool));
+      svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, db->name),
+                    svn_node_kind_to_word(svn_node_dir));
 
-      /* ### TODO: Also print victim_path in the skip msg. */
       do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_skip_conflicted, pool);
+                      svn_wc_notify_skip_conflicted, scratch_pool);
+
+      svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
     }
   else if (conflict_ignored)
@@ -2207,7 +2210,7 @@ add_directory(const char *path,
         SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL, NULL,
                                          eb->db, db->local_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
 
 
       /* Is there *something* that is not a dir? */
@@ -2230,7 +2233,7 @@ add_directory(const char *path,
                                       db->local_abspath,
                                       status, FALSE, svn_node_none,
                                       svn_wc_conflict_action_add,
-                                      pool, pool));
+                                      db->pool, scratch_pool));
         }
 
       if (tree_conflict == NULL)
@@ -2258,7 +2261,7 @@ add_directory(const char *path,
                                         eb->db, db->local_abspath,
                                         svn_wc_conflict_reason_unversioned,
                                         svn_wc_conflict_action_add, NULL,
-                                        db->pool, pool));
+                                        db->pool, scratch_pool));
           db->edit_conflict = tree_conflict;
         }
     }
@@ -2269,7 +2272,7 @@ add_directory(const char *path,
                               db->new_repos_relpath,
                               wc_kind,
                               svn_node_dir,
-                              db->pool, pool));
+                              db->pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
                                      eb->db, db->local_abspath,
@@ -2282,12 +2285,12 @@ add_directory(const char *path,
                                      (! db->shadowed
                                       && status == svn_wc__db_status_added),
                                      tree_conflict, NULL,
-                                     pool));
+                                     scratch_pool));
 
   /* Make sure there is a real directory at LOCAL_ABSPATH, unless we are just
      updating the DB */
   if (!db->shadowed)
-    SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
+    SVN_ERR(svn_wc__ensure_directory(db->local_abspath, scratch_pool));
 
   if (tree_conflict != NULL)
     {
@@ -2299,11 +2302,11 @@ add_directory(const char *path,
                                                  eb->conflict_baton,
                                                  eb->cancel_func,
                                                  eb->cancel_baton,
-                                                 pool));
+                                                 scratch_pool));
 
       db->already_notified = TRUE;
       do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_tree_conflict, pool);
+                      svn_wc_notify_tree_conflict, scratch_pool);
     }
 
 
@@ -2325,8 +2328,11 @@ add_directory(const char *path,
 
       db->already_notified = TRUE;
 
-      do_notification(eb, db->local_abspath, svn_node_dir, action, pool);
+      do_notification(eb, db->local_abspath, svn_node_dir, action,
+                      scratch_pool);
     }
+
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2767,7 +2773,7 @@ close_directory(void *dir_baton,
       }
   }
 
-  if (apr_hash_count(db->not_present_files))
+  if (apr_hash_count(db->not_present_nodes))
     {
       apr_hash_index_t *hi;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -2777,12 +2783,14 @@ close_directory(void *dir_baton,
          transaction, but I can't even trigger it.  I've tried
          ra_local, ra_svn, ra_neon, ra_serf and they all call
          close_file before close_dir. */
-      for (hi = apr_hash_first(scratch_pool, db->not_present_files);
+      for (hi = apr_hash_first(scratch_pool, db->not_present_nodes);
            hi;
            hi = apr_hash_next(hi))
         {
           const char *child = svn__apr_hash_index_key(hi);
           const char *child_abspath, *child_relpath;
+          svn_node_kind_t kind = svn_node_kind_from_word(
+                                      svn__apr_hash_index_val(hi));
 
           svn_pool_clear(iterpool);
 
@@ -2795,7 +2803,7 @@ close_directory(void *dir_baton,
                                                        eb->repos_root,
                                                        eb->repos_uuid,
                                                        *eb->target_revision,
-                                                       svn_node_file,
+                                                       kind,
                                                        NULL, NULL,
                                                        iterpool));
         }
@@ -2916,6 +2924,9 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));
+
+  if (db->parent_baton)
+    svn_hash_sets(db->parent_baton->not_present_nodes, db->name, NULL);
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
@@ -3136,13 +3147,13 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
-  svn_node_kind_t kind = svn_node_none;
-  svn_node_kind_t wc_kind = svn_node_unknown;
-  svn_wc__db_status_t status = svn_wc__db_status_normal;
+  svn_node_kind_t kind;
+  svn_node_kind_t wc_kind;
+  svn_wc__db_status_t status;
   apr_pool_t *scratch_pool;
-  svn_boolean_t conflicted = FALSE;
+  svn_boolean_t conflicted;
   svn_boolean_t conflict_ignored = FALSE;
-  svn_boolean_t versioned_locally_and_present = FALSE;
+  svn_boolean_t versioned_locally_and_present;
   svn_skel_t *tree_conflict = NULL;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -3182,6 +3193,13 @@ add_file(const char *path,
                                 eb->db, fb->local_abspath,
                                 scratch_pool, scratch_pool);
     }
+  else
+    {
+      kind =  svn_node_none;
+      status = svn_wc__db_status_not_present;
+      wc_kind = svn_node_unknown;
+      conflicted = FALSE;
+    }
 
   if (err)
     {
@@ -3194,58 +3212,53 @@ add_file(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
-  else if (wc_kind == svn_node_dir
-           && status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal && wc_kind == svn_node_unknown)
     {
-      /* !! We found the root of a separate working copy obstructing the wc !!
+      SVN_ERR_ASSERT(conflicted);
+      versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
+    }
+  else if (status == svn_wc__db_status_normal)
+    {
+      if (wc_kind == svn_node_dir)
+        {
+          /* !! We found the root of a working copy obstructing the wc !!
 
-         If the directory would be part of our own working copy then
-         we wouldn't have been called as an add_file().
+             If the directory would be part of our own working copy then
+             we wouldn't have been called as an add_file().
 
-         The only thing we can do is add a not-present node, to allow
-         a future update to bring in the new files when the problem is
-         resolved. */
-      svn_hash_sets(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
-                    (void *)1);
+             The only thing we can do is add a not-present node, to allow
+             a future update to bring in the new files when the problem is
+             resolved. */
+          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, fb->name),
+                        svn_node_kind_to_word(svn_node_file));
+        }
+      else
+        {
+          /* We found a file external occupating the place we need in BASE.
+
+             We can't add a not-present node in this case as that would overwrite
+             the file external. Luckily the file external itself stops us from
+             forgetting a child of this parent directory like an obstructing
+             working copy would.
+
+             The reason we get here is that the adm crawler doesn't report
+             file externals.
+           */
+          SVN_ERR_ASSERT(wc_kind == svn_node_file
+                         || wc_kind == svn_node_symlink);
+        }
 
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
 
-      do_notification(eb, fb->local_abspath, svn_node_file,
+      do_notification(eb, fb->local_abspath, wc_kind,
                       svn_wc_notify_update_skip_obstruction, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
     }
-  else if (status == svn_wc__db_status_normal
-           && (wc_kind == svn_node_file
-               || wc_kind == svn_node_symlink))
-    {
-      /* We found a file external occupating the place we need in BASE.
-
-         We can't add a not-present node in this case as that would overwrite
-         the file external. Luckily the file external itself stops us from
-         forgetting a child of this parent directory like an obstructing
-         working copy would.
-
-         The reason we get here is that the adm crawler doesn't report
-         file externals.
-      */
-      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
-      fb->skip_this = TRUE;
-      fb->already_notified = TRUE;
-
-      do_notification(eb, fb->local_abspath, svn_node_file,
-                      svn_wc_notify_update_skip_obstruction, scratch_pool);
-
-      svn_pool_destroy(scratch_pool);
-
-      return SVN_NO_ERROR;
-    }
-  else if (wc_kind == svn_node_unknown)
-    versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
     versioned_locally_and_present = IS_NODE_PRESENT(status);
 
@@ -3313,10 +3326,10 @@ add_file(const char *path,
          Note that we can safely assume that no present base node exists,
          because then we would not have received an add_file.
        */
-      svn_hash_sets(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
-                    (void *)1);
+      svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, fb->name),
+                    svn_node_kind_to_word(svn_node_file));
 
-      do_notification(eb, fb->local_abspath, svn_node_unknown,
+      do_notification(eb, fb->local_abspath, svn_node_file,
                       svn_wc_notify_skip_conflicted, scratch_pool);
 
       svn_pool_destroy(scratch_pool);
@@ -3418,8 +3431,8 @@ add_file(const char *path,
       || *eb->target_basename == '\0'
       || (strcmp(fb->local_abspath, eb->target_abspath) != 0))
     {
-      svn_hash_sets(pb->not_present_files, apr_pstrdup(pb->pool, fb->name),
-                    (void *)1);
+      svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, fb->name),
+                    svn_node_kind_to_word(svn_node_file));
     }
 
   if (tree_conflict != NULL)
@@ -4619,7 +4632,7 @@ close_file(void *file_baton,
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
-  svn_hash_sets(fb->dir_baton->not_present_files, fb->name, NULL);
+  svn_hash_sets(fb->dir_baton->not_present_nodes, fb->name, NULL);
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
