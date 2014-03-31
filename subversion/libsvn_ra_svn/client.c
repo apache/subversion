@@ -624,8 +624,6 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->url = apr_pstrdup(pool, url);
   sess->user = uri->user;
   sess->hostname = uri->hostname;
-  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
-                                    uri->port);
   sess->tunnel_name = tunnel_name;
   sess->tunnel_argv = tunnel_argv;
   sess->callbacks = callbacks;
@@ -639,6 +637,10 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   if (tunnel_name)
     {
+      sess->realm_prefix = apr_psprintf(pool, "<svn+%s://%s:%d>",
+                                        tunnel_name,
+                                        uri->hostname, uri->port);
+
       if (tunnel_argv)
         SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
       else
@@ -667,6 +669,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     }
   else
     {
+      sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
+                                        uri->port ? uri->port : SVN_RA_SVN_PORT);
+
       SVN_ERR(make_connection(uri->hostname,
                               uri->port ? uri->port : SVN_RA_SVN_PORT,
                               &sock, pool));
