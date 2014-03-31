@@ -129,6 +129,8 @@ svn_cl__accept_from_word(const char *word)
 static svn_error_t *
 show_diff(const svn_wc_conflict_description2_t *desc,
           const char *path_prefix,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
           apr_pool_t *pool)
 {
   const char *path1, *path2;
@@ -186,11 +188,12 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   SVN_ERR(svn_stream_for_stdout(&output, pool));
   SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
                                options, pool));
-  return svn_diff_file_output_unified3(output, diff,
+  return svn_diff_file_output_unified4(output, diff,
                                        path1, path2,
                                        label1, label2,
                                        APR_LOCALE_CHARSET,
                                        NULL, FALSE,
+                                       cancel_func, cancel_baton,
                                        pool);
 }
 
@@ -796,7 +799,9 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          SVN_ERR(show_diff(desc, b->path_prefix, iterpool));
+          SVN_ERR(show_diff(desc, b->path_prefix,
+                            b->pb->cancel_func, b->pb->cancel_baton,
+                            iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
@@ -850,7 +855,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                   continue;
                 }
 
-              SVN_ERR(svn_cl__merge_file(desc->base_abspath,
+              SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
+                                         desc->base_abspath,
                                          desc->their_abspath,
                                          desc->my_abspath,
                                          desc->merged_file,
@@ -858,7 +864,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                          b->path_prefix,
                                          b->editor_cmd,
                                          b->config,
-                                         &remains_in_conflict,
+                                         b->pb->cancel_func,
+                                         b->pb->cancel_baton,
                                          iterpool));
             }
           else

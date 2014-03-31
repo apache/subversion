@@ -227,7 +227,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                    enum dav_svn__build_what what,
                    svn_revnum_t revision,
                    const char *path,
-                   int add_href,
+                   svn_boolean_t add_href,
                    apr_pool_t *pool)
 {
   const char *root_path = repos->root_path;

@@ -23,15 +23,26 @@ set -x
 echo "============ autogen.sh"
 ./autogen.sh || exit $?
 
+SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h`
+
+cd ../obj
+grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
+
+if [ $SVN_VER_MINOR -eq 8 ]; then
+  # A bug causes 1.8 --enable-optimize to add -flto which isn't supported
+  OPTIONS_1_8='--disable-optimize'
+fi
+
 echo "============ configure"
-./configure CC='cc -m64' \
+../build/configure CC='cc -m64 -v' \
   --with-apr=/export/home/wandisco/buildbot/install \
   --with-apr-util=/export/home/wandisco/buildbot/install \
   --with-serf=/export/home/wandisco/buildbot/install \
   --with-apxs=/export/home/wandisco/buildbot/install/bin/apxs \
   --with-sqlite=/export/home/wandisco/buildbot/sqlite-amalgamation-3071501/sqlite3.c \
   --enable-optimize \
-  --disable-static \
+  --disable-shared \
+  $OPTIONS_1_8 \
   || exit $?
 
 echo "============ make"

@@ -84,12 +84,17 @@ typedef enum report_state_e {
   PROP,
 
   FETCH_FILE,
+  FETCH_PROPS,
   TXDELTA,
 
   CHECKED_IN,
   CHECKED_IN_HREF,
 
-  MD5_CHECKSUM
+  MD5_CHECKSUM,
+
+  VERSION_NAME,
+  CREATIONDATE,
+  CREATOR_DISPLAYNAME
 } report_state_e;
 
 
@@ -193,7 +198,11 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
 
   { OPEN_FILE, S_, "prop", PROP,
     FALSE, { NULL }, FALSE },
+  { OPEN_DIR, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
   { ADD_FILE, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+  { ADD_DIR, S_, "prop", PROP,
     FALSE, { NULL }, FALSE },
 
   { OPEN_FILE, S_, "txdelta", TXDELTA,
@@ -214,6 +223,18 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { PROP, V_, "md5-checksum", MD5_CHECKSUM,
     TRUE, { NULL }, TRUE },
 
+  /* These are only reported for <= 1.6.x mod_dav_svn */
+  { OPEN_DIR, S_, "fetch-props", FETCH_PROPS,
+    FALSE, { NULL }, FALSE },
+  { OPEN_FILE, S_, "fetch-props", FETCH_PROPS,
+    FALSE, { NULL }, FALSE },
+
+  { PROP, D_, "version-name", VERSION_NAME,
+    TRUE, { NULL }, TRUE },
+  { PROP, D_, "creationdate", CREATIONDATE,
+    TRUE, { NULL }, TRUE },
+  { PROP, D_, "creator-displayname", CREATOR_DISPLAYNAME,
+    TRUE, { NULL }, TRUE },
   { 0 }
 };
 
@@ -1765,6 +1786,27 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
             }
         }
         break;
+
+      case FETCH_PROPS:
+        {
+          /* Subversion <= 1.6 servers will return a fetch-props element on
+             open-file and open-dir when non entry props were changed in
+             !send-all mode. In turn we fetch the full set of properties
+             and send all of those as *changes* to the editor. So these
+             editors have to be aware that they receive-non property changes.
+             (In case of incomplete directories they have to be aware anyway)
+
+             In r1063337 this behavior was changed in mod_dav_svn to always
+             send property changes inline in these cases. (See issue #3657)
+
+             Note that before that change the property changes to the last_*
+             entry props were already inlined via specific xml elements. */
+          if (ctx->cur_file)
+            ctx->cur_file->fetch_props = TRUE;
+          else if (ctx->cur_dir)
+            ctx->cur_dir->fetch_props = TRUE;
+        }
+        break;
     }
 
   return SVN_NO_ERROR;
@@ -2036,6 +2078,59 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
               SVN_ERR(svn_stream_close(file->txdelta_stream));
               file->txdelta_stream = NULL;
             }
+        }
+        break;
+
+      case VERSION_NAME:
+      case CREATIONDATE:
+      case CREATOR_DISPLAYNAME:
+        {
+          /* Subversion <= 1.6 servers would return a fetch-props element on
+             open-file and open-dir when non entry props were changed in
+             !send-all mode. In turn we fetch the full set of properties and
+             send those as *changes* to the editor. So these editors have to
+             be aware that they receive non property changes.
+             (In case of incomplete directories they have to be aware anyway)
+
+             In that case the last_* entry props are posted as 3 specific xml
+             elements, which we handle here.
+
+             In r1063337 this behavior was changed in mod_dav_svn to always
+             send property changes inline in these cases. (See issue #3657)
+           */
+
+          const char *propname;
+
+          if (ctx->cur_file)
+            SVN_ERR(ensure_file_opened(ctx->cur_file, scratch_pool));
+          else if (ctx->cur_dir)
+            SVN_ERR(ensure_dir_opened(ctx->cur_dir, scratch_pool));
+          else
+            break;
+
+          switch (leaving_state)
+            {
+              case VERSION_NAME:
+                propname = SVN_PROP_ENTRY_COMMITTED_REV;
+                break;
+              case CREATIONDATE:
+                propname = SVN_PROP_ENTRY_COMMITTED_DATE;
+                break;
+              case CREATOR_DISPLAYNAME:
+                propname = SVN_PROP_ENTRY_LAST_AUTHOR;
+                break;
+              default:
+                SVN_ERR_MALFUNCTION(); /* Impossible to reach */
+            }
+
+          if (ctx->cur_file)
+            SVN_ERR(ctx->editor->change_file_prop(ctx->cur_file->file_baton,
+                                                  propname, cdata,
+                                                  scratch_pool));
+          else
+            SVN_ERR(ctx->editor->change_dir_prop(ctx->cur_dir->dir_baton,
+                                                  propname, cdata,
+                                                  scratch_pool));
         }
         break;
     }

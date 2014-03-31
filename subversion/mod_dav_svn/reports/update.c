@@ -253,13 +253,13 @@ send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
     {
       href = dav_svn__build_uri(baton->uc->resource->info->repos,
                                 DAV_SVN__BUILD_URI_REVROOT,
-                                revision, path, 0 /* add_href */, pool);
+                                revision, path, FALSE /* add_href */, pool);
     }
   else
     {
       href = dav_svn__build_uri(baton->uc->resource->info->repos,
                                 DAV_SVN__BUILD_URI_VERSION,
-                                revision, path, 0 /* add_href */, pool);
+                                revision, path, FALSE /* add_href */, pool);
     }
 
   return dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
@@ -346,7 +346,7 @@ add_helper(svn_boolean_t is_dir,
           bc_url = dav_svn__build_uri(child->uc->resource->info->repos,
                                       DAV_SVN__BUILD_URI_BC,
                                       revision, real_path,
-                                      0 /* add_href */, pool);
+                                      FALSE /* add_href */, pool);
           bc_url = svn_urlpath__canonicalize(bc_url, pool);
 
           /* ugh, build_uri ignores the path and just builds the root

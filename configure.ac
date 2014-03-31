@@ -684,13 +684,22 @@ AC_ARG_ENABLE(nls,
   [enable_nls=$enableval],[enable_nls=yes])
 
 USE_NLS="no"
+SVN_INTL_LIBS=""
 if test "$enable_nls" = "yes"; then
   dnl First, check to see if there is a working msgfmt.
   AC_PATH_PROG(MSGFMT, msgfmt, none)
   AC_PATH_PROG(MSGMERGE, msgmerge, none)
   AC_PATH_PROG(XGETTEXT, xgettext, none)
   if test "$MSGFMT" != "none"; then
-    AC_SEARCH_LIBS(bindtextdomain, [intl], [],
+    AC_SEARCH_LIBS(bindtextdomain, [intl],
+                   [
+                      # in case libintl needs to be linked explicitly,
+                      # $ac_cv_search_bindtextdomain contains -l linker flags
+                      if echo "$ac_cv_search_bindtextdomain" | grep '^-l' >/dev/null
+                      then
+                        SVN_INTL_LIBS="$ac_cv_search_bindtextdomain"
+                      fi
+                   ],
                    [
                     enable_nls="no"
                    ])
@@ -702,6 +711,10 @@ if test "$enable_nls" = "yes"; then
       AC_SEARCH_LIBS(bindtextdomain, [intl],
                      [
                       enable_nls="yes"
+                      if echo "$ac_cv_search_bindtextdomain" | grep '^-l' >/dev/null
+                      then
+                        SVN_INTL_LIBS="$ac_cv_search_bindtextdomain"
+                      fi
                       # This is here so that -liconv ends up in LIBS
                       # if it worked with -liconv.
                       AC_CHECK_LIB(iconv, libiconv_open)
@@ -720,7 +733,6 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
-dnl Currently SVN_INTL_LIBS is always empty.
 AC_SUBST(SVN_INTL_LIBS)
 
 AH_BOTTOM([

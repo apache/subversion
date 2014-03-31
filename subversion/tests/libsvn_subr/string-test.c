@@ -521,19 +521,19 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__i64toa(buffer, 0x8000000000000000ll);
+  length = svn__i64toa(buffer, APR_INT64_MIN);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
 
-  length = svn__i64toa(buffer, 0x7fffffffffffffffll);
+  length = svn__i64toa(buffer, APR_INT64_MAX);
   SVN_TEST_ASSERT(length == 19);
   SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
 
-  length = svn__ui64toa(buffer, 0ull);
+  length = svn__ui64toa(buffer, 0u);
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
+  length = svn__ui64toa(buffer, APR_UINT64_MAX);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
 
@@ -567,10 +567,10 @@ static svn_error_t *
 test_base36(apr_pool_t *pool)
 {
   SVN_ERR(sub_test_base36(0, "0"));
-  SVN_ERR(sub_test_base36(1234567890ull, "kf12oi"));
-  SVN_ERR(sub_test_base36(0x7fffffffffffffffull, "1y2p0ij32e8e7"));
-  SVN_ERR(sub_test_base36(0x8000000000000000ull, "1y2p0ij32e8e8"));
-  SVN_ERR(sub_test_base36(0xffffffffffffffffull, "3w5e11264sgsf"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(1234567890), "kf12oi"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(0x7fffffffffffffff), "1y2p0ij32e8e7"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(0x8000000000000000), "1y2p0ij32e8e8"));
+  SVN_ERR(sub_test_base36(APR_UINT64_MAX, "3w5e11264sgsf"));
 
   return SVN_NO_ERROR;
 }

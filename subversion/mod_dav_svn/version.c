@@ -178,7 +178,8 @@ get_option(const dav_resource *resource,
   request_rec *r = resource->info->r;
   const char *repos_root_uri =
     dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
-                       SVN_IGNORED_REVNUM, "", 0, resource->pool);
+                       SVN_IGNORED_REVNUM, "", FALSE /* add_href */,
+                       resource->pool);
 
   /* ### DAV:version-history-collection-set */
   if (elem->ns != APR_XML_NS_DAV_ID
@@ -199,7 +200,7 @@ get_option(const dav_resource *resource,
                   dav_svn__build_uri(resource->info->repos,
                                      DAV_SVN__BUILD_URI_ACT_COLLECTION,
                                      SVN_INVALID_REVNUM, NULL,
-                                     1 /* add_href */,
+                                     TRUE /* add_href */,
                                      resource->pool));
   apr_text_append(resource->pool, option,
                   "</D:activity-collection-set>");
@@ -1040,7 +1041,7 @@ dav_svn__checkin(dav_resource *resource,
           uri = dav_svn__build_uri(resource->info->repos,
                                    DAV_SVN__BUILD_URI_VERSION,
                                    new_rev, resource->info->repos_path,
-                                   0, resource->pool);
+                                   FALSE /* add_href */, resource->pool);
 
           err = dav_svn__create_version_resource(version_resource, uri,
                                                  resource->pool);

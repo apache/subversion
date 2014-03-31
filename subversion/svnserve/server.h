@@ -128,8 +128,9 @@ typedef struct serve_params_t {
   /* all authz data should be opened through this factory */
   svn_repos__authz_pool_t *authz_pool;
 
-  /* all repositories should be opened through this factory */
-  svn_repos__repos_pool_t *repos_pool;
+  /* The FS configuration to be applied to all repositories.
+     It mainly contains things like cache settings. */
+  apr_hash_t *fs_config;
 
   /* Username case normalization style. */
   enum username_case_type username_case;
@@ -175,9 +176,6 @@ typedef struct connection_t
   /* memory pool for objects with connection lifetime */
   apr_pool_t *pool;
 
-  /* source and ultimate destiny for POOL */
-  svn_root_pools__t *root_pools;
-  
   /* Number of threads using the pool.
      The pool passed to apr_thread_create can only be released when both
 
