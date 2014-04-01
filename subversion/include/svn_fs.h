@@ -2566,7 +2566,7 @@ typedef struct svn_fs_lock_result_t
  * that existing lock.  If current_rev is a valid revnum, then do an
  * out-of-dateness check.  If the revnum is less than the
  * last-changed-revision of the path (or if the path doesn't exist in
- * HEAD), yeild an #SVN_ERR_FS_OUT_OF_DATE error for this path.
+ * HEAD), yield an #SVN_ERR_FS_OUT_OF_DATE error for this path.
  *
  * If a path is already locked, then return #SVN_ERR_FS_PATH_ALREADY_LOCKED,
  * unless @a steal_lock is TRUE, in which case "steal" the existing
@@ -2639,8 +2639,8 @@ svn_fs_generate_lock_token(const char **token,
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
  * of the @a targets hash with the corresponding lock tokens as
- * <tt>const char *</tt> values.  If the the token doesn't point to a
- * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN errot for this path.  If
+ * <tt>const char *</tt> values.  If the token doesn't point to a
+ * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN error for this path.  If
  * the token points to an expired lock, yield an
  * #SVN_ERR_FS_LOCK_EXPIRED error for this path.  If @a fs has no
  * username associated with it, yield an #SVN_ERR_FS_NO_USER unless @a
