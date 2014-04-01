@@ -300,6 +300,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1583580
+   Skip a test that fails when run as root.
+   Justification:
+     Avoids spurious FAIL.
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
