@@ -2191,12 +2191,12 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * which the pre-lock is successful are passed to svn_fs_lock2 and the
  * post-lock is run for those that are successfully locked.
  *
- * @a results contains the result for each target of running the
+ * @a *results contains the result for each target of running the
  * pre-lock and svn_fs_lock2 if the pre-lock was successful.
  *
  * If an error occurs when running the post-lock hook the error is
- * returned wrapped with SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
- * caller sees this error, it knows that the some locks succeeded.  In
+ * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
+ * caller sees this error, it knows that some locks succeeded.  In
  * all cases the caller must handle all errors in @a results to avoid
  * leaks.
  *
@@ -2237,7 +2237,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
                   apr_pool_t *pool);
 
 
-/** Like svn_fs_unlock(), but invoke the @a repos's pre- and
+/** Like svn_fs_unlock2(), but invoke the @a repos's pre- and
  * post-unlock hooks before and after the unlocking action.
  *
  * The pre-unlock hook is run for every path in @a targets. Those
@@ -2245,14 +2245,14 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * svn_fs_unlock2 and the post-unlock is run for those that are
  * successfully unlocked.
  *
- * @a results contains the result for each target of running the
+ * @a *results contains the result for each target of running the
  * pre-unlock and svn_fs_unlock2 if the pre-unlock was successful.
 
  * If an error occurs when running the post-unlock hook, return the
- * original error wrapped with SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
+ * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
  * If the caller sees this error, it knows that some unlocks
- * succeeded.  In all cases the caller must handle all error in @a
- * results to avoid leaks.
+ * succeeded.  In all cases the caller must handle all errors in @a
+ * *results to avoid leaks.
  *
  * Allocate @a *results in @a result_pool. Use @a scratch_pool for
  * temporary allocations.
@@ -2267,7 +2267,7 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
-/* Similar to svn_repos_fs_unlock2 but only unlocks a single path.
+/** Similar to svn_repos_fs_unlock2() but only unlocks a single path.
  *
  * @since New in 1.2.
  */
