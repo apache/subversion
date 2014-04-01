@@ -1233,8 +1233,9 @@ get_dir_status(const struct walk_status_baton *wb,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, scratch_pool,
-                            iterpool);
+  err = svn_io_get_dirents3(&dirents, local_abspath,
+                            wb->ignore_text_mods /* only_check_type*/,
+                            scratch_pool, iterpool);
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
