@@ -1849,6 +1849,10 @@ svn_ra_git__get_log(svn_ra_session_t *session,
                                                                      iterpool);
 
               SVN_ERR(receiver(receiver_baton, log_entry, iterpool));
+
+              if (limit > 0)
+                if (--limit == 0)
+                  break;
             }
         }
 
