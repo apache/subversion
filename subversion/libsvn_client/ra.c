@@ -271,6 +271,34 @@ get_wc_contents(void *baton,
                                                        pool, pool));
 }
 
+/* This implements the `svn_ra_get_wc_adm_subdir_func_t' interface. */
+static svn_error_t *
+get_wc_adm_subdir(void *baton,
+                  const char **local_abspath,
+                  const char *basename,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  callback_baton_t *cb = baton;
+  svn_node_kind_t kind;
+
+  *local_abspath = svn_dirent_join_many(result_pool, cb->wcroot_abspath,
+                                        svn_wc_get_adm_dir(scratch_pool),
+                                        basename, SVN_VA_NULL);
+
+  SVN_ERR(svn_io_check_path(*local_abspath, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    {
+      SVN_ERR(svn_io_make_dir_recursively(*local_abspath, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+  else if (kind == svn_node_dir)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                           _("'%s' already exists and is not a directory"),
+                           svn_dirent_local_style(*local_abspath, scratch_pool));
+}
 
 static svn_error_t *
 cancel_callback(void *baton)
@@ -350,7 +378,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
   if (base_dir_abspath)
-    cbtable->get_wc_contents = get_wc_contents;
+    {
+      cbtable->get_wc_contents = get_wc_contents;
+      cbtable->get_wc_adm_subdir = get_wc_adm_subdir;
+    }
   cbtable->check_tunnel_func = ctx->check_tunnel_func;
   cbtable->open_tunnel_func = ctx->open_tunnel_func;
   cbtable->tunnel_baton = ctx->tunnel_baton;

@@ -66,6 +66,7 @@
 static const char * const dav_schemes[] = { "http", "https", NULL };
 static const char * const svn_schemes[] = { "svn", NULL };
 static const char * const local_schemes[] = { "file", NULL };
+static const char * const git_schemes[] = { "git", NULL };
 
 static const struct ra_lib_defn {
   /* the name of this RA library (e.g. "neon" or "local") */
@@ -100,6 +101,14 @@ static const struct ra_lib_defn {
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SERF
     svn_ra_serf__init,
     svn_ra_serf__deprecated_init
+#endif
+  },
+  {
+    "git",
+    git_schemes,
+#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_GIT
+    svn_ra_git__init,
+    svn_ra_git__deprecated_init,
 #endif
   },
 
@@ -1720,3 +1729,13 @@ svn_ra_serf_init(int abi_version,
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 }
 #endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_SERF */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_GIT
+svn_error_t *
+svn_ra_git_init(int abi_version,
+                 apr_pool_t *pool,
+                 apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_GIT */

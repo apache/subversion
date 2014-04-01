@@ -54,6 +54,7 @@ SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_XML_LIBS = @SVN_XML_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
+SVN_LIBGIT2_LIBS = @SVN_LIBGIT2_LIBS@
 
 LIBS = @LIBS@
 
@@ -127,7 +128,7 @@ INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
            @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
-           @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_LIBGIT2_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -249,6 +250,7 @@ libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
 libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
 libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
 libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
+libsvn_ra_git_LDFLAGS = @libsvn_ra_git_LDFLAGS@
 libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
 libsvn_subr_LDFLAGS = @libsvn_subr_LDFLAGS@
 libsvn_wc_LDFLAGS = @libsvn_wc_LDFLAGS@

@@ -1,0 +1,112 @@
+This branch implements Git repository access for Subversion.
+The implementation is a new RA module called libsvn_ra_git.
+
+$Id$
+
+= Design =
+
+Git repository are accessed via the following URL schemes:
+
+  git://          native git protocol
+  git+file://     local git repository
+  git+http://     git protocol via http
+  git+https://    git protocol via https
+
+All git operations are performed with libgit2.
+See http://libgit2.github.com/
+
+A bare git repository is stored in .svn/git. The svn working copy
+acts like the git working tree. For commands which don't use a 
+working copy (e.g. svn info URL) the git repository is stored
+at a temporary location.
+
+svn follows the linear history of the git branch it mirrors.
+That means svn only sees the first parent of every git commit.
+
+All commits along this linear history are mapped to Subversion
+revision numbers. When the svn client asks for a path at a specific
+revision, the git RA layer returns the object at the same path in
+the corresponding git commit.
+
+Commits are made to the local git repository with a subsequent
+attempt to push to the git repository's remote (i.e. the repository
+the initial clone was made from). If this push fails, a hard reset
+is performed to undo the local commit, and new objects are fetched
+from the remote. The svn client must then run an update to merge the
+newly fetched objects and try again.
+
+= Status =
+
+The following subcommands work with git repositories:
+
+   blame (praise, annotate, ann)
+   cat
+   checkout (co)
+   export
+   diff (di)
+   info
+   list (ls)
+   log
+   status (stat, st)
+   switch (sw)
+   update (up)
+   relocate
+   youngest
+
+One limitation of checkout/export is that they currently expect
+to get a branch called 'master'. This should be made configurable.
+Unfortunately, there is no standard representation of branch names
+in git URLs. Some people use # as a separator in a URL:
+  git://git.example.com/myrepository#master
+We could either implement this scheme, or add a --branch option
+to checkout/export for this purpose.
+
+The following still need to be implemented:
+
+   commit (ci)
+   copy (cp)
+   delete (del, remove, rm)
+   import
+   mkdir
+   move (mv, rename, ren)
+
+The following still need to be implemented (but I'm not yet sure how);
+
+   propdel (pdel, pd)
+   propedit (pedit, pe)
+   propget (pget, pg)
+   proplist (plist, pl)
+   propset (pset, ps)
+
+The following will not be implemented:
+
+   lock
+   merge
+   mergeinfo
+   unlock
+
+Lock/unlock are not needed in a distributed system like git.
+
+Implementing merge support is just a lot of work for no gain.
+The native merge capabilities of git far exceed those of svn anyway.
+Users can simply use a native git client to merge branches.
+Subversion's mergeinfo cannot accurately represent the commit DAG
+of a git repository.
+
+The following are working-copy only and thus don't use the RA layer:
+
+   patch
+   resolve
+   resolved
+   revert
+   upgrade
+
+= Other TODO items =
+
+- Progress output for git operations (currently only visible in debug builds)
+- Map libgit2 error codes to svn error codes
+- Make libgit2 support optional at build time (it's LGPL licensed)
+- Support git+ssh:// (requires libssh support in ligit2)
+- Test suite integration (so "make check" can be run with ra_git)
+- Documentation updates
+- Look for git subcommands which would be worth adding to 'svn'

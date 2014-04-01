@@ -133,6 +133,23 @@ typedef svn_error_t *
                                  const svn_checksum_t *checksum,
                                  apr_pool_t *pool);
 
+/** This is a function type which allows the RA layer to use a persistent
+ * directory with the specified @a basename within the working copy meta data area.
+ * This directory can be used by the RA-layer to store arbitrary data associated
+ * with the current working copy.
+ * 
+ * The absolute path to the directory is returned in @a *local_abspath.
+ *
+ * The directory is created if it does exist yet.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *
+(*svn_ra_get_wc_adm_subdir_func_t)(void *baton,
+                                   const char **local_abspath,
+                                   const char *basename,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /** A function type for retrieving the youngest revision from a repos.
  * @deprecated Provided for backward compatibility with the 1.8 API.
@@ -595,6 +612,11 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.8.
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
+
+  /** Working copy adm subdir fetching function.
+   * @since New in 1.9.
+   */
+  svn_ra_get_wc_adm_subdir_func_t get_wc_adm_subdir;
 
   /** Check-tunnel callback
    *
@@ -2576,6 +2598,16 @@ svn_error_t *
 svn_ra_serf_init(int abi_version,
                  apr_pool_t *pool,
                  apr_hash_t *hash);
+
+/** Initialize libsvn_ra_git.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
+SVN_DEPRECATED
+svn_error_t *
+svn_ra_git_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash);
 
 
 /**

@@ -53,6 +53,12 @@ svn_ra_serf__deprecated_init(int abi_version,
                              apr_pool_t *pool,
                              apr_hash_t *hash);
 
+/* Non-deprecated wrapper around svn_ra_git_init. */
+svn_error_t *
+svn_ra_git__deprecated_init(int abi_version,
+                            apr_pool_t *pool,
+                            apr_hash_t *hash);
+
 #ifdef __cplusplus
 }
 #endif

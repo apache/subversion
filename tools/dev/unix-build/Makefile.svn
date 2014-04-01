@@ -84,6 +84,7 @@ BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.3
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.18.3.1
+LIBGIT2_VER	= 0.20.0
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -98,6 +99,7 @@ BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
+LIBGIT2_DIST	= v$(LIBGIT2_VER).tar.gz
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -111,7 +113,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
 		$(DISTDIR)/$(PYTHON_DIST) \
 		$(DISTDIR)/$(JUNIT_DIST) \
-		$(DISTDIR)/$(GETTEXT_DIST)
+		$(DISTDIR)/$(GETTEXT_DIST) \
+		$(DISTDIR)/$(LIBGIT2_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -134,6 +137,7 @@ BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 GETTEXT_URL	= http://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
+LIBGIT2_URL	= https://github.com/libgit2/libgit2/archive/$(LIBGIT2_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -152,6 +156,7 @@ RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
+LIBGIT2_SRCDIR	= $(SRCDIR)/libgit2-$(LIBGIT2_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -170,6 +175,7 @@ RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
+LIBGIT2_OBJDIR	= $(OBJDIR)/libgit2-$(LIBGIT2_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -182,7 +188,7 @@ PROFILE_CFLAGS=-pg
 endif
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/libgit2/lib:$(PREFIX)/svn-$(WC)/lib
 
 #######################################################################
 # Main targets.
@@ -194,18 +200,19 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
 	ruby-install bz2-install python-install gettext-install \
-	svn-install svn-bindings-install
+	libgit2-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
 	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-reset gettext-reset svn-reset
+	bz2-reset gettext-reset libgit2-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean \
+	libgit2-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -1182,6 +1189,58 @@ $(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# libgit2
+#######################################################################
+
+libgit2-retrieve:	$(LIBGIT2_OBJDIR)/.retrieved
+libgit2-configure:	$(LIBGIT2_OBJDIR)/.configured
+libgit2-compile:	$(LIBGIT2_OBJDIR)/.compiled
+libgit2-install:	$(LIBGIT2_OBJDIR)/.installed
+libgit2-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(LIBGIT2_OBJDIR)/$(f);)
+
+libgit2-clean:
+	-(cd $(LIBGIT2_OBJDIR) && env MAKEFLAGS= make clean)
+
+# fetch distfile for libgit2
+$(DISTDIR)/$(LIBGIT2_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(LIBGIT2_URL)
+
+# retrieve libgit2
+$(LIBGIT2_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBGIT2_DIST)
+	[ -d $(LIBGIT2_OBJDIR) ] || mkdir -p $(LIBGIT2_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBGIT2_DIST)
+	touch $@
+
+
+ifeq ($(THREADING),yes)
+THREADSAFE_FLAG=-DTHREADSAFE=1
+else
+THREADSAFE_FLAG=
+endif
+
+$(LIBGIT2_OBJDIR)/.configured: $(LIBGIT2_OBJDIR)/.retrieved
+	cd $(LIBGIT2_OBJDIR) \
+		&& cmake $(LIBGIT2_SRCDIR) \
+			-DCMAKE_C_FLAGS="-O0 -g" \
+			-DCMAKE_INSTALL_PREFIX=$(PREFIX)/libgit2 \
+			-DCMAKE_BUILD_TYPE=Debug \
+			-DBUILD_CLAR=off \
+			$(THREADSAFE_FLAG)
+	touch $@
+
+# compile libgit2
+$(LIBGIT2_OBJDIR)/.compiled: $(LIBGIT2_OBJDIR)/.configured
+	(cd $(LIBGIT2_OBJDIR) && env MAKEFLAGS= make)
+	touch $@
+
+# install libgit2
+$(LIBGIT2_OBJDIR)/.installed: $(LIBGIT2_OBJDIR)/.compiled
+	(cd $(LIBGIT2_OBJDIR) && env MAKEFLAGS= make install)
+	touch $@
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1262,6 +1321,7 @@ MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
+LIBGIT2_LDFLAG=-Wl,-rpath,$(PREFIX)/libgit2/lib
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1289,7 +1349,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LIBGIT2_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CFLAGS="-I$(PREFIX)/gettext/include" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
@@ -1311,7 +1371,8 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
 			$(SVN_STATIC_FLAG) \
-			$(DISABLE_NEON_VERSION_CHECK)
+			$(DISABLE_NEON_VERSION_CHECK) \
+			--with-libgit2=$(PREFIX)/libgit2
 	touch $@
 
 # compile svn

@@ -1023,6 +1023,7 @@ AC_SUBST([libsvn_ra_LDFLAGS])
 AC_SUBST([libsvn_ra_local_LDFLAGS])
 AC_SUBST([libsvn_ra_serf_LDFLAGS])
 AC_SUBST([libsvn_ra_svn_LDFLAGS])
+AC_SUBST([libsvn_ra_git_LDFLAGS])
 AC_SUBST([libsvn_repos_LDFLAGS])
 AC_SUBST([libsvn_subr_LDFLAGS])
 AC_SUBST([libsvn_wc_LDFLAGS])
@@ -1214,6 +1215,8 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
+SVN_LIB_GIT2
+
 MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--enable-mod-activation],
@@ -1394,6 +1397,13 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
     svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-serf-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_SERF_LINK)"
   fi
+
+  # TODO: make libgit2 support optional?
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_GIT, 1,
+        [Defined if libsvn_client should link against libsvn_ra_git])
+  svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_GIT_DEPS)"
+  svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-ramod-lib"
+  svn_ra_lib_link="$svn_ra_lib_link \$(RA_GIT_LINK)"
 
   SVN_RA_LIB_DEPS=$svn_ra_lib_deps
   SVN_RA_LIB_INSTALL_DEPS=$svn_ra_lib_install_deps

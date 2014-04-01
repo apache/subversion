@@ -526,3 +526,11 @@ svn_ra_serf__deprecated_init(int abi_version,
 {
   return svn_error_trace(svn_ra_serf_init(abi_version, pool, hash));
 }
+
+svn_error_t *
+svn_ra_git__deprecated_init(int abi_version,
+                             apr_pool_t *pool,
+                             apr_hash_t *hash)
+{
+  return svn_error_trace(svn_ra_git_init(abi_version, pool, hash));
+}
