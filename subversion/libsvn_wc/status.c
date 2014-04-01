@@ -573,7 +573,42 @@ assemble_status(svn_wc_status3_t **status,
               if (below_working != svn_wc__db_status_not_present
                   && below_working != svn_wc__db_status_deleted)
                 {
-                  node_status = svn_wc_status_replaced;
+                  if (check_working_copy)
+                    node_status = svn_wc_status_replaced;
+                  else
+                    {
+                      /* This is a remote-only walk; report the
+                         base node info instead of the replacement. */
+                      const char *target;
+                      const svn_checksum_t *checksum;
+                      struct svn_wc__db_info_t *base_info =
+                        apr_palloc(scratch_pool, sizeof(*base_info));
+                      memcpy(base_info, info, sizeof(*base_info));
+                      SVN_ERR(svn_wc__db_read_pristine_info(
+                                  &base_info->status,
+                                  &base_info->kind,
+                                  &base_info->changed_rev,
+                                  &base_info->changed_date,
+                                  &base_info->changed_author,
+                                  &base_info->depth,
+                                  &checksum, &target,
+                                  &base_info->had_props, NULL,
+                                  db, local_abspath,
+                                  scratch_pool, scratch_pool));
+                      SVN_ERR(svn_wc__db_base_get_info(
+                                  NULL, NULL, &base_info->revnum,
+                                  NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL,
+                                  db, local_abspath,
+                                  scratch_pool, scratch_pool));
+                      base_info->has_checksum = (checksum != NULL);
+#ifdef HAVE_SYMLINK
+                      base_info->special = (target != NULL);
+#endif
+                      node_status = svn_wc_status_deleted;
+                      info = base_info;
+                    }
                 }
               else
                 node_status = svn_wc_status_added;
@@ -609,6 +644,16 @@ assemble_status(svn_wc_status3_t **status,
   if (node_status == svn_wc_status_normal
       && prop_status != svn_wc_status_none)
     node_status = prop_status;
+
+
+  /* Ignore local additions in remote-only mode */
+  if (!check_working_copy
+      && node_status == svn_wc_status_added
+      && !moved_from_abspath)
+    {
+      *status = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* 5. Easy out:  unless we're fetching -every- node, don't bother
      to allocate a struct for an uninteresting node.
@@ -1351,11 +1396,6 @@ get_dir_status(const struct walk_status_baton *wb,
       child_abspath = svn_dirent_join(local_abspath, key, iterpool);
       child_dirent = apr_hash_get(dirents, key, klen);
       child_info = apr_hash_get(nodes, key, klen);
-
-      /* If this is a remote-only status walk, ignore locally added nodes. */
-      if (!wb->check_working_copy && child_info
-          && child_info->status == svn_wc__db_status_added)
-        continue;
 
       SVN_ERR(one_child_status(wb,
                                child_abspath,

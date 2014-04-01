@@ -890,7 +890,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
       +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
       +2, svn_wc_status_modified, svn_wc_status_modified, svn_wc_status_none },
     { "B",
-      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +1, svn_wc_status_deleted,  svn_wc_status_normal,   svn_wc_status_none,
       +2, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none },
     { "C",
       +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
@@ -969,6 +969,15 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_client_add5(local_path, svn_depth_unknown,
                           FALSE, FALSE, FALSE, FALSE,
                           ctx, pool));
+
+  /* Replace a local dir */
+  local_path = svn_dirent_join(wc_path, "B", pool);
+  targets = apr_array_make(pool, 1, sizeof(const char*));
+  APR_ARRAY_PUSH(targets, const char*) = local_path;
+  SVN_ERR(svn_client_delete4(targets, FALSE, FALSE, NULL, NULL, NULL,
+                             ctx, pool));
+  SVN_ERR(svn_client_mkdir4(targets, FALSE, NULL, NULL, NULL,
+                            ctx, pool));
 
   /* Modify a local dir's props */
   local_path = svn_dirent_join(wc_path, "D", pool);
