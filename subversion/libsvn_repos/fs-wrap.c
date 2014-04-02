@@ -507,28 +507,60 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_fs_lock2(apr_hash_t **results,
-                   svn_repos_t *repos,
-                   apr_hash_t *targets,
-                   const char *comment,
-                   svn_boolean_t is_dav_comment,
-                   apr_time_t expiration_date,
-                   svn_boolean_t steal_lock,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+struct lock_many_baton_t {
+  svn_boolean_t need_lock;
+  apr_array_header_t *paths;
+  svn_fs_lock_callback_t lock_callback;
+  void *lock_baton;
+  svn_error_t *cb_err;
+  apr_pool_t *pool;
+};
+
+/* Implements svn_fs_lock_callback_t.  Used by svn_repos_fs_lock_many
+   and svn_repos_fs_unlock_many to record the paths for use by post-
+   hooks, forward to the supplied callback and record any callback
+   error. */
+static svn_error_t *
+lock_many_cb(void *lock_baton,
+             const char *path,
+             const svn_lock_t *lock,
+             svn_error_t *fs_err,
+             apr_pool_t *pool)
 {
-  svn_error_t *err;
+  struct lock_many_baton_t *b = lock_baton;
+
+  if (!b->cb_err && b->lock_callback)
+    b->cb_err = b->lock_callback(b->lock_baton, path, lock, fs_err, pool);
+
+  if ((b->need_lock && lock) || (!b->need_lock && !fs_err))
+    APR_ARRAY_PUSH(b->paths, const char *) = apr_pstrdup(b->pool, path);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_lock_many(svn_repos_t *repos,
+                       apr_hash_t *targets,
+                       const char *comment,
+                       svn_boolean_t is_dav_comment,
+                       apr_time_t expiration_date,
+                       svn_boolean_t steal_lock,
+                       svn_fs_lock_callback_t lock_callback,
+                       void *lock_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
   apr_hash_t *hooks_env;
   apr_hash_t *pre_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  apr_array_header_t *paths;
-  apr_hash_t *pre_results;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct lock_many_baton_t baton;
 
-  *results = apr_hash_make(result_pool);
+  if (!apr_hash_count(targets))
+    return SVN_NO_ERROR;
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
@@ -557,11 +589,10 @@ svn_repos_fs_lock2(apr_hash_t **results,
                                       username, comment, steal_lock, iterpool);
       if (err)
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-          result->lock = NULL;
-          result->err = err;
-          svn_hash_sets(*results, path, result);
+          if (!cb_err && lock_callback)
+            cb_err = lock_callback(lock_baton, path, NULL, err, iterpool);
+          svn_error_clear(err);
+          
           continue;
         }
 
@@ -571,39 +602,62 @@ svn_repos_fs_lock2(apr_hash_t **results,
       svn_hash_sets(pre_targets, path, target);
     }
 
-  err = svn_fs_lock2(&pre_results, repos->fs, pre_targets, comment,
-                     is_dav_comment, expiration_date, steal_lock,
-                     result_pool, iterpool);
+  if (!apr_hash_count(pre_targets))
+    return svn_error_trace(cb_err);
 
-  /* Combine results so the caller can handle all the errors. */
-  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(*results, svn__apr_hash_index_key(hi),
-                  svn__apr_hash_index_val(hi));
+  baton.need_lock = TRUE;
+  baton.paths = apr_array_make(scratch_pool, apr_hash_count(pre_targets),
+                               sizeof(const char *));
+  baton.lock_callback = lock_callback;
+  baton.lock_baton = lock_baton;
+  baton.cb_err = cb_err;
+  baton.pool = scratch_pool;
+
+  err = svn_fs_lock_many(repos->fs, pre_targets, comment,
+                         is_dav_comment, expiration_date, steal_lock,
+                         lock_many_cb, &baton, result_pool, iterpool);
 
   /* If there are locks and an error should we return or run the post-lock? */
-  if (err)
-    return svn_error_trace(err);
-
-  /* Extract paths that were successfully locked for the post-lock. */
-  paths = apr_array_make(iterpool, apr_hash_count(pre_results),
-                         sizeof(const char *));
-  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
+  if (!err && baton.paths->nelts)
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-
-      if (result->lock)
-        APR_ARRAY_PUSH(paths, const char *) = path;
+      err = svn_repos__hooks_post_lock(repos, hooks_env, baton.paths, username,
+                                       iterpool);
+      if (err)
+        err = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+                            _("Locking succeeded, but post-lock hook failed"));
     }
-
-  err = svn_repos__hooks_post_lock(repos, hooks_env, paths, username, iterpool);
-  if (err)
-    err = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
-                           "Locking succeeded, but post-lock hook failed");
 
   svn_pool_destroy(iterpool);
 
-  return err;
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
+  else if (!err)
+    err = cb_err;
+
+  return svn_error_trace(err);
+}
+
+struct lock_baton_t {
+  const svn_lock_t *lock;
+  svn_error_t *fs_err;
+};
+
+/* Implements svn_fs_lock_callback_t.  Used by svn_repos_fs_lock and
+   svn_repos_fs_unlock to record the lock and error from
+   svn_repos_fs_lock_many and svn_repos_fs_unlock_many. */
+static svn_error_t *
+lock_cb(void *lock_baton,
+        const char *path,
+        const svn_lock_t *lock,
+        svn_error_t *fs_err,
+        apr_pool_t *pool)
+{
+  struct lock_baton_t *b = lock_baton;
+
+  b->lock = lock;
+  b->fs_err = svn_error_dup(fs_err);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -618,55 +672,51 @@ svn_repos_fs_lock(svn_lock_t **lock,
                   svn_boolean_t steal_lock,
                   apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   svn_fs_lock_target_t target; 
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   target.token = token;
   target.current_rev = current_rev;
   svn_hash_sets(targets, path, &target);
 
-  err = svn_repos_fs_lock2(&results, repos, targets, comment, is_dav_comment,
-                           expiration_date, steal_lock,
-                           pool, pool);
+  err = svn_repos_fs_lock_many(repos, targets, comment, is_dav_comment,
+                               expiration_date, steal_lock, lock_cb, &baton,
+                               pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      const svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (baton.lock)
+    *lock = (svn_lock_t*)baton.lock;
 
-      if (result->lock)
-        *lock = result->lock;
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
 
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
-
-  return err;
+  return svn_error_trace(err);
 }
 
 
 svn_error_t *
-svn_repos_fs_unlock2(apr_hash_t **results,
-                     svn_repos_t *repos,
-                     apr_hash_t *targets,
-                     svn_boolean_t break_lock,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_repos_fs_unlock_many(svn_repos_t *repos,
+                         apr_hash_t *targets,
+                         svn_boolean_t break_lock,
+                         svn_fs_lock_callback_t lock_callback,
+                         void *lock_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
   apr_hash_t *hooks_env;
   apr_hash_t *pre_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  apr_array_header_t *paths;
-  apr_hash_t *pre_results;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct lock_many_baton_t baton;
 
-  *results = apr_hash_make(result_pool);
+  if (!apr_hash_count(targets))
+    return SVN_NO_ERROR;
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
@@ -682,7 +732,7 @@ svn_repos_fs_unlock2(apr_hash_t **results,
        _("Cannot unlock, no authenticated username available"));
 
   /* Run pre-unlock hook.  This could throw error, preventing
-     svn_fs_unlock2() from happening for that path. */
+     svn_fs_unlock_many() from happening for that path. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
@@ -694,49 +744,47 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                                         break_lock, iterpool);
       if (err)
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-          result->lock = NULL;
-          result->err = err;
-          svn_hash_sets(*results, path, result);
+          if (!cb_err && lock_callback)
+            cb_err = lock_callback(lock_baton, path, NULL, err, iterpool);
+          svn_error_clear(err);
+
           continue;
         }
 
       svn_hash_sets(pre_targets, path, token);
     }
 
-  err = svn_fs_unlock2(&pre_results, repos->fs, pre_targets, break_lock,
-                       result_pool, iterpool);
+  if (!apr_hash_count(pre_targets))
+    return svn_error_trace(cb_err);
 
-  /* Combine results for all paths. */
-  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(*results, svn__apr_hash_index_key(hi),
-                  svn__apr_hash_index_val(hi));
+  baton.need_lock = FALSE;
+  baton.paths = apr_array_make(scratch_pool, apr_hash_count(pre_targets),
+                               sizeof(const char *));
+  baton.lock_callback = lock_callback;
+  baton.lock_baton = lock_baton;
+  baton.cb_err = cb_err;
+  baton.pool = scratch_pool;
 
-  if (err)
-    return svn_error_trace(err);
+  err = svn_fs_unlock_many(repos->fs, pre_targets, break_lock,
+                           lock_many_cb, &baton, result_pool, iterpool);
 
-  /* Extract paths that were successfully unlocked for the post-unlock. */
-  paths = apr_array_make(iterpool, apr_hash_count(pre_results),
-                         sizeof(const char *));
-  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
+  if (!err && baton.paths->nelts)
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-
-      if (result->lock)
-        APR_ARRAY_PUSH(paths, const char *) = path;
-    }
-  
-
-  if ((err = svn_repos__hooks_post_unlock(repos, hooks_env, paths,
-                                          username, iterpool)))
-    err = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
+      err = svn_repos__hooks_post_unlock(repos, hooks_env, baton.paths,
+                                         username, iterpool);
+      if (err)
+        err = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
                            _("Unlock succeeded, but post-unlock hook failed"));
+    }
 
   svn_pool_destroy(iterpool);
 
-  return err;
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
+  else if (!err)
+    err = cb_err;
+
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -746,28 +794,24 @@ svn_repos_fs_unlock(svn_repos_t *repos,
                     svn_boolean_t break_lock,
                     apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   if (!token)
     token = "";
 
   svn_hash_sets(targets, path, token);
 
-  err = svn_repos_fs_unlock2(&results, repos, targets, break_lock, pool, pool);
+  err = svn_repos_fs_unlock_many(repos, targets, break_lock, lock_cb, &baton,
+                                 pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      const svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
 
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
-
-  return err;
+  return svn_error_trace(err);
 }
 
 
