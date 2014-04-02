@@ -360,6 +360,9 @@ svn_error_dup(svn_error_t *err)
   apr_pool_t *pool;
   svn_error_t *new_err = NULL, *tmp_err = NULL;
 
+  if (!err)
+    return SVN_NO_ERROR;
+
   pool = svn_pool_create(NULL);
   if (!pool)
     abort();
