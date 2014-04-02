@@ -800,6 +800,36 @@ def authz_locking(sbox):
                                         None,
                                         mu_path)
 
+  # Lock two paths one of which fails. First add read access to '/' so
+  # that OPTIONS on common ancestor works.
+  write_authz_file(sbox, {"/": "jrandom = r", "/A": "jrandom = rw"})
+
+  # Two unlocked paths
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('iota'))
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('A/mu'))
+
+  ### Crazy serf SVN_ERR_FS_LOCK_OWNER_MISMATCH warning! Issue 3801?
+  if sbox.repo_url.startswith('http'):
+    expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
+    expected_status = 0
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      None, expected_err, expected_status,
+                                      'lock',
+                                      '-m', 'lock msg',
+                                      mu_path,
+                                      iota_path)
+
+  # One path locked, one still unlocked
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('iota'))
+  svntest.actions.run_and_verify_info([{'Lock Token' : 'opaquelocktoken:.*'}],
+                                      sbox.ospath('A/mu'))
+
+
+
 # test for issue #2712: if anon-access == read, svnserve should also check
 # authz to determine whether a checkout/update is actually allowed for
 # anonymous users, and, if not, attempt authentication.

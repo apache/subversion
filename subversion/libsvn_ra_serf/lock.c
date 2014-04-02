@@ -263,6 +263,7 @@ run_locks(svn_ra_serf__session_t *sess,
                                             ctx->handler->sline.reason);
                     break;
                   case 403:
+                    /* ### Authz can also lead to 403. */
                     err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH,
                                             NULL,
                                             _("Unlock of '%s' failed (%d %s)"),
