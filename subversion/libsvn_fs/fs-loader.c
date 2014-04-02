@@ -1582,22 +1582,46 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->set_uuid(fs, uuid, pool));
 }
 
+struct lock_many_baton_t {
+  svn_fs_lock_callback_t lock_callback;
+  void *lock_baton;
+  svn_error_t *cb_err;
+};
+
+/* Implements svn_fs_lock_callback_t.  Used by svn_fs_lock_many and
+   svn_fs_unlock_many to forward to the supplied callback and record
+   any error from the callback. */
+static svn_error_t *
+lock_many_cb(void *lock_baton,
+             const char *path,
+             const svn_lock_t *lock,
+             svn_error_t *fs_err,
+             apr_pool_t *pool)
+{
+  struct lock_many_baton_t *b = lock_baton;
+
+  if (!b->cb_err)
+    b->cb_err = b->lock_callback(b->lock_baton, path, lock, fs_err, pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_fs_lock2(apr_hash_t **results,
-             svn_fs_t *fs,
-             apr_hash_t *targets,
-             const char *comment,
-             svn_boolean_t is_dav_comment,
-             apr_time_t expiration_date,
-             svn_boolean_t steal_lock,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
+svn_fs_lock_many(svn_fs_t *fs,
+                 apr_hash_t *targets,
+                 const char *comment,
+                 svn_boolean_t is_dav_comment,
+                 apr_time_t expiration_date,
+                 svn_boolean_t steal_lock,
+                 svn_fs_lock_callback_t lock_callback,
+                 void *lock_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *ok_targets = apr_hash_make(scratch_pool), *ok_results;
-  svn_error_t *err;
-
-  *results = apr_hash_make(result_pool);
+  apr_hash_t *ok_targets = apr_hash_make(scratch_pool);
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
+  struct lock_many_baton_t baton;
 
   /* Enforce that the comment be xml-escapable. */
   if (comment)
@@ -1645,27 +1669,56 @@ svn_fs_lock2(apr_hash_t **results,
 
       if (err)
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-
-          result->err = err;
-          result->lock = NULL;
-          svn_hash_sets(*results, svn__apr_hash_index_key(hi), result);
+          if (!cb_err)
+            cb_err = lock_callback(lock_baton, svn__apr_hash_index_key(hi),
+                                   NULL, err, scratch_pool);
+          svn_error_clear(err);
         }
       else
         svn_hash_sets(ok_targets, svn__apr_hash_index_key(hi), target);
     }
 
-  err = fs->vtable->lock(&ok_results, fs, ok_targets, comment,
-                         is_dav_comment, expiration_date,
-                         steal_lock, result_pool, scratch_pool);
+  if (!apr_hash_count(ok_targets))
+    return svn_error_trace(cb_err);
 
-  for (hi = apr_hash_first(scratch_pool, ok_results);
-       hi; hi = apr_hash_next(hi))
-    svn_hash_sets(*results, svn__apr_hash_index_key(hi),
-                  svn__apr_hash_index_val(hi));
+  baton.lock_callback = lock_callback;
+  baton.lock_baton = lock_baton;
+  baton.cb_err = cb_err;
+
+  err = fs->vtable->lock(fs, ok_targets, comment, is_dav_comment,
+                         expiration_date, steal_lock,
+                         lock_many_cb, &baton,
+                         result_pool, scratch_pool);
+
+  if (err && baton.cb_err)
+    svn_error_compose(err, baton.cb_err);
+  else if (!err)
+    err = baton.cb_err;
 
   return svn_error_trace(err);
+}
+
+struct lock_baton_t {
+  const svn_lock_t *lock;
+  svn_error_t *fs_err;
+};
+
+/* Implements svn_fs_lock_callback_t. Used by svn_fs_lock and
+   svn_fs_unlock to record the lock and error from svn_fs_lock_many
+   and svn_fs_unlock_many. */
+static svn_error_t *
+lock_cb(void *lock_baton,
+        const char *path,
+        const svn_lock_t *lock,
+        svn_error_t *fs_err,
+        apr_pool_t *pool)
+{
+  struct lock_baton_t *b = lock_baton;
+
+  b->lock = lock;
+  b->fs_err = svn_error_dup(fs_err);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1675,32 +1728,28 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
             svn_revnum_t current_rev, svn_boolean_t steal_lock,
             apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   svn_fs_lock_target_t target; 
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   target.token = token;
   target.current_rev = current_rev;
   svn_hash_sets(targets, path, &target);
 
-  err = svn_fs_lock2(&results, fs, targets, comment, is_dav_comment,
-                     expiration_date, steal_lock, pool, pool);
+  err = svn_fs_lock_many(fs, targets, comment, is_dav_comment,
+                         expiration_date, steal_lock, lock_cb, &baton,
+                         pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (baton.lock)
+    *lock = (svn_lock_t*)baton.lock;
 
-      if (result->lock)
-        *lock = result->lock;
-
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
   
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -1710,14 +1759,16 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_unlock2(apr_hash_t **results,
-               svn_fs_t *fs,
-               apr_hash_t *targets,
-               svn_boolean_t break_lock,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+svn_fs_unlock_many(svn_fs_t *fs,
+                   apr_hash_t *targets,
+                   svn_boolean_t break_lock,
+                   svn_fs_lock_callback_t lock_callback,
+                   void *lock_baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(fs->vtable->unlock(results, fs, targets, break_lock,
+  return svn_error_trace(fs->vtable->unlock(fs, targets, break_lock,
+                                            lock_callback, lock_baton,
                                             result_pool, scratch_pool));
 }
 
@@ -1725,27 +1776,23 @@ svn_error_t *
 svn_fs_unlock(svn_fs_t *fs, const char *path, const char *token,
               svn_boolean_t break_lock, apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   if (!token)
     token = "";
   svn_hash_sets(targets, path, token);
 
-  err = svn_fs_unlock2(&results, fs, targets, break_lock, pool, pool);
+  err = svn_fs_unlock_many(fs, targets, break_lock, lock_cb, &baton,
+                           pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
 
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
-
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *

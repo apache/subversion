@@ -2184,15 +2184,16 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * @{
  */
 
-/** Like svn_fs_lock2(), but invoke the @a repos's pre- and
+/** Like svn_fs_lock_many(), but invoke the @a repos's pre- and
  * post-lock hooks before and after the locking action.
  *
  * The pre-lock is run for every path in @a targets. Those targets for
- * which the pre-lock is successful are passed to svn_fs_lock2 and the
- * post-lock is run for those that are successfully locked.
+ * which the pre-lock is successful are passed to svn_fs_lock_many and
+ * the post-lock is run for those that are successfully locked.
  *
- * @a *results contains the result for each target of running the
- * pre-lock and svn_fs_lock2 if the pre-lock was successful.
+ * For each path in @a targets @a lock_callback will be invoked
+ * passing @a lock_baton and the lock and error that apply to path.
+ * @a lock_callback can be NULL in which case it is not called.
  *
  * If an error occurs when running the post-lock hook the error is
  * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
@@ -2204,23 +2205,24 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * lock, instead of the token supplied; see the pre-lock-hook
  * documentation for more.
  *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * The lock and path passed to @a lock_callback will be allocated in
+ * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_repos_fs_lock2(apr_hash_t **results,
-                   svn_repos_t *repos,
-                   apr_hash_t *targets,
-                   const char *comment,
-                   svn_boolean_t is_dav_comment,
-                   apr_time_t expiration_date,
-                   svn_boolean_t steal_lock,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
+svn_repos_fs_lock_many(svn_repos_t *repos,
+                       apr_hash_t *targets,
+                       const char *comment,
+                       svn_boolean_t is_dav_comment,
+                       apr_time_t expiration_date,
+                       svn_boolean_t steal_lock,
+                       svn_fs_lock_callback_t lock_callback,
+                       void *lock_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
-/** Similar to svn_repos_fs_lock2() but locks only a single path.
+/** Similar to svn_repos_fs_lock_many() but locks only a single path.
  *
  * @since New in 1.2.
  */
@@ -2237,37 +2239,40 @@ svn_repos_fs_lock(svn_lock_t **lock,
                   apr_pool_t *pool);
 
 
-/** Like svn_fs_unlock2(), but invoke the @a repos's pre- and
+/** Like svn_fs_unlock_many(), but invoke the @a repos's pre- and
  * post-unlock hooks before and after the unlocking action.
  *
  * The pre-unlock hook is run for every path in @a targets. Those
  * targets for which the pre-unlock is successful are passed to
- * svn_fs_unlock2 and the post-unlock is run for those that are
+ * svn_fs_unlock_many and the post-unlock is run for those that are
  * successfully unlocked.
  *
- * @a *results contains the result for each target of running the
- * pre-unlock and svn_fs_unlock2 if the pre-unlock was successful.
-
+ * For each path in @a targets @a lock_callback will be invoked
+ * passing @a lock_baton and error that apply to path.  The lock
+ * passed to the callback will be NULL.  @a lock_callback can be NULL
+ * in which case it is not called.
+ *
  * If an error occurs when running the post-unlock hook, return the
  * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
  * If the caller sees this error, it knows that some unlocks
  * succeeded.  In all cases the caller must handle all errors in @a
  * *results to avoid leaks.
  *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * The path passed to @a lock_callback will be allocated in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_repos_fs_unlock2(apr_hash_t **results,
-                     svn_repos_t *repos,
-                     apr_hash_t *targets,
-                     svn_boolean_t break_lock,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
+svn_repos_fs_unlock_many(svn_repos_t *repos,
+                         apr_hash_t *targets,
+                         svn_boolean_t break_lock,
+                         svn_fs_lock_callback_t lock_callback,
+                         void *lock_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
-/** Similar to svn_repos_fs_unlock2() but only unlocks a single path.
+/** Similar to svn_repos_fs_unlock_many() but only unlocks a single path.
  *
  * @since New in 1.2.
  */
