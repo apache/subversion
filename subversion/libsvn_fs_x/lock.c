@@ -1165,13 +1165,14 @@ unlock_single(svn_fs_t *fs,
 /*** Public API implementations ***/
 
 svn_error_t *
-svn_fs_x__lock(apr_hash_t **results,
-               svn_fs_t *fs,
+svn_fs_x__lock(svn_fs_t *fs,
                apr_hash_t *targets,
                const char *comment,
                svn_boolean_t is_dav_comment,
                apr_time_t expiration_date,
                svn_boolean_t steal_lock,
+               svn_fs_lock_callback_t lock_callback,
+               void *lock_baton,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
@@ -1179,10 +1180,8 @@ svn_fs_x__lock(apr_hash_t **results,
   apr_array_header_t *sorted_targets;
   apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  svn_error_t *err;
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
-
-  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -1224,16 +1223,18 @@ svn_fs_x__lock(apr_hash_t **results,
     {
       struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
                                                 struct lock_info_t);
-      svn_fs_lock_result_t *result
-        = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-
-      result->lock = info->lock;
-      result->err = info->fs_err;
-
-      svn_hash_sets(*results, info->path, result);
+      if (!cb_err && lock_callback)
+        cb_err = lock_callback(lock_baton, info->path, info->lock,
+                               info->fs_err, scratch_pool);
+      svn_error_clear(info->fs_err);
     }
 
-  return err;
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
+  else if (!err)
+    err = cb_err;
+
+  return svn_error_trace(err);
 }
 
 
@@ -1254,10 +1255,11 @@ svn_fs_x__generate_lock_token(const char **token,
 }
 
 svn_error_t *
-svn_fs_x__unlock(apr_hash_t **results,
-                 svn_fs_t *fs,
+svn_fs_x__unlock(svn_fs_t *fs,
                  apr_hash_t *targets,
                  svn_boolean_t break_lock,
+                 svn_fs_lock_callback_t lock_callback,
+                 void *lock_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -1265,10 +1267,8 @@ svn_fs_x__unlock(apr_hash_t **results,
   apr_array_header_t *sorted_targets;
   apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  svn_error_t *err;
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
-
-  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -1304,16 +1304,18 @@ svn_fs_x__unlock(apr_hash_t **results,
     {
       struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
                                                   struct unlock_info_t);
-      svn_fs_lock_result_t *result
-        = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-
-      result->lock = NULL;
-      result->err = info->fs_err;
-
-      svn_hash_sets(*results, info->path, result);
+      if (!cb_err && lock_callback)
+        cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
+                               scratch_pool);
+      svn_error_clear(info->fs_err);
     }
 
-  return err;
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
+  else if (!err)
+    err = cb_err;
+
+  return svn_error_trace(err);
 }
 
 

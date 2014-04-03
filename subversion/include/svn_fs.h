@@ -2512,7 +2512,7 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * expiration error (depending on the API).
  */
 
-/** The @a targets hash passed to svn_fs_lock2() has <tt>const char
+/** The @a targets hash passed to svn_fs_lock_many() has <tt>const char
  * *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values.
  *
  * @since New in 1.9.
@@ -2524,23 +2524,26 @@ typedef struct svn_fs_lock_target_t
 
 } svn_fs_lock_target_t;
 
-/** The @a results hash returned by svn_fs_lock2() and svn_fs_unlock2()
- * has <tt>const char *</tt> keys and <tt>svn_fs_lock_result_t *</tt>
- * values.
+/** The callback invoked by svn_fs_lock_many() and svn_fs_unlock_many().
  *
- * @since New in 1.9.
+ * @a path and @a lock are allocated in the result_pool passed to
+ * svn_fs_lock_many/svn_fs_unlock_many and so will persist beyond the
+ * callback invocation. @a fs_err will be cleared after the callback
+ * returns, use svn_error_dup() to preserve the error.
+ *
+ * If the callback returns an error no further callbacks will be made
+ * and svn_fs_lock_many/svn_fs_unlock_many will return an error.
  */
-typedef struct svn_fs_lock_result_t
-{
-  svn_lock_t *lock;
-  svn_error_t *err;
-
-} svn_fs_lock_result_t;
+typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
+                                               const char *path,
+                                               const svn_lock_t *lock,
+                                               svn_error_t *fs_err,
+                                               apr_pool_t *pool);
 
 /** Lock the paths in @a targets in @a fs, and set @a *results to the
  * locks or errors representing each new lock.
  *
- * @warning You may prefer to use svn_repos_fs_lock2() instead,
+ * @warning You may prefer to use svn_repos_fs_lock_many() instead,
  * which see.
  *
  * @a fs must have a username associated with it (see
@@ -2568,7 +2571,7 @@ typedef struct svn_fs_lock_result_t
  * last-changed-revision of the path (or if the path doesn't exist in
  * HEAD), yield an #SVN_ERR_FS_OUT_OF_DATE error for this path.
  *
- * If a path is already locked, then return #SVN_ERR_FS_PATH_ALREADY_LOCKED,
+ * If a path is already locked, then yield #SVN_ERR_FS_PATH_ALREADY_LOCKED,
  * unless @a steal_lock is TRUE, in which case "steal" the existing
  * lock, even if the FS access-context's username does not match the
  * current lock's owner: delete the existing lock on the path, and
@@ -2577,34 +2580,30 @@ typedef struct svn_fs_lock_result_t
  * If @a expiration_date is zero, then create a non-expiring lock.
  * Else, the lock will expire at @a expiration_date.
  *
- * The results are returned in @a *results hash where the keys are
- * <tt>const char *</tt> paths and the values are
- * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err. The lock associated
- * with each path is returned as #svn_fs_lock_result_t->lock; this
- * will be @c NULL if no lock was created. @a *results will always be
- * a valid hash and in all cases the caller must ensure that all
- * errors it contains are handled to avoid leaks.
+ * For each path in @a targets @a lock_callback will be invoked
+ * passing @a lock_baton and the lock and error that apply to path.
+ * @a lock_callback can be NULL in which case it is not called.
  *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * The lock and path passed to @a lock_callback will be allocated in
+ * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
  * @note At this time, only files can be locked.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_fs_lock2(apr_hash_t **results,
-             svn_fs_t *fs,
-             apr_hash_t *targets,
-             const char *comment,
-             svn_boolean_t is_dav_comment,
-             apr_time_t expiration_date,
-             svn_boolean_t steal_lock,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool);
+svn_fs_lock_many(svn_fs_t *fs,
+                 apr_hash_t *targets,
+                 const char *comment,
+                 svn_boolean_t is_dav_comment,
+                 apr_time_t expiration_date,
+                 svn_boolean_t steal_lock,
+                 svn_fs_lock_callback_t lock_callback,
+                 void *lock_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
-/** Similar to svn_fs_lock2() but locks only a single @a path and
+/** Similar to svn_fs_lock_many() but locks only a single @a path and
  * returns the lock in @a *lock, allocated in @a pool, or an error.
  *
  * @since New in 1.2.
@@ -2652,35 +2651,30 @@ svn_fs_generate_lock_token(const char **token,
  * however, don't return error; allow the lock to be "broken" in any
  * case.  In the latter case, the token shall be @c NULL.
  *
- * The results are returned in @a *results hash where the keys are
- * <tt>const char *</tt> paths and the values are
- * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err.  @a *results will
- * always be a valid hash and in all cases the caller must ensure that
- * all errors it contains are handled to avoid leaks.
+ * For each path in @a targets @a lock_callback will be invoked
+ * passing @a lock_baton and error that apply to path.  The @a lock
+ * passed to the callback will be NULL.  @a lock_callback can be NULL
+ * in which case it is not called.
  *
  * @note #svn_fs_lock_target_t is used to allow @c NULL tokens to be
  * passed (it is not possible to pass @c NULL as a hash value
  * directly), #svn_fs_lock_target_t->current_rev is ignored.
  *
- * @note #svn_fs_lock_result_t is used to allow @c SVN_NO_ERROR to
- * be returned (it is not possible to return @c SVN_NO_ERROR as a hash
- * value directly), #svn_fs_lock_result_t->lock is always NULL.
- *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * The path passed to lock_callback will be allocated in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_fs_unlock2(apr_hash_t **results,
-               svn_fs_t *fs,
-               apr_hash_t *targets,
-               svn_boolean_t break_lock,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool);
+svn_fs_unlock_many(svn_fs_t *fs,
+                   apr_hash_t *targets,
+                   svn_boolean_t break_lock,
+                   svn_fs_lock_callback_t lock_callback,
+                   void *lock_baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
-/** Similar to svn_fs_unlock2() but only unlocks a single path.
+/** Similar to svn_fs_unlock_many() but only unlocks a single path.
  *
  * @since New in 1.2.
  */

@@ -426,9 +426,6 @@ struct report_context_t {
      files/dirs? */
   svn_boolean_t add_props_included;
 
-  /* Path -> lock token mapping. */
-  apr_hash_t *lock_path_tokens;
-
   /* Path -> const char *repos_relpath mapping */
   apr_hash_t *switched_paths;
 
@@ -683,9 +680,6 @@ create_file_baton(file_baton_t **new_file,
   /* Sane defaults */
   file->base_rev = SVN_INVALID_REVNUM;
   file->copyfrom_rev = SVN_INVALID_REVNUM;
-
-  file->lock_token = svn_hash_gets(ctx->lock_path_tokens,
-                                   file->relpath);
 
   *new_file = file;
 
@@ -2198,13 +2192,6 @@ set_path(void *report_baton,
 
   SVN_ERR(svn_stream_write(report->body_template, buf->data, &buf->len));
 
-  if (lock_token)
-    {
-      svn_hash_sets(report->lock_path_tokens,
-                    apr_pstrdup(report->pool, path),
-                    apr_pstrdup(report->pool, lock_token));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -2274,12 +2261,6 @@ link_path(void *report_baton,
   path = apr_pstrdup(report->pool, path);
   link = apr_pstrdup(report->pool, link + 1);
   svn_hash_sets(report->switched_paths, path, link);
-
-  if (lock_token)
-    {
-      svn_hash_sets(report->lock_path_tokens,
-                    path, apr_pstrdup(report->pool, lock_token));
-    }
 
   if (!path[0] && report->update_target[0])
     {
@@ -2766,7 +2747,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->ignore_ancestry = ignore_ancestry;
   report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
-  report->lock_path_tokens = apr_hash_make(report->pool);
   report->switched_paths = apr_hash_make(report->pool);
 
   report->source = src_path;
