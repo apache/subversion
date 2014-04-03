@@ -307,6 +307,17 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1581810, 1584342
+   Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
+   Justification:
+     Regression from 1.7, makes using locks hard.
+   Notes:
+     r1584342 is the fix, r1581810 is a test that fails with a 1.6.16 server.
+   Branch:
+     ^/subversion/branches/1.8.x-r1584342
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
