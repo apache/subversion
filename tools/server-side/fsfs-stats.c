@@ -1405,6 +1405,7 @@ read_log_rev_or_packfile(fs_t *fs,
   apr_off_t offset = 0;
   int i;
   svn_fs_fs__revision_file_t *rev_file;
+  fs_fs_data_t *ffd = fs->fs->fsap_data;
 
   /* we will process every revision in the rev / pack file */
   for (i = 0; i < count; ++i)
@@ -1437,7 +1438,8 @@ read_log_rev_or_packfile(fs_t *fs,
 
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs->fs, rev_file, base,
-                                          offset, iterpool));
+                                          offset, ffd->p2l_page_size,
+                                          iterpool));
 
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)

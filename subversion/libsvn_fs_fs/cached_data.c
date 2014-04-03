@@ -2918,10 +2918,13 @@ block_read(void **result,
    */
   do
     {
+      svn_error_t *err;
+
       /* fetch list of items in the block surrounding OFFSET */
-      svn_error_t *err
-        = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
-                                      revision, offset, scratch_pool);
+      block_start = offset - (offset % ffd->block_size);
+      err = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
+                                        revision, block_start,
+                                        ffd->block_size, scratch_pool);
 
       /* if the revision got packed in the meantime and we still need
        * to actually read some item, we retry the whole process */
