@@ -411,7 +411,6 @@ deltify_etc(const svn_commit_info_t *commit_info,
     {
       apr_pool_t *subpool = svn_pool_create(scratch_pool);
       apr_hash_t *targets = apr_hash_make(subpool);
-      apr_hash_t *results;
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first(subpool, deb->lock_tokens); hi;
@@ -428,14 +427,9 @@ deltify_etc(const svn_commit_info_t *commit_info,
       /* We may get errors here if the lock was broken or stolen
          after the commit succeeded.  This is fine and should be
          ignored. */
-      svn_error_clear(svn_repos_fs_unlock2(&results, deb->repos, targets,
-                                           FALSE, subpool, subpool));
-
-      for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
-        {
-          svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-          svn_error_clear(result->err);
-        }
+      svn_error_clear(svn_repos_fs_unlock_many(deb->repos, targets, FALSE,
+                                               NULL, NULL,
+                                               subpool, subpool));
 
       svn_pool_destroy(subpool);
     }
@@ -1381,6 +1375,36 @@ svn_ra_local__get_location_segments(svn_ra_session_t *session,
                                           NULL, NULL, pool);
 }
 
+struct lock_baton_t {
+  svn_ra_lock_callback_t lock_func;
+  void *lock_baton;
+  const char *fs_path;
+  svn_boolean_t is_lock;
+  svn_error_t *cb_err;
+};
+
+/* Implements svn_fs_lock_callback_t.  Used by svn_ra_local__lock and
+   svn_ra_local__unlock to forward to supplied callback and record any
+   callback error. */
+static svn_error_t *
+lock_cb(void *lock_baton,
+        const char *path,
+        const svn_lock_t *lock,
+        svn_error_t *fs_err,
+        apr_pool_t *pool)
+{
+  struct lock_baton_t *b = lock_baton;
+
+  if (b && !b->cb_err && b->lock_func)
+    {
+      path = svn_fspath__skip_ancestor(b->fs_path, path);
+      b->cb_err = b->lock_func(b->lock_baton, path, b->is_lock, lock, fs_err,
+                               pool);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 svn_ra_local__lock(svn_ra_session_t *session,
                    apr_hash_t *path_revs,
@@ -1391,10 +1415,10 @@ svn_ra_local__lock(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   apr_hash_index_t *hi;
-  svn_error_t *err, *err_cb = SVN_NO_ERROR;
+  svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   /* A username is absolutely required to lock a path. */
   SVN_ERR(get_username(session, pool));
@@ -1412,31 +1436,23 @@ svn_ra_local__lock(svn_ra_session_t *session,
       svn_hash_sets(targets, abs_path, target);
     }
 
-  err = svn_repos_fs_lock2(&results, sess->repos, targets, comment,
-                           FALSE /* not DAV comment */,
-                           0 /* no expiration */, force,
-                           pool, iterpool);
+  baton.lock_func = lock_func;
+  baton.lock_baton = lock_baton;
+  baton.fs_path = sess->fs_path->data;
+  baton.is_lock = TRUE;
+  baton.cb_err = SVN_NO_ERROR;
 
-  /* Make sure we handle all locking errors in results hash. */
-  for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+  err = svn_repos_fs_lock_many(sess->repos, targets, comment,
+                               FALSE /* not DAV comment */,
+                               0 /* no expiration */, force,
+                               lock_cb, &baton,
+                               pool, pool);
 
-      svn_pool_clear(iterpool);
-
-      path = svn_fspath__skip_ancestor(sess->fs_path->data, path);
-      if (!err_cb)
-        err_cb = lock_func(lock_baton, path, TRUE, result->lock, result->err,
-                           iterpool);
-      svn_error_clear(result->err);
-    }
-
-  svn_pool_destroy(iterpool);
-  if (err && err_cb)
-    svn_error_compose(err, err_cb);
+  if (err && baton.cb_err)
+    svn_error_compose(err, baton.cb_err);
   else if (!err)
-    err = err_cb;
+    err = baton.cb_err;
+
   return svn_error_trace(err);
 }
 
@@ -1450,10 +1466,10 @@ svn_ra_local__unlock(svn_ra_session_t *session,
                      apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   apr_hash_index_t *hi;
-  svn_error_t *err, *err_cb = SVN_NO_ERROR;
+  svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR(get_username(session, pool));
@@ -1468,29 +1484,20 @@ svn_ra_local__unlock(svn_ra_session_t *session,
       svn_hash_sets(targets, abs_path, token);
     }
 
-  err = svn_repos_fs_unlock2(&results, sess->repos, targets, force,
-                             pool, iterpool);
+  baton.lock_func = lock_func;
+  baton.lock_baton = lock_baton;
+  baton.fs_path = sess->fs_path->data;
+  baton.is_lock = FALSE;
+  baton.cb_err = SVN_NO_ERROR;
 
-  /* Make sure we handle all locking errors in results hash. */
-  for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+  err = svn_repos_fs_unlock_many(sess->repos, targets, force, lock_cb, &baton,
+                                 pool, pool);
 
-      svn_pool_clear(iterpool);
-
-      path = svn_fspath__skip_ancestor(sess->fs_path->data, path);
-      if (lock_func && !err_cb)
-        err_cb = lock_func(lock_baton, path, FALSE, NULL, result->err,
-                           iterpool);
-      svn_error_clear(result->err);
-    }
-
-  svn_pool_destroy(iterpool);
-  if (err && err_cb)
-    svn_error_compose(err, err_cb);
+  if (err && baton.cb_err)
+    svn_error_compose(err, baton.cb_err);
   else if (!err)
-    err = err_cb;
+    err = baton.cb_err;
+
   return svn_error_trace(err);
 }
 

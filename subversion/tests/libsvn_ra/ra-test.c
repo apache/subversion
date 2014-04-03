@@ -374,6 +374,11 @@ tunnel_callback_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+struct lock_result_t {
+  svn_lock_t *lock;
+  svn_error_t *err;
+};
+
 struct lock_baton_t {
   apr_hash_t *results;
   apr_pool_t *pool;
@@ -389,8 +394,8 @@ lock_cb(void *baton,
         apr_pool_t *pool)
 {
   struct lock_baton_t *b = baton;
-  svn_fs_lock_result_t *result = apr_palloc(b->pool,
-                                            sizeof(svn_fs_lock_result_t));
+  struct lock_result_t *result = apr_palloc(b->pool,
+                                            sizeof(struct lock_result_t));
 
   if (lock)
     {
@@ -417,7 +422,7 @@ expect_lock(const char *path,
             apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && result->lock && !result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -432,7 +437,7 @@ expect_error(const char *path,
              apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && !result->lock && result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -447,7 +452,7 @@ expect_unlock(const char *path,
               apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && !result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -462,7 +467,7 @@ expect_unlock_error(const char *path,
                     apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -479,7 +484,7 @@ lock_test(const svn_test_opts_t *opts,
   apr_hash_t *lock_targets = apr_hash_make(pool);
   apr_hash_t *unlock_targets = apr_hash_make(pool);
   svn_revnum_t rev = 1;
-  svn_fs_lock_result_t *result;
+  struct lock_result_t *result;
   struct lock_baton_t baton;
   apr_hash_index_t *hi;
 
