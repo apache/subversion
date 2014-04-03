@@ -207,6 +207,8 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_SINGLE_CONN     268
 #define SVNSERVE_OPT_CLIENT_SPEED    269
 #define SVNSERVE_OPT_VIRTUAL_HOST    270
+#define SVNSERVE_OPT_MIN_THREADS     271
+#define SVNSERVE_OPT_MAX_THREADS     272
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -304,6 +306,33 @@ static const apr_getopt_option_t svnserve__options[] =
      * ### this option never exists when --service exists. */
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
+    {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
+     N_("Minimum number of server threads, even if idle.\n"
+        "                             "
+        "Caped to max-threads; minimum value is 0.\n"
+        "                             "
+        "Default is 1.\n"
+        "                             "
+        "[used only with --threads]")},
+#if (APR_SIZEOF_VOIDP <= 4)
+    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
+     N_("Maximum number of server threads, even if there\n"
+        "                             "
+        "are more connections.  Minimum value is 1.\n"
+        "                             "
+        "Default is 64.\n"
+        "                             "
+        "[used only with --threads]")},
+#else
+    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
+     N_("Maximum number of server threads, even if there\n"
+        "                             "
+        "are more connections.  Minimum value is 1.\n"
+        "                             "
+        "Default is 256.\n"
+        "                             "
+        "[used only with --threads]")},
+#endif
 #endif
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
@@ -656,7 +685,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *pid_filename = NULL;
   const char *log_filename = NULL;
   svn_node_kind_t kind;
-
+  apr_size_t min_thread_count = THREADPOOL_MIN_SIZE;
+  apr_size_t max_thread_count = THREADPOOL_MAX_SIZE;
 #ifdef SVN_HAVE_SASL
   SVN_ERR(cyrus_init(pool));
 #endif
@@ -842,6 +872,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 params.error_check_interval = bandwidth * 120;
               }
           }
+          break;
+
+        case SVNSERVE_OPT_MIN_THREADS:
+          min_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+          break;
+
+        case SVNSERVE_OPT_MAX_THREADS:
+          max_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
 
 #ifdef WIN32
@@ -1181,10 +1219,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (handling_mode == connection_mode_thread)
     {
-      /* create the thread pool */
+      /* create the thread pool with a valid range of threads */
+      if (max_thread_count < 1)
+        max_thread_count = 1;
+      if (min_thread_count > max_thread_count)
+        min_thread_count = max_thread_count;
+
       status = apr_thread_pool_create(&threads,
-                                      THREADPOOL_MIN_SIZE,
-                                      THREADPOOL_MAX_SIZE,
+                                      min_thread_count,
+                                      max_thread_count,
                                       pool);
       if (status)
         {
