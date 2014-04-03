@@ -914,7 +914,7 @@ svn_fs_fs__check_rep(representation_t *rep,
                                  _("No representation found at offset %s "
                                    "for item %" APR_UINT64_T_FMT
                                    " in revision %ld"),
-                                 apr_off_t_toa(pool, entry->offset),
+                                 apr_off_t_toa(pool, offset),
                                  rep->item_index, rep->revision);
 
       SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
