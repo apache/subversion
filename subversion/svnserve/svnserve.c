@@ -270,7 +270,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is 16.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1,
      N_("enable or disable caching of deltas between older\n"
         "                             "
@@ -278,13 +278,13 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is yes.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1,
      N_("enable or disable caching of file contents\n"
         "                             "
         "Default is yes.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"cache-revprops", SVNSERVE_OPT_CACHE_REVPROPS, 1,
      N_("enable or disable caching of revision properties.\n"
         "                             "
@@ -292,7 +292,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is no.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
      N_("Optimize network handling based on the assumption\n"
         "                             "
@@ -339,9 +339,9 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[mode: daemon]")},
     {"single-thread",    SVNSERVE_OPT_SINGLE_CONN, 0,
-     N_("handle one connection at a time in the parent process\n"
+     N_("handle one connection at a time in the parent\n"
         "                             "
-        "(useful for debugging)")},
+        "process (useful for debugging)")},
     {"log-file",         SVNSERVE_OPT_LOG_FILE, 1,
      N_("svnserve log file")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
