@@ -136,6 +136,15 @@ svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
                                      svn_fs_fs__p2l_entry_t *entry,
                                      apr_pool_t *pool);
 
+/* Set *NEXT_OFFSET to the first offset behind the last entry in the
+ * phys-to-log proto index file PROTO_INDEX.  This will be 0 for empty
+ * index files.  Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
+                                       apr_file_t *proto_index,
+                                       apr_pool_t *pool);
+
 /* Use the proto index file stored at PROTO_FILE_NAME and construct the
  * final phys-to-log index file at FILE_NAME.  Entries without a valid
  * revision will be assigned to the REVISION given here.
