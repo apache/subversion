@@ -2540,8 +2540,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                svn_error_t *fs_err,
                                                apr_pool_t *pool);
 
-/** Lock the paths in @a targets in @a fs, and set @a *results to the
- * locks or errors representing each new lock.
+/** Lock the paths in @a targets in @a fs.
  *
  * @warning You may prefer to use svn_repos_fs_lock_many() instead,
  * which see.
@@ -2633,8 +2632,7 @@ svn_fs_generate_lock_token(const char **token,
                            apr_pool_t *pool);
 
 
-/** Remove the locks on the paths in @a targets in @a fs, and return
- * the results in @a *results.
+/** Remove the locks on the paths in @a targets in @a fs.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
  * of the @a targets hash with the corresponding lock tokens as

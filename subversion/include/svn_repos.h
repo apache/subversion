@@ -2197,9 +2197,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  *
  * If an error occurs when running the post-lock hook the error is
  * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
- * caller sees this error, it knows that some locks succeeded.  In
- * all cases the caller must handle all errors in @a results to avoid
- * leaks.
+ * caller sees this error, it knows that some locks succeeded.
  *
  * The pre-lock hook may cause a different token to be used for the
  * lock, instead of the token supplied; see the pre-lock-hook
@@ -2255,8 +2253,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * If an error occurs when running the post-unlock hook, return the
  * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
  * If the caller sees this error, it knows that some unlocks
- * succeeded.  In all cases the caller must handle all errors in @a
- * *results to avoid leaks.
+ * succeeded.
  *
  * The path passed to @a lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
