@@ -2178,6 +2178,58 @@ def non_root_locks(sbox):
   expected_status.tweak('A/D/G/pi', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def many_locks_hooks(sbox):
+  "many locks with hooks"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Prevent locking '/A/D/G/pi'.
+  svntest.main.create_python_hook_script(os.path.join(sbox.repo_dir,
+                                                      'hooks', 'pre-lock'),
+                                         'import sys\n'
+                                         'if sys.argv[2] == "/A/D/G/pi":\n'
+                                         '  sys.exit(1)\n'
+                                         'sys.exit(0)\n')
+
+  # Prevent unlocking '/A/mu'.
+  svntest.main.create_python_hook_script(os.path.join(sbox.repo_dir,
+                                                      'hooks', 'pre-unlock'),
+                                         'import sys\n'
+                                         'if sys.argv[2] == "/A/mu":\n'
+                                         '  sys.exit(1)\n'
+                                         'sys.exit(0)\n')
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      ".* locked",
+                                      "svn: warning: W165001: .*", 0,
+                                      'lock',
+                                      sbox.ospath('iota'),
+                                      sbox.ospath('A/mu'),
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/D/G/pi'),
+                                      sbox.ospath('A/D/G/rho'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha', 'A/D/G/rho',
+                        writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      ".* unlocked",
+                                      "svn: warning: W165001: .*", 0,
+                                      'unlock',
+                                      sbox.ospath('iota'),
+                                      sbox.ospath('A/mu'),
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/D/G/rho'))
+
+  expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/G/rho',
+                        writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2238,6 +2290,7 @@ test_list = [ None,
               dav_lock_timeout,
               create_dav_lock_timeout,
               non_root_locks,
+              many_locks_hooks,
             ]
 
 if __name__ == '__main__':
