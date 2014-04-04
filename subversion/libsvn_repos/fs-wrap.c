@@ -617,14 +617,18 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
                          is_dav_comment, expiration_date, steal_lock,
                          lock_many_cb, &baton, result_pool, iterpool);
 
-  /* If there are locks and an error should we return or run the post-lock? */
-  if (!err && baton.paths->nelts)
+  /* If there are locks run the post-lock even if there is an error. */
+  if (baton.paths->nelts)
     {
-      err = svn_repos__hooks_post_lock(repos, hooks_env, baton.paths, username,
-                                       iterpool);
-      if (err)
-        err = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+      svn_error_t *perr = svn_repos__hooks_post_lock(repos, hooks_env,
+                                                     baton.paths, username,
+                                                     iterpool);
+      if (perr)
+        {
+          perr = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, perr,
                             _("Locking succeeded, but post-lock hook failed"));
+          err = svn_error_compose_create(err, perr);
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -767,13 +771,18 @@ svn_repos_fs_unlock_many(svn_repos_t *repos,
   err = svn_fs_unlock_many(repos->fs, pre_targets, break_lock,
                            lock_many_cb, &baton, result_pool, iterpool);
 
-  if (!err && baton.paths->nelts)
+  /* If there are 'unlocks' run the post-unlock even if there is an error. */
+  if (baton.paths->nelts)
     {
-      err = svn_repos__hooks_post_unlock(repos, hooks_env, baton.paths,
-                                         username, iterpool);
-      if (err)
-        err = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
+      svn_error_t *perr = svn_repos__hooks_post_unlock(repos, hooks_env,
+                                                       baton.paths,
+                                                       username, iterpool);
+      if (perr)
+        {
+          perr = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, perr,
                            _("Unlock succeeded, but post-unlock hook failed"));
+          err = svn_error_compose_create(err, perr);
+        }
     }
 
   svn_pool_destroy(iterpool);
