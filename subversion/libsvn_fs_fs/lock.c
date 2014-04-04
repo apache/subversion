@@ -1171,8 +1171,6 @@ unlock_single(svn_fs_t *fs,
   svn_sort__item_t item;
   apr_array_header_t *targets = apr_array_make(pool, 1,
                                                sizeof(svn_sort__item_t));
-  svn_error_t *err;
-
   item.key = lock->path;
   item.klen = strlen(item.key);
   item.value = (char*)lock->token;
