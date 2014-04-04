@@ -167,7 +167,7 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
   if (err)
     return svn_error_compose_create(err, svn_fs_abort_txn(txn, pool));
 
-  /* We have API promise that *TXN_P is unaffected on faulure. */
+  /* We have API promise that *TXN_P is unaffected on failure. */
   *txn_p = txn;
   return SVN_NO_ERROR;
 }
