@@ -442,9 +442,7 @@ svn_client_info4(const char *abspath_or_url,
                                   pool);
 
           /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
-          if (err &&
-              (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED
-               || err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
+          if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
             {
               svn_error_clear(err);
               locks = apr_hash_make(pool); /* use an empty hash */
