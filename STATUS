@@ -318,6 +318,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1583977
+   Do not leave dead transaction if commit was blocked by start-commit hook.
+   Justification:
+     Leaving dead transaction is not good thing. Regression from 1.7.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
