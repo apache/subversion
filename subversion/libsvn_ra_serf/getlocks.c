@@ -234,6 +234,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url, *rel_path;
+  svn_error_t *err;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
@@ -260,7 +261,14 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
+  
+  /* Wrap the server generated error for an unsupported report with the
+     documented error for this ra function. */
+  if (svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE))
+    err = svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
+    
+  SVN_ERR(err);
 
   /* We get a 404 when a path doesn't exist in HEAD, but it might
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
