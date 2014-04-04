@@ -1758,6 +1758,26 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->generate_lock_token(token, fs, pool));
 }
 
+svn_fs_lock_target_t *
+svn_fs_lock_target_create(const char *token,
+                          svn_revnum_t current_rev,
+                          apr_pool_t *pool)
+{
+  svn_fs_lock_target_t *target = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+
+  target->token = token;
+  target->current_rev = current_rev;
+
+  return target;
+}
+
+void
+svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
+                             const char *token)
+{
+  target->token = token;
+}
+
 svn_error_t *
 svn_fs_unlock_many(svn_fs_t *fs,
                    apr_hash_t *targets,

@@ -2517,12 +2517,23 @@ svn_fs_set_uuid(svn_fs_t *fs,
  *
  * @since New in 1.9.
  */
-typedef struct svn_fs_lock_target_t
-{
-  const char *token;
-  svn_revnum_t current_rev;
+typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-} svn_fs_lock_target_t;
+/* Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
+ * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
+ *
+ * @since New in 1.9.
+ **/
+svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
+                                                svn_revnum_t current_rev,
+                                                apr_pool_t *pool);
+
+/* Update @a target changing the token to @a token, @a token can be NULL.
+ *
+ * @since New in 1.9.
+ **/
+void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
+                                  const char *token);
 
 /** The callback invoked by svn_fs_lock_many() and svn_fs_unlock_many().
  *

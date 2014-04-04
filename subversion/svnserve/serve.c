@@ -2787,8 +2787,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       svn_revnum_t current_rev;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
                                                svn_ra_svn_item_t);
-      svn_fs_lock_target_t *target
-        = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+      svn_fs_lock_target_t *target;
 
       svn_pool_clear(subpool);
 
@@ -2802,8 +2801,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
-      target->token = NULL;
-      target->current_rev = current_rev;
+      target = svn_fs_lock_target_create(NULL, current_rev, pool);
 
       /* We could check for duplicate paths and reject the request? */
       svn_hash_sets(targets, full_path, target);
