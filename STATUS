@@ -299,6 +299,7 @@ Candidate changes:
      Makes --enable-optimize and --enable-debug work with Solaris CC.
    Votes:
      +1: philip
+     +0.5: rhuijben (looks good, can't test)
 
  * r1583580
    Skip a test that fails when run as root.
@@ -316,14 +317,14 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1584342
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1583977
    Do not leave dead transaction if commit was blocked by start-commit hook.
    Justification:
      Leaving dead transaction is not good thing. Regression from 1.7.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * ^/subversion/branches/1.8.x-serf-no-lock-support
    Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
