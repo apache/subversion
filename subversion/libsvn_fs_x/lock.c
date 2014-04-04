@@ -997,6 +997,7 @@ struct unlock_baton {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
+  /* Set skip_check TRUE to prevent the checks that set infos[].fs_err. */
   svn_boolean_t skip_check;
   svn_boolean_t break_lock;
   apr_pool_t *result_pool;
@@ -1170,6 +1171,8 @@ unlock_single(svn_fs_t *fs,
   svn_sort__item_t item;
   apr_array_header_t *targets = apr_array_make(pool, 1,
                                                sizeof(svn_sort__item_t));
+  svn_error_t *err;
+
   item.key = lock->path;
   item.klen = strlen(item.key);
   item.value = (char*)lock->token;
@@ -1180,6 +1183,7 @@ unlock_single(svn_fs_t *fs,
   ub.skip_check = TRUE;
   ub.result_pool = pool;
 
+  /* No ub.infos[].fs_err error because skip_check is TRUE. */
   SVN_ERR(unlock_body(&ub, pool));
 
   return SVN_NO_ERROR;
