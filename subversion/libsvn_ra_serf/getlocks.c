@@ -241,6 +241,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url, *rel_path;
+  svn_error_t *err;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
@@ -266,22 +267,33 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
-  handler->no_fail_on_http_failure_status = TRUE;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
+
+  if (err)
+    {
+      if (svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE))
+        {
+          /* The server told us that it doesn't support this report type.
+             We return the documented error for svn_ra_get_locks(), but
+             with the original error report */
+          return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
+        }
+      else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          /* File doesn't exist in HEAD: Not an error */
+          svn_error_clear(err);
+        }
+      else
+        return svn_error_trace(err);
+    }
 
   /* We get a 404 when a path doesn't exist in HEAD, but it might
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
   if (handler->sline.code != 200
       && handler->sline.code != 404)
     {
-      svn_error_t *err = svn_ra_serf__unexpected_status(handler);
-
-      if (handler->sline.code == 500 || handler->sline.code == 501)
-        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                                _("Server does not support locking features"));
-
-      return svn_error_trace(err);
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   *locks = lock_ctx->hash;
