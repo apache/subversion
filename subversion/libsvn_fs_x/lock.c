@@ -1031,6 +1031,7 @@ struct unlock_info_t {
   const char *path;
   const char *component;
   svn_error_t *fs_err;
+  svn_boolean_t done;
   int components;
 };
 
@@ -1116,6 +1117,7 @@ unlock_body(void *baton, apr_pool_t *pool)
               if (info->components == i)
                 {
                   SVN_ERR(delete_lock(ub->fs->path, info->path, iterpool));
+                  info->done = TRUE;
                 }
               else if (info->components > i)
                 {
@@ -1250,8 +1252,15 @@ svn_fs_x__lock(svn_fs_t *fs,
       struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
                                                 struct lock_info_t);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, info->path, info->lock,
-                               info->fs_err, scratch_pool);
+        {
+          if (!info->lock && !info->fs_err)
+            info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+                                             0, _("Failed to lock '%s'"),
+                                             info->path);
+                                             
+          cb_err = lock_callback(lock_baton, info->path, info->lock,
+                                 info->fs_err, scratch_pool);
+        }
       svn_error_clear(info->fs_err);
     }
 
@@ -1331,8 +1340,14 @@ svn_fs_x__unlock(svn_fs_t *fs,
       struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
                                                   struct unlock_info_t);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
-                               scratch_pool);
+        {
+          if (!info->done && !info->fs_err)
+            info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+                                             0, _("Failed to unlock '%s'"),
+                                             info->path);
+          cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
+                                 scratch_pool);
+        }
       svn_error_clear(info->fs_err);
     }
 
