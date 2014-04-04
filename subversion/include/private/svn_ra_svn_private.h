@@ -314,11 +314,13 @@ svn_ra_svn__write_cmd_response(svn_ra_svn_conn_t *conn,
                                apr_pool_t *pool,
                                const char *fmt, ...);
 
-/** Write an unsuccessful command response over the network. */
+/** Write an unsuccessful command response over the network.
+ *
+ * @note This does not clear @a err. */
 svn_error_t *
 svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
-                              svn_error_t *err);
+                              const svn_error_t *err);
 
 /**
  * @}
