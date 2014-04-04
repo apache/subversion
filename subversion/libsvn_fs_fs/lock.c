@@ -715,7 +715,7 @@ svn_fs_fs__allow_locked_operation(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Baton used for lock_body below. */
+/* The effective arguments for lock_body() below. */
 struct lock_baton {
   svn_fs_t *fs;
   apr_array_header_t *targets;
@@ -832,9 +832,17 @@ struct lock_info_t {
   svn_error_t *fs_err;
 };
 
-/* This implements the svn_fs_fs__with_write_lock() 'body' callback
+/* The body of svn_fs_fs__lock(), which see.
+
+   BATON is a 'struct lock_baton *' holding the effective arguments.
+   BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
+   path, mapping canonical path to 'svn_fs_lock_target_t'.  Set
+   BATON->infos to an array of 'lock_info_t' holding the results.  For
+   the other arguments, see svn_fs_lock_many().
+
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
-   BATON is a 'struct lock_baton *'. */
+ */
 static svn_error_t *
 lock_body(void *baton, apr_pool_t *pool)
 {
@@ -984,6 +992,7 @@ lock_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The effective arguments for unlock_body() below. */
 struct unlock_baton {
   svn_fs_t *fs;
   apr_array_header_t *targets;
@@ -1024,6 +1033,17 @@ struct unlock_info_t {
   int components;
 };
 
+/* The body of svn_fs_fs__unlock(), which see.
+
+   BATON is a 'struct unlock_baton *' holding the effective arguments.
+   BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
+   path, mapping canonical path to (const char *) token.  Set
+   BATON->infos to an array of 'unlock_info_t' results.  For the other
+   arguments, see svn_fs_unlock_many().
+
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type, and assumes that the write lock is held.
+ */
 static svn_error_t *
 unlock_body(void *baton, apr_pool_t *pool)
 {
@@ -1137,6 +1157,10 @@ unlock_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Unlock the lock described by LOCK->path and LOCK->token in FS.
+
+   This assumes that the write lock is held.
+ */
 static svn_error_t *
 unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
