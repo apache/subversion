@@ -2230,7 +2230,6 @@ def many_locks_hooks(sbox):
 
 
 
-@XFail()
 @Issue(3515)
 @SkipUnless(svntest.main.is_ra_type_dav)
 def dav_lock_refresh(sbox):
