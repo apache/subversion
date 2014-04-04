@@ -337,7 +337,7 @@ Candidate changes:
      The equivalent patch on trunk was part of a complete error handling
      refactoring.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1584576, r1584592, r1584745
    Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
