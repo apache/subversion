@@ -409,7 +409,7 @@ svn_error_clear(svn_error_t *err)
 }
 
 svn_boolean_t
-svn_error__is_tracing_link(svn_error_t *err)
+svn_error__is_tracing_link(const svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
   /* ### A strcmp()?  Really?  I think it's the best we can do unless
@@ -640,7 +640,7 @@ svn_handle_warning(FILE *stream, svn_error_t *err)
 }
 
 void
-svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
+svn_handle_warning2(FILE *stream, const svn_error_t *err, const char *prefix)
 {
   char buf[256];
 #ifdef SVN_DEBUG
@@ -663,7 +663,7 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 }
 
 const char *
-svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
+svn_err_best_message(const svn_error_t *err, char *buf, apr_size_t bufsize)
 {
   /* Skip over any trace records.  */
   while (svn_error__is_tracing_link(err))
