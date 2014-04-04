@@ -2868,9 +2868,10 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           /* No result?  Something really odd happened, create a
              placeholder error so that any other results can be
              reported in the correct order. */
-          result = apr_palloc(subpool, sizeof(struct lock_result_t));
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
           result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
                                           _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
         }
 
       if (result->err)
@@ -3037,9 +3038,10 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           /* No result?  Something really odd happened, create a
              placeholder error so that any other results can be
              reported in the correct order. */
-          result = apr_palloc(subpool, sizeof(struct lock_result_t));
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
           result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
                                           _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
         }
 
       if (result->err)
