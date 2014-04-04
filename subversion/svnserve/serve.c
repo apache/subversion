@@ -2864,8 +2864,14 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(subpool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, subpool,
@@ -3027,8 +3033,14 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(subpool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, pool, result->err);
