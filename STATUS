@@ -325,6 +325,19 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * ^/subversion/branches/1.8.x-serf-no-lock-support
+   Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
+   don't implement the locks report.
+   Justification:
+     svn ls -v (or the api equivalent) should just work. Regression against
+     <= 1.7 and perhaps in some cases early 1.8.x that didn't properly
+     check for errors.
+   Notes:
+     The equivalent patch on trunk was part of a complete error handling
+     refactoring.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
