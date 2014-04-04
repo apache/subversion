@@ -70,6 +70,7 @@ delete_lock_and_token(const char *lock_token,
 }
 
 
+/* The effective arguments for txn_body_lock() below. */
 struct lock_args
 {
   svn_lock_t **lock_p;
@@ -83,6 +84,15 @@ struct lock_args
 };
 
 
+/* The body of svn_fs_base__lock(), which see.
+
+   BATON is a 'struct lock_args *' holding the effective arguments.
+   BATON->path is the canonical abspath to lock.  Set *BATON->lock_p
+   to the resulting lock.  For the other arguments, see
+   svn_fs_lock_many().
+
+   This implements the svn_fs_base__retry_txn() 'body' callback type.
+ */
 static svn_error_t *
 txn_body_lock(void *baton, trail_t *trail)
 {
@@ -276,6 +286,7 @@ svn_fs_base__generate_lock_token(const char **token,
 }
 
 
+/* The effective arguments for txn_body_unlock() below. */
 struct unlock_args
 {
   const char *path;
@@ -284,6 +295,14 @@ struct unlock_args
 };
 
 
+/* The body of svn_fs_base__unlock(), which see.
+
+   BATON is a 'struct unlock_args *' holding the effective arguments.
+   BATON->path is the canonical path and BATON->token is the token.
+   For the other arguments, see svn_fs_unlock_many().
+
+   This implements the svn_fs_base__retry_txn() 'body' callback type.
+ */
 static svn_error_t *
 txn_body_unlock(void *baton, trail_t *trail)
 {
