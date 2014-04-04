@@ -105,7 +105,7 @@ svn_error_symbolic_name(apr_status_t statcode);
  * @note @a buf and @a bufsize are provided in the interface so that
  * this function is thread-safe and yet does no allocation.
  */
-const char *svn_err_best_message(svn_error_t *err,
+const char *svn_err_best_message(const svn_error_t *err,
                                  char *buf,
                                  apr_size_t bufsize);
 
@@ -297,11 +297,13 @@ svn_handle_error(svn_error_t *error,
  *
  * @a error may not be @c NULL.
  *
+ * @note This does not clear @a error.
+ *
  * @since New in 1.2.
  */
 void
 svn_handle_warning2(FILE *stream,
-                    svn_error_t *error,
+                    const svn_error_t *error,
                     const char *prefix);
 
 /** Like svn_handle_warning2() but with @c prefix set to "svn: "
