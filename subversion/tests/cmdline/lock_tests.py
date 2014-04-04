@@ -2242,7 +2242,8 @@ def dav_lock_refresh(sbox):
   sbox.build(create_wc = False)
 
   # Acquire lock on 'iota'
-  svntest.main.run_lock_helper(sbox.repo_dir, 'iota', 'jconstant', 3600)
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     sbox.repo_url + '/iota')
 
   # Try to refresh lock using 'If' header
   loc = urlparse(sbox.repo_url)
@@ -2255,7 +2256,7 @@ def dav_lock_refresh(sbox):
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
   lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
     'If': '(<' + lock_token + '>)',
     'Timeout': 'Second-7200'
   }
