@@ -339,14 +339,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1584576, r1584592
+ * r1584576, r1584592, r1584745
    Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
    Justification:
      Without this patch generic DAV clients can not refresh their own locks,
      causing them to loose their locks.
    Notes:
      Patch needed, because a plain merge triggers a text conflict while
-     removing the XFail marker from the test.
+     removing the XFail marker from the test. r1584745 makes the test code
+     compatible with 1.8.
    Branch:
      ^/subversion/branches/1.8.x-r1584592
    Votes:
