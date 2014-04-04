@@ -598,7 +598,7 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
 
       target = svn__apr_hash_index_val(hi);
       if (*new_token)
-        target->token = new_token;
+        svn_fs_lock_target_set_token(target, new_token);
       svn_hash_sets(pre_targets, path, target);
     }
 
@@ -673,13 +673,12 @@ svn_repos_fs_lock(svn_lock_t **lock,
                   apr_pool_t *pool)
 {
   apr_hash_t *targets = apr_hash_make(pool);
-  svn_fs_lock_target_t target; 
+  svn_fs_lock_target_t *target = svn_fs_lock_target_create(token, current_rev,
+                                                           pool); 
   svn_error_t *err;
   struct lock_baton_t baton = {0};
 
-  target.token = token;
-  target.current_rev = current_rev;
-  svn_hash_sets(targets, path, &target);
+  svn_hash_sets(targets, path, target);
 
   err = svn_repos_fs_lock_many(repos, targets, comment, is_dav_comment,
                                expiration_date, steal_lock, lock_cb, &baton,

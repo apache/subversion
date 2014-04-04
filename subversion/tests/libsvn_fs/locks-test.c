@@ -888,7 +888,7 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   const char *conflict;
   svn_revnum_t newrev;
   svn_fs_access_t *access;
-  svn_fs_lock_target_t target;
+  svn_fs_lock_target_t *target;
   struct lock_many_baton_t baton;
   apr_hash_t *lock_paths, *unlock_paths;
   apr_hash_index_t *hi;
@@ -910,18 +910,17 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   baton.pool = pool;
   lock_paths = apr_hash_make(pool);
   unlock_paths = apr_hash_make(pool);
-  target.token = NULL;
-  target.current_rev = newrev;
+  target = svn_fs_lock_target_create(NULL, newrev, pool);
 
-  svn_hash_sets(lock_paths, "/A/B/E/alpha", &target);
-  svn_hash_sets(lock_paths, "/A/B/E/beta", &target);
-  svn_hash_sets(lock_paths, "/A/B/E/zulu", &target);
-  svn_hash_sets(lock_paths, "/A/BB/mu", &target);
-  svn_hash_sets(lock_paths, "/A/BBB/mu", &target);
-  svn_hash_sets(lock_paths, "/A/D/G/pi", &target);
-  svn_hash_sets(lock_paths, "/A/D/G/rho", &target);
-  svn_hash_sets(lock_paths, "/A/mu", &target);
-  svn_hash_sets(lock_paths, "/X/zulu", &target);
+  svn_hash_sets(lock_paths, "/A/B/E/alpha", target);
+  svn_hash_sets(lock_paths, "/A/B/E/beta", target);
+  svn_hash_sets(lock_paths, "/A/B/E/zulu", target);
+  svn_hash_sets(lock_paths, "/A/BB/mu", target);
+  svn_hash_sets(lock_paths, "/A/BBB/mu", target);
+  svn_hash_sets(lock_paths, "/A/D/G/pi", target);
+  svn_hash_sets(lock_paths, "/A/D/G/rho", target);
+  svn_hash_sets(lock_paths, "/A/mu", target);
+  svn_hash_sets(lock_paths, "/X/zulu", target);
 
   /* Lock some paths. */
   apr_hash_clear(baton.results);
