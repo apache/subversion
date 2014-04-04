@@ -1202,7 +1202,7 @@ svn_fs_x__lock(svn_fs_t *fs,
 {
   struct lock_baton lb;
   apr_array_header_t *sorted_targets;
-  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
@@ -1213,8 +1213,8 @@ svn_fs_x__lock(svn_fs_t *fs,
   if (!fs->access_ctx || !fs->access_ctx->username)
     return SVN_FS__ERR_NO_USER(fs);
 
-  /* The FS locking API allows both cannonical and non-cannonical
-     paths which means that the same cannonical path could be
+  /* The FS locking API allows both canonical and non-canonical
+     paths which means that the same canonical path could be
      represented more than once in the TARGETS hash.  We just keep
      one, choosing one with a token if possible. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
@@ -1224,13 +1224,13 @@ svn_fs_x__lock(svn_fs_t *fs,
       const svn_fs_lock_target_t *other;
 
       path = svn_fspath__canonicalize(path, result_pool);
-      other = svn_hash_gets(cannonical_targets, path);
+      other = svn_hash_gets(canonical_targets, path);
 
       if (!other || (!other->token && target->token))
-        svn_hash_sets(cannonical_targets, path, target);
+        svn_hash_sets(canonical_targets, path, target);
     }
 
-  sorted_targets = svn_sort__hash(cannonical_targets,
+  sorted_targets = svn_sort__hash(canonical_targets,
                                   svn_sort_compare_items_as_paths,
                                   scratch_pool);
 
@@ -1289,7 +1289,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
 {
   struct unlock_baton ub;
   apr_array_header_t *sorted_targets;
-  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
@@ -1307,13 +1307,13 @@ svn_fs_x__unlock(svn_fs_t *fs,
       const char *other;
 
       path = svn_fspath__canonicalize(path, result_pool);
-      other = svn_hash_gets(cannonical_targets, path);
+      other = svn_hash_gets(canonical_targets, path);
 
       if (!other)
-        svn_hash_sets(cannonical_targets, path, token);
+        svn_hash_sets(canonical_targets, path, token);
     }
 
-  sorted_targets = svn_sort__hash(cannonical_targets,
+  sorted_targets = svn_sort__hash(canonical_targets,
                                   svn_sort_compare_items_as_paths,
                                   scratch_pool);
 
