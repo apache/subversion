@@ -197,8 +197,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
   err = svn_ra_get_locks2(ras, &locks, "", rb->depth, rb->pool);
-  if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-              || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
