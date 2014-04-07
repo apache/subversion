@@ -345,7 +345,7 @@ Candidate changes:
    Justification:
      1.8 claims 0.9 support but it doesn't work.
    Branch:
-     ^/subversion/branches/1.8.x-apr-0.9.x
+     ^/subversion/branches/1.8.x-apr-0.9
    Votes:
      +1: philip, rhuijben
 
