@@ -375,7 +375,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
       svn_error_clear(err);
     }
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(cb_err);
 }
 
 
