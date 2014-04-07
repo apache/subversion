@@ -867,20 +867,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       rev, max_files_per_dir, FALSE,
                                       iterpool));
 
-      /* After completing a full shard, update 'current'.  For non-sharded
-       * repositories, update after every revision.
-       * 
-       * This "checkpoints" the progress we made so far and prevents us from
-       * starting all over again if the hotcopy process got canceled.  It is
-       * not _necessary_ to update "current" until the very end (see further
-       * below); it's a performance trade-off between different scenarios.
-       *
-       * Repositories with global IDs must do a full repo scan here to find
-       * the latest IDs.  Because that's too expensive, we don't checkpoint
-       * pre-1.4 repositories.
-       */
-      if (   (!max_files_per_dir || rev % max_files_per_dir == 0)
-          && dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+      /* After completing a full shard, update 'current'. */
+      if (max_files_per_dir && rev % max_files_per_dir == 0)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
