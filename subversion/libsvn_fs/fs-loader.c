@@ -1582,30 +1582,6 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->set_uuid(fs, uuid, pool));
 }
 
-struct lock_many_baton_t {
-  svn_fs_lock_callback_t lock_callback;
-  void *lock_baton;
-  svn_error_t *cb_err;
-};
-
-/* Implements svn_fs_lock_callback_t.  Used by svn_fs_lock_many and
-   svn_fs_unlock_many to forward to the supplied callback and record
-   any error from the callback. */
-static svn_error_t *
-lock_many_cb(void *lock_baton,
-             const char *path,
-             const svn_lock_t *lock,
-             svn_error_t *fs_err,
-             apr_pool_t *pool)
-{
-  struct lock_many_baton_t *b = lock_baton;
-
-  if (!b->cb_err)
-    b->cb_err = b->lock_callback(b->lock_baton, path, lock, fs_err, pool);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_lock_many(svn_fs_t *fs,
                  apr_hash_t *targets,
@@ -1621,7 +1597,6 @@ svn_fs_lock_many(svn_fs_t *fs,
   apr_hash_index_t *hi;
   apr_hash_t *ok_targets = apr_hash_make(scratch_pool);
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
-  struct lock_many_baton_t baton;
 
   /* Enforce that the comment be xml-escapable. */
   if (comment)
@@ -1681,19 +1656,15 @@ svn_fs_lock_many(svn_fs_t *fs,
   if (!apr_hash_count(ok_targets))
     return svn_error_trace(cb_err);
 
-  baton.lock_callback = lock_callback;
-  baton.lock_baton = lock_baton;
-  baton.cb_err = cb_err;
-
   err = fs->vtable->lock(fs, ok_targets, comment, is_dav_comment,
                          expiration_date, steal_lock,
-                         lock_many_cb, &baton,
+                         lock_callback, lock_baton,
                          result_pool, scratch_pool);
 
-  if (err && baton.cb_err)
-    svn_error_compose(err, baton.cb_err);
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
   else if (!err)
-    err = baton.cb_err;
+    err = cb_err;
 
   return svn_error_trace(err);
 }
