@@ -98,7 +98,7 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\. 2\."]
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.[12][0-9] 1\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 

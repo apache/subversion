@@ -78,6 +78,7 @@ void svn_hash__clear(struct apr_hash_t *ht);
 #if !APR_VERSION_AT_LEAST(1,0,0)
 #define APR_UINT64_C(val) UINT64_C(val)
 #define APR_FPROT_OS_DEFAULT APR_OS_DEFAULT
+#define apr_hash_make_custom(pool,hash_func) apr_hash_make(pool)
 #endif
 
 #if !APR_VERSION_AT_LEAST(1,3,0)
