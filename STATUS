@@ -342,8 +342,9 @@ Candidate changes:
      compatible with 1.8.
    Branch:
      ^/subversion/branches/1.8.x-r1584592
+     (not needed if ^/subversion/branches/1.8.x-r1584342 is merged first)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
