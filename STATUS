@@ -275,7 +275,7 @@ Candidate changes:
    Justification:
      Simple fix for a segfault
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1579684, r1580867, r1580872
    Fix issue #4481 "automatic merge confused by missing subtree merge".
