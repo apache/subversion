@@ -1351,10 +1351,12 @@ typedef enum svn_fs_path_change_kind_t
   /** ignore all previous change items for path (internal-use only) */
   svn_fs_path_change_reset,
 
-  /** moved to this path in txn */
+  /** moved to this path in txn
+   * @since New in 1.9 */
   svn_fs_path_change_move,
 
-  /** path removed and replaced by moved path in txn */
+  /** path removed and replaced by moved path in txn
+   * @since New in 1.9 */
   svn_fs_path_change_movereplace
 
 } svn_fs_path_change_kind_t;
