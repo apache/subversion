@@ -312,13 +312,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1583977
-   Do not leave dead transaction if commit was blocked by start-commit hook.
-   Justification:
-     Leaving dead transaction is not good thing. Regression from 1.7.
-   Votes:
-     +1: ivan, rhuijben
-
  * ^/subversion/branches/1.8.x-serf-no-lock-support
    Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
    don't implement the locks report.
@@ -390,5 +383,12 @@ Approved changes:
    100kb of memory -- 16kb is enough to avoid I/O overhead.
    Justification:
      Significantly reduce server memory footprint on high load.
+   Votes:
+     +1: ivan, rhuijben, kotkov
+
+ * r1583977
+   Do not leave dead transaction if commit was blocked by start-commit hook.
+   Justification:
+     Leaving dead transaction is not good thing. Regression from 1.7.
    Votes:
      +1: ivan, rhuijben, kotkov
