@@ -1394,14 +1394,8 @@ def failed_commit(sbox):
                                      'commit', '-m', 'log', other_wc_dir)
 
   # Now list the txns in the repo. The list should be empty.
-  exit_code, output, errput = svntest.main.run_svnadmin('lstxns',
-                                                        sbox.repo_dir)
-  svntest.verify.compare_and_display_lines(
-    "Error running 'svnadmin lstxns'.",
-    'STDERR', [], errput)
-  svntest.verify.compare_and_display_lines(
-    "Output of 'svnadmin lstxns' is unexpected.",
-    'STDOUT', [], output)
+  svntest.actions.run_and_verify_svnadmin(None, [], [],
+                                          'lstxns', sbox.repo_dir)
 
 #----------------------------------------------------------------------
 
@@ -2546,14 +2540,8 @@ def start_commit_hook_test(sbox):
                                            expected_stderr, actual_stderr)
 
   # Now list the txns in the repo. The list should be empty.
-  exit_code, output, errput = svntest.main.run_svnadmin('lstxns',
-                                                        sbox.repo_dir)
-  svntest.verify.compare_and_display_lines(
-    "Error running 'svnadmin lstxns'.",
-    'STDERR', [], errput)
-  svntest.verify.compare_and_display_lines(
-    "Output of 'svnadmin lstxns' is unexpected.",
-    'STDOUT', [], output)
+  svntest.actions.run_and_verify_svnadmin(None, [], [],
+                                          'lstxns', sbox.repo_dir)
 
 #----------------------------------------------------------------------
 @Issue(3553)
