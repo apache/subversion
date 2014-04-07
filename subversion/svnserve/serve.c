@@ -2803,7 +2803,9 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    pool);
       target = svn_fs_lock_target_create(NULL, current_rev, pool);
 
-      /* We could check for duplicate paths and reject the request? */
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, target);
     }
 
@@ -2976,6 +2978,10 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
+
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, token);
     }
 

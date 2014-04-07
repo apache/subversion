@@ -2514,8 +2514,9 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * expiration error (depending on the API).
  */
 
-/** The @a targets hash passed to svn_fs_lock_many() has <tt>const char
- * *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values.
+/** Lock information for use with svn_fs_lock_many() [and svn_repos_fs_...].
+ *
+ * @see svn_fs_lock_target_create().
  *
  * @since New in 1.9.
  */
@@ -2524,6 +2525,9 @@ typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 /* Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
  * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
  *
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as the returned target object.
+ *
  * @since New in 1.9.
  **/
 svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
@@ -2531,6 +2535,9 @@ svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
                                                 apr_pool_t *pool);
 
 /* Update @a target changing the token to @a token, @a token can be NULL.
+ *
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as the returned target object.
  *
  * @since New in 1.9.
  **/
