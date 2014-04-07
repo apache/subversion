@@ -1231,6 +1231,7 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
@@ -1240,6 +1241,7 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
@@ -1248,6 +1250,7 @@ BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/mod_dontdothat.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
@@ -1260,6 +1263,7 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
 endif
@@ -1323,7 +1327,7 @@ $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 # install svn
 $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 	cd $(svn_builddir) \
-		&& env MAKEFLAGS= make install
+		&& env MAKEFLAGS= make install install-tools
 	touch $@
 
 # SWIG 1.x and 2.x are not compatible. If SWIG 2.x is used to generated .swg
@@ -1378,6 +1382,13 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_PORT=8081
+MOD_DONTDOTHAT_CONF=$(PREFIX)/httpd/conf/dontdothat
+
+$(MOD_DONTDOTHAT_CONF):
+	mkdir -p $(dir $@)
+	echo > $@.tmp '[recursive-actions]'
+	echo >>$@.tmp '/ = deny'
+	mv -f $@.tmp $@
 
 $(HTTPD_CHECK_USERS):
 	mkdir -p $(dir $@)
@@ -1385,12 +1396,13 @@ $(HTTPD_CHECK_USERS):
 	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
 	mv -f $@.tmp $@
 
-$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS)
+$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS) $(MOD_DONTDOTHAT_CONF)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
 	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
 	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
+	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
 	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
 	echo >>$@.tmp '# These two Locations are used for "make check"'
 	echo >>$@.tmp '<Directory />'
@@ -1435,12 +1447,27 @@ endif
 	echo >>$@.tmp '    SVNParentPath /tmp'
 	echo >>$@.tmp '    Allow from all'
 ifeq ($(USE_HTTPV1),yes)
-	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+	echo >> $@.tmp '   SVNAdvertiseV2Protocol off'
 endif
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
-	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+	echo >> $@.tmp '   SVNPathAuthz short_circuit'
 endif
 	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '# Location for tests using mod_dontdothat'
+	echo >>$@.tmp '<Location /ddt-test-work/repositories>'
+	echo >> $@.tmp 'DAV               svn'
+	echo >> $@.tmp 'SVNParentPath     "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories"'
+	echo >> $@.tmp 'AuthzSVNAccessFile "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz"'
+	echo >> $@.tmp 'AuthType          Basic'
+	echo >> $@.tmp 'AuthName          "Subversion Repository"'
+	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+	echo >> $@.tmp 'AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >> $@.tmp 'Require           valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >> $@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >> $@.tmp 'DontDoThatConfigFile "$(MOD_DONTDOTHAT_CONF)"'
+	echo >> $@.tmp '</Location>'
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
