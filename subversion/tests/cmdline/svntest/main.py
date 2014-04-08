@@ -1486,7 +1486,7 @@ class TestSpawningThread(threading.Thread):
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
     if options.memcached_server:
-      args.append('--memcached-server' + options.memcached_server)
+      args.append('--memcached-server=' + options.memcached_server)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
