@@ -81,6 +81,7 @@ struct lock_args
   svn_boolean_t steal_lock;
   apr_time_t expiration_date;
   svn_revnum_t current_rev;
+  apr_pool_t *result_pool;
 };
 
 
@@ -206,15 +207,15 @@ txn_body_lock(void *baton, trail_t *trail)
     }
 
   /* Create a new lock, and add it to the tables. */
-  lock = svn_lock_create(trail->pool);
+  lock = svn_lock_create(args->result_pool);
   if (args->token)
-    lock->token = apr_pstrdup(trail->pool, args->token);
+    lock->token = apr_pstrdup(args->result_pool, args->token);
   else
     SVN_ERR(svn_fs_base__generate_lock_token(&(lock->token), trail->fs,
-                                             trail->pool));
-  lock->path = apr_pstrdup(trail->pool, args->path);
-  lock->owner = apr_pstrdup(trail->pool, trail->fs->access_ctx->username);
-  lock->comment = apr_pstrdup(trail->pool, args->comment);
+                                             args->result_pool));
+  lock->path = args->path; /* Already in result_pool. */
+  lock->owner = apr_pstrdup(args->result_pool, trail->fs->access_ctx->username);
+  lock->comment = apr_pstrdup(args->result_pool, args->comment);
   lock->is_dav_comment = args->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = args->expiration_date;
@@ -259,11 +260,12 @@ svn_fs_base__lock(svn_fs_t *fs,
       args.steal_lock = steal_lock;
       args.expiration_date = expiration_date;
       args.current_rev = target->current_rev;
+      args.result_pool = result_pool;
       
-      err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, FALSE,
+      err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, TRUE,
                                    scratch_pool);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, path, lock, err, scratch_pool);
+        cb_err = lock_callback(lock_baton, args.path, lock, err, scratch_pool);
       svn_error_clear(err);
     }
 
