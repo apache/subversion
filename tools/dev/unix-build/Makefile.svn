@@ -319,6 +319,10 @@ endif
 
 ifdef POOL_DEBUG
 POOL_DEBUG_FLAG=--enable-pool-debug=all
+else
+# Map apr_palloc()/apr_pool_{clear,destroy}() to malloc()/free().
+# This also puts poison bytes into freed memory to help detect use after free.
+POOL_DEBUG_FLAG=--enable-pool-debug=yes
 endif
 
 # configure apr
@@ -372,7 +376,8 @@ $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
 $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	$(APR_OBJDIR)/.installed
 	cd $(APR_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		GREP="`which grep`" \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -525,7 +530,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
@@ -575,7 +580,8 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(HTTPD_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		GREP="`which grep`" \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -727,7 +733,8 @@ $(SERF_OBJDIR)/.retrieved:
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
-		scons DEBUG=1 CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+		scons DEBUG=1 \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
 			PREFIX=$(PREFIX)/serf
@@ -770,7 +777,7 @@ $(SERF_OLD_OBJDIR)/.retrieved:
 $(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_OLD_SRCDIR) && \
-		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+		env CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf-old \
 			build
@@ -1294,7 +1301,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
-			CFLAGS="-I$(PREFIX)/gettext/include" \
+			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
