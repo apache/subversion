@@ -160,6 +160,8 @@ def guarantee_greek_repository(path, minor_version):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
+  # give the repository a unique UUID
+  run_and_verify_svnadmin("could not set uuid", [], [], 'setuuid', path)
 
 def run_and_verify_atomic_ra_revprop_change(message,
                                             expected_stdout,
