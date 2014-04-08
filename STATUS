@@ -349,6 +349,14 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1570642, r1585686
+   Fix memcached support.
+   Justification:
+     Enabling memcached causes crashes without these fixes.
+     Regression from 1.7.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
