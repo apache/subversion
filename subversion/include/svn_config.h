@@ -892,7 +892,7 @@ svn_config_get_user_config_path(const char **path,
  */
 svn_error_t *
 svn_config_dup(svn_config_t **cfgp,
-               svn_config_t *src,
+               const svn_config_t *src,
                apr_pool_t *pool);
 
 /** Create a deep copy of the config hash @a src_hash and return

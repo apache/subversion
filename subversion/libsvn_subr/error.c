@@ -355,7 +355,7 @@ svn_error_find_cause(svn_error_t *err, apr_status_t apr_err)
 }
 
 svn_error_t *
-svn_error_dup(svn_error_t *err)
+svn_error_dup(const svn_error_t *err)
 {
   apr_pool_t *pool;
   svn_error_t *new_err = NULL, *tmp_err = NULL;
