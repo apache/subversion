@@ -225,7 +225,7 @@ svn_error_find_cause(svn_error_t *err, apr_status_t apr_err);
  * @since New in 1.2.
  */
 svn_error_t *
-svn_error_dup(svn_error_t *err);
+svn_error_dup(const svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
  * descendants of @a error.
