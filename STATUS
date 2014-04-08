@@ -355,7 +355,7 @@ Candidate changes:
      Enabling memcached causes crashes without these fixes.
      Regression from 1.7.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
 Veto-blocked changes:
 =====================
