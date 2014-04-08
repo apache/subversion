@@ -1537,7 +1537,8 @@ define do_check
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
         env MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
-	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) $1 FS_TYPE=$$fs; \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) \
+	  MEMCACHED_SERVER=$(MEMCACHED_SERVER) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
