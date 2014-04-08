@@ -378,14 +378,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1581296
-   Reduce buffer size used for parsing config files. There no reason to waste 
-   100kb of memory -- 16kb is enough to avoid I/O overhead.
-   Justification:
-     Significantly reduce server memory footprint on high load.
-   Votes:
-     +1: ivan, rhuijben, kotkov
-
  * r1583977
    Do not leave dead transaction if commit was blocked by start-commit hook.
    Justification:
