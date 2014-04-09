@@ -35,6 +35,15 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
 
+-- STMT_SELECT_BASE_NODE_INFO
+SELECT op_depth, repos_id, repos_path, presence, kind, revision, checksum,
+  translated_size, changed_revision, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties, moved_here, inherited_props,
+  moved_to
+  /* All the columns must match those returned by STMT_SELECT_NODE_INFO. */
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
 -- STMT_SELECT_NODE_INFO_WITH_LOCK
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
@@ -49,6 +58,20 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
+
+-- STMT_SELECT_BASE_NODE_INFO_WITH_LOCK
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, moved_here,
+  inherited_props,
+  /* All the columns until now must match those returned by
+     STMT_SELECT_NODE_INFO. The implementation of svn_wc__db_read_info()
+     assumes that these columns are followed by the lock information) */
+  lock_token, lock_owner, lock_comment, lock_date
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
@@ -137,6 +160,20 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
 WHERE wc_id = ?1 AND parent_relpath = ?2
 ORDER BY local_relpath DESC, op_depth DESC
+
+-- STMT_SELECT_BASE_NODE_CHILDREN_INFO
+/* See above re: result ordering. The results of this query must be in
+the same order as returned by STMT_SELECT_NODE_CHILDREN_INFO, because
+read_children_info expects them to be. */
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date, local_relpath, moved_here, moved_to, file_external
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+ORDER BY local_relpath DESC
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
 SELECT local_relpath, op_depth, presence, kind
