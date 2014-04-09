@@ -84,8 +84,8 @@ public interface ISVNClient
      * @param path        Path to explore.
      * @param depth       How deep to recurse into subdirectories.
      * @param onServer    Request status information from server.
-     * @param onDisk       Check the working copy for modified or missing
-     *                    items. A value of <code>false</code> only
+     * @param onDisk      Check the working copy for local modifications.
+     *                    A value of <code>false</code> only
      *                    has effect when <code>onServer</code> is
      *                    <code>true</code>.
      * @param getAll      get status for uninteresting (unchanged) files.
