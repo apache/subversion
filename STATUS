@@ -131,6 +131,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1577200
+   Fix libmagic detection with custom LDFLAGS.
+   Justification:
+     Fixes libmagic detection where configure relies on LDFLAGS
+     to find libraries in non-standard locations.
+     This should allow the bb-openbsd buildbot to compile 1.7.x.
+   Votes:
+    +1: stsp
+
 Veto-blocked changes:
 =====================
 
