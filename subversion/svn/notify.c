@@ -700,7 +700,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       else
         {
           svn_error_t *warn_err =
-            svn_error_createf(SVN_ERR_BASE, NULL,
+            svn_error_createf(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
                               _("Error handling externals definition for '%s':"),
                               path_local);
           svn_handle_warning2(stderr, warn_err, "svn: ");
