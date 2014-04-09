@@ -32,6 +32,7 @@ extern "C" {
 /* These functions implement some of the calls in the FS loader
    library's fs vtables. */
 
+/* See svn_fs_lock(), svn_fs_lock_many(). */
 svn_error_t *svn_fs_x__lock(svn_fs_t *fs,
                             apr_hash_t *targets,
                             const char *comment,
@@ -43,10 +44,12 @@ svn_error_t *svn_fs_x__lock(svn_fs_t *fs,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+/* See svn_fs_generate_lock_token(). */
 svn_error_t *svn_fs_x__generate_lock_token(const char **token,
                                            svn_fs_t *fs,
                                            apr_pool_t *pool);
 
+/* See svn_fs_unlock(), svn_fs_unlock_many(). */
 svn_error_t *svn_fs_x__unlock(svn_fs_t *fs,
                               apr_hash_t *targets,
                               svn_boolean_t break_lock,
@@ -55,11 +58,13 @@ svn_error_t *svn_fs_x__unlock(svn_fs_t *fs,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
   
+/* See svn_fs_get_lock(). */
 svn_error_t *svn_fs_x__get_lock(svn_lock_t **lock,
                                 svn_fs_t *fs,
                                 const char *path,
                                 apr_pool_t *pool);
 
+/* See svn_fs_get_locks2(). */
 svn_error_t *svn_fs_x__get_locks(svn_fs_t *fs,
                                  const char *path,
                                  svn_depth_t depth,

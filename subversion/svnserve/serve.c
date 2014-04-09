@@ -2787,8 +2787,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       svn_revnum_t current_rev;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
                                                svn_ra_svn_item_t);
-      svn_fs_lock_target_t *target
-        = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+      svn_fs_lock_target_t *target;
 
       svn_pool_clear(subpool);
 
@@ -2802,10 +2801,11 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
-      target->token = NULL;
-      target->current_rev = current_rev;
+      target = svn_fs_lock_target_create(NULL, current_rev, pool);
 
-      /* We could check for duplicate paths and reject the request? */
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, target);
     }
 
@@ -2866,8 +2866,15 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, subpool,
@@ -2971,6 +2978,10 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
+
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, token);
     }
 
@@ -3029,8 +3040,15 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, pool, result->err);

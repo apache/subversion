@@ -91,12 +91,14 @@ struct parse_baton
 
 struct revision_baton
 {
+  /* rev num from dump file */
   svn_revnum_t rev;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
   const svn_string_t *datestamp;
 
+  /* (rev num from dump file) minus (rev num to be committed) */
   apr_int32_t rev_offset;
   svn_boolean_t skipped;
 
@@ -519,7 +521,7 @@ new_revision_record(void **revision_baton,
       pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
     }
 
-  /* If we're parsing revision 0, only the revision are (possibly)
+  /* If we're parsing revision 0, only the revision props are (possibly)
      interesting to us: when loading the stream into an empty
      filesystem, then we want new filesystem's revision 0 to have the
      same props.  Otherwise, we just ignore revision 0 in the stream. */

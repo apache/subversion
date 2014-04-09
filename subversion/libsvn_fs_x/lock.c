@@ -715,7 +715,7 @@ svn_fs_x__allow_locked_operation(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Baton used for lock_body below. */
+/* The effective arguments for lock_body() below. */
 struct lock_baton {
   svn_fs_t *fs;
   apr_array_header_t *targets;
@@ -832,9 +832,17 @@ struct lock_info_t {
   svn_error_t *fs_err;
 };
 
-/* This implements the svn_fs_x__with_write_lock() 'body' callback
+/* The body of svn_fs_x__lock(), which see.
+
+   BATON is a 'struct lock_baton *' holding the effective arguments.
+   BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
+   path, mapping canonical path to 'svn_fs_lock_target_t'.  Set
+   BATON->infos to an array of 'lock_info_t' holding the results.  For
+   the other arguments, see svn_fs_lock_many().
+
+   This implements the svn_fs_x__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
-   BATON is a 'struct lock_baton *'. */
+ */
 static svn_error_t *
 lock_body(void *baton, apr_pool_t *pool)
 {
@@ -984,10 +992,12 @@ lock_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The effective arguments for unlock_body() below. */
 struct unlock_baton {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
+  /* Set skip_check TRUE to prevent the checks that set infos[].fs_err. */
   svn_boolean_t skip_check;
   svn_boolean_t break_lock;
   apr_pool_t *result_pool;
@@ -1021,9 +1031,21 @@ struct unlock_info_t {
   const char *path;
   const char *component;
   svn_error_t *fs_err;
+  svn_boolean_t done;
   int components;
 };
 
+/* The body of svn_fs_x__unlock(), which see.
+
+   BATON is a 'struct unlock_baton *' holding the effective arguments.
+   BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
+   path, mapping canonical path to (const char *) token.  Set
+   BATON->infos to an array of 'unlock_info_t' results.  For the other
+   arguments, see svn_fs_unlock_many().
+
+   This implements the svn_fs_x__with_write_lock() 'body' callback
+   type, and assumes that the write lock is held.
+ */
 static svn_error_t *
 unlock_body(void *baton, apr_pool_t *pool)
 {
@@ -1095,6 +1117,7 @@ unlock_body(void *baton, apr_pool_t *pool)
               if (info->components == i)
                 {
                   SVN_ERR(delete_lock(ub->fs->path, info->path, iterpool));
+                  info->done = TRUE;
                 }
               else if (info->components > i)
                 {
@@ -1137,6 +1160,10 @@ unlock_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Unlock the lock described by LOCK->path and LOCK->token in FS.
+
+   This assumes that the write lock is held.
+ */
 static svn_error_t *
 unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
@@ -1156,6 +1183,7 @@ unlock_single(svn_fs_t *fs,
   ub.skip_check = TRUE;
   ub.result_pool = pool;
 
+  /* No ub.infos[].fs_err error because skip_check is TRUE. */
   SVN_ERR(unlock_body(&ub, pool));
 
   return SVN_NO_ERROR;
@@ -1178,7 +1206,7 @@ svn_fs_x__lock(svn_fs_t *fs,
 {
   struct lock_baton lb;
   apr_array_header_t *sorted_targets;
-  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
@@ -1189,8 +1217,8 @@ svn_fs_x__lock(svn_fs_t *fs,
   if (!fs->access_ctx || !fs->access_ctx->username)
     return SVN_FS__ERR_NO_USER(fs);
 
-  /* The FS locking API allows both cannonical and non-cannonical
-     paths which means that the same cannonical path could be
+  /* The FS locking API allows both canonical and non-canonical
+     paths which means that the same canonical path could be
      represented more than once in the TARGETS hash.  We just keep
      one, choosing one with a token if possible. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
@@ -1200,13 +1228,13 @@ svn_fs_x__lock(svn_fs_t *fs,
       const svn_fs_lock_target_t *other;
 
       path = svn_fspath__canonicalize(path, result_pool);
-      other = svn_hash_gets(cannonical_targets, path);
+      other = svn_hash_gets(canonical_targets, path);
 
       if (!other || (!other->token && target->token))
-        svn_hash_sets(cannonical_targets, path, target);
+        svn_hash_sets(canonical_targets, path, target);
     }
 
-  sorted_targets = svn_sort__hash(cannonical_targets,
+  sorted_targets = svn_sort__hash(canonical_targets,
                                   svn_sort_compare_items_as_paths,
                                   scratch_pool);
 
@@ -1224,8 +1252,15 @@ svn_fs_x__lock(svn_fs_t *fs,
       struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
                                                 struct lock_info_t);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, info->path, info->lock,
-                               info->fs_err, scratch_pool);
+        {
+          if (!info->lock && !info->fs_err)
+            info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+                                             0, _("Failed to lock '%s'"),
+                                             info->path);
+                                             
+          cb_err = lock_callback(lock_baton, info->path, info->lock,
+                                 info->fs_err, scratch_pool);
+        }
       svn_error_clear(info->fs_err);
     }
 
@@ -1265,7 +1300,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
 {
   struct unlock_baton ub;
   apr_array_header_t *sorted_targets;
-  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
@@ -1283,13 +1318,13 @@ svn_fs_x__unlock(svn_fs_t *fs,
       const char *other;
 
       path = svn_fspath__canonicalize(path, result_pool);
-      other = svn_hash_gets(cannonical_targets, path);
+      other = svn_hash_gets(canonical_targets, path);
 
       if (!other)
-        svn_hash_sets(cannonical_targets, path, token);
+        svn_hash_sets(canonical_targets, path, token);
     }
 
-  sorted_targets = svn_sort__hash(cannonical_targets,
+  sorted_targets = svn_sort__hash(canonical_targets,
                                   svn_sort_compare_items_as_paths,
                                   scratch_pool);
 
@@ -1305,8 +1340,14 @@ svn_fs_x__unlock(svn_fs_t *fs,
       struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
                                                   struct unlock_info_t);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
-                               scratch_pool);
+        {
+          if (!info->done && !info->fs_err)
+            info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+                                             0, _("Failed to unlock '%s'"),
+                                             info->path);
+          cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
+                                 scratch_pool);
+        }
       svn_error_clear(info->fs_err);
     }
 

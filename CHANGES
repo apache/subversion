@@ -444,6 +444,31 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: allow revert API to take a set of paths (r1571461)
 
 
+Version 1.8.9
+(XX Apr 2014, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.9
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * use proper peg revision for log over DAV (r1568872)
+    * allow upgrading from 1.7 with exclusive locks (r1572102 et al)
+    * resolve inconsitent inherited property results (r1575270 et al)
+    * increase minimal timestamp sleep from 1ms to 10ms (r1581305 et al)
+
+  - Server-side bugfixes:
+    * ensure proper access synchronization in fsfs on Windows (r1568953 et al)
+    * don't let invalid mergeinfo stop 'svnadmin dump' (r1574868 et al)
+    * resolve svnserve performance regression caused by iprops (r1578853 et al)
+
+ Developer-visible changes:
+  - General:
+    * improve consistency checks of DAV inherited property requests (r1498000)
+    * fix ocassional failure in autoprop_tests.py (r1567752)
+    * avoid duplicate sqlite analyze information rows (r1571214)
+    * add Mavericks to our sysinfo output (r1573088)
+    * bump copyright years to 2014 (r1555403)
+
+
 Version 1.8.8
 (19 Feb 2014, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.8

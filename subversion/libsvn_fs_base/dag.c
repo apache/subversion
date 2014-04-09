@@ -1342,7 +1342,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
 
 
 dag_node_t *
-svn_fs_base__dag_dup(dag_node_t *node,
+svn_fs_base__dag_dup(const dag_node_t *node,
                      apr_pool_t *pool)
 {
   /* Allocate our new node. */

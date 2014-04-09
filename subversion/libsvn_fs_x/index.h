@@ -79,7 +79,7 @@ typedef struct svn_fs_x__p2l_entry_t
 /* Return a (deep) copy of ENTRY, allocated in POOL.
  */
 svn_fs_x__p2l_entry_t *
-svn_fs_x__p2l_entry_dup(svn_fs_x__p2l_entry_t *entry,
+svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
                         apr_pool_t *pool);
 
 /* Open / create a log-to-phys index file with the full file path name

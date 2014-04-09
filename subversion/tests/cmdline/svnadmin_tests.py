@@ -2397,6 +2397,21 @@ def verify_packed(sbox):
   svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
                                           "verify", sbox.repo_dir)
 
+# Test that 'svnadmin freeze' is nestable.  (For example, this ensures it
+# won't take system-global locks, only repository-scoped ones.)
+#
+# This could be useful to easily freeze a small number of repositories at once.
+#
+# ### We don't actually test that freeze takes a write lock anywhere (not even
+# ### in C tests.)
+def freeze_freeze(sbox):
+  "svnadmin freeze svnadmin freeze (some-cmd)"
+  sbox.build(create_wc=False, read_only=True)
+  second_repo_dir, _ = sbox.add_repo_path('backup')
+  svntest.main.run_svnadmin('freeze', '--', sbox.repo_dir,
+                 svntest.main.svnadmin_binary, 'freeze', '--', second_repo_dir,
+                 sys.executable, '-c', 'True')
+
 ########################################################################
 # Run the tests
 
@@ -2442,6 +2457,7 @@ test_list = [ None,
               load_ignore_dates,
               fsfs_hotcopy_old_with_propchanges,
               verify_packed,
+              freeze_freeze,
              ]
 
 if __name__ == '__main__':
