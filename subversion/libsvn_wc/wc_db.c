@@ -331,7 +331,6 @@ read_info(svn_wc__db_status_t *status,
           svn_boolean_t *have_work,
           svn_wc__db_wcroot_t *wcroot,
           const char *local_relpath,
-          svn_boolean_t base_tree_only,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool);
 
@@ -3843,8 +3842,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                     &changed_rev, &changed_date, &changed_author, &depth,
                     &checksum, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    src_wcroot, src_relpath, FALSE /* base_tree_only */,
-                    scratch_pool, scratch_pool));
+                    src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
                                  scratch_pool, scratch_pool));
@@ -4177,7 +4175,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     NULL /* have_more_work */,
                     NULL /* have_work */,
                     src_wcroot, local_relpath,
-                    FALSE /* base_tree_only */,
                     result_pool, scratch_pool));
 
   if (op_root)
@@ -4470,8 +4467,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
           err = read_info(&dst_status, NULL, NULL, NULL, NULL, NULL, NULL,
                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          dst_wcroot, dst_relpath, FALSE /* base_tree_only */,
-                          scratch_pool, scratch_pool);
+                          dst_wcroot, dst_relpath, scratch_pool, scratch_pool);
 
           if (err)
             {
@@ -7253,8 +7249,7 @@ remove_node_txn(svn_boolean_t *left_changes,
       SVN_ERR(read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        wcroot, local_relpath, FALSE /* base_tree_only */,
-                        scratch_pool, scratch_pool));
+                        wcroot, local_relpath, scratch_pool, scratch_pool));
 
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_added
@@ -8380,8 +8375,7 @@ svn_wc__db_op_delete_many(svn_wc__db_t *db,
 
 
 /* Like svn_wc__db_read_info(), but taking WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID.
-   If BASE_TREE_ONLY is set, only the base tree is taken into account. */
+   DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 static svn_error_t *
 read_info(svn_wc__db_status_t *status,
           svn_node_kind_t *kind,
@@ -8410,7 +8404,6 @@ read_info(svn_wc__db_status_t *status,
           svn_boolean_t *have_work,
           svn_wc__db_wcroot_t *wcroot,
           const char *local_relpath,
-          svn_boolean_t base_tree_only,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
@@ -8425,16 +8418,12 @@ read_info(svn_wc__db_status_t *status,
   SVN_ERR(svn_sqlite__get_statement(
               &stmt_info, wcroot->sdb,
               (lock
-               ? (base_tree_only
-                  ? STMT_SELECT_BASE_NODE_INFO_WITH_LOCK
-                  : STMT_SELECT_NODE_INFO_WITH_LOCK)
-               : (base_tree_only
-                  ? STMT_SELECT_BASE_NODE_INFO
-                  : STMT_SELECT_NODE_INFO))));
+               ?  STMT_SELECT_NODE_INFO_WITH_LOCK
+               :  STMT_SELECT_NODE_INFO)));
   SVN_ERR(svn_sqlite__bindf(stmt_info, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_info, stmt_info));
 
-  if (!base_tree_only && (changelist || conflicted || props_mod))
+  if (changelist || conflicted || props_mod)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt_act, wcroot->sdb,
                                         STMT_SELECT_ACTUAL_NODE));
@@ -8758,8 +8747,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                      recorded_size, recorded_time, changelist, conflicted,
                      op_root, had_props, props_mod,
                      have_base, have_more_work, have_work,
-                     wcroot, local_relpath, FALSE /* base_tree_only */,
-                     result_pool, scratch_pool));
+                     wcroot, local_relpath, result_pool, scratch_pool));
 }
 
 
@@ -8814,8 +8802,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                     recorded_size, recorded_time, changelist, conflicted,
                     op_root, have_props, props_mod,
                     have_base, have_more_work, have_work,
-                    wcroot, local_relpath, FALSE /* base_tree_only */,
-                    result_pool, scratch_pool),
+                    wcroot, local_relpath, result_pool, scratch_pool),
           svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
                                       wcroot->sdb, repos_id, result_pool),
           svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
@@ -9183,19 +9170,37 @@ read_single_info(const struct svn_wc__db_info_t **info,
   const svn_checksum_t *checksum;
   const char *original_repos_relpath;
   svn_boolean_t have_work;
+  apr_hash_t *properties;
 
   mtb = apr_pcalloc(result_pool, sizeof(*mtb));
 
-  SVN_ERR(read_info(&mtb->status, &mtb->kind, &mtb->revnum,
-                    &mtb->repos_relpath, &repos_id, &mtb->changed_rev,
-                    &mtb->changed_date, &mtb->changed_author, &mtb->depth,
-                    &checksum, NULL, &original_repos_relpath, NULL, NULL,
-                    &mtb->lock, &mtb->recorded_size, &mtb->recorded_time,
-                    &mtb->changelist, &mtb->conflicted, &mtb->op_root,
-                    &mtb->had_props, &mtb->props_mod, &mtb->have_base,
-                    &mtb->have_more_work, &have_work,
-                    wcroot, local_relpath, base_tree_only,
-                    result_pool, scratch_pool));
+  if (!base_tree_only)
+    SVN_ERR(read_info(&mtb->status, &mtb->kind, &mtb->revnum,
+                      &mtb->repos_relpath, &repos_id, &mtb->changed_rev,
+                      &mtb->changed_date, &mtb->changed_author, &mtb->depth,
+                      &checksum, NULL, &original_repos_relpath, NULL, NULL,
+                      &mtb->lock, &mtb->recorded_size, &mtb->recorded_time,
+                      &mtb->changelist, &mtb->conflicted, &mtb->op_root,
+                      &mtb->had_props, &mtb->props_mod, &mtb->have_base,
+                      &mtb->have_more_work, &have_work,
+                      wcroot, local_relpath, result_pool, scratch_pool));
+  else
+    {
+      svn_boolean_t update_root;
+
+      have_work = FALSE;
+      original_repos_relpath = NULL;
+
+      SVN_ERR(svn_wc__db_base_get_info_internal(
+                  &mtb->status, &mtb->kind, &mtb->revnum, &mtb->repos_relpath,
+                  &repos_id, &mtb->changed_rev, &mtb->changed_date,
+                  &mtb->changed_author, &mtb->depth, &checksum, NULL,
+                  &mtb->lock, &mtb->had_props, &properties, &update_root,
+                  wcroot, local_relpath, scratch_pool, scratch_pool));
+
+      mtb->have_base = TRUE;
+      mtb->file_external = (update_root && mtb->kind == svn_node_file);
+    }
 
   /* Query the same rows in the database again for move information */
   if (have_work && (mtb->have_base || mtb->have_more_work))
@@ -9240,7 +9245,8 @@ read_single_info(const struct svn_wc__db_info_t **info,
   /* Maybe we have to get some shadowed lock from BASE to make our test suite
      happy... (It might be completely unrelated, but...)
      This queries the same BASE row again, joined to the lock table */
-  if (mtb->have_base && (have_work || mtb->kind == svn_node_file))
+  if (!base_tree_only && mtb->have_base
+      && (have_work || mtb->kind == svn_node_file))
     {
       svn_boolean_t update_root;
       svn_wc__db_lock_t **lock_arg = NULL;
@@ -9273,18 +9279,20 @@ read_single_info(const struct svn_wc__db_info_t **info,
 
 #ifdef HAVE_SYMLINK
   if (mtb->kind == svn_node_file
-      && (mtb->had_props || mtb->props_mod))
+      && (mtb->had_props || mtb->props_mod
+          || (base_tree_only && properties)))
     {
-      apr_hash_t *properties;
-
-      if (mtb->props_mod)
-        SVN_ERR(svn_wc__db_read_props_internal(&properties,
-                                               wcroot, local_relpath,
-                                               scratch_pool, scratch_pool));
-      else
-        SVN_ERR(db_read_pristine_props(&properties, wcroot, local_relpath,
-                                       TRUE /* deleted_ok */,
-                                       scratch_pool, scratch_pool));
+      if (!base_tree_only)
+        {
+          if (mtb->props_mod)
+            SVN_ERR(svn_wc__db_read_props_internal(&properties,
+                                                   wcroot, local_relpath,
+                                                   scratch_pool, scratch_pool));
+          else
+            SVN_ERR(db_read_pristine_props(&properties, wcroot, local_relpath,
+                                           TRUE /* deleted_ok */,
+                                           scratch_pool, scratch_pool));
+        }
 
       mtb->special = (NULL != svn_hash_gets(properties, SVN_PROP_SPECIAL));
     }
@@ -9296,7 +9304,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
   SVN_ERR(svn_wc__db_fetch_repos_info(&mtb->repos_root_url, &mtb->repos_uuid,
                                       wcroot->sdb, repos_id, result_pool));
 
-  if (mtb->kind == svn_node_dir)
+  if (!base_tree_only && mtb->kind == svn_node_dir)
     SVN_ERR(is_wclocked(&mtb->locked, wcroot, local_relpath, scratch_pool));
 
   *info = mtb;
@@ -9643,8 +9651,7 @@ read_url_txn(const char **url,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     &have_base, NULL, NULL,
-                    wcroot, local_relpath, FALSE /* base_tree_only */,
-                    scratch_pool, scratch_pool));
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
 
   if (repos_relpath == NULL)
     {
@@ -10825,8 +10832,7 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL,
                     &have_base_node, NULL, NULL,
-                    wcroot, local_relpath, FALSE /* base_tree_only */,
-                    scratch_pool, scratch_pool));
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_excluded)
     {
@@ -10840,8 +10846,7 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL,
                         NULL, NULL, NULL,
-                        wcroot, parent_relpath, FALSE /* base_tree_only */,
-                        scratch_pool, scratch_pool));
+                        wcroot, parent_relpath, scratch_pool, scratch_pool));
       local_dir_relpath = parent_relpath;
     }
 
@@ -13721,8 +13726,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL,
-                    wcroot, local_relpath, FALSE /* base_tree_only */,
-                    scratch_pool, scratch_pool));
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
 
   *hidden = (status == svn_wc__db_status_server_excluded
              || status == svn_wc__db_status_not_present
@@ -13782,8 +13786,7 @@ db_is_switched(svn_boolean_t *is_switched,
   SVN_ERR(read_info(&status, kind, NULL, &repos_relpath, &repos_id, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    wcroot, local_relpath, FALSE /* base_tree_only */,
-                    scratch_pool, scratch_pool));
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
