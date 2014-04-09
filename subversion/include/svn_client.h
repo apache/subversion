@@ -2510,15 +2510,11 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  *      set).
  *
  *    - If @a check_working_copy is not set, do not scan the working
- *      copy for locally modified and missing files. This parameter
- *      will be ignored unless @a check_out_of_date is set.
- *      When set, the status report will be different in the following
- *      details:
- *
- *      -- Local modifications, missing nodes and locally added nodes
- *         will not be reported.
- *      -- Locally replaced nodes will be reported as deletions of
- *         the original node instead of as replacements.
+ *      copy for local modifications. This parameter will be ignored
+ *      unless @a check_out_of_date is set.  When set, the status
+ *      report will not contain any information about local changes in
+ *      the working copy; this includes local deletions and
+ *      replacements.
  *
  * If @a no_ignore is @c FALSE, don't report any file or directory (or
  * recurse into any directory) that is found by recursion (as opposed to

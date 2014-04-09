@@ -358,6 +358,8 @@ svn_client_status6(svn_revnum_t *result_rev,
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
 
+  /* Override invalid combinations of the check_out_of_date and
+     check_working_copy flags. */
   if (!check_out_of_date)
     check_working_copy = TRUE;
 

@@ -1323,8 +1323,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
  *     working copy directory, the found depth always governs.
  *
  * If @a check_working_copy is not set, do not scan the working copy
- * for locally modified and missing files.
- * ### TODO: describe interaction with @a get_all.
+ * for local modifications, taking only the BASE tree into account.
  *
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.

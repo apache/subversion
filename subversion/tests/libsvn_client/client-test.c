@@ -827,7 +827,6 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 }
 
 
-/* FIXME: temporary */
 static char
 status_to_char(enum svn_wc_status_kind status)
 {
