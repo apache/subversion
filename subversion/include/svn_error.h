@@ -202,7 +202,8 @@ svn_error_compose(svn_error_t *chain,
 
 /** Return the root cause of @a err by finding the last error in its
  * chain (e.g. it or its children).  @a err may be @c SVN_NO_ERROR, in
- * which case @c SVN_NO_ERROR is returned.
+ * which case @c SVN_NO_ERROR is returned.  The returned error should
+ * @em not be cleared as it shares memory with @a err.
  *
  * @since New in 1.5.
  */
