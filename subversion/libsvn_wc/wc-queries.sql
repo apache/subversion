@@ -138,6 +138,20 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
 WHERE wc_id = ?1 AND parent_relpath = ?2
 ORDER BY local_relpath DESC, op_depth DESC
 
+-- STMT_SELECT_BASE_NODE_CHILDREN_INFO
+/* See above re: result ordering. The results of this query must be in
+the same order as returned by STMT_SELECT_NODE_CHILDREN_INFO, because
+read_children_info expects them to be. */
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date, local_relpath, moved_here, moved_to, file_external
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+ORDER BY local_relpath DESC
+
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
 SELECT local_relpath, op_depth, presence, kind
 FROM nodes_current

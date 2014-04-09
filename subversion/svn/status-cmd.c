@@ -345,10 +345,11 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, ctx, target, &rev,
+      SVN_ERR(svn_cl__try(svn_client_status6(&repos_rev, ctx, target, &rev,
                                              opt_state->depth,
                                              opt_state->verbose,
                                              opt_state->update,
+                                             TRUE /* check_working_copy */,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
                                              FALSE /* depth_as_sticky */,

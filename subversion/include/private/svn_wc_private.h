@@ -1306,8 +1306,8 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
  *
  * Assuming the target is a directory, then:
  *
- *   - If @a get_all is FALSE, then only locally-modified entries will be
- *     returned.  If TRUE, then all entries will be returned.
+ *   - If @a get_all is @c FALSE, then only locally-modified entries will be
+ *     returned.  If @c TRUE, then all entries will be returned.
  *
  *   - If @a depth is #svn_depth_empty, a status structure will
  *     be returned for the target only; if #svn_depth_files, for the
@@ -1321,6 +1321,9 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
  *
  *     If the given @a depth is incompatible with the depth found in a
  *     working copy directory, the found depth always governs.
+ *
+ * If @a check_working_copy is not set, do not scan the working copy
+ * for local modifications, taking only the BASE tree into account.
  *
  * If @a no_ignore is set, statuses that would typically be ignored
  * will instead be reported.
@@ -1356,6 +1359,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
                           const char *target_basename,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
+                          svn_boolean_t check_working_copy,
                           svn_boolean_t no_ignore,
                           svn_boolean_t depth_as_sticky,
                           svn_boolean_t server_performs_filtering,

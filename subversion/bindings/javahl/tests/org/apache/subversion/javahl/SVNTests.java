@@ -793,7 +793,8 @@ class SVNTests extends TestCase
         {
             MyStatusCallback statusCallback = new MyStatusCallback();
             client.status(workingCopy.getAbsolutePath(), Depth.unknown,
-                          checkRepos, true, true, false, null, statusCallback);
+                          checkRepos, false, true, true, false, false,
+                          null, statusCallback);
             wc.check(statusCallback.getStatusArray(),
                     workingCopy.getAbsolutePath(), checkRepos);
         }

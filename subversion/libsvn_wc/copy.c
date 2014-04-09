@@ -353,6 +353,7 @@ copy_versioned_dir(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_children_info(&versioned_children,
                                         &conflicted_children,
                                         db, src_abspath,
+                                        FALSE /* base_tree_only */,
                                         scratch_pool, iterpool));
   for (hi = apr_hash_first(scratch_pool, versioned_children);
        hi;
@@ -942,6 +943,7 @@ remove_all_conflict_markers(svn_wc__db_t *db,
           artillery. */
   SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db,
                                         src_dir_abspath,
+                                        FALSE /* base_tree_only */,
                                         scratch_pool, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, nodes);

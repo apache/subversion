@@ -187,8 +187,9 @@ void SVNClient::list(const char *url, Revision &revision,
 
 void
 SVNClient::status(const char *path, svn_depth_t depth,
-                  bool onServer, bool getAll, bool noIgnore,
-                  bool ignoreExternals, StringArray &changelists,
+                  bool onServer, bool onDisk, bool getAll,
+                  bool noIgnore, bool ignoreExternals,
+                  bool depthAsSticky, StringArray &changelists,
                   StatusCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -207,11 +208,10 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    SVN_JNI_ERR(svn_client_status5(&youngest, ctx, checkedPath.c_str(),
-                                   &rev,
-                                   depth,
-                                   getAll, onServer, noIgnore, ignoreExternals,
-                                   FALSE,
+    SVN_JNI_ERR(svn_client_status6(&youngest, ctx, checkedPath.c_str(),
+                                   &rev, depth,
+                                   getAll, onServer, onDisk,
+                                   noIgnore, ignoreExternals, depthAsSticky,
                                    changelists.array(subPool),
                                    StatusCallback::callback, callback,
                                    subPool.getPool()), );

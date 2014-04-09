@@ -79,16 +79,40 @@ public interface ISVNClient
     public boolean isAdminDirectory(String name);
 
     /**
-     * List a directory or file of the working copy.
+     * Return the status of the working copy and maybe repository.
      *
      * @param path        Path to explore.
      * @param depth       How deep to recurse into subdirectories.
      * @param onServer    Request status information from server.
+     * @param onDisk      Check the working copy for local modifications.
+     *                    A value of <code>false</code> only
+     *                    has effect when <code>onServer</code> is
+     *                    <code>true</code>.
      * @param getAll      get status for uninteresting (unchanged) files.
      * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
+     * @param depthAsSticky When set, interpret <code>depth</code> as
+     *                      the ambient depth of the working copy.
      * @param changelists changelists to filter by
+     * @since 1.9
      */
+    void status(String path, Depth depth,
+                boolean onServer, boolean ignoreLocal,
+                boolean getAll, boolean noIgnore,
+                boolean ignoreExternals, boolean depthAsSticky,
+                Collection<String> changelists, StatusCallback callback)
+            throws ClientException;
+
+    /**
+     * Return information about the status of the working copy and
+     * maybe repository.
+     * <p>
+     * Behaves like the 1.9 version with
+     *     <code>onDisk = true</code> and
+     *     <code>depthAsSticky = false</code>.
+     * @deprecated
+     */
+    @Deprecated
     void status(String path, Depth depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
                 Collection<String> changelists, StatusCallback callback)

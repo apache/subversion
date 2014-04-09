@@ -578,6 +578,7 @@ ensure_local_info(struct dir_baton_t *db,
 
   SVN_ERR(svn_wc__db_read_children_info(&db->local_info, &conflicts,
                                         db->eb->db, db->local_abspath,
+                                        FALSE /* base_tree_only */,
                                         db->pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -667,6 +668,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
       SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
                                             db, local_abspath,
+                                            FALSE /* base_tree_only */,
                                             scratch_pool, iterpool));
 
       children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
@@ -1079,6 +1081,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                                 scratch_pool, iterpool));
 
   SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db, local_abspath,
+                                        FALSE /* base_tree_only */,
                                         scratch_pool, iterpool));
 
   if (depth_below_here == svn_depth_immediates)

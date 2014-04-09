@@ -853,6 +853,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #endif
       }
     }
+  opts.verbose = verbose_mode;
 
   /* Disable sleeping for timestamps, to speed up the tests. */
   apr_env_set(

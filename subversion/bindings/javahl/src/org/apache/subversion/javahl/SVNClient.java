@@ -121,12 +121,25 @@ public class SVNClient implements ISVNClient
     @Deprecated
     public native String getLastPath();
 
-    public native void status(String path, Depth depth, boolean onServer,
+    public native void status(String path, Depth depth,
+                              boolean onServer, boolean onDisk,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals,
+                              boolean ignoreExternals, boolean depthAsSticky,
                               Collection<String> changelists,
                               StatusCallback callback)
             throws ClientException;
+
+    @Deprecated
+    public void status(String path, Depth depth, boolean onServer,
+                       boolean getAll, boolean noIgnore,
+                       boolean ignoreExternals,
+                       Collection<String> changelists,
+                       StatusCallback callback)
+            throws ClientException
+    {
+        status(path, depth, onServer, true, getAll, noIgnore,
+               ignoreExternals, false, changelists, callback);
+    }
 
     public native void list(String url, Revision revision,
                             Revision pegRevision, Depth depth, int direntFields,
