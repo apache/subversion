@@ -851,6 +851,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 60,
              "Move without a suitable deletion")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+             SVN_ERR_FS_CATEGORY_START + 61,
+             "Lock operation failed")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

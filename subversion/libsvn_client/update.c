@@ -402,8 +402,10 @@ update_internal(svn_revnum_t *result_rev,
     {
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                    anchor_url,
-                                                   anchor_abspath, NULL, TRUE,
-                                                   TRUE, ctx, pool, pool));
+                                                   anchor_abspath, NULL,
+                                                   TRUE /* write_dav_props */,
+                                                   TRUE /* read_dav_props */,
+                                                   ctx, pool, pool));
       *ra_session_p = ra_session;
     }
 

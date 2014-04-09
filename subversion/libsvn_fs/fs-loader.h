@@ -548,6 +548,11 @@ struct svn_fs_access_t
   apr_hash_t *lock_tokens;
 };
 
+struct svn_fs_lock_target_t
+{
+  const char *token;
+  svn_revnum_t current_rev;
+};
 
 
 #ifdef __cplusplus

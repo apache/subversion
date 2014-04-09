@@ -458,7 +458,8 @@ get_locks(dav_lockdb *lockdb,
      lock.  For the --force case, this is required and for the non-force case,
      we allow the filesystem to produce a better error for svn clients.
   */
-  if (info->r->method_number == M_LOCK)
+  if (info->r->method_number == M_LOCK
+      && resource->info->repos->is_svn_client)
     {
       *locks = NULL;
       return 0;
@@ -599,7 +600,8 @@ has_locks(dav_lockdb *lockdb, const dav_resource *resource, int *locks_present)
      lock.  For the --force case, this is required and for the non-force case,
      we allow the filesystem to produce a better error for svn clients.
   */
-  if (info->r->method_number == M_LOCK)
+  if (info->r->method_number == M_LOCK
+      && resource->info->repos->is_svn_client)
     {
       *locks_present = 0;
       return 0;

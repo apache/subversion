@@ -1428,10 +1428,10 @@ svn_ra_local__lock(svn_ra_session_t *session,
       const char *abs_path = svn_fspath__join(sess->fs_path->data,
                                               svn__apr_hash_index_key(hi),
                                               pool);
-      svn_fs_lock_target_t *target = apr_palloc(pool,
-                                                sizeof(svn_fs_lock_target_t));
-      target->token = NULL;
-      target->current_rev = *(svn_revnum_t *)svn__apr_hash_index_val(hi);
+      svn_revnum_t current_rev = *(svn_revnum_t *)svn__apr_hash_index_val(hi);
+      svn_fs_lock_target_t *target = svn_fs_lock_target_create(NULL,
+                                                               current_rev,
+                                                               pool);
 
       svn_hash_sets(targets, abs_path, target);
     }

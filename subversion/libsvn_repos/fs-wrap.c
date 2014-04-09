@@ -167,7 +167,7 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
   if (err)
     return svn_error_compose_create(err, svn_fs_abort_txn(txn, pool));
 
-  /* We have API promise that *TXN_P is unaffected on faulure. */
+  /* We have API promise that *TXN_P is unaffected on failure. */
   *txn_p = txn;
   return SVN_NO_ERROR;
 }
@@ -598,7 +598,7 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
 
       target = svn__apr_hash_index_val(hi);
       if (*new_token)
-        target->token = new_token;
+        svn_fs_lock_target_set_token(target, new_token);
       svn_hash_sets(pre_targets, path, target);
     }
 
@@ -617,14 +617,18 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
                          is_dav_comment, expiration_date, steal_lock,
                          lock_many_cb, &baton, result_pool, iterpool);
 
-  /* If there are locks and an error should we return or run the post-lock? */
-  if (!err && baton.paths->nelts)
+  /* If there are locks run the post-lock even if there is an error. */
+  if (baton.paths->nelts)
     {
-      err = svn_repos__hooks_post_lock(repos, hooks_env, baton.paths, username,
-                                       iterpool);
-      if (err)
-        err = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+      svn_error_t *perr = svn_repos__hooks_post_lock(repos, hooks_env,
+                                                     baton.paths, username,
+                                                     iterpool);
+      if (perr)
+        {
+          perr = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, perr,
                             _("Locking succeeded, but post-lock hook failed"));
+          err = svn_error_compose_create(err, perr);
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -673,13 +677,12 @@ svn_repos_fs_lock(svn_lock_t **lock,
                   apr_pool_t *pool)
 {
   apr_hash_t *targets = apr_hash_make(pool);
-  svn_fs_lock_target_t target; 
+  svn_fs_lock_target_t *target = svn_fs_lock_target_create(token, current_rev,
+                                                           pool); 
   svn_error_t *err;
   struct lock_baton_t baton = {0};
 
-  target.token = token;
-  target.current_rev = current_rev;
-  svn_hash_sets(targets, path, &target);
+  svn_hash_sets(targets, path, target);
 
   err = svn_repos_fs_lock_many(repos, targets, comment, is_dav_comment,
                                expiration_date, steal_lock, lock_cb, &baton,
@@ -768,13 +771,18 @@ svn_repos_fs_unlock_many(svn_repos_t *repos,
   err = svn_fs_unlock_many(repos->fs, pre_targets, break_lock,
                            lock_many_cb, &baton, result_pool, iterpool);
 
-  if (!err && baton.paths->nelts)
+  /* If there are 'unlocks' run the post-unlock even if there is an error. */
+  if (baton.paths->nelts)
     {
-      err = svn_repos__hooks_post_unlock(repos, hooks_env, baton.paths,
-                                         username, iterpool);
-      if (err)
-        err = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
+      svn_error_t *perr = svn_repos__hooks_post_unlock(repos, hooks_env,
+                                                       baton.paths,
+                                                       username, iterpool);
+      if (perr)
+        {
+          perr = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, perr,
                            _("Unlock succeeded, but post-unlock hook failed"));
+          err = svn_error_compose_create(err, perr);
+        }
     }
 
   svn_pool_destroy(iterpool);

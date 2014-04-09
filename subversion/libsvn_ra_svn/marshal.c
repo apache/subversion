@@ -2403,7 +2403,8 @@ svn_error_t *svn_ra_svn__write_cmd_response(svn_ra_svn_conn_t *conn,
 }
 
 svn_error_t *svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
-                                           apr_pool_t *pool, svn_error_t *err)
+                                           apr_pool_t *pool,
+                                           const svn_error_t *err)
 {
   char buffer[128];
   SVN_ERR(writebuf_write_short_string(conn, pool, "( failure ( ", 12));

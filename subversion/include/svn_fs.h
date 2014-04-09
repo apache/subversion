@@ -1351,10 +1351,12 @@ typedef enum svn_fs_path_change_kind_t
   /** ignore all previous change items for path (internal-use only) */
   svn_fs_path_change_reset,
 
-  /** moved to this path in txn */
+  /** moved to this path in txn
+   * @since New in 1.9 */
   svn_fs_path_change_move,
 
-  /** path removed and replaced by moved path in txn */
+  /** path removed and replaced by moved path in txn
+   * @since New in 1.9 */
   svn_fs_path_change_movereplace
 
 } svn_fs_path_change_kind_t;
@@ -2512,17 +2514,35 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * expiration error (depending on the API).
  */
 
-/** The @a targets hash passed to svn_fs_lock_many() has <tt>const char
- * *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values.
+/** Lock information for use with svn_fs_lock_many() [and svn_repos_fs_...].
+ *
+ * @see svn_fs_lock_target_create().
  *
  * @since New in 1.9.
  */
-typedef struct svn_fs_lock_target_t
-{
-  const char *token;
-  svn_revnum_t current_rev;
+typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-} svn_fs_lock_target_t;
+/* Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
+ * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
+ *
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as the returned target object.
+ *
+ * @since New in 1.9.
+ **/
+svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
+                                                svn_revnum_t current_rev,
+                                                apr_pool_t *pool);
+
+/* Update @a target changing the token to @a token, @a token can be NULL.
+ *
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as the returned target object.
+ *
+ * @since New in 1.9.
+ **/
+void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
+                                  const char *token);
 
 /** The callback invoked by svn_fs_lock_many() and svn_fs_unlock_many().
  *
@@ -2540,8 +2560,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                svn_error_t *fs_err,
                                                apr_pool_t *pool);
 
-/** Lock the paths in @a targets in @a fs, and set @a *results to the
- * locks or errors representing each new lock.
+/** Lock the paths in @a targets in @a fs.
  *
  * @warning You may prefer to use svn_repos_fs_lock_many() instead,
  * which see.
@@ -2633,8 +2652,7 @@ svn_fs_generate_lock_token(const char **token,
                            apr_pool_t *pool);
 
 
-/** Remove the locks on the paths in @a targets in @a fs, and return
- * the results in @a *results.
+/** Remove the locks on the paths in @a targets in @a fs.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
  * of the @a targets hash with the corresponding lock tokens as

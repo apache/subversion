@@ -2928,18 +2928,24 @@ block_read(void **result,
 
       /* if the revision got packed in the meantime and we still need
        * to actually read some item, we retry the whole process */
-      if (err &&
-          revision_file->is_packed != svn_fs_fs__is_packed_rev(fs, revision))
+      if (err)
         {
-          if (result && !*result)
+          /* We failed for the first time. Refresh cache & retry. */
+          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
+          if (   revision_file->is_packed
+              != svn_fs_fs__is_packed_rev(fs, revision))
             {
-              SVN_ERR(svn_fs_fs__reopen_revision_file(revision_file, fs, 
-                                                      revision));
-              SVN_ERR(block_read(result, fs, revision, item_index,
-                                  revision_file, result_pool, scratch_pool));
-            }
+              if (result && !*result)
+                {
+                  SVN_ERR(svn_fs_fs__reopen_revision_file(revision_file, fs, 
+                                                          revision));
+                  SVN_ERR(block_read(result, fs, revision, item_index,
+                                     revision_file, result_pool,
+                                     scratch_pool));
+                }
 
-          return SVN_NO_ERROR;
+              return SVN_NO_ERROR;
+            }
         }
 
       SVN_ERR(err);

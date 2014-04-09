@@ -1600,6 +1600,36 @@ svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
 }
 
 svn_error_t *
+svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
+                                       apr_file_t *proto_index,
+                                       apr_pool_t *pool)
+{
+  apr_off_t offset = 0;
+
+  /* Empty index file? */
+  SVN_ERR(svn_io_file_seek(proto_index, APR_END, &offset, pool));
+  if (offset == 0)
+    {
+      *next_offset = 0;
+    }
+  else
+    {
+      /* At least one entry.  Read last entry. */
+      svn_fs_fs__p2l_entry_t entry;
+      offset -= sizeof(entry);
+
+      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, pool));
+      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
+                                    NULL, NULL, pool));
+
+      /* Return next offset. */
+      *next_offset = entry.offset + entry.size;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__p2l_index_create(svn_fs_t *fs,
                             const char *file_name,
                             const char *proto_file_name,

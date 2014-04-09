@@ -205,7 +205,7 @@ auto_parse(svn_config_t **cfg,
                    &checksum, NULL, svn_checksum_sha1, TRUE, scratch_pool)));
 
   /* return reference to suitable config object if that already exists */
-  *key = checksum_as_key(checksum, scratch_pool);
+  *key = checksum_as_key(checksum, result_pool);
   SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool->object_pool,
                                   *key, &case_sensitive, result_pool));
   if (*cfg)

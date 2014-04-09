@@ -1113,7 +1113,7 @@ svn_config_get_server_setting(svn_config_t *cfg,
 
 svn_error_t *
 svn_config_dup(svn_config_t **cfgp,
-               svn_config_t *src,
+               const svn_config_t *src,
                apr_pool_t *pool)
 {
   apr_hash_index_t *sectidx;

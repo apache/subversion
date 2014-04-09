@@ -1634,7 +1634,7 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
  * phys-to-log index
  */
 svn_fs_x__p2l_entry_t *
-svn_fs_x__p2l_entry_dup(svn_fs_x__p2l_entry_t *entry,
+svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
                         apr_pool_t *pool)
 {
   svn_fs_x__p2l_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
