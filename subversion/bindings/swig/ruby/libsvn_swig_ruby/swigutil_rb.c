@@ -1199,6 +1199,7 @@ DEFINE_DUP(auth_ssl_server_cert_info)
 DEFINE_DUP(wc_entry)
 DEFINE_DUP(client_diff_summarize)
 DEFINE_DUP(dirent)
+DEFINE_DUP(log_entry)
 DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
@@ -2162,9 +2163,7 @@ svn_swig_rb_log_entry_receiver(void *baton,
 
         cbb.receiver = proc;
         cbb.message = id_call;
-        cbb.args = rb_ary_new3(1,
-                               c2r_swig_type((void *)entry,
-                                             (void *)"svn_log_entry_t *"));
+        cbb.args = rb_ary_new3(1, c2r_log_entry__dup(entry));
         invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
     }
     return err;
