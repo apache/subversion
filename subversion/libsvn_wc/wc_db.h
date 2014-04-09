@@ -1988,21 +1988,29 @@ struct svn_wc__db_info_t {
    The results include any path that was a child of a deleted directory that
    existed at LOCAL_ABSPATH, even if that directory is now scheduled to be
    replaced by the working node at LOCAL_ABSPATH.
+
+   If BASE_TREE_ONLY is set, only information about the BASE tree
+   is returned.
  */
 svn_error_t *
 svn_wc__db_read_children_info(apr_hash_t **nodes,
                               apr_hash_t **conflicts,
                               svn_wc__db_t *db,
                               const char *dir_abspath,
+                              svn_boolean_t base_tree_only,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
 /* Like svn_wc__db_read_children_info, but only gets an info node for the root
-   element. */
+   element.
+
+   If BASE_TREE_ONLY is set, only information about the BASE tree
+   is returned. */
 svn_error_t *
 svn_wc__db_read_single_info(const struct svn_wc__db_info_t **info,
                             svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t base_tree_only,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 

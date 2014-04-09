@@ -2772,7 +2772,9 @@ test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(CHECK_ARRAY(children_array, working_children_exc_hidden, pool));
 
   SVN_ERR(svn_wc__db_read_children_info(&children_hash, &conflicts_hash,
-                                        b.wc_ctx->db, A_abspath, pool, pool));
+                                        b.wc_ctx->db, A_abspath,
+                                        FALSE /* base_tree_only */,
+                                        pool, pool));
   SVN_ERR(CHECK_HASH(children_hash, all_children_inc_hidden, pool));
 
   /* We don't yet have a svn_wc__db_read_children_info2() to test. */
