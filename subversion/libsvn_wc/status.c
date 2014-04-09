@@ -1335,7 +1335,6 @@ get_dir_status(const struct walk_status_baton *wb,
   sorted_children = svn_sort__hash(all_children,
                                    svn_sort_compare_items_lexically,
                                    scratch_pool);
-
   for (i = 0; i < sorted_children->nelts; i++)
     {
       const void *key;

@@ -4174,8 +4174,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     NULL /* have_base */,
                     NULL /* have_more_work */,
                     NULL /* have_work */,
-                    src_wcroot, local_relpath,
-                    result_pool, scratch_pool));
+                    src_wcroot, local_relpath, result_pool, scratch_pool));
 
   if (op_root)
     *op_root = is_op_root;
@@ -7249,7 +7248,8 @@ remove_node_txn(svn_boolean_t *left_changes,
       SVN_ERR(read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        wcroot, local_relpath, scratch_pool, scratch_pool));
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
 
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_added
@@ -8415,11 +8415,9 @@ read_info(svn_wc__db_status_t *status,
 
   /* Obtain the most likely to exist record first, to make sure we don't
      have to obtain the SQLite read-lock multiple times */
-  SVN_ERR(svn_sqlite__get_statement(
-              &stmt_info, wcroot->sdb,
-              (lock
-               ?  STMT_SELECT_NODE_INFO_WITH_LOCK
-               :  STMT_SELECT_NODE_INFO)));
+  SVN_ERR(svn_sqlite__get_statement(&stmt_info, wcroot->sdb,
+                                    lock ? STMT_SELECT_NODE_INFO_WITH_LOCK
+                                         : STMT_SELECT_NODE_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt_info, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_info, stmt_info));
 
@@ -10832,7 +10830,8 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL,
                     &have_base_node, NULL, NULL,
-                    wcroot, local_relpath, scratch_pool, scratch_pool));
+                    wcroot, local_relpath,
+                    scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_excluded)
     {
@@ -10846,7 +10845,8 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL,
                         NULL, NULL, NULL,
-                        wcroot, parent_relpath, scratch_pool, scratch_pool));
+                        wcroot, parent_relpath,
+                        scratch_pool, scratch_pool));
       local_dir_relpath = parent_relpath;
     }
 
@@ -13726,7 +13726,8 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL,
-                    wcroot, local_relpath, scratch_pool, scratch_pool));
+                    wcroot, local_relpath,
+                    scratch_pool, scratch_pool));
 
   *hidden = (status == svn_wc__db_status_server_excluded
              || status == svn_wc__db_status_not_present
