@@ -1375,8 +1375,11 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
   if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
-
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
+  
+  /* Always send the, nominally optional, want-iprops as "false" to
+     workaround a bug in svnserve 1.8.0-1.8.8 that causes the server
+     to see "true" if it is omitted. */
+  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)b)", FALSE));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, "rll", &rev, &proplist,

@@ -2092,7 +2092,11 @@ svn_ra_svn__write_cmd_get_file(svn_ra_svn_conn_t *conn,
   SVN_ERR(write_tuple_end_list(conn, pool));
   SVN_ERR(write_tuple_boolean(conn, pool, props));
   SVN_ERR(write_tuple_boolean(conn, pool, stream));
-  SVN_ERR(writebuf_write_short_string(conn, pool, ") ) ", 4));
+
+  /* Always send the, nominally optional, want-iprops as "false" to
+     workaround a bug in svnserve 1.8.0-1.8.8 that causes the server
+     to see "true" if it is omitted. */
+  SVN_ERR(writebuf_write_short_string(conn, pool, " false ) ) ", 11));
 
   return SVN_NO_ERROR;
 }
