@@ -2849,18 +2849,27 @@ internal_status(svn_wc_status3_t **status,
      these values to determine if a node is switched */
   if (!is_root)
     {
-      const svn_wc__db_base_read_info_fn_t read_info_fn =
-        (check_working_copy ? svn_wc__db_read_info : svn_wc__db_base_read_info);
       const char *const parent_abspath = svn_dirent_dirname(local_abspath,
                                                             scratch_pool);
-      SVN_ERR(read_info_fn(NULL, NULL, NULL,
-                           &parent_repos_relpath,
-                           &parent_repos_root_url,
-                           &parent_repos_uuid,
-                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                           NULL, NULL, NULL, NULL, NULL,
-                           db, parent_abspath, result_pool, scratch_pool));
+      if (check_working_copy)
+        SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                                     &parent_repos_relpath,
+                                     &parent_repos_root_url,
+                                     &parent_repos_uuid,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     db, parent_abspath,
+                                     result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                         &parent_repos_relpath,
+                                         &parent_repos_root_url,
+                                         &parent_repos_uuid,
+                                         NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         result_pool, scratch_pool));
     }
   else
     {
