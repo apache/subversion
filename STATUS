@@ -349,6 +349,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, julianfoad
 
+ * r1481782
+   Fix problem in test suite by allocating buffer of the right size
+   Justification:
+     Reported to fail often when tracing memory problems.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
