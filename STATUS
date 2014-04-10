@@ -375,6 +375,13 @@ Veto-blocked changes:
                the root cause is not fixed. Discussion:
                http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
 
+ * r1481782
+   Fix a crash bug in a test case in libsvn_wc/conflict-data-test.
+   Justification:
+     The test crashes with APR pool debugging enabled.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
