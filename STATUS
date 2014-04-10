@@ -140,6 +140,19 @@ Candidate changes:
    Votes:
     +1: stsp
 
+ * r1586439
+   Fix a crash in JavaHL that was reported on the users@ list and is
+   already fixed on trunk.
+   Justification:
+     JavaHL should not crash the JVM too often.
+   Notes:
+     The original report is here:
+     http://mail-archives.apache.org/mod_mbox/subversion-users/201404.mbox/%3CCAAVTFFjrZEy-PT3i1xu0mOM_AC89-237CmFEZ7QYcJxNckfEtA%40mail.gmail.com%3E
+   Branch:
+     ^/subversion/branches/1.7.x-javahl-exception-crash
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
