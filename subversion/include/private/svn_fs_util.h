@@ -230,6 +230,73 @@ svn_fs__prop_lists_equal(apr_hash_t *a,
                          apr_hash_t *b,
                          apr_pool_t *pool);
 
+/* Thundering Herd mitigation registry API.
+   See notes/thundering-herd.txt for details. */
+
+/* Opaque type of the Thundering Herd mitigation registry.
+   There may be multiple instances of this object and all tracking is done
+   locally within the respective instance.  I.e. there is no global sync.
+   going on in the background. */
+typedef struct svn_fs__thunder_t svn_fs__thunder_t;
+
+/* Opaque access token handed out by an svn_fs__thunder_t instance.
+   It signifies that the caller was the first to attempt the data access. */
+typedef struct svn_fs__thunder_access_t svn_fs__thunder_access_t;
+
+/* Create a new Thundering Herd mitigation registry instance and return it
+   in *THUNDER.  TIMEOUT is the maximum timespan in musecs that
+   svn_fs__thunder_begin_access may delay callers.
+
+   If svn_fs__thunder_destroy is not called explicitly, *THUNDER will remain
+   valid until POOL gets cleared or destroyed. */
+svn_error_t *
+svn_fs__thunder_create(svn_fs__thunder_t **thunder,
+                       apr_time_t timeout,
+                       apr_pool_t *pool);
+
+/* Explicitly destroy the THUNDER registry.  Access objects previously
+   returned by svn_fs__thunder_begin_access for this registry become invalid
+   and svn_fs__thunder_end_access may not be called on them anymore.
+
+   It is not necessary to call this function explicitly; the registry gets
+   destroyed when its owning pool gets cleaned up. */
+svn_error_t *
+svn_fs__thunder_destroy(svn_fs__thunder_t *thunder);
+
+/* Request access to the data at PATH + LOCATION.  If the THUNDER registry
+   did not have no valid entry for this already, *ACCESS will receive a
+   token that the caller shall return by calling svn_fs__thunder_end_access.
+   The access token will expire automatically after THUNDER's configured
+   timeout.
+
+   If there is still a valid ACCESS object for the PATH + LOCATION, this
+   function will wait for that access to either end / complete or to timeout.
+   *ACCESS will be set to NULL in these cases.  If the access token had been
+   issued to the same thread already, this call will not block.
+
+   A caller receiving a NULL *ACCESS may assume that some other thread
+   already put the desired data into the cache.  Therefore, it should retry
+   the lookup.  However, there is no guarantee that it actually got cached
+   nor that it still is. */
+svn_error_t *
+svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
+                             svn_fs__thunder_t *thunder,
+                             const char *path,
+                             apr_uint64_t location,
+                             apr_pool_t *pool);
+
+/* Return the ACCESS token.  This will unblock all threads blocked on the
+   respective path + location.  The next call to svn_fs__thunder_begin_access
+   for this path + location will return a new access token.
+
+   Note that the registry object that handed out this token must still be
+   valid.
+
+   It is safe to call this with NULL for ACCESS as well as to call it for
+   the same ACCESS token more than once.  The latter may be inefficient. */
+svn_error_t *
+svn_fs__thunder_end_access(svn_fs__thunder_access_t *access);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
