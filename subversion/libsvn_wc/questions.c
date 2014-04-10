@@ -117,6 +117,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   apr_hash_t *keywords;
   svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
+  svn_stream_t *v_stream; /* versioned_file */
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
@@ -150,22 +151,24 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   /* ### Other checks possible? */
 
-  if (need_translation)
+  /* Reading files is necessary. */
+  if (special && need_translation)
     {
-      /* Reading files is necessary. */
-      svn_stream_t *v_stream;  /* versioned_file */
+      SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file_abspath,
+                                          scratch_pool, scratch_pool));
+    }
+  else
+    {
+	  /* We don't use APR-level buffering because the comparison function
+	   * will do its own buffering. */
+      apr_file_t *file;
+      SVN_ERR(svn_io_file_open(&file, versioned_file_abspath, APR_READ,
+                               APR_OS_DEFAULT, scratch_pool));
+      v_stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
 
-      if (special)
+      if (need_translation)
         {
-          SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
-                                           scratch_pool, scratch_pool));
-
-          if (!exact_comparison && need_translation)
+          if (!exact_comparison)
             {
               if (eol_style == svn_subst_eol_style_native)
                 eol_str = SVN_SUBST_NATIVE_EOL_STR;
@@ -183,7 +186,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                                      FALSE /* expand */,
                                                      scratch_pool);
             }
-          else if (need_translation)
+          else
             {
               /* Wrap base stream to translate into working copy form, and
                * arrange to throw an error if its EOL style is inconsistent. */
@@ -193,21 +196,10 @@ compare_and_verify(svn_boolean_t *modified_p,
                                                             scratch_pool);
             }
         }
-
-      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                        scratch_pool));
     }
-  else
-    {
-      /* Translation would be a no-op, so compare the original file. */
-      svn_stream_t *v_stream;  /* versioned_file */
 
-      SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
-                                       scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                        scratch_pool));
-    }
+  SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
+                                    scratch_pool));
 
   *modified_p = (! same);
 

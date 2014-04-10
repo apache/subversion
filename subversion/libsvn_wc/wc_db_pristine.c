@@ -197,10 +197,20 @@ pristine_read_txn(svn_stream_t **contents,
     }
 
   /* Open the file as a readable stream.  It will remain readable even when
-   * deleted from disk; APR guarantees that on Windows as well as Unix. */
+   * deleted from disk; APR guarantees that on Windows as well as Unix.
+   *
+   * We also don't enable APR_BUFFERED on this file to maximize throughput
+   * e.g. for fulltext comparison.  As we use SVN__STREAM_CHUNK_SIZE buffers
+   * where needed in streams, there is no point in having another layer of
+   * buffers. */
   if (contents)
-    SVN_ERR(svn_stream_open_readonly(contents, pristine_abspath,
-                                     result_pool, scratch_pool));
+    {
+      apr_file_t *file;
+      SVN_ERR(svn_io_file_open(&file, pristine_abspath, APR_READ,
+                               APR_OS_DEFAULT, result_pool));
+      *contents = svn_stream_from_aprfile2(file, FALSE, result_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
