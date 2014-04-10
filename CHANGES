@@ -454,11 +454,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.9
     * allow upgrading from 1.7 with exclusive locks (r1572102 et al)
     * resolve inconsitent inherited property results (r1575270 et al)
     * increase minimal timestamp sleep from 1ms to 10ms (r1581305 et al)
+    * automatic merge confused by subtree merge (issue #4481)
+    * report proper error on propget on invalid revision for url (r1586255)
 
   - Server-side bugfixes:
     * ensure proper access synchronization in fsfs on Windows (r1568953 et al)
     * don't let invalid mergeinfo stop 'svnadmin dump' (r1574868 et al)
     * resolve svnserve performance regression caused by iprops (r1578853 et al)
+    * reduce size of memory buffer when reading config files (r1581296)
+    * remove dead transaction if commit was blocked by hook (r1583977)
 
  Developer-visible changes:
   - General:
@@ -467,6 +471,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.9
     * avoid duplicate sqlite analyze information rows (r1571214)
     * add Mavericks to our sysinfo output (r1573088)
     * bump copyright years to 2014 (r1555403)
+    * unbreak test suite when running as root (r1583580)
+    * resolve buffer overflow in testcode (r1481782)
 
 
 Version 1.8.8
