@@ -3243,7 +3243,8 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in
  * which case no revision-based filtering occurs at all), or both are
  * valid revisions (where @a start_rev is older than or equivalent to
- * @a end_rev).
+ * @a end_rev).  They refer to dump stream revision numbers rather than
+ * committed revision numbers.
  *
  * If @a use_history is set, then the parser will require relative
  * 'copyfrom' history to exist in the repository when it encounters
