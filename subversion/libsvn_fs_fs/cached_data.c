@@ -28,6 +28,7 @@
 #include "svn_ctype.h"
 #include "svn_sorts.h"
 #include "private/svn_delta_private.h"
+#include "private/svn_fs_util.h"
 #include "private/svn_io_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
@@ -716,6 +717,7 @@ create_rep_state_body(rep_state_t **rep_state,
   rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
   svn_boolean_t is_cached = FALSE;
+  svn_fs__thunder_access_t *access = NULL;
 
   /* If the hint is
    * - given,
@@ -749,8 +751,11 @@ create_rep_state_body(rep_state_t **rep_state,
 
   /* cache lookup, i.e. skip reading the rep header if possible */
   if (ffd->rep_header_cache && !svn_fs_fs__id_txn_used(&rep->txn_id))
-    SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
-                           ffd->rep_header_cache, &key, pool));
+    SVN_ERR(svn_fs_fs__thundered_cache_get((void **) &rh, &is_cached,
+                                           &access, fs, "REP", 
+                                           rep->revision, rep->item_index,
+                                           ffd->rep_header_cache, &key,
+                                           pool));
 
   /* initialize the (shared) FILE member in RS */
   if (reuse_shared_file)
@@ -810,6 +815,10 @@ create_rep_state_body(rep_state_t **rep_state,
             if (ffd->rep_header_cache)
               SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
         }
+
+      /* Returning the access token is only needed in case of a cache miss
+       * because it will be NULL in case of cache hit. */
+      SVN_ERR(svn_fs__thunder_end_access(access));
     }
 
   /* finalize */

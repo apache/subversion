@@ -23,6 +23,8 @@
 #ifndef SVN_LIBSVN_FS__UTIL_H
 #define SVN_LIBSVN_FS__UTIL_H
 
+#include "private/svn_fs_util.h"
+
 #include "svn_fs.h"
 #include "id.h"
 
@@ -388,5 +390,26 @@ svn_fs_fs__use_log_addressing(svn_fs_t *fs,
 /* Return TRUE if FS's format supports moves to be recorded natively. */
 svn_boolean_t
 svn_fs_fs__supports_move(svn_fs_t *fs);
+
+/* Wrapper around svn_cache__get that uses the thundering heard mitigation
+ * registry upon cache miss to coordinate access.  If there have been
+ * concurrent accesses, retry the lookup before returning to the caller.
+ *
+ * FS, TAG, REVISION and LOCATION will be combined into key data for our
+ * module-global THUNDER instance.  If the caller is the first to access
+ * the data after the cache miss, the associated token is returned in
+ * *ACCESS.  It will be NULL otherwise.
+ */
+svn_error_t *
+svn_fs_fs__thundered_cache_get(void **value,
+                               svn_boolean_t *found,
+                               svn_fs__thunder_access_t **access,
+                               svn_fs_t *fs,
+                               const char *tag,
+                               svn_revnum_t revision,
+                               apr_uint64_t location,
+                               svn_cache__t *cache,
+                               const void *key,
+                               apr_pool_t *pool);
 
 #endif

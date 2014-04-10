@@ -490,6 +490,24 @@ static fs_library_vtable_t library_vtable = {
   fs_info_dup
 };
 
+/* Module-global Thundering Herd mitigation registry instance. */
+static svn_fs__thunder_t *thunder;
+
+/* Reset THUNDER to detect access to stale objects after this module got
+ * unloaded. */
+static apr_status_t
+reset_thunder(void *baton)
+{
+  thunder = NULL;
+  return APR_SUCCESS;
+}
+
+svn_fs__thunder_t *
+svn_fs_fs__get_thunder()
+{
+  return thunder;
+}
+
 svn_error_t *
 svn_fs_fs__init(const svn_version_t *loader_version,
                 fs_library_vtable_t **vtable, apr_pool_t* common_pool)
@@ -508,6 +526,14 @@ svn_fs_fs__init(const svn_version_t *loader_version,
                              _("Unsupported FS loader version (%d) for fsfs"),
                              loader_version->major);
   SVN_ERR(svn_ver_check_list2(fs_version(), checklist, svn_ver_equal));
+
+  /* An I/O op and the respective data extraction (including putting stuff
+   * into cache) afterwards should not take longer than 250ms.  Since disk
+   * file systems may require a sequence of accesses to finally return a
+   * single block, timeouts below 100ms could be too tight. */
+  SVN_ERR(svn_fs__thunder_create(&thunder, 250000, common_pool));
+  apr_pool_cleanup_register(common_pool, NULL, reset_thunder,
+                            apr_pool_cleanup_null);
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

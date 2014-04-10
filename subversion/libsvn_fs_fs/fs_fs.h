@@ -241,4 +241,8 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
 void
 svn_fs_fs__reset_txn_caches(svn_fs_t *fs);
 
+/* Access to the module-wide thunder registry. */
+struct svn_fs__thunder_t *
+svn_fs_fs__get_thunder();
+
 #endif

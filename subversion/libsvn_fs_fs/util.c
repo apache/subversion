@@ -645,3 +645,29 @@ svn_fs_fs__supports_move(svn_fs_t *fs)
 
   return ffd->format >= SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT;
 }
+
+svn_error_t *
+svn_fs_fs__thundered_cache_get(void **value,
+                               svn_boolean_t *found,
+                               svn_fs__thunder_access_t **access,
+                               svn_fs_t *fs,
+                               const char *tag,
+                               svn_revnum_t revision,
+                               apr_uint64_t location,
+                               svn_cache__t *cache,
+                               const void *key,
+                               apr_pool_t *pool)
+{
+  SVN_ERR(svn_cache__get(value, found, cache, key, pool));
+  if (!*found)
+    {
+      const char *access_path = apr_psprintf(pool, "%s:%s:%ld",
+                                             fs->path, tag, revision);
+      SVN_ERR(svn_fs__thunder_begin_access(access, svn_fs_fs__get_thunder(),
+                                           access_path, location, pool));
+      if (!*access)
+        SVN_ERR(svn_cache__get(value, found, cache, key, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
