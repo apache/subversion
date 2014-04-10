@@ -600,7 +600,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
       ffd->mergeinfo_existence_cache = NULL;
     }
 
-  /* initialize revprop cache, if full-text caching has been enabled */
+  /* if enabled, cache revprops */
   if (cache_revprops)
     {
       SVN_ERR(create_cache(&(ffd->revprop_cache),
