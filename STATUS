@@ -362,7 +362,7 @@ Candidate changes:
    Justification:
      Replaces easy to trigger assertions with proper errors.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, julianfoad
 
 Veto-blocked changes:
 =====================
