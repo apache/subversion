@@ -277,14 +277,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1579684, r1580867, r1580872
-   Fix issue #4481 "automatic merge confused by missing subtree merge".
-   Justification:
-     Valid merges were broken (and gave a confusing error message).
-   Votes:
-     +1: julianfoad (without r1579684)
-     +1: rhuijben, philip
-
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
    Justification:
@@ -292,13 +284,6 @@ Candidate changes:
    Votes:
      +1: philip
      +0.5: rhuijben (looks good, can't test)
-
- * r1583580
-   Skip a test that fails when run as root.
-   Justification:
-     Avoids spurious FAIL.
-   Votes:
-     +1: philip, rhuijben
 
  * r1581810, 1584342
    Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
@@ -392,3 +377,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1579684, r1580867, r1580872
+   Fix issue #4481 "automatic merge confused by missing subtree merge".
+   Justification:
+     Valid merges were broken (and gave a confusing error message).
+   Votes:
+     +1: julianfoad, rhuijben, philip
+
+ * r1583580
+   Skip a test that fails when run as root.
+   Justification:
+     Avoids spurious FAIL.
+   Votes:
+     +1: philip, rhuijben, julianfoad
