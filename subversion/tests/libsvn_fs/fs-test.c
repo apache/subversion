@@ -5307,6 +5307,55 @@ dir_prop_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+basic_thunder_interface(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs__thunder_t *thunder;
+  svn_fs__thunder_access_t *access, *access2, *access3;
+
+  /* Create thunder object with some small timeout
+   * (this is a single-threaded test anyways which would not block) */
+  SVN_ERR(svn_fs__thunder_create(&thunder, 10000, pool));
+
+  /* Gain access and release it. */
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path",
+                                       123456, pool));
+  SVN_TEST_ASSERT(access);
+  SVN_ERR(svn_fs__thunder_end_access(access));
+
+  /* Double release is fine */
+  SVN_ERR(svn_fs__thunder_end_access(access));
+
+  /* Re-acquiring an access is fine, too.   This time, we won't release it
+   * to verify that unreleased access objects don't mess up the destruction
+   * of the thunder_t instance. */
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path",
+                                       123456, pool));
+  SVN_TEST_ASSERT(access);
+
+  /* Acquiring the same path twice is legal but the second attempt causes
+   * a time out and no access object gets returned. */
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "path2", 9, pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access2, thunder, "path2", 9, pool));
+
+  SVN_TEST_ASSERT(access);
+  SVN_TEST_ASSERT(access2 == NULL);
+
+  /* Gaining access to another path should be passible. */
+  SVN_ERR(svn_fs__thunder_begin_access(&access3, thunder, "path2", 91, pool));
+  SVN_TEST_ASSERT(access3);
+
+  /* Now, release all three. */
+  SVN_ERR(svn_fs__thunder_end_access(access));
+  SVN_ERR(svn_fs__thunder_end_access(access2));
+  SVN_ERR(svn_fs__thunder_end_access(access3));
+
+  /* Clean up the container (while still holding an access object). */
+  svn_fs__thunder_destroy(thunder);
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -5402,6 +5451,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs__compatible_version"),
     SVN_TEST_OPTS_PASS(dir_prop_merge,
                        "test merge directory properties"),
+    SVN_TEST_OPTS_PASS(basic_thunder_interface,
+                       "test basic thunder_t interface"),
     SVN_TEST_NULL
   };
 
