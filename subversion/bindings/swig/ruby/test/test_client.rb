@@ -2267,7 +2267,6 @@ class SvnClientTest < Test::Unit::TestCase
         end
       end
       config = Svn::Core::Config.config(@config_path)
-      assert_nil(ctx.config)
       assert_equal(options, config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
       ctx.config = config
       assert_equal(options,
