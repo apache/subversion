@@ -354,7 +354,7 @@ Candidate changes:
    Justification:
      Reported to fail often when tracing memory problems.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
@@ -381,13 +381,6 @@ Veto-blocked changes:
      -1: ivan (Significant performance degradation for svnadmin hotcopy,
                the root cause is not fixed. Discussion:
                http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
-
- * r1481782
-   Fix a crash bug in a test case in libsvn_wc/conflict-data-test.
-   Justification:
-     The test crashes with APR pool debugging enabled.
-   Votes:
-     +1: stsp
 
 Approved changes:
 =================
