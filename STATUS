@@ -342,20 +342,6 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1586255
-   Fix propget/proplist error on invalid revisions
-   Justification:
-     Replaces easy to trigger assertions with proper errors.
-   Votes:
-     +1: rhuijben, julianfoad
-
- * r1481782
-   Fix problem in test suite by allocating buffer of the right size
-   Justification:
-     Reported to fail often when tracing memory problems.
-   Votes:
-     +1: rhuijben, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -398,3 +384,17 @@ Approved changes:
      Avoids spurious FAIL.
    Votes:
      +1: philip, rhuijben, julianfoad
+
+ * r1586255
+   Fix propget/proplist error on invalid revisions
+   Justification:
+     Replaces easy to trigger assertions with proper errors.
+   Votes:
+     +1: rhuijben, julianfoad, philip
+
+ * r1481782
+   Fix problem in test suite by allocating buffer of the right size
+   Justification:
+     Reported to fail often when tracing memory problems.
+   Votes:
+     +1: rhuijben, stsp, philip
