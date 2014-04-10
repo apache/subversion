@@ -357,6 +357,13 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
+ * r1586255
+   Fix propget/proplist error on invalid revisions
+   Justification:
+     Replaces easy to trigger assertions with proper errors.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
