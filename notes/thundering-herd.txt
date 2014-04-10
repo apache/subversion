@@ -1,0 +1,50 @@
+The Problem
+-----------
+
+In certain situations, such as the announcement of a milestone being
+reched, the server gets hit by a large number of client requests for
+the same data.  Since updates or checkouts may take minutes, more of
+the same requests come in before the first ones complete.  The server
+than gets progressively slowed down.
+
+The best we may achieve is that the first request gets to read the
+data from disk and all others are being fed from the cache, basically
+saturating the network as necessary.
+
+However, there is a catch.  While the first request reads missing data
+from disk, all others get served quickly from cache and catch up until
+they miss the *same data* as the first request.  Disk access suddenly 
+acts like a synchronization barrier.  More importantly, reading and
+reconstructing data from disk is CPU expensive and blocks ressources
+such as file handles.  Both limits scalability.
+
+
+The Solution
+------------
+
+We introduce a central registry that keeps track of FS layer operations.
+Whenever a cache lookup misses, we turn to that registry and tell it
+that we intend to read / reconstruct the missing data.  Once we are
+done, we inform the registry again.
+
+If the registry already contains an entry for the same node, it delays
+the request until the first one is completed and then tells the caller
+that it has not been the first.  The caller, in turn, may then retry
+the cache lookup and will usually find the required data.  If it misses
+again, we continue with reading / reconstructing the data ourselves.
+
+There are a few caveats that we need to address:
+
+* A initial reader may get aborted due to error, stuck or otherwise
+  delayed.  The registry uses a configurable timeout for that case.
+
+* Streamy processing can make the "end of access" notification
+  unreliable, i.e. it might not get sent in all cases.  Again, the
+  timeout will prevent the worst effects.
+
+* A reader may request access to the same data more than once at the
+  same time. The second request must not get delayed in that case.
+  Example: When a file gets committed, the deltification base as well
+  as the base for the incomming delta stream may be the same reps,
+  being read as streams at the same time.
+

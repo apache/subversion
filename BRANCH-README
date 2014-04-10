@@ -1,0 +1,5 @@
+This branch will enable the FS layer to mitigate some of the effects of
+the "Thundering Herd" problem.  See notes/thundering-herd.txt for details.
+
+Besides for implementation and testing purposes, we use this branch to
+come up with a somewhat usable interface.
