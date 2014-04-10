@@ -350,6 +350,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1586052, r1586467
+   Fix two memory lifetime bugs in the Ruby bindings.
+   Justification:
+     Ruby bindings tests crash with APR pool debugging enabled.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
