@@ -386,13 +386,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1586255
-   Fix propget/proplist error on invalid revisions
-   Justification:
-     Replaces easy to trigger assertions with proper errors.
-   Votes:
-     +1: rhuijben, julianfoad, philip
-
  * r1481782
    Fix problem in test suite by allocating buffer of the right size
    Justification:
