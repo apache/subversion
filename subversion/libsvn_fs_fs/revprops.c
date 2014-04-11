@@ -950,6 +950,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_int64_t generation = 0;
+  svn_fs__thunder_access_t *access = NULL;
 
   /* not found, yet */
   *proplist_p = NULL;
@@ -967,8 +968,10 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
 
       key.revision = rev;
       key.second = generation;
-      SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                             ffd->revprop_cache, &key, pool));
+      SVN_ERR(svn_fs_fs__thundered_cache_get((void **) proplist_p,
+                                             &is_cached, &access, fs,
+                                             "REVPROPS", rev, 0,
+                                             ffd->revprop_cache, &key, pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
@@ -1000,6 +1003,8 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
       SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
       *proplist_p = revprops->properties;
     }
+
+  SVN_ERR(svn_fs__thunder_end_access(access));
 
   /* The revprops should have been there. Did we get them? */
   if (!*proplist_p)

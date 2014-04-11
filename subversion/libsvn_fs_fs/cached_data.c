@@ -1049,6 +1049,11 @@ struct rep_read_baton
   /* The key for the fulltext cache for this rep, if there is a
      fulltext cache. */
   pair_cache_key_t fulltext_cache_key;
+
+  /* Access token we should release after reading the fulltext.
+     May be NULL. */
+  svn_fs__thunder_access_t *access;
+
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
@@ -1350,12 +1355,14 @@ build_rep_list(apr_array_header_t **list,
    filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
    NULL, it is the rep's key in the fulltext cache, and a stringbuf
    must be allocated to store the text.  Perform all allocations in
-   POOL.  If rep is mutable, it must be for file contents. */
+   POOL.  Store the ACCESS token to be released once the read as been
+   completed.  If rep is mutable, it must be for file contents. */
 static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
                    representation_t *rep,
                    pair_cache_key_t fulltext_cache_key,
+                   svn_fs__thunder_access_t *access,
                    apr_pool_t *pool)
 {
   struct rep_read_baton *b;
@@ -1371,6 +1378,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
+  b->access = access;
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
 
@@ -1749,12 +1757,24 @@ rep_read_contents(void *baton,
         }
     }
 
-  if (rb->off == rb->len && rb->current_fulltext)
+  /* End of representation? */
+  if (rb->off == rb->len)
     {
-      fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, &rb->fulltext_cache_key,
-                             rb->current_fulltext, rb->pool));
-      rb->current_fulltext = NULL;
+      /* Cache fulltext, if enabled. */
+      if (rb->current_fulltext)
+        {
+          fs_fs_data_t *ffd = rb->fs->fsap_data;
+          SVN_ERR(svn_cache__set(ffd->fulltext_cache, &rb->fulltext_cache_key,
+                                rb->current_fulltext, rb->pool));
+          rb->current_fulltext = NULL;
+        }
+
+      /* Return access token, if we have one. */
+      if (rb->access)
+        {
+          SVN_ERR(svn_fs__thunder_end_access(rb->access));
+          rb->access = NULL;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1777,6 +1797,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
       pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
+      svn_fs__thunder_access_t *access = NULL;
 
       /* Cache lookup, if the fulltext may be cached. */
       fulltext_cache_key.revision = rep->revision;
@@ -1787,9 +1808,13 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, &fulltext_cache_key,
-                                 pool));
+          SVN_ERR(svn_fs_fs__thundered_cache_get((void **) &fulltext,
+                                                 &is_cached, &access, fs,
+                                                 "TXT", rep->revision,
+                                                 rep->item_index,
+                                                 ffd->fulltext_cache,
+                                                 &fulltext_cache_key,
+                                                 pool));
           if (is_cached)
             {
               *contents_p = svn_stream_from_stringbuf(fulltext, pool);
@@ -1805,7 +1830,8 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
 
       /* Create the object chain for reconstruction from deltas or for
          reading plain text, depending on on-disk representation. */
-      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
+      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, access,
+                                 pool));
 
       *contents_p = svn_stream_create(rb, pool);
       svn_stream_set_read2(*contents_p, NULL /* only full read support */,
@@ -2254,6 +2280,7 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 {
   pair_cache_key_t pair_key = { 0 };
   const void *key;
+  svn_fs__thunder_access_t *access;
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
@@ -2262,8 +2289,11 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
     {
       svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key,
-                             result_pool));
+      SVN_ERR(svn_fs_fs__thundered_cache_get((void **)entries_p, &found,
+                                             &access, fs, "DIR", 
+                                             noderev->data_rep->revision,
+                                             noderev->data_rep->item_index,
+                                             cache, key, result_pool));
       if (found)
         return SVN_NO_ERROR;
     }
@@ -2275,6 +2305,9 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
   /* Update the cache, if we are to use one. */
   if (cache)
     SVN_ERR(svn_cache__set(cache, key, *entries_p, scratch_pool));
+
+  /* Others may now retry the cache lookup */
+  SVN_ERR(svn_fs__thunder_end_access(access));
 
   return SVN_NO_ERROR;
 }
