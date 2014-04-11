@@ -2291,8 +2291,8 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 
       SVN_ERR(svn_fs_fs__thundered_cache_get((void **)entries_p, &found,
                                              &access, fs, "DIR", 
-                                             noderev->data_rep->revision,
-                                             noderev->data_rep->item_index,
+                                             pair_key.revision,
+                                             pair_key.second,
                                              cache, key, result_pool));
       if (found)
         return SVN_NO_ERROR;
@@ -2304,10 +2304,12 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, key, *entries_p, scratch_pool));
+    {
+      SVN_ERR(svn_cache__set(cache, key, *entries_p, scratch_pool));
 
-  /* Others may now retry the cache lookup */
-  SVN_ERR(svn_fs__thunder_end_access(access));
+      /* Others may now retry the cache lookup */
+      SVN_ERR(svn_fs__thunder_end_access(access));
+    }
 
   return SVN_NO_ERROR;
 }
