@@ -984,15 +984,18 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   l2p_header_t *result;
   svn_boolean_t is_cached = FALSE;
   void *dummy = NULL;
+  svn_fs__thunder_access_t *access;
 
   /* try to find the info in the cache */
   pair_cache_key_t key;
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
-  SVN_ERR(svn_cache__get_partial((void**)&dummy, &is_cached,
-                                 ffd->l2p_header_cache, &key,
-                                 l2p_page_info_access_func, baton,
-                                 pool));
+  SVN_ERR(svn_fs_fs__thundered_cache_get_partial((void**)&dummy, &is_cached,
+                                                 &access, fs, "L2P:HEADER",
+                                                 key.revision, key.second,
+                                                 ffd->l2p_header_cache, &key,
+                                                 l2p_page_info_access_func,
+                                                 baton, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
@@ -1000,6 +1003,9 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   SVN_ERR(get_l2p_header_body(&result, rev_file, fs, baton->revision, pool));
   SVN_ERR(l2p_page_info_copy(baton, result, result->page_table,
                              result->page_table_index));
+
+  /* Completed our data access. */
+  SVN_ERR(svn_fs__thunder_end_access(access));
 
   return SVN_NO_ERROR;
 }
@@ -1290,6 +1296,7 @@ l2p_index_lookup(apr_off_t *offset,
   svn_fs_fs__page_cache_key_t key = { 0 };
   svn_boolean_t is_cached = FALSE;
   void *dummy = NULL;
+  svn_fs__thunder_access_t *access;
 
   /* read index master data structure and extract the info required to
    * access the l2p index page for (REVISION,ITEM_INDEX)*/
@@ -1307,9 +1314,11 @@ l2p_index_lookup(apr_off_t *offset,
   key.is_packed = svn_fs_fs__is_packed_rev(fs, revision);
   key.page = info_baton.page_no;
 
-  SVN_ERR(svn_cache__get_partial(&dummy, &is_cached,
-                                 ffd->l2p_page_cache, &key,
-                                 l2p_entry_access_func, &page_baton, pool));
+  SVN_ERR(svn_fs_fs__thundered_cache_get_partial
+            (&dummy, &is_cached, &access, fs, "L2P", rev_file->start_revision,
+             info_baton.entry.offset / ffd->block_size,
+             ffd->l2p_page_cache, &key, l2p_entry_access_func, &page_baton,
+             pool));
 
   if (!is_cached)
     {
@@ -1368,6 +1377,9 @@ l2p_index_lookup(apr_off_t *offset,
         }
 
       svn_pool_destroy(iterpool);
+
+      /* Completed our data access. */
+      SVN_ERR(svn_fs__thunder_end_access(access));
     }
 
   *offset = page_baton.offset;

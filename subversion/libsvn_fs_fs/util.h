@@ -412,4 +412,21 @@ svn_fs_fs__thundered_cache_get(void **value,
                                const void *key,
                                apr_pool_t *pool);
 
+/* Wrapper around svn_cache__get_packed similar to
+ * svn_fs_fs__thundered_cache_get.
+ */
+svn_error_t *
+svn_fs_fs__thundered_cache_get_partial(void **value,
+                                       svn_boolean_t *found,
+                                       svn_fs__thunder_access_t **access,
+                                       svn_fs_t *fs,
+                                       const char *tag,
+                                       svn_revnum_t revision,
+                                       apr_uint64_t location,
+                                       svn_cache__t *cache,
+                                       const void *key,
+                                       svn_cache__partial_getter_func_t func,
+                                       void *baton,
+                                       apr_pool_t *pool);
+
 #endif
