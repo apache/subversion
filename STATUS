@@ -201,21 +201,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1577812, r1577813, r1579429
-   Resolve a segfault when 'svn merge --force' merges a directory delete
-   Justification:
-     Even though this merge flag is not recommended, it shouldn't cause a
-     segfault.
-   Notes:
-     r1577812 contains the actual fix and a regression test. r1577813 is
-     a minor improvement. A branch is necessary because a comment right above
-     the fix contained a typo that was fixed on trunk in a huge commit of many
-     typo fixes.
-   Branch:
-     ^/subversion/branches/1.8.x-r1577812
-   Votes:
-     +1: philip, rhuijben
-
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
    with a NULL svn_lock_t *, as documented.
@@ -359,6 +344,21 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1577812, r1577813, r1579429
+   Resolve a segfault when 'svn merge --force' merges a directory delete
+   Justification:
+     Even though this merge flag is not recommended, it shouldn't cause a
+     segfault.
+   Notes:
+     r1577812 contains the actual fix and a regression test. r1577813 is
+     a minor improvement. A branch is necessary because a comment right above
+     the fix contained a typo that was fixed on trunk in a huge commit of many
+     typo fixes.
+   Branch:
+     ^/subversion/branches/1.8.x-r1577812
+   Votes:
+     +1: philip, rhuijben, julianfoad
 
  * r1577294
    Make interactive conflict resolver behave as designed.
