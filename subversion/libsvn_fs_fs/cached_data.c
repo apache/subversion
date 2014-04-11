@@ -52,6 +52,7 @@ block_read(void **result,
            svn_fs_t *fs,
            svn_revnum_t revision,
            apr_uint64_t item_index,
+           int item_type,
            svn_fs_fs__revision_file_t *revision_file,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool);
@@ -352,6 +353,7 @@ get_node_revision_body(node_revision_t **noderev_p,
           SVN_ERR(block_read((void **)noderev_p, fs,
                              rev_item->revision,
                              rev_item->number,
+                             SVN_FS_FS__ITEM_TYPE_NODEREV,
                              revision_file,
                              pool,
                              pool));
@@ -810,6 +812,7 @@ create_rep_state_body(rep_state_t **rep_state,
         {
           if (svn_fs_fs__use_log_addressing(fs, rep->revision))
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
+                               SVN_FS_FS__ITEM_TYPE_UNUSED,
                                rs->sfile->rfile, pool, pool));
           else
             if (ffd->rep_header_cache)
@@ -1431,6 +1434,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
       && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
+                         SVN_FS_FS__ITEM_TYPE_UNUSED,
                          rs->sfile->rfile, pool, pool));
 
       /* reading the whole block probably also provided us with the
@@ -2471,6 +2475,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
           /* 'block-read' will also provide us with the desired data */
           SVN_ERR(block_read((void **)changes, fs,
                              rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
+                             SVN_FS_FS__ITEM_TYPE_CHANGES,
                              revision_file, pool, pool));
         }
       else
@@ -2916,11 +2921,11 @@ block_read_noderev(node_revision_t **noderev_p,
   return SVN_NO_ERROR;
 }
 
-/* Read the whole (e.g. 64kB) block containing ITEM_INDEX of REVISION in FS
- * and put all data into cache.  If necessary and depending on heuristics,
- * neighboring blocks may also get read.  The data is being read from
- * already open REVISION_FILE, which must be the correct rev / pack file
- * w.r.t. REVISION.
+/* Read the whole (e.g. 64kB) block containing ITEM_INDEX of REVISION and
+ * type ITEM_TYPE in FS and put all data into cache.  If necessary and
+ * depending on heuristics, neighboring blocks may also get read.  The data
+ * is being read from already open REVISION_FILE, which must be the correct
+ * rev / pack file w.r.t. REVISION.
  *
  * For noderevs and changed path lists, the item fetched can be allocated
  * RESULT_POOL and returned in *RESULT.  Otherwise, RESULT must be NULL.
@@ -2930,6 +2935,7 @@ block_read(void **result,
            svn_fs_t *fs,
            svn_revnum_t revision,
            apr_uint64_t item_index,
+           int item_type,
            svn_fs_fs__revision_file_t *revision_file,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -2944,7 +2950,7 @@ block_read(void **result,
 
   /* don't try this on transaction protorev files */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  
+
   /* index lookup: find the OFFSET of the item we *must* read plus (in the
    * "do-while" block) the list of items in the same block. */
   SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, fs, revision_file,
@@ -2963,9 +2969,64 @@ block_read(void **result,
   do
     {
       svn_error_t *err;
+      svn_fs__thunder_access_t *access;
+      const char *filename;
+
+      /* Begin coordinated thunder-aware access. */
+      block_start = offset - (offset % ffd->block_size);
+      SVN_ERR(svn_io_file_name_get(&filename, revision_file->file,
+                                   scratch_pool));
+      SVN_ERR(svn_fs__thunder_begin_access(&access, svn_fs_fs__get_thunder(),
+                                           filename, block_start,
+                                           scratch_pool));
+
+      /* If we did not get the access token, retry the cache access if we
+       * need to data at all. */
+      if (!access)
+        {
+          pair_cache_key_t key = { 0 };
+          svn_boolean_t found = FALSE;
+
+          /* We don't actually need to return data, just exit. */ 
+          if (!result)
+            break;
+
+          /* Retry cache lookup only on the first pass.  Otherwise, we might
+             overwrite data explicitly read in the first iteration if its
+             not in cache anymore.  */
+          if (run_count == 0)
+            {
+              key.revision = revision;
+              key.second = item_index;
+
+              switch (item_type)
+                {
+                  case SVN_FS_FS__ITEM_TYPE_NODEREV:
+                    if (ffd->node_revision_cache)
+                      SVN_ERR(svn_cache__get(result, &found,
+                                             ffd->node_revision_cache,
+                                             &key, result_pool));
+                    break;
+
+                  case SVN_FS_FS__ITEM_TYPE_CHANGES:
+                    if (ffd->changes_cache)
+                      SVN_ERR(svn_cache__get(result, &found,
+                                             ffd->changes_cache,
+                                             &key, result_pool));
+                    break;
+
+                  default:
+                    found = FALSE;
+                    break;
+                }
+            }
+
+          /* If the data has been found in cache, we are done. */
+          if (found)
+            break;
+        }
 
       /* fetch list of items in the block surrounding OFFSET */
-      block_start = offset - (offset % ffd->block_size);
       err = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
                                         revision, block_start,
                                         ffd->block_size, scratch_pool);
@@ -2974,6 +3035,10 @@ block_read(void **result,
        * to actually read some item, we retry the whole process */
       if (err)
         {
+          /* Abort the current attempt at accessing data. 
+           * We will retry in the recursive call. */
+          SVN_ERR(svn_fs__thunder_end_access(access));
+
           /* We failed for the first time. Refresh cache & retry. */
           SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
           if (   revision_file->is_packed
@@ -2984,7 +3049,7 @@ block_read(void **result,
                   SVN_ERR(svn_fs_fs__reopen_revision_file(revision_file, fs, 
                                                           revision));
                   SVN_ERR(block_read(result, fs, revision, item_index,
-                                     revision_file, result_pool,
+                                     item_type, revision_file, result_pool,
                                      scratch_pool));
                 }
 
@@ -3069,6 +3134,8 @@ block_read(void **result,
             }
         }
 
+      /* We sync for the first block only and that has been read now. */
+      SVN_ERR(svn_fs__thunder_end_access(access));
     }
   while(run_count++ == 1); /* can only be true once and only if a block
                             * boundary got crossed */
