@@ -661,10 +661,12 @@ svn_fs_fs__thundered_cache_get(void **value,
   SVN_ERR(svn_cache__get(value, found, cache, key, pool));
   if (!*found)
     {
-      const char *access_path = apr_psprintf(pool, "%s:%s:%ld",
-                                             fs->path, tag, revision);
+      const char *access_path = apr_psprintf(pool,
+                                             "%s:%s:%ld:%" APR_UINT64_T_FMT,
+                                             fs->path, tag, revision,
+                                             location);
       SVN_ERR(svn_fs__thunder_begin_access(access, svn_fs_fs__get_thunder(),
-                                           access_path, location, pool));
+                                           access_path, pool));
       if (!*access)
         SVN_ERR(svn_cache__get(value, found, cache, key, pool));
     }
@@ -691,10 +693,12 @@ svn_fs_fs__thundered_cache_get_partial(void **value,
                                  pool));
   if (!*found)
     {
-      const char *access_path = apr_psprintf(pool, "%s:%s:%ld",
-                                             fs->path, tag, revision);
+      const char *access_path = apr_psprintf(pool,
+                                             "%s:%s:%ld:%" APR_UINT64_T_FMT,
+                                             fs->path, tag, revision,
+                                             location);
       SVN_ERR(svn_fs__thunder_begin_access(access, svn_fs_fs__get_thunder(),
-                                           access_path, location, pool));
+                                           access_path, pool));
       if (!*access)
         SVN_ERR(svn_cache__get_partial(value, found, cache, key, func, baton,
                                        pool));

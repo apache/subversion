@@ -5319,8 +5319,7 @@ basic_thunder_interface(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs__thunder_create(&thunder, 10000, pool));
 
   /* Gain access and release it. */
-  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path",
-                                       123456, pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path", pool));
   SVN_TEST_ASSERT(access);
   SVN_ERR(svn_fs__thunder_end_access(access));
 
@@ -5330,20 +5329,19 @@ basic_thunder_interface(const svn_test_opts_t *opts,
   /* Re-acquiring an access is fine, too.   This time, we won't release it
    * to verify that unreleased access objects don't mess up the destruction
    * of the thunder_t instance. */
-  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path",
-                                       123456, pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "/some/path", pool));
   SVN_TEST_ASSERT(access);
 
   /* Acquiring the same path twice is legal but the second attempt causes
    * a time out and no access object gets returned. */
-  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "path2", 9, pool));
-  SVN_ERR(svn_fs__thunder_begin_access(&access2, thunder, "path2", 9, pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access, thunder, "path2:9", pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access2, thunder, "path2:9", pool));
 
   SVN_TEST_ASSERT(access);
   SVN_TEST_ASSERT(access2 == NULL);
 
   /* Gaining access to another path should be passible. */
-  SVN_ERR(svn_fs__thunder_begin_access(&access3, thunder, "path2", 91, pool));
+  SVN_ERR(svn_fs__thunder_begin_access(&access3, thunder, "path2:91", pool));
   SVN_TEST_ASSERT(access3);
 
   /* Now, release all three. */

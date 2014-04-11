@@ -263,16 +263,17 @@ svn_fs__thunder_create(svn_fs__thunder_t **thunder,
 svn_error_t *
 svn_fs__thunder_destroy(svn_fs__thunder_t *thunder);
 
-/* Request access to the data at PATH + LOCATION.  If the THUNDER registry
-   did not have no valid entry for this already, *ACCESS will receive a
-   token that the caller shall return by calling svn_fs__thunder_end_access.
-   The access token will expire automatically after THUNDER's configured
-   timeout.
+/* Request access to the data location identified by KEY.  To prevent false
+   conflicts, repository path, revision number etc- should be included into
+   the KEY.  If the THUNDER registry did not have no valid entry for that
+   KEY already, *ACCESS will receive a token that the caller shall return
+   by calling svn_fs__thunder_end_access.  The access token will expire
+   automatically after THUNDER's configured timeout.
 
-   If there is still a valid ACCESS object for the PATH + LOCATION, this
-   function will wait for that access to either end / complete or to timeout.
-   *ACCESS will be set to NULL in these cases.  If the access token had been
-   issued to the same thread already, this call will not block.
+   If there is still a valid ACCESS object for the KEY, this function will
+   wait for that access to either end / complete or to timeout.  *ACCESS
+   will be set to NULL in these cases.  If the access token had been issued
+   to the same thread already, this call will not block.
 
    A caller receiving a NULL *ACCESS may assume that some other thread
    already put the desired data into the cache.  Therefore, it should retry
@@ -281,8 +282,7 @@ svn_fs__thunder_destroy(svn_fs__thunder_t *thunder);
 svn_error_t *
 svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
                              svn_fs__thunder_t *thunder,
-                             const char *path,
-                             apr_uint64_t location,
+                             const char *key,
                              apr_pool_t *pool);
 
 /* Return the ACCESS token.  This will unblock all threads blocked on the

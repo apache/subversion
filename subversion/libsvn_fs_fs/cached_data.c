@@ -2970,15 +2970,17 @@ block_read(void **result,
     {
       svn_error_t *err;
       svn_fs__thunder_access_t *access;
-      const char *filename;
+      const char *filename, *access_path;
 
       /* Begin coordinated thunder-aware access. */
       block_start = offset - (offset % ffd->block_size);
       SVN_ERR(svn_io_file_name_get(&filename, revision_file->file,
                                    scratch_pool));
+
+      access_path = apr_psprintf(scratch_pool, "%s:%" APR_UINT64_T_FMT,
+                                 filename, block_start);
       SVN_ERR(svn_fs__thunder_begin_access(&access, svn_fs_fs__get_thunder(),
-                                           filename, block_start,
-                                           scratch_pool));
+                                           access_path, scratch_pool));
 
       /* If we did not get the access token, retry the cache access if we
        * need to data at all. */

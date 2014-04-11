@@ -215,21 +215,6 @@ svn_fs__thunder_destroy(svn_fs__thunder_t *thunder)
   return SVN_NO_ERROR;
 }
 
-/* Return the combination of PATH and LOCATION as a single key allocated in
- * POOL.
- */
-static svn_stringbuf_t *
-construct_key(const char *path,
-              apr_uint64_t location,
-              apr_pool_t *pool)
-{
-  /* There are certainly more efficient ways to do it, but this good enough
-   * because the amount of data that the caller wants to process as part of
-   * the data access is several kB.  So, we can afford to trade a few cycles
-   * for simplicity. */
-  return svn_stringbuf_createf(pool, "%s:%" APR_UINT64_T_FMT, path, location);
-}
-
 /* Mark ACCESS as  begin used for KEY.
  *
  * Callers must serialize for ACCESS.
@@ -396,13 +381,12 @@ release_access(svn_fs__thunder_t *thunder,
 svn_error_t *
 svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
                              svn_fs__thunder_t *thunder,
-                             const char *path,
-                             apr_uint64_t location,
+                             const char *ckey,
                              apr_pool_t *pool)
 {
-  svn_stringbuf_t *key = construct_key(path, location, pool);
   access_t *internal_access;
   svn_boolean_t first;
+  svn_stringbuf_t *key = svn_stringbuf_create(ckey, pool);
 
   /* Get the current hash entry or create a new one (FIRST will then be TRUE).
    */
