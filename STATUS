@@ -241,13 +241,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1578670, r1578820, r1579274
-   Fix the order of node record headers written by svndumpfilter.
-   Justification:
-     Makes output match the rules documented in notes/dump-load-format.txt.
-   Votes:
-     +1: philip, rhuijben
-
  * r1579588
    ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
    Justification:
@@ -375,6 +368,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1578670, r1578820, r1579274
+   Fix the order of node record headers written by svndumpfilter.
+   Justification:
+     Makes output match the rules documented in notes/dump-load-format.txt.
+   Votes:
+     +1: philip, rhuijben, julianfoad
 
  * r1580832
    svnrdump: resolve segfault on 'svnrdump load' deleting an 'svn:*' property
