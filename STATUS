@@ -386,13 +386,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1583580
-   Skip a test that fails when run as root.
-   Justification:
-     Avoids spurious FAIL.
-   Votes:
-     +1: philip, rhuijben, julianfoad
-
  * r1586255
    Fix propget/proplist error on invalid revisions
    Justification:
