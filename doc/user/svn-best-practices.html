@@ -183,39 +183,6 @@ the server or affect other users.</p>
 
 <!-- =================================================== -->
 
-<h2>Work around commands that don't understand copies/renames</h2>
-
-<p>When a file or directory is copied or renamed, the Subversion repository
-tracks that history.  Unfortunately in Subversion 1.0, the only client
-subcommand which actually takes advantage of this feature is <tt>svn
-log</tt>.  A number of other commands (such as <tt>svn diff</tt> and
-<tt>svn cat</tt>) ought to be automatically following rename-history,
-but aren't doing so yet.</p>
-
-<p>In all of these cases, a basic workaround is to use <tt>'svn log
--v'</tt> to discover the proper path within the older revision.</p>
-
-<p>For example, suppose you copied <tt>/trunk</tt> to
-<tt>/branches/mybranch</tt> in revision 200, and then committed some
-changes to <tt>/branches/mybranch/foo.c</tt> in subsequent revisions.
-Now you'd like to compare revisions 80 and 250 of the file.</p>
-
-<p>If you have a working copy of the branch and run <tt>svn diff
--r80:250 foo.c</tt>, you'll see an error about
-<tt>/branches/mybranch/foo.c</tt> not existing in revision 80.  To
-remedy, you would run <tt>svn log -v</tt> on your branch or file to
-discover that it was named <tt>/trunk/foo.c</tt> prior to revision 200,
-and then compare the two URLs directly:</p>
-
-<pre>
-   $ svn diff http://.../trunk/foo.c@80 \
-              http://.../branches/mybranch/foo.c@200
-</pre>
-
-
-
-<!-- =================================================== -->
-
 <h2>Know when to create branches</h2>
 
 <p>This is a hotly debated question, and it really depends on the
