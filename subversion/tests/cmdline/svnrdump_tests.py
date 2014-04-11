@@ -769,6 +769,34 @@ def only_trunk_A_range_dump(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(4490)
+def load_prop_change_in_non_deltas_dump(sbox):
+  "load: prop change in non-deltas dump"
+  # 'svnrdump load' crashed when processing a node record with a non-delta
+  # properties block if the node previously had any svn:* properties.
+
+  sbox.build()
+  sbox.simple_propset('svn:eol-style', 'native', 'iota', 'A/mu', 'A/B/lambda')
+  sbox.simple_commit()
+
+  # Any prop change on a node that had an svn:* prop triggered the crash,
+  # so test an svn:* prop deletion and also some other prop changes.
+  sbox.simple_propdel('svn:eol-style', 'iota')
+  sbox.simple_propset('svn:eol-style', 'LF', 'A/mu')
+  sbox.simple_propset('p1', 'v1', 'A/B/lambda')
+  sbox.simple_commit()
+
+  # Create a non-deltas dump. Use 'svnadmin', as svnrdump doesn't have that
+  # option.
+  dump = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Try to load that dump.
+  build_repos(sbox)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dump,
+                                          [], [], 0,
+                                          '-q', 'load', sbox.repo_url)
+
 
 ########################################################################
 # Run the tests
@@ -824,6 +852,7 @@ test_list = [ None,
               range_dump,
               only_trunk_range_dump,
               only_trunk_A_range_dump,
+              load_prop_change_in_non_deltas_dump,
              ]
 
 if __name__ == '__main__':
