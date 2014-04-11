@@ -270,16 +270,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1580832
-   svnrdump: resolve segfault on 'svnrdump load' deleting an 'svn:*' property
-   Issue #4490.
-   Justification:
-     Simple fix for a segfault
-   Votes:
-     +1: rhuijben, ivan
-     +0: julianfoad (Looks like an obvious fix. I would like to have a
-                     regression test; I'm working on one.)
-
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
    Justification:
@@ -385,6 +375,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1580832
+   svnrdump: resolve segfault on 'svnrdump load' deleting an 'svn:*' property
+   Issue #4490.
+   Justification:
+     Simple fix for a segfault
+   Notes:
+     r1586668 on trunk is a regression test for this fix. Normally we'd
+     backport a regression test along with a fix but others have already
+     voted for the fix without it, so, as it's simple, I'm not bothering to
+     do so this time.
+   Votes:
+     +1: rhuijben, ivan, julianfoad
 
  * r1570642, r1585686, r1586352
    Fix memcached support.
