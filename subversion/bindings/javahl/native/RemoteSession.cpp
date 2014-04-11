@@ -252,7 +252,7 @@ RemoteSession::RemoteSession(int retryAttempts,
       static jmethodID exctor = 0;
       if (exctor == 0)
         {
-          exctor = env->GetMethodID(excls, "<init>", "(J)V");
+          exctor = env->GetMethodID(excls, "<init>", "(Ljava/lang/String;)V");
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
