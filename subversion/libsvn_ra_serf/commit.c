@@ -850,8 +850,11 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
     }
 
-  if (apr_hash_count(ctx->removed_props) > 0)
+  if ((apr_hash_count(ctx->removed_props) > 0)
+      && (wb.previous_changed_props || wb.previous_removed_props))
     {
+      /* For revision properties we handle a remove as a special propset if
+         we want to provide the old version of the property */
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
