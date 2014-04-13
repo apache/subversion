@@ -914,7 +914,11 @@ typedef enum open_path_flags_t {
 
   /* The caller does not care about the parent node chain but only
      the final DAG node. */
-  open_path_node_only = 4
+  open_path_node_only = 4,
+
+  /* The caller wants a NULL path object instead of an error if the
+     path cannot be found. */
+  open_path_allow_null = 8
 } open_path_flags_t;
 
 
@@ -1060,6 +1064,11 @@ open_path(parent_path_t **parent_path_p,
                 {
                   parent_path = make_parent_path(NULL, entry, parent_path,
                                                  pool);
+                  break;
+                }
+              else if (flags & open_path_allow_null)
+                {
+                  parent_path = NULL;
                   break;
                 }
               else
@@ -3536,7 +3545,6 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
   const char *copy_dst_path;
   svn_fs_root_t *copy_dst_root;
   dag_node_t *copy_dst_node;
-  svn_node_kind_t kind;
 
   /* Initialize return values. */
   *root_p = NULL;
@@ -3557,11 +3565,11 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
      revision between COPY_DST_REV and REV.  Make sure that PATH
      exists as of COPY_DST_REV and is related to this node-rev. */
   SVN_ERR(svn_fs_fs__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
-  SVN_ERR(svn_fs_fs__check_path(&kind, copy_dst_root, path, pool));
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;
   SVN_ERR(open_path(&copy_dst_parent_path, copy_dst_root, path,
-                    open_path_node_only, FALSE, pool));
+                    open_path_node_only | open_path_allow_null, FALSE, pool));
+  if (copy_dst_parent_path == NULL)
+    return SVN_NO_ERROR;
+
   copy_dst_node = copy_dst_parent_path->node;
   if (! svn_fs_fs__id_check_related(svn_fs_fs__dag_get_id(copy_dst_node),
                                     svn_fs_fs__dag_get_id(parent_path->node)))
