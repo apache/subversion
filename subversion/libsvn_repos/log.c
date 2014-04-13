@@ -763,22 +763,26 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *changed_path = svn__apr_hash_index_key(hi);
+      const char *changed_path;
       svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
       const char *base_path = NULL;
       svn_revnum_t base_rev = SVN_INVALID_REVNUM;
       svn_fs_root_t *base_root = NULL;
       svn_string_t *prev_mergeinfo_value = NULL, *mergeinfo_value;
 
-      svn_pool_clear(iterpool);
+      /* Cheap pre-checks that don't require memory allocation etc. */
 
-      /* If there was no mergeinfo change on this item, ignore it. */
+      /* No mergeinfo change? -> nothing to do here. */
       if (change->mergeinfo_mod == svn_tristate_false)
         continue;
 
       /* If there was no property change on this item, ignore it. */
       if (! change->prop_mod)
         continue;
+
+      /* Begin actual processing */
+      changed_path = svn__apr_hash_index_key(hi);
+      svn_pool_clear(iterpool);
 
       switch (change->change_kind)
         {
@@ -787,20 +791,6 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
            ### together to all use svn_repos__prev_location()?  The
            ### difference would be the fallback case (path/rev-1 for
            ### modifies, NULL otherwise).  -- cmpilato  */
-
-        /* If the path was added or replaced, see if it was created via
-           copy.  If so, set BASE_REV/BASE_PATH to its previous location.
-           If not, there's no previous location to examine -- leave
-           BASE_REV/BASE_PATH = -1/NULL.  */
-        case svn_fs_path_change_add:
-        case svn_fs_path_change_replace:
-        case svn_fs_path_change_move:
-        case svn_fs_path_change_movereplace:
-          {
-            SVN_ERR(svn_fs_copied_from(&base_rev, &base_path,
-                                       root, changed_path, iterpool));
-            break;
-          }
 
         /* If the path was merely modified, see if its previous
            location was affected by a copy which happened in this
@@ -823,6 +813,20 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                 base_path = changed_path;
                 base_rev = rev - 1;
               }
+            break;
+          }
+
+        /* If the path was added or replaced, see if it was created via
+           copy.  If so, set BASE_REV/BASE_PATH to its previous location.
+           If not, there's no previous location to examine -- leave
+           BASE_REV/BASE_PATH = -1/NULL.  */
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+        case svn_fs_path_change_move:
+        case svn_fs_path_change_movereplace:
+          {
+            SVN_ERR(svn_fs_copied_from(&base_rev, &base_path,
+                                       root, changed_path, iterpool));
             break;
           }
 
