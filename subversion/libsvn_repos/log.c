@@ -736,6 +736,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   svn_fs_root_t *root;
   apr_pool_t *iterpool;
   apr_hash_index_t *hi;
+  svn_boolean_t any_mergeinfo = FALSE;
+  svn_boolean_t any_copy = FALSE;
 
   /* Initialize return variables. */
   *deleted_mergeinfo_catalog = svn_hash__make(result_pool);
@@ -751,8 +753,35 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   if (*prefetched_changes == NULL)
     SVN_ERR(svn_fs_paths_changed2(prefetched_changes, root, scratch_pool));
 
-  /* No changed paths?  We're done. */
-  if (apr_hash_count(*prefetched_changes) == 0)
+  /* Look for copies and (potential) mergeinfo changes.
+     We will use both flags to take shortcuts further down the road. */
+  for (hi = apr_hash_first(scratch_pool, *prefetched_changes);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
+
+      /* If there was a prop change and we are not positive that _no_
+         mergeinfo change happened, we must assume that it might have. */
+      if (change->mergeinfo_mod != svn_tristate_false && change->prop_mod)
+        any_mergeinfo = TRUE;
+
+      switch (change->change_kind)
+        {
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+        case svn_fs_path_change_move:
+        case svn_fs_path_change_movereplace:
+          any_copy = TRUE;
+          break;
+
+        default:
+          break;
+        }
+    }
+
+  /* No potential mergeinfo changes?  We're done. */
+  if (! any_mergeinfo)
     return SVN_NO_ERROR;
 
   /* Loop over changes, looking for anything that might carry an
@@ -800,15 +829,26 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           {
             svn_revnum_t appeared_rev;
 
-            SVN_ERR(svn_repos__prev_location(&appeared_rev, &base_path,
-                                             &base_rev, fs, rev,
-                                             changed_path, iterpool));
+            /* If there were no copies in this revision, the path will have
+               existed in the previous rev.  Otherwise, we might just got
+               copied here and need to check for that eventuality. */
+            if (any_copy)
+              {
+                SVN_ERR(svn_repos__prev_location(&appeared_rev, &base_path,
+                                                 &base_rev, fs, rev,
+                                                 changed_path, iterpool));
 
-            /* If this path isn't the result of a copy that occurred
-               in this revision, we can find the previous version of
-               it in REV - 1 at the same path. */
-            if (! (base_path && SVN_IS_VALID_REVNUM(base_rev)
-                   && (appeared_rev == rev)))
+                /* If this path isn't the result of a copy that occurred
+                   in this revision, we can find the previous version of
+                   it in REV - 1 at the same path. */
+                if (! (base_path && SVN_IS_VALID_REVNUM(base_rev)
+                      && (appeared_rev == rev)))
+                  {
+                    base_path = changed_path;
+                    base_rev = rev - 1;
+                  }
+              }
+            else
               {
                 base_path = changed_path;
                 base_rev = rev - 1;
