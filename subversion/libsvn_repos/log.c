@@ -454,8 +454,11 @@ detect_changed(apr_hash_t **changed,
              we will follow the DAG from ROOT to PATH and that requires
              actually reading the directories along the way. */
           if (!change->copyfrom_known)
-            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                      root, path, subpool));
+            {
+              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                        root, path, subpool));
+              copyfrom_path = apr_pstrdup(pool, copyfrom_path);
+            }
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
             {
@@ -476,14 +479,13 @@ detect_changed(apr_hash_t **changed,
 
               if (readable)
                 {
-                  item->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
+                  item->copyfrom_path = copyfrom_path;
                   item->copyfrom_rev = copyfrom_rev;
                 }
             }
         }
 
-      apr_hash_set(*changed, apr_pstrmemdup(pool, path, path_len), path_len,
-                   item);
+      apr_hash_set(*changed, path, path_len, item);
     }
 
   svn_pool_destroy(subpool);
