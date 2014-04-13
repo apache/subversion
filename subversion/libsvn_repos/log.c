@@ -905,6 +905,11 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
       if (! (mergeinfo_value || prev_mergeinfo_value))
         continue;
 
+      /* Mergeinfo on both sides but it did not change? Skip that too. */
+      if (   mergeinfo_value && prev_mergeinfo_value
+          && svn_string_compare(mergeinfo_value, prev_mergeinfo_value))
+        continue;
+
       /* If mergeinfo was explicitly added or removed on this path, we
          need to check to see if that was a real semantic change of
          meaning.  So, fill in the "missing" mergeinfo value with the
@@ -937,13 +942,11 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                                             iterpool));
         }
 
-      /* If the old and new mergeinfo differ in any way, store the
-         before and after mergeinfo values in our return hashes. */
-      if ((prev_mergeinfo_value && (! mergeinfo_value))
-          || ((! prev_mergeinfo_value) && mergeinfo_value)
-          || (prev_mergeinfo_value && mergeinfo_value
-              && (! svn_string_compare(mergeinfo_value,
-                                       prev_mergeinfo_value))))
+      /* Old and new mergeinfo probably differ in some way (we already
+         checked for textual equality further up). Store the before and
+         after mergeinfo values in our return hashes.  They may still be
+         equal as manual intervention may have only changed the formatting
+         but not the relevant contents. */
         {
           svn_mergeinfo_t prev_mergeinfo = NULL, mergeinfo = NULL;
           svn_mergeinfo_t deleted, added;
