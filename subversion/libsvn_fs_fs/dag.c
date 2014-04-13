@@ -685,6 +685,10 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
   SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool, subpool));
+  if (! cur_entry)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       "Attempted to open non-existent child node '%s'", name);
 
   /* Check for mutability in the node we found.  If it's mutable, we
      don't need to clone it. */
@@ -1174,9 +1178,10 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
   SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
                                  scratch_pool, scratch_pool));
   if (! node_id)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       "Attempted to open non-existent child node '%s'", name);
+    {
+      *child_p = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component(name))
