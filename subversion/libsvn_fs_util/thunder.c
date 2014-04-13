@@ -34,6 +34,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 #include "svn_version.h"
 
 #include "private/svn_fs_util.h"
@@ -45,30 +46,20 @@
 #if APR_HAS_THREADS
 
 /* Internal data structure describing a single access-in-progress.
- * Instances of this object are relatively expensive to create (mainly due
- * to the sync objects). So, we should recycle unused instances.
+ * For optimal memory pool usage, we should recycle unused instances.
  *
  * Also, never destroying these instances for the lifetime of the registry,
- * prevents synchronization / destruction hazards.  Same goes for the
- * string buffer in KEY.  Setting it to different values and expanding it
- * by re-allocation will never render the previous memory location
- * inaccessible. */
+ * prevents synchronization / destruction hazards.  Reusing instances may
+ * cause KEY mismatches with svn_fs__thunder_access_t.KEY but it will never
+ * render the previous memory location inaccessible or mistyped. */
 typedef struct access_t
 {
-  /* Key identifying the data location being accessed.  If this is empty,
-   * the entry is unused, i.e. the respective access has completed.
+  /* Key identifying the data location being accessed.
    * Must not be modified while being used as key in THUNDER_T->IN_ACCESS. */
   svn_stringbuf_t *key;
 
   /* Timestamp of when this instance has been added to the in-access list. */
   apr_time_t started;
-
-  /* This will be signaled when the access completes. */
-  apr_thread_cond_t *condition;
-
-  /* Mutex to be used with CONDITION.  Must also be used when accessing
-   * any other member of this struct. */
-  svn_mutex__t *mutex;
 
   /* ID of the thread performing the access, i.e. the one that others may
    * wait for.  Only valid while the instance is in use. */
@@ -215,25 +206,13 @@ svn_fs__thunder_destroy(svn_fs__thunder_t *thunder)
   return SVN_NO_ERROR;
 }
 
-/* Mark ACCESS as  begin used for KEY.
- *
- * Callers must serialize for ACCESS.
- */
-static svn_error_t *
-set_access(access_t *access,
-           svn_stringbuf_t *key)
-{
-  svn_stringbuf_set(access->key, key->data);
-  access->started = apr_time_now();
-  access->owning_thread = apr_os_thread_current();
-
-  return SVN_NO_ERROR;
-}
-
 /* Retrieve the internal access description for KEY in THUNDER and return
  * it in *ACCESS.  If there is no such entry, create a new one / recycle an
- * unused one, start the access and set *FIRST to TRUE.  Set it to FALSE
- * otherwise.
+ * unused one, initialize the *START timestamp as well as *THREAD of the
+ * access and set *FIRST to TRUE.
+ *
+ * If there is already an entry for KEY, set *FIRST to FALSE and return the
+ * entries *START and *THREAD values.
  *
  * Callers must serialize for THUNDER.
  */
@@ -242,6 +221,8 @@ get_access(access_t **access,
            svn_boolean_t *first,
            svn_fs__thunder_t *thunder,
            svn_stringbuf_t *key,
+           apr_time_t *start,
+           apr_os_thread_t *thread,
            void *owner)
 {
   access_t *result = apr_hash_get(thunder->in_access, key->data, key->len);
@@ -250,6 +231,11 @@ get_access(access_t **access,
       /* There is already an access object for KEY
        * (might have timed out already but we let the caller handle that). */
       *first = FALSE;
+
+      /* Extract these values while we are in a serialized function.
+       * Any other place would be racy. */
+      *start = result->started;
+      *thread = result->owning_thread;
     }
   else
     {
@@ -260,21 +246,17 @@ get_access(access_t **access,
       if (thunder->recyler->nelts)
         {
           result = *(access_t **)apr_array_pop(thunder->recyler);
+          svn_stringbuf_set(result->key, key->data);
         }
       else
         {
-          apr_status_t status;
           result = apr_pcalloc(thunder->pool, sizeof(*result));
-          result->key = svn_stringbuf_create_ensure(key->len, thunder->pool);
-          SVN_ERR(svn_mutex__init(&result->mutex, TRUE, thunder->pool));
-          status = apr_thread_cond_create(&result->condition, thunder->pool);
-          if (status != APR_SUCCESS)
-            return svn_error_trace(svn_error_wrap_apr(status,
-                                              _("Can't create condition")));
+          result->key = svn_stringbuf_dup(key, thunder->pool);
         }
 
       /* Start the access and remember which thread we will be waiting for. */
-      SVN_MUTEX__WITH_LOCK(result->mutex, set_access(result, key));
+      result->started = *start;
+      result->owning_thread = *thread;
 
       /* Add it to the list of accesses currently under way. */
       apr_hash_set(thunder->in_access, result->key->data, key->len, result);
@@ -284,95 +266,25 @@ get_access(access_t **access,
   return SVN_NO_ERROR;
 }
 
-/* Mark ACCESS as unused.
- *
- * Callers must serialize for ACCESS.
- */
-static svn_error_t *
-reset_access(access_t *access)
-{
-  svn_stringbuf_setempty(access->key);
-
-  return SVN_NO_ERROR;
-}
-
-/* Remove *ACCESS from THUNDER's list of accesses currently in progress.
- * This is a no-op when *ACCESS is not the current entry for KEY.  In that
- * case, we set *ACCESS to NULL.
+/* Remove ACCESS from THUNDER's list of accesses currently in progress, if it
+ * is still being used for KEY.  Otherwise, this is a no-op.  ACCESS will be
+ * put into THUNDER's recyler list.
  *
  * Callers must serialize for THUNDER.
- */
-static svn_error_t *
-remove_access(access_t **access,
-              svn_fs__thunder_t *thunder,
-              svn_stringbuf_t *key)
-{
-  void *value = apr_hash_get(thunder->in_access, key->data, key->len);
-  if (value == *access)
-    {
-      /* remove entry from hash */
-      apr_hash_set(thunder->in_access, key->data, key->len, NULL);
-
-      /* Sync with the time-out test in svn_fs__thunder_begin_access. */
-      SVN_MUTEX__WITH_LOCK((*access)->mutex, reset_access(*access));
-    }
-  else
-    {
-      /* Access has already been removed (and possibly re-used for another
-       * key later).  Leave it alone. */
-      *access = NULL;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Move the unused ACCESS to the list of recyclable objects in THUNDER.
- *
- * Callers must serialize for THUNDER.
- */
-static svn_error_t *
-recycle_access(svn_fs__thunder_t *thunder,
-               access_t *access)
-{
-  APR_ARRAY_PUSH(thunder->recyler, access_t *) = access;
-  return SVN_NO_ERROR;
-}
-
-/* Safely remove ACCESS from THUNDER's list of ongoing accesses for KEY and
- * unblock any threads waiting on it.
  */
 static svn_error_t *
 release_access(svn_fs__thunder_t *thunder,
                access_t *access,
                svn_stringbuf_t *key)
 {
-  /* No longer report KEY as "in access", i.e. don't block any additional
-   * threads t. */
-  SVN_MUTEX__WITH_LOCK(thunder->mutex, remove_access(&access, thunder, key));
-
-  /* This was racy up to here but now we know whether we are the ones
-   * releasing ACCESS. */
-  if (access)
+  void *value = apr_hash_get(thunder->in_access, key->data, key->len);
+  if (value == access)
     {
-      /* At this point, no thread will attempt to wait for this access,
-       * so we only have to wake up those who already wait. */
+      /* remove entry from hash */
+      apr_hash_set(thunder->in_access, key->data, key->len, NULL);
 
-      /* Tell / wake everybody that the access has been completed now. */
-      apr_status_t status = apr_thread_cond_broadcast(access->condition);
-      if (status != APR_SUCCESS)
-        return svn_error_trace(svn_error_wrap_apr(status,
-                                              _("Can't signal condition")));
-
-      /* Some threads may still be in the process of waking up or at least
-       * hold ACCESS->MUTEX.  That's fine since the object remains valid.
-       *
-       * It might happen that some threads are still waiting for ACCESS->MUTEX
-       * on their early time-out check.  If ACCESS should get re-used quickly,
-       * those threads would end up waiting for the new access to finish.
-       * This is inefficient but rare and safe. */
-
-      /* Object is now ready to be recycled */
-      SVN_MUTEX__WITH_LOCK(thunder->mutex, recycle_access(thunder, access));
+      /* Sync with the time-out test in svn_fs__thunder_begin_access. */
+      APR_ARRAY_PUSH(thunder->recyler, access_t *) = access;
     }
 
   return SVN_NO_ERROR;
@@ -386,13 +298,17 @@ svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
 {
   access_t *internal_access;
   svn_boolean_t first;
+
+  /* Calculate these parameters outside the critical section. */
   svn_stringbuf_t *key = svn_stringbuf_create(ckey, pool);
+  apr_time_t start = apr_time_now();
+  apr_os_thread_t thread = apr_os_thread_current();
 
   /* Get the current hash entry or create a new one (FIRST will then be TRUE).
    */
   SVN_MUTEX__WITH_LOCK(thunder->mutex,
                        get_access(&internal_access, &first, thunder, key,
-                                  pool));
+                                  &start, &thread, pool));
 
   if (first)
     {
@@ -404,8 +320,7 @@ svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
 
       *access = result;
     }
-  else if (apr_os_thread_equal(apr_os_thread_current(),
-                               internal_access->owning_thread))
+  else if (apr_os_thread_equal(apr_os_thread_current(), thread))
     {
       /* The current thread already holds a token for this KEY.
        * There is no point in making it block on itself since it would
@@ -418,38 +333,20 @@ svn_fs__thunder_begin_access(svn_fs__thunder_access_t **access,
       apr_time_t timeout;
       *access = NULL;
 
-      timeout = internal_access->started + thunder->timeout - apr_time_now();
+      timeout = start + thunder->timeout - apr_time_now();
       if (timeout <= 0)
         {
           /* Something went wrong (probably just some hold-up but still ...).
            * No longer let anyone wait on this access.  This is racy but we
            * allow  multiple attempts to release the same access. */
-          SVN_ERR(release_access(thunder, internal_access, key));
+          SVN_MUTEX__WITH_LOCK(thunder->mutex,
+                               release_access(thunder, internal_access, key));
         }
       else
         {
-          /* Sync. with reset and signaling code.
-           * Don't use the SVN_MUTEX__WITH_LOCK macro here since we need
-           * to hold the lock when waiting for the condition variable. */
-          SVN_ERR(svn_mutex__lock(internal_access->mutex));
-
-          /* Has there been a reset in the meantime?
-           * There is a chance that the access got recycled and used for
-           * the same key.  But in that case, we would simply wait for that
-           * access to complete.  It's the same data block so we simply
-           * don't care _who_ is reading it. */
-          if (svn_stringbuf_compare(internal_access->key, key))
-            {
-              /* We will receive the signal.  The only way to time out here
-               * is a holdup in the thread holding the access. */
-              apr_thread_cond_timedwait(internal_access->condition,
-                                        internal_access->mutex,
-                                        timeout);
-            }
-
-          /* Done with the access struct.
-           * Others may now do with it as they please. */
-          SVN_ERR(svn_mutex__unlock(internal_access->mutex, SVN_NO_ERROR));
+          /* Wait for better times.
+           * Use the MIN limiter to harden this against corruption. */
+          apr_sleep(MIN(timeout, thunder->timeout));
         }
     }
 
@@ -460,9 +357,12 @@ svn_error_t *
 svn_fs__thunder_end_access(svn_fs__thunder_access_t *access)
 {
   /* NULL is valid for ACCESS. */
-  return access
-    ? release_access(access->thunder, access->access, access->key)
-    : SVN_NO_ERROR;
+  if (access)
+    SVN_MUTEX__WITH_LOCK(access->thunder->mutex,
+                         release_access(access->thunder, access->access,
+                                        access->key));
+
+  return SVN_NO_ERROR;
 }
 
 #else
