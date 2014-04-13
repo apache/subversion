@@ -865,8 +865,16 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
         case svn_fs_path_change_move:
         case svn_fs_path_change_movereplace:
           {
-            SVN_ERR(svn_fs_copied_from(&base_rev, &base_path,
-                                       root, changed_path, iterpool));
+            if (change->copyfrom_known)
+              {
+                base_rev = change->copyfrom_rev;
+                base_path = change->copyfrom_path;
+              }
+            else
+              {
+                SVN_ERR(svn_fs_copied_from(&base_rev, &base_path,
+                                          root, changed_path, iterpool));
+              }
             break;
           }
 
