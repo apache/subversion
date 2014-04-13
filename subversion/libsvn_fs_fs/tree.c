@@ -1033,7 +1033,6 @@ open_path(parent_path_t **parent_path_p,
         {
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
-          svn_error_t *err = SVN_NO_ERROR;
           dag_node_t *cached_node = NULL;
 
           /* If we found a directory entry, follow it.  First, we
@@ -1047,16 +1046,14 @@ open_path(parent_path_t **parent_path_p,
           if (cached_node)
             child = cached_node;
           else
-            err = svn_fs_fs__dag_open(&child, here, entry, pool, iterpool);
+            SVN_ERR(svn_fs_fs__dag_open(&child, here, entry, pool, iterpool));
 
           /* "file not found" requires special handling.  */
-          if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+          if (child == NULL)
             {
               /* If this was the last path component, and the caller
                  said it was optional, then don't return an error;
                  just put a NULL node pointer in the path.  */
-
-              svn_error_clear(err);
 
               if ((flags & open_path_last_optional)
                   && (! next || *next == '\0'))
@@ -1072,9 +1069,6 @@ open_path(parent_path_t **parent_path_p,
                   return SVN_FS__NOT_FOUND(root, path);
                 }
             }
-
-          /* Other errors we return normally.  */
-          SVN_ERR(err);
 
           if (flags & open_path_node_only)
             {
