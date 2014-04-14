@@ -2780,7 +2780,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      an error. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, TRUE));
 
-  /* Loop through the lock requests. */
+  /* Parse the lock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < path_revs->nelts; ++i)
     {
       const char *path, *full_path;
@@ -2812,7 +2812,9 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(log_command(b, conn, subpool, "%s",
                       svn_log__lock(targets, steal_lock, subpool)));
 
-  /* From here on we need to make sure any errors in authz_results, or
+  /* Check authz.
+
+     Note: From here on we need to make sure any errors in authz_results, or
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
@@ -2842,7 +2844,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                steal_lock, lock_many_cb, &lmb,
                                pool, subpool);
 
-  /* The client expects results in the same order as paths were supplied. */
+  /* Return results in the same order as the paths were supplied. */
   for (i = 0; i < path_revs->nelts; ++i)
     {
       const char *path, *full_path;
@@ -2957,7 +2959,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   subpool = svn_pool_create(pool);
 
-  /* Loop through the unlock requests. */
+  /* Parse the unlock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
@@ -2988,7 +2990,9 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(log_command(b, conn, subpool, "%s",
                       svn_log__unlock(targets, break_lock, subpool)));
 
-  /* From here on we need to make sure any errors in authz_results, or
+  /* Check authz.
+
+     Note: From here on we need to make sure any errors in authz_results, or
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
