@@ -2522,25 +2522,25 @@ svn_fs_set_uuid(svn_fs_t *fs,
  */
 typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-/* Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
+/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
  * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
  *
  * The @a token is not duplicated and so must have a lifetime at least as
  * long as the returned target object.
  *
  * @since New in 1.9.
- **/
+ */
 svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
                                                 svn_revnum_t current_rev,
                                                 apr_pool_t *pool);
 
-/* Update @a target changing the token to @a token, @a token can be NULL.
+/** Update @a target changing the token to @a token, @a token can be NULL.
  *
  * The @a token is not duplicated and so must have a lifetime at least as
- * long as the returned target object.
+ * long as @a target.
  *
  * @since New in 1.9.
- **/
+ */
 void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
                                   const char *token);
 
@@ -2673,10 +2673,6 @@ svn_fs_generate_lock_token(const char **token,
  * passing @a lock_baton and error that apply to path.  The @a lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
  * in which case it is not called.
- *
- * @note #svn_fs_lock_target_t is used to allow @c NULL tokens to be
- * passed (it is not possible to pass @c NULL as a hash value
- * directly), #svn_fs_lock_target_t->current_rev is ignored.
  *
  * The path passed to lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
