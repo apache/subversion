@@ -2521,8 +2521,8 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
   iterpool = svn_pool_create(scratch_pool);
   while (have_row)
     {
-      const char *src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
-      const char *dst_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
+      const char *src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *dst_relpath = svn_sqlite__column_text(stmt, 1, NULL);
       int src_op_depth = svn_sqlite__column_int(stmt, 2);
 
       svn_pool_clear(iterpool);
