@@ -625,10 +625,11 @@ new_node_record(void **node_baton,
       if (! nb->rb->writing_begun)
         SVN_ERR(output_revision(nb->rb));
 
-      /* A node record is required to begin with 'Node-path'. */
+      /* A node record is required to begin with 'Node-path', skip the
+         leading '/' to match the form used by 'svnadmin dump'. */
       SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
                                 pool, "%s: %s\n",
-                                SVN_REPOS_DUMPFILE_NODE_PATH, node_path));
+                                SVN_REPOS_DUMPFILE_NODE_PATH, node_path + 1));
 
       /* Node-kind is next and is optional. */
       kind = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_KIND);
