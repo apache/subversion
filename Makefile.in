@@ -689,17 +689,29 @@ doc-clean:
 	rm -rf $(abs_builddir)/doc/javadoc
 
 # Converting from the .rnc XML schemas to various other schema formats.
-SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
-              $(SCHEMA_DIR)/list.dtd $(SCHEMA_DIR)/log.dtd \
-              $(SCHEMA_DIR)/status.dtd $(SCHEMA_DIR)/props.dtd
+SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd \
+              $(SCHEMA_DIR)/diff.dtd \
+              $(SCHEMA_DIR)/info.dtd \
+              $(SCHEMA_DIR)/list.dtd \
+              $(SCHEMA_DIR)/log.dtd \
+              $(SCHEMA_DIR)/props.dtd \
+              $(SCHEMA_DIR)/status.dtd
 
-SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng $(SCHEMA_DIR)/info.rng \
-              $(SCHEMA_DIR)/list.rng $(SCHEMA_DIR)/log.rng \
-              $(SCHEMA_DIR)/status.rng $(SCHEMA_DIR)/props.rng
+SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng \
+              $(SCHEMA_DIR)/diff.rng \
+              $(SCHEMA_DIR)/info.rng \
+              $(SCHEMA_DIR)/list.rng \
+              $(SCHEMA_DIR)/log.rng \
+              $(SCHEMA_DIR)/props.rng \
+              $(SCHEMA_DIR)/status.rng
 
-SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd $(SCHEMA_DIR)/info.xsd \
-              $(SCHEMA_DIR)/list.xsd $(SCHEMA_DIR)/log.xsd \
-              $(SCHEMA_DIR)/status.xsd $(SCHEMA_DIR)/props.xsd
+SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd \
+              $(SCHEMA_DIR)/diff.xsd \
+              $(SCHEMA_DIR)/info.xsd \
+              $(SCHEMA_DIR)/list.xsd \
+              $(SCHEMA_DIR)/log.xsd \
+              $(SCHEMA_DIR)/props.xsd \
+              $(SCHEMA_DIR)/status.xsd
 
 schema: mkdir-init schema-rng schema-dtd schema-xsd
 
