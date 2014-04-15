@@ -316,6 +316,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1578670, r1578820, r1579274, r1587511
+   Fix the order of node record headers written by svndumpfilter.
+   Justification:
+     Makes output match the rules documented in notes/dump-load-format.txt.
+   Votes:
+     +1: philip, julianfoad
+     +1: (without r1587511) rhuijben
+
 Veto-blocked changes:
 =====================
 
@@ -341,14 +349,6 @@ Veto-blocked changes:
      -1: ivan (Significant performance degradation for svnadmin hotcopy,
                the root cause is not fixed. Discussion:
                http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
-
- * r1578670, r1578820, r1579274, r1587511
-   Fix the order of node record headers written by svndumpfilter.
-   Justification:
-     Makes output match the rules documented in notes/dump-load-format.txt.
-   Votes:
-     +1: philip, julianfoad
-     +1: (without r1587511) rhuijben
 
 Approved changes:
 =================
