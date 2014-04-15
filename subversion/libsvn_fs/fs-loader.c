@@ -1644,7 +1644,7 @@ svn_fs_lock_many(svn_fs_t *fs,
 
       if (err)
         {
-          if (!cb_err)
+          if (!cb_err && lock_callback)
             cb_err = lock_callback(lock_baton, svn__apr_hash_index_key(hi),
                                    NULL, err, scratch_pool);
           svn_error_clear(err);
