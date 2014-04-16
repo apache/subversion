@@ -10469,15 +10469,10 @@ merge_locked(conflict_report_t **conflict_report,
     }
   else
     {
-      merge_source_t source;
-
-      source.loc1 = source1_loc;
-      source.loc2 = source2_loc;
-      source.ancestral = FALSE;
-
       /* Build a single-item merge_source_t array. */
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
-      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &source;
+      APR_ARRAY_PUSH(merge_sources, merge_source_t *)
+        = merge_source_create(source1_loc, source2_loc, FALSE, scratch_pool);
     }
 
   err = do_merge(NULL, NULL, conflict_report, &use_sleep,
