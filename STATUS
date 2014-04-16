@@ -322,6 +322,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1587968
+   Maintain data[len]=0 invariant for svn_string_t.
+   Justification:
+     Code may rely on null byte being present.
+   Notes:
+     Triggers a read beyond allocated memory on trunk but no known
+     misbehaviour on 1.8.
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
