@@ -167,18 +167,6 @@ Candidate changes:
                    overkill. The whole thing can be implemented with simple
                    atomic operations while mutexes may be a limited resource)
 
- * r1571747, r1571787, r1571795
-   Resolve the 'commit_util.c' (repos_root_url && repos_relpath) assertion.
-   Notes:
-     This assertion is raised when specifically committing a deleted
-     descendant, like via a checkbox list in a GUI client.
-   Justification:
-     Often reported assertion by users. Upto now very hard to reproduce
-     for these users. Probably because they didn't see that the node they
-     deleted wasn't added to the repository yet.
-   Votes:
-     +1: rhuijben, philip
-
  * r1575525, r1575915
    Resolve issue #4427: File externals can't be exported.
    Justification:
@@ -198,7 +186,7 @@ Candidate changes:
      I'm guessing nobody knew that we didn't implement this flag in this
      scenario.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
@@ -315,13 +303,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1587946
-   Fix variable usage after it is out of scope.
-   Justification:
-     While not reported by users, this might cause hard to diagnose segfaults.
-   Votes:
-     +1: rhuijben, philip
-
  * r1587968
    Maintain data[len]=0 invariant for svn_string_t.
    Justification:
@@ -334,6 +315,13 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1587946
+   Fix variable usage after it is out of scope.
+   Justification:
+     While not reported by users, this might cause hard to diagnose segfaults.
+   Votes:
+     +1: rhuijben, philip, steveking
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
@@ -360,6 +348,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1571747, r1571787, r1571795
+   Resolve the 'commit_util.c' (repos_root_url && repos_relpath) assertion.
+   Notes:
+     This assertion is raised when specifically committing a deleted
+     descendant, like via a checkbox list in a GUI client.
+   Justification:
+     Often reported assertion by users. Upto now very hard to reproduce
+     for these users. Probably because they didn't see that the node they
+     deleted wasn't added to the repository yet.
+   Votes:
+     +1: rhuijben, philip, steveking
 
  * r1577812, r1577813, r1579429
    Resolve a segfault when 'svn merge --force' merges a directory delete
