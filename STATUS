@@ -320,7 +320,17 @@ Candidate changes:
    Justification:
      While not reported by users, this might cause hard to diagnose segfaults.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
+
+ * r1587968
+   Maintain data[len]=0 invariant for svn_string_t.
+   Justification:
+     Code may rely on null byte being present.
+   Notes:
+     Triggers a read beyond allocated memory on trunk but no known
+     misbehaviour on 1.8.
+   Votes:
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
