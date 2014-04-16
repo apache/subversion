@@ -51,8 +51,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4437
    Votes:
-     +1: rhuijben
-     +1: (before branch, without r1567204, r1567228) philip
+     +1: rhuijben, philip
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
