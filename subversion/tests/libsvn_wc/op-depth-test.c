@@ -9643,6 +9643,72 @@ repo_wc_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+break_move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "break_move_in_delete", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X"));
+  SVN_ERR(sbox_wc_mkdir(&b, "X/Y"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_propset(&b, "key", "value", "X/Y"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "X/Y", "A/Y"));
+  SVN_ERR(sbox_wc_delete(&b, "X"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       1, ""},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "X",   "normal",       1, "X"},
+      {0, "X/Y", "normal",       1, "X/Y"},
+      {1, "X",   "base-deleted", NO_COPY_FROM},
+      {1, "X/Y", "base-deleted", NO_COPY_FROM, "A/Y"},
+      {2, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       2, ""},
+      {0, "A",   "normal",       2, "A"},
+      {0, "A/B", "normal",       2, "A/B"},
+      {0, "X",   "normal",       2, "X"},
+      {0, "X/Y", "normal",       2, "X/Y"},
+      {1, "X",   "base-deleted", NO_COPY_FROM},
+      {1, "X/Y", "base-deleted", NO_COPY_FROM, "A/Y"},
+      {2, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {0}
+    };
+    conflict_info_t conflicts1[] = {
+      {"X", FALSE, FALSE, TRUE},
+      {0}
+    };
+    conflict_info_t conflicts2[] = {
+      {"X/Y", FALSE, FALSE, TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts1));
+    SVN_ERR(sbox_wc_resolve(&b, "X", svn_depth_empty,
+                            svn_wc_conflict_choose_mine_conflict));
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts2));
+  }
+  SVN_ERR(sbox_wc_resolved(&b, "X/Y"));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -9835,6 +9901,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "movedhere extract retract"),
     SVN_TEST_OPTS_PASS(repo_wc_copy,
                        "repo_wc_copy"),
+    SVN_TEST_OPTS_XFAIL(break_move_in_delete,
+                       "break move in delete (issue 4491)"),
     SVN_TEST_NULL
   };
 
