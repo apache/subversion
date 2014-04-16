@@ -315,6 +315,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1587946
+   Fix variable usage after it is out of scope.
+   Justification:
+     While not reported by users, this might cause hard to diagnose segfaults.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
