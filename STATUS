@@ -62,7 +62,7 @@ Candidate changes:
      on some random descendant.
    Branch: ^/subversion/branches/1.8.x-r1536931
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
