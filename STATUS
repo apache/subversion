@@ -283,26 +283,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1586439
-   Fix a crash in JavaHL that was reported on the users@ list and is
-   already fixed on trunk.
-   Justification:
-     JavaHL should not crash the JVM too often.
-   Notes:
-     The original report is here:
-     http://mail-archives.apache.org/mod_mbox/subversion-users/201404.mbox/%3CCAAVTFFjrZEy-PT3i1xu0mOM_AC89-237CmFEZ7QYcJxNckfEtA%40mail.gmail.com%3E
-   Branch:
-     ^/subversion/branches/1.8.x-javahl-exception-crash
-   Votes:
-     +1: brane
-
- * r1586052, r1586467
-   Fix two memory lifetime bugs in the Ruby bindings.
-   Justification:
-     Ruby bindings tests crash with APR pool debugging enabled.
-   Votes:
-     +1: stsp
-
  * r1587968
    Maintain data[len]=0 invariant for svn_string_t.
    Justification:
@@ -413,3 +393,24 @@ Approved changes:
      While not reported by users, this might cause hard to diagnose segfaults.
    Votes:
      +1: rhuijben, philip, steveking
+
+ * r1586439
+   Fix a crash in JavaHL that was reported on the users@ list and is
+   already fixed on trunk.
+   Justification:
+     JavaHL should not crash the JVM too often.
+   Notes:
+     The original report is here:
+     http://mail-archives.apache.org/mod_mbox/subversion-users/201404.mbox/%3CCAAVTFFjrZEy-PT3i1xu0mOM_AC89-237CmFEZ7QYcJxNckfEtA%40mail.gmail.com%3E
+   Branch:
+     ^/subversion/branches/1.8.x-javahl-exception-crash
+   Votes:
+     +1: brane, rhuijben
+
+ * r1586052, r1586467
+   Fix two memory lifetime bugs in the Ruby bindings.
+   Justification:
+     Ruby bindings tests crash with APR pool debugging enabled.
+   Votes:
+     +1: stsp
+     +0: rhuijben (Looks good. Can't test)
