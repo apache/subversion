@@ -174,7 +174,7 @@ Candidate changes:
      descendant, like via a checkbox list in a GUI client.
    Justification:
      Often reported assertion by users. Upto now very hard to reproduce
-     for these users. Probably because they didn's see that the node they
+     for these users. Probably because they didn't see that the node they
      deleted wasn't added to the repository yet.
    Votes:
      +1: rhuijben, philip
@@ -204,7 +204,7 @@ Candidate changes:
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
    with a NULL svn_lock_t *, as documented.
    Justification:
-     Many clients use the existance of an svn_lock_t on a node via info/status
+     Many clients use the existence of an svn_lock_t on a node via info/status
      as a boolean to note that there is a lock. But because we didn't properly
      check the result we reported mostly empty svn_lock_t instances in more
      cases. Even on directories!
@@ -275,7 +275,7 @@ Candidate changes:
    Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
    Justification:
      Without this patch generic DAV clients can not refresh their own locks,
-     causing them to loose their locks.
+     causing them to lose their locks.
    Notes:
      Patch needed, because a plain merge triggers a text conflict while
      removing the XFail marker from the test. r1584745 makes the test code
