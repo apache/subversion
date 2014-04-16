@@ -231,8 +231,7 @@ Candidate changes:
    Justification:
      Makes --enable-optimize and --enable-debug work with Solaris CC.
    Votes:
-     +1: philip
-     +0.5: rhuijben (looks good, can't test)
+     +1: philip, rhuijben
 
  * r1581810, 1584342
    Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
