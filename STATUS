@@ -213,8 +213,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1579588
    Votes:
-     +1: rhuijben
-     -1: philip (new test fails on Linux, error message not the expected)
+     +1: rhuijben (before r1588325 on branch)
+     +1: philip
 
  * r1580626, r1580650, r1581430
    Fix 'svn copy URL WC' after the working copy is relocated
