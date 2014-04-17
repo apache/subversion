@@ -355,13 +355,6 @@ Approved changes:
    Votes:
      +1: philip, julianfoad, rhuijben
 
- * r1587946
-   Fix variable usage after it is out of scope.
-   Justification:
-     While not reported by users, this might cause hard to diagnose segfaults.
-   Votes:
-     +1: rhuijben, philip, steveking
-
  * r1586439
    Fix a crash in JavaHL that was reported on the users@ list and is
    already fixed on trunk.
