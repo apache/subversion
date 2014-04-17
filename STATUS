@@ -321,18 +321,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1571747, r1571787, r1571795
-   Resolve the 'commit_util.c' (repos_root_url && repos_relpath) assertion.
-   Notes:
-     This assertion is raised when specifically committing a deleted
-     descendant, like via a checkbox list in a GUI client.
-   Justification:
-     Often reported assertion by users. Upto now very hard to reproduce
-     for these users. Probably because they didn't see that the node they
-     deleted wasn't added to the repository yet.
-   Votes:
-     +1: rhuijben, philip, steveking
-
  * r1577812, r1577813, r1579429
    Resolve a segfault when 'svn merge --force' merges a directory delete
    Justification:
