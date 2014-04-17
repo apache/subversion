@@ -366,12 +366,3 @@ Approved changes:
    Branch:
      ^/subversion/branches/1.8.x-javahl-exception-crash
    Votes:
-     +1: brane, rhuijben
-
- * r1586052, r1586467
-   Fix two memory lifetime bugs in the Ruby bindings.
-   Justification:
-     Ruby bindings tests crash with APR pool debugging enabled.
-   Votes:
-     +1: stsp
-     +0: rhuijben (Looks good. Can't test)
