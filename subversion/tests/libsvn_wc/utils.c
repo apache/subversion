@@ -229,45 +229,6 @@ sbox_wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
 }
 
 svn_error_t *
-sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
-                 svn_revnum_t revision, const char *to_path)
-{
-  apr_pool_t *scratch_pool = b->pool;
-  svn_client_ctx_t *ctx;
-  svn_opt_revision_t rev = { svn_opt_revision_unspecified, {0} };
-  svn_client_copy_source_t* src;
-  apr_array_header_t *sources = apr_array_make(
-                                        scratch_pool, 1,
-                                        sizeof(svn_client_copy_source_t *));
-
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
-  ctx->wc_ctx = b->wc_ctx;
-
-  if (SVN_IS_VALID_REVNUM(revision))
-    {
-      rev.kind = svn_opt_revision_number;
-      rev.value.number = revision;
-    }
-
-  src = apr_pcalloc(scratch_pool, sizeof(*src));
-
-  src->path = from_url;
-  src->revision = &rev;
-  src->peg_revision = &rev;
-
-  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = src;
-
-  SVN_ERR(svn_client_copy6(sources, sbox_wc_path(b, to_path),
-                           FALSE, FALSE, FALSE, NULL, NULL, NULL,
-                           ctx, scratch_pool));
-
-  ctx->wc_ctx = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = sbox_wc_path(b, path);
@@ -331,26 +292,15 @@ sbox_wc_commit_ex(svn_test__sandbox_t *b,
                   svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
-  apr_pool_t *scratch_pool = svn_pool_create(b->pool);
-  svn_error_t *err;
-
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
-
-  /* A successfull commit doesn't close the ra session, but leaves that
-     to the caller. This leaves the BDB handle open, which might cause
-     problems in further test code. (op_depth_tests.c's repo_wc_copy) */
-  err = svn_client_commit6(targets, depth,
-                           FALSE /* keep_locks */,
-                           FALSE /* keep_changelist */,
-                           TRUE  /* commit_as_operations */,
-                           TRUE  /* include_file_externals */,
-                           FALSE /* include_dir_externals */,
-                           NULL, NULL, NULL, NULL, ctx, scratch_pool);
-
-  svn_pool_destroy(scratch_pool);
-
-  return svn_error_trace(err);
+  return svn_client_commit6(targets, depth,
+                            FALSE /* keep_locks */,
+                            FALSE /* keep_changelist */,
+                            TRUE  /* commit_as_operations */,
+                            TRUE  /* include_file_externals */,
+                            FALSE /* include_dir_externals */,
+                            NULL, NULL, NULL, NULL, ctx, b->pool);
 }
 
 svn_error_t *
@@ -487,24 +437,6 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,
                                   NULL, ctx, b->pool);
-}
-
-svn_error_t *
-sbox_wc_relocate(svn_test__sandbox_t *b,
-                 const char *new_repos_url)
-{
-  apr_pool_t *scratch_pool = b->pool;
-  svn_client_ctx_t *ctx;
-
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
-  ctx->wc_ctx = b->wc_ctx;
-
-  SVN_ERR(svn_client_relocate2(b->wc_abspath, b->repos_url,
-                               new_repos_url, FALSE, ctx,scratch_pool));
-
-  b->repos_url = apr_pstrdup(b->pool, new_repos_url);
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *

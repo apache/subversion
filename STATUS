@@ -51,8 +51,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4437
    Votes:
-     +1: rhuijben
-     +1: (before branch, without r1567204, r1567228) philip
+     +1: rhuijben, philip
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
@@ -63,7 +62,7 @@ Candidate changes:
      on some random descendant.
    Branch: ^/subversion/branches/1.8.x-r1536931
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
@@ -118,8 +117,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1544597
    Votes:
-     +1: rhuijben
-     -0 (before branch): philip (Doesn't build, needs a branch due to r1539279)
+     +1: philip, rhuijben
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -169,18 +167,6 @@ Candidate changes:
                    overkill. The whole thing can be implemented with simple
                    atomic operations while mutexes may be a limited resource)
 
- * r1571747, r1571787, r1571795
-   Resolve the 'commit_util.c' (repos_root_url && repos_relpath) assertion.
-   Notes:
-     This assertion is raised when specifically committing a deleted
-     descendant, like via a checkbox list in a GUI client.
-   Justification:
-     Often reported assertion by users. Upto now very hard to reproduce
-     for these users. Probably because they didn's see that the node they
-     deleted wasn't added to the repository yet.
-   Votes:
-     +1: rhuijben, philip
-
  * r1575525, r1575915
    Resolve issue #4427: File externals can't be exported.
    Justification:
@@ -200,37 +186,13 @@ Candidate changes:
      I'm guessing nobody knew that we didn't implement this flag in this
      scenario.
    Votes:
-     +1: rhuijben
-
- * r1577294
-   Make interactive conflict resolver behave as designed.
-   Justification:
-     This was intended to be the behavior form the start.  A typo in a
-     refactoring broke it.  This fix helps users avoid accidentally choosing
-     'mark resolved' and committing conflict markers.
-   Votes:
-     +1: breser
-
- * r1577812, r1577813, r1579429
-   Resolve a segfault when 'svn merge --force' merges a directory delete
-   Justification:
-     Even though this merge flag is not recommended, it shouldn't cause a
-     segfault.
-   Notes:
-     r1577812 contains the actual fix and a regression test. r1577813 is
-     a minor improvement. A branch is necessary because a comment right above
-     the fix contained a typo that was fixed on trunk in a huge commit of many
-     typo fixes.
-   Branch:
-     ^/subversion/branches/1.8.x-r1577812
-   Votes:
-     +1: philip, rhuijben
+     +1: rhuijben, steveking
 
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
    with a NULL svn_lock_t *, as documented.
    Justification:
-     Many clients use the existance of an svn_lock_t on a node via info/status
+     Many clients use the existence of an svn_lock_t on a node via info/status
      as a boolean to note that there is a lock. But because we didn't properly
      check the result we reported mostly empty svn_lock_t instances in more
      cases. Even on directories!
@@ -242,22 +204,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1578670, r1578820, r1579274
-   Fix the order of node record headers written by svndumpfilter.
-   Justification:
-     Makes output match the rules documented in notes/dump-load-format.txt.
-   Votes:
-     +1: philip, rhuijben
-
- * r1578853, r1578875
-   Fix svnserve to only send inherited properties when necessary.
-   Justification:
-     Performance regression from 1.7, reported by a user.
-   Branch:
-     ^/subversion/branches/1.8.x-r1578853
-   Votes:
-     +1: philip, rhuijben
-
  * r1579588
    ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
    Justification:
@@ -267,7 +213,86 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1579588
    Votes:
+     +1: rhuijben (before r1588325 on branch)
+     +1: philip
+
+ * r1580626, r1580650, r1581430
+   Fix 'svn copy URL WC' after the working copy is relocated
+   Justification:
+     Without this patch (which is a followup of 1560690 backported in 1.8.8),
+     descendants of copies in a relocated working copy are marked as incomplete
+     (and these nodes are all created at their own op-depth)
+   Branch:
+     ^/subversion/branches/1.8.x-r1580626
+   Votes:
      +1: rhuijben
+     +1: philip (branch has wrong base but can be merged using -r1580627:head)
+
+ * r1573106, r1573209
+   A more stringent test for whether the compiler accepts a given option.
+   Justification:
+     Makes --enable-optimize and --enable-debug work with Solaris CC.
+   Votes:
+     +1: philip, rhuijben
+
+ * r1581810, 1584342
+   Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
+   Justification:
+     Regression from 1.7, makes using locks hard.
+   Notes:
+     r1584342 is the fix, r1581810 is a test that fails with a 1.6.16 server.
+   Branch:
+     ^/subversion/branches/1.8.x-r1584342
+    (merge before ^/subversion/branches/1.8.x-r1584592)
+   Votes:
+     +1: philip, rhuijben
+
+ * ^/subversion/branches/1.8.x-serf-no-lock-support
+   Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
+   don't implement the locks report.
+   Justification:
+     svn ls -v (or the api equivalent) should just work. Regression against
+     <= 1.7 and perhaps in some cases early 1.8.x that didn't properly
+     check for errors.
+   Notes:
+     The equivalent patch on trunk was part of a complete error handling
+     refactoring.
+   Votes:
+     +1: rhuijben, philip
+
+ * r1584576, r1584592, r1584745
+   Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
+   Justification:
+     Without this patch generic DAV clients can not refresh their own locks,
+     causing them to lose their locks.
+   Notes:
+     Patch needed, because a plain merge triggers a text conflict while
+     removing the XFail marker from the test. r1584745 makes the test code
+     compatible with 1.8.
+   Branch:
+     ^/subversion/branches/1.8.x-r1584592
+     (merge from trunk if ^/subversion/branches/1.8.x-r1584342 is merged first)
+   Votes:
+     +1: rhuijben, philip
+
+ * 1585499
+   Build with apr-0.9.x.
+   Justification:
+     1.8 claims 0.9 support but it doesn't work.
+   Branch:
+     ^/subversion/branches/1.8.x-apr-0.9
+   Votes:
+     +1: philip, rhuijben
+
+ * r1587968
+   Maintain data[len]=0 invariant for svn_string_t.
+   Justification:
+     Code may rely on null byte being present.
+   Notes:
+     Triggers a read beyond allocated memory on trunk but no known
+     misbehaviour on 1.8.
+   Votes:
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================

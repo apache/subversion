@@ -104,14 +104,6 @@ sbox_wc_mkdir(svn_test__sandbox_t *b, const char *path);
 svn_error_t *
 sbox_wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path);
 
-svn_error_t *
-sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
-                 svn_revnum_t revision, const char *to_path);
-
-svn_error_t *
-sbox_wc_relocate(svn_test__sandbox_t *b,
-                 const char *new_repos_url);
-
 /* Revert a WC file or directory tree at PATH */
 svn_error_t *
 sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth);

@@ -238,27 +238,6 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def set_changed_path_list(filename, changes):
-  """ Replace the changed paths list in the file given by FILENAME
-      with the text CHANGES."""
-
-  # read full file
-  fp = open(filename, 'r+b')
-  contents = fp.read()
-
-  # replace the changed paths list
-  length = len(contents)
-  header = contents[contents.rfind('\n', length - 64, length - 1):]
-  body_len = long(header.split(' ')[1])
-
-  contents = contents[:body_len] + changes + header
-
-  # set new contents
-  fp.seek(0)
-  fp.write(contents)
-  fp.truncate()
-  fp.close()
-
 ######################################################################
 # Tests
 
@@ -1843,6 +1822,7 @@ def recover_old(sbox):
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir, minor_version=0)
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
 
 ########################################################################
 # Run the tests
