@@ -226,7 +226,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1580626
    Votes:
      +1: rhuijben
-     -1: philip (branched from 1.8.x-r1536854 not 1.8.x)
+     +1: philip (branch has wrong base but can be merged using -r1580627:head)
 
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
