@@ -348,16 +348,6 @@ Approved changes:
    Votes:
      +1: rhuijben, ivan, julianfoad
 
- * r1570642, r1585686, r1586352
-   Fix memcached support.
-   Justification:
-     Enabling memcached causes crashes without these fixes.
-     Regression from 1.7.
-   Notes:
-     Merge with --accept=working to resolve FSX conflict.
-   Votes:
-     +1: stsp, philip, julianfoad
-
  * r1578670, r1578820, r1579274, r1587511
    Fix the order of node record headers written by svndumpfilter.
    Justification:
