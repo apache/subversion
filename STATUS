@@ -336,15 +336,6 @@ Approved changes:
    Votes:
      +1: philip, rhuijben, julianfoad
 
- * r1577294
-   Make interactive conflict resolver behave as designed.
-   Justification:
-     This was intended to be the behavior form the start.  A typo in a
-     refactoring broke it.  This fix helps users avoid accidentally choosing
-     'mark resolved' and committing conflict markers.
-   Votes:
-     +1: breser, ivan, julianfoad
-
  * r1580832
    Resolve 'svnrdump load' segfault deleting an 'svn:*' property (issue #4490)
    Justification:
