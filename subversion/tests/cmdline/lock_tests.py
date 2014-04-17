@@ -1932,7 +1932,7 @@ def dav_lock_timeout(sbox):
                                       'lock', '-m', '', sbox.ospath('iota'))
 
   # Before this patch this used to fail with a parse error of the timeout
-  svntest.actions.run_and_verify_svn2(None, None, ".*Unlock.*iota' failed", 0,
+  svntest.actions.run_and_verify_svn2(None, None, ".*W160039.*Unlock.*403", 0,
                                      'unlock', sbox.repo_url + '/iota')
 
   svntest.actions.run_and_verify_svn(None, None, [],
