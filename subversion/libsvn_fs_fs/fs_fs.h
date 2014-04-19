@@ -218,7 +218,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 
 
 /* Initialize all session-local caches in FS according to the global
-   cache settings. Use POOL for allocations.
+   cache settings. Use POOL for temporary allocations.
 
    Please note that it is permissible for this function to set some
    or all of these caches to NULL, regardless of any setting. */

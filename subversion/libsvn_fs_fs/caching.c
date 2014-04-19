@@ -411,11 +411,11 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 
   /* schedule printing the global access statistics upon pool cleanup,
-    * i.e. end of FSFS session.
-    */
+   * i.e. when the repo instance gets closed / cleaned up.
+   */
   if (membuffer)
-    apr_pool_cleanup_register(pool,
-                              pool,
+    apr_pool_cleanup_register(fs->pool,
+                              fs->pool,
                               dump_global_cache_statistics,
                               apr_pool_cleanup_null);
 #endif
