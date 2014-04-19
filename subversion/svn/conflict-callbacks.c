@@ -415,7 +415,8 @@ typedef struct resolver_option_t
   const char *code;        /* one or two characters */
   const char *short_desc;  /* label in prompt (localized) */
   const char *long_desc;   /* longer description (localized) */
-  svn_wc_conflict_choice_t choice;  /* or -1 if not a simple choice */
+  svn_wc_conflict_choice_t choice;
+                           /* or ..._undefined if not a simple choice */
 } resolver_option_t;
 
 /* Resolver options for a text conflict */
@@ -427,14 +428,15 @@ static const resolver_option_t text_conflict_options[] =
      brackets. */
   { "e",  N_("edit file"),        N_("change merged file in an editor"
                                      "  [edit]"),
-                                  -1 },
+                                  svn_wc_conflict_choose_undefined },
   { "df", N_("show diff"),        N_("show all changes made to merged file"),
-                                  -1 },
+                                  svn_wc_conflict_choose_undefined },
   { "r",  N_("mark resolved"),   N_("accept merged version of file"),
                                   svn_wc_conflict_choose_merged },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "dc", N_("display conflict"), N_("show all conflicts "
-                                     "(ignoring merged version)"), -1 },
+                                     "(ignoring merged version)"),
+                                  svn_wc_conflict_choose_undefined },
   { "mc", N_("my side of conflict"), N_("accept my version for all conflicts "
                                         "(same)  [mine-conflict]"),
                                   svn_wc_conflict_choose_mine_conflict },
@@ -451,15 +453,17 @@ static const resolver_option_t text_conflict_options[] =
                                   svn_wc_conflict_choose_theirs_full },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "m",  N_("merge"),            N_("use merge tool to resolve conflict"),
-                                     -1 },
+                                  svn_wc_conflict_choose_undefined },
   { "l",  N_("launch tool"),      N_("launch external tool to resolve "
-                                     "conflict  [launch]"), -1 },
+                                     "conflict  [launch]"),
+                                  svn_wc_conflict_choose_undefined },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"), -1 },
+  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -472,9 +476,11 @@ static const resolver_option_t prop_conflict_options[] =
   { "tf", N_("their version"),    N_("accept their version of entire property "
                                      "(same)  [theirs-full]"),
                                   svn_wc_conflict_choose_theirs_full },
-  { "dc", N_("display conflict"), N_("show conflicts in this property"), -1 },
+  { "dc", N_("display conflict"), N_("show conflicts in this property"),
+                                  svn_wc_conflict_choose_undefined },
   { "e",  N_("edit property"),    N_("change merged property value in an editor"
-                                     "  [edit]"), -1 },
+                                     "  [edit]"),
+                                  svn_wc_conflict_choose_undefined },
   { "r",  N_("mark resolved"),    N_("accept edited version of property"),
                                   svn_wc_conflict_choose_merged },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
@@ -482,7 +488,8 @@ static const resolver_option_t prop_conflict_options[] =
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
+  { "h",  N_("help"),             N_("show this help (also '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -500,7 +507,8 @@ static const resolver_option_t obstructed_add_options[] =
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
+  { "h",  N_("help"),             N_("show this help (also '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -513,7 +521,8 @@ static const resolver_option_t tree_conflict_options[] =
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
+  { "h",  N_("help"),             N_("show this help (also '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -527,7 +536,8 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
+  { "h",  N_("help"),             N_("show this help (also '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -541,7 +551,8 @@ static const resolver_option_t tree_conflict_options_update_edit_deleted_dir[] =
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"), -1 },
+  { "h",  N_("help"),             N_("show this help (also '?')"),
+                                  svn_wc_conflict_choose_undefined },
   { NULL }
 };
 
@@ -907,7 +918,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
             SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
         }
-      else if (opt->choice != -1)
+      else if (opt->choice != svn_wc_conflict_choose_undefined)
         {
           if ((opt->choice == svn_wc_conflict_choose_mine_conflict
                || opt->choice == svn_wc_conflict_choose_theirs_conflict)
@@ -1036,7 +1047,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
           result->choice = svn_wc_conflict_choose_merged;
           break;
         }
-      else if (opt->choice != -1)
+      else if (opt->choice != svn_wc_conflict_choose_undefined)
         {
           result->choice = opt->choice;
           break;
@@ -1107,7 +1118,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
           b->quit = TRUE;
           break;
         }
-      else if (opt->choice != -1)
+      else if (opt->choice != svn_wc_conflict_choose_undefined)
         {
           result->choice = opt->choice;
           break;
@@ -1157,7 +1168,7 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
           b->quit = TRUE;
           break;
         }
-      else if (opt->choice != -1)
+      else if (opt->choice != svn_wc_conflict_choose_undefined)
         {
           result->choice = opt->choice;
           break;
