@@ -246,7 +246,8 @@ get_or_allocate_third(struct fs_type_defn **fst,
 }
 #endif
 
-/* Fetch a library vtable by FS type. */
+/* Fetch a library *VTABLE by FS_TYPE.
+   Use POOL for temporary allocations. */
 static svn_error_t *
 get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
                    apr_pool_t *pool)
@@ -343,11 +344,15 @@ fs_library_vtable(fs_library_vtable_t **vtable, const char *path,
                   apr_pool_t *pool)
 {
   const char *fs_type;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_type(&fs_type, path, pool));
+  SVN_ERR(svn_fs_type(&fs_type, path, subpool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
-  return svn_error_trace(get_library_vtable(vtable, fs_type, pool));
+  SVN_ERR(get_library_vtable(vtable, fs_type, subpool));
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
