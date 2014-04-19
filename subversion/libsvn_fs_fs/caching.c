@@ -457,7 +457,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        fs->pool));
 
   /* 1st level DAG node cache */
-  ffd->dag_node_cache = svn_fs_fs__create_dag_cache(pool);
+  ffd->dag_node_cache = svn_fs_fs__create_dag_cache(fs->pool);
 
   /* Very rough estimate: 1K per directory. */
   SVN_ERR(create_cache(&(ffd->dir_cache),
