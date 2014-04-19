@@ -2224,9 +2224,15 @@ svn_wc__conflict_description2_dup(
  */
 typedef enum svn_wc_conflict_choice_t
 {
+  /** Undefined; for internal use only.
+      This value is never returned in svn_wc_conflict_result_t.
+   * @since New in 1.9
+   */
+  svn_wc_conflict_choose_undefined = -1,
+
   /** Don't resolve the conflict now.  Let libsvn_wc mark the path
      'conflicted', so user can run 'svn resolved' later. */
-  svn_wc_conflict_choose_postpone,
+  svn_wc_conflict_choose_postpone = 0,
 
   /** If there were files to choose from, select one as a way of
      resolving the conflict here and now.  libsvn_wc will then do the
@@ -2239,7 +2245,7 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
   svn_wc_conflict_choose_merged,          /**< merged version */
 
-  /* @since New in 1.8. */
+  /** @since New in 1.8. */
   svn_wc_conflict_choose_unspecified      /**< undecided */
 
 } svn_wc_conflict_choice_t;
