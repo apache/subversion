@@ -165,6 +165,22 @@ svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
                                  void *baton,
                                  apr_pool_t *pool);
 
+/* Obtain all locks on the filesystem FS in a subpool of POOL, call BODY
+   with BATON and that subpool, destroy the subpool (releasing the locks)
+   and return what BODY returned.  If ALLOW_NEW_TXNS is TRUE, other svn_fs_t
+   instances may start new transactions while we hold the locks.
+
+   This combines svn_fs_fs__with_write_lock, svn_fs_fs__with_pack_lock,
+   and optionally svn_fs_fs__with_txn_current_lock, ensuring correct lock
+   ordering. */
+svn_error_t *
+svn_fs_fs__with_all_locks(svn_fs_t *fs,
+                          svn_boolean_t allow_new_txns,
+                          svn_error_t *(*body)(void *baton,
+                                               apr_pool_t *pool),
+                          void *baton,
+                          apr_pool_t *pool);
+
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
    from POOL. */
