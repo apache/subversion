@@ -138,20 +138,7 @@ Candidate changes:
      to find libraries in non-standard locations.
      This should allow the bb-openbsd buildbot to compile 1.7.x.
    Votes:
-    +1: stsp
-
- * r1586439
-   Fix a crash in JavaHL that was reported on the users@ list and is
-   already fixed on trunk.
-   Justification:
-     JavaHL should not crash the JVM too often.
-   Notes:
-     The original report is here:
-     http://mail-archives.apache.org/mod_mbox/subversion-users/201404.mbox/%3CCAAVTFFjrZEy-PT3i1xu0mOM_AC89-237CmFEZ7QYcJxNckfEtA%40mail.gmail.com%3E
-   Branch:
-     ^/subversion/branches/1.7.x-javahl-exception-crash
-   Votes:
-     +1: brane
+    +1: stsp, rhuijben
 
  * r1587968
    Maintain data[len]=0 invariant for svn_string_t.
@@ -193,3 +180,17 @@ Veto-blocked changes:
      -1: stsp (not a bug fix, changes output in a patch release)
 
 Approved changes:
+=================
+
+ * r1586439
+   Fix a crash in JavaHL that was reported on the users@ list and is
+   already fixed on trunk.
+   Justification:
+     JavaHL should not crash the JVM too often.
+   Notes:
+     The original report is here:
+     http://mail-archives.apache.org/mod_mbox/subversion-users/201404.mbox/%3CCAAVTFFjrZEy-PT3i1xu0mOM_AC89-237CmFEZ7QYcJxNckfEtA%40mail.gmail.com%3E
+   Branch:
+     ^/subversion/branches/1.7.x-javahl-exception-crash
+   Votes:
+     +1: brane, rhuijben
