@@ -1828,31 +1828,22 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
              For now I would say reporting out of date in a few too many
              cases is safer than not reporting out of date when we should.
        */
-      svn_revnum_t youngest;
-      svn_fs_root_t *youngest_root;
+      svn_revnum_t txn_base_rev;
+      svn_fs_root_t *txn_base_root;
       svn_fs_root_t *rev_root;
-      svn_fs_id_t *youngest_id;
+      svn_fs_id_t *txn_base_id;
       svn_fs_id_t *rev_id;
 
-      serr = svn_fs_youngest_rev(&youngest, comb->res.info->repos->fs,
-                                 r->pool);
-      if (serr != NULL)
-        {
-          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Could not determine the youngest "
-                                      "revision for verification against "
-                                      "the baseline being checked out",
-                                      r->pool);
-        }
+      txn_base_rev = svn_fs_txn_base_revision(comb->res.info->root.txn);
 
-      if (comb->priv.version_name == youngest)
-        return NULL; /* Easy out: we commit against HEAD */
+      if (comb->priv.version_name == txn_base_rev)
+        return NULL; /* Easy out: Nothing changed */
 
-      serr = svn_fs_revision_root(&youngest_root, comb->res.info->repos->fs,
-                                  youngest, r->pool);
+      serr = svn_fs_revision_root(&txn_base_root, comb->res.info->repos->fs,
+                                  txn_base_rev, r->pool);
                                   
       if (!serr)
-        serr = svn_fs_node_id(&youngest_id, youngest_root,
+        serr = svn_fs_node_id(&txn_base_id, txn_base_root,
                               comb->priv.repos_path, r->pool);
 
       if (serr != NULL)
@@ -1879,9 +1870,9 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
         }
 
       svn_fs_close_root(rev_root);
-      svn_fs_close_root(youngest_root);
+      svn_fs_close_root(txn_base_root);
 
-      if (0 == svn_fs_compare_ids(youngest_id, rev_id))
+      if (0 == svn_fs_compare_ids(txn_base_id, rev_id))
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",
