@@ -294,6 +294,19 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1577739, r1577755, r1588772, r1588778
+   Resolve issue #4480: Mergeinfo overwritten on successive merges
+   Justification:
+     This issue allows accidentally destroying mergeinfo changes and other
+     property changes.
+   Notes:
+     The trunk change uses a new fs layer api. The branch reimplements the
+     same change with fs ids.
+   Branch:
+     ^/subversion/1.8.x-issue4480
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
