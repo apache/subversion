@@ -3072,7 +3072,6 @@ def commit_deep_deleted(sbox):
                                         sbox.ospath('A'))
 
 @Issue(4480)
-@XFail(svntest.main.is_ra_type_dav)
 def commit_mergeinfo_ood(sbox):
   "commit of mergeinfo that should cause out of date"
 
