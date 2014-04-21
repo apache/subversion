@@ -3567,7 +3567,7 @@ fnv1a_checksum_on_file_range(apr_uint32_t *fnv1_checksum,
                              apr_off_t size,
                              apr_pool_t *pool)
 {
-  char buffer[SVN__STREAM_CHUNK_SIZE];
+  char *buffer = apr_pcalloc(pool, SVN__STREAM_CHUNK_SIZE);
 
   svn_checksum_ctx_t *checksum_ctx
     = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
