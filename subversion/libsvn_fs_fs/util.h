@@ -123,6 +123,13 @@ const char *
 svn_fs_fs__path_lock(svn_fs_t *fs,
                      apr_pool_t *pool);
 
+/* Return the full path of the pack operation lock file in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_pack_lock(svn_fs_t *fs,
+                          apr_pool_t *pool);
+
 /* Return the full path of the revprop generation file in FS.
  * Allocate the result in POOL.
  */

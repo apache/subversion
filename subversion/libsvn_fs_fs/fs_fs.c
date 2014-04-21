@@ -105,18 +105,6 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
   return svn_dirent_join(fs->path, PATH_CURRENT, pool);
 }
 
-static APR_INLINE const char *
-path_lock(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
-}
-
-static APR_INLINE const char *
-path_pack_lock(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE, pool);
-}
-
 
 
 /* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
@@ -283,8 +271,8 @@ init_lock_baton(with_lock_baton_t *baton,
   switch (lock_id)
     {
       case write_lock: baton->mutex = ffsd->fs_write_lock;
-                       baton->lock_path = path_lock(baton->fs,
-                                                    baton->lock_pool);
+                       baton->lock_path = svn_fs_fs__path_lock
+                                            (baton->fs, baton->lock_pool);
                        baton->is_global_lock = TRUE;
                        break;
 
@@ -295,8 +283,8 @@ init_lock_baton(with_lock_baton_t *baton,
                        break;
 
       case pack_lock:  baton->mutex = ffsd->fs_pack_lock;
-                       baton->lock_path = path_pack_lock(baton->fs,
-                                                         baton->lock_pool);
+                       baton->lock_path = svn_fs_fs__path_pack_lock
+                                            (baton->fs, baton->lock_pool);
                        baton->is_global_lock = FALSE;
                        break;
     }
@@ -1574,7 +1562,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                               ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
