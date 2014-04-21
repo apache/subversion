@@ -72,6 +72,14 @@ def check_hotcopy_fsfs_fsx(src, dst):
                               "destination" % dst_dirpath)
       # Verify that all dirents in the current directory also exist in source
       for dst_dirent in os.listdir(dst_dirpath):
+        # Ignore auto-created empty lock files as they may or may not
+        # be present and are neither required by nor do they harm to
+        # the destination repository.
+        if dst_dirent == 'pack-lock':
+          continue
+        if dst_dirent == 'write-lock':
+          continue
+
         src_dirent = os.path.join(src_dirpath, dst_dirent)
         if not os.path.exists(src_dirent):
           raise svntest.Failure("%s does not exist in hotcopy "
