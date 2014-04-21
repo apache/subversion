@@ -213,8 +213,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1579588
    Votes:
-     +1: rhuijben (before r1588325 on branch)
-     +1: philip
+     +1: philip, rhuijben
 
  * r1580626, r1580650, r1581430
    Fix 'svn copy URL WC' after the working copy is relocated
@@ -226,7 +225,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1580626
    Votes:
      +1: rhuijben
-     +1: philip (branch has wrong base but can be merged using -r1580627:head)
+     +1: philip (before recreating branch)
 
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
