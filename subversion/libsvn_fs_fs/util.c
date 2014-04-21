@@ -77,6 +77,13 @@ svn_fs_fs__path_lock(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_pack_lock(svn_fs_t *fs,
+                          apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE, pool);
+}
+
+const char *
 svn_fs_fs__path_revprop_generation(svn_fs_t *fs,
                                    apr_pool_t *pool)
 {
