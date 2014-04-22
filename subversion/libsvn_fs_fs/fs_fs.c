@@ -379,7 +379,6 @@ svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_fs__with_all_locks(svn_fs_t *fs,
-                          svn_boolean_t allow_new_txns,
                           svn_error_t *(*body)(void *baton,
                                                apr_pool_t *pool),
                           void *baton,
@@ -393,8 +392,7 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
     lock_baton = chain_lock_baton(pack_lock, lock_baton);
 
-  if (!allow_new_txns)
-    lock_baton = chain_lock_baton(txn_lock, lock_baton);
+  lock_baton = chain_lock_baton(txn_lock, lock_baton);
 
   return svn_error_trace(with_lock(lock_baton, pool));
 }
@@ -1166,7 +1164,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
   
-  return svn_fs_fs__with_all_locks(fs, FALSE, upgrade_body, (void *)&baton, pool);
+  return svn_fs_fs__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
 }
 
 /* Find the youngest revision in a repository at path FS_PATH and
