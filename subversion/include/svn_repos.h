@@ -405,16 +405,31 @@ svn_repos_find_root_path(const char *path,
 
 /** Set @a *repos_p to a repository object for the repository at @a path.
  *
- * Allocate @a *repos_p in @a pool.
+ * Allocate @a *repos_p in @a result_pool.
  *
  * Acquires a shared lock on the repository, and attaches a cleanup
- * function to @a pool to remove the lock.  If no lock can be acquired,
+ * function to @a result_pool to remove the lock.  If no lock can be acquired,
  * returns error, with undefined effect on @a *repos_p.  If an exclusive
  * lock is present, this blocks until it's gone.  @a fs_config will be
  * passed to the filesystem initialization function and may be @c NULL.
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_repos_open3(svn_repos_t **repos_p,
+                const char *path,
+                apr_hash_t *fs_config,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/** Similar to svn_repos_open3() but without @a scratch_pool.
+ *
+ * @deprecated Provided for backward compatibility with 1.8 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_open2(svn_repos_t **repos_p,
                 const char *path,

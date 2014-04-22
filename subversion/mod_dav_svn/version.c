@@ -841,7 +841,7 @@ cleanup_deltify(void *data)
      subpool, then destroy it before exiting. */
   apr_pool_t *subpool = svn_pool_create(cdb->pool);
 
-  err = svn_repos_open2(&repos, cdb->repos_path, NULL, subpool);
+  err = svn_repos_open3(&repos, cdb->repos_path, NULL, subpool, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,

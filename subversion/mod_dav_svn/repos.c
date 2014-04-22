@@ -2291,8 +2291,8 @@ get_resource(request_rec *r,
 
       /* open the FS */
       if (!serr)
-        serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,
-                               r->connection->pool);
+        serr = svn_repos_open3(&(repos->repos), fs_path, fs_config,
+                               r->connection->pool, r->pool);
       if (serr != NULL)
         {
           /* The error returned by svn_repos_open2 might contain the

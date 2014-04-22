@@ -138,6 +138,15 @@ svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
+svn_repos_open2(svn_repos_t **repos_p,
+                const char *path,
+                apr_hash_t *fs_config,
+                apr_pool_t *pool)
+{
+  return svn_repos_open3(repos_p, path, fs_config, pool, pool);
+}
+
+svn_error_t *
 svn_repos_open(svn_repos_t **repos_p,
                const char *path,
                apr_pool_t *pool)

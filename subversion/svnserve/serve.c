@@ -3442,6 +3442,9 @@ repos_path_valid(const char *path)
  *
  * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
  * respective type.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ *
  */
 static svn_error_t *
 find_repos(const char *url,
@@ -3453,7 +3456,8 @@ find_repos(const char *url,
            svn_repos__config_pool_t *config_pool,
            svn_repos__authz_pool_t *authz_pool,
            apr_hash_t *fs_config,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
@@ -3470,8 +3474,8 @@ find_repos(const char *url,
       if (path == NULL)
         path = "";
     }
-  path = svn_relpath_canonicalize(path, pool);
-  path = svn_path_uri_decode(path, pool);
+  path = svn_relpath_canonicalize(path, scratch_pool);
+  path = svn_path_uri_decode(path, scratch_pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
      '..' segments. */
@@ -3480,55 +3484,55 @@ find_repos(const char *url,
                             "Couldn't determine repository path");
 
   /* Join the server-configured root with the client path. */
-  full_path = svn_dirent_join(svn_dirent_canonicalize(root, pool),
-                              path, pool);
+  full_path = svn_dirent_join(svn_dirent_canonicalize(root, scratch_pool),
+                              path, scratch_pool);
 
   /* Search for a repository in the full path. */
-  repository->repos_root = svn_repos_find_root_path(full_path, pool);
+  repository->repos_root = svn_repos_find_root_path(full_path, result_pool);
   if (!repository->repos_root)
     return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open2(&repository->repos, repository->repos_root,
-                          fs_config, pool));
+  SVN_ERR(svn_repos_open3(&repository->repos, repository->repos_root,
+                          fs_config, result_pool, scratch_pool));
   SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
                                                  repository->capabilities));
   repository->fs = svn_repos_fs(repository->repos);
   fs_path = full_path + strlen(repository->repos_root);
   repository->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/",
-                                             pool);
-  url_buf = svn_stringbuf_create(url, pool);
+                                             result_pool);
+  url_buf = svn_stringbuf_create(url, result_pool);
   svn_path_remove_components(url_buf,
                         svn_path_component_count(repository->fs_path->data));
   repository->repos_url = url_buf->data;
   repository->authz_repos_name = svn_dirent_is_child(root,
                                                      repository->repos_root,
-                                                     pool);
+                                                     result_pool);
   if (repository->authz_repos_name == NULL)
     repository->repos_name = svn_dirent_basename(repository->repos_root,
-                                                 pool);
+                                                 result_pool);
   else
     repository->repos_name = repository->authz_repos_name;
   repository->repos_name = svn_path_uri_encode(repository->repos_name,
-                                               pool);
+                                               result_pool);
 
   /* If the svnserve configuration has not been loaded then load it from the
    * repository. */
   if (NULL == cfg)
     {
-      repository->base = svn_repos_conf_dir(repository->repos, pool);
+      repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
       SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                                          svn_repos_svnserve_conf
-                                            (repository->repos, pool),
+                                            (repository->repos, result_pool),
                                          FALSE, FALSE, repository->repos,
-                                         pool));
+                                         result_pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, pool));
+                            authz_pool, result_pool));
 
 #ifdef SVN_HAVE_SASL
     {
@@ -3550,10 +3554,10 @@ find_repos(const char *url,
 #endif
 
   /* Use the repository UUID as the default realm. */
-  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, pool));
+  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, scratch_pool));
   svn_config_get(cfg, &repository->realm, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_REALM, repository->realm);
-  repository->realm = apr_pstrdup(pool, repository->realm);
+  repository->realm = apr_pstrdup(result_pool, repository->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
@@ -3565,9 +3569,9 @@ find_repos(const char *url,
   svn_config_get(cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
-    hooks_env = svn_dirent_internal_style(hooks_env, pool);
+    hooks_env = svn_dirent_internal_style(hooks_env, scratch_pool);
 
-  repository->hooks_env = apr_pstrdup(pool, hooks_env);
+  repository->hooks_env = apr_pstrdup(result_pool, hooks_env);
 
   return SVN_NO_ERROR;
 }
@@ -3857,7 +3861,7 @@ construct_server_baton(server_baton_t **baton,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
                                        params->authz_pool, params->fs_config, 
-                                       conn_pool),
+                                       conn_pool, scratch_pool),
                             b);
   if (!err)
     {
