@@ -194,7 +194,7 @@ create_packed_filesystem(const char *dir,
     }
 
   /* Reopen the filesystem */
-  SVN_ERR(svn_fs_open(&fs, dir, NULL, subpool));
+  SVN_ERR(svn_fs_open2(&fs, dir, NULL, subpool, subpool));
 
   /* Revision 1: the Greek tree */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
@@ -249,7 +249,7 @@ prepare_revprop_repo(svn_fs_t **fs,
 
   /* Create the packed FS and open it. */
   SVN_ERR(create_packed_filesystem(repo_name, opts, max_rev, shard_size, pool));
-  SVN_ERR(svn_fs_open(fs, repo_name, NULL, pool));
+  SVN_ERR(svn_fs_open2(fs, repo_name, NULL, pool, pool));
 
   subpool = svn_pool_create(pool);
   /* Do a commit to trigger packing. */
@@ -445,7 +445,7 @@ read_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t i;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
 
   for (i = 1; i < (MAX_REV + 1); i++)
     {
@@ -488,7 +488,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
 
   /* Create the packed FS and open it. */
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, 5, pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
 
   /* Now do a commit. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, pool));
@@ -711,7 +711,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
 
   /* Add another revision, re-pack, re-recover. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, subpool, subpool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", "new-mu", subpool));
@@ -767,7 +767,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 
   /* Reopen the filesystem */
   subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, subpool, subpool));
 
   /* Revision = SHARD_SIZE */
   file_contents = get_rev_contents(SHARD_SIZE, subpool);
@@ -809,7 +809,7 @@ test_info(const svn_test_opts_t *opts,
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
   SVN_ERR(svn_fs_info(&info, fs, pool, pool));
   info = svn_fs_info_dup(info, pool, pool);
 
@@ -851,7 +851,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
   /* whitebox: revprop packing special-cases r0, which causes
      (start_rev==1, end_rev==0) in pack_revprops_shard().  So test that. */
   SVN_ERR(svn_fs_revision_prop(&propval, fs, 1, SVN_PROP_REVISION_LOG, pool));
@@ -968,7 +968,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
     {
       /* upgrade to final repo format (using log addressing) and re-open */
       SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
-      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+      SVN_ERR(svn_fs_open2(&fs, repo_name, svn_fs_config(fs, pool), pool,
+                           pool));
     }
 
   /* Create 4 concurrent transactions */
@@ -1012,7 +1013,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
     {
       /* upgrade to final repo format (using log addressing) and re-open */
       SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
-      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+      SVN_ERR(svn_fs_open2(&fs, repo_name, svn_fs_config(fs, pool), pool,
+                           pool));
     }
 
   /* Commit all transactions

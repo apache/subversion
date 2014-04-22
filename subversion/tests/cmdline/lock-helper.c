@@ -59,7 +59,7 @@ main(int argc, const char *argv[])
   username = argv[3];
   SVN_INT_ERR(svn_cstring_atoi64(&seconds, argv[4]));
 
-  SVN_INT_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
+  SVN_INT_ERR(svn_fs_open2(&fs, fs_path, NULL, pool, pool));
   SVN_INT_ERR(svn_fs_create_access(&access, username, pool));
   SVN_INT_ERR(svn_fs_set_access(fs, access));
 
