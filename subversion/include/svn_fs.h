@@ -266,21 +266,35 @@ svn_fs_create(svn_fs_t **fs_p,
  * NULL, the options it contains modify the behavior of the
  * filesystem.  The interpretation of @a fs_config is specific to the
  * filesystem back-end.  The opened filesystem may be closed by
- * destroying @a pool.
+ * destroying @a result_pool.
  *
  * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @a fs_config from @a pool or
- * one of its ancestors.
+ * result_pool's. It's a good idea to allocate @a fs_config from
+ * @a result_pool or one of its ancestors.
  *
  * Only one thread may operate on any given filesystem object at once.
  * Two threads may access the same filesystem simultaneously only if
  * they open separate filesystem objects.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_open2() instead.
+ * svn_repos_open3() instead.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_open2(svn_fs_t **fs_p,
+             const char *path,
+             apr_hash_t *fs_config,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_open2(), but without @a scratch_pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_open(svn_fs_t **fs_p,
             const char *path,

@@ -1454,25 +1454,29 @@ get_repos(svn_repos_t **repos_p,
           svn_boolean_t nonblocking,
           svn_boolean_t open_fs,
           apr_hash_t *fs_config,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
 {
   svn_repos_t *repos;
+  const char *fs_type;
 
   /* Allocate a repository object. */
-  repos = create_svn_repos_t(path, pool);
+  repos = create_svn_repos_t(path, result_pool);
 
   /* Verify the validity of our repository format. */
-  SVN_ERR(check_repos_format(repos, pool));
+  SVN_ERR(check_repos_format(repos, scratch_pool));
 
   /* Discover the FS type. */
-  SVN_ERR(svn_fs_type(&repos->fs_type, repos->db_path, pool));
+  SVN_ERR(svn_fs_type(&fs_type, repos->db_path, scratch_pool));
+  repos->fs_type = apr_pstrdup(result_pool, fs_type);
 
   /* Lock if needed. */
-  SVN_ERR(lock_repos(repos, exclusive, nonblocking, pool));
+  SVN_ERR(lock_repos(repos, exclusive, nonblocking, result_pool));
 
   /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
-    SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
+    SVN_ERR(svn_fs_open2(&repos->fs, repos->db_path, fs_config,
+                         result_pool, scratch_pool));
 
 #ifdef SVN_DEBUG_CRASH_AT_REPOS_OPEN
   /* If $PATH/config/debug-abort exists, crash the server here.
@@ -1483,8 +1487,8 @@ get_repos(svn_repos_t **repos_p,
   {
     svn_node_kind_t kind;
     svn_error_t *err = svn_io_check_path(
-        svn_dirent_join(repos->conf_path, "debug-abort", pool),
-        &kind, pool);
+        svn_dirent_join(repos->conf_path, "debug-abort", scratch_pool),
+        &kind, scratch_pool);
     svn_error_clear(err);
     if (!err && kind == svn_node_file)
       SVN_ERR_MALFUNCTION_NO_RETURN();
@@ -1525,17 +1529,18 @@ svn_repos_find_root_path(const char *path,
   return candidate;
 }
 
-
 svn_error_t *
-svn_repos_open2(svn_repos_t **repos_p,
+svn_repos_open3(svn_repos_t **repos_p,
                 const char *path,
                 apr_hash_t *fs_config,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   /* Fetch a repository object initialized with a shared read/write
      lock on the database. */
 
-  return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config, pool);
+  return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config,
+                   result_pool, scratch_pool);
 }
 
 /* Baton used with fs_upgrade_notify, specifying the svn_repos layer
@@ -1608,7 +1613,8 @@ svn_repos_upgrade2(const char *path,
      least prevent others from trying to read or write to it while we
      run recovery. (Other backends should do their own locking; see
      lock_repos.) */
-  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, NULL, subpool));
+  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, NULL, subpool,
+                    subpool));
 
   if (notify_func)
     {
@@ -1848,7 +1854,7 @@ svn_repos_recover4(const char *path,
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
-                    subpool));
+                    subpool, subpool));
 
   if (notify_func)
     {
@@ -1903,7 +1909,7 @@ multi_freeze(void *baton,
                         TRUE  /* exclusive (only applies to BDB) */,
                         FALSE /* non-blocking */,
                         FALSE /* open-fs */,
-                        NULL, subpool));
+                        NULL, subpool, subpool));
 
 
       if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
@@ -1963,7 +1969,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
                     FALSE, FALSE,
                     FALSE,     /* Do not open fs. */
                     NULL,
-                    pool));
+                    pool, pool));
 
   SVN_ERR(svn_fs_berkeley_logfiles(logfiles,
                                    svn_repos_db_env(repos, pool),
@@ -2106,7 +2112,7 @@ svn_repos_hotcopy2(const char *src_path,
                     FALSE, FALSE,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
-                    pool));
+                    pool, pool));
 
   /* If we are going to clean logs, then get an exclusive lock on
      db-logs.lock, to ensure that no one else will work with logs.

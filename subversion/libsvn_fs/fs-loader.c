@@ -344,13 +344,11 @@ fs_library_vtable(fs_library_vtable_t **vtable, const char *path,
                   apr_pool_t *pool)
 {
   const char *fs_type;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_type(&fs_type, path, subpool));
+  SVN_ERR(svn_fs_type(&fs_type, path, pool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
-  SVN_ERR(get_library_vtable(vtable, fs_type, subpool));
-  svn_pool_destroy(subpool);
+  SVN_ERR(get_library_vtable(vtable, fs_type, pool));
 
   return SVN_NO_ERROR;
 }
@@ -507,17 +505,28 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 }
 
 svn_error_t *
-svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
-            apr_pool_t *pool)
+svn_fs_open2(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  *fs_p = fs_new(fs_config, pool);
-  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, pool, common_pool));
+  SVN_ERR(fs_library_vtable(&vtable, path, scratch_pool));
+  *fs_p = fs_new(fs_config, result_pool);
+  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, result_pool,
+                          common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_open(svn_fs_t **fs_p,
+            const char *path,
+            apr_hash_t *fs_config,
+            apr_pool_t *pool)
+{
+  return svn_fs_open2(fs_p, path, fs_config, pool, pool);
 }
 
 svn_error_t *
