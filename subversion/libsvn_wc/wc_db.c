@@ -3844,8 +3844,13 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
-                                 scratch_pool, scratch_pool));
+  if (dst_status != svn_wc__db_status_not_present)
+    {
+      SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
+                                     scratch_pool, scratch_pool));
+    }
+  else
+    props = NULL;
 
   blank_iwb(&iwb);
   iwb.presence = dst_status;
