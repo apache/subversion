@@ -940,26 +940,21 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(dst_fs));
 
-  /* Hotcopied FS is complete. Stamp it with a format file. */
-  dst_ffd->max_files_per_dir = max_files_per_dir;
-  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
-
   return SVN_NO_ERROR;
 }
 
-
-/* Set up shared data between SRC_FS and DST_FS. */
-static void
-hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
+/* Wrapper around hotcopy_body taking out all necessary source repositories.
+ */
+static svn_error_t *
+hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
 {
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+  struct hotcopy_body_baton *hbb = baton;
+  fs_fs_data_t *src_ffd = hbb->src_fs->fsap_data;
 
-  /* The common pool and mutexes are shared between src and dst filesystems.
-   * During hotcopy we only grab the mutexes for the destination, so there
-   * is no risk of dead-lock. We don't write to the src filesystem. Shared
-   * data for the src_fs has already been initialised in fs_hotcopy(). */
-  dst_ffd->shared = src_ffd->shared;
+  return src_ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT
+    ? svn_error_trace(svn_fs_fs__with_pack_lock(hbb->src_fs, hotcopy_body,
+                                                baton, pool))
+    : hotcopy_body(baton, pool);
 }
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
@@ -1039,31 +1034,19 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                           pool));
     }
 
-  dst_ffd->youngest_rev_cache = 0;
-
-  hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+  /* FS creation is complete. Stamp it with a format file. */
+  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_fs__hotcopy(svn_fs_t *src_fs,
-                   svn_fs_t *dst_fs,
-                   const char *src_path,
-                   const char *dst_path,
-                   svn_boolean_t incremental,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *pool)
+svn_fs_fs__hotcopy_prepare_target(svn_fs_t *src_fs,
+                                  svn_fs_t *dst_fs,
+                                  const char *dst_path,
+                                  svn_boolean_t incremental,
+                                  apr_pool_t *pool)
 {
-  struct hotcopy_body_baton hbb;
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  SVN_ERR(svn_fs_fs__open(src_fs, src_path, pool));
-
   if (incremental)
     {
       const char *dst_format_abspath;
@@ -1085,8 +1068,6 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
           SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
           SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
                                                           pool));
-          hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
         }
     }
   else
@@ -1096,15 +1077,26 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
       SVN_ERR(hotcopy_create_empty_dest(src_fs, dst_fs, dst_path, pool));
     }
 
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__hotcopy(svn_fs_t *src_fs,
+                   svn_fs_t *dst_fs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  struct hotcopy_body_baton hbb;
 
   hbb.src_fs = src_fs;
   hbb.dst_fs = dst_fs;
   hbb.incremental = incremental;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_body, &hbb, pool));
+  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
+                                    pool));
 
   return SVN_NO_ERROR;
 }
