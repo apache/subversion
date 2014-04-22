@@ -1293,7 +1293,9 @@ base_hotcopy(svn_fs_t *src_fs,
              svn_boolean_t incremental,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
-             apr_pool_t *pool)
+             svn_mutex__t *common_pool_lock,
+             apr_pool_t *pool,
+             apr_pool_t *common_pool)
 {
   svn_error_t *err;
   u_int32_t pagesize;
