@@ -226,8 +226,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1580626
    Votes:
-     +1: rhuijben
-     +1: philip (before recreating branch)
+     +1: rhuijben, philip
 
  * r1573106, r1573209
    A more stringent test for whether the compiler accepts a given option.
