@@ -308,6 +308,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1589184, r1589188
+   Properly handle properties not present and excluded on cross wc copy
+   Justification:
+     Cross working copy copies should just work.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
