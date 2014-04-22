@@ -663,7 +663,7 @@ svn_fs_hotcopy2(const char *src_path, const char *dst_path,
 
   SVN_ERR(vtable->hotcopy(src_fs, dst_fs, src_path, dst_path, clean,
                           incremental, cancel_func, cancel_baton,
-                          scratch_pool));
+                          common_pool_lock, scratch_pool, common_pool));
   return svn_error_trace(write_fs_type(dst_path, src_fs_type, scratch_pool));
 }
 

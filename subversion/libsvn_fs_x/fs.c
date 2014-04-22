@@ -381,13 +381,11 @@ x_hotcopy(svn_fs_t *src_fs,
           svn_boolean_t incremental,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
-          apr_pool_t *pool)
+          svn_mutex__t *common_pool_lock,
+          apr_pool_t *pool,
+          apr_pool_t *common_pool)
 {
-  SVN_ERR(svn_fs__check_fs(src_fs, FALSE));
-  SVN_ERR(initialize_fs_struct(src_fs));
-  SVN_ERR(svn_fs_x__open(src_fs, src_path, pool));
-  SVN_ERR(svn_fs_x__initialize_caches(src_fs, pool));
-  SVN_ERR(x_serialized_init(src_fs, pool, pool));
+  SVN_ERR(x_open(src_fs, src_path, common_pool_lock, pool, common_pool));
 
   SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
   SVN_ERR(initialize_fs_struct(dst_fs));
