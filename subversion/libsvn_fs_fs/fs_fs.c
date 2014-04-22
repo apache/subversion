@@ -628,20 +628,23 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
 }
 
 /* Read the configuration information of the file system at FS_PATH
- * and set the respective values in FFD.  Use POOL for allocations.
+ * and set the respective values in FFD.  Use pools as usual.
  */
 static svn_error_t *
 read_config(fs_fs_data_t *ffd,
             const char *fs_path,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_config_read3(&ffd->config,
-                           svn_dirent_join(fs_path, PATH_CONFIG, pool),
-                           FALSE, FALSE, FALSE, pool));
+  svn_config_t *config;
+
+  SVN_ERR(svn_config_read3(&config,
+                           svn_dirent_join(fs_path, PATH_CONFIG, scratch_pool),
+                           FALSE, FALSE, FALSE, scratch_pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
-    SVN_ERR(svn_config_get_bool(ffd->config, &ffd->rep_sharing_allowed,
+    SVN_ERR(svn_config_get_bool(config, &ffd->rep_sharing_allowed,
                                 CONFIG_SECTION_REP_SHARING,
                                 CONFIG_OPTION_ENABLE_REP_SHARING, TRUE));
   else
@@ -652,24 +655,24 @@ read_config(fs_fs_data_t *ffd,
     {
       apr_int64_t compression_level;
 
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
+      SVN_ERR(svn_config_get_bool(config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
                                   TRUE));
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
+      SVN_ERR(svn_config_get_bool(config, &ffd->deltify_properties,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
                                   TRUE));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
+      SVN_ERR(svn_config_get_int64(config, &ffd->max_deltification_walk,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_DELTIFICATION_WALK,
                                    SVN_FS_FS_MAX_DELTIFICATION_WALK));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
+      SVN_ERR(svn_config_get_int64(config, &ffd->max_linear_deltification,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
                                    SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
 
-      SVN_ERR(svn_config_get_int64(ffd->config, &compression_level,
+      SVN_ERR(svn_config_get_int64(config, &compression_level,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_COMPRESSION_LEVEL,
                                    SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
@@ -689,11 +692,11 @@ read_config(fs_fs_data_t *ffd,
   /* Initialize revprop packing settings in ffd. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
+      SVN_ERR(svn_config_get_bool(config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
                                   TRUE));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
+      SVN_ERR(svn_config_get_int64(config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
                                    ffd->compress_packed_revprops
@@ -710,15 +713,15 @@ read_config(fs_fs_data_t *ffd,
 
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
+      SVN_ERR(svn_config_get_int64(config, &ffd->block_size,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_BLOCK_SIZE,
                                    64));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->l2p_page_size,
+      SVN_ERR(svn_config_get_int64(config, &ffd->l2p_page_size,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_L2P_PAGE_SIZE,
                                    0x2000));
-      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->p2l_page_size,
+      SVN_ERR(svn_config_get_int64(config, &ffd->p2l_page_size,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_P2L_PAGE_SIZE,
                                    0x400));
@@ -736,7 +739,7 @@ read_config(fs_fs_data_t *ffd,
 
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
-      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->pack_after_commit,
+      SVN_ERR(svn_config_get_bool(config, &ffd->pack_after_commit,
                                   CONFIG_SECTION_DEBUG,
                                   CONFIG_OPTION_PACK_AFTER_COMMIT,
                                   FALSE));
@@ -745,6 +748,14 @@ read_config(fs_fs_data_t *ffd,
     {
       ffd->pack_after_commit = FALSE;
     }
+
+  /* memcached configuration */
+  SVN_ERR(svn_cache__make_memcache_from_config(&ffd->memcache, config,
+                                               result_pool));
+
+  SVN_ERR(svn_config_get_bool(config, &ffd->fail_stop,
+                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
+                              FALSE));
 
   return SVN_NO_ERROR;
 }
@@ -991,7 +1002,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
-  SVN_ERR(read_config(ffd, fs->path, fs->pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -1574,7 +1585,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_CONFIG_FILE)
     SVN_ERR(write_config(fs, pool));
 
-  SVN_ERR(read_config(ffd, fs->path, pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
