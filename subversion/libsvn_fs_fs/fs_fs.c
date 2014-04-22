@@ -991,7 +991,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
-  SVN_ERR(read_config(ffd, fs->path, pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
