@@ -625,8 +625,8 @@ fs_open(fs_t **fs, const char *path, apr_pool_t *pool)
   fs_fs_data_t *ffd;
 
   *fs = apr_pcalloc(pool, sizeof(**fs));
-  SVN_ERR(svn_fs_open(&(*fs)->fs, svn_dirent_join(path, "db", pool),
-                      NULL, pool));
+  SVN_ERR(svn_fs_open2(&(*fs)->fs, svn_dirent_join(path, "db", pool),
+                      NULL, pool, pool));
 
   /* Check the FS format number. */
   ffd = (*fs)->fs->fsap_data;
