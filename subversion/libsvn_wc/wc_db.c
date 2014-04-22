@@ -3844,7 +3844,9 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
-  if (dst_status != svn_wc__db_status_not_present)
+  if (dst_status != svn_wc__db_status_not_present
+      && dst_status != svn_wc__db_status_excluded
+      && dst_status != svn_wc__db_status_server_excluded)
     {
       SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath, FALSE,
                                      scratch_pool, scratch_pool));

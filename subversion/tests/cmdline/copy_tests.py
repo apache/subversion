@@ -5826,6 +5826,10 @@ def ext_wc_copy_deleted(sbox):
   sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/D'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'co', sbox.repo_url, wc2_dir, '-r', 1)
 
   svntest.actions.run_and_verify_svn(None, None, [],
