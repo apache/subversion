@@ -5814,6 +5814,32 @@ def copy_relocate(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'info', copiedpath)
 
+def ext_wc_copy_deleted(sbox):
+  "copy deleted tree from separate wc"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  sbox.simple_rm('A/B')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url, wc2_dir, '-r', 1)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'), os.path.join(wc2_dir,'AA'))
+
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
 ########################################################################
 # Run the tests
 
@@ -5932,6 +5958,7 @@ test_list = [ None,
               copy_text_conflict,
               copy_over_excluded,
               copy_relocate,
+              ext_wc_copy_deleted,
              ]
 
 if __name__ == '__main__':
