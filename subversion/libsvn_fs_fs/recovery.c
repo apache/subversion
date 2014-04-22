@@ -507,5 +507,5 @@ svn_fs_fs__recover(svn_fs_t *fs,
   b.fs = fs;
   b.cancel_func = cancel_func;
   b.cancel_baton = cancel_baton;
-  return svn_fs_fs__with_all_locks(fs, FALSE, recover_body, &b, pool);
+  return svn_fs_fs__with_all_locks(fs, recover_body, &b, pool);
 }
