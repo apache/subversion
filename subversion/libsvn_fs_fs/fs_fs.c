@@ -270,23 +270,25 @@ init_lock_baton(with_lock_baton_t *baton,
 
   switch (lock_id)
     {
-      case write_lock: baton->mutex = ffsd->fs_write_lock;
-                       baton->lock_path = svn_fs_fs__path_lock
-                                            (baton->fs, baton->lock_pool);
-                       baton->is_global_lock = TRUE;
-                       break;
+    case write_lock:
+      baton->mutex = ffsd->fs_write_lock;
+      baton->lock_path = svn_fs_fs__path_lock(baton->fs, baton->lock_pool);
+      baton->is_global_lock = TRUE;
+      break;
 
-      case txn_lock:   baton->mutex = ffsd->txn_current_lock;
-                       baton->lock_path = svn_fs_fs__path_txn_current_lock
-                                            (baton->fs, baton->lock_pool);
-                       baton->is_global_lock = FALSE;
-                       break;
+    case txn_lock:
+      baton->mutex = ffsd->txn_current_lock;
+      baton->lock_path = svn_fs_fs__path_txn_current_lock(baton->fs,
+                                                          baton->lock_pool);
+      baton->is_global_lock = FALSE;
+      break;
 
-      case pack_lock:  baton->mutex = ffsd->fs_pack_lock;
-                       baton->lock_path = svn_fs_fs__path_pack_lock
-                                            (baton->fs, baton->lock_pool);
-                       baton->is_global_lock = FALSE;
-                       break;
+    case pack_lock:
+      baton->mutex = ffsd->fs_pack_lock;
+      baton->lock_path = svn_fs_fs__path_pack_lock(baton->fs,
+                                                   baton->lock_pool);
+      baton->is_global_lock = FALSE;
+      break;
     }
 }
 
