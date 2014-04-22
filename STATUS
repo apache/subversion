@@ -185,6 +185,8 @@ Candidate changes:
      While really a behavior change that doesn't belong in a patch release
      I'm guessing nobody knew that we didn't implement this flag in this
      scenario.
+   Branch:
+     ^/subversion/branches/1.8.x-r1577151
    Votes:
      +1: rhuijben, steveking
 
