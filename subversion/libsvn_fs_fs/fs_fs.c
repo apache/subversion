@@ -392,7 +392,8 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
     lock_baton = chain_lock_baton(pack_lock, lock_baton);
 
-  lock_baton = chain_lock_baton(txn_lock, lock_baton);
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    lock_baton = chain_lock_baton(txn_lock, lock_baton);
 
   return svn_error_trace(with_lock(lock_baton, pool));
 }
