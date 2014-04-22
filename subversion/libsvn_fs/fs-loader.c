@@ -513,7 +513,7 @@ svn_fs_open2(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_ERR(fs_library_vtable(&vtable, path, scratch_pool));
   *fs_p = fs_new(fs_config, result_pool);
-  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, result_pool,
+  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, scratch_pool,
                           common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
