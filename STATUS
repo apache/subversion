@@ -314,15 +314,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1545835, r154845
-   Prevent use with known buggy versions of httpd.
-   Justification:
-     Signal to our packagers that these versions have issues that they either
-     need to upgrade or patch around.
-   Votes:
-     +1: breser, rhuijben
-     +1: danielsh (if s/r154845/r1545845/)
-
  * r1589360
    Make property output in 'svn diff' stable
    Justification:
@@ -358,3 +349,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1545835, r1545845
+   Prevent use with known buggy versions of httpd.
+   Justification:
+     Signal to our packagers that these versions have issues that they either
+     need to upgrade or patch around.
+   Votes:
+     +1: breser, rhuijben, danielsh
