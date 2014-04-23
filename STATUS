@@ -164,6 +164,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1545835, r154845
+   Prevent use with known buggy versions of httpd.
+   Justification:
+     Signal to our packagers that these versions have issues that they either
+     need to upgrade or patch around.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
