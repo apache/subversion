@@ -320,7 +320,14 @@ Candidate changes:
      Signal to our packagers that these versions have issues that they either
      need to upgrade or patch around.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
+
+ * r1589360
+   Make property output in 'svn diff' stable
+   Justification:
+     Local change that makes it easier to compare patch files.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
