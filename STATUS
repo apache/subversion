@@ -255,6 +255,7 @@ Candidate changes:
      Local change that makes it easier to compare patch files.
    Votes:
      +1: rhuijben
+     -0: stefan2 (compiler misses "private/svn_sorts_private.h")
      
  * r1589460, r1589486
    Fix copying parents of locally deleted nodes between working copies.
