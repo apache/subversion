@@ -5844,7 +5844,6 @@ def ext_wc_copy_deleted(sbox):
                                         expected_output, None, None,
                                         wc2_dir)
 
-@XFail()
 def copy_subtree_deleted(sbox):
   "copy to-be-deleted subtree"
 

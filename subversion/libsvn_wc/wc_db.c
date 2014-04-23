@@ -5167,6 +5167,17 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
                                     scratch_pool));
     }
 
+  if (dst_presence == svn_wc__db_status_not_present)
+    {
+      /* Don't create descendants of a not present node! */
+
+      /* This code is currently still triggered by copying deleted nodes
+         between separate working copies. See ### comment above. */
+
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(gather_repo_children(&children, src_wcroot, src_relpath,
                                src_op_depth, scratch_pool, iterpool));
 
