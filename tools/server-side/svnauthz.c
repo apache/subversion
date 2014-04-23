@@ -234,7 +234,7 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   svn_error_t *err;
 
   /* Open up the repository and find the transaction root */
-  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, pool));
+  SVN_ERR(svn_repos_open3(&repos, repos_path, NULL, pool, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));

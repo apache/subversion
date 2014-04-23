@@ -122,7 +122,7 @@ open_repos(svn_repos_t **repos,
                            svn_uuid_generate(pool));
 
   /* now, open the requested repository */
-  SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
+  SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));
   svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }

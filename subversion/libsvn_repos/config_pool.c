@@ -337,7 +337,8 @@ find_repos_config(svn_config_t **cfg,
       repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
 
       /* Attempt to open a repository at repos_root_dirent. */
-      SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+      SVN_ERR(svn_repos_open3(&repos, repos_root_dirent, NULL,
+                              scratch_pool, scratch_pool));
     }
 
   fs_path = &dirent[strlen(repos_root_dirent)];
