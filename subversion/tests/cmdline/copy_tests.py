@@ -5844,6 +5844,40 @@ def ext_wc_copy_deleted(sbox):
                                         expected_output, None, None,
                                         wc2_dir)
 
+@XFail()
+def copy_subtree_deleted(sbox):
+  "copy to-be-deleted subtree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc2_dir)
+
+  sbox.simple_rm('A/B')
+
+  # Commit copy within a working copy
+  sbox.simple_copy('A', 'AA')
+  expected_output = expected_output = svntest.wc.State(wc_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        sbox.ospath('AA'))
+
+  # Commit copy between working copies
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'),
+                                     os.path.join(wc2_dir,'AA2'))
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA2'    : Item(verb='Adding'),
+    'AA2/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -5963,6 +5997,7 @@ test_list = [ None,
               copy_over_excluded,
               copy_relocate,
               ext_wc_copy_deleted,
+              copy_subtree_deleted,
              ]
 
 if __name__ == '__main__':
