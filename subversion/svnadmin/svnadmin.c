@@ -1215,7 +1215,7 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   else
     {
       /* All repositories in filedata. */
-      paths = svn_cstring_split(opt_state->filedata->data, "\n", FALSE, pool);
+      paths = svn_cstring_split(opt_state->filedata->data, "\r\n", FALSE, pool);
     }
 
   b.command = APR_ARRAY_IDX(args, 0, const char *);

@@ -2414,11 +2414,24 @@ def verify_packed(sbox):
 # ### in C tests.)
 def freeze_freeze(sbox):
   "svnadmin freeze svnadmin freeze (some-cmd)"
-  sbox.build(create_wc=False, read_only=True)
+
+  sbox.build(read_only=True) # need working copy as location for arg-file
   second_repo_dir, _ = sbox.add_repo_path('backup')
-  svntest.main.run_svnadmin('freeze', '--', sbox.repo_dir,
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, second_repo_dir)
+
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                 'freeze', '--', sbox.repo_dir,
                  svntest.main.svnadmin_binary, 'freeze', '--', second_repo_dir,
                  sys.executable, '-c', 'True')
+
+  arg_file = sbox.ospath('arg-file')
+  svntest.main.file_write(arg_file,
+                          "%s\n%s\n" % (sbox.repo_dir, second_repo_dir))
+
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          'freeze', '-F', arg_file, '--',
+                                          sys.executable, '-c', 'True')
 
 ########################################################################
 # Run the tests
