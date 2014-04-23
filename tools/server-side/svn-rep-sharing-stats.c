@@ -396,7 +396,8 @@ static svn_error_t *process(const char *repos_path,
     both_reps = apr_hash_make(scratch_pool);
 
   /* Open the FS. */
-  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, scratch_pool));
+  SVN_ERR(svn_repos_open3(&repos, repos_path, NULL, scratch_pool,
+                          scratch_pool));
   fs = svn_repos_fs(repos);
 
   SVN_ERR(is_fs_fsfs(fs, scratch_pool));

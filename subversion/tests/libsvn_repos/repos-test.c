@@ -3531,7 +3531,8 @@ test_repos_fs_type(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
 
   /* Re-open repository and verify fs-type again. */
-  SVN_ERR(svn_repos_open2(&repos, svn_repos_path(repos, pool), NULL, pool));
+  SVN_ERR(svn_repos_open3(&repos, svn_repos_path(repos, pool), NULL,
+                          pool, pool));
 
   SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
 
