@@ -329,6 +329,9 @@ create_lock_baton(svn_fs_t *fs,
 }
 
 /* Return a baton that wraps NESTED and requests LOCK_ID as additional lock.
+ *
+ * That means, when you create a lock chain, start with the last / innermost
+ * lock to take out and add the first / outermost lock last.
  */
 static with_lock_baton_t *
 chain_lock_baton(lock_id_t lock_id,
@@ -407,7 +410,8 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Be sure to use the correct lock ordering as documented in
-     fs_fs_shared_data_t. */
+     fs_fs_shared_data_t.  The lock chain is being created in 
+     innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, pool);
 
