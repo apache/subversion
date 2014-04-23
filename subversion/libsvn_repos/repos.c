@@ -1882,6 +1882,9 @@ struct freeze_baton_t {
   int counter;
   svn_repos_freeze_func_t freeze_func;
   void *freeze_baton;
+
+  /* Scratch pool used for every freeze callback invocation. */
+  apr_pool_t *scratch_pool;
 };
 
 static svn_error_t *
@@ -1890,6 +1893,7 @@ multi_freeze(void *baton,
 {
   struct freeze_baton_t *fb = baton;
 
+  svn_pool_clear(fb->scratch_pool);
   if (fb->counter == fb->paths->nelts)
     {
       SVN_ERR(fb->freeze_func(fb->freeze_baton, pool));
@@ -1909,7 +1913,7 @@ multi_freeze(void *baton,
                         TRUE  /* exclusive (only applies to BDB) */,
                         FALSE /* non-blocking */,
                         FALSE /* open-fs */,
-                        NULL, subpool, subpool));
+                        NULL, subpool, fb->scratch_pool));
 
 
       if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
@@ -1922,7 +1926,8 @@ multi_freeze(void *baton,
         }
       else
         {
-          SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+          SVN_ERR(svn_fs_open2(&repos->fs, repos->db_path, NULL, subpool,
+                               fb->scratch_pool));
           SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), multi_freeze, fb,
                                 subpool));
         }
@@ -1951,9 +1956,11 @@ svn_repos_freeze(apr_array_header_t *paths,
   fb.counter = 0;
   fb.freeze_func = freeze_func;
   fb.freeze_baton = freeze_baton;
+  fb.scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(multi_freeze(&fb, pool));
 
+  svn_pool_destroy(fb.scratch_pool);
   return SVN_NO_ERROR;
 }
 
