@@ -59,25 +59,6 @@ Candidate changes:
      +1 (without r1568180): breser
      +1: rhuijben
 
- * ^/subversion/branches/1.7.x-serf-1.3.x-Windows
-   Allow compiling against Serf 1.3.x
-   Notes:
-     Backport of the 1.8 fixes, plus a few more fixes in order not to
-     break the neon compilation which also hooks into zlib.
-   Justification:
-     (Without this patch the Windows buildbot remains broken for serf with 1.7,
-      as recent Subversion versions require serf 1.3.x)
-   Votes:
-     +1: rhuijben, jcorvel
-
- * ^/subversion/branches/1.7.x-r1551579
-   Fix moving files from externals to ancestor directories and vice versa.
-   Justification:
-     "Moves should just work" or "be nice to api users, like Markus"
-   Votes:
-     +1: rhuijben, breser
-     +1 (non-binding): schabi (Fixes our use case, all our other tests pass.)
-
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
    Justification:
@@ -131,26 +112,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1577200
-   Fix libmagic detection with custom LDFLAGS.
-   Justification:
-     Fixes libmagic detection where configure relies on LDFLAGS
-     to find libraries in non-standard locations.
-     This should allow the bb-openbsd buildbot to compile 1.7.x.
-   Votes:
-    +1: stsp, rhuijben
-
- * r1587968
-   Maintain data[len]=0 invariant for svn_string_t.
-   Justification:
-     Code may rely on null byte being present.
-   Notes:
-     Triggers a read beyond allocated memory on trunk but no known
-     misbehaviour on 1.7.
-     Merge with --accept=mine-conflict.
-   Votes:
-     +1: philip, rhuijben
-
  * r1577739, r1577755, r1588772, r1588778
    Resolve issue #4480: Mergeinfo overwritten on successive merges
    Justification:
@@ -189,3 +150,45 @@ Veto-blocked changes:
      -1: stsp (not a bug fix, changes output in a patch release)
 
 Approved changes:
+=================
+
+ * r1577200
+   Fix libmagic detection with custom LDFLAGS.
+   Justification:
+     Fixes libmagic detection where configure relies on LDFLAGS
+     to find libraries in non-standard locations.
+     This should allow the bb-openbsd buildbot to compile 1.7.x.
+   Votes:
+    +1: stsp, rhuijben, stefan2
+
+ * r1587968
+   Maintain data[len]=0 invariant for svn_string_t.
+   Justification:
+     Code may rely on null byte being present.
+   Notes:
+     Triggers a read beyond allocated memory on trunk but no known
+     misbehaviour on 1.7.
+     Merge with --accept=mine-conflict.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * ^/subversion/branches/1.7.x-serf-1.3.x-Windows
+   Allow compiling against Serf 1.3.x
+   Notes:
+     Backport of the 1.8 fixes, plus a few more fixes in order not to
+     break the neon compilation which also hooks into zlib.
+   Justification:
+     (Without this patch the Windows buildbot remains broken for serf with 1.7,
+      as recent Subversion versions require serf 1.3.x)
+   Votes:
+     +1: rhuijben, jcorvel, stefan2
+
+ * ^/subversion/branches/1.7.x-r1551579
+   Fix moving files from externals to ancestor directories and vice versa.
+   Justification:
+     "Moves should just work" or "be nice to api users, like Markus"
+   Votes:
+     +1: rhuijben, breser, stefan2
+     +1 (non-binding): schabi (Fixes our use case, all our other tests pass.)
+
+
