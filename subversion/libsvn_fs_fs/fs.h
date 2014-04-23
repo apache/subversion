@@ -236,6 +236,12 @@ typedef struct fs_fs_shared_data_t
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_fs_shared_txn_data_t *free_txn;
 
+  /* The following lock must be taken out in reverse order of their
+     declaration here.  Any subset may be acquired and held at any given
+     time but their relative acquisition order must not change.
+
+     (lock 'txn-current' before 'pack' before 'write' before 'txn-list') */
+
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
 
