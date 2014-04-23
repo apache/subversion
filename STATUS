@@ -303,7 +303,7 @@ Candidate changes:
      The trunk change uses a new fs layer api. The branch reimplements the
      same change with fs ids.
    Branch:
-     ^/subversion/1.8.x-issue4480
+     ^/subversion/branches/1.8.x-issue4480
    Votes:
      +1: rhuijben
 
