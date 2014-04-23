@@ -179,33 +179,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1577151
-   Make 'svn merge' honor the 'preserved-conflict-file-exts' setting.
-   Justification:
-     While really a behavior change that doesn't belong in a patch release
-     I'm guessing nobody knew that we didn't implement this flag in this
-     scenario.
-   Branch:
-     ^/subversion/branches/1.8.x-r1577151
-   Votes:
-     +1: rhuijben, steveking
-
- * r1578273, r1578311, r1578326
-   Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
-   with a NULL svn_lock_t *, as documented.
-   Justification:
-     Many clients use the existence of an svn_lock_t on a node via info/status
-     as a boolean to note that there is a lock. But because we didn't properly
-     check the result we reported mostly empty svn_lock_t instances in more
-     cases. Even on directories!
-   Notes:
-     A branch is needed, because the serf lock handling code was refactored and
-     split to multiple files on trunk.
-   Branch:
-     ^/subversion/branches/1.8.x-r1578311
-   Votes:
-     +1: rhuijben, philip
-
  * r1579588
    ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
    Justification:
@@ -227,25 +200,6 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1580626
    Votes:
      +1: rhuijben, philip
-
- * r1573106, r1573209
-   A more stringent test for whether the compiler accepts a given option.
-   Justification:
-     Makes --enable-optimize and --enable-debug work with Solaris CC.
-   Votes:
-     +1: philip, rhuijben
-
- * r1581810, 1584342
-   Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
-   Justification:
-     Regression from 1.7, makes using locks hard.
-   Notes:
-     r1584342 is the fix, r1581810 is a test that fails with a 1.6.16 server.
-   Branch:
-     ^/subversion/branches/1.8.x-r1584342
-    (merge before ^/subversion/branches/1.8.x-r1584592)
-   Votes:
-     +1: philip, rhuijben
 
  * ^/subversion/branches/1.8.x-serf-no-lock-support
    Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
@@ -274,25 +228,6 @@ Candidate changes:
      (merge from trunk if ^/subversion/branches/1.8.x-r1584342 is merged first)
    Votes:
      +1: rhuijben, philip
-
- * 1585499
-   Build with apr-0.9.x.
-   Justification:
-     1.8 claims 0.9 support but it doesn't work.
-   Branch:
-     ^/subversion/branches/1.8.x-apr-0.9
-   Votes:
-     +1: philip, rhuijben
-
- * r1587968
-   Maintain data[len]=0 invariant for svn_string_t.
-   Justification:
-     Code may rely on null byte being present.
-   Notes:
-     Triggers a read beyond allocated memory on trunk but no known
-     misbehaviour on 1.8.
-   Votes:
-     +1: philip, rhuijben
 
  * r1577739, r1577755, r1588772, r1588778
    Resolve issue #4480: Mergeinfo overwritten on successive merges
@@ -364,3 +299,69 @@ Approved changes:
      need to upgrade or patch around.
    Votes:
      +1: breser, rhuijben, danielsh
+
+ * r1587968
+   Maintain data[len]=0 invariant for svn_string_t.
+   Justification:
+     Code may rely on null byte being present.
+   Notes:
+     Triggers a read beyond allocated memory on trunk but no known
+     misbehaviour on 1.8.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * 1585499
+   Build with apr-0.9.x.
+   Justification:
+     1.8 claims 0.9 support but it doesn't work.
+   Branch:
+     ^/subversion/branches/1.8.x-apr-0.9
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1581810, 1584342
+   Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
+   Justification:
+     Regression from 1.7, makes using locks hard.
+   Notes:
+     r1584342 is the fix, r1581810 is a test that fails with a 1.6.16 server.
+   Branch:
+     ^/subversion/branches/1.8.x-r1584342
+    (merge before ^/subversion/branches/1.8.x-r1584592)
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1577151
+   Make 'svn merge' honor the 'preserved-conflict-file-exts' setting.
+   Justification:
+     While really a behavior change that doesn't belong in a patch release
+     I'm guessing nobody knew that we didn't implement this flag in this
+     scenario.
+   Branch:
+     ^/subversion/branches/1.8.x-r1577151
+   Votes:
+     +1: rhuijben, steveking, stefan2
+
+ * r1578273, r1578311, r1578326
+   Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
+   with a NULL svn_lock_t *, as documented.
+   Justification:
+     Many clients use the existence of an svn_lock_t on a node via info/status
+     as a boolean to note that there is a lock. But because we didn't properly
+     check the result we reported mostly empty svn_lock_t instances in more
+     cases. Even on directories!
+   Notes:
+     A branch is needed, because the serf lock handling code was refactored and
+     split to multiple files on trunk.
+   Branch:
+     ^/subversion/branches/1.8.x-r1578311
+   Votes:
+     +1: rhuijben, philip, stefan2
+
+ * r1573106, r1573209
+   A more stringent test for whether the compiler accepts a given option.
+   Justification:
+     Makes --enable-optimize and --enable-debug work with Solaris CC.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
