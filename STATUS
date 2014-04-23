@@ -320,6 +320,13 @@ Candidate changes:
      Local change that makes it easier to compare patch files.
    Votes:
      +1: rhuijben
+     
+ * r1589460, r1589486
+   Fix copying parents of locally deleted nodes between working copies.
+   Justification:
+     Resolves a case of creating invalid working copy state.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
