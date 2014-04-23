@@ -300,20 +300,29 @@ static with_lock_baton_t *
 create_lock_baton(svn_fs_t *fs,
                   lock_id_t lock_id,
                   svn_error_t *(*body)(void *baton,
-                                        apr_pool_t *pool),
+                                       apr_pool_t *pool),
                   void *baton,
                   apr_pool_t *pool)
 {
+  /* Allocate everything along the lock chain into a single sub-pool.
+     This minimizes memory usage and cleanup overhead. */
   apr_pool_t *lock_pool = svn_pool_create(pool);
   with_lock_baton_t *result = apr_pcalloc(lock_pool, sizeof(*result));
 
+  /* Store parameters. */
   result->fs = fs;
   result->body = body;
   result->baton = baton;
+
+  /* File locks etc. will use this pool as well for easy cleanup. */
   result->lock_pool = lock_pool;
+
+  /* Right now, we are the first, (only, ) and last struct in the chain. */
   result->is_inner_most_lock = TRUE;
   result->is_outer_most_lock = TRUE;
 
+  /* Select mutex and lock file path depending on LOCK_ID.
+     Also, initialize dependent members (IS_GLOBAL_LOCK only, ATM). */
   init_lock_baton(result, lock_id);
 
   return result;
@@ -325,17 +334,28 @@ static with_lock_baton_t *
 chain_lock_baton(lock_id_t lock_id,
                  with_lock_baton_t *nested)
 {
+  /* Use the same pool for batons along the lock chain. */
   apr_pool_t *lock_pool = nested->lock_pool;
   with_lock_baton_t *result = apr_pcalloc(lock_pool, sizeof(*result));
 
+  /* All locks along the chain operate on the same FS. */
   result->fs = nested->fs;
+
+  /* Execution of this baton means acquiring the nested lock and its
+     execution. */
   result->body = with_lock;
   result->baton = nested;
+
+  /* Shared among all locks along the chain. */
   result->lock_pool = lock_pool;
+
+  /* We are the new outermost lock but surely not the innermost lock. */
   result->is_inner_most_lock = FALSE;
   result->is_outer_most_lock = TRUE;
   nested->is_outer_most_lock = FALSE;
 
+  /* Select mutex and lock file path depending on LOCK_ID.
+     Also, initialize dependent members (IS_GLOBAL_LOCK only, ATM). */
   init_lock_baton(result, lock_id);
 
   return result;
@@ -386,6 +406,8 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  /* Be sure to use the correct lock ordering as documented in
+     fs_fs_shared_data_t. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, pool);
 
