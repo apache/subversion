@@ -1855,6 +1855,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
 
       if (serr != NULL)
         {
+          svn_fs_close_root(txn_base_root);
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Could not open the base revision"
                                       "for verification against the youngest "
