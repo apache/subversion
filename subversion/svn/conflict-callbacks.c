@@ -830,7 +830,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           svn_boolean_t remains_in_conflict = TRUE;
           svn_error_t *err;
 
-          err = launch_resolver(&performed_edit, desc, b, iterpool);
+          err = svn_cl__merge_file_externally(desc->base_abspath, desc->their_abspath,
+                                              desc->my_abspath, desc->merged_file,
+                                              desc->local_abspath, b->config,
+                                              &remains_in_conflict, iterpool);
           if (err)
             {
               if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
@@ -852,6 +855,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               else
                 return svn_error_trace(err);
             }
+          else
+            performed_edit = TRUE;
 
           if (!performed_edit &&
               desc->base_abspath && desc->their_abspath &&
