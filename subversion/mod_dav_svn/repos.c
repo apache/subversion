@@ -1829,8 +1829,8 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
       svn_revnum_t youngest;
       svn_fs_root_t *youngest_root;
       svn_fs_root_t *rev_root;
-      svn_fs_id_t *youngest_id;
-      svn_fs_id_t *rev_id;
+      const svn_fs_id_t *youngest_id;
+      const svn_fs_id_t *rev_id;
 
       serr = svn_fs_youngest_rev(&youngest, comb->res.info->repos->fs,
                                  r->pool);
@@ -1879,7 +1879,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
       svn_fs_close_root(rev_root);
       svn_fs_close_root(youngest_root);
 
-      if (0 == svn_fs_compare_ids(youngest_id, rev_id))
+      if (0 != svn_fs_compare_ids(youngest_id, rev_id))
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",

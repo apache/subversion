@@ -2911,7 +2911,8 @@ def commit_mergeinfo_ood(sbox):
 
   sbox.simple_commit()
 
-  sbox.simple_update(revision='5')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r5', sbox.wc_dir)
 
   expected_output = [
     '--- Merging r5 into \'%s\':\n' % sbox.ospath('branch'),
