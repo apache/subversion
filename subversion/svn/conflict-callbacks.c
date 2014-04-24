@@ -381,31 +381,6 @@ edit_prop_conflict(const char **merged_file_path,
   return SVN_NO_ERROR;
 }
 
-/* Run an external merge tool, passing it the 'base', 'their', 'my' and
- * 'merged' files in DESC. The tool to use is determined by B->config and
- * environment variables; see svn_cl__merge_file_externally() for details.
- *
- * If the tool runs, set *PERFORMED_EDIT to true; if a tool is not
- * configured or cannot run, do not touch *PERFORMED_EDIT, report the error
- * on stderr, and return SVN_NO_ERROR; if any other error is encountered,
- * return that error.  */
-static svn_error_t *
-launch_resolver(svn_boolean_t *performed_edit,
-                const svn_wc_conflict_description2_t *desc,
-                svn_cl__interactive_conflict_baton_t *b,
-                apr_pool_t *pool)
-{
-  SVN_ERR(svn_cl__merge_file_externally(desc->base_abspath, desc->their_abspath,
-                                        desc->my_abspath, desc->merged_file,
-                                        desc->local_abspath, b->config, NULL,
-                                        pool));
-  if (performed_edit)
-    *performed_edit = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Maximum line length for the prompt string. */
 #define MAX_PROMPT_WIDTH 70
 
