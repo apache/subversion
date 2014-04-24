@@ -1831,8 +1831,8 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
       svn_revnum_t txn_base_rev;
       svn_fs_root_t *txn_base_root;
       svn_fs_root_t *rev_root;
-      svn_fs_id_t *txn_base_id;
-      svn_fs_id_t *rev_id;
+      const svn_fs_id_t *txn_base_id;
+      const svn_fs_id_t *rev_id;
 
       txn_base_rev = svn_fs_txn_base_revision(comb->res.info->root.txn);
 
@@ -1872,7 +1872,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
       svn_fs_close_root(rev_root);
       svn_fs_close_root(txn_base_root);
 
-      if (0 == svn_fs_compare_ids(txn_base_id, rev_id))
+      if (0 != svn_fs_compare_ids(txn_base_id, rev_id))
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",
