@@ -169,6 +169,3 @@ Approved changes:
      "Moves should just work" or "be nice to api users, like Markus"
    Votes:
      +1: rhuijben, breser, stefan2
-     +1 (non-binding): schabi (Fixes our use case, all our other tests pass.)
-
-
