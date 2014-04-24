@@ -1214,8 +1214,10 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
   else
     {
+      const char *utf8;
       /* All repositories in filedata. */
-      paths = svn_cstring_split(opt_state->filedata->data, "\r\n", FALSE, pool);
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8, opt_state->filedata->data, pool));
+      paths = svn_cstring_split(utf8, "\r\n", FALSE, pool);
     }
 
   b.command = APR_ARRAY_IDX(args, 0, const char *);
