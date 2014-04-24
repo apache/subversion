@@ -4238,7 +4238,7 @@ def tree_conflicts_on_update_1_2(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
@@ -4256,7 +4256,7 @@ def tree_conflicts_on_update_1_2(sbox):
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
@@ -4321,37 +4321,37 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file edit, incoming file delete upon update'
+        '^local file edit, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -4426,37 +4426,37 @@ def tree_conflicts_on_update_2_2(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -4584,37 +4584,37 @@ def tree_conflicts_on_update_3(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
