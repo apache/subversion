@@ -1807,8 +1807,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                       r->pool);
         }
     }
-  else if (SVN_IS_VALID_REVNUM(comb->priv.version_name)
-           && comb->res.collection)
+  else if (comb->res.collection)
     {
       /* Issue #4480: With HTTPv2 we can receive the first change for a
          directory after it has been made mutable, because one of its
