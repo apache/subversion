@@ -1255,7 +1255,7 @@ def actual_only_node_behaviour(sbox):
 
   # info
   expected_info = {
-    'Tree conflict': 'local file missing, incoming file edit upon merge.*',
+    'Tree conflict': 'local file missing or deleted or moved away, incoming file edit upon merge.*',
     'Name': 'foo',
     'Schedule': 'normal',
     'Node Kind': 'none',
