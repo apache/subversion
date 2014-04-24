@@ -1823,7 +1823,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
          properties changed since the BASE version.
 
          ### I think svn_fs_node_relation() checks for more changes than we
-             should check for here. Needs further review. But it looks like\
+             should check for here. Needs further review. But it looks like
              this check matches the checks in the libsvn_fs commit editor.
 
              For now I would say reporting out of date in a few too many
