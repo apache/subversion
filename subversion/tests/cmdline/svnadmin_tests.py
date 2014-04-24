@@ -2419,6 +2419,8 @@ def freeze_freeze(sbox):
   second_repo_dir, _ = sbox.add_repo_path('backup')
   svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
                                           sbox.repo_dir, second_repo_dir)
+  svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                          'setuuid', second_repo_dir)
 
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                  'freeze', '--', sbox.repo_dir,
