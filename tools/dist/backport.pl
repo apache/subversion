@@ -1076,10 +1076,10 @@ sub nominate_main {
 }
 
 # Dispatch to the appropriate main().
-die "svn-role mode is broken when there are >=2 entries in Approved; ".
-    "see <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C20140417111215.GB1802@tarsus.local2%3E> ".
-    "and <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C8738h36mwh.fsf@ntlworld.com%3E> ".
-    "for details."
+die 'svn-role mode is broken when there are >=2 entries in Approved; '.
+    'see <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C20140417111215.GB1802@tarsus.local2%3E> '.
+    'and <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C8738h36mwh.fsf@ntlworld.com%3E> '.
+    'for details.'
     if $MAY_COMMIT;
 
 given (basename($0)) {
