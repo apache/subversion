@@ -454,8 +454,11 @@ static const resolver_option_t text_conflict_options[] =
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "m",  N_("merge"),            N_("use merge tool to resolve conflict"),
                                   svn_wc_conflict_choose_undefined },
-  { "l",  N_("launch tool"),      N_("launch external tool to resolve "
+  { "l",  N_("launch tool"),      N_("launch external merge tool to resolve "
                                      "conflict  [launch]"),
+                                  svn_wc_conflict_choose_undefined },
+  { "i",  N_("internal merge tool"), N_("use built-in merge tool to "
+                                     "resolve conflict"),
                                   svn_wc_conflict_choose_undefined },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
@@ -915,6 +918,44 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           else
             SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
+        }
+      else if (strcmp(opt->code, "i") == 0)
+        {
+          svn_boolean_t remains_in_conflict = TRUE;
+
+          if (!performed_edit &&
+              desc->base_abspath && desc->their_abspath &&
+              desc->my_abspath && desc->merged_file)
+            {
+              if (desc->kind != svn_wc_conflict_kind_text)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                                              _("Invalid option; can only "
+                                                "resolve text conflicts with "
+                                                "the internal merge tool."
+                                                "\n\n")));
+                  continue;
+                }
+
+              SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
+                                         desc->base_abspath,
+                                         desc->their_abspath,
+                                         desc->my_abspath,
+                                         desc->merged_file,
+                                         desc->local_abspath,
+                                         b->path_prefix,
+                                         b->editor_cmd,
+                                         b->config,
+                                         b->pb->cancel_func,
+                                         b->pb->cancel_baton,
+                                         iterpool));
+            }
+          else
+            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                                        _("Invalid option.\n\n")));
+
+          if (!remains_in_conflict)
+            knows_something = TRUE;
         }
       else if (opt->choice != svn_wc_conflict_choose_undefined)
         {
