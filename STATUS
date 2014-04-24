@@ -303,15 +303,6 @@ Approved changes:
    Votes:
      +1: philip, rhuijben, stefan2
 
- * 1585499
-   Build with apr-0.9.x.
-   Justification:
-     1.8 claims 0.9 support but it doesn't work.
-   Branch:
-     ^/subversion/branches/1.8.x-apr-0.9
-   Votes:
-     +1: philip, rhuijben, stefan2
-
  * r1581810, 1584342
    Fix issue 4412, locks lost from working copy with pre-1.6.17 servers.
    Justification:
