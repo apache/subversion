@@ -803,7 +803,6 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "m") == 0 || strcmp(opt->code, ":-g") == 0 ||
                strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0)
         {
-          svn_boolean_t remains_in_conflict = TRUE;
           svn_error_t *err;
 
           err = svn_cl__merge_file_externally(desc->base_abspath,
@@ -811,13 +810,28 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                               desc->my_abspath,
                                               desc->merged_file,
                                               desc->local_abspath, b->config,
-                                              &remains_in_conflict, iterpool);
+                                              NULL, iterpool);
           if (err)
             {
               if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
                 {
+                  svn_boolean_t remains_in_conflict = TRUE;
+
                   /* Try the internal merge tool. */
                   svn_error_clear(err);
+                  SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
+                                             desc->base_abspath,
+                                             desc->their_abspath,
+                                             desc->my_abspath,
+                                             desc->merged_file,
+                                             desc->local_abspath,
+                                             b->path_prefix,
+                                             b->editor_cmd,
+                                             b->config,
+                                             b->pb->cancel_func,
+                                             b->pb->cancel_baton,
+                                             iterpool));
+                  knows_something = !remains_in_conflict;
                 }
               else if (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
                 {
@@ -834,41 +848,14 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                 return svn_error_trace(err);
             }
           else
-            performed_edit = TRUE;
-
-          if (!performed_edit &&
-              desc->base_abspath && desc->their_abspath &&
-              desc->my_abspath && desc->merged_file)
             {
-              if (desc->kind != svn_wc_conflict_kind_text)
-                {
-                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                              _("Invalid option; can only "
-                                                "resolve text conflicts with "
-                                                "the internal merge tool."
-                                                "\n\n")));
-                  continue;
-                }
-
-              SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
-                                         desc->base_abspath,
-                                         desc->their_abspath,
-                                         desc->my_abspath,
-                                         desc->merged_file,
-                                         desc->local_abspath,
-                                         b->path_prefix,
-                                         b->editor_cmd,
-                                         b->config,
-                                         b->pb->cancel_func,
-                                         b->pb->cancel_baton,
-                                         iterpool));
+              /* The external merge tool's exit code was either 0 or 1.
+               * The tool may leave the file conflicted by exiting with
+               * exit code 1, and we allow the user to mark the conflict
+               * resolved in this case. */
+              performed_edit = TRUE;
+              knows_something = TRUE;
             }
-          else
-            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                        _("Invalid option.\n\n")));
-
-          if (performed_edit || !remains_in_conflict)
-            knows_something = TRUE;
         }
       else if (strcmp(opt->code, "l") == 0 || strcmp(opt->code, ":-l") == 0)
         {
@@ -913,36 +900,18 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           svn_boolean_t remains_in_conflict = TRUE;
 
-          if (!performed_edit &&
-              desc->base_abspath && desc->their_abspath &&
-              desc->my_abspath && desc->merged_file)
-            {
-              if (desc->kind != svn_wc_conflict_kind_text)
-                {
-                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                              _("Invalid option; can only "
-                                                "resolve text conflicts with "
-                                                "the internal merge tool."
-                                                "\n\n")));
-                  continue;
-                }
-
-              SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
-                                         desc->base_abspath,
-                                         desc->their_abspath,
-                                         desc->my_abspath,
-                                         desc->merged_file,
-                                         desc->local_abspath,
-                                         b->path_prefix,
-                                         b->editor_cmd,
-                                         b->config,
-                                         b->pb->cancel_func,
-                                         b->pb->cancel_baton,
-                                         iterpool));
-            }
-          else
-            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                        _("Invalid option.\n\n")));
+          SVN_ERR(svn_cl__merge_file(&remains_in_conflict,
+                                     desc->base_abspath,
+                                     desc->their_abspath,
+                                     desc->my_abspath,
+                                     desc->merged_file,
+                                     desc->local_abspath,
+                                     b->path_prefix,
+                                     b->editor_cmd,
+                                     b->config,
+                                     b->pb->cancel_func,
+                                     b->pb->cancel_baton,
+                                     iterpool));
 
           if (!remains_in_conflict)
             knows_something = TRUE;
