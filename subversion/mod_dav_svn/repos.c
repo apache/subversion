@@ -1845,7 +1845,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
       if (serr != NULL)
         {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Could not open youngest revision root "
+                                      "Could not open the transaction revision "
                                       "for verification against the base "
                                       "revision", r->pool);
         }
@@ -1857,9 +1857,9 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
         {
           svn_fs_close_root(txn_base_root);
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Could not open the base revision"
-                                      "for verification against the youngest "
-                                      "revision", r->pool);
+                                      "Could not open the base revision "
+                                      "for verification against the "
+                                      "transaction revision", r->pool);
         }
 
       serr = svn_fs_node_relation(&node_relation, rev_root,
