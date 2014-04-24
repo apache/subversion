@@ -85,7 +85,7 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
             return _("local file delete");
           case svn_wc_conflict_reason_missing:
             if (operation == svn_wc_operation_merge)
-              return _("local file missing (deleted or moved away?)");
+              return _("local file missing or deleted or moved away");
             else
               return _("local file missing");
           case svn_wc_conflict_reason_unversioned:
@@ -111,7 +111,7 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
             return _("local dir delete");
           case svn_wc_conflict_reason_missing:
             if (operation == svn_wc_operation_merge)
-              return _("local dir missing (deleted or moved away?)");
+              return _("local dir missing or deleted or moved away");
             else
               return _("local dir missing");
           case svn_wc_conflict_reason_unversioned:
