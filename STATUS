@@ -293,14 +293,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1545835, r1545845
-   Prevent use with known buggy versions of httpd.
-   Justification:
-     Signal to our packagers that these versions have issues that they either
-     need to upgrade or patch around.
-   Votes:
-     +1: breser, rhuijben, danielsh
-
  * r1587968
    Maintain data[len]=0 invariant for svn_string_t.
    Justification:
