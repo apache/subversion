@@ -805,8 +805,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           svn_boolean_t remains_in_conflict = TRUE;
           svn_error_t *err;
 
-          err = svn_cl__merge_file_externally(desc->base_abspath, desc->their_abspath,
-                                              desc->my_abspath, desc->merged_file,
+          err = svn_cl__merge_file_externally(desc->base_abspath,
+                                              desc->their_abspath,
+                                              desc->my_abspath,
+                                              desc->merged_file,
                                               desc->local_abspath, b->config,
                                               &remains_in_conflict, iterpool);
           if (err)
