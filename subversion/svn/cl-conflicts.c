@@ -69,7 +69,8 @@ static const svn_token_map_t map_conflict_kind_xml[] =
 /* Return a localised string representation of the local part of a conflict;
    NULL for non-localised odd cases. */
 static const char *
-local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason)
+local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
+                 svn_wc_operation_t operation)
 {
   switch (kind)
     {
@@ -83,7 +84,10 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason)
           case svn_wc_conflict_reason_deleted:
             return _("local file delete");
           case svn_wc_conflict_reason_missing:
-            return _("local file missing");
+            if (operation == svn_wc_operation_merge)
+              return _("local file missing (deleted or moved away?)");
+            else
+              return _("local file missing");
           case svn_wc_conflict_reason_unversioned:
             return _("local file unversioned");
           case svn_wc_conflict_reason_added:
@@ -106,7 +110,10 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason)
           case svn_wc_conflict_reason_deleted:
             return _("local dir delete");
           case svn_wc_conflict_reason_missing:
-            return _("local dir missing");
+            if (operation == svn_wc_operation_merge)
+              return _("local dir missing (deleted or moved away?)");
+            else
+              return _("local dir missing");
           case svn_wc_conflict_reason_unversioned:
             return _("local dir unversioned");
           case svn_wc_conflict_reason_added:
@@ -142,7 +149,7 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
             case svn_wc_conflict_action_add:
               return _("incoming file add");
             case svn_wc_conflict_action_delete:
-              return _("incoming file delete");
+              return _("incoming file delete or move");
             case svn_wc_conflict_action_replace:
               return _("incoming file replace");
           }
@@ -155,7 +162,7 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
             case svn_wc_conflict_action_add:
               return _("incoming dir add");
             case svn_wc_conflict_action_delete:
-              return _("incoming dir delete");
+              return _("incoming dir delete or move");
             case svn_wc_conflict_action_replace:
               return _("incoming dir replace");
           }
@@ -267,7 +274,8 @@ svn_cl__get_human_readable_tree_conflict_description(
         incoming_kind = conflict->src_right_version->node_kind;
     }
 
-  reason = local_reason_str(conflict->node_kind, conflict->reason);
+  reason = local_reason_str(conflict->node_kind, conflict->reason,
+                            conflict->operation);
   action = incoming_action_str(incoming_kind, conflict->action);
   operation = operation_str(conflict->operation);
   SVN_ERR_ASSERT(operation);
