@@ -331,10 +331,3 @@ Approved changes:
    Votes:
      +1: rhuijben, philip, stefan2
 
- * r1573106, r1573209
-   A more stringent test for whether the compiler accepts a given option.
-   Justification:
-     Makes --enable-optimize and --enable-debug work with Solaris CC.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
