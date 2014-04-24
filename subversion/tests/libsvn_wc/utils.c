@@ -23,6 +23,7 @@
 #include "svn_error.h"
 #include "svn_client.h"
 #include "svn_pools.h"
+#include "private/svn_dep_compat.h"
 
 #include "utils.h"
 

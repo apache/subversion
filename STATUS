@@ -315,17 +315,6 @@ Approved changes:
    Votes:
      +1: philip, rhuijben, stefan2
 
- * r1577151
-   Make 'svn merge' honor the 'preserved-conflict-file-exts' setting.
-   Justification:
-     While really a behavior change that doesn't belong in a patch release
-     I'm guessing nobody knew that we didn't implement this flag in this
-     scenario.
-   Branch:
-     ^/subversion/branches/1.8.x-r1577151
-   Votes:
-     +1: rhuijben, steveking, stefan2
-
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
    with a NULL svn_lock_t *, as documented.
