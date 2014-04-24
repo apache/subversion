@@ -827,7 +827,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "m") == 0 || strcmp(opt->code, ":-g") == 0 ||
                strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0)
         {
-          svn_boolean_t remains_in_conflict;
+          svn_boolean_t remains_in_conflict = TRUE;
           svn_error_t *err;
 
           err = launch_resolver(&performed_edit, desc, b, iterpool);
