@@ -362,29 +362,30 @@ svn_error_t *
 svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
                       svn_lock_t **lock,
                       const char *path,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
 
-  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->session_url.path, path,
+                                        scratch_pool);
 
-  lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
-
-  lock_ctx->pool = pool;
+  lock_ctx = apr_pcalloc(scratch_pool, sizeof(*lock_ctx));
+  lock_ctx->pool = result_pool;
   lock_ctx->path = req_url;
-  lock_ctx->lock = svn_lock_create(pool);
-  lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
+  lock_ctx->lock = svn_lock_create(result_pool);
+  lock_ctx->lock->path = apr_pstrdup(result_pool, path);
 
   xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
                                            NULL, locks_closed, NULL,
                                            lock_ctx,
-                                           pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+                                           scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, scratch_pool);
 
   handler->method = "PROPFIND";
   handler->path = req_url;
@@ -405,7 +406,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   lock_ctx->handler = handler;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
   err = determine_error(handler, err);
 
   if (handler->sline.code == 404)
@@ -420,7 +421,12 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
                               _("Server does not support locking features"));
     }
 
-  *lock = lock_ctx->lock;
+  if (lock_ctx->lock && lock_ctx->lock->token)
+    *lock = lock_ctx->lock;
+  else
+    *lock = NULL;
+
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -574,7 +580,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
         {
           SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
                                         iterpool));
-          token = existing_lock->token;
+          token = existing_lock ? existing_lock->token : NULL;
           if (!token)
             {
               err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
