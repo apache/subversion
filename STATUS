@@ -240,7 +240,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4480
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1589184, r1589188
    Properly handle properties not present and excluded on cross wc copy
