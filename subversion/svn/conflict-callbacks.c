@@ -843,10 +843,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                   message = svn_err_best_message(err, buf, sizeof(buf));
                   SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                               "%s\n", message));
-                  SVN_ERR(svn_cmdline_fputs(_("Falling back to internal "
-                                              "merge tool.\n"), stderr,
-                                              iterpool));
                   svn_error_clear(err);
+                  continue;
                 }
               else
                 return svn_error_trace(err);
