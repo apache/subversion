@@ -683,7 +683,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t diff_allowed = FALSE;
   /* Have they done something that might have affected the merged
-     file (so that we need to save a .edited copy)? */
+     file (so that we need to save a .edited copy by setting the
+     result->save_merge flag)? */
   svn_boolean_t performed_edit = FALSE;
   /* Have they done *something* (edit, look at diff, etc) to
      give them a rational basis for choosing (r)esolved? */
