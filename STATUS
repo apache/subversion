@@ -123,7 +123,7 @@ Candidate changes:
    Branch:
      ^/subversion/1.7.x-issue4480
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1545835, r154845
    Prevent use with known buggy versions of httpd.
