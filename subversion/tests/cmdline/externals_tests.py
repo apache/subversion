@@ -3347,6 +3347,71 @@ def file_external_versioned_obstruction(sbox):
                                         expected_output, expected_disk,
                                         expected_status)
 
+@Issue(4495)
+@XFail()
+def update_external_peg_rev(sbox):
+  "update external peg rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E/alpha')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  sbox.simple_propset('svn:externals', '^/A/B/E@1 xE', 'A/B/F')
+  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/F/xE/alpha' : Item(status='A '),
+      'A/B/F/xE/beta'  : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.add({
+      'A/B/F/xE'       : Item(),
+      'A/B/F/xE/alpha' : Item('This is the file \'alpha\'.\n'),
+      'A/B/F/xE/beta'  : Item('This is the file \'beta\'.\n'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+      'A/B/F/xE'       : Item(status='  ', wc_rev='1', prev_status='X '),
+      'A/B/F/xE/alpha' : Item(status='  ', wc_rev='1'),
+      'A/B/F/xE/beta'  : Item(status='  ', wc_rev='1'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  sbox.simple_propset('svn:externals', '^/A/B/E@2 xE', 'A/B/F')
+  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/F/xE/alpha' : Item(status='D '),
+  })
+  expected_disk.remove('A/B/F/xE/alpha')
+  expected_status.remove('A/B/F/xE/alpha')
+  expected_status.tweak(wc_rev=4)
+  expected_status.tweak('A/B/F/xE', 'A/B/F/xE/beta', wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # XFAIL: EXTERNALS.def_revision and EXTERNALS.def_operational_revision
+  # are still r1 for 'A/B/F/xE' so status is not against the expected r2.
+  # No testsuite support for ood marker so examine status output manually.
+  expected_output = [
+    "X                    %s\n" % sbox.ospath('A/B/F/xE'),
+    "Status against revision:      4\n",
+    "\n",
+    "Performing status on external item at '%s':\n" % sbox.ospath('A/B/F/xE'),
+    "Status against revision:      2\n",
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', '-u', sbox.wc_dir)
 
 ########################################################################
 # Run the tests
@@ -3403,6 +3468,7 @@ test_list = [ None,
               switch_parent_relative_file_external,
               file_external_unversioned_obstruction,
               file_external_versioned_obstruction,
+              update_external_peg_rev,
              ]
 
 if __name__ == '__main__':
