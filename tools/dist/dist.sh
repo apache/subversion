@@ -183,20 +183,6 @@ if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   exit 1
 fi
 
-# Default to 'wget', but allow 'curl' to be used if available.
-HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-O"
-type wget > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  type curl > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Neither curl or wget found."
-    exit 2
-  fi
-  HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-o"
-fi
-
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
