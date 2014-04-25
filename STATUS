@@ -177,18 +177,7 @@ Candidate changes:
      doesn't allow exporting file externals. r1575915 simplifies the fix and
      resolves a few remaining issues.
    Votes:
-     +1: rhuijben
-
- * r1579588
-   ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
-   Justification:
-     Local fix to resolve user reported issue.
-   Notes:
-     Branch needed as the lock code was split to multiple files on trunk.
-   Branch:
-     ^/subversion/branches/1.8.x-r1579588
-   Votes:
-     +1: philip, rhuijben
+     +1: rhuijben, breser
 
  * r1580626, r1580650, r1581430
    Fix 'svn copy URL WC' after the working copy is relocated
@@ -198,34 +187,6 @@ Candidate changes:
      (and these nodes are all created at their own op-depth)
    Branch:
      ^/subversion/branches/1.8.x-r1580626
-   Votes:
-     +1: rhuijben, philip
-
- * ^/subversion/branches/1.8.x-serf-no-lock-support
-   Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
-   don't implement the locks report.
-   Justification:
-     svn ls -v (or the api equivalent) should just work. Regression against
-     <= 1.7 and perhaps in some cases early 1.8.x that didn't properly
-     check for errors.
-   Notes:
-     The equivalent patch on trunk was part of a complete error handling
-     refactoring.
-   Votes:
-     +1: rhuijben, philip
-
- * r1584576, r1584592, r1584745
-   Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
-   Justification:
-     Without this patch generic DAV clients can not refresh their own locks,
-     causing them to lose their locks.
-   Notes:
-     Patch needed, because a plain merge triggers a text conflict while
-     removing the XFail marker from the test. r1584745 makes the test code
-     compatible with 1.8.
-   Branch:
-     ^/subversion/branches/1.8.x-r1584592
-     (merge from trunk if ^/subversion/branches/1.8.x-r1584342 is merged first)
    Votes:
      +1: rhuijben, philip
 
@@ -292,3 +253,42 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * ^/subversion/branches/1.8.x-serf-no-lock-support
+   Resolve regression in 'svn ls -v' against mod_dav_svn repositories that
+   don't implement the locks report.
+   Justification:
+     svn ls -v (or the api equivalent) should just work. Regression against
+     <= 1.7 and perhaps in some cases early 1.8.x that didn't properly
+     check for errors.
+   Notes:
+     The equivalent patch on trunk was part of a complete error handling
+     refactoring.
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1579588
+   ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
+   Justification:
+     Local fix to resolve user reported issue.
+   Notes:
+     Branch needed as the lock code was split to multiple files on trunk.
+   Branch:
+     ^/subversion/branches/1.8.x-r1579588
+   Votes:
+     +1: philip, rhuijben, breser
+
+ * r1584576, r1584592, r1584745
+   Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
+   Justification:
+     Without this patch generic DAV clients can not refresh their own locks,
+     causing them to lose their locks.
+   Notes:
+     Patch needed, because a plain merge triggers a text conflict while
+     removing the XFail marker from the test. r1584745 makes the test code
+     compatible with 1.8.
+   Branch:
+     ^/subversion/branches/1.8.x-r1584592
+     (merge from trunk if ^/subversion/branches/1.8.x-r1584342 is merged first)
+   Votes:
+     +1: rhuijben, philip, breser
