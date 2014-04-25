@@ -56,8 +56,7 @@ Candidate changes:
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
    Votes:
-     +1 (without r1568180): breser
-     +1: rhuijben
+     +1: rhuijben, breser
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -125,14 +124,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1545835, r154845
+ * r1545835, r1545845
    Prevent use with known buggy versions of httpd.
    Justification:
      Signal to our packagers that these versions have issues that they either
      need to upgrade or patch around.
    Votes:
-     +1: breser
-     +1: danielsh (if s/r154845/r1545845/)                                      
+     +1: breser, danielsh
 
 Veto-blocked changes:
 =====================
