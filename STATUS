@@ -100,30 +100,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1580626, r1580650
-   Fix 'svn copy URL WC' after the working copy is relocated
-   Justification:
-     Without this patch (which is a followup of 1560690 backported in 1.7.16),
-     descendants of copies in a relocated working copy are marked as incomplete
-     (and these nodes are all created at their own op-depth)
-   Branch:
-     ^/subversion/branches/1.7.x-r1580626
-   Votes:
-     +1: rhuijben, philip
-
- * r1577739, r1577755, r1588772, r1588778
-   Resolve issue #4480: Mergeinfo overwritten on successive merges
-   Justification:
-     This issue allows accidentally destroying mergeinfo changes and other
-     property changes.
-   Notes:
-     The trunk change uses a new fs layer api. The branch contains the
-     1.8.x fix backported to 1.7.x
-   Branch:
-     ^/subversion/1.7.x-issue4480
-   Votes:
-     +1: rhuijben, philip
-
 Veto-blocked changes:
 =====================
 
@@ -149,3 +125,27 @@ Approved changes:
      need to upgrade or patch around.
    Votes:
      +1: breser, danielsh, philip
+
+ * r1577739, r1577755, r1588772, r1588778
+   Resolve issue #4480: Mergeinfo overwritten on successive merges
+   Justification:
+     This issue allows accidentally destroying mergeinfo changes and other
+     property changes.
+   Notes:
+     The trunk change uses a new fs layer api. The branch contains the
+     1.8.x fix backported to 1.7.x
+   Branch:
+     ^/subversion/branches/1.7.x-issue4480
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1580626, r1580650
+   Fix 'svn copy URL WC' after the working copy is relocated
+   Justification:
+     Without this patch (which is a followup of 1560690 backported in 1.7.16),
+     descendants of copies in a relocated working copy are marked as incomplete
+     (and these nodes are all created at their own op-depth)
+   Branch:
+     ^/subversion/branches/1.7.x-r1580626
+   Votes:
+     +1: rhuijben, philip, breser
