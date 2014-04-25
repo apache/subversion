@@ -109,7 +109,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1580626
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1577739, r1577755, r1588772, r1588778
    Resolve issue #4480: Mergeinfo overwritten on successive merges
