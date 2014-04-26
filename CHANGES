@@ -1097,6 +1097,33 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.17
+(07 May 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.17
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * log: use proper peg revision over DAV (r1568872)
+    * move: fix errors when moving files between an external and the parent
+      working copy (r1551579)
+    * copy: fix 'svn copy URL WC' on relocated working copies
+      (r1580626, r1580650)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: blacklist building with broken versions of httpd; 2.2.25,
+      2.4.5 and 2.4.6 (r1545835)
+    * mod_dav_svn: detect out of dateness correctly during commit (issue #4480)
+
+ Developer-visible changes:
+  - General:
+    * fix libmagic detection with custom LDFLAGS (r1577200)
+    * fix a missing null byte when handling old pre-1.4 deltas (r1587968)
+    * support building with Serf 1.3.x (r1517123, r1535139)
+
+  - Bindings:
+    * javahl: fix crash from resolve callback throwing an exception (r1586439)
+
+
 Version 1.7.16
 (26 Feb 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.16
