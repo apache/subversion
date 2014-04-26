@@ -2877,6 +2877,58 @@ def commit_add_subadd(sbox):
   svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
 
 
+@Issue(4480)
+def commit_mergeinfo_ood(sbox):
+  "commit of mergeinfo that should cause out of date"
+
+  sbox.build()
+  sbox.simple_rm('A', 'iota')
+  sbox.simple_commit() # r2
+
+  sbox.simple_mkdir('trunk', 'branch')
+  sbox.simple_commit() # r3
+
+  sbox.simple_append('trunk/a', 'This is a\n')
+  sbox.simple_add('trunk/a')
+  sbox.simple_commit() # r4
+
+  sbox.simple_append('trunk/b', 'This is b\n')
+  sbox.simple_add('trunk/b')
+  sbox.simple_commit() # r5
+
+  sbox.simple_update() # To r5
+
+  expected_output = [
+    '--- Merging r4 into \'%s\':\n' % sbox.ospath('branch'),
+    'A    %s\n' % sbox.ospath('branch/a'),
+    '--- Recording mergeinfo for merge of r4' \
+                                ' into \'%s\':\n' % sbox.ospath('branch'),
+    ' U   %s\n' % sbox.ospath('branch'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '-c4', '^/trunk',
+                                     sbox.ospath('branch'))
+
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r5', sbox.wc_dir)
+
+  expected_output = [
+    '--- Merging r5 into \'%s\':\n' % sbox.ospath('branch'),
+    'A    %s\n' % sbox.ospath('branch/b'),
+    '--- Recording mergeinfo for merge of r5 into \'%s\':\n' % sbox.ospath('branch'),
+    ' U   %s\n' % sbox.ospath('branch'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '-c5', '^/trunk',
+                                     sbox.ospath('branch'))
+
+  # Currently this commit succeeds with dav over HTTPv2, while it should really fail
+  expected_err = '.*out of date.*'
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'commit', sbox.ospath(''), '-m', 'M')
+
 ########################################################################
 # Run the tests
 
@@ -2946,6 +2998,7 @@ test_list = [ None,
               commit_multiple_nested_deletes,
               commit_incomplete,
               commit_add_subadd,
+              commit_mergeinfo_ood,
              ]
 
 if __name__ == '__main__':
