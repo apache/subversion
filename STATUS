@@ -118,14 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1545835, r1545845
-   Prevent use with known buggy versions of httpd.
-   Justification:
-     Signal to our packagers that these versions have issues that they either
-     need to upgrade or patch around.
-   Votes:
-     +1: breser, danielsh, philip
-
  * r1577739, r1577755, r1588772, r1588778
    Resolve issue #4480: Mergeinfo overwritten on successive merges
    Justification:
