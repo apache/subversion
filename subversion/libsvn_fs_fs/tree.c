@@ -295,8 +295,12 @@ lock_cache(fs_fs_dag_cache_t* cache, apr_pool_t *pool)
      But limit the time spent on chasing pointers.  */
   int limiter = 8;
   while (lock && --limiter)
+    {
       if (lock->pool == pool)
         return;
+
+      lock = lock->next;
+    }
 
   /* create a new lock and put it at the beginning of the lock chain */
   lock = apr_palloc(pool, sizeof(*lock));
