@@ -70,26 +70,6 @@
 #include "../libsvn_fs/fs-loader.h"
 
 
-/* ### I believe this constant will become internal to reps-strings.c.
-   ### see the comment in window_consumer() for more information. */
-
-/* ### the comment also seems to need tweaking: the log file stuff
-   ### is no longer an issue... */
-/* Data written to the filesystem through the svn_fs_apply_textdelta()
-   interface is cached in memory until the end of the data stream, or
-   until a size trigger is hit.  Define that trigger here (in bytes).
-   Setting the value to 0 will result in no filesystem buffering at
-   all.  The value only really matters when dealing with file contents
-   bigger than the value itself.  Above that point, large values here
-   allow the filesystem to buffer more data in memory before flushing
-   to the database, which increases memory usage but greatly decreases
-   the amount of disk access (and log-file generation) in database.
-   Smaller values will limit your overall memory consumption, but can
-   drastically hurt throughput by necessitating more write operations
-   to the database (which also generates more log-files).  */
-#define WRITE_BUFFER_SIZE          512000
-
-
 
 /* The root structures.
 
@@ -3033,8 +3013,6 @@ typedef struct txdelta_baton_t
 
   svn_stream_t *source_stream;
   svn_stream_t *target_stream;
-  svn_stream_t *string_stream;
-  svn_stringbuf_t *target_string;
 
   /* MD5 digest for the base text against which a delta is to be
      applied, and for the resultant fulltext, respectively.  Either or
@@ -3048,20 +3026,6 @@ typedef struct txdelta_baton_t
 } txdelta_baton_t;
 
 
-/* ### see comment in window_consumer() regarding this function. */
-
-/* Helper function of generic type `svn_write_fn_t'.  Implements a
-   writable stream which appends to an svn_stringbuf_t. */
-static svn_error_t *
-write_to_string(void *baton, const char *data, apr_size_t *len)
-{
-  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  svn_stringbuf_appendbytes(tb->target_string, data, *len);
-  return SVN_NO_ERROR;
-}
-
-
-
 /* The main window handler returned by svn_fs_apply_textdelta. */
 static svn_error_t *
 window_consumer(svn_txdelta_window_t *window, void *baton)
@@ -3073,48 +3037,11 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
      cb->target_string. */
   SVN_ERR(tb->interpreter(window, tb->interpreter_baton));
 
-  /* ### the write_to_string() callback for the txdelta's output stream
-     ### should be doing all the flush determination logic, not here.
-     ### in a drastic case, a window could generate a LOT more than the
-     ### maximum buffer size. we want to flush to the underlying target
-     ### stream much sooner (e.g. also in a streamy fashion). also, by
-     ### moving this logic inside the stream, the stream becomes nice
-     ### and encapsulated: it holds all the logic about buffering and
-     ### flushing.
-     ###
-     ### further: I believe the buffering should be removed from tree.c
-     ### the buffering should go into the target_stream itself, which
-     ### is defined by reps-string.c. Specifically, I think the
-     ### rep_write_contents() function will handle the buffering and
-     ### the spill to the underlying DB. by locating it there, then
-     ### anybody who gets a writable stream for FS content can take
-     ### advantage of the buffering capability. this will be important
-     ### when we export an FS API function for writing a fulltext into
-     ### the FS, rather than forcing that fulltext thru apply_textdelta.
-  */
-
-  /* Check to see if we need to purge the portion of the contents that
-     have been written thus far. */
-  if ((! window) || (tb->target_string->len > WRITE_BUFFER_SIZE))
-    {
-      apr_size_t len = tb->target_string->len;
-      SVN_ERR(svn_stream_write(tb->target_stream,
-                               tb->target_string->data,
-                               &len));
-      svn_stringbuf_setempty(tb->target_string);
-    }
-
-  /* Is the window NULL?  If so, we're done. */
+  /* Is the window NULL?  If so, we're done.  The stream has already been 
+     closed by the interpreter. */
   if (! window)
-    {
-      /* Close the internal-use stream.  ### This used to be inside of
-         txn_body_fulltext_finalize_edits(), but that invoked a nested
-         Berkeley DB transaction -- scandalous! */
-      SVN_ERR(svn_stream_close(tb->target_stream));
-
-      SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                            tb->pool));
-    }
+    SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
+                                          tb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3166,15 +3093,9 @@ apply_textdelta(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__dag_get_edit_stream(&(tb->target_stream), tb->node,
                                          tb->pool));
 
-  /* Make a writable "string" stream which writes data to
-     tb->target_string. */
-  tb->target_string = svn_stringbuf_create_empty(tb->pool);
-  tb->string_stream = svn_stream_create(tb, tb->pool);
-  svn_stream_set_write(tb->string_stream, write_to_string);
-
   /* Now, create a custom window handler that uses our two streams. */
   svn_txdelta_apply(tb->source_stream,
-                    tb->string_stream,
+                    tb->target_stream,
                     NULL,
                     tb->path,
                     tb->pool,
