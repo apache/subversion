@@ -1077,11 +1077,21 @@ svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_history2(svn_fs_history_t **history_p, svn_fs_root_t *root,
+                     const char *path, apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(root->vtable->node_history(history_p, root, path,
+                                                    result_pool,
+                                                    scratch_pool));
+}
+
+svn_error_t *
 svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
                     const char *path, apr_pool_t *pool)
 {
   return svn_error_trace(root->vtable->node_history(history_p, root, path,
-                                                    pool));
+                                                    pool, pool));
 }
 
 svn_error_t *
@@ -1835,12 +1845,22 @@ svn_fs_get_locks(svn_fs_t *fs, const char *path,
 /* --- History functions --- */
 
 svn_error_t *
+svn_fs_history_prev2(svn_fs_history_t **prev_history_p,
+                     svn_fs_history_t *history, svn_boolean_t cross_copies,
+                     apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(history->vtable->prev(prev_history_p, history,
+                                               cross_copies, result_pool,
+                                               scratch_pool));
+}
+
+svn_error_t *
 svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     svn_fs_history_t *history, svn_boolean_t cross_copies,
                     apr_pool_t *pool)
 {
   return svn_error_trace(history->vtable->prev(prev_history_p, history,
-                                               cross_copies, pool));
+                                               cross_copies, pool, pool));
 }
 
 svn_error_t *

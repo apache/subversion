@@ -1507,8 +1507,24 @@ typedef struct svn_fs_history_t svn_fs_history_t;
 
 /** Set @a *history_p to an opaque node history object which
  * represents @a path under @a root.  @a root must be a revision root.
- * Use @a pool for all allocations.
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_fs_node_history2(svn_fs_history_t **history_p,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Same as svn_fs_node_history2() but using a single @a pool for all
+ * allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_node_history(svn_fs_history_t **history_p,
                     svn_fs_root_t *root,
@@ -1541,7 +1557,25 @@ svn_fs_node_history(svn_fs_history_t **history_p,
  * the same age as the revision of that path in @a root.  That is, if
  * @a root is a revision root based on revision X, and @a path was
  * modified in some revision(s) younger than X, those revisions
- * younger than X will not be included for @a path.  */
+ * younger than X will not be included for @a path.
+ *
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.9. */
+svn_error_t *
+svn_fs_history_prev2(svn_fs_history_t **prev_history_p,
+                     svn_fs_history_t *history,
+                     svn_boolean_t cross_copies,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Same as svn_fs_history_prev2() but using a single @a pool for all
+ * allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     svn_fs_history_t *history,

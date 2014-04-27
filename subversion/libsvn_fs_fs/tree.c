@@ -3474,7 +3474,8 @@ static svn_error_t *
 fs_node_history(svn_fs_history_t **history_p,
                 svn_fs_root_t *root,
                 const char *path,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
 
@@ -3483,13 +3484,13 @@ fs_node_history(svn_fs_history_t **history_p,
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   /* And we require that the path exist in the root. */
-  SVN_ERR(svn_fs_fs__check_path(&kind, root, path, pool));
+  SVN_ERR(svn_fs_fs__check_path(&kind, root, path, scratch_pool));
   if (kind == svn_node_none)
     return SVN_FS__NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs, path, root->rev, FALSE, NULL,
-                                SVN_INVALID_REVNUM, pool);
+                                SVN_INVALID_REVNUM, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3932,7 +3933,8 @@ static svn_error_t *
 fs_history_prev(svn_fs_history_t **prev_history_p,
                 svn_fs_history_t *history,
                 svn_boolean_t cross_copies,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   svn_fs_history_t *prev_history = NULL;
   fs_history_data_t *fhd = history->fsap_data;
@@ -3946,10 +3948,12 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
     {
       if (! fhd->is_interesting)
         prev_history = assemble_history(fs, "/", fhd->revision,
-                                        1, NULL, SVN_INVALID_REVNUM, pool);
+                                        1, NULL, SVN_INVALID_REVNUM,
+                                        result_pool);
       else if (fhd->revision > 0)
         prev_history = assemble_history(fs, "/", fhd->revision - 1,
-                                        1, NULL, SVN_INVALID_REVNUM, pool);
+                                        1, NULL, SVN_INVALID_REVNUM,
+                                        result_pool);
     }
   else
     {
@@ -3958,7 +3962,7 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
       while (1)
         {
           SVN_ERR(history_prev(&prev_history, prev_history, cross_copies,
-                               pool, pool));
+                               result_pool, scratch_pool));
 
           if (! prev_history)
             break;

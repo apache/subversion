@@ -231,7 +231,7 @@ svn_repos_history2(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
     }
 
-  SVN_ERR(svn_fs_node_history(&history, root, path, oldpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, oldpool, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
@@ -242,7 +242,8 @@ svn_repos_history2(svn_fs_t *fs,
       apr_pool_t *tmppool;
       svn_error_t *err;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, cross_copies, newpool,
+                                   oldpool));
 
       /* Only continue if there is further history to deal with. */
       if (! history)
@@ -523,7 +524,7 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, future_revision, pool));
 
-  SVN_ERR(svn_fs_node_history(&history, root, fs_path, lastpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, fs_path, lastpool, lastpool));
 
   /* Since paths that are different according to strcmp may still be
      equivalent (due to number of consecutive slashes and the fact that
@@ -536,7 +537,8 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
     {
       apr_pool_t *tmppool;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, currpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, currpool,
+                                   lastpool));
 
       if (!history)
         break;
@@ -1116,7 +1118,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
        path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool,
+                               scratch_pool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1127,7 +1130,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,
@@ -1453,7 +1457,7 @@ get_file_revs_backwards(svn_repos_t *repos,
                              path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool, iterpool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1463,7 +1467,8 @@ get_file_revs_backwards(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,
