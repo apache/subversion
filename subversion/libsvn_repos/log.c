@@ -1365,7 +1365,7 @@ send_log(svn_revnum_t rev,
          svn_fs_t *fs,
          apr_hash_t *prefetched_changes,
          svn_mergeinfo_t log_target_history_as_mergeinfo,
-         apr_hash_t *nested_merges,
+         svn_bit_array__t *nested_merges,
          svn_boolean_t discover_changed_paths,
          svn_boolean_t subtractive_merge,
          svn_boolean_t handling_merged_revision,
@@ -1470,10 +1470,7 @@ send_log(svn_revnum_t rev,
       /* Is REV a merged revision we've already sent? */
       if (nested_merges && handling_merged_revision)
         {
-          svn_revnum_t *merged_rev = apr_hash_get(nested_merges, &rev,
-                                                  sizeof(svn_revnum_t *));
-
-          if (merged_rev)
+          if (svn_bit_array__get(nested_merges, rev))
             {
               /* We already sent REV. */
               return SVN_NO_ERROR;
@@ -1483,12 +1480,7 @@ send_log(svn_revnum_t rev,
               /* NESTED_REVS needs to last across all the send_log, do_logs,
                  handle_merged_revisions() recursions, so use the pool it
                  was created in at the top of the recursion. */
-              apr_pool_t *hash_pool = apr_hash_pool_get(nested_merges);
-              svn_revnum_t *long_lived_rev = apr_palloc(hash_pool,
-                                                        sizeof(svn_revnum_t));
-              *long_lived_rev = rev;
-              apr_hash_set(nested_merges, long_lived_rev,
-                           sizeof(svn_revnum_t *), long_lived_rev);
+              svn_bit_array__set(nested_merges, rev, TRUE);
             }
         }
 
@@ -1838,7 +1830,7 @@ do_logs(svn_fs_t *fs,
         const apr_array_header_t *paths,
         svn_mergeinfo_t log_target_history_as_mergeinfo,
         svn_mergeinfo_t processed,
-        apr_hash_t *nested_merges,
+        svn_bit_array__t *nested_merges,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
@@ -1892,7 +1884,7 @@ static svn_error_t *
 handle_merged_revisions(svn_revnum_t rev,
                         svn_fs_t *fs,
                         svn_mergeinfo_t log_target_history_as_mergeinfo,
-                        apr_hash_t *nested_merges,
+                        svn_bit_array__t *nested_merges,
                         svn_mergeinfo_t processed,
                         svn_mergeinfo_t added_mergeinfo,
                         svn_mergeinfo_t deleted_mergeinfo,
@@ -2104,7 +2096,7 @@ do_logs(svn_fs_t *fs,
         const apr_array_header_t *paths,
         svn_mergeinfo_t log_target_history_as_mergeinfo,
         svn_mergeinfo_t processed,
-        apr_hash_t *nested_merges,
+        svn_bit_array__t *nested_merges,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
@@ -2242,7 +2234,7 @@ do_logs(svn_fs_t *fs,
                          single hash to be shared across all of the merged
                          recursions so we can track and squelch duplicates. */
                       subpool = svn_pool_create(pool);
-                      nested_merges = svn_hash__make(subpool);
+                      nested_merges = svn_bit_array__create(hist_end, subpool);
                       processed = svn_hash__make(subpool);
                     }
 
@@ -2344,7 +2336,7 @@ do_logs(svn_fs_t *fs,
               if (!nested_merges)
                 {
                   subpool = svn_pool_create(pool);
-                  nested_merges = svn_hash__make(subpool);
+                  nested_merges = svn_bit_array__create(current, subpool);
                 }
 
               SVN_ERR(handle_merged_revisions(current, fs,

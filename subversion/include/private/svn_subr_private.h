@@ -610,6 +610,44 @@ svn_config__shallow_replace_section(svn_config_t *target,
 
 /** @} */
 
+
+/**
+ * @defgroup svn_bit_array Packed bit array handling API
+ * @{
+ */
+
+/* This opaque data struct is an alternative to an INT->VOID hash.
+ * 
+ * Technically, it is an automatically growing packed bit array.
+ * All indexes not previously set are implicitly 0 and setting it will
+ * grow the array as needed.
+ */
+typedef struct svn_bit_array__t svn_bit_array__t;
+
+/* Return a new bit array allocated in POOL.  MAX is a mere hint for
+ * the initial size of the array in bits.
+ */
+svn_bit_array__t *
+svn_bit_array__create(apr_size_t max,
+                      apr_pool_t *pool);
+
+/* Set bit at index IDX in ARRAY to VALUE.  If necessary, grow the
+ * underlying data buffer, i.e. any IDX is valid unless we run OOM.
+ */
+void
+svn_bit_array__set(svn_bit_array__t *array,
+                   apr_size_t idx,
+                   svn_boolean_t value);
+
+/* Get the bit value at index IDX in ARRAY.  Bits not previously accessed
+ * are implicitly 0 (or FALSE).  That implies IDX can never be out-of-range.
+ */
+svn_boolean_t
+svn_bit_array__get(svn_bit_array__t *array,
+                   apr_size_t idx);
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
