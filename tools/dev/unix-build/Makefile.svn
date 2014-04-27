@@ -581,9 +581,27 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
 	touch $@
 
+$(HTTPD_OBJDIR)/chil-engine.diff:
+	mkdir -p $(dir $@)
+	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Mon Apr 14 13:20:57 2014'
+	echo >>$@.tmp '+++ modules/ssl/ssl_engine_init.c	Mon Apr 14 13:21:22 2014'
+	echo >>$@.tmp '@@ -406,9 +406,11 @@ void ssl_init_Engine(server_rec *s, apr_pool_t *p)'
+	echo >>$@.tmp '             ssl_die();'
+	echo >>$@.tmp '         }'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '+#ifdef ENGINE_CTRL_CHIL_SET_FORKCHECK'
+	echo >>$@.tmp '         if (strEQ(mc->szCryptoDevice, "chil")) {'
+	echo >>$@.tmp '             ENGINE_ctrl(e, ENGINE_CTRL_CHIL_SET_FORKCHECK, 1, 0, 0);'
+	echo >>$@.tmp '         }'
+	echo >>$@.tmp '+#endif'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '         if (!ENGINE_set_default(e, ENGINE_METHOD_ALL)) {'
+	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
+	mv -f $@.tmp $@
+
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
-	$(APR_UTIL_OBJDIR)/.installed
+	$(APR_UTIL_OBJDIR)/.installed $(HTTPD_OBJDIR)/chil-engine.diff
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
@@ -595,6 +613,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--with-mpm=prefork \
 		--with-apr="$(PREFIX)/apr" \
 		--with-apr-util="$(PREFIX)/apr"
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
 	touch $@
 
 # compile httpd
