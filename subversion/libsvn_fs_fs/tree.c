@@ -3488,9 +3488,7 @@ fs_node_history(svn_fs_history_t **history_p,
     return SVN_FS__NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
-  *history_p = assemble_history(root->fs,
-                                svn_fs__canonicalize_abspath(path, pool),
-                                root->rev, FALSE, NULL,
+  *history_p = assemble_history(root->fs, path, root->rev, FALSE, NULL,
                                 SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
 }
@@ -3832,8 +3830,7 @@ history_prev(svn_fs_history_t **prev_history,
         {
           /* ... we either have not yet reported on this revision (and
              need now to do so) ... */
-          *prev_history = assemble_history(fs,
-                                           apr_pstrdup(result_pool, commit_path),
+          *prev_history = assemble_history(fs, commit_path,
                                            commit_rev, TRUE, NULL,
                                            SVN_INVALID_REVNUM, result_pool);
           return SVN_NO_ERROR;
@@ -3914,15 +3911,13 @@ history_prev(svn_fs_history_t **prev_history,
       if ((dst_rev == revision) && reported)
         retry = TRUE;
 
-      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, path),
-                                       dst_rev, ! retry,
+      *prev_history = assemble_history(fs, path, dst_rev, ! retry,
                                        src_path, src_rev, result_pool);
     }
   else
     {
-      *prev_history = assemble_history(fs, apr_pstrdup(result_pool, commit_path),
-                                       commit_rev, TRUE, NULL,
-                                       SVN_INVALID_REVNUM, result_pool);
+      *prev_history = assemble_history(fs, commit_path, commit_rev, TRUE,
+                                       NULL, SVN_INVALID_REVNUM, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -4000,9 +3995,8 @@ static history_vtable_t history_vtable = {
 
 /* Return a new history object (marked as "interesting") for PATH and
    REVISION, allocated in POOL, and with its members set to the values
-   of the parameters provided.  Note that PATH and PATH_HINT are not
-   duped into POOL -- it is the responsibility of the caller to ensure
-   that this happens. */
+   of the parameters provided.  Note that PATH and PATH_HINT get
+   normalized and duplicated in POOL. */
 static svn_fs_history_t *
 assemble_history(svn_fs_t *fs,
                  const char *path,
@@ -4017,7 +4011,8 @@ assemble_history(svn_fs_t *fs,
   fhd->path = svn_fs__canonicalize_abspath(path, pool);
   fhd->revision = revision;
   fhd->is_interesting = is_interesting;
-  fhd->path_hint = path_hint;
+  fhd->path_hint = path_hint ? svn_fs__canonicalize_abspath(path_hint, pool)
+                             : NULL;
   fhd->rev_hint = rev_hint;
   fhd->fs = fs;
 
