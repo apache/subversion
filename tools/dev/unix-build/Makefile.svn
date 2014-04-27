@@ -72,7 +72,7 @@ APR_VER		= 1.5.0
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.5.3
-HTTPD_VER	= 2.2.26
+HTTPD_VER	= 2.2.27
 NEON_VER	= 0.29.6
 SERF_VER	= 1.3.4
 SERF_OLD_VER	= 0.3.1
@@ -575,12 +575,6 @@ httpd-clean:
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
-# retrieve httpd
-$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
-	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
-	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
-	touch $@
-
 $(HTTPD_OBJDIR)/chil-engine.diff:
 	mkdir -p $(dir $@)
 	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Mon Apr 14 13:20:57 2014'
@@ -599,9 +593,23 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
 	mv -f $@.tmp $@
 
+
+# retrieve httpd
+$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
+	$(HTTPD_OBJDIR)/chil-engine.diff
+	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
+	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
+	sed '/^#define HAVE_SSL_RAND_EGD/d' \
+		< $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h
+	touch $@
+
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
-	$(APR_UTIL_OBJDIR)/.installed $(HTTPD_OBJDIR)/chil-engine.diff
+	$(APR_UTIL_OBJDIR)/.installed
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
@@ -613,7 +621,6 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--with-mpm=prefork \
 		--with-apr="$(PREFIX)/apr" \
 		--with-apr-util="$(PREFIX)/apr"
-	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
 	touch $@
 
 # compile httpd
