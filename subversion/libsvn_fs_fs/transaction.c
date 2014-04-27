@@ -1899,7 +1899,7 @@ shards_spanned(int *spanned,
   fs_fs_data_t *ffd = fs->fsap_data;
   int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
 
-  int count = 0;
+  int count = walk ? 1 : 0; /* The start of a walk already touches a shard. */
   svn_revnum_t shard, last_shard = ffd->youngest_rev_cache / shard_size;
   while (walk-- && noderev->predecessor_count)
     {
@@ -1974,7 +1974,7 @@ choose_delta_base(representation_t **rep,
       SVN_ERR(shards_spanned(&shards, fs, noderev, walk, pool));
 
       /* We also don't want the linear deltification to span more shards
-         than deltas would be used in the simple skip-delta schme. */
+         than if deltas we used in a simple skip-delta scheme. */
       if ((1 << (--shards)) <= walk)
         count = noderev->predecessor_count - 1;
     }
