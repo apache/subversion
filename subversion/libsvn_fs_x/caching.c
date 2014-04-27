@@ -93,7 +93,7 @@ read_config(svn_memcache_t **memcache_p,
   fs_x_data_t *ffd = fs->fsap_data;
 
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
-                                              fs->pool));
+                                               fs->pool, pool));
 
   /* No cache namespace by default.  I.e. all FS instances share the
    * cached data.  If you specify different namespaces, the data will
@@ -352,7 +352,7 @@ create_cache(svn_cache__t **cache_p,
     {
       SVN_ERR(svn_cache__create_membuffer_cache(
                 cache_p, membuffer, serializer, deserializer,
-                klen, prefix, priority, FALSE, pool));
+                klen, prefix, priority, FALSE, pool, pool));
     }
   else if (pages)
     {

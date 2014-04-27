@@ -778,7 +778,7 @@ read_config(fs_fs_data_t *ffd,
 
   /* memcached configuration */
   SVN_ERR(svn_cache__make_memcache_from_config(&ffd->memcache, config,
-                                               result_pool));
+                                               result_pool, scratch_pool));
 
   SVN_ERR(svn_config_get_bool(config, &ffd->fail_stop,
                               CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,

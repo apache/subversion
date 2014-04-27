@@ -544,20 +544,17 @@ nop_enumerator(const char *name,
 svn_error_t *
 svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
 {
-  int server_count;
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  server_count =
+  int server_count =
     svn_config_enumerate2(config,
                           SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
-                          nop_enumerator, NULL, subpool);
+                          nop_enumerator, NULL, scratch_pool);
 
   if (server_count == 0)
     {
       *memcache_p = NULL;
-      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -567,8 +564,8 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
 #ifdef SVN_HAVE_MEMCACHE
   {
     struct ams_baton b;
-    svn_memcache_t *memcache = apr_pcalloc(pool, sizeof(*memcache));
-    apr_status_t apr_err = apr_memcache_create(pool,
+    svn_memcache_t *memcache = apr_pcalloc(result_pool, sizeof(*memcache));
+    apr_status_t apr_err = apr_memcache_create(result_pool,
                                                (apr_uint16_t)server_count,
                                                0, /* flags */
                                                &(memcache->c));
@@ -577,19 +574,18 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                 _("Unknown error creating apr_memcache_t"));
 
     b.memcache = memcache->c;
-    b.memcache_pool = pool;
+    b.memcache_pool = result_pool;
     b.err = SVN_NO_ERROR;
     svn_config_enumerate2(config,
                           SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
                           add_memcache_server, &b,
-                          subpool);
+                          scratch_pool);
 
     if (b.err)
       return b.err;
 
     *memcache_p = memcache;
 
-    svn_pool_destroy(subpool);
     return SVN_NO_ERROR;
   }
 #else /* ! SVN_HAVE_MEMCACHE */

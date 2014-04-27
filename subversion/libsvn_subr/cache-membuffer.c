@@ -3050,14 +3050,15 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   svn_checksum_t *checksum;
 
   /* allocate the cache header structures
    */
-  svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
-  svn_membuffer_cache_t *cache = apr_palloc(pool, sizeof(*cache));
+  svn_cache__t *wrapper = apr_pcalloc(result_pool, sizeof(*wrapper));
+  svn_membuffer_cache_t *cache = apr_palloc(result_pool, sizeof(*cache));
 
   /* initialize our internal cache header
    */
@@ -3072,7 +3073,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->priority = priority;
   cache->key_len = klen;
 
-  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, result_pool));
 
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it
@@ -3081,14 +3082,14 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        svn_checksum_md5,
                        prefix,
                        strlen(prefix),
-                       pool));
+                       scratch_pool));
   memcpy(cache->prefix, checksum->digest, sizeof(cache->prefix));
 
   /* fix-length keys of 16 bytes or under don't need a buffer because we
    * can use a very fast key combining algorithm. */
   if ((klen == APR_HASH_KEY_STRING) ||  klen > sizeof(entry_key_t))
     {
-      cache->last_access = apr_pcalloc(pool, sizeof(*cache->last_access));
+      cache->last_access = apr_pcalloc(result_pool, sizeof(*cache->last_access));
       cache->last_access->key_len = APR_HASH_KEY_STRING;
     }
   else

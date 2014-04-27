@@ -257,7 +257,8 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
  * Given @a config, returns an APR memcached interface in @a
  * *memcache_p allocated in @a result_pool if @a config contains entries in
  * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
- * memcached servers; otherwise, sets @a *memcache_p to NULL.
+ * memcached servers; otherwise, sets @a *memcache_p to NULL.  Use
+ * @a scratch_pool for temporary allocations.
  *
  * If Subversion was not built with apr_memcache_support, then raises
  * SVN_ERR_NO_APR_MEMCACHE if and only if @a config is configured to
@@ -266,7 +267,8 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
 svn_error_t *
 svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                      svn_config_t *config,
-                                     apr_pool_t *result_pool);
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /**
  * Creates a new membuffer cache object in @a *cache. It will contain
@@ -345,7 +347,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * form multiple caches, @a prefix should be specified to differentiate
  * this cache from other caches.  All entries written through this cache
  * interface will be assigned into the given @a priority class.  @a *cache_p
- * will be allocated in @a result_pool.
+ * will be allocated in @a result_pool.  @a scratch_pool is used for
+ * temporary allocations.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
  * svn_stringbuf_t; if @a serialize_func is NULL, then the data is
@@ -366,7 +369,8 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
-                                  apr_pool_t *result_pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
