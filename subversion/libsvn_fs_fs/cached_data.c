@@ -42,6 +42,7 @@
 #include "temp_serializer.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "../libsvn_delta/delta.h"  /* for SVN_DELTA_WINDOW_SIZE */
 
 #include "svn_private_config.h"
 
@@ -716,6 +717,7 @@ create_rep_state_body(rep_state_t **rep_state,
   rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
   svn_boolean_t is_cached = FALSE;
+  apr_uint64_t estimated_window_storage;
 
   /* If the hint is
    * - given,
@@ -742,10 +744,29 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->revision = rep->revision;
   rs->item_index = rep->item_index;
   rs->raw_window_cache = ffd->raw_window_cache;
-  rs->window_cache = ffd->txdelta_window_cache;
-  rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
   rs->start = -1;
+
+  /* Very long files stored as self-delta will produce a huge number of
+     delta windows.  Don't cache them lest we don't thrash the cache.
+     Since we don't know the depth of the delta chain, let's assume, the
+     whole contents get rewritten 3 times.
+   */
+  estimated_window_storage
+    = 4 * (  (rep->expanded_size ? rep->expanded_size : rep->size)
+           + SVN_DELTA_WINDOW_SIZE);
+  estimated_window_storage = MIN(estimated_window_storage, APR_SIZE_MAX);
+
+  rs->window_cache =    ffd->txdelta_window_cache
+                     && svn_cache__is_cachable(ffd->txdelta_window_cache,
+                                       (apr_size_t)estimated_window_storage)
+                   ? ffd->txdelta_window_cache
+                   : NULL;
+  rs->combined_cache =    ffd->combined_window_cache
+                       && svn_cache__is_cachable(ffd->combined_window_cache,
+                                       (apr_size_t)estimated_window_storage)
+                     ? ffd->combined_window_cache
+                     : NULL;
 
   /* cache lookup, i.e. skip reading the rep header if possible */
   if (ffd->rep_header_cache && !svn_fs_fs__id_txn_used(&rep->txn_id))
