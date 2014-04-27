@@ -1569,7 +1569,7 @@ read_revisions(fs_t **fs,
                                             sizeof(cache_key_t),
                                             "",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                                            FALSE, pool));
+                                            FALSE, pool, pool));
 
   /* read all packed revs */
   for ( revision = start_revision
