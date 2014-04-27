@@ -944,7 +944,7 @@ open_path(parent_path_t **parent_path_p,
   svn_fs_t *fs = root->fs;
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root. */
-  const char *rest; /* The portion of PATH we haven't traversed yet.  */
+  const char *rest = NULL; /* The portion of PATH we haven't traversed yet. */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* path to the currently processed entry without trailing '/'.
