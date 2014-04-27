@@ -1324,8 +1324,8 @@ l2p_index_lookup(apr_off_t *offset,
       svn_boolean_t end;
       apr_off_t max_offset
         = APR_ALIGN(info_baton.entry.offset + info_baton.entry.size,
-                    0x10000);
-      apr_off_t min_offset = max_offset - 0x10000;
+                    ffd->block_size);
+      apr_off_t min_offset = max_offset - ffd->block_size;
 
       /* read the relevant page */
       SVN_ERR(get_l2p_page(&page, rev_file, fs, info_baton.first_revision,
