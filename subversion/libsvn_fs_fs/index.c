@@ -1174,6 +1174,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
 
   for (i = 0; i < pages->nelts && !*end; ++i)
     {
+      svn_boolean_t is_cached;
+
       l2p_page_table_entry_t *entry
         = &APR_ARRAY_IDX(pages, i, l2p_page_table_entry_t);
       svn_pool_clear(iterpool);
@@ -1191,9 +1193,9 @@ prefetch_l2p_pages(svn_boolean_t *end,
 
       /* page already in cache? */
       key.page = i;
-      SVN_ERR(svn_cache__has_key(end, ffd->l2p_page_cache,
+      SVN_ERR(svn_cache__has_key(&is_cached, ffd->l2p_page_cache,
                                  &key, iterpool));
-      if (!*end)
+      if (!is_cached)
         {
           /* no in cache -> read from stream (data already buffered in APR)
            * and cache the result */
