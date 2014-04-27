@@ -425,13 +425,15 @@ detect_changed(apr_hash_t **changed,
 
               svn_fspath__split(&parent_path, &name, path, subpool);
 
-              SVN_ERR(svn_fs_node_history(&history, root, parent_path,
-                                          subpool));
+              SVN_ERR(svn_fs_node_history2(&history, root, parent_path,
+                                           subpool, subpool));
 
               /* Two calls because the first call returns the original
                  revision as the deleted child means it is 'interesting' */
-              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
-              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
+              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, subpool,
+                                           subpool));
+              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, subpool,
+                                           subpool));
 
               SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
                                               subpool));
@@ -567,7 +569,8 @@ get_history(struct path_info *info,
             svn_repos_authz_func_t authz_read_func,
             void *authz_read_baton,
             svn_revnum_t start,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *history_root = NULL;
   svn_fs_history_t *hist;
@@ -578,27 +581,30 @@ get_history(struct path_info *info,
     {
       subpool = info->newpool;
 
-      SVN_ERR(svn_fs_history_prev(&info->hist, info->hist, ! strict, subpool));
+      SVN_ERR(svn_fs_history_prev2(&info->hist, info->hist, ! strict,
+                                   subpool, scratch_pool));
 
       hist = info->hist;
     }
   else
     {
-      subpool = svn_pool_create(pool);
+      subpool = svn_pool_create(result_pool);
 
       /* Open the history located at the last rev we were at. */
       SVN_ERR(svn_fs_revision_root(&history_root, fs, info->history_rev,
                                    subpool));
 
-      SVN_ERR(svn_fs_node_history(&hist, history_root, info->path->data,
-                                  subpool));
+      SVN_ERR(svn_fs_node_history2(&hist, history_root, info->path->data,
+                                   subpool, scratch_pool));
 
-      SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
+      SVN_ERR(svn_fs_history_prev2(&hist, hist, ! strict, subpool,
+                                   scratch_pool));
 
       if (info->first_time)
         info->first_time = FALSE;
       else
-        SVN_ERR(svn_fs_history_prev(&hist, hist, ! strict, subpool));
+        SVN_ERR(svn_fs_history_prev2(&hist, hist, ! strict, subpool,
+                                     scratch_pool));
     }
 
   if (! hist)
@@ -633,11 +639,11 @@ get_history(struct path_info *info,
       svn_boolean_t readable;
       SVN_ERR(svn_fs_revision_root(&history_root, fs,
                                    info->history_rev,
-                                   subpool));
+                                   scratch_pool));
       SVN_ERR(authz_read_func(&readable, history_root,
                               info->path->data,
                               authz_read_baton,
-                              subpool));
+                              scratch_pool));
       if (! readable)
         info->done = TRUE;
     }
@@ -675,7 +681,8 @@ check_history(svn_boolean_t *changed,
               svn_repos_authz_func_t authz_read_func,
               void *authz_read_baton,
               svn_revnum_t start,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   /* If we're already done with histories for this path,
      don't try to fetch any more. */
@@ -694,7 +701,7 @@ check_history(svn_boolean_t *changed,
      rev where this path was changed. */
   *changed = TRUE;
   return get_history(info, fs, strict, authz_read_func,
-                     authz_read_baton, start, pool);
+                     authz_read_baton, start, result_pool, scratch_pool);
 }
 
 /* Return the next interesting revision in our list of HISTORIES. */
@@ -1539,13 +1546,11 @@ get_path_histories(apr_array_header_t **histories,
       const char *this_path = APR_ARRAY_IDX(paths, i, const char *);
       struct path_info *info = apr_palloc(pool,
                                           sizeof(struct path_info));
+      svn_pool_clear(iterpool);
 
       if (authz_read_func)
         {
           svn_boolean_t readable;
-
-          svn_pool_clear(iterpool);
-
           SVN_ERR(authz_read_func(&readable, root, this_path,
                                   authz_read_baton, iterpool));
           if (! readable)
@@ -1559,7 +1564,8 @@ get_path_histories(apr_array_header_t **histories,
 
       if (i < MAX_OPEN_HISTORIES)
         {
-          err = svn_fs_node_history(&info->hist, root, this_path, pool);
+          err = svn_fs_node_history2(&info->hist, root, this_path, pool,
+                                     iterpool);
           if (err
               && ignore_missing_locations
               && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
@@ -1583,7 +1589,7 @@ get_path_histories(apr_array_header_t **histories,
       err = get_history(info, fs,
                         strict_node_history,
                         authz_read_func, authz_read_baton,
-                        hist_start, pool);
+                        hist_start, pool, iterpool);
       if (err
           && ignore_missing_locations
           && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
@@ -2117,7 +2123,7 @@ do_logs(svn_fs_t *fs,
         void *authz_read_baton,
         apr_pool_t *pool)
 {
-  apr_pool_t *iterpool;
+  apr_pool_t *iterpool, *iterpool2;
   apr_pool_t *subpool = NULL;
   apr_array_header_t *revs = NULL;
   apr_hash_t *rev_mergeinfo = NULL;
@@ -2153,6 +2159,7 @@ do_logs(svn_fs_t *fs,
      where a path was changed to the array, or if they wanted
      history in reverse order just send it to them right away. */
   iterpool = svn_pool_create(pool);
+  iterpool2 = svn_pool_create(pool);
   for (current = hist_end;
        any_histories_left;
        current = next_history_rev(histories))
@@ -2166,13 +2173,18 @@ do_logs(svn_fs_t *fs,
           struct path_info *info = APR_ARRAY_IDX(histories, i,
                                                  struct path_info *);
 
+          svn_pool_clear(iterpool2);
+
           /* Check history for this path in current rev. */
           SVN_ERR(check_history(&changed, info, fs, current,
                                 strict_node_history, authz_read_func,
-                                authz_read_baton, hist_start, pool));
+                                authz_read_baton, hist_start, pool,
+                                iterpool2));
           if (! info->done)
             any_histories_left = TRUE;
         }
+
+      svn_pool_clear(iterpool2);
 
       /* If any of the paths changed in this rev then add or send it. */
       if (changed)
@@ -2283,6 +2295,7 @@ do_logs(svn_fs_t *fs,
             }
         }
     }
+  svn_pool_destroy(iterpool2);
   svn_pool_destroy(iterpool);
 
   if (subpool)

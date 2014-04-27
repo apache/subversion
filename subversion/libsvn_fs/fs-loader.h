@@ -305,7 +305,8 @@ typedef struct root_vtable_t
                              const char *path, apr_pool_t *pool);
   svn_error_t *(*node_history)(svn_fs_history_t **history_p,
                                svn_fs_root_t *root, const char *path,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
   svn_error_t *(*node_id)(const svn_fs_id_t **id_p, svn_fs_root_t *root,
                           const char *path, apr_pool_t *pool);
   svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation,
@@ -427,7 +428,7 @@ typedef struct history_vtable_t
 {
   svn_error_t *(*prev)(svn_fs_history_t **prev_history_p,
                        svn_fs_history_t *history, svn_boolean_t cross_copies,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool, apr_pool_t *scratch_pool);
   svn_error_t *(*location)(const char **path, svn_revnum_t *revision,
                            svn_fs_history_t *history, apr_pool_t *pool);
 } history_vtable_t;
