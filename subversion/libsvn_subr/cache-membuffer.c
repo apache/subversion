@@ -2463,8 +2463,8 @@ typedef struct svn_membuffer_cache_t
    */
   entry_key_t prefix;
 
-  /* The tail of the prefix string. It is being used as a deveveloper
-   * visible ID for this cache instance.
+  /* The tail of the prefix string. It is being used as a developer-visible
+   * ID for this cache instance.
    */
   char info_prefix[PREFIX_TAIL_LEN];
 
