@@ -4505,7 +4505,7 @@ svn_io_read_version_file(int *version,
 apr_size_t
 svn_io__next_chunk_size(apr_off_t total_read)
 {
-  /* Started with total_read===, this will generate a sequence ensuring
+  /* Started with total_read==0, this will generate a sequence ensuring
      aligned access with increasing block size up to SVN__STREAM_CHUNK_SIZE:
      4k@ offset 0, 4k@ offset 4k, 8k@ offset 8k, 16k@ offset 16k etc.
      */
