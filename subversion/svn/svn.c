@@ -2590,9 +2590,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EACCES(err->apr_err)
           || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
+          svn_config_t *empty_cfg;
+
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
-          cfg_hash = NULL;
+          cfg_hash = apr_hash_make(pool);
+          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+          svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
+          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+          svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
         }
       else
         return err;
