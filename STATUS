@@ -167,18 +167,6 @@ Candidate changes:
                    overkill. The whole thing can be implemented with simple
                    atomic operations while mutexes may be a limited resource)
 
- * r1575525, r1575915
-   Resolve issue #4427: File externals can't be exported.
-   Justification:
-     File externals 'are just files', so why should they be discriminated
-     by export?
-   Notes:
-     r1575525 resolves the most important issues, but in some cases still
-     doesn't allow exporting file externals. r1575915 simplifies the fix and
-     resolves a few remaining issues.
-   Votes:
-     +1: rhuijben, breser
-
  * r1589184, r1589188
    Properly handle properties not present and excluded on cross wc copy
    Justification:
@@ -289,3 +277,15 @@ Approved changes:
      ^/subversion/branches/1.8.x-issue4480
    Votes:
      +1: rhuijben, philip, breser
+
+ * r1575525, r1575915
+   Resolve issue #4427: File externals can't be exported.
+   Justification:
+     File externals 'are just files', so why should they be discriminated
+     by export?
+   Notes:
+     r1575525 resolves the most important issues, but in some cases still
+     doesn't allow exporting file externals. r1575915 simplifies the fix and
+     resolves a few remaining issues.
+   Votes:
+     +1: rhuijben, breser, philip
