@@ -189,6 +189,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1590751
+   Use empty, rather than NULL, config if default is unreadable.
+   Justification:
+     svn SEGV reported by user.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
