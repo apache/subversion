@@ -247,7 +247,7 @@ read_all(svn_config_t **cfgp,
 
 /* CONFIG_DIR provides an override for the default behavior of reading
    the default set of overlay files described by read_all()'s doc
-   string. */
+   string.  Returns non-NULL *CFG or an error. */
 static svn_error_t *
 get_category_config(svn_config_t **cfg,
                     const char *config_dir,
@@ -298,13 +298,11 @@ svn_config_get_config(apr_hash_t **cfg_hash,
 
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));
-  if (cfg)
-    svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, cfg);
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, cfg);
 
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_CONFIG,
                               pool));
-  if (cfg)
-    svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, cfg);
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, cfg);
 
   return SVN_NO_ERROR;
 }
