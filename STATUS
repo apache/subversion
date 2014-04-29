@@ -195,6 +195,8 @@ Candidate changes:
      svn SEGV reported by user.
    Votes:
      +1: philip
+     -0: julianfoad (prefer to fix all the programs at the same time;
+                     other queries -- see email thread)
 
 Veto-blocked changes:
 =====================
