@@ -56,6 +56,7 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -2590,8 +2591,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EACCES(err->apr_err)
           || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
-          svn_config_t *empty_cfg;
-
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
 
