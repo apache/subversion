@@ -296,19 +296,15 @@ svn_config_get_config(apr_hash_t **cfg_hash,
   svn_config_t *cfg;
   *cfg_hash = apr_hash_make(pool);
 
-#define CATLEN (sizeof(SVN_CONFIG_CATEGORY_SERVERS) - 1)
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));
   if (cfg)
-    apr_hash_set(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, CATLEN, cfg);
-#undef CATLEN
+    svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, cfg);
 
-#define CATLEN (sizeof(SVN_CONFIG_CATEGORY_CONFIG) - 1)
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_CONFIG,
                               pool));
   if (cfg)
-    apr_hash_set(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, CATLEN, cfg);
-#undef CATLEN
+    svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, cfg);
 
   return SVN_NO_ERROR;
 }
