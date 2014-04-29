@@ -42,28 +42,6 @@ Candidate changes:
                    a related problem. It looks like this fix doesn't work for
                    the user scenario it was intended for)
 
- * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488, r1567204, r1567228
-   Fix working copy database inconsistency on certain move scenarios,
-   including those described in issue #4437 "Deleting a moved file can maintain a
-   half move"
-   Justification:
-     The working copy database should be consistent on any normal operation.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4437
-   Votes:
-     +1: rhuijben, philip
-
- * r1518942, r1536914, r1536931
-   Fix commit of a specific mixed revision copy with non copy descendants that
-   shadow not present nodes. This problem manifests itself as a copy of a tree
-   that can't be committed because it is reported out of date.
-   Justification:
-     'svn cp TREE NEW-TREE; svn ci NEW-TREE' should never report out of date
-     on some random descendant.
-   Branch: ^/subversion/branches/1.8.x-r1536931
-   Votes:
-     +1: rhuijben, philip
-
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
    dump files.
@@ -76,17 +54,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1538812, r1538925, r1538928, r1538939
-   Properly remove moved_to information when the node in its original location
-   is removed.
-   Justification:
-     The NODES table in the working copy database should always be consistent.
-   Notes:
-     rhuijben: The test for this problem might accidentally depend on other
-               move fixes on trunk.
-   Votes:
-     +1: rhuijben, philip
-
  * r1542610, r1564576, r1568180
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
@@ -97,27 +64,6 @@ Candidate changes:
      +1: rhuijben, breser
      +1: (without r1564567, r1568180): stsp
      -0: brane (horrible grammar; suggest translation to English)
-
- * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
-   Fix a specific case where the api behind status would report a different
-   move status for A depending on whether the user called 'svn status A' or
-   'svn status wc' and then looked at 'wc/A'.
-   Justification:
-     Api users such as AnkhSVN rely on the result of svn status to match and
-     this breaks their assumptions.
-     This change has the nice side effect that it resolves the most common
-     user triggerable assertion in AnkhSVN, which is really caused by a
-     broken move. (See other nomination for a fix). But even then it shouldn't
-     matter how status is called: on the node or an ancestor.
-     (It also improves status performance a tiny bit, by reducing the number
-      of sqlite transactions used)
-   Notes:
-     r1564587 fixes a function reference on the branch in some code that
-     is disabled by the macro processor on Windows.
-   Branch:
-     ^/subversion/branches/1.8.x-r1544597
-   Votes:
-     +1: philip, rhuijben
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -298,3 +244,57 @@ Approved changes:
      resolves a few remaining issues.
    Votes:
      +1: rhuijben, breser, philip
+
+ * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488, r1567204, r1567228
+   Fix working copy database inconsistency on certain move scenarios,
+   including those described in issue #4437 "Deleting a moved file can maintain a
+   half move"
+   Justification:
+     The working copy database should be consistent on any normal operation.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4437
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1518942, r1536914, r1536931
+   Fix commit of a specific mixed revision copy with non copy descendants that
+   shadow not present nodes. This problem manifests itself as a copy of a tree
+   that can't be committed because it is reported out of date.
+   Justification:
+     'svn cp TREE NEW-TREE; svn ci NEW-TREE' should never report out of date
+     on some random descendant.
+   Branch: ^/subversion/branches/1.8.x-r1536931
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1538812, r1538925, r1538928, r1538939
+   Properly remove moved_to information when the node in its original location
+   is removed.
+   Justification:
+     The NODES table in the working copy database should always be consistent.
+   Notes:
+     rhuijben: The test for this problem might accidentally depend on other
+               move fixes on trunk.
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
+   Fix a specific case where the api behind status would report a different
+   move status for A depending on whether the user called 'svn status A' or
+   'svn status wc' and then looked at 'wc/A'.
+   Justification:
+     Api users such as AnkhSVN rely on the result of svn status to match and
+     this breaks their assumptions.
+     This change has the nice side effect that it resolves the most common
+     user triggerable assertion in AnkhSVN, which is really caused by a
+     broken move. (See other nomination for a fix). But even then it shouldn't
+     matter how status is called: on the node or an ancestor.
+     (It also improves status performance a tiny bit, by reducing the number
+      of sqlite transactions used)
+   Notes:
+     r1564587 fixes a function reference on the branch in some code that
+     is disabled by the macro processor on Windows.
+   Branch:
+     ^/subversion/branches/1.8.x-r1544597
+   Votes:
+     +1: philip, rhuijben, breser
