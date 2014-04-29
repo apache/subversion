@@ -181,17 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1538812, r1538925, r1538928, r1538939
-   Properly remove moved_to information when the node in its original location
-   is removed.
-   Justification:
-     The NODES table in the working copy database should always be consistent.
-   Notes:
-     rhuijben: The test for this problem might accidentally depend on other
-               move fixes on trunk.
-   Votes:
-     +1: rhuijben, philip, breser
-
  * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
    Fix a specific case where the api behind status would report a different
    move status for A depending on whether the user called 'svn status A' or

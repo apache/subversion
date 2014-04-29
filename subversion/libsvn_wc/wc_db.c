@@ -627,6 +627,10 @@ svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
    When removing a node if the parent has a higher working node then
    the parent node and this node are both deleted or replaced and any
    delete over this node must be removed.
+
+   This function (like most wcroot functions) assumes that its caller
+   only uses this function within an sqlite transaction if atomic
+   behavior is needed.
  */
 svn_error_t *
 svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
@@ -635,14 +639,60 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int working_depth;
+  svn_wc__db_status_t presence;
+  const char *moved_to;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_LOWEST_WORKING_NODE));
+                                    STMT_SELECT_LOWEST_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
                             op_depth));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  return SVN_NO_ERROR;
+  if (!have_row)
+    return svn_error_trace(svn_sqlite__reset(stmt));
+
+  working_depth = svn_sqlite__column_int(stmt, 0);
+  presence = svn_sqlite__column_token(stmt, 1, presence_map);
+  moved_to = svn_sqlite__column_text(stmt, 3, scratch_pool);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (moved_to)
+    {
+      /* Turn the move into a copy to keep the NODES table valid */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_MOVED_HERE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                moved_to, relpath_depth(moved_to)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      /* This leaves just the moved_to information on the origin,
+         which we will remove in the next step */
+    }
+
+  if (presence == svn_wc__db_status_base_deleted)
+    {
+      /* Nothing left to shadow; remove the base-deleted node */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DELETE_NODE));
+    }
+  else if (moved_to)
+    {
+      /* Clear moved to information, as this node is no longer base-deleted */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_MOVED_TO_RELPATH));
+      }
+  else
+    {
+      /* Nothing to update */
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            working_depth));
+
+  return svn_error_trace(svn_sqlite__update(NULL, stmt));
 }
 
 
@@ -7182,7 +7232,7 @@ remove_node_txn(svn_boolean_t *left_changes,
   if (local_relpath[0] != '\0')
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_NODE));
+                                        STMT_DELETE_NODE_ALL_LAYERS));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
@@ -10903,7 +10953,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
          if we need to remove shadowed layers below our descendants. */
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ALL_LAYERS));
+                                        STMT_DELETE_NODE_ALL_LAYERS));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
