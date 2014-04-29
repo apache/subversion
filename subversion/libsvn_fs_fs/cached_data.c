@@ -2027,7 +2027,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
         {
           /* This will also prevent the reconstructed fulltext from being
              put into the cache. */
-          fulltext_cache_key.revision = SVN_INVALID_REVNUM;
+          rb->fulltext_cache_key.revision = SVN_INVALID_REVNUM;
         }
 
       *contents_p = svn_stream_create(rb, pool);
