@@ -827,7 +827,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 
 
-#ifdef SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC
 %inline %{
 /* Helper function to set the gnome-keyring unlock prompt function. This
  * C function accepts an auth baton, a function and a prompt baton, but
@@ -851,7 +850,6 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
                            prompt_baton);
 }
 %}
-#endif
 
 #if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg

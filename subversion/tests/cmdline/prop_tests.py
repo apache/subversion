@@ -2612,6 +2612,62 @@ def peg_rev_base_working(sbox):
                                      'propget', '--strict', 'ordinal',
                                      sbox.ospath('iota') + '@BASE')
 
+def iprops_list_abspath(sbox):
+  "test listing iprops via abspath"
+
+  sbox.build()
+
+  sbox.simple_propset('im', 'root', '')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '^/A/D', sbox.ospath(''),
+                                     '--ignore-ancestry')
+
+  sbox.simple_propset('im', 'GammA', 'gamma')
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % sbox.ospath('')[:-1],
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % sbox.ospath('gamma'),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     sbox.ospath(''))
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % os.path.abspath(sbox.ospath('')),
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % os.path.abspath(sbox.ospath('gamma')),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     os.path.abspath(sbox.ospath('')))
+
+def wc_propop_on_url(sbox):
+  "perform wc specific operations on url"
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pl', '-r', 'PREV',
+                                     sbox.repo_url)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pg', 'my:Q', '-r', 'PREV',
+                                     sbox.repo_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -2657,6 +2713,8 @@ test_list = [ None,
               inheritable_ignores,
               almost_known_prop_names,
               peg_rev_base_working,
+              iprops_list_abspath,
+              wc_propop_on_url,
              ]
 
 if __name__ == '__main__':

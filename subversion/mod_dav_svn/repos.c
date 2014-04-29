@@ -1790,14 +1790,97 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                 "Could not get created rev of "
                                 "resource", r->pool);
 
-  if (comb->priv.version_name < created_rev)
+  if (SVN_IS_VALID_REVNUM(created_rev))
     {
-      serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
-                               "Item '%s' is out of date",
-                               comb->priv.repos_path);
-      return dav_svn__convert_err(serr, HTTP_CONFLICT,
-                                  "Attempting to modify out-of-date resource.",
-                                  r->pool);
+      if (comb->priv.version_name < created_rev)
+        {
+          serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                   comb->res.collection
+                                    ? "Directory '%s' is out of date"
+                                    : (comb->res.exists
+                                        ? "File '%s' is out of date"
+                                        : "'%s' is out of date"),
+                                   comb->priv.repos_path);
+          return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                      "Attempting to modify out-of-date resource.",
+                                      r->pool);
+        }
+    }
+  else if (SVN_IS_VALID_REVNUM(comb->priv.version_name)
+           && comb->res.collection)
+    {
+      /* Issue #4480: With HTTPv2 we can receive the first change for a
+         directory after it has been made mutable, because one of its
+         descendants was changed before changing the directory.
+
+         We have to check if whatever the node is in HEAD is equivalent
+         to what it was in the provided BASE revision.
+
+         If the node was copied, we would process it before its decendants
+         and we already performed quite a few checks when making it mutable
+         via its descendant, so what we should really check here is if the
+         properties changed since the BASE version.
+
+         ### I think svn_fs_node_relation() checks for more changes than we
+             should check for here. Needs further review. But it looks like\
+             this check matches the checks in the libsvn_fs commit editor.
+
+             For now I would say reporting out of date in a few too many
+             cases is safer than not reporting out of date when we should.
+       */
+      svn_revnum_t txn_base_rev;
+      svn_fs_root_t *txn_base_root;
+      svn_fs_root_t *rev_root;
+      const svn_fs_id_t *txn_base_id;
+      const svn_fs_id_t *rev_id;
+
+      txn_base_rev = svn_fs_txn_base_revision(comb->res.info->root.txn);
+
+      if (comb->priv.version_name == txn_base_rev)
+        return NULL; /* Easy out: Nothing changed */
+
+      serr = svn_fs_revision_root(&txn_base_root, comb->res.info->repos->fs,
+                                  txn_base_rev, r->pool);
+                                  
+      if (!serr)
+        serr = svn_fs_node_id(&txn_base_id, txn_base_root,
+                              comb->priv.repos_path, r->pool);
+
+      if (serr != NULL)
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not open youngest revision root "
+                                      "for verification against the base "
+                                      "revision", r->pool);
+        }
+
+      serr = svn_fs_revision_root(&rev_root, comb->res.info->repos->fs,
+                                  comb->priv.version_name, r->pool);
+
+      if (!serr)
+        serr = svn_fs_node_id(&rev_id, rev_root,
+                              comb->priv.repos_path, r->pool);
+
+      if (serr != NULL)
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not open the base revision"
+                                      "for verification against the youngest "
+                                      "revision", r->pool);
+        }
+
+      svn_fs_close_root(rev_root);
+      svn_fs_close_root(txn_base_root);
+
+      if (0 != svn_fs_compare_ids(txn_base_id, rev_id))
+        {
+          serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                   "Directory '%s' is out of date",
+                                   comb->priv.repos_path);
+          return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                      "Attempting to modify out-of-date resource.",
+                                      r->pool);
+        }
     }
 
   return NULL;
@@ -1969,26 +2052,31 @@ get_resource(request_rec *r,
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+  if (dav_svn__is_parentpath_list(r))
     {
-      char *uri = apr_pstrdup(r->pool, r->uri);
-      char *parentpath = apr_pstrdup(r->pool, root_path);
-      apr_size_t uri_len = strlen(uri);
-      apr_size_t parentpath_len = strlen(parentpath);
-
-      if (uri[uri_len-1] == '/')
-        uri[uri_len-1] = '\0';
-
-      if (parentpath[parentpath_len-1] == '/')
-        parentpath[parentpath_len-1] = '\0';
-
-      if (strcmp(parentpath, uri) == 0)
+      /* Only allow GET and HEAD on the parentpath resource
+       * httpd uses the same method_number for HEAD as GET */
+      if (r->method_number != M_GET)
         {
-          err = get_parentpath_resource(r, resource);
-          if (err)
-            return err;
-          return NULL;
+          int status;
+
+          /* Marshall the error back to the client by generating by
+           * way of the dav_svn__error_response_tag trick. */
+          err = dav_svn__new_error(r->pool, HTTP_METHOD_NOT_ALLOWED,
+                                   SVN_ERR_APMOD_MALFORMED_URI,
+                                   "The URI does not contain the name "
+                                   "of a repository.");
+          /* can't use r->allowed since the default handler isn't called */
+          apr_table_setn(r->headers_out, "Allow", "GET,HEAD");
+          status = dav_svn__error_response_tag(r, err);
+
+          return dav_push_error(r->pool, status, err->error_id, NULL, err);
         }
+
+      err = get_parentpath_resource(r, resource);
+      if (err)
+        return err;
+      return NULL;
     }
 
   /* This does all the work of interpreting/splitting the request uri. */
@@ -2455,9 +2543,12 @@ get_parent_resource(const dav_resource *resource,
       parent->info = parentinfo;
 
       parentinfo->uri_path =
-        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             TRUE, resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(
+               get_parent_path(
+                   svn_urlpath__canonicalize(resource->info->uri_path->data,
+                                            resource->pool),
+                   TRUE, resource->pool),
+               resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;

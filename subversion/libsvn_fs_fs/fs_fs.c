@@ -5380,11 +5380,13 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_args, NULL, NULL,
                                target->data_rep, fs, pool));
-      /* If that matches source, then use this delta as is. */
+
+      /* If that matches source, then use this delta as is.
+         Note that we want an actual delta here.  E.g. a self-delta would
+         not be good enough. */
       if (rep_args->is_delta
-          && (rep_args->is_delta_vs_empty
-              || (rep_args->base_revision == source->data_rep->revision
-                  && rep_args->base_offset == source->data_rep->offset)))
+          && rep_args->base_revision == source->data_rep->revision
+          && rep_args->base_offset == source->data_rep->offset)
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
@@ -11293,16 +11295,18 @@ hotcopy_body(void *baton, apr_pool_t *pool)
           SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev,
                                            rev + max_files_per_dir,
                                            max_files_per_dir, iterpool));
-          SVN_ERR(hotcopy_remove_revprop_files(dst_fs, rev,
-                                               rev + max_files_per_dir,
-                                               max_files_per_dir, iterpool));
+          if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+            SVN_ERR(hotcopy_remove_revprop_files(dst_fs, rev,
+                                                 rev + max_files_per_dir,
+                                                 max_files_per_dir,
+                                                 iterpool));
         }
 
       /* Now that all revisions have moved into the pack, the original
        * rev dir can be removed. */
       SVN_ERR(remove_folder(path_rev_shard(dst_fs, rev, iterpool),
                             cancel_func, cancel_baton, iterpool));
-      if (rev > 0)
+      if (rev > 0 && dst_ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
         SVN_ERR(remove_folder(path_revprops_shard(dst_fs, rev, iterpool),
                               cancel_func, cancel_baton, iterpool));
     }
