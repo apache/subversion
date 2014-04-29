@@ -181,18 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1584576, r1584592, r1584745
-   Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
-   Justification:
-     Without this patch generic DAV clients can not refresh their own locks,
-     causing them to lose their locks.
-   Notes:
-     Patch needed, because a plain merge triggers a text conflict while
-     removing the XFail marker from the test. r1584745 makes the test code
-     compatible with 1.8.
-   Votes:
-     +1: rhuijben, philip, breser
-
  * r1580626, r1580650, r1581430
    Fix 'svn copy URL WC' after the working copy is relocated
    Justification:
