@@ -1762,7 +1762,8 @@ get_fulltext_partial(void **out,
   fulltext_baton->read = MIN(fulltext_len - start, fulltext_baton->len);
 
   /* Copy the data to the output buffer and be done. */
-  memcpy(fulltext_baton->buffer, data + start, fulltext_baton->read);
+  memcpy(fulltext_baton->buffer, (const char *)data + start,
+         fulltext_baton->read);
 
   return SVN_NO_ERROR;
 }
