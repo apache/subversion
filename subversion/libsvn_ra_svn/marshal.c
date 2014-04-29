@@ -533,7 +533,7 @@ svn_ra_svn__write_string(svn_ra_svn_conn_t *conn,
                          apr_pool_t *pool,
                          const svn_string_t *str)
 {
-  svn_ra_svn__write_ncstring(conn, pool, str->data, str->len);
+  SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, str->data, str->len));
   return SVN_NO_ERROR;
 }
 
@@ -542,7 +542,7 @@ svn_ra_svn__write_cstring(svn_ra_svn_conn_t *conn,
                           apr_pool_t *pool,
                           const char *s)
 {
-  svn_ra_svn__write_ncstring(conn, pool, s, strlen(s));
+  SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, s, strlen(s)));
   return SVN_NO_ERROR;
 }
 
