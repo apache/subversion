@@ -1990,6 +1990,47 @@ def non_root_locks(sbox):
   expected_status.tweak('A/D/G/pi', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(3515)
+@SkipUnless(svntest.main.is_ra_type_dav)
+def dav_lock_refresh(sbox):
+  "refresh timeout of DAV lock"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build(create_wc = False)
+
+  # Acquire lock on 'iota'
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     sbox.repo_url + '/iota')
+
+  # Try to refresh lock using 'If' header
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
+    'If': '(<' + lock_token + '>)',
+    'Timeout': 'Second-7200'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', '', lock_headers)
+
+  # XFAIL Refreshing of DAV lock fails with error '412 Precondition Failed'
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
+
 ########################################################################
 # Run the tests
 
@@ -2045,6 +2086,7 @@ test_list = [ None,
               drop_locks_on_parent_deletion,
               dav_lock_timeout,
               non_root_locks,
+              dav_lock_refresh,
             ]
 
 if __name__ == '__main__':
