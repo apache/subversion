@@ -307,6 +307,20 @@ svn_config_get_config(apr_hash_t **cfg_hash,
   return SVN_NO_ERROR;
 }
 
+void
+svn_config__get_default_config(apr_hash_t **cfg_hash,
+                               apr_pool_t *pool)
+{
+  svn_config_t *empty_cfg;
+  *cfg_hash = apr_hash_make(pool);
+
+  SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
+
+  SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
+}
+
 
 
 /* Iterate through CFG, passing BATON to CALLBACK for every (SECTION, OPTION)
