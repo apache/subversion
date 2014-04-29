@@ -8551,6 +8551,7 @@ static svn_error_t *
 move_replace_ancestor_with_child(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
     svn_test__sandbox_t b;
+
     SVN_ERR(svn_test__sandbox_create(&b, "move_replace_ancestor_with_child", opts,
         pool));
 
