@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.8.7:
+Status of 1.8.9:
 
 Candidate changes:
 ==================
@@ -23,26 +23,6 @@ Candidate changes:
    Votes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
-
- * r1498000
-   Improve error handling for inherited property requests by using the
-   transition based xml parser in libsvn_ra_serf.
-   Justification:
-     This maintenance work which usually doesn't belong in a patch release
-     makes it possible to properly detect if this request should be restarted
-     on non-chunk-enabled proxies.
-   Votes:
-     +1: rhuijben, ivan
-
- * r1496127
-   Fix occasional failure of checkout_tests.py 12.
-   Justification:
-     Spurious FAILs confuse people testing the release.
-   Votes:
-     +1: philip, rhuijben
-     -0: danielsh (loses functionality; patch sent with alternative fix)
-     stsp: where exactly is the alternative patch?
-     danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
 
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
@@ -62,26 +42,6 @@ Candidate changes:
                    a related problem. It looks like this fix doesn't work for
                    the user scenario it was intended for)
 
- * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
-   Fix working copy database inconsistency on certain move scenarios,
-   including those described in issue #4437 "Deleting a moved file can maintain a
-   half move"
-   Justification:
-     The working copy database should be consistent on any normal operation.
-   Votes:
-     +1: rhuijben, philip
-
- * r1518942, r1536914, r1536931
-   Fix commit of a specific mixed revision copy with non copy descendants that
-   shadow not present nodes. This problem manifests itself as a copy of a tree
-   that can't be committed because it is reported out of date.
-   Justification:
-     'svn cp TREE NEW-TREE; svn ci NEW-TREE' should never report out of date
-     on some random descendant.
-   Branch: ^/subversion/branches/1.8.x-r1536931
-   Votes:
-     +1: rhuijben
-
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
    dump files.
@@ -94,46 +54,16 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1538812, r1538925, r1538928, r1538939
-   Properly remove moved_to information when the node in its original location
-   is removed.
-   Justification:
-     The NODES table in the working copy database should always be consistent.
-   Notes:
-     rhuijben: The test for this problem might accidentally depend on other
-               move fixes on trunk.
-   Votes:
-     +1: rhuijben, philip
-
- * r1542610, r1564576
+ * r1542610, r1564576, r1568180
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
-   Votes:
-     +1: breser, rhuijben
-     +1 (without r1564567): stsp
-     -0: brane (horrible grammar; suggest translation to English)
-
- * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
-   Fix a specific case where the api behind status would report a different
-   move status for A depending on whether the user called 'svn status A' or
-   'svn status wc' and then looked at 'wc/A'.
-   Justification:
-     Api users such as AnkhSVN rely on the result of svn status to match and
-     this breaks their assumptions.
-     This change has the nice side effect that it resolves the most common
-     user triggerable assertion in AnkhSVN, which is really caused by a
-     broken move. (See other nomination for a fix). But even then it shouldn't
-     matter how status is called: on the node or an ancestor.
-     (It also improves status performance a tiny bit, by reducing the number
-      of sqlite transactions used)
    Notes:
-     r1564587 fixes a function reference on the branch in some code that
-     is disabled by the macro processor on Windows.
-   Branch:
-     ^/subversion/branches/1.8.x-r1544597
+     r1564576 breaks compilation on Visual Studio 2010, 2012 and 2013 of
+     this project. r1568180 fixes this problem.
    Votes:
-     +1: rhuijben
-     -0 (before branch): philip (Doesn't build, needs a branch due to r1539279)
+     +1: rhuijben, breser
+     +1: (without r1564567, r1568180): stsp
+     -0: brane (horrible grammar; suggest translation to English)
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -144,8 +74,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1555491
    Votes:
-     +1: stefan2, rhuijben
-     -0: philip (Seems to be a different name for the same pool?)
+     +1: stefan2
+     -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
  * r1547454
    In FSFS, omit config file when creating pre-1.5 format repositories.
@@ -168,37 +98,59 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1543187
-   Fix SWIG bindings not building in release mode with out of tree builds.
+ * r1567996, r1568009, r1568062, r1568063
+   Fix a caching inefficiency in multi-threaded servers.
    Justification:
-     Build systems should work.  This makes Branko cranky every release.
-   Notes: Test by using ./autogen.sh --release, then do an out of tree build
-     without this fix swig-py and swig-rb fail immediately.
+     .
+   Notes:
+     Due to going back and forth with different approaches to solve this
+     issue, the best way to review this 
+   Branch:
+     ^/subversion/branches/1.8.x-r1567996
    Votes:
-     +1: breser, brane
+     +1: stefan2
+     -0: rhuijben (incomplete (misses cache->total_reads accesses) and
+                   overkill. The whole thing can be implemented with simple
+                   atomic operations while mutexes may be a limited resource)
 
- * r1566960, r1566977, r1567034
-   Try to block people from using SQLITE_ENABLE_STAT3/4 with versions of
-   SQLite that are buggy.
+ * r1589184, r1589188
+   Properly handle properties not present and excluded on cross wc copy
    Justification:
-     SQLite returns incorrect results for queries.  Try to help our users
-     and packagers from using buggy setups.
-   Url:
-     http://www.sqlite.org/src/info/4c86b126f2
+     Cross working copy copies should just work.
    Votes:
-     +1: (without r1567034) breser, brane
      +1: rhuijben
 
- * r1567109, r1567134
-   Fix an sqlite query definition to always return its rows in the order the
-   C code expects them to be. This resolves some potential problems in the
-   move logic on update/switch.
+ * r1589360
+   Make property output in 'svn diff' stable
    Justification:
-     Sqlite tries to execute queries in an 'optimal' way, but how this is
-     depends on factors like SQLITE_ENABLE_STAT3, code improvements in Sqlite,
-     etc. We shouldn't rely on a specific execution plan for correct behavior.
+     Local change that makes it easier to compare patch files.
    Votes:
      +1: rhuijben
+     -0: stefan2 (compiler misses "private/svn_sorts_private.h")
+     
+ * r1589460, r1589486
+   Fix copying parents of locally deleted nodes between working copies.
+   Justification:
+     Resolves a case of creating invalid working copy state.
+   Votes:
+     +1: rhuijben
+
+ * r1590751
+   Use empty, rather than NULL, config if default is unreadable.
+   Justification:
+     svn SEGV reported by user.
+   Votes:
+     +1: philip
+     -0: julianfoad (prefer to fix all the programs at the same time;
+                     other queries -- see email thread)
+
+ * r1591123
+   Display the proper URL for 'svn rm URL' in the commit log editor.
+   Justification:
+     It's confusing since the URL isn't what the user passed.  Regression since
+     1.7.9 when we fixed issue #4332.
+   Votes:
+     +1: breser
 
 Veto-blocked changes:
 =====================
@@ -228,3 +180,57 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488, r1567204, r1567228
+   Fix working copy database inconsistency on certain move scenarios,
+   including those described in issue #4437 "Deleting a moved file can maintain a
+   half move"
+   Justification:
+     The working copy database should be consistent on any normal operation.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4437
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1518942, r1536914, r1536931
+   Fix commit of a specific mixed revision copy with non copy descendants that
+   shadow not present nodes. This problem manifests itself as a copy of a tree
+   that can't be committed because it is reported out of date.
+   Justification:
+     'svn cp TREE NEW-TREE; svn ci NEW-TREE' should never report out of date
+     on some random descendant.
+   Branch: ^/subversion/branches/1.8.x-r1536931
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1538812, r1538925, r1538928, r1538939
+   Properly remove moved_to information when the node in its original location
+   is removed.
+   Justification:
+     The NODES table in the working copy database should always be consistent.
+   Notes:
+     rhuijben: The test for this problem might accidentally depend on other
+               move fixes on trunk.
+   Votes:
+     +1: rhuijben, philip, breser
+
+ * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
+   Fix a specific case where the api behind status would report a different
+   move status for A depending on whether the user called 'svn status A' or
+   'svn status wc' and then looked at 'wc/A'.
+   Justification:
+     Api users such as AnkhSVN rely on the result of svn status to match and
+     this breaks their assumptions.
+     This change has the nice side effect that it resolves the most common
+     user triggerable assertion in AnkhSVN, which is really caused by a
+     broken move. (See other nomination for a fix). But even then it shouldn't
+     matter how status is called: on the node or an ancestor.
+     (It also improves status performance a tiny bit, by reducing the number
+      of sqlite transactions used)
+   Notes:
+     r1564587 fixes a function reference on the branch in some code that
+     is disabled by the macro processor on Windows.
+   Branch:
+     ^/subversion/branches/1.8.x-r1544597
+   Votes:
+     +1: philip, rhuijben, breser
