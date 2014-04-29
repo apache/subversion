@@ -25,29 +25,58 @@
 #include "svn_sorts.h"
 #include "private/svn_subr_private.h"
 
+/* We allocate our data buffer in blocks of this size (in bytes).
+ * For performance reasons, this shall be a power of two.
+ * It should also not exceed 80kB (to prevent APR pool fragmentation) and
+ * not be too small (to keep the number of OS-side memory allocations low -
+ * avoiding hitting system-specific limits).
+ */
+#define BLOCK_SIZE          0x10000
+
+/* Number of bits in each block. 
+ */
+#define BLOCK_SIZE_BITS     (8 * BLOCK_SIZE)
+
+/* Initial array size (covers INITIAL_BLOCK_COUNT * BLOCK_SIZE_BITS bits).
+ * For performance reasons, this shall be a power of two.
+ */
+#define INITIAL_BLOCK_COUNT 16
+
+/* We store the bits in a lazily allocated two-dimensional array.
+ * For every BLOCK_SIZE_BITS range of indexes, there is one entry in the
+ * BLOCKS array.  If index / BLOCK_SIZE_BITS exceeds BLOCK_COUNT-1, the
+ * blocks are implicitly empty.  Only if a bit will be set to 1, will the
+ * BLOCKS array be auto-expanded.
+ *
+ * As long as no bit got set in a particular block, the respective entry in
+ * BLOCKS entry will be NULL, implying that all block contents is 0.
+ */
 struct svn_bit_array__t
 {
-  /* Data buffer of DATA_SIZE bytes.  Never NULL. */
-  unsigned char *data;
+  /* Data buffer of BLOCK_COUNT blocks, BLOCK_SIZE_BITS each.  Never NULL.
+   * Every block may be NULL, though. */
+  unsigned char **blocks;
 
   /* Number of bytes allocated to DATA.  Never shrinks. */
-  apr_size_t data_size;
+  apr_size_t block_count;
 
   /* Reallocate DATA form this POOL when growing. */
   apr_pool_t *pool;
 };
 
 /* Given that MAX shall be an actual bit index in a packed bit array,
- * return the number of bytes to allocate for the data buffer. */
+ * return the number of blocks entries to allocate for the data buffer. */
 static apr_size_t
 select_data_size(apr_size_t max)
 {
-  /* We allocate a power of two of bytes but at least 16 bytes */
-  apr_size_t size = 16;
+  /* We allocate a power of two of bytes but at least 16 blocks. */
+  apr_size_t size = INITIAL_BLOCK_COUNT;
 
-  /* Caution: MAX / 8 == SIZE still means that MAX is out of bounds.
-   * OTOH, 2*(MAX/8) is always within the value range of APR_SIZE_T. */
-  while (size <= max / 8)
+  /* Caution:
+   * MAX / BLOCK_SIZE_BITS == SIZE still means that MAX is out of bounds.
+   * OTOH, 2 * (MAX/BLOCK_SIZE_BITS) is always within the value range of
+   * APR_SIZE_T. */
+  while (size <= max / BLOCK_SIZE_BITS)
     size *= 2;
 
   return size;
@@ -59,9 +88,10 @@ svn_bit_array__create(apr_size_t max,
 {
   svn_bit_array__t *array = apr_pcalloc(pool, sizeof(*array));
 
-  array->data_size = select_data_size(max);
+  array->block_count = select_data_size(max);
   array->pool = pool;
-  array->data = apr_pcalloc(pool, array->data_size);
+  array->blocks = apr_pcalloc(pool,
+                              array->block_count * sizeof(*array->blocks));
 
   return array;
 }
@@ -71,15 +101,17 @@ svn_bit_array__set(svn_bit_array__t *array,
                    apr_size_t idx,
                    svn_boolean_t value)
 {
+  unsigned char *block;
+
   /* If IDX is outside the allocated range, we _may_ have to grow it.
    *
    * Be sure to use division instead of multiplication as we need to cover
    * the full value range of APR_SIZE_T for the bit indexes.
    */
-  if (idx / 8 >= array->data_size)
+  if (idx / BLOCK_SIZE_BITS >= array->block_count)
     {
-      apr_size_t new_size;
-      unsigned char *new_data;
+      apr_size_t new_count;
+      unsigned char **new_blocks;
 
       /* Unallocated indexes are implicitly 0, so no actual allocation
        * required in that case.
@@ -87,34 +119,57 @@ svn_bit_array__set(svn_bit_array__t *array,
       if (!value)
         return;
 
-      /* Grow data buffer to cover IDX.
-       * Clear the new buffer to guarantee our array[idx]==0 default.
+      /* Grow block list to cover IDX.
+       * Clear the new entries to guarantee our array[idx]==0 default.
        */
-      new_size = select_data_size(idx);
-      new_data = apr_pcalloc(array->pool, new_size);
-      memcpy(new_data, array->data, array->data_size);
-      array->data = new_data;
-      array->data_size = new_size;
+      new_count = select_data_size(idx);
+      new_blocks = apr_pcalloc(array->pool, new_count * sizeof(*new_blocks));
+      memcpy(new_blocks, array->blocks, new_count * sizeof(*new_blocks));
+      array->blocks = new_blocks;
+      array->block_count = new_count;
     }
 
-  /* IDX is covered by ARRAY->DATA now. */
+  /* IDX is covered by ARRAY->BLOCKS now. */
+
+  /* Get the block that contains IDX.  Auto-allocate it if missing. */
+  block = array->blocks[idx / BLOCK_SIZE_BITS];
+  if (block == NULL)
+    {
+      /* Unallocated indexes are implicitly 0, so no actual allocation
+       * required in that case.
+       */
+      if (!value)
+        return;
+
+      /* Allocate the previously missing block and clear it for our
+       * array[idx] == 0 default. */
+      block = apr_pcalloc(array->pool, BLOCK_SIZE);
+      array->blocks[idx / BLOCK_SIZE_BITS] = block;
+    }
 
   /* Set / reset one bit.  Be sure to use unsigned shifts. */
   if (value)
-    array->data[idx / 8] |= (unsigned char)(1u << (idx % 8));
+    block[(idx % BLOCK_SIZE_BITS) / 8] |= (unsigned char)(1u << (idx % 8));
   else
-    array->data[idx / 8] &= (unsigned char)(255u - (1u << (idx % 8)));
+    block[(idx % BLOCK_SIZE_BITS) / 8] &= (unsigned char)(255u - (1u << (idx % 8)));
 }
 
 svn_boolean_t
 svn_bit_array__get(svn_bit_array__t *array,
                    apr_size_t idx)
 {
-  /* Indexes outside the allocated range are implictly 0. */
-  if (idx / 8 >= array->data_size)
+  unsigned char *block;
+
+  /* Indexes outside the allocated range are implicitly 0. */
+  if (idx / BLOCK_SIZE_BITS >= array->block_count)
+    return 0;
+
+  /* Same if the respective block has not been allocated. */
+  block = array->blocks[idx / BLOCK_SIZE_BITS];
+  if (block == NULL)
     return 0;
 
   /* Extract one bit (get the byte, shift bit to LSB, extract it). */
-  return (array->data[idx / 8] >> (idx % 8)) & 1;
+  return (block[(idx % BLOCK_SIZE_BITS) / 8] >> (idx % 8)) & 1;
 }
 
