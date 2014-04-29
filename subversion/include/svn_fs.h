@@ -2610,9 +2610,6 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
 
 /** Lock the paths in @a targets in @a fs.
  *
- * @warning You may prefer to use svn_repos_fs_lock_many() instead,
- * which see.
- *
  * @a fs must have a username associated with it (see
  * #svn_fs_access_t), else return #SVN_ERR_FS_NO_USER.  Set the
  * 'owner' field in each new lock to the fs username.
@@ -2655,6 +2652,9 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
  * @note At this time, only files can be locked.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_fs_lock_many() instead.
  *
  * @since New in 1.9.
  */
@@ -2724,6 +2724,9 @@ svn_fs_generate_lock_token(const char **token,
  *
  * The path passed to lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_fs_unlock_many() instead.
  *
  * @since New in 1.9.
  */
