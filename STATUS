@@ -173,17 +173,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1579588
-   ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
-   Justification:
-     Local fix to resolve user reported issue.
-   Notes:
-     Branch needed as the lock code was split to multiple files on trunk.
-   Branch:
-     ^/subversion/branches/1.8.x-r1579588
-   Votes:
-     +1: philip, rhuijben, breser
-
  * r1584576, r1584592, r1584745
    Resolve issue #3515 "mod_dav_svn cannot refresh any locks"
    Justification:
