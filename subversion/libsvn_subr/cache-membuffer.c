@@ -1843,9 +1843,9 @@ select_level(svn_membuffer_t *cache,
     }
   else if (   cache->l2.size >= size
            && MAX_ITEM_SIZE >= size
-           && priority >= SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
+           && priority > SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
     {
-      /* Large and somewhat important items go into L2. */
+      /* Large but important items go into L2. */
       entry_t dummy_entry = { { 0 } };
       dummy_entry.priority = priority;
       dummy_entry.size = (apr_uint32_t) size;
@@ -2809,7 +2809,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return cache->priority >= SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
+  return cache->priority > SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
        ? cache->membuffer->l2.size >= size && MAX_ITEM_SIZE >= size
        : size <= cache->membuffer->max_entry_size;
 }
