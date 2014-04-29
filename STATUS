@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.8.5:
+Status of 1.8.9:
 
 Candidate changes:
 ==================
@@ -24,26 +24,6 @@ Candidate changes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
- * r1498000
-   Improve error handling for inherited property requests by using the
-   transition based xml parser in libsvn_ra_serf.
-   Justification:
-     This maintenance work which usually doesn't belong in a patch release
-     makes it possible to properly detect if this request should be restarted
-     on non-chunk-enabled proxies.
-   Votes:
-     +1: rhuijben, ivan
-
- * r1496127
-   Fix occasional failure of checkout_tests.py 12.
-   Justification:
-     Spurious FAILs confuse people testing the release.
-   Votes:
-     +1: philip, rhuijben
-     -0: danielsh (loses functionality; patch sent with alternative fix)
-     stsp: where exactly is the alternative patch?
-     danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
-
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
    Justification:
@@ -55,8 +35,125 @@ Candidate changes:
      Branch should probably be removed from the nomination (it was only needed
      before r1503552).
    Votes:
-     +1: stsp, rhuijben
-     -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
+     +1: stsp
+     -0: ivan, brane (not regression from 1.7.x,
+                      destructive change in libsvn_wc core)
+     -0: rhuijben (temporarily remove my +1 until I complete investigating
+                   a related problem. It looks like this fix doesn't work for
+                   the user scenario it was intended for)
+
+ * r1536854
+   Make 'svnadmin verify' detect inconsistencies that will prevent loading
+   dump files.
+   Justification:
+     Some users rely on dump files as a means of repository backup.  Without
+     this patch, there is no way except of 'svnadmin load' to know that these
+     dump files will load at all.  With this patch, a successful verify run
+     should guarantee loadable dump files.
+   Branch: ^/subversion/branches/1.8.x-r1536854
+   Votes:
+     +1: stefan2
+
+ * r1542610, r1564576, r1568180
+   Add missing description to build.conf, to properly generate a version
+   resource (including icon) for this executable on Windows.
+   Notes:
+     r1564576 breaks compilation on Visual Studio 2010, 2012 and 2013 of
+     this project. r1568180 fixes this problem.
+   Votes:
+     +1: rhuijben, breser
+     +1: (without r1564567, r1568180): stsp
+     -0: brane (horrible grammar; suggest translation to English)
+
+ * r1555491
+   Fix svn_fs_close_root for FSFS transaction roots.
+   Justification:
+     Without this patch, cache-related pool cleanups may be run after the
+     svn_fs_t object has been destroyed.  I.e. even with explicit calls to
+     svn_fs_close_root, the user may see a segfault.
+   Branch:
+     ^/subversion/branches/1.8.x-r1555491
+   Votes:
+     +1: stefan2
+     -0: philip, rhuijben (Seems to be a different name for the same pool?)
+
+ * r1547454
+   In FSFS, omit config file when creating pre-1.5 format repositories.
+   Justification:
+     Old SVN versions won't preserve this file in hotcopy.  Later versions
+     might also behave inconsistently in the presence of this file if their
+     feature availability check is incomplete.
+   Votes:
+     +1: stefan2
+     -0: rhuijben (Might require r1561703 to avoid breaking tests)
+
+ * r1561426
+   In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
+   Branch: ^/subversion/branches/1.8.x-r1561426
+   Justification:
+     This is not known to be a bug, atm, as we omit these when we write the
+     final revisions.  But we rely on those uniquifiers to be NULL in old
+     repo formats when we compare reps.  Them being non-NULL in a txn might
+     cause problems with future changes.
+   Votes:
+     +1: stefan2
+
+ * r1567996, r1568009, r1568062, r1568063
+   Fix a caching inefficiency in multi-threaded servers.
+   Justification:
+     .
+   Notes:
+     Due to going back and forth with different approaches to solve this
+     issue, the best way to review this 
+   Branch:
+     ^/subversion/branches/1.8.x-r1567996
+   Votes:
+     +1: stefan2
+     -0: rhuijben (incomplete (misses cache->total_reads accesses) and
+                   overkill. The whole thing can be implemented with simple
+                   atomic operations while mutexes may be a limited resource)
+
+ * r1589184, r1589188
+   Properly handle properties not present and excluded on cross wc copy
+   Justification:
+     Cross working copy copies should just work.
+   Votes:
+     +1: rhuijben
+
+ * r1589360
+   Make property output in 'svn diff' stable
+   Justification:
+     Local change that makes it easier to compare patch files.
+   Votes:
+     +1: rhuijben
+     -0: stefan2 (compiler misses "private/svn_sorts_private.h")
+     
+ * r1589460, r1589486
+   Fix copying parents of locally deleted nodes between working copies.
+   Justification:
+     Resolves a case of creating invalid working copy state.
+   Votes:
+     +1: rhuijben
+
+ * r1590751
+   Use empty, rather than NULL, config if default is unreadable.
+   Justification:
+     svn SEGV reported by user.
+   Votes:
+     +1: philip
+     -0: julianfoad (prefer to fix all the programs at the same time;
+                     other queries -- see email thread)
+
+ * r1591123
+   Display the proper URL for 'svn rm URL' in the commit log editor.
+   Justification:
+     It's confusing since the URL isn't what the user passed.  Regression since
+     1.7.9 when we fixed issue #4332.
+   Votes:
+     +1: breser
+
+Veto-blocked changes:
+=====================
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
@@ -66,95 +163,23 @@ Candidate changes:
      external merge tool. See issue #4426.
    Votes:
      +1: stsp
+     -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
 
- * r1534149, r1535676
-   In the windows CryptoAPI ssl certificate verification, properly handle
-   certificates that are only trusted via intermediate authorities.
+ * r1560723, r1561419, r1561427, r1561428
+   Fix the handling of pre-1.4 FSFS repositories.
+   Branch: ^/subversion/branches/1.8.x-r1560723-and-friends
    Justification:
-      While not strictly a bug, intermediate authorities are getting more
-      common since recent Certificate Authority incidents.
-   Notes:
-      rhuijben: This introduces a new credential type as private API.
-      Not sure about our strict ABI guarantees here, but this affects
-      usability of users migrating to cloud platforms, etc.
-   Votes:
-     +1: rhuijben
-
- * r1533530
-   Fix latency issue when reusing svnserve connections.
-   Justification:
-      This simple patch affects all operations that run multiple requests
-      over the same connection.  It should improve things like e.g. merge.
+     Without this, old SVN versions won't be able to e.g. hotcopy those
+     repos once 1.8.x made a commit in them.  Also, fix our hotcopy code
+     and make it cope with repositories broken by previous 1.8.x releases.
    Votes:
      +1: stefan2
+     -1: ivan (Significant performance degradation for svnadmin hotcopy,
+               the root cause is not fixed. Discussion:
+               http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
 
- * r1499470
-   Flush stdout before exiting svn with an error.
-   Justification:
-      Without this patch merge_tests.py 135 may fail to output its required
-      output.
-   Votes:
-     +1: rhuijben
-
- * r1535115
-   Make JavaHL tests run without installing on OS X.
-   Justification:
-     Shouldn't need to install code to test it.
-   Votes:
-     +1: breser
-
- * r1535139
-   Make openssl lib and include directory available when using --with-openssl
-   on Windows.
-   Justification:
-     Serf 1.2 simply included the openssl static library in its own static
-     library, which made it very easy for Subversion to consume, but added the
-     risk of linking to many different openssl versions (both static and
-     shared builds) at once. This bug in serf was fixed for 1.3 and we
-     updated Subversion to use 1.3 for Subversion 1.8.4, but without this
-     patch we added the assumption that ssleay32.lib and libeay32.lib are
-     within some existing referenced library directory.
-     This patch fixes that assumption by adding the right libdir to our build,
-     by borrowing some code from trunk.
-   Branch: ^/subversion/branches/1.8.x-openssl-dirs
-   Votes:
-     +1: rhuijben, ivan
-
- * r1535161
-   Make swig-rb tests run without installing on OS X.
-   Justification:
-     Shouldn't need to install code to test it.  The existing Makefile target
-     is just downright wrong.
-   Votes:
-     +1: breser
-
- * r1535532
-   Make the certificate verification handling in ra_serf properly ask multiple
-   providers for acceptance of certificate failures.
-   Justification:
-     Without this patch it is not possible to have one hook accept invalid
-     ca roots, while another provider accepts an invalid date on a certificate.
-     Probably only interesting for bindings and code that explicitly tests
-     our certificate handling behavior.
-   Votes:
-     +1: rhuijben
-
- * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
-   Fix working copy database inconsistency on certain move scenarios,
-   including those described in issue #4437 "Deleting a moved file can maintain a
-   half move"
-   Justification:
-     The working copy database should be consistent on any normal operation.
-   Votes:
-     +1: rhuijben
-
- * r1536537
-   Fix build of ctypes-python on newer OS X versions.
-   Justificaton:
-     Build system should work.  We shouldn't be trying to use the CPP from the
-     APR build anyway.
-   Votes:
-     +1: breser
+Approved changes:
+=================
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
@@ -165,10 +190,36 @@ Candidate changes:
      on some random descendant.
    Branch: ^/subversion/branches/1.8.x-r1536931
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip, breser
 
-Veto-blocked changes:
-=====================
+ * r1538812, r1538925, r1538928, r1538939
+   Properly remove moved_to information when the node in its original location
+   is removed.
+   Justification:
+     The NODES table in the working copy database should always be consistent.
+   Notes:
+     rhuijben: The test for this problem might accidentally depend on other
+               move fixes on trunk.
+   Votes:
+     +1: rhuijben, philip, breser
 
-Approved changes:
-=================
+ * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
+   Fix a specific case where the api behind status would report a different
+   move status for A depending on whether the user called 'svn status A' or
+   'svn status wc' and then looked at 'wc/A'.
+   Justification:
+     Api users such as AnkhSVN rely on the result of svn status to match and
+     this breaks their assumptions.
+     This change has the nice side effect that it resolves the most common
+     user triggerable assertion in AnkhSVN, which is really caused by a
+     broken move. (See other nomination for a fix). But even then it shouldn't
+     matter how status is called: on the node or an ancestor.
+     (It also improves status performance a tiny bit, by reducing the number
+      of sqlite transactions used)
+   Notes:
+     r1564587 fixes a function reference on the branch in some code that
+     is disabled by the macro processor on Windows.
+   Branch:
+     ^/subversion/branches/1.8.x-r1544597
+   Votes:
+     +1: philip, rhuijben, breser

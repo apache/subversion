@@ -98,7 +98,7 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\. 2\."]
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.[12][0-9] 1\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -755,7 +755,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
     CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
     AC_CHECK_HEADERS(magic.h,[
       save_ldflags="$LDFLAGS"
-      LDFLAGS="-L$libmagic_prefix/lib"
+      LDFLAGS="-L$libmagic_prefix/lib $LDFLAGS"
       AC_CHECK_LIB(magic, magic_open, [libmagic_found="yes"])
       LDFLAGS="$save_ldflags"
     ])
@@ -1442,6 +1442,11 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
+
+# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
+SWIG_CPPFLAGS="$CPPFLAGS"
+SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
+AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

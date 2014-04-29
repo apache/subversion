@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import stat, os, re, shutil, logging
+import stat, os, re, shutil, logging, sys
 
 logger = logging.getLogger()
 
@@ -5787,6 +5787,33 @@ def copy_over_excluded(sbox):
                                        sbox.ospath('A/C'),
                                        sbox.ospath('A/D'))
 
+def copy_relocate(sbox):
+  "copy from a relocated location"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  tmp_dir = sbox.add_wc_path('relocated')
+
+  shutil.copytree(sbox.repo_dir, tmp_dir)
+
+  url = 'file://'
+
+  if sys.platform == 'win32':
+    url += '/'
+
+  url += os.path.abspath(tmp_dir).replace(os.path.sep, '/')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', url, wc_dir)
+
+  copiedpath = sbox.ospath('AA')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', url + '/A', copiedpath)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'info', copiedpath)
+
 ########################################################################
 # Run the tests
 
@@ -5904,6 +5931,7 @@ test_list = [ None,
               copy_to_unversioned_parent,
               copy_text_conflict,
               copy_over_excluded,
+              copy_relocate,
              ]
 
 if __name__ == '__main__':

@@ -694,8 +694,8 @@ upd_change_xxx_prop(void *baton,
 
           /* That said, beginning in Subversion 1.8, clients might
              request even in skelta mode that we transmit properties
-             on newly added files explicitly. */
-          if ((! b->copyfrom) && value && b->uc->include_props)
+             on added files and directories explicitly. */
+          if (value && b->uc->include_props)
             {
               SVN_ERR(send_propchange(b, name, value, pool));
             }
