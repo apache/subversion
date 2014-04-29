@@ -181,18 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1575525, r1575915
-   Resolve issue #4427: File externals can't be exported.
-   Justification:
-     File externals 'are just files', so why should they be discriminated
-     by export?
-   Notes:
-     r1575525 resolves the most important issues, but in some cases still
-     doesn't allow exporting file externals. r1575915 simplifies the fix and
-     resolves a few remaining issues.
-   Votes:
-     +1: rhuijben, breser, philip
-
  * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488, r1567204, r1567228
    Fix working copy database inconsistency on certain move scenarios,
    including those described in issue #4437 "Deleting a moved file can maintain a
