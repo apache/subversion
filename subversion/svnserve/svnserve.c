@@ -591,6 +591,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
                         get_client_info(connection->conn, connection->params,
                                         pool));
       svn_error_clear(err);
+      done = TRUE;
     }
   svn_root_pools__release_pool(pool, connection_pools);
 
