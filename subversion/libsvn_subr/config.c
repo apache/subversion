@@ -307,7 +307,7 @@ svn_config_get_config(apr_hash_t **cfg_hash,
   return SVN_NO_ERROR;
 }
 
-void
+svn_error_t *
 svn_config__get_default_config(apr_hash_t **cfg_hash,
                                apr_pool_t *pool)
 {
@@ -319,6 +319,8 @@ svn_config__get_default_config(apr_hash_t **cfg_hash,
 
   SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
   svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
+
+  return SVN_NO_ERROR;
 }
 
 

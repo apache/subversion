@@ -642,7 +642,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           svn_handle_warning2(stderr, err, "svnmucc: ");
           svn_error_clear(err);
 
-          svn_config__get_default_config(&cfg_hash, pool);
+          SVN_ERR(svn_config__get_default_config(&cfg_hash, pool));
         }
       else
         return err;

@@ -614,7 +614,7 @@ svn_config__shallow_replace_section(svn_config_t *target,
  * This returns a hash equivalent to svn_config_get_config when the
  * config files are empty.
  */
-void
+svn_error_t *
 svn_config__get_default_config(apr_hash_t **cfg_hash,
                                apr_pool_t *pool);
 
