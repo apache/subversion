@@ -44,8 +44,8 @@ test_zero_defaults(apr_pool_t *pool)
   svn_bit_array__t *array = svn_bit_array__create(0, pool);
 
   /* Test (default) allocation boundaries */
-  SVN_TEST_ASSERT(svn_bit_array__get(array, 127) == 0);
-  SVN_TEST_ASSERT(svn_bit_array__get(array, 128) == 0);
+  SVN_TEST_ASSERT(svn_bit_array__get(array, 0x7ffff) == 0);
+  SVN_TEST_ASSERT(svn_bit_array__get(array, 0x80000) == 0);
 
   /* Test address boundaries */
   SVN_TEST_ASSERT(svn_bit_array__get(array, 0) == 0);
@@ -58,7 +58,7 @@ static svn_error_t *
 test_get_set(apr_pool_t *pool)
 {
   svn_bit_array__t *array = svn_bit_array__create(0, pool);
-  apr_size_t i = 0, min = 0, max = 1025;
+  apr_size_t i, min = 0x7ff00, max = 0x7ff00 + 1025;
 
   /* All values default to 0. */
   for (i = min; i < max; ++i)
