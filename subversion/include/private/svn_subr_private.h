@@ -608,6 +608,16 @@ svn_config__shallow_replace_section(svn_config_t *target,
                                     svn_config_t *source,
                                     const char *section);
 
+/* Allocate *CFG_HASH and populate it with default, empty,
+ * svn_config_t for the configuration categories (@c
+ * SVN_CONFIG_CATEGORY_SERVERS, @c SVN_CONFIG_CATEGORY_CONFIG, etc.).
+ * This returns a hash equivalent to svn_config_get_config when the
+ * config files are empty.
+ */
+void
+svn_config__get_default_config(apr_hash_t **cfg_hash,
+                               apr_pool_t *pool);
+
 /** @} */
 
 

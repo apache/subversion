@@ -2594,11 +2594,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
-          cfg_hash = apr_hash_make(pool);
-          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
-          svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
-          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
-          svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
+
+          svn_config__get_default_config(&cfg_hash, pool);
         }
       else
         return err;
@@ -2659,8 +2656,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
     }
 
-  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
-
   /* Update the options in the config */
   if (opt_state.config_options)
     {
@@ -2670,6 +2665,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                             "svn: ", "--config-option"));
     }
 
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
 #if !defined(SVN_CL_NO_EXCLUSIVE_LOCK)
   {
     const char *exclusive_clients_option;

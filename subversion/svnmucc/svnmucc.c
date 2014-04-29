@@ -56,6 +56,7 @@
 #include "svn_version.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_subr_private.h"
 
 /* Version compatibility check */
 static svn_error_t *
@@ -640,13 +641,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_handle_warning2(stderr, err, "svnmucc: ");
           svn_error_clear(err);
-          cfg_hash = NULL;
+
+          svn_config__get_default_config(&cfg_hash, pool);
         }
       else
         return err;
     }
 
-  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
   if (config_options)
     {
       svn_error_clear(
@@ -656,6 +657,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
 
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
   SVN_ERR(svn_cmdline_create_auth_baton(&ctx->auth_baton,
                                         non_interactive,
                                         username,
