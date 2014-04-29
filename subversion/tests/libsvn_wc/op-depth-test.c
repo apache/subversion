@@ -8493,6 +8493,61 @@ move_revert_intermediate(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 static svn_error_t *
+copy_mixed_rev_mods(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_mixed_rev_mods", opts,
+                                   pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_update(&b, "A/B", 2));
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal",       1, ""},
+      {0, "A",     "normal",       1, "A"},
+      {0, "A/B",   "normal",       2, "A/B"},
+      {0, "A/B/C", "normal",       2, "A/B/C"},
+      {2, "A/B",   "normal",       NO_COPY_FROM},
+      {2, "A/B/C", "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_copy(&b, "A", "X"));
+  {
+    nodes_row_t nodes[] = {
+      {1, "X",   "normal",      1, "A"},
+      {1, "X/B", "not-present", 2, "A/B"},
+      {2, "X/B", "normal",      NO_COPY_FROM},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "X", nodes));
+  }
+
+  SVN_ERR(sbox_wc_commit(&b, "X"));
+  {
+    nodes_row_t nodes[] = {
+      {0, "X",   "normal", 3, "X"},
+      {0, "X/B", "normal", 3, "X/B"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "X", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 move_replace_ancestor_with_child(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
     svn_test__sandbox_t b;
@@ -8885,5 +8940,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move twice and then delete"),
     SVN_TEST_OPTS_PASS(repo_wc_copy,
                        "repo_wc_copy"),
+    SVN_TEST_OPTS_PASS(copy_mixed_rev_mods,
+                       "copy mixed-rev with mods"),
     SVN_TEST_NULL
   };
