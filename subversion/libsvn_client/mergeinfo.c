@@ -922,13 +922,12 @@ svn_client__elide_mergeinfo(const char *target_abspath,
     {
       svn_mergeinfo_t target_mergeinfo;
       svn_mergeinfo_t mergeinfo = NULL;
-      svn_boolean_t inherited;
       const char *walk_path;
       svn_error_t *err;
 
       /* Get the TARGET_WCPATH's explicit mergeinfo. */
-      err = svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
-                                         svn_mergeinfo_inherited,
+      err = svn_client__get_wc_mergeinfo(&target_mergeinfo, NULL,
+                                         svn_mergeinfo_explicit,
                                          target_abspath,
                                          limit_abspath,
                                          &walk_path, FALSE,
@@ -951,7 +950,7 @@ svn_client__elide_mergeinfo(const char *target_abspath,
 
      /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
          elide, we're done. */
-      if (inherited || target_mergeinfo == NULL)
+      if (target_mergeinfo == NULL)
         return SVN_NO_ERROR;
 
       /* Get TARGET_WCPATH's inherited mergeinfo from the WC. */
