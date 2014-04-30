@@ -467,7 +467,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.9
     * reduce size of memory buffer when reading config files (r1581296)
     * remove dead transaction if commit was blocked by hook (r1583977)
     * svnrdump load: fix crash when svn:* normalization (issue #4490)
-    * fix memcached support (r1570642, r1585686, r1586352)
+    * fix memcached support (issue #4470)
     * svndumpfilter: fix order of node record headers (r1578670 et al)
     * mod_dav_svn: blacklist building with broken versions of httpd; 2.2.25,
       2.4.5 and 2.4.6 (r1545835)
