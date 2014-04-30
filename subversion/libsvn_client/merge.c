@@ -8611,7 +8611,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
           /* Allow mergeinfo on switched subtrees to elide to the
              repository. Otherwise limit elision to the merge target
-             for now.  do_directory_merge() will eventually try to
+             for now.  do_merge() will eventually try to
              elide that when the merge is complete. */
           SVN_ERR(svn_client__elide_mergeinfo(
             child->abspath,
