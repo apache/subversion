@@ -922,15 +922,13 @@ svn_client__elide_mergeinfo(const char *target_abspath,
     {
       svn_mergeinfo_t target_mergeinfo;
       svn_mergeinfo_t mergeinfo = NULL;
-      const char *walk_path;
       svn_error_t *err;
 
       /* Get the TARGET_WCPATH's explicit mergeinfo. */
       err = svn_client__get_wc_mergeinfo(&target_mergeinfo, NULL,
                                          svn_mergeinfo_explicit,
                                          target_abspath,
-                                         limit_abspath,
-                                         &walk_path, FALSE,
+                                         NULL, NULL, FALSE,
                                          ctx, pool, pool);
       if (err)
         {
@@ -958,7 +956,7 @@ svn_client__elide_mergeinfo(const char *target_abspath,
                                          svn_mergeinfo_nearest_ancestor,
                                          target_abspath,
                                          limit_abspath,
-                                         &walk_path, FALSE, ctx, pool, pool);
+                                         NULL, FALSE, ctx, pool, pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
