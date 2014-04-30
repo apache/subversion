@@ -33,7 +33,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * cleanup: add '--remove-unversioned' and '--remove-ignore' (issue #3549)
     * cleanup: add '--include-externals' option (issue #2325)
     * cleanup: add '--quiet' option (r1498661)
-    * ra_serf: use better transition based XML processing (r1498000 et al)
+    * ra_serf: use better transition based XML processing (r1498858 et al)
     * svnadmin load: speedup by setting revprops in one call (r1504079)
     * svnadmin load: set svn:date revprop in the initial commit (r1504951)
     * reimplement UTF-8 fuzzy conversion using utf8proc (r1511676)
@@ -77,7 +77,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: speed up critical open_path() call (r1483301 et al)
     * fsfs: speed up node verification (r1520421 et al)
     * fsfs: speed up serialization into cache buffer format (r1505056)
-    * fsfs: checkpoint after each rev during hotcopy (r1560723)
     * fsfs: avoid caching intermediate fulltexts (r1565100)
     * fsfs: reduce lock contention on txn-list-lock (r1569549)
     * svnadmin: don't display warnings as errors (r1556297)
@@ -153,13 +152,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mkdir: use absolute paths to avoid Windows path length limits (r1516816)
     * avoid encoding support code when C runtime doesn't support it (r1530582)
     * ra_svn: add check against dirents with path separators (r1533812)
-    * fix wc database inconsistency on certain move scenarios (issue #4437)
-    * fix commit of of mixed revision copy with non copy descendants that
-      shadow not present nodes (r1518942, 1536914, 1536931)
     * properly delete temporary files when atomic write fails (r1537466)
     * fix corner cases in move-update tree conflicts (r1538639 et al)
     * fix crash report indentation for x64 reports (r1543589)
-    * status: fix output of multiple moves from same location (r1544690)
     * mergeinfo: allow to work on a moved target (issue #4301)
     * windows: avoid delay when no homedir is available (r1546814)
     * status: report externals in a deterministic way (r1550200)
@@ -183,17 +178,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * ra_serf: follow RFC 2818, ignore common name when subjectAltNames are
       present (r1565531)
     * wc: reduce dependence on unspecified SQLite behavior (r1567080 et al)
-    * delete/move: explicitly specify node to delete rather than querying
-      wc db multiple times to determine on the fly (r1567204 et al)
     * diff: fix diff of directory failing without permissions to read ancester
       directory on server (r1569265, 1569290)
     * diff: improve resolving peg revisions (r1570205 et al)
     * diff: fix bug in calculating header paths (r1570584)
-    * wc: prevent duplicated rows in sqlite_stat1 table (r1571214)
-    * commit: fix assertion from commit of deep descendant of deleted node
-      (r1571747, r1571787, r1571795)
-    * upgrade: fix error upgrading wc with externals when exclusive locking is
-      enabled (1572200)
     * ra_serf: add SSL certificate issuers common name to output (r1573728)
 
   - Server-side bugfixes:
@@ -208,8 +196,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mod_dav_svn: use 404 when the repository doesn't exist (r1544259)
     * mod_dav_svn: use 'dav_svn:' prefix for filename instead of 'svn:'
      (r1544711)
-    * mod_dav_svn: blacklist building with broken versions of httpd; 2.2.25,
-      2.4.5 and 2.4.6 (r1545835)
     * mod_dav_svn: XML escape lock tokens (r1547427)
     * hotcopy: don't create config files when copying pre-1.5 repos (r1547454)
     * hotcopy: preserve the rep-cache.db permissions when hotcopying (r1547877)
@@ -225,7 +211,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix hotcopy for pre-1.4 repositories (r1561427)
     * fix 64-bit underflows in update hit counters (r1567996 et al)
     * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
-    * svnserve: fix memcached caching causes segfault (issue #4470)
     * bdb: fix potential integer overflow and underflow (r1570701)
     * bdb: prevent silent propogation of some corruption (r1570778)
 
@@ -310,8 +295,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * require Apache httpd 2.2.x (r1572339)
     * support pkg-config for serf when using a prefix (r1572762)
     * don't depend on stdbool.h and inttypes.h for utf8proc (r1573069 et al)
-    * correctly disable some compiler flags at configure time if they aren't
-      available with the selected compiler (r1573106, r1573209)
     * avoid non-portable find extensions so the build works on Solaris (r1573780)
     * Allow PARALLEL value to specify the number of threads to run tests with,
       PARALLEL=1 means to use the default (r1573320)
