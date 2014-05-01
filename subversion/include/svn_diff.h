@@ -402,6 +402,9 @@ typedef enum svn_diff_conflict_display_style_t
   /** Like svn_diff_conflict_display_modified_original_latest, but
       *only* showing conflicts. */
   svn_diff_conflict_display_only_conflicts
+
+  /* IMPORTANT: If you extend this enum note that it is mapped in
+     tools/diff/diff3.c. */
 } svn_diff_conflict_display_style_t;
 
 
