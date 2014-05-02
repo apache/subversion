@@ -34,7 +34,12 @@
 
 static svn_error_t *
 do_diff3(svn_stream_t *ostream,
-         const char *original, const char *modified, const char *latest,
+         const char *original,
+         const char *modified,
+         const char *latest,
+         const char *conflict_original,
+         const char *conflict_modified,
+         const char *conflict_latest,
          svn_diff_conflict_display_style_t conflict_style,
          svn_boolean_t *has_changes,
          apr_pool_t *pool)
@@ -48,7 +53,10 @@ do_diff3(svn_stream_t *ostream,
 
   SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
                                       original, modified, latest,
-                                      NULL, NULL, NULL, NULL,
+                                      conflict_original,
+                                      conflict_modified,
+                                      conflict_latest,
+                                      "=======",
                                       conflict_style,
                                       pool));
 
@@ -67,6 +75,9 @@ int main(int argc, const char *argv[])
   };
   static const apr_getopt_option_t options[] = {
     {"conflict-style", conflict_style_opt, 1, ""},
+    {"label", 'L', 1, ""},
+    {"show-overlap", 'E', 0, ""},
+    {"merge", 'm', 0, ""},
     {NULL, 0, 0, NULL}
   };
   svn_diff_conflict_display_style_t conflict_style
@@ -86,6 +97,9 @@ int main(int argc, const char *argv[])
       svn_diff_conflict_display_only_conflicts },
     {NULL, 0}
   };
+  const char *conflict_original = NULL;
+  const char *conflict_modified = NULL;
+  const char *conflict_latest = NULL;
 
   apr_initialize();
 
@@ -115,6 +129,23 @@ int main(int argc, const char *argv[])
             conflict_style = val;
             break;
           }
+        case 'L':
+          if (!conflict_original)
+            conflict_original = apr_pstrcat(pool, "<<<<<<< ", arg, SVN_VA_NULL);
+          else if (!conflict_modified)
+            conflict_modified = apr_pstrcat(pool, "||||||| ", arg, SVN_VA_NULL);
+          else if (!conflict_latest)
+            conflict_latest = apr_pstrcat(pool, ">>>>>>> ", arg, SVN_VA_NULL);
+          else
+            svn_err = svn_error_wrap_apr(status, "getopt failure");
+          break;
+        case 'E':
+        case 'm':
+          /* These are allowed and ignored so that all the options
+             passed when invoking --diff3-cmd are accepted as that
+             makes it easier to use this as an external diff3
+             program. */
+          break;
         }
     }
 
@@ -131,6 +162,7 @@ int main(int argc, const char *argv[])
       svn_boolean_t has_changes;
 
       svn_err = do_diff3(ostream, argv[argc-2], argv[argc-3], argv[argc-1],
+                         conflict_original, conflict_modified, conflict_latest,
                          conflict_style, &has_changes, pool);
       if (svn_err == NULL)
         {
@@ -148,13 +180,22 @@ int main(int argc, const char *argv[])
         "Usage: %s [options] <mine> <older> <yours>\n"
         "Options:\n"
         "  --conflict-style STYLE\n"
-        "  where STYLE can be:\n"
-        "    %s\n"
-        "    %s\n"
-        "    %s\n"
-        "    %s\n"
-        "    %s\n"
-        "    %s\n",
+        "    where STYLE can be:\n"
+        "      %s\n"
+        "      %s\n"
+        "      %s\n"
+        "      %s\n"
+        "      %s\n"
+        "      %s\n"
+        "\n"
+        "  --label [-L] LABEL\n"
+        "    can be repeated up to three times\n"
+        "\n"
+        "  --merge [-m]\n"
+        "    ignored (present for compatibility)\n"
+        "\n"
+        "  --show-overlap [-E]\n"
+        "    ignored (present for compatibility)\n",
         argv[0],
         svn_token__to_word(style_map,
                            svn_diff_conflict_display_modified_latest),
