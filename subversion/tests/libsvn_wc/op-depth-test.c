@@ -79,7 +79,8 @@ open_wc_db(svn_sqlite__db_t **sdb,
 {
   SVN_ERR(svn_wc__db_util_open_db(sdb, wc_root_abspath, "wc.db",
                                   svn_sqlite__mode_readwrite,
-                                  FALSE /* exclusive */, my_statements,
+                                  FALSE /* exclusive */, 0 /* timeout */,
+                                  my_statements,
                                   result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }

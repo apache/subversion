@@ -1525,11 +1525,13 @@ create_db(svn_sqlite__db_t **sdb,
           svn_revnum_t root_node_revision,
           svn_depth_t root_node_depth,
           svn_boolean_t exclusive,
+          apr_int32_t timeout,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_util_open_db(sdb, dir_abspath, sdb_fname,
                                   svn_sqlite__mode_rwcreate, exclusive,
+                                  timeout,
                                   NULL /* my_statements */,
                                   result_pool, scratch_pool));
 
@@ -1558,6 +1560,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   apr_int64_t wc_id;
   svn_wc__db_wcroot_t *wcroot;
   svn_boolean_t sqlite_exclusive = FALSE;
+  apr_int32_t sqlite_timeout = 0; /* default timeout */
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1577,6 +1580,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
                     repos_uuid, SDB_FILE,
                     repos_relpath, initial_rev, depth, sqlite_exclusive,
+                    sqlite_timeout,
                     db->state_pool, scratch_pool));
 
   /* Create the WCROOT for this directory.  */
@@ -12737,6 +12741,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                     SDB_FILE,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
                     TRUE /* exclusive */,
+                    0 /* timeout */,
                     wc_db->state_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
@@ -15456,6 +15461,7 @@ svn_wc__db_bump_format(int *result_format,
   err = svn_wc__db_util_open_db(&sdb, wcroot_abspath, SDB_FILE,
                                 svn_sqlite__mode_readwrite,
                                 TRUE, /* exclusive */
+                                0, /* default timeout */
                                 NULL, /* my statements */
                                 scratch_pool, scratch_pool);
   if (err)
