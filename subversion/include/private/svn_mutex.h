@@ -45,7 +45,7 @@ extern "C" {
  * which case no synchronization will take place. The latter is useful
  * when implementing some functionality with optional synchronization.
  */
-typedef apr_thread_mutex_t svn_mutex__t;
+typedef struct svn_mutex__t svn_mutex__t;
 
 #else
 
@@ -60,11 +60,19 @@ typedef void svn_mutex__t;
  * the pointer will be set to @c NULL and svn_mutex__lock() as well as
  * svn_mutex__unlock() will be no-ops.
  *
+ * We don't support recursive locks, i.e. a thread may not acquire the same
+ * mutex twice without releasing it in between.  Attempts to lock a mutex
+ * recursively will cause lock ups and other undefined behavior on some
+ * systems.  If @a checked is set, svn_mutex__lock() will try to detect that
+ * situation and return an error.  However, this comes with some system
+ * dependent overhead and may not detect all violations.
+ *
  * If threading is not supported by APR, this function is a no-op.
  */
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex,
                 svn_boolean_t mutex_required,
+                svn_boolean_t checked,
                 apr_pool_t *result_pool);
 
 /** Acquire the @a mutex, if that has been enabled in svn_mutex__init().
