@@ -2498,7 +2498,7 @@ class SvnClientTest < Test::Unit::TestCase
       assert_not_nil(info)
       assert_equal(3, info.revision)
 
-      assert_equal("<<<<<<< .mine\nafter\n=======\nbefore\n>>>>>>> .r2\n",
+      assert_equal("<<<<<<< .mine\nafter\n||||||| .r1\n=======\nbefore\n>>>>>>> .r2\n",
                    File.read(path))
     end
   end
