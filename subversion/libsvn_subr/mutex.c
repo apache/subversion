@@ -21,12 +21,44 @@
  * ====================================================================
  */
 
+#include <apr_portable.h>
+
 #include "svn_private_config.h"
+#include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
+
+#if APR_HAS_THREADS
+
+/* With CHECKED set to TRUE, LOCKED and OWNER must be set *after* acquiring
+ * the MUTEX and be reset *before* releasing it again.  This is sufficient
+ * because we only want to check whether the current thread already holds
+ * the lock.  And the current thread cannot be acquiring / releasing a lock
+ * *while* checking for recursion at the same time.
+ */
+struct svn_mutex__t
+{
+  apr_thread_mutex_t *mutex;
+
+  /* If TRUE, perform extra checks to detect attempts at recursive locking. */
+  svn_boolean_t checked;
+
+  /* The owner of this lock, if locked or NULL, otherwise.  Since NULL might
+   * be a valid owner ID on some systems, checking for NULL may not be 100%
+   * accurate.  Be sure to only produce false negatives in that case.
+   * We can't use apr_os_thread_t directly here as there is no portable way
+   * to access them atomically.  Instead, we assume that it can always be
+   * cast safely to a pointer.
+   * This value will only be modified while the lock is being held.  So,
+   * setting and resetting it is never racy (but reading it may be).
+   * Only used when CHECKED is set. */
+  volatile void *owner;
+};
+#endif
 
 svn_error_t *
 svn_mutex__init(svn_mutex__t **mutex_p,
                 svn_boolean_t mutex_required,
+                svn_boolean_t checked,
                 apr_pool_t *result_pool)
 {
   /* always initialize the mutex pointer, even though it is not
@@ -36,15 +68,16 @@ svn_mutex__init(svn_mutex__t **mutex_p,
 #if APR_HAS_THREADS
   if (mutex_required)
     {
-      apr_thread_mutex_t *apr_mutex;
+      svn_mutex__t *mutex = apr_pcalloc(result_pool, sizeof(*mutex));
       apr_status_t status =
-          apr_thread_mutex_create(&apr_mutex,
+          apr_thread_mutex_create(&mutex->mutex,
                                   APR_THREAD_MUTEX_DEFAULT,
                                   result_pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't create mutex"));
 
-      *mutex_p = apr_mutex;
+      mutex->checked = checked;
+      *mutex_p = mutex;
     }
 #endif
 
@@ -57,9 +90,52 @@ svn_mutex__lock(svn_mutex__t *mutex)
 #if APR_HAS_THREADS
   if (mutex)
     {
-      apr_status_t status = apr_thread_mutex_lock(mutex);
+      apr_status_t status;
+      void *current_thread;
+      void *lock_owner;
+
+      /* Detect recursive locking attempts. */
+      if (mutex->checked)
+        {
+          /* "us" */
+          current_thread = (void *)apr_os_thread_current();
+
+          /* Get the current owner value without actually modifying it
+             (idempotent replacement of NULL by NULL).  We need the atomic
+             operation here since other threads may be writing to this
+             variable while we read it (in which case LOCK_OWNER and
+             CURRENT_THREAD will differ). */
+          lock_owner = apr_atomic_casptr(&mutex->owner, NULL, NULL);
+
+          /* If this matches, svn_mutex__unlock did not reset the owner
+             since this thread acquired the lock:  Because there is no
+             exit condition between that reset and the actual mutex unlock,
+             and because no other thread would set the owner to this value,
+             this thread has simply not released the mutex. */
+          if (lock_owner &&
+              apr_os_thread_equal((apr_os_thread_t)lock_owner,
+                                  (apr_os_thread_t)current_thread))
+            return svn_error_create(SVN_ERR_RECURSIVE_LOCK, NULL, 
+                                    _("Recursive locks are not supported"));
+        }
+
+      /* Acquire the mutex.  In the meantime, other threads may acquire and
+         release the same lock.  Once we got the lock, however, it is in a
+         defined state. */
+      status = apr_thread_mutex_lock(mutex->mutex);
       if (status)
         return svn_error_wrap_apr(status, _("Can't lock mutex"));
+
+      /* We own the lock now. */
+      if (mutex->checked)
+        {
+          /* It must have been released by the previous owner as part of
+             the mutex unlock. */
+          SVN_ERR_ASSERT(apr_atomic_casptr(&mutex->owner, NULL, NULL) == NULL);
+
+          /* Set "us" as the new owner. */
+          apr_atomic_casptr(&mutex->owner, current_thread, NULL);
+        }
     }
 #endif
 
@@ -73,7 +149,27 @@ svn_mutex__unlock(svn_mutex__t *mutex,
 #if APR_HAS_THREADS
   if (mutex)
     {
-      apr_status_t status = apr_thread_mutex_unlock(mutex);
+      apr_status_t status;
+
+      /* We will soon no longer be the owner of this lock.  So, reset the
+         OWNER value.  This makes no difference to the recursion check in
+         *other* threads; they are known not to hold this mutex and will
+         not assume that they do after we set the OWNER to NULL.  And the
+         current thread is known not to attempt a recursive lock right now;
+         it cannot be in two places at the same time. */
+      if (mutex->checked)
+        {
+          /* Reading the current OWNER value is faster and more reliable
+             than asking APR for the current thread id (APR might return
+             different but equivalent IDs for the same thread). */
+          void *lock_owner = apr_atomic_casptr(&mutex->owner, NULL, NULL);
+
+          /* Now, set it to NULL. */
+          apr_atomic_casptr(&mutex->owner, NULL,  lock_owner);
+        }
+
+      /* Release the actual mutex. */
+      status = apr_thread_mutex_unlock(mutex->mutex);
       if (status && !err)
         return svn_error_wrap_apr(status, _("Can't unlock mutex"));
     }

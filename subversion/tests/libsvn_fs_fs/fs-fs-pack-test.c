@@ -26,6 +26,7 @@
 
 #include "../svn_test.h"
 #include "../../libsvn_fs_fs/fs.h"
+#include "../../libsvn_fs_fs/fs_fs.h"
 
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -1129,6 +1130,40 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
+
+static svn_error_t *
+never_reached(void *baton,
+              apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+lock_again(void *baton,
+           apr_pool_t *pool)
+{
+  svn_fs_t *fs = baton;
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__with_all_locks(fs, never_reached, fs,
+                                                  pool),
+                        SVN_ERR_RECURSIVE_LOCK);
+  return SVN_NO_ERROR;
+}
+
+#define REPO_NAME "recursive_locking"
+static svn_error_t *
+recursive_locking(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  SVN_ERR(svn_fs_fs__with_all_locks(fs, lock_again, fs, pool));
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -1165,6 +1200,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns to log addressing in shared FSFS"),
     SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
                        "upgrade txns started before svnadmin upgrade"),
+    SVN_TEST_OPTS_PASS(recursive_locking,
+                       "prevent recursive locking"),
     SVN_TEST_NULL
   };
 

@@ -111,7 +111,7 @@ init_handle_pool(void *baton, apr_pool_t *scratch_pool)
   /* Global pool for the temp path */
   apr_pool_t *pool = svn_pool_create(NULL);
 
-  SVN_ERR(svn_mutex__init(&global_handle_pool.mutex, TRUE, pool));
+  SVN_ERR(svn_mutex__init(&global_handle_pool.mutex, TRUE, FALSE, pool));
   global_handle_pool.handles
     = apr_array_make(pool, DEFAULT_CAPACITY, sizeof(shared_handle_t *));
 
