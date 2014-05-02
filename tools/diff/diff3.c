@@ -70,6 +70,8 @@ int main(int argc, const char *argv[])
   int rc;
   svn_error_t *svn_err = SVN_NO_ERROR;
   apr_getopt_t *opts;
+  svn_boolean_t help = FALSE;
+
   enum {
     conflict_style_opt = SVN_OPT_FIRST_LONGOPT_ID
   };
@@ -78,6 +80,8 @@ int main(int argc, const char *argv[])
     {"label", 'L', 1, ""},
     {"show-overlap", 'E', 0, ""},
     {"merge", 'm', 0, ""},
+    {"help", 'h', 0, ""},
+    {NULL, '?', 0, ""},
     {NULL, 0, 0, NULL}
   };
   svn_diff_conflict_display_style_t conflict_style
@@ -146,6 +150,10 @@ int main(int argc, const char *argv[])
              makes it easier to use this as an external diff3
              program. */
           break;
+        case 'h':
+        case '?':
+          help = TRUE;
+          break;
         }
     }
 
@@ -157,7 +165,7 @@ int main(int argc, const char *argv[])
       svn_error_clear(svn_err);
       rc = 2;
     }
-  else if (argc - opts->ind == 3)
+  else if (argc - opts->ind == 3 && !help)
     {
       svn_boolean_t has_changes;
 
