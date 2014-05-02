@@ -103,12 +103,21 @@ svn_bit_array__set(svn_bit_array__t *array,
 {
   unsigned char *block;
 
+  /* Index within ARRAY->BLOCKS for the block containing bit IDX. */
+  apr_size_t block_idx = idx / BLOCK_SIZE_BITS;
+
+  /* Within that block, index of the byte containing IDX. */
+  apr_size_t byte_idx = (idx % BLOCK_SIZE_BITS) / 8;
+
+  /* Within that byte, index of the bit corresponding to IDX. */
+  apr_size_t bit_idx = (idx % BLOCK_SIZE_BITS) % 8;
+
   /* If IDX is outside the allocated range, we _may_ have to grow it.
    *
    * Be sure to use division instead of multiplication as we need to cover
    * the full value range of APR_SIZE_T for the bit indexes.
    */
-  if (idx / BLOCK_SIZE_BITS >= array->block_count)
+  if (block_idx >= array->block_count)
     {
       apr_size_t new_count;
       unsigned char **new_blocks;
@@ -124,7 +133,8 @@ svn_bit_array__set(svn_bit_array__t *array,
        */
       new_count = select_data_size(idx);
       new_blocks = apr_pcalloc(array->pool, new_count * sizeof(*new_blocks));
-      memcpy(new_blocks, array->blocks, new_count * sizeof(*new_blocks));
+      memcpy(new_blocks, array->blocks,
+             array->block_count * sizeof(*new_blocks));
       array->blocks = new_blocks;
       array->block_count = new_count;
     }
@@ -132,7 +142,7 @@ svn_bit_array__set(svn_bit_array__t *array,
   /* IDX is covered by ARRAY->BLOCKS now. */
 
   /* Get the block that contains IDX.  Auto-allocate it if missing. */
-  block = array->blocks[idx / BLOCK_SIZE_BITS];
+  block = array->blocks[block_idx];
   if (block == NULL)
     {
       /* Unallocated indexes are implicitly 0, so no actual allocation
@@ -144,14 +154,14 @@ svn_bit_array__set(svn_bit_array__t *array,
       /* Allocate the previously missing block and clear it for our
        * array[idx] == 0 default. */
       block = apr_pcalloc(array->pool, BLOCK_SIZE);
-      array->blocks[idx / BLOCK_SIZE_BITS] = block;
+      array->blocks[block_idx] = block;
     }
 
   /* Set / reset one bit.  Be sure to use unsigned shifts. */
   if (value)
-    block[(idx % BLOCK_SIZE_BITS) / 8] |= (unsigned char)(1u << (idx % 8));
+    block[byte_idx] |=  (unsigned char)(1u << bit_idx);
   else
-    block[(idx % BLOCK_SIZE_BITS) / 8] &= (unsigned char)(255u - (1u << (idx % 8)));
+    block[byte_idx] &= ~(unsigned char)(1u << bit_idx);
 }
 
 svn_boolean_t
@@ -160,16 +170,25 @@ svn_bit_array__get(svn_bit_array__t *array,
 {
   unsigned char *block;
 
+  /* Index within ARRAY->BLOCKS for the block containing bit IDX. */
+  apr_size_t block_idx = idx / BLOCK_SIZE_BITS;
+
+  /* Within that block, index of the byte containing IDX. */
+  apr_size_t byte_idx = (idx % BLOCK_SIZE_BITS) / 8;
+
+  /* Within that byte, index of the bit corresponding to IDX. */
+  apr_size_t bit_idx = (idx % BLOCK_SIZE_BITS) % 8;
+
   /* Indexes outside the allocated range are implicitly 0. */
-  if (idx / BLOCK_SIZE_BITS >= array->block_count)
+  if (block_idx >= array->block_count)
     return 0;
 
   /* Same if the respective block has not been allocated. */
-  block = array->blocks[idx / BLOCK_SIZE_BITS];
+  block = array->blocks[block_idx];
   if (block == NULL)
     return 0;
 
   /* Extract one bit (get the byte, shift bit to LSB, extract it). */
-  return (block[(idx % BLOCK_SIZE_BITS) / 8] >> (idx % 8)) & 1;
+  return (block[byte_idx] >> bit_idx) & 1;
 }
 
