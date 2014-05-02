@@ -152,6 +152,14 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1592014
+   Fix 'svn patch' skipping targets in valid --git diffs.
+   Justification:
+     'svn patch' should parse --git diffs correctly. User complained.
+     See http://svn.haxx.se/users/archive-2014-05/0003.shtml and replies.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
