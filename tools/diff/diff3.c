@@ -131,9 +131,9 @@ int main(int argc, const char *argv[])
           }
         case 'L':
           if (!conflict_modified)
-            conflict_modified = apr_pstrcat(pool, "||||||| ", arg, SVN_VA_NULL);
+            conflict_modified = apr_pstrcat(pool, "<<<<<<< ", arg, SVN_VA_NULL);
           else if (!conflict_original)
-            conflict_original = apr_pstrcat(pool, "<<<<<<< ", arg, SVN_VA_NULL);
+            conflict_original = apr_pstrcat(pool, "||||||| ", arg, SVN_VA_NULL);
           else if (!conflict_latest)
             conflict_latest = apr_pstrcat(pool, ">>>>>>> ", arg, SVN_VA_NULL);
           else
