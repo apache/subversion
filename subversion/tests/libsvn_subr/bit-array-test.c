@@ -96,6 +96,31 @@ test_get_set(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_sparse(apr_pool_t *pool)
+{
+  svn_bit_array__t *array = svn_bit_array__create(0, pool);
+  apr_size_t i, k, min = 0x7ff00, max = 0x7ff00 + 1025, SCALE = 0x10000000;
+
+  /* All values default to 0. */
+  for (i = 0; i < 15; ++i)
+    for (k = i * SCALE + min; k < i * SCALE +  max; ++k)
+      SVN_TEST_ASSERT(svn_bit_array__get(array, k) == 0);
+
+  /* Create a pattern, setting every other bit. Array will also auto-grow. */
+  for (i = 0; i < 15; ++i)
+    for (k = i * SCALE + min; k < i * SCALE +  max; ++k)
+      if (k % 2)
+        svn_bit_array__set(array, k, 1);
+
+  /* Verify pattern */
+  for (i = 0; i < 15; ++i)
+    for (k = i * SCALE + min; k < i * SCALE +  max; ++k)
+      SVN_TEST_ASSERT(svn_bit_array__get(array, k) == k % 2);
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -107,6 +132,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "check entries to default to zero"),
     SVN_TEST_PASS2(test_get_set,
                    "get / set entries"),
+    SVN_TEST_PASS2(test_sparse,
+                   "get / set sparse entries"),
     SVN_TEST_NULL
   };
 
