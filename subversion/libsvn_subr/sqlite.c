@@ -810,7 +810,7 @@ init_sqlite(void *baton, apr_pool_t *pool)
 
 static svn_error_t *
 internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
-              apr_pool_t *scratch_pool)
+              apr_int32_t timeout, apr_pool_t *scratch_pool)
 {
   {
     int flags;
@@ -901,9 +901,11 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     }
   }
 
+  if (timeout <= 0)
+    timeout = BUSY_TIMEOUT;
+
   /* Retry until timeout when database is busy. */
-  SQLITE_ERR_MSG(sqlite3_busy_timeout(*db3, BUSY_TIMEOUT),
-                 sqlite3_errmsg(*db3));
+  SQLITE_ERR_MSG(sqlite3_busy_timeout(*db3, timeout), sqlite3_errmsg(*db3));
 
   return SVN_NO_ERROR;
 }
@@ -1071,6 +1073,7 @@ svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int unused1, const char * const *unused2,
+                 apr_int32_t timeout,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
@@ -1078,7 +1081,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
-  SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
+  SVN_ERR(internal_open(&(*db)->db3, path, mode, timeout, scratch_pool));
 
 #if SQLITE_VERSION_NUMBER >= 3008000 && SQLITE_VERSION_NUMBER < 3009000
   /* disable SQLITE_ENABLE_STAT3/4 from 3.8.1 - 3.8.3 (but not 3.8.3.1+)
@@ -1413,7 +1416,7 @@ svn_sqlite__hotcopy(const char *src_path,
   svn_sqlite__db_t *src_db;
 
   SVN_ERR(svn_sqlite__open(&src_db, src_path, svn_sqlite__mode_readonly,
-                           NULL, 0, NULL,
+                           NULL, 0, NULL, 0,
                            scratch_pool, scratch_pool));
 
   {
@@ -1422,7 +1425,7 @@ svn_sqlite__hotcopy(const char *src_path,
     int rc1, rc2;
 
     SVN_ERR(svn_sqlite__open(&dst_db, dst_path, svn_sqlite__mode_rwcreate,
-                             NULL, 0, NULL, scratch_pool, scratch_pool));
+                             NULL, 0, NULL, 0, scratch_pool, scratch_pool));
     backup = sqlite3_backup_init(dst_db->db3, "main", src_db->db3, "main");
     if (!backup)
       return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,

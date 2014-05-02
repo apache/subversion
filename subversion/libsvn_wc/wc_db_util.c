@@ -115,6 +115,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
                         svn_boolean_t exclusive,
+                        apr_int32_t timeout,
                         const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -139,7 +140,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
 
   SVN_ERR(svn_sqlite__open(sdb, sdb_abspath, smode,
                            my_statements ? my_statements : statements,
-                           0, NULL, result_pool, scratch_pool));
+                           0, NULL, timeout, result_pool, scratch_pool));
 
   if (exclusive)
     SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_PRAGMA_LOCKING_MODE));

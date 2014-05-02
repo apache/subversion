@@ -206,6 +206,7 @@ svn_wc__db_open(svn_wc__db_t **db,
     {
       svn_error_t *err;
       svn_boolean_t sqlite_exclusive = FALSE;
+      apr_int64_t timeout;
 
       err = svn_config_get_bool(config, &sqlite_exclusive,
                                 SVN_CONFIG_SECTION_WORKING_COPY,
@@ -217,6 +218,15 @@ svn_wc__db_open(svn_wc__db_t **db,
         }
       else
         (*db)->exclusive = sqlite_exclusive;
+
+      err = svn_config_get_int64(config, &timeout,
+                                 SVN_CONFIG_SECTION_WORKING_COPY,
+                                 SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT,
+                                 0);
+      if (err || timeout < 0 || timeout > APR_INT32_MAX)
+        svn_error_clear(err);
+      else
+        (*db)->timeout = (apr_int32_t)timeout;
     }
 
   return SVN_NO_ERROR;
@@ -542,7 +552,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
                                         svn_sqlite__mode_readwrite,
-                                        db->exclusive, NULL,
+                                        db->exclusive, db->timeout, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {

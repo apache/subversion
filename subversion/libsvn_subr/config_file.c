@@ -1337,7 +1337,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### copies by all clients using the 1.8 APIs.  Enabling this may"   NL
         "### cause some clients to fail to work properly. This does not have"NL
         "### to be set for exclusive-locking-clients to work."               NL
-        "# exclusive-locking = false"                                        NL;
+        "# exclusive-locking = false"                                        NL
+        "### Set the SQLite busy timeout in milliseconds: the maximum time"  NL
+        "### the client waits to get access to the SQLite database before"   NL
+        "### returning an error.  The default is 10000, i.e. 10 seconds."    NL
+        "### Longer values may be useful when exclusive locking is enabled." NL
+        "# busy-timeout = 10000"                                             NL
+        ;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),

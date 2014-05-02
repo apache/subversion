@@ -117,12 +117,16 @@ svn_sqlite__read_schema_version(int *version,
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
+   TIMEOUT defines the SQLite busy timeout, values <= 0 cause a Subversion
+   default to be used.
+
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 apr_int32_t timeout,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
 /* Explicitly close the connection in DB. */

@@ -40,7 +40,7 @@ open_db(svn_sqlite__db_t **sdb,
   db_abspath = svn_dirent_join(db_dir, db_name, pool);
 
   SVN_ERR(svn_sqlite__open(sdb, db_abspath, svn_sqlite__mode_rwcreate,
-                           statements, 0, NULL, pool, pool));
+                           statements, 0, NULL, 0, pool, pool));
 
   return SVN_NO_ERROR;
 }
