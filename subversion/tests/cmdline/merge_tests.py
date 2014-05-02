@@ -247,7 +247,7 @@ def textual_merges_galore(sbox):
 
   inject_conflict_into_expected_state('A/D/G/tau', expected_disk,
                                       expected_status, other_tau_text, tau_text,
-                                      3)
+                                      1, 3)
 
   expected_skip = wc.State('', { })
 
@@ -336,7 +336,7 @@ def textual_merges_galore(sbox):
                                })
 
   inject_conflict_into_expected_state('tau', expected_disk, expected_status,
-                                      other_tau_text, tau_text, 3)
+                                      other_tau_text, tau_text, 1, 3)
 
   # Do the merge, but check svn:mergeinfo props separately since
   # run_and_verify_merge would attempt to proplist tau's conflict
@@ -3000,7 +3000,7 @@ def cherry_pick_text_conflict(sbox):
     })
   expected_disk = wc.State('', {
     'mu'        : Item("This is the file 'mu'.\n"
-                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 4)),
+                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 3, 4)),
     'B'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(),
@@ -3515,6 +3515,7 @@ def merge_conflict_markers_matching_eol(sbox):
     'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
       "<<<<<<< .working" + eolchar +
       "Conflicting appended text for mu" + eolchar +
+      "||||||| .merge-left.r" + str(cur_rev - 1) + eolchar +
       "=======" + eolchar +
       "Original appended text for mu" + eolchar +
       ">>>>>>> .merge-right.r" + str(cur_rev) + eolchar),
@@ -14836,6 +14837,8 @@ def merge_automatic_conflict_resolution(sbox):
     })
   expected_disk.tweak('D/H/psi', contents="<<<<<<< .working\n"
                       "BASE.\n"
+                      "||||||| .merge-left.r2\n"
+                      "This is the file 'psi'.\n"
                       "=======\n"
                       "New content>>>>>>> .merge-right.r3\n")
   expected_status.tweak('D/H/psi', status='C ')
@@ -18729,6 +18732,8 @@ def conflict_naming(sbox):
     'file.txt.r2'       : Item(contents="This is the initial content\n"),
     'file.txt'          : Item(contents="<<<<<<< .mine\n" \
                                "This is conflicting content\n" \
+                               "||||||| .r3\n" \
+                               "This is the new content\n" \
                                "=======\n" \
                                "This is the initial content\n" \
                                ">>>>>>> .r2\n"),
@@ -18760,6 +18765,8 @@ def conflict_naming(sbox):
     'file.txt.r2.txt'   : Item(contents="This is the initial content\n"),
     'file.txt'          : Item(contents="<<<<<<< .mine.txt\n" \
                                "This is conflicting content\n" \
+                               "||||||| .r3.txt\n" \
+                               "This is the new content\n" \
                                "=======\n" \
                                "This is the initial content\n" \
                                ">>>>>>> .r2.txt\n"),
@@ -18789,6 +18796,8 @@ def conflict_naming(sbox):
     'file.txt.merge-right.r2': Item(contents="This is the initial content\n"),
     'file.txt'               : Item(contents="<<<<<<< .working\n" \
                                     "This is conflicting content\n" \
+                                    "||||||| .merge-left.r3\n" \
+                                    "This is the new content\n" \
                                     "=======\n" \
                                     "This is the initial content\n" \
                                     ">>>>>>> .merge-right.r2\n"),
@@ -18814,6 +18823,8 @@ def conflict_naming(sbox):
     'file.txt.merge-right.r2.txt': Item(contents="This is the initial content\n"),
     'file.txt'                   : Item(contents="<<<<<<< .working.txt\n" \
                                         "This is conflicting content\n" \
+                                        "||||||| .merge-left.r3.txt\n" \
+                                        "This is the new content\n" \
                                         "=======\n" \
                                         "This is the initial content\n" \
                                         ">>>>>>> .merge-right.r2.txt\n"),

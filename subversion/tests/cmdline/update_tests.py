@@ -658,6 +658,7 @@ def update_to_resolve_text_conflicts(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -666,6 +667,7 @@ def update_to_resolve_text_conflicts(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -1798,6 +1800,7 @@ def conflict_markers_matching_eol(sbox):
     'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
       "<<<<<<< .mine" + eolchar +
       "Conflicting appended text for mu" + eolchar +
+      "||||||| .r" + str(cur_rev - 1) + eolchar +
       "=======" + eolchar +
       "Original appended text for mu" + eolchar +
       ">>>>>>> .r" + str(cur_rev) + eolchar),
@@ -2737,6 +2740,7 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/J'     : Item(props={'propname1' : 'propval-WC'}),
     'A/D/H/I/J/eta' : Item("\n".join(["<<<<<<< .mine",
                                       "This is WC file 'eta'",
+                                      "||||||| .r0",
                                       "=======",
                                       "This is REPOS file 'eta'",
                                       ">>>>>>> .r2",
@@ -2746,6 +2750,7 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/L'     : Item(),
     'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
                                       "This is WC file 'kappa'",
+                                      "||||||| .r0",
                                       "=======",
                                       "This is REPOS file 'kappa'",
                                       ">>>>>>> .r2",
@@ -2753,6 +2758,7 @@ def update_with_obstructing_additions(sbox):
                            props={'propname1' : 'propval-WC'}),
     'A/D/epsilon'     : Item("\n".join(["<<<<<<< .mine",
                                         "This is WC file 'epsilon'",
+                                        "||||||| .r0",
                                         "=======",
                                         "This is REPOS file 'epsilon'",
                                         ">>>>>>> .r2",
@@ -3033,6 +3039,7 @@ def update_conflicted(sbox):
                       contents="\n".join(["This is the file 'iota'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for iota",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for iota",
                                           ">>>>>>> .r2",
@@ -3041,6 +3048,7 @@ def update_conflicted(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -3876,12 +3884,14 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
                                         '<<<<<<< .mine\n'
                                         'My appended text for iota\n'
+                                        '||||||| .r1\n'
                                         '=======\n'
                                         'Their appended text for iota\n'
                                         '>>>>>>> .r2\n'))
   expected_disk.tweak('A/B/lambda', contents=("This is the file 'lambda'.\n"
                                               '<<<<<<< .mine\n'
                                               'My appended text for lambda\n'
+                                              '||||||| .r1\n'
                                               '=======\n'
                                               'Their appended text for lambda\n'
                                               '>>>>>>> .r2\n'))
@@ -3893,6 +3903,7 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('A/D/G/pi', contents=("This is the file 'pi'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for pi\n'
+                                             '||||||| .r1\n'
                                              '=======\n'
                                              'Their appended text for pi\n'
                                              '>>>>>>> .r2\n'
@@ -3900,6 +3911,7 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for rho\n'
+                                             '||||||| .r1\n'
                                              '=======\n'
                                              'Their appended text for rho\n'
                                              '>>>>>>> .r2\n'

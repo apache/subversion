@@ -2145,7 +2145,7 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
   inject_conflict_into_expected_state(state_path,
                                       expected_disk, expected_status,
                                       conflicting_contents, contents,
-                                      merged_rev)
+                                      prev_rev, merged_rev)
   exit_code, output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
                                            file_path)
   if expected_status:
@@ -2153,26 +2153,28 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
 
 def inject_conflict_into_expected_state(state_path,
                                         expected_disk, expected_status,
-                                        wc_text, merged_text, merged_rev):
+                                        wc_text, merged_text, prev_rev,
+                                        merged_rev):
   """Update the EXPECTED_DISK and EXPECTED_STATUS trees for the
   conflict at STATE_PATH (ignored if None).  WC_TEXT, MERGED_TEXT, and
   MERGED_REV are used to determine the contents of the conflict (the
   text parameters should be newline-terminated)."""
   if expected_disk:
     conflict_marker = make_conflict_marker_text(wc_text, merged_text,
-                                                merged_rev)
+                                                prev_rev, merged_rev)
     existing_text = expected_disk.desc[state_path].contents or ""
     expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
 
   if expected_status:
     expected_status.tweak(state_path, status='C ')
 
-def make_conflict_marker_text(wc_text, merged_text, merged_rev):
+def make_conflict_marker_text(wc_text, merged_text, prev_rev, merged_rev):
   """Return the conflict marker text described by WC_TEXT (the current
   text in the working copy, MERGED_TEXT (the conflicting text merged
   in), and MERGED_REV (the revision from whence the conflicting text
   came)."""
-  return "<<<<<<< .working\n" + wc_text + "=======\n" + \
+  return "<<<<<<< .working\n" + wc_text + \
+         "||||||| .merge-left.r" + str(prev_rev) +  "\n=======\n" + \
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
 
 
