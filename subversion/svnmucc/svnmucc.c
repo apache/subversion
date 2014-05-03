@@ -365,12 +365,21 @@ sanitize_log_sources(const char **final_message,
   else if (filedata)
     {
       if (message)
-        return mutually_exclusive_logs_error();
+        {
+          return mutually_exclusive_logs_error();
+        }
+      else
+        {
+          svn_string_t *message_string;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data,
-                                      scratch_pool));
+          message_string = svn_string_create_from_buf(filedata, scratch_pool);
+          SVN_ERR_W(svn_subst_translate_string2(&message_string, NULL, NULL,
+                                                message_string, NULL, FALSE,
+                                                result_pool, scratch_pool),
+                    _("Error normalizing log message to internal format"));
 
-      *final_message = apr_pstrdup(result_pool, message);
+          *final_message = message_string->data;
+        }
     }
   else if (message)
     {
