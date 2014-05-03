@@ -1345,7 +1345,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+          err = svn_subst_translate_string2(edited_contents, NULL, NULL,
                                             *edited_contents, encoding, FALSE,
                                             pool, pool);
           if (err)
