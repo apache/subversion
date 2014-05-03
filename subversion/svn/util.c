@@ -345,7 +345,7 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
 
-      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, NULL, NULL,
                                             log_msg_str, lmb->message_encoding,
                                             FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
