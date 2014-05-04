@@ -905,28 +905,37 @@ svn_fs_fs__check_rep(representation_t *rep,
       svn_error_t *err;
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
-      svn_boolean_t is_packed;
 
       svn_fs_fs__revision_file_t rev_file;
       svn_fs_fs__init_revision_file(&rev_file, fs, rep->revision, pool);
+
+      /* This will auto-retry if there was a background pack. */
       SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, rep->revision,
                                      NULL, rep->item_index, pool));
 
-      is_packed = rev_file.is_packed;
+      /* This may fail if there is a background pack operation (can't auto-
+         retry because the item offset lookup has to be redone as well). */
       err = svn_fs_fs__p2l_entry_lookup(&entry, fs, &rev_file, rep->revision,
                                         offset, pool);
 
-      /* retry if the packing state has changed */
-      if (is_packed != rev_file.is_packed)
+      /* Retry if the packing state may have changed, i.e. if we got an
+         error while opening the index for a non-packed rev file. */
+      if (err && !rev_file.is_packed)
         {
-          svn_error_clear(err);
           SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
-          return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint, pool));
+
+          /* Be sure to know the latest pack status of REP. */
+          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+          if (svn_fs_fs__is_packed_rev(fs, rep->revision))
+            {
+              /* REP got actually packed. Retry (can happen at most once). */
+              svn_error_clear(err);
+              return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint,
+                                                          pool));
+            }
         }
-      else
-        {
-          SVN_ERR(err);
-        }
+
+      SVN_ERR(err);
 
       if (   entry == NULL
           || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
