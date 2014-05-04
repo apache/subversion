@@ -5099,7 +5099,7 @@ commit_timestamp(const svn_test_opts_t *opts,
   apr_hash_t *proplist;
   svn_string_t *svn_date;
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-commit-timestamp",
+  SVN_ERR(svn_test__create_fs(&fs, "test-fs-commit-timestamp",
                               opts, pool));
 
   /* Commit with a specified svn:date. */
@@ -5244,7 +5244,7 @@ dir_prop_merge(const svn_test_opts_t *opts,
   svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
 
   /* Create test repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-dir_prop-merge", opts, pool));
+  SVN_ERR(svn_test__create_fs(&fs, "test-fs-dir_prop-merge", opts, pool));
 
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
