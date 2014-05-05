@@ -39,21 +39,12 @@ extern "C" {
  * This is a simple wrapper around @c apr_thread_mutex_t and will be a
  * valid identifier even if APR does not support threading.
  */
-#if APR_HAS_THREADS
 
 /** A mutex for synchronization between threads. It may be NULL, in
  * which case no synchronization will take place. The latter is useful
  * when implementing some functionality with optional synchronization.
  */
 typedef struct svn_mutex__t svn_mutex__t;
-
-#else
-
-/** Dummy definition. The content will never be actually accessed.
- */
-typedef void svn_mutex__t;
-
-#endif
 
 /** Initialize the @a *mutex. If @a mutex_required is TRUE, the mutex will
  * actually be created with a lifetime defined by @a result_pool. Otherwise,
