@@ -382,7 +382,10 @@ class Generator(gen_base.GeneratorBase):
           dirname, fname = build_path_splitfile(file.filename)
           return _eztdata(mode=None,
                           dirname=dirname, fullname=file.filename,
-                          filename=fname, when=file.when)
+                          filename=fname, when=file.when,
+                          pc_fullname=None,
+                          pc_installdir=None,
+                          pc_install_fname=None,)
 
       def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
@@ -415,6 +418,15 @@ class Generator(gen_base.GeneratorBase):
             else:
               ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
                                                        ezt_file.filename)
+
+          # Install pkg-config files
+          if (isinstance(file.target, gen_base.TargetLib) and
+              ezt_file.fullname.startswith('subversion/libsvn_')):
+            ezt_file.pc_fullname = ezt_file.fullname.replace('-1.la', '.pc')
+            ezt_file.pc_installdir = '$(pkgconfig_dir)'
+            pc_install_fname = ezt_file.filename.replace('-1.la', '.pc')
+            ezt_file.pc_install_fname = build_path_join(ezt_file.pc_installdir,
+                                                        pc_install_fname)
           ezt_area.files.append(ezt_file)
 
         # certain areas require hooks for extra install rules defined
