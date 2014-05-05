@@ -623,6 +623,8 @@ DIR=`pwd`
         lib_required=[],
         lib_required_private=[],
         )
+      # libsvn_foo -> -lsvn_foo
+      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
       for lib_dep in lib_deps.split():
         if lib_dep == 'apriconv':
           # apriconv is part of apr-util, skip it
@@ -647,8 +649,7 @@ DIR=`pwd`
             # $(EXTERNAL_LIB) -> @EXTERNAL_LIB@
             data.lib_deps.append('@%s@' % external_lib[2:-1])
         else:
-          # libsvn_foo -> -lsvn_foo
-          data.lib_deps.append('-l%s' % lib_dep.replace('lib', '', 1))
+          data.lib_required_private.append(lib_dep)
 
       template.generate(open(output_path, 'w'), data)
 
