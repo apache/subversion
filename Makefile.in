@@ -88,6 +88,9 @@ swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
 toolsdir = @bindir@/svn-tools
 
+# where to install pkg-config files
+pkgconfig_dir = $(datadir)/pkgconfig
+
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
 javahl_libdir = @libdir@
