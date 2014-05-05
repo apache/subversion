@@ -298,6 +298,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * avoid non-portable find extensions so the build works on Solaris (r1573780)
     * Allow PARALLEL value to specify the number of threads to run tests with,
       PARALLEL=1 means to use the default (r1573320)
+    * pkg-config support for libsvn_* libraries (issue #4435)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
