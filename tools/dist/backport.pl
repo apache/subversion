@@ -232,11 +232,12 @@ sub prompt {
 #     >>> shell_escape(q[foo'bar]) eq q['foo'\''bar']
 #     True
 sub shell_escape {
-  map {
+  my (@reply) = map {
     local $_ = $_; # the LHS $_ is mutable; the RHS $_ may not be.
     s/\x27/'\\\x27'/g;
     "'$_'"
-  } @_
+  } @_;
+  wantarray ? @reply : $reply[0]
 }
 
 sub shell_safe_path_or_url($) {
