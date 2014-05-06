@@ -474,8 +474,8 @@ def empty_date(sbox):
                              '--ignore-uuid')
 
   # Verify that the revision still lacks the svn:date property.
-  svntest.actions.run_and_verify_svn(None, [], [], "propget",
-                                     "--revprop", "-r1", "svn:date",
+  svntest.actions.run_and_verify_svn(None, [], '.*(E195011|E200017).*svn:date',
+                                     "propget", "--revprop", "-r1", "svn:date",
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------

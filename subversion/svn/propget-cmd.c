@@ -365,7 +365,14 @@ svn_cl__propget(apr_getopt_t *os,
                                      URL, &(opt_state->start_revision),
                                      &rev, ctx, pool));
 
-      if (propval != NULL)
+      if (propval == NULL)
+        {
+          return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+                                   _("Property '%s' not found on "
+                                     "revision %ld"),
+                                   pname_utf8, opt_state->start_revision);
+        }
+      else
         {
           if (opt_state->xml)
             {

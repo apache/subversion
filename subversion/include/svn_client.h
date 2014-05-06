@@ -5242,6 +5242,8 @@ svn_client_propget(apr_hash_t **props,
  * in @a ctx for authentication, and @a pool for all memory allocation.
  * Return the actual rev queried in @a *set_rev.
  *
+ * If @a propname does not exist on @a revision, set @a *propval to @c NULL.
+ *
  * Note that unlike its cousin svn_client_propget(), this routine
  * doesn't affect the working copy at all; it's a pure network
  * operation that queries an *unversioned* property attached to a
