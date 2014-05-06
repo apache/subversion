@@ -80,6 +80,11 @@ $ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
 
 # Globals.
 my %ERRORS = ();
+# TODO: can $MERGED_SOMETHING be removed and references to it replaced by scalar(@MERGES_TODAY) ?
+#       alternately, does @MERGES_TODAY need to be purged whenever $MERGED_SOMETHING is reset?
+#       The scalar is only used in interactive runs, but the array is used in
+#       svn-role batch mode too.
+my @MERGES_TODAY;
 my $MERGED_SOMETHING = 0;
 my $SVNq;
 
@@ -256,6 +261,7 @@ sub my_tempfile {
 
 sub merge {
   my %entry = @_;
+  my $parno = $entry{parno} - scalar grep { $_->{parno} < $entry{parno} } @MERGES_TODAY;
 
   my ($logmsg_fh, $logmsg_filename) = my_tempfile();
   my (@mergeargs);
@@ -310,11 +316,21 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   fi
 fi
 if $sh[$MAY_COMMIT]; then
-  # Remove the approved entry.  The sentinel guarantees the right number of blank
-  # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
-  echo "sentinel" >> $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $entry{parno}\x{7d}kdap' -c wq $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
+  # Remove the approved entry.  The sentinel is important when the entry being
+  # removed is the very last one in STATUS, and in that case it has two effects:
+  # (1) keeps STATUS from ending in a run of multiple empty lines;
+  # (2) makes the \x{7d}k motion behave the same as in all other cases.
+  #
+  # Use a tempfile because otherwise backport_main() would see the "sentinel paragraph".
+  # Since backport_main() has an open descriptor, it will continue to see
+  # the STATUS inode that existed when control flow entered backport_main();
+  # since we replace the file on disk, when this block of code runs in the
+  # next iteration, it will see the new contents.
+  cp $STATUS $STATUS.t
+  (echo; echo; echo "sentinel paragraph") >> $STATUS.t
+  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $parno\x{7d}kdap' -c wq $STATUS.t
+  $VIM -e -s -n -N -i NONE -u NONE -c '\$normal! dap' -c wq $STATUS.t
+  mv $STATUS.t $STATUS
   $SVNq commit -F $logmsg_filename
 elif ! $sh[$YES]; then
   echo "Would have committed:"
@@ -325,6 +341,11 @@ elif ! $sh[$YES]; then
   echo ']]]'
 fi
 EOF
+
+  if ($MAY_COMMIT) {
+    # STATUS has been edited and the change has been committed
+    push @MERGES_TODAY, \%entry;
+  }
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
@@ -355,7 +376,10 @@ EOF
   $MERGED_SOMETHING++;
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
-  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
+  close SHELL or do {
+    warn "$0: sh($?): $! (in '$entry{header}')";
+    die "Lost track of paragraph numbers; aborting" if $MAY_COMMIT
+  };
   $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   unlink $logmsg_filename unless $? or $!;
@@ -908,9 +932,6 @@ sub handle_entry {
     die "Unreachable code reached.";
   }
 
-  # TODO: merge() changes ./STATUS, which we're reading below, but
-  #       on my system the loop in main() doesn't seem to care.
-
   1;
 }
 
@@ -1077,12 +1098,6 @@ sub nominate_main {
 }
 
 # Dispatch to the appropriate main().
-die 'svn-role mode is broken when there are >=2 entries in Approved; '.
-    'see <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C20140417111215.GB1802@tarsus.local2%3E> '.
-    'and <http://mail-archives.apache.org/mod_mbox/subversion-dev/201404.mbox/%3C8738h36mwh.fsf@ntlworld.com%3E> '.
-    'for details.'
-    if $MAY_COMMIT;
-
 given (basename($0)) {
   when (/^b$|backport/) {
     chdir dirname $0 or die "Can't chdir: $!" if /^b$/;
