@@ -847,14 +847,10 @@ def revprop_change(sbox):
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
-  actual_exit, actual_stdout, actual_stderr = svntest.main.run_svn(
-    None, 'pg', '--revprop', '-r', '0', 'cash-sound', sbox.wc_dir)
-
   # The property should have been deleted.
-  regex = 'cha-ching'
-  for line in actual_stdout:
-    if re.match(regex, line):
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None,
+    '.*(E195011|E200017).*cash-sound.*',
+    'propget', '--revprop', '-r', '0', 'cash-sound', sbox.wc_dir)
 
 
 #----------------------------------------------------------------------
