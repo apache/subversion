@@ -141,25 +141,28 @@ stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
-# The locations of the svn binaries (svn, svnadmin, svnlook and others),
-# relative to the only scripts that import this file right now (they
-# live in ../).
+# The locations of the svn binaries.
 # Use --bin to override these defaults.
-svn_binary = os.path.abspath('../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
-svnrdump_binary = os.path.abspath('../../svnrdump/svnrdump' + _exe)
-svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
-svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
-svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
-                                       _exe)
-svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
-entriesdump_binary = os.path.abspath('entries-dump' + _exe)
-lock_helper_binary = os.path.abspath('lock-helper' + _exe)
-atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
-                                                  _exe)
-wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
-wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
+def P(relpath,
+      head=os.path.abspath(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+                                                                  __file__)))))
+      ):
+  return os.path.join(head, relpath)
+svn_binary = P('svn/svn')
+svnadmin_binary = P('svnadmin/svnadmin')
+svnlook_binary = P('svnlook/svnlook')
+svnrdump_binary = P('svnrdump/svnrdump')
+svnsync_binary = P('svnsync/svnsync')
+svnversion_binary = P('svnversion/svnversion')
+svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
+svnmucc_binary = P('svnmucc/svnmucc')
+entriesdump_binary = P('tests/cmdline/entries-dump')
+lock_helper_binary = P('tests/cmdline/lock-helper')
+atomic_ra_revprop_change_binary = P('tests/cmdline/atomic-ra-revprop-change')
+wc_lock_tester_binary = P('tests/libsvn_wc/wc-lock-tester')
+wc_incomplete_tester_binary = P('tests/libsvn_wc/wc-incomplete-tester')
+del P
 
 ######################################################################
 # The location of svnauthz binary, relative to the only scripts that
