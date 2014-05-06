@@ -374,6 +374,12 @@ class Sandbox:
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'lock', *targets)
 
+  def youngest(self):
+    _, output, _ = svntest.actions.run_and_verify_svnlook(
+                     None, svntest.verify.AnyOutput, [],
+                     'youngest', self.repo_dir)
+    youngest = int(output[0])
+    return youngest
 
 def is_url(target):
   return (target.startswith('^/')
