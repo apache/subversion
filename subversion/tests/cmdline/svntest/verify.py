@@ -544,14 +544,37 @@ class DumpParser:
   def parse_text_length(self):
     return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
 
-  # One day we may need to parse individual property name/values into a map
   def get_props(self):
     props = []
     while not re.match('PROPS-END$', self.lines[self.current]):
       props.append(self.lines[self.current])
       self.current += 1
     self.current += 1
-    return props
+
+    # Split into key/value pairs to do an unordered comparison.
+    # This parses the serialized hash under the assumption that it is valid.
+    prophash = {}
+    curprop = [0]
+    while curprop[0] < len(props):
+      def read_key_or_value(curprop):
+        # klen / vlen
+        klen = int(props[curprop[0]].split()[1])
+        curprop[0] += 1
+
+        # key / value
+        key = ''
+        while len(key) != klen + 1:
+          key += props[curprop[0]]
+          curprop[0] += 1
+        key = key[:-1]
+
+        return key
+
+      key = read_key_or_value(curprop)
+      value = read_key_or_value(curprop)
+      prophash[key] = value
+
+    return prophash
 
   def get_content(self, length):
     content = ''
