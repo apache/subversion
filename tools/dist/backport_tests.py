@@ -196,9 +196,8 @@ def verify_backport(sbox, expected_dump_file, uuid):
   # mirror repository in preparation for the comparison dump.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   for revnum in range(0, 1+int(sbox.youngest())):
-    # TODO: there is no 'svnadmin delrevprop' command.
-    svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-      "propdel", "--revprop", "-r", revnum, "svn:date", sbox.repo_url)
+    svntest.actions.run_and_verify_svnadmin(None, [], [],
+      "delrevprop", "-r", revnum, sbox.repo_dir, "svn:date")
 
   # Create a dump file from the mirror repository.
   dest_dump = open(expected_dump_file).readlines()
