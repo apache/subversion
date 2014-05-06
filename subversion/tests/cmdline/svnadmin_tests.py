@@ -599,7 +599,7 @@ def hotcopy_format(sbox):
 #----------------------------------------------------------------------
 
 def setrevprop(sbox):
-  "'setlog' and 'setrevprop', bypassing hooks'"
+  "setlog, setrevprop, delrevprop; bypass hooks"
   sbox.build()
 
   # Try a simple log property modification.
@@ -637,6 +637,14 @@ def setrevprop(sbox):
   svntest.actions.run_and_verify_svn(None, [ "foo\n" ], [], "propget",
                                      "--revprop", "-r0", "svn:author",
                                      sbox.wc_dir)
+
+  # Delete the property.
+  svntest.actions.run_and_verify_svnadmin(None, [], [],
+                                          "delrevprop", "-r0", sbox.repo_dir,
+                                          "svn:author")
+  svntest.actions.run_and_verify_svnlook(None, [], ".*E200017.*svn:author.*",
+                                         "propget", "--revprop", "-r0",
+                                         sbox.repo_dir, "svn:author")
 
 def verify_windows_paths_in_repos(sbox):
   "verify a repository containing paths like 'c:hi'"

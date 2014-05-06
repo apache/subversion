@@ -152,6 +152,7 @@ check_lib_versions(void)
 static svn_opt_subcommand_t
   subcommand_crashtest,
   subcommand_create,
+  subcommand_delrevprop,
   subcommand_deltify,
   subcommand_dump,
   subcommand_freeze,
@@ -338,6 +339,17 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     svnadmin__pre_1_4_compatible, svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible
     } },
+
+  {"delrevprop", subcommand_delrevprop, {0}, N_
+   ("usage: svnadmin delrevprop REPOS_PATH -r REVISION NAME\n\n"
+    "Delete the property NAME on revision REVISION. Use\n"
+    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
+    "the revision property-related hooks (for example, if you want an email\n"
+    "notification sent from your post-revprop-change hook).\n\n"
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "irreversibly destroy the previous value of the property.\n"),
+   {'r', svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -1564,22 +1576,32 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* A helper for the 'setrevprop' and 'setlog' commands.  Expects
    OPT_STATE->use_pre_revprop_change_hook and
-   OPT_STATE->use_post_revprop_change_hook to be set appropriately. */
+   OPT_STATE->use_post_revprop_change_hook to be set appropriately.
+   If FILENAME is NULL, delete property PROP_NAME.  */
 static svn_error_t *
 set_revprop(const char *prop_name, const char *filename,
             struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_string_t *prop_value = svn_string_create_empty(pool);
-  svn_stringbuf_t *file_contents;
+  svn_string_t *prop_value;
 
-  SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));
+  if (filename)
+    {
+      svn_stringbuf_t *file_contents;
 
-  prop_value->data = file_contents->data;
-  prop_value->len = file_contents->len;
+      SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));
 
-  SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
-                                      NULL, FALSE, pool, pool));
+      prop_value = svn_string_create_empty(pool);
+      prop_value->data = file_contents->data;
+      prop_value->len = file_contents->len;
+
+      SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
+                                          NULL, FALSE, pool, pool));
+    }
+  else
+    {
+      prop_value = NULL;
+    }
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
@@ -2270,6 +2292,29 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_cmdline_printf(pool, _("\nUpgrade completed.\n")));
   return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+  const char *prop_name, *filename;
+
+  /* Expect one more argument: NAME */
+  SVN_ERR(parse_args(&args, os, 1, 1, pool));
+  prop_name = APR_ARRAY_IDX(args, 0, const char *);
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
+
+  return set_revprop(prop_name, NULL, opt_state, pool);
 }
 
 
