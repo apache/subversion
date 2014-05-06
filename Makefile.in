@@ -444,6 +444,7 @@ local-distclean: local-clean
 	  libtool mkmf.log subversion/svn_private_config.h \
 	  subversion/bindings/javahl/classes \
 	  subversion/bindings/javahl/include \
+	  subversion/libsvn_*/*.pc \
 	$(SVN_CONFIG_SCRIPT_FILES)
 	rm -f Makefile
 
