@@ -604,14 +604,20 @@ def setrevprop(sbox):
 
   # Try a simple log property modification.
   iota_path = os.path.join(sbox.wc_dir, "iota")
-  exit_code, output, errput = svntest.main.run_svnadmin("setlog",
-                                                        sbox.repo_dir,
-                                                        "-r0",
-                                                        "--bypass-hooks",
-                                                        iota_path)
-  if errput:
-    logger.warn("Error: 'setlog' failed")
-    raise svntest.Failure
+  mu_path = sbox.ospath('A/mu')
+  svntest.actions.run_and_verify_svnadmin(None, [], [],
+                                          "setlog", sbox.repo_dir, "-r0",
+                                          "--bypass-hooks",
+                                          iota_path)
+
+  # Make sure it fails without --bypass-hooks.  (We haven't called
+  # svntest.actions.enable_revprop_changes().)
+  #
+  # Note that we attempt to set the log message to a different value than the
+  # successful call.
+  svntest.actions.run_and_verify_svnadmin(None, [], svntest.verify.AnyOutput,
+                                          "setlog", sbox.repo_dir, "-r0",
+                                          mu_path)
 
   # Verify that the revprop value matches what we set when retrieved
   # through the client.
