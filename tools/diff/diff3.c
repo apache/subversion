@@ -141,7 +141,8 @@ int main(int argc, const char *argv[])
           else if (!conflict_latest)
             conflict_latest = apr_pstrcat(pool, ">>>>>>> ", arg, SVN_VA_NULL);
           else
-            svn_err = svn_error_wrap_apr(status, "getopt failure");
+            svn_err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                       "too many lables");
           break;
         case 'E':
         case 'm':
