@@ -148,10 +148,13 @@ svn_mutex__lock(svn_mutex__t *mutex)
       if (mutex->checked)
         {
           /* We want non-threaded systems to detect the same coding errors
-             as threaded systems. */
-          if (++mutex->count > 1)
+             as threaded systems.  No further sync required. */
+          if (mutex->count)
             return svn_error_create(SVN_ERR_RECURSIVE_LOCK, NULL, 
                                     _("Recursive locks are not supported"));
+
+          /* Update lock counter. */
+          ++mutex->count;
         }
 #endif
     }
