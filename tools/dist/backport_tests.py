@@ -32,9 +32,20 @@ import os
 import re
 import sys
 
+@contextlib.contextmanager
+def chdir(dir):
+  try:
+    saved_dir = os.getcwd()
+    os.chdir(dir)
+    yield
+  finally:
+    os.chdir(saved_dir)
+
 # Our testing module
-sys.path.insert(0, '../../subversion/tests/cmdline')
-import svntest
+# HACK: chdir to cause svntest.main.svn_binary to be set correctly
+sys.path.insert(0, os.path.abspath('../../subversion/tests/cmdline'))
+with chdir('../../subversion/tests/cmdline'):
+  import svntest
 
 # (abbreviations)
 Skip = svntest.testcase.Skip_deco
@@ -50,15 +61,6 @@ Wimp = svntest.testcase.Wimp_deco
 BACKPORT_PL = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                            'backport.pl'))
 STATUS = 'branch/STATUS'
-
-@contextlib.contextmanager
-def chdir(dir):
-  try:
-    saved_dir = os.getcwd()
-    os.chdir(dir)
-    yield
-  finally:
-    os.chdir(saved_dir)
 
 class BackportTest(object):
   """Decorator.  See self.__call__()."""
