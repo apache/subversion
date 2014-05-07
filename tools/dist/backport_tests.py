@@ -29,6 +29,7 @@
 import contextlib
 import functools
 import os
+import re
 import sys
 
 # Our testing module
@@ -63,7 +64,8 @@ class BackportTest(object):
   """Decorator.  See self.__call__()."""
 
   def __init__(self, uuid):
-    "The argument is the UUID embedded in the dump file."
+    """The argument is the UUID embedded in the dump file.
+    If the argument is None, then there is no dump file."""
     self.uuid = uuid
 
   def __call__(self, test_func):
@@ -177,20 +179,30 @@ def serialize_STATUS(approveds,
 
   return "".join(strings)
 
-def run_backport(sbox):
+def run_backport(sbox, error_expected=False, extra_env=[]):
+  """Run backport.pl.  EXTRA_ENV is a list of key=value pairs (str) to set in
+  the child's environment.  ERROR_EXPECTED is propagated to run_command()."""
   # TODO: if the test is run in verbose mode, pass DEBUG=1 in the environment,
   #       and pass error_expected=True to run_command() to not croak on
   #       stderr output from the child (because it uses 'sh -x').
+  args = [
+    '/usr/bin/env',
+    'SVN=' + svntest.main.svn_binary,
+    'YES=1', 'MAY_COMMIT=1', 'AVAILID=jrandom',
+  ] + list(extra_env) + [
+    'perl', BACKPORT_PL,
+  ]
   with chdir(sbox.ospath('branch')):
-    svntest.main.run_command('/usr/bin/env', None, False,
-                             'SVN=' + svntest.main.svn_binary,
-                             'YES=1', 'MAY_COMMIT=1', 'AVAILID=jrandom', 'perl',
-                             BACKPORT_PL)
+    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
 
 def verify_backport(sbox, expected_dump_file, uuid):
   """Compare the contents of the SBOX repository with EXPECTED_DUMP_FILE.
   Set the UUID of SBOX to UUID beforehand.
   Based on svnsync_tests.py:verify_mirror."""
+
+  if uuid is None:
+    # There is no expected dump file.
+    return
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -346,6 +358,45 @@ def backport_multirevisions(sbox):
 
 
 #----------------------------------------------------------------------
+@BackportTest(None) # would be 000000000006
+def backport_conflicts_detection(sbox):
+  "test the conflicts detector"
+
+  # r6: conflicting change on branch
+  sbox.simple_append('branch/iota', 'Conflicts with first change\n')
+  sbox.simple_commit(message="Conflicting change on iota")
+  
+  # r7: nominate r4, but without the requisite --accept
+  approved_entries = [
+    make_entry([4], notes="This will conflict."),
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4')
+
+  # Run it.
+  exit_code, output, errput = run_backport(sbox, True,
+                                           # Choose conflicts mode:
+                                           ["MAY_COMMIT=0"])
+
+  # Verify
+  expected_errput = (
+    r'(?ms)' # re.MULTILINE | re.DOTALL
+    r'.*Warning summary.*'
+    r'^r4 [(]default logsummary[)]: Conflicts on iota.*'
+  )
+  expected_errput = svntest.verify.RegexListOutput(
+                      [
+                        r'Warning summary',
+                        r'===============',
+                        r'r4 [(]default logsummary[)]: Conflicts on iota',
+                      ],
+                      match_all=False)
+  svntest.verify.verify_outputs(None, output, errput,
+                                svntest.verify.AnyOutput, expected_errput)
+  svntest.verify.verify_exit_code(None, exit_code, 1)
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -357,6 +408,7 @@ test_list = [ None,
               backport_accept,
               backport_branches,
               backport_multirevisions,
+              backport_conflicts_detection,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID.
              ]
