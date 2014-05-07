@@ -1160,7 +1160,7 @@ recursive_locking(const svn_test_opts_t *opts,
   /* ### This test deadlocks on Windows because the mutex code it tries to
      ### test is not used. This mutex is not needed as the locking is per
      ### handle on Windows, not per process */
-  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
 #endif
 
   SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
@@ -1208,8 +1208,13 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns to log addressing in shared FSFS"),
     SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
                        "upgrade txns started before svnadmin upgrade"),
+#ifdef WIN32
+    SVN_TEST_OPTS_XFAIL(recursive_locking,
+                       "prevent recursive locking"),
+#else
     SVN_TEST_OPTS_PASS(recursive_locking,
                        "prevent recursive locking"),
+#endif
     SVN_TEST_NULL
   };
 
