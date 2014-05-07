@@ -1155,6 +1155,14 @@ recursive_locking(const svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   svn_fs_t *fs;
+
+#ifdef WIN32
+  /* ### This test deadlocks on Windows because the mutex code it tries to
+     ### test is not used. This mutex is not needed as the locking is per
+     ### handle on Windows, not per process */
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+#endif
+
   SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
   SVN_ERR(svn_fs_fs__with_all_locks(fs, lock_again, fs, pool));
 
