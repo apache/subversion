@@ -144,9 +144,7 @@ os.environ['LC_ALL'] = 'C'
 # The locations of the svn binaries.
 # Use --bin to override these defaults.
 def P(relpath,
-      head=os.path.abspath(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-                                                                  __file__)))))
+      head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
       ):
   return os.path.join(head, relpath)
 svn_binary = P('svn/svn')
