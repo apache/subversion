@@ -1999,22 +1999,29 @@ def delete_keep_local_twice(sbox):
     logger.warn('Directory was really deleted')
     raise svntest.Failure
 
-def windows_paths_in_repos(sbox):
+@XFail(svntest.main.is_ra_type_dav)
+def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
   sbox.build(create_wc = False)
   repo_url       = sbox.repo_url
 
-  chi_url = sbox.repo_url + '/c:hi'
+  for test_url in [ sbox.repo_url + '/c:hi',
+                    sbox.repo_url + '/C:',
+                    sbox.repo_url + '/C&',
+                    sbox.repo_url + '/C<',
+                    sbox.repo_url + '/C# hi',
+                    sbox.repo_url + '/C\\ri',]:
 
-  # do some manipulations on a folder containing a windows drive name.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', '-m', 'log_msg',
-                                     chi_url)
+    # do some manipulations on a folder containing a windows drive name.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'mkdir', '-m', 'log_msg',
+                                       test_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '-m', 'log_msg',
-                                     chi_url)
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_url)
+
 
 def basic_rm_urls_one_repo(sbox):
   "remotely remove directories from one repository"
@@ -3143,7 +3150,7 @@ test_list = [ None,
               ls_space_in_repo_name,
               delete_keep_local,
               delete_keep_local_twice,
-              windows_paths_in_repos,
+              special_paths_in_repos,
               basic_rm_urls_one_repo,
               basic_rm_urls_multi_repos,
               automatic_conflict_resolution,
