@@ -1999,7 +1999,7 @@ def delete_keep_local_twice(sbox):
     logger.warn('Directory was really deleted')
     raise svntest.Failure
 
-@XFail(svntest.main.is_ra_type_dav)
+@Wimp(svntest.main.is_ra_type_dav) # fails with recent httpd
 def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
