@@ -34,7 +34,6 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
