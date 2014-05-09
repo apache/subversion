@@ -2301,7 +2301,7 @@ subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   apr_array_header_t *args;
-  const char *prop_name, *filename;
+  const char *prop_name;
 
   /* Expect one more argument: NAME */
   SVN_ERR(parse_args(&args, os, 1, 1, pool));
