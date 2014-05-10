@@ -44,6 +44,7 @@
 #include "cl.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_opt_private.h"
 #include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
 
@@ -369,8 +370,11 @@ svn_cl__propget(apr_getopt_t *os,
         {
           return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
                                    _("Property '%s' not found on "
-                                     "revision %ld"),
-                                   pname_utf8, opt_state->start_revision);
+                                     "revision %s"),
+                                   pname_utf8,
+                                   svn_opt__revision_to_string(
+                                     &opt_state->start_revision,
+                                     pool));
         }
       else
         {
