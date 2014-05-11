@@ -2179,6 +2179,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
                      svn_boolean_t check_normalization,
+                     svn_boolean_t metadata_only,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -2256,38 +2257,39 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                                                         pool));
     }
 
-  for (rev = start_rev; rev <= end_rev; rev++)
-    {
-      svn_pool_clear(iterpool);
+  if (!metadata_only)
+    for (rev = start_rev; rev <= end_rev; rev++)
+      {
+        svn_pool_clear(iterpool);
 
-      /* Wrapper function to catch the possible errors. */
-      err = verify_one_revision(fs, rev, notify_func, notify_baton,
-                                start_rev, check_normalization,
-                                cancel_func, cancel_baton,
-                                iterpool);
+        /* Wrapper function to catch the possible errors. */
+        err = verify_one_revision(fs, rev, notify_func, notify_baton,
+                                  start_rev, check_normalization,
+                                  cancel_func, cancel_baton,
+                                  iterpool);
 
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_CANCELLED)
-            return svn_error_trace(err);
+        if (err)
+          {
+            if (err->apr_err == SVN_ERR_CANCELLED)
+              return svn_error_trace(err);
 
-          found_corruption = TRUE;
-          notify_verification_error(rev, err, notify_func, notify_baton,
-                                    iterpool);
-          svn_error_clear(err);
+            found_corruption = TRUE;
+            notify_verification_error(rev, err, notify_func, notify_baton,
+                                      iterpool);
+            svn_error_clear(err);
 
-          if (keep_going)
-            continue;
-          else
-            break;
-        }
+            if (keep_going)
+              continue;
+            else
+              break;
+          }
 
-      if (notify_func)
-        {
-          notify->revision = rev;
-          notify_func(notify_baton, notify, iterpool);
-        }
-    }
+        if (notify_func)
+          {
+            notify->revision = rev;
+            notify_func(notify_baton, notify, iterpool);
+          }
+      }
 
   /* We're done. */
   if (notify_func)

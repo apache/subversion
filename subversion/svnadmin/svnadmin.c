@@ -202,7 +202,8 @@ enum svnadmin__cmdline_options_t
     svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible,
     svnadmin__compatible_version,
-    svnadmin__check_normalization
+    svnadmin__check_normalization,
+    svnadmin__metadata_only
   };
 
 /* Option codes and descriptions.
@@ -315,6 +316,11 @@ static const apr_getopt_option_t options_table[] =
         "                             svn:mergeinfo property value that differ only\n"
         "                             in character representation, but are otherwise\n"
         "                             identical")},
+
+    {"metadata-only", svnadmin__metadata_only, 0,
+     N_("verify metadata only (ignored for BDB),"
+        "                             checking against external corruption in\n"
+        "                             Subversion 1.9+ format repositories.\n")},
 
     {NULL}
   };
@@ -521,7 +527,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verify the data stored in the repository.\n"),
    {'t', 'r', 'q', svnadmin__keep_going, 'M',
-    svnadmin__check_normalization} },
+    svnadmin__check_normalization, svnadmin__metadata_only} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -551,6 +557,7 @@ struct svnadmin_opt_state
   svn_boolean_t wait;                               /* --wait */
   svn_boolean_t keep_going;                         /* --keep-going */
   svn_boolean_t check_normalization;                /* --check-normalization */
+  svn_boolean_t metadata_only;                      /* --metadata-only */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   svn_boolean_t ignore_dates;                       /* --ignore-dates */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
@@ -1784,6 +1791,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
                                     opt_state->keep_going,
                                     opt_state->check_normalization,
+                                    opt_state->metadata_only,
                                     !opt_state->quiet
                                     ? repos_notify_handler : NULL,
                                     &notify_baton, check_cancel,
@@ -2496,6 +2504,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__check_normalization:
         opt_state.check_normalization = TRUE;
+        break;
+      case svnadmin__metadata_only:
+        opt_state.metadata_only = TRUE;
         break;
       case svnadmin__fs_type:
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));

@@ -2449,6 +2449,68 @@ def freeze_freeze(sbox):
                                           'freeze', '-F', arg_file, '--',
                                           sys.executable, '-c', 'True')
 
+def verify_metadata_only(sbox):
+  "verify metadata only"
+
+  sbox.build(create_wc = False)
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir,
+                                                        "--metadata-only")
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  # Unfortunately, older formats won't test as thoroughly than newer ones
+  # resulting in different progress output. BDB will do a full check but
+  # not produce any output.
+  if svntest.main.is_fs_log_addressing():
+    svntest.verify.compare_and_display_lines(
+      "Unexpected error while running 'svnadmin verify'.",
+      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n"], output)
+  elif svntest.main.fs_has_rep_sharing() \
+       and not svntest.main.is_fs_type_bdb():
+    svntest.verify.compare_and_display_lines(
+      "Unexpected error while running 'svnadmin verify'.",
+      'STDOUT', ["* Verifying repository metadata ...\n"], output)
+  else:
+    svntest.verify.compare_and_display_lines(
+      "Unexpected error while running 'svnadmin verify'.",
+      'STDOUT', [], output)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_quickly(sbox):
+  "verify quickly using metadata"
+
+  sbox.build(create_wc = False)
+  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+
+  # set new contents
+  rev_file.seek(8)
+  rev_file.write('#')
+  rev_file.close()
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir,
+                                                        "--metadata-only")
+
+  # unfortunately, some backends needs to do more checks than other
+  # resulting in different progress output
+  if svntest.main.is_fs_log_addressing():
+    exp_out = svntest.verify.RegexListOutput([])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                              "svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([])
+    exp_err = svntest.verify.RegexListOutput([])
+
+  if (svntest.main.fs_has_rep_sharing()):
+    exp_out.insert(0, ".*Verifying.*metadata.*")
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -2495,6 +2557,8 @@ test_list = [ None,
               fsfs_hotcopy_old_with_propchanges,
               verify_packed,
               freeze_freeze,
+              verify_metadata_only,
+              verify_quickly,
              ]
 
 if __name__ == '__main__':
