@@ -2739,6 +2739,11 @@ svn_repos_info_format(int *repos_format,
  * differ only in character representation, but are otherwise
  * identical.
  *
+ * If @a metadata_only is @c TRUE, backends that have a concept of separate
+ * metadata verification will only perform that and skip the more expensive
+ * file context reconstruction and verification.  For FSFS format 7+ and
+ * FSX, this allows for a very fast check against external corruption.
+ *
  * If @a notify_func is not null, then call it with @a notify_baton and
  * with a notification structure in which the fields are set as follows.
  * (For a warning or error notification that does not apply to a specific
@@ -2792,6 +2797,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
                      svn_boolean_t check_normalization,
+                     svn_boolean_t metadata_only,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel,
