@@ -2013,7 +2013,6 @@ def special_paths_in_repos(sbox):
                     sbox.repo_url + '/C<',
                     sbox.repo_url + '/C# hi',
                     sbox.repo_url + '/C\\ri',
-                    sbox.repo_url + '/C&',
                     sbox.repo_url + '/C?',
                     sbox.repo_url + '/C+',
                     sbox.repo_url + '/C%']:
