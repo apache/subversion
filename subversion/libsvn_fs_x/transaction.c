@@ -1352,7 +1352,8 @@ read_next_ids(apr_uint64_t *node_id,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("next-id file corrupt"));
 
-  *copy_id = svn__base36toui64(&str, ++str);
+  ++str;
+  *copy_id = svn__base36toui64(&str, str);
   if (*str != '\n')
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("next-id file corrupt"));
