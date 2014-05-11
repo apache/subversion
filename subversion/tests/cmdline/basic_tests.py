@@ -2004,6 +2004,7 @@ def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
   sbox.build(create_wc = False)
+  test_file_source = os.path.join(sbox.repo_dir, 'format')
   repo_url       = sbox.repo_url
 
   for test_url in [ sbox.repo_url + '/c:hi',
@@ -2011,12 +2012,41 @@ def special_paths_in_repos(sbox):
                     sbox.repo_url + '/C&',
                     sbox.repo_url + '/C<',
                     sbox.repo_url + '/C# hi',
-                    sbox.repo_url + '/C\\ri',]:
+                    sbox.repo_url + '/C\\ri',
+                    sbox.repo_url + '/C&',
+                    sbox.repo_url + '/C?',
+                    sbox.repo_url + '/C+',
+                    sbox.repo_url + '/C%']:
 
-    # do some manipulations on a folder containing a windows drive name.
+    test_file_url = test_url + '/' + test_url[test_url.rindex('/')+1:]
+
+    # do some manipulations on a folder which problematic names
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'mkdir', '-m', 'log_msg',
                                        test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                           '-m', 'log_msg',
+                                           'put', test_file_source,
+                                           test_file_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_url)
+
+    svntest.actions.run_and_verify_svn(None, 'propvalue', [],
+                                       'propget', 'propname', test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, 'propvalue', [],
+                                       'propget', 'propname', test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_file_url)
 
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'rm', '-m', 'log_msg',
