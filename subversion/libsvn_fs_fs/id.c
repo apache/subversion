@@ -94,8 +94,9 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
   data = strchr(data, '-');
   if (data == NULL)
     return FALSE;
-  
-  txn_id->number = svn__base36toui64(&data, ++data);
+
+  ++data;
+  txn_id->number = svn__base36toui64(&data, data);
   return *data == '\0';
 }
 
