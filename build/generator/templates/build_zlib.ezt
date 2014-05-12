@@ -44,25 +44,6 @@ if /i "%2" == "x64" goto PX64
 goto pIIerr
 
 :checkrebuild
-
-[if-any use_ml]
-@rem **************************************************************************
-@rem Compile ASM sources with ML
-set ASFLAGS=-nologo -Zi -coff
-set LOC=-DASMV -DASMINF
-[is zlib_version "1.2.4"]
-set OBJA=contrib\masmx86\gvmat32c.obj contrib\masmx86\gvmat32.obj contrib\masmx86\inffas32.obj
-set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
-[else]
-if /i "%2" == "Win32" (
-  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
-) else if /i "%2" == "x64" (
-  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.obj" AS=ml64 
-)
-[end]
-[end]
-
-
 if /i "%3" == "rebuild" goto rebuild
 if /i "%3" == "clean" goto clean
 if not "%3" == "" goto pIIIerr
