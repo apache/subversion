@@ -108,6 +108,18 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * ^/subversion/branches/1.7.x-disable_zlib_asm
+   Disable building ZLib's assembly optimizations on Windows
+   Justification:
+     Without this patch some users might accidentally make Subversion build
+     zlib with known issues which would break ra_serf against older serf
+     versions. (With newer serf versions the user would have to build zlib
+     himself before building Subversion)
+   Branch:
+     ^/subversion/branches/1.7.x-disable_zlib_asm
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
