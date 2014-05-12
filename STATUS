@@ -118,7 +118,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-disable_zlib_asm
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
