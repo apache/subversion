@@ -150,7 +150,7 @@ Candidate changes:
      It's confusing since the URL isn't what the user passed.  Regression since
      1.7.9 when we fixed issue #4332.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
  * r1592014, r1592034
    Fix 'svn patch' skipping targets in valid --git diffs.
@@ -161,12 +161,12 @@ Candidate changes:
      +1: stsp
 
  * r1593992
-   Remove usless warning about ruby during configure.
+   Remove useless warning about ruby during configure.
    Justification:
      Ruby 1.9 support has been there for a while.  Telling people iff they
      are using Ruby 1.9.3 that the support is new is useless.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
 Veto-blocked changes:
 =====================
