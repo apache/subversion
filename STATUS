@@ -120,6 +120,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
+ * r1496127, r1567492, r1567494
+   Fix occasional failure of checkout_tests.py 12.
+   Justification:
+     Spurious FAILs confuse people testing the release.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
