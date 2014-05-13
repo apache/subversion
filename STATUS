@@ -180,6 +180,8 @@ Candidate changes:
    Add a regression test for a problem specific to 1.8.x.
    Justification:
      Need this test on the affected branch. The test passes on trunk.
+   Branch:
+     ^/subversion/branches/1.8.x-r1594223
    Votes:
      +1: stsp
 
