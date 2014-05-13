@@ -87,7 +87,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
   esac
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  AC_EGREP_CPP([[apache_minor_version= *"$apache_minor_version_wanted_regex"]],
+  AC_EGREP_CPP([apache_minor_version= *\"$apache_minor_version_wanted_regex\"],
                [
 #include "$APXS_INCLUDE/ap_release.h"
 apache_minor_version=AP_SERVER_MINORVERSION],
