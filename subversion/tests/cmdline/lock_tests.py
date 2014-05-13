@@ -2271,6 +2271,27 @@ def dav_lock_refresh(sbox):
   if r.status != httplib.OK:
     raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def delete_locked_file_with_percent(sbox):
+  "lock and delete a file called 'a %( ) .txt'"
+
+  sbox.build()
+
+  locked_filename = 'a %( ) .txt'
+  locked_path = sbox.ospath(locked_filename)
+  svntest.main.file_write(locked_path, "content\n")
+  sbox.simple_add(locked_filename)
+  sbox.simple_commit()
+  
+  sbox.simple_lock(locked_filename)
+  sbox.simple_rm(locked_filename)
+
+  # XFAIL: With a 1.8.x client, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '/svn-test-work/repositories/lock_tests-52/!svn/txr/2-2/a%20%25(%20)%20.txt'
+  # and the following error in the httpd error log:
+  #  Invalid percent encoded URI in tagged If-header [400, #104]
+  sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -2333,6 +2354,7 @@ test_list = [ None,
               non_root_locks,
               many_locks_hooks,
               dav_lock_refresh,
+              delete_locked_file_with_percent,
             ]
 
 if __name__ == '__main__':
