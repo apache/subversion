@@ -127,7 +127,7 @@ Candidate changes:
      Spurious FAILs confuse people testing the release.
      This group was back-ported to 1.8.x in http://svn.apache.org/r1567731 .
    Votes:
-     +1: julianfoad
+     +1: julianfoad, danielsh
 
 Veto-blocked changes:
 =====================
