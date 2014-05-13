@@ -71,6 +71,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r113837
+   Fix a broken regex match in ac-macros/apache.m4.
+   Justification:
+     Fixes build with APR 1.5.
+   Branch:
+     ^/subversion/branches/1.6.x-r113837
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
