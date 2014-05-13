@@ -176,6 +176,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1594223
+   Add a regression test for a problem specific to 1.8.x.
+   Justification:
+     Need this test on the affected branch. The test passes on trunk.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
