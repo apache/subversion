@@ -232,6 +232,10 @@ typedef struct patch_target_t {
    * (i.e. a new file was added on top locally deleted node). */
   svn_boolean_t replaced;
 
+  /* Set if the target is supposed to be moved by the patch.
+   * This applies to --git diffs which carry "rename from/to" headers. */
+   const char *move_target_abspath;
+
   /* True if the target has the executable bit set. */
   svn_boolean_t executable;
 
@@ -942,6 +946,12 @@ choose_target_filename(const svn_patch_t *patch)
   if (strcmp(patch->new_filename, "/dev/null") == 0)
     return patch->old_filename;
 
+  /* If the patch renames the target, use the old name while
+   * applying hunks. The target will be renamed to the new name
+   * after hunks have been applied. */
+  if (patch->operation == svn_diff_op_moved)
+    return patch->old_filename;
+
   old = svn_path_component_count(patch->old_filename);
   new = svn_path_component_count(patch->new_filename);
 
@@ -1079,6 +1089,49 @@ init_patch_target(patch_target_t **patch_target,
         target->added = TRUE;
       else if (patch->operation == svn_diff_op_deleted)
         target->deleted = TRUE;
+      else if (patch->operation == svn_diff_op_moved)
+        {
+          const char *move_target_path;
+          const char *move_target_relpath;
+          svn_boolean_t under_root;
+
+          move_target_path = svn_dirent_internal_style(patch->new_filename,
+                                                       scratch_pool);
+
+          if (strip_count > 0)
+            SVN_ERR(strip_path(&move_target_path, move_target_path,
+                               strip_count, scratch_pool, scratch_pool));
+
+          if (svn_dirent_is_absolute(move_target_path))
+            {
+              move_target_relpath = svn_dirent_is_child(wcroot_abspath,
+                                                        move_target_path,
+                                                        scratch_pool);
+              if (! move_target_relpath)
+                {
+                  /* The move target path is either outside of the working
+                   * copy or it is the working copy itself. Skip it. */
+                  target->skipped = TRUE;
+                  target->local_abspath = NULL;
+                  return SVN_NO_ERROR;
+                }
+            }
+          else
+            move_target_relpath = move_target_path;
+
+          /* Make sure the move target path is secure to use. */
+          SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                           &target->move_target_abspath,
+                                           wcroot_abspath,
+                                           move_target_relpath, result_pool));
+          if (! under_root)
+            {
+              /* The target path is outside of the working copy. Skip it. */
+              target->skipped = TRUE;
+              target->local_abspath = NULL;
+              return SVN_NO_ERROR;
+            }
+        }
 
       if (! target->is_symlink)
         {
@@ -1963,6 +2016,7 @@ send_patch_notification(const patch_target_t *target,
 {
   svn_wc_notify_t *notify;
   svn_wc_notify_action_t action;
+  const char *notify_path;
 
   if (! ctx->notify_func2)
     return SVN_NO_ERROR;
@@ -1971,14 +2025,18 @@ send_patch_notification(const patch_target_t *target,
     action = svn_wc_notify_skip;
   else if (target->deleted)
     action = svn_wc_notify_delete;
-  else if (target->added || target->replaced)
+  else if (target->added || target->replaced || target->move_target_abspath)
     action = svn_wc_notify_add;
   else
     action = svn_wc_notify_patch;
 
-  notify = svn_wc_create_notify(target->local_abspath ? target->local_abspath
-                                                 : target->local_relpath,
-                                action, pool);
+  if (target->move_target_abspath)
+    notify_path = target->move_target_abspath;
+  else
+    notify_path = target->local_abspath ? target->local_abspath
+                                        : target->local_relpath;
+
+  notify = svn_wc_create_notify(notify_path, action, pool);
   notify->kind = svn_node_file;
 
   if (action == svn_wc_notify_skip)
@@ -2052,6 +2110,15 @@ send_patch_notification(const patch_target_t *target,
             }
         }
       svn_pool_destroy(iterpool);
+    }
+
+  if (target->move_target_abspath)
+    {
+      /* Notify about deletion of move source. */
+      notify = svn_wc_create_notify(target->local_abspath,
+                                    svn_wc_notify_delete, pool);
+      notify->kind = svn_node_file;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -2572,7 +2639,10 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                               svn_subst_eol_style_native);
 
               SVN_ERR(svn_subst_copy_and_translate4(
-                        target->patched_path, target->local_abspath,
+                        target->patched_path,
+                        target->move_target_abspath
+                          ? target->move_target_abspath
+                          : target->local_abspath,
                         target->content->eol_str, repair_eol,
                         target->content->keywords,
                         TRUE /* expand */, FALSE /* special */,
@@ -2593,9 +2663,32 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             }
 
           /* Restore the target's executable bit if necessary. */
-          SVN_ERR(svn_io_set_file_executable(target->local_abspath,
+          SVN_ERR(svn_io_set_file_executable(target->move_target_abspath
+                                               ? target->move_target_abspath
+                                               : target->local_abspath,
                                              target->executable,
                                              FALSE, pool));
+
+          if (target->move_target_abspath)
+            {
+              /* ### Copying the patched content to the move target location,
+               * performing the move in meta-data, and removing the file at
+               * the move source should be one atomic operation. */
+
+              /* ### Create missing parents. */
+
+              /* Perform the move in meta-data. */
+              SVN_ERR(svn_wc__move2(ctx->wc_ctx,
+                                    target->local_abspath,
+                                    target->move_target_abspath,
+                                    TRUE, /* metadata_only */
+                                    FALSE, /* allow_mixed_revisions */
+                                    NULL, NULL, NULL, NULL,
+                                    pool));
+
+              /* Delete the patch target's old location from disk. */
+              SVN_ERR(svn_io_remove_file2(target->local_abspath, FALSE, pool));
+            }
         }
     }
 
@@ -2961,6 +3054,7 @@ apply_patches(/* The path to the patch file. */
 
                   if (target->has_text_changes
                       || target->added
+                      || target->move_target_abspath
                       || target->deleted)
                     SVN_ERR(install_patched_target(target, abs_wc_path,
                                                    ctx, dry_run, iterpool));
