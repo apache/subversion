@@ -120,6 +120,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
+ r1594156
+   Fix a problem with the Unix build that could result in linking to the wrong
+   Subversion libraries at build time or at run time.
+   Justification:
+     Building and testing should Just Work as far as possible.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
