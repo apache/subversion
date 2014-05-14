@@ -176,10 +176,10 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1594223
-   Add a regression test for a problem specific to 1.8.x.
+ * r1594223, r1553501, r1553556, r1559197
+   Fix a URI-escaping bug specific to 1.8.x and add a regression test for it.
    Justification:
-     Need this test on the affected branch. The test passes on trunk.
+     Committing a deletion of a locked path should work.
    Branch:
      ^/subversion/branches/1.8.x-r1594223
    Votes:
