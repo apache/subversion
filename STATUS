@@ -125,6 +125,8 @@ Candidate changes:
    Subversion libraries at build time or at run time.
    Justification:
      Building and testing should Just Work as far as possible.
+   Branch:
+     ^/subversion/branches/1.7.x-r1594157
    Votes:
      +1: julianfoad
 
