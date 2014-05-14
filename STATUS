@@ -180,6 +180,11 @@ Candidate changes:
    Fix a URI-escaping bug specific to 1.8.x and add a regression test for it.
    Justification:
      Committing a deletion of a locked path should work.
+   Notes:
+     As a nice side effect the behavior change of this patch also resolves
+     Issue #3674: Replace + propset of locked file fails over DAV, and avoids
+     some duplicated requests by providing better lock information during
+     commit.
    Branch:
      ^/subversion/branches/1.8.x-r1594223
    Votes:
