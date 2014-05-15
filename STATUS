@@ -190,6 +190,13 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1594794, r1594814, r1594834, r1595061
+   Fix the notify_func callbacks in Python bindings.
+   Justification:
+     Slightly broken implementation made them impossible to use.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
