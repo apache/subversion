@@ -1095,6 +1095,8 @@ init_patch_target(patch_target_t **patch_target,
           const char *move_target_path;
           const char *move_target_relpath;
           svn_boolean_t under_root;
+          svn_node_kind_t kind_on_disk;
+          svn_node_kind_t wc_kind;
 
           move_target_path = svn_dirent_internal_style(patch->new_filename,
                                                        scratch_pool);
@@ -1130,6 +1132,19 @@ init_patch_target(patch_target_t **patch_target,
               /* The target path is outside of the working copy. Skip it. */
               target->skipped = TRUE;
               target->local_abspath = NULL;
+              return SVN_NO_ERROR;
+            }
+
+          SVN_ERR(svn_io_check_path(target->move_target_abspath,
+                                    &kind_on_disk, scratch_pool));
+          SVN_ERR(svn_wc_read_kind2(&wc_kind, wc_ctx,
+                                    target->move_target_abspath,
+                                    FALSE, FALSE, scratch_pool));
+          if (kind_on_disk != svn_node_none || wc_kind != svn_node_none)
+            {
+              /* The move target path already exists on disk. Skip target. */
+              target->skipped = TRUE;
+              target->move_target_abspath = NULL;
               return SVN_NO_ERROR;
             }
         }
