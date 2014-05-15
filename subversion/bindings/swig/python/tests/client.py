@@ -462,14 +462,19 @@ class SubversionClientTestCase(unittest.TestCase):
     self.notified_paths = []
     client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
                    False, False, self.client_ctx)
-    self.assertEquals(self.notified_paths,
-                      [  path,
-                         os.path.join(path, 'branches'),
-                         os.path.join(path, 'tags'),
-                         os.path.join(path, 'trunk'),
-                         path,
-                         path
-                      ])
+    expected_paths = [
+        path,
+        os.path.join(path, 'branches'),
+        os.path.join(path, 'tags'),
+        os.path.join(path, 'trunk'),
+        path,
+        path
+    ]
+    # All normal subversion apis process paths in Subversion's canonical format,
+    # which isn't the platform specific format
+    expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    
+    self.assertEquals(self.notified_paths, expected_paths)
 
     def notify_func2(notify, pool):
         self.notified_paths.append(notify.path)
