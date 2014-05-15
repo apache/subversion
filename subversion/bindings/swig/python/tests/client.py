@@ -473,6 +473,8 @@ class SubversionClientTestCase(unittest.TestCase):
     # All normal subversion apis process paths in Subversion's canonical format,
     # which isn't the platform specific format
     expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    self.notified_paths.sort()
+    expected_paths.sort()
 
     self.assertEquals(self.notified_paths, expected_paths)
 
@@ -493,6 +495,8 @@ class SubversionClientTestCase(unittest.TestCase):
     expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
     client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
                    False, False, self.client_ctx)
+    self.notified_paths.sort()
+    expected_paths.sort()
     self.assertEquals(self.notified_paths, expected_paths)
 
 
