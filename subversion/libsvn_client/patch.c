@@ -1031,6 +1031,7 @@ init_patch_target(patch_target_t **patch_target,
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               wcroot_abspath, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
+  *patch_target = target;
   if (! target->skipped)
     {
       const char *diff_header;
@@ -1203,7 +1204,6 @@ init_patch_target(patch_target_t **patch_target,
         }
     }
 
-  *patch_target = target;
   return SVN_NO_ERROR;
 }
 
