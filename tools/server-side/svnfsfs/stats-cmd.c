@@ -1,4 +1,4 @@
-/* fsfs-stats.c -- gather size statistics on FSFS repositories
+/* stats-cmd.c -- implements the size stats sub-command.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,43 +20,23 @@
  * ====================================================================
  */
 
-
-#include <assert.h>
-
-#include <apr.h>
-#include <apr_general.h>
-#include <apr_file_io.h>
-
-#include "svn_pools.h"
-#include "svn_diff.h"
-#include "svn_fs.h"
-#include "svn_io.h"
-#include "svn_utf.h"
 #include "svn_dirent_uri.h"
+#include "svn_fs.h"
+#include "svn_pools.h"
 #include "svn_sorts.h"
-#include "svn_delta.h"
-#include "svn_hash.h"
-#include "svn_cache_config.h"
 
+#include "private/svn_cache.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
-#include "private/svn_dep_compat.h"
-#include "private/svn_cache.h"
 
-#include "../../subversion/libsvn_fs_fs/fs.h"
-#include "../../subversion/libsvn_fs_fs/index.h"
-#include "../../subversion/libsvn_fs_fs/pack.h"
-#include "../../subversion/libsvn_fs_fs/rev_file.h"
-#include "../../subversion/libsvn_fs_fs/util.h"
+#include "../../../subversion/libsvn_fs_fs/index.h"
+#include "../../../subversion/libsvn_fs_fs/pack.h"
+#include "../../../subversion/libsvn_fs_fs/rev_file.h"
+#include "../../../subversion/libsvn_fs_fs/util.h"
+#include "../../../subversion/libsvn_fs/fs-loader.h"
 
-#include "../../subversion/libsvn_fs/fs-loader.h"
-
-#ifndef _
-#define _(x) x
-#endif
-
-#define ERROR_TAG "fsfs-stats: "
+#include "svn_private_config.h"
+#include "svnfsfs.h"
 
 /* We group representations into 2x2 different kinds plus one default:
  * [dir / file] x [text / prop]. The assignment is done by the first node
@@ -625,8 +605,9 @@ fs_open(fs_t **fs, const char *path, apr_pool_t *pool)
   fs_fs_data_t *ffd;
 
   *fs = apr_pcalloc(pool, sizeof(**fs));
-  SVN_ERR(svn_fs_open2(&(*fs)->fs, svn_dirent_join(path, "db", pool),
-                      NULL, pool, pool));
+
+  /* Check repository type and open it. */
+  SVN_ERR(open_fs(&(*fs)->fs, path, pool));
 
   /* Check the FS format number. */
   ffd = (*fs)->fs->fsap_data;
@@ -691,8 +672,6 @@ find_representation(int *idx,
   /* not found -> no result */
   if (info == NULL)
     return NULL;
-
-  assert(revision == info->revision);
 
   /* look for the representation */
   *idx = svn_sort__bsearch_lower_bound(info->representations,
@@ -1524,29 +1503,18 @@ read_log_revision_file(fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Read the repository at PATH beginning with revision START_REVISION and
- * return the result in *FS.  Allocate caches with MEMSIZE bytes total
- * capacity.  Use POOL for non-cache allocations.
+/* Read the repository at PATH and return the result in *FS.
+ * Use POOL for allocations.
  */
 static svn_error_t *
 read_revisions(fs_t **fs,
                const char *path,
-               svn_revnum_t start_revision,
-               apr_size_t memsize,
                apr_pool_t *pool)
 {
   svn_revnum_t revision;
-  svn_cache_config_t cache_config = *svn_cache_config_get();
   fs_fs_data_t *ffd;
 
   /* determine cache sizes */
-
-  if (memsize < 100)
-    memsize = 100;
-
-  cache_config.cache_size = memsize * 1024 * 1024;
-  svn_cache_config_set(&cache_config);
-
   SVN_ERR(fs_open(fs, path, pool));
   ffd = (*fs)->fs->fsap_data;
 
@@ -1572,7 +1540,7 @@ read_revisions(fs_t **fs,
                                             FALSE, pool, pool));
 
   /* read all packed revs */
-  for ( revision = start_revision
+  for ( revision = 0
       ; revision < ffd->min_unpacked_rev
       ; revision += ffd->max_files_per_dir)
     if (svn_fs_fs__use_log_addressing((*fs)->fs, revision))
@@ -2105,82 +2073,17 @@ print_stats(fs_t *fs,
   print_histograms_by_extension(fs, pool);
 }
 
-/* Write tool usage info text to OSTREAM using PROGNAME as a prefix and
- * POOL for allocations.
- */
-static void
-print_usage(svn_stream_t *ostream, const char *progname,
-            apr_pool_t *pool)
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  svn_error_clear(svn_stream_printf(ostream, pool,
-     "\n"
-     "Usage: %s <repo> [cachesize]\n"
-     "\n"
-     "Read the repository at local path <repo> starting at revision 0,\n"
-     "count statistical information and write that data to stdout.\n"
-     "Use up to [cachesize] MB of memory for caching. This does not include\n"
-     "temporary representation of the repository structure, i.e. the actual\n"
-     "memory may be considerably higher.  If not given, defaults to 100 MB.\n",
-     progname));
-}
-
-/* linear control flow */
-int main(int argc, const char *argv[])
-{
-  apr_pool_t *pool;
-  svn_stream_t *ostream;
-  svn_error_t *svn_err;
-  const char *repo_path = NULL;
-  svn_revnum_t start_revision = 0;
-  apr_size_t memsize = 100;
-  apr_uint64_t temp = 0;
+  svnfsfs__opt_state *opt_state = baton;
   fs_t *fs;
 
-  apr_initialize();
-  atexit(apr_terminate);
-
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
-  svn_err = svn_stream_for_stdout(&ostream, pool);
-  if (svn_err)
-    {
-      svn_handle_error2(svn_err, stdout, FALSE, ERROR_TAG);
-      return 2;
-    }
-
-  if (argc < 2 || argc > 3)
-    {
-      print_usage(ostream, argv[0], pool);
-      return 2;
-    }
-
-  if (argc == 3)
-    {
-      svn_err = svn_cstring_strtoui64(&temp, argv[2], 0, APR_SIZE_MAX, 10);
-      if (svn_err)
-        {
-          print_usage(ostream, argv[0], pool);
-          svn_error_clear(svn_err);
-          return 2;
-        }
-
-      memsize = (apr_size_t)temp;
-    }
-
-  repo_path = svn_dirent_canonicalize(argv[1], pool);
-  start_revision = 0;
-
   printf("Reading revisions\n");
-  svn_err = read_revisions(&fs, repo_path, start_revision, memsize, pool);
-  printf("\n");
-
-  if (svn_err)
-    {
-      svn_handle_error2(svn_err, stdout, FALSE, ERROR_TAG);
-      return 2;
-    }
+  SVN_ERR(read_revisions(&fs, opt_state->repository_path, pool));
 
   print_stats(fs, pool);
 
-  return 0;
+  return SVN_NO_ERROR;
 }

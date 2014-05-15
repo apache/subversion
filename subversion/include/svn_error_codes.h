@@ -856,6 +856,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 61,
              "Lock operation failed")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_UNSUPPORTED_TYPE,
+             SVN_ERR_FS_CATEGORY_START + 62,
+             "Unsupported FS type")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -1429,6 +1434,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RECURSIVE_LOCK,
              SVN_ERR_MISC_CATEGORY_START + 43,
              "Recursive locks are not supported")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_INVALID_INPUT,
+             SVN_ERR_MISC_CATEGORY_START + 44,
+             "Parser error: invalid input")
 
   /* command-line client errors */
 
