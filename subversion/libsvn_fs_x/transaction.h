@@ -40,6 +40,38 @@ svn_fs_x__with_write_lock(svn_fs_t *fs,
                           void *baton,
                           apr_pool_t *pool);
 
+/* Obtain a pack operation lock on the filesystem FS in a subpool of POOL,
+   call BODY with BATON and that subpool, destroy the subpool (releasing the
+   write lock) and return what BODY returned. */
+svn_error_t *
+svn_fs_x__with_pack_lock(svn_fs_t *fs,
+                         svn_error_t *(*body)(void *baton,
+                                              apr_pool_t *pool),
+                         void *baton,
+                         apr_pool_t *pool);
+
+/* Run BODY (with BATON and POOL) while the txn-current file
+   of FS is locked. */
+svn_error_t *
+svn_fs_x__with_txn_current_lock(svn_fs_t *fs,
+                                svn_error_t *(*body)(void *baton,
+                                                     apr_pool_t *pool),
+                                void *baton,
+                                apr_pool_t *pool);
+
+/* Obtain all locks on the filesystem FS in a subpool of POOL, call BODY
+   with BATON and that subpool, destroy the subpool (releasing the locks)
+   and return what BODY returned.
+
+   This combines svn_fs_fs__with_write_lock, svn_fs_fs__with_pack_lock,
+   and svn_fs_fs__with_txn_current_lock, ensuring correct lock ordering. */
+svn_error_t *
+svn_fs_x__with_all_locks(svn_fs_t *fs,
+                         svn_error_t *(*body)(void *baton,
+                                              apr_pool_t *pool),
+                         void *baton,
+                         apr_pool_t *pool);
+
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */
