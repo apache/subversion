@@ -414,21 +414,6 @@ svn_fs_x__path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t
                      PATH_EXT_CHILDREN, SVN_VA_NULL);
 }
 
-const char *
-svn_fs_x__path_node_origin(svn_fs_t *fs,
-                           const svn_fs_x__id_part_t *node_id,
-                           apr_pool_t *pool)
-{
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  apr_size_t len = svn__ui64tobase36(buffer, node_id->number);
-
-  if (len > 1)
-    buffer[len - 1] = '\0';
-
-  return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                              buffer, SVN_VA_NULL);
-}
-
 
 /* Check that BUF, a nul-terminated buffer of text from file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.

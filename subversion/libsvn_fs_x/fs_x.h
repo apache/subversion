@@ -190,33 +190,6 @@ svn_error_t *svn_fs_x__ensure_dir_exists(const char *path,
                                          const char *fs_path,
                                          apr_pool_t *pool);
 
-/* Update the node origin index for FS, recording the mapping from
-   NODE_ID to NODE_REV_ID.  Use POOL for any temporary allocations.
-
-   Because this is just an "optional" cache, this function does not
-   return an error if the underlying storage is readonly; it still
-   returns an error for other error conditions.
- */
-svn_error_t *
-svn_fs_x__set_node_origin(svn_fs_t *fs,
-                          const svn_fs_x__id_part_t *node_id,
-                          const svn_fs_id_t *node_rev_id,
-                          apr_pool_t *pool);
-
-/* Set *ORIGIN_ID to the node revision ID from which the history of
-   all nodes in FS whose "Node ID" is NODE_ID springs, as determined
-   by a look in the index.  ORIGIN_ID needs to be parsed in an
-   FS-backend-specific way.  Use POOL for allocations.
-
-   If there is no entry for NODE_ID in the cache, return NULL
-   in *ORIGIN_ID. */
-svn_error_t *
-svn_fs_x__get_node_origin(const svn_fs_id_t **origin_id,
-                          svn_fs_t *fs,
-                          const svn_fs_x__id_part_t *node_id,
-                          apr_pool_t *pool);
-
-
 /* Initialize all session-local caches in FS according to the global
    cache settings. Use POOL for allocations.
 
