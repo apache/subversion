@@ -49,6 +49,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "fs.h"
 #include "dag.h"
@@ -1642,33 +1643,23 @@ compare_dir_structure(svn_boolean_t *changed,
                       dag_node_t *rhs,
                       apr_pool_t *pool)
 {
-  apr_hash_t *lhs_entries;
-  apr_hash_t *rhs_entries;
-  apr_hash_index_t *hi;
+  apr_array_header_t *lhs_entries;
+  apr_array_header_t *rhs_entries;
+  int i;
 
   SVN_ERR(svn_fs_x__dag_dir_entries(&lhs_entries, lhs, pool));
   SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, pool));
 
-  /* different number of entries -> some addition / removal */
-  if (apr_hash_count(lhs_entries) != apr_hash_count(rhs_entries))
+  /* Since directories are sorted by name, we can simply compare their
+     entries one-by-one without binary lookup etc. */
+  for (i = 0; i < lhs_entries->nelts; ++i)
     {
-      *changed = TRUE;
-      return SVN_NO_ERROR;
-    }
+      svn_fs_dirent_t *lhs_entry
+        = APR_ARRAY_IDX(lhs_entries, i, svn_fs_dirent_t *);
+      svn_fs_dirent_t *rhs_entry
+        = APR_ARRAY_IDX(rhs_entries, i, svn_fs_dirent_t *);
 
-  /* Since the number of dirents is the same, we simply need to do a 
-     one-sided comparison. */
-  for (hi = apr_hash_first(pool, lhs_entries); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_dirent_t *lhs_entry;
-      svn_fs_dirent_t *rhs_entry;
-      const char *name;
-      apr_ssize_t klen;
-
-      apr_hash_this(hi, (const void **)&name, &klen, (void **)&lhs_entry);
-      rhs_entry = apr_hash_get(rhs_entries, name, klen);
-
-      if (!rhs_entry
+      if (strcmp(lhs_entry->name, rhs_entry->name)
           || !svn_fs_x__id_part_eq(svn_fs_x__id_node_id(lhs_entry->id),
                                    svn_fs_x__id_node_id(rhs_entry->id))
           || !svn_fs_x__id_part_eq(svn_fs_x__id_copy_id(lhs_entry->id),
@@ -1716,8 +1707,8 @@ merge(svn_stringbuf_t *conflict_p,
       apr_pool_t *pool)
 {
   const svn_fs_id_t *source_id, *target_id, *ancestor_id;
-  apr_hash_t *s_entries, *t_entries, *a_entries;
-  apr_hash_index_t *hi;
+  apr_array_header_t *s_entries, *t_entries, *a_entries;
+  int i, s_idx = -1, t_idx = -1;
   svn_fs_t *fs;
   apr_pool_t *iterpool;
   apr_int64_t mergeinfo_increment = 0;
@@ -1883,27 +1874,19 @@ merge(svn_stringbuf_t *conflict_p,
 
   /* for each entry E in a_entries... */
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, a_entries);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < a_entries->nelts; ++i)
     {
       svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
-      const char *name;
-      apr_ssize_t klen;
-
       svn_pool_clear(iterpool);
 
-      name = svn__apr_hash_index_key(hi);
-      klen = svn__apr_hash_index_klen(hi);
-      a_entry = svn__apr_hash_index_val(hi);
-
-      s_entry = apr_hash_get(s_entries, name, klen);
-      t_entry = apr_hash_get(t_entries, name, klen);
+      a_entry = APR_ARRAY_IDX(a_entries, i, svn_fs_dirent_t *);
+      s_entry = svn_fs_x__find_dir_entry(s_entries, a_entry->name, &s_idx);
+      t_entry = svn_fs_x__find_dir_entry(t_entries, a_entry->name, &t_idx);
 
       /* No changes were made to this entry while the transaction was
          in progress, so do nothing to the target. */
       if (s_entry && svn_fs_x__id_eq(a_entry->id, s_entry->id))
-        goto end;
+        continue;
 
       /* A change was made to this entry while the transaction was in
          process, but the transaction did not touch this entry. */
@@ -1929,15 +1912,16 @@ merge(svn_stringbuf_t *conflict_p,
                                                         s_ent_node));
               mergeinfo_increment += mergeinfo_end;
 
-              SVN_ERR(svn_fs_x__dag_set_entry(target, name,
+              SVN_ERR(svn_fs_x__dag_set_entry(target, a_entry->name,
                                               s_entry->id,
                                               s_entry->kind,
                                               txn_id,
-                                              pool));
+                                              iterpool));
             }
           else
             {
-              SVN_ERR(svn_fs_x__dag_delete(target, name, txn_id, iterpool));
+              SVN_ERR(svn_fs_x__dag_delete(target, a_entry->name, txn_id,
+                                           iterpool));
             }
         }
 
@@ -2000,30 +1984,24 @@ merge(svn_stringbuf_t *conflict_p,
                         iterpool));
           mergeinfo_increment += sub_mergeinfo_increment;
         }
-
-      /* We've taken care of any possible implications E could have.
-         Remove it from source_entries, so it's easy later to loop
-         over all the source entries that didn't exist in
-         ancestor_entries. */
-    end:
-      apr_hash_set(s_entries, name, klen, NULL);
     }
 
   /* For each entry E in source but not in ancestor */
-  for (hi = apr_hash_first(pool, s_entries);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < s_entries->nelts; ++i)
     {
-      svn_fs_dirent_t *s_entry, *t_entry;
-      const char *name = svn__apr_hash_index_key(hi);
-      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      svn_fs_dirent_t *a_entry, *s_entry, *t_entry;
       dag_node_t *s_ent_node;
       apr_int64_t mergeinfo_s;
 
       svn_pool_clear(iterpool);
 
-      s_entry = svn__apr_hash_index_val(hi);
-      t_entry = apr_hash_get(t_entries, name, klen);
+      s_entry = APR_ARRAY_IDX(s_entries, i, svn_fs_dirent_t *);
+      a_entry = svn_fs_x__find_dir_entry(a_entries, s_entry->name, &s_idx);
+      t_entry = svn_fs_x__find_dir_entry(t_entries, s_entry->name, &t_idx);
+
+      /* Process only entries in source that are NOT in ancestor. */
+      if (a_entry)
+        continue;
 
       /* If NAME exists in TARGET, declare a conflict. */
       if (t_entry)
@@ -2324,10 +2302,23 @@ x_dir_entries(apr_hash_t **table_p,
               apr_pool_t *pool)
 {
   dag_node_t *node;
+  apr_hash_t *hash = svn_hash__make(pool);
+  apr_array_header_t *table;
+  int i;
 
   /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, FALSE, pool));
-  return svn_fs_x__dag_dir_entries(table_p, node, pool);
+  SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, pool));
+
+  /* Convert directory array to hash. */
+  for (i = 0; i < table->nelts; ++i)
+    {
+      svn_fs_dirent_t *entry = APR_ARRAY_IDX(table, i, svn_fs_dirent_t *);
+      svn_hash_sets(hash, entry->name, entry);
+    }
+
+  *table_p = hash;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -3819,17 +3810,14 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  apr_array_header_t *entries;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs_x__dag_dir_entries(&entries, dir_dag, scratch_pool));
-
-  for (hi = apr_hash_first(scratch_pool, entries);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < entries->nelts; ++i)
     {
-      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
+      svn_fs_dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
       const char *kid_path;
       dag_node_t *kid_dag;
       svn_boolean_t has_mergeinfo, go_down;
@@ -4361,18 +4349,17 @@ verify_node(dag_node_t *node,
     }
   if (kind == svn_node_dir)
     {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
+      apr_array_header_t *entries;
+      int i;
       apr_int64_t children_mergeinfo = 0;
 
       SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, pool));
 
       /* Compute CHILDREN_MERGEINFO. */
-      for (hi = apr_hash_first(pool, entries);
-           hi;
-           hi = apr_hash_next(hi))
+      for (i = 0; i < entries->nelts; ++i)
         {
-          svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
+          svn_fs_dirent_t *dirent
+            = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
           dag_node_t *child;
           apr_int64_t child_mergeinfo;
 
