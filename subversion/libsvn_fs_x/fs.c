@@ -385,15 +385,24 @@ x_hotcopy(svn_fs_t *src_fs,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
+  /* Open the source repo as usual. */
   SVN_ERR(x_open(src_fs, src_path, common_pool_lock, pool, common_pool));
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
+  /* Provide FFD for DST_FS, test / initialize target repo, remove FFD. */
   SVN_ERR(initialize_fs_struct(dst_fs));
-  /* In INCREMENTAL mode, svn_fs_x__hotcopy() will open DST_FS.
-     Otherwise, it's not an FS yet --- possibly just an empty dir --- so
-     can't be opened.
-   */
-  return svn_fs_x__hotcopy(src_fs, dst_fs, src_path, dst_path,
+  SVN_ERR(svn_fs_x__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
+                                           incremental, pool));
+  dst_fs->fsap_data = NULL;
+
+  /* Now, the destination repo should open just fine. */
+  SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Now, we may copy data as needed ... */
+  return svn_fs_x__hotcopy(src_fs, dst_fs,
                            incremental, cancel_func, cancel_baton, pool);
 }
 

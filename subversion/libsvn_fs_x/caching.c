@@ -69,32 +69,20 @@ normalize_key_part(const char *original,
   return normalized->data;
 }
 
-/* Return a memcache in *MEMCACHE_P for FS if it's configured to use
-   memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
-   indicating whether cache errors should be returned to the caller or
-   just passed to the FS warning handler.
-
-   *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
+/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
    according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
    to use.
 
    Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
    for temporary allocations. */
 static svn_error_t *
-read_config(svn_memcache_t **memcache_p,
-            svn_boolean_t *fail_stop,
-            const char **cache_namespace,
+read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
             svn_boolean_t *cache_revprops,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-
-  SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
-                                               fs->pool, pool));
-
   /* No cache namespace by default.  I.e. all FS instances share the
    * cached data.  If you specify different namespaces, the data will
    * share / compete for the same cache memory but keys will not match
@@ -152,9 +140,7 @@ read_config(svn_memcache_t **memcache_p,
   else
     *cache_revprops = svn_named_atomic__is_efficient();
 
-  return svn_config_get_bool(ffd->config, fail_stop,
-                             CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
-                             FALSE);
+  return SVN_NO_ERROR;
 }
 
 
@@ -380,18 +366,15 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                                    "/", normalize_key_part(fs->path, pool),
                                    ":",
                                    SVN_VA_NULL);
-  svn_memcache_t *memcache;
   svn_membuffer_t *membuffer;
-  svn_boolean_t no_handler;
+  svn_boolean_t no_handler = ffd->fail_stop;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
   svn_boolean_t cache_revprops;
   const char *cache_namespace;
 
   /* Evaluating the cache configuration. */
-  SVN_ERR(read_config(&memcache,
-                      &no_handler,
-                      &cache_namespace,
+  SVN_ERR(read_config(&cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
                       &cache_revprops,
@@ -538,7 +521,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
   if (cache_fulltexts)
     {
       SVN_ERR(create_cache(&(ffd->fulltext_cache),
-                           memcache,
+                           ffd->memcache,
                            membuffer,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
