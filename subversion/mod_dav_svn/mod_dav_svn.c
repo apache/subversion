@@ -1349,6 +1349,9 @@ register_hooks(apr_pool_t *pconf)
   /* general request handler for methods which mod_dav DECLINEs. */
   ap_hook_handler(dav_svn__handler, NULL, NULL, APR_HOOK_LAST);
 
+  /* Handler to GET Subversion's FSFS cache stats, a bit like mod_status. */
+  ap_hook_handler(dav_svn__status, NULL, NULL, APR_HOOK_MIDDLE);
+
   /* live property handling */
   dav_hook_gather_propsets(dav_svn__gather_propsets, NULL, NULL,
                            APR_HOOK_MIDDLE);
