@@ -1667,17 +1667,66 @@ svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
                                     apr_pool_t *pool)
 {
   apr_size_t written = sizeof(*entry);
+  apr_size_t written_total = 0;
 
+  /* Write main record. */
   SVN_ERR(svn_io_file_write_full(proto_index, entry, sizeof(*entry),
                                  &written, pool));
   SVN_ERR_ASSERT(written == sizeof(*entry));
+  written_total += written;
 
+  /* Add sub-items. */
   if (entry->item_count)
     {
       written = entry->item_count * sizeof(*entry->items);
       SVN_ERR(svn_io_file_write_full(proto_index, entry->items, written,
                                      &written, pool));
       SVN_ERR_ASSERT(written == entry->item_count * sizeof(*entry->items));
+      written_total += written;
+    }
+
+  /* Add trailer: number of bytes total in this entr.y */
+  written = sizeof(written_total);
+  SVN_ERR(svn_io_file_write_full(proto_index, &written_total, written,
+                                 &written, pool));
+  SVN_ERR_ASSERT(written == sizeof(written_total));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__p2l_proto_index_next_offset(apr_off_t *next_offset,
+                                      apr_file_t *proto_index,
+                                      apr_pool_t *pool)
+{
+  apr_off_t offset = 0;
+
+  /* Empty index file? */
+  SVN_ERR(svn_io_file_seek(proto_index, APR_END, &offset, pool));
+  if (offset == 0)
+    {
+      *next_offset = 0;
+    }
+  else
+    {
+      /* At least one entry.  Read last entry. */
+      apr_size_t size;
+      svn_fs_x__p2l_entry_t entry;
+
+      /* Read length of last entry. */
+      offset -= sizeof(size);
+      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, pool));
+      SVN_ERR(svn_io_file_read_full2(proto_index, &size, sizeof(size),
+                                    NULL, NULL, pool));
+
+      /* Read last entry's main record. */
+      offset -= size;
+      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, pool));
+      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
+                                    NULL, NULL, pool));
+
+      /* Return next offset. */
+      *next_offset = entry.offset + entry.size;
     }
 
   return SVN_NO_ERROR;
@@ -1744,6 +1793,16 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           entry.items = apr_palloc(iter_pool, to_read);
 
           SVN_ERR(svn_io_file_read_full2(proto_index, entry.items, to_read,
+                                         &read, &eof, iter_pool));
+          SVN_ERR_ASSERT(eof || read == to_read);
+        }
+
+      /* Read entry trailer. However, we won't need its content. */
+      if (!eof)
+        {
+          apr_size_t entry_size;
+          to_read = sizeof(entry_size);
+          SVN_ERR(svn_io_file_read_full2(proto_index, &entry_size, to_read,
                                          &read, &eof, iter_pool));
           SVN_ERR_ASSERT(eof || read == to_read);
         }
