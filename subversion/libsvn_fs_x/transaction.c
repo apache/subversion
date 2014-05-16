@@ -885,6 +885,7 @@ replace_change(svn_fs_path_change2_t *old_change,
   old_change->node_rev_id = svn_fs_x__id_copy(new_change->node_rev_id, pool);
   old_change->text_mod = new_change->text_mod;
   old_change->prop_mod = new_change->prop_mod;
+  old_change->mergeinfo_mod = new_change->mergeinfo_mod;
   if (new_change->copyfrom_rev == SVN_INVALID_REVNUM)
     {
       old_change->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -979,6 +980,7 @@ fold_change(apr_hash_t *changes,
               old_change->change_kind = svn_fs_path_change_delete;
               old_change->text_mod = info->text_mod;
               old_change->prop_mod = info->prop_mod;
+              old_change->mergeinfo_mod = info->mergeinfo_mod;
               old_change->copyfrom_rev = SVN_INVALID_REVNUM;
               old_change->copyfrom_path = NULL;
             }
@@ -1006,6 +1008,8 @@ fold_change(apr_hash_t *changes,
             old_change->text_mod = TRUE;
           if (info->prop_mod)
             old_change->prop_mod = TRUE;
+          if (info->mergeinfo_mod)
+            old_change->mergeinfo_mod = svn_tristate_true;
           break;
         }
 
@@ -1821,6 +1825,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
+                     svn_boolean_t mergeinfo_mod,
                      svn_node_kind_t node_kind,
                      svn_revnum_t copyfrom_rev,
                      const char *copyfrom_path,
@@ -1839,6 +1844,9 @@ svn_fs_x__add_change(svn_fs_t *fs,
   change = svn_fs__path_change_create_internal(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
+  change->mergeinfo_mod = mergeinfo_mod
+                        ? svn_tristate_true
+                        : svn_tristate_false;
   change->node_kind = node_kind;
   change->copyfrom_rev = copyfrom_rev;
   change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
