@@ -60,11 +60,11 @@
  ** Solution
  *
  * Try open and read of such files in try_stringbuf_from_file().  Call
- * this function within a loop of RECOVERABLE_RETRY_COUNT iterations
- * (though, realistically, the second try will succeed).
+ * this function within a loop of SVN_FS_X__RECOVERABLE_RETRY_COUNT
+ * iterations (though, realistically, the second try will succeed).
  */
 
-#define RECOVERABLE_RETRY_COUNT 10
+#define SVN_FS_X__RECOVERABLE_RETRY_COUNT 10
 
 /* Pathname helper functions */
 
