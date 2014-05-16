@@ -1245,7 +1245,9 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   /* invoke the 'block-read' feature for non-txn data.
      However, don't do that if we are in the middle of some representation,
      because the block is unlikely to contain other data. */
-  if (rs->chunk_index == 0 && svn_fs_x__is_revision(rs->rep_id.change_set))
+  if (   rs->chunk_index == 0
+      && svn_fs_x__is_revision(rs->rep_id.change_set)
+      && rs->window_cache)
     {
       SVN_ERR(block_read(NULL, rs->file->fs, &rs->rep_id, rs->file->file,
                          pool, pool));
