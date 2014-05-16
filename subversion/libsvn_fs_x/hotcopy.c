@@ -910,7 +910,8 @@ hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
   struct hotcopy_body_baton *hbb = baton;
   fs_x_data_t *src_ffd = hbb->src_fs->fsap_data;
 
-  return hotcopy_body(baton, pool);
+  return svn_error_trace(svn_fs_x__with_pack_lock(hbb->src_fs, hotcopy_body,
+                                                  baton, pool));
 }
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same

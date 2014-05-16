@@ -212,31 +212,77 @@ reset_lock_flag(void *baton_void)
   return APR_SUCCESS;
 }
 
-/* Obtain a write lock on the file LOCK_FILENAME (protecting with
-   LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
-   BATON and that subpool, destroy the subpool (releasing the write
-   lock) and return what BODY returned.  If IS_GLOBAL_LOCK is set,
-   set the HAS_WRITE_LOCK flag while we keep the write lock. */
-static svn_error_t *
-with_some_lock_file(svn_fs_t *fs,
-                    svn_error_t *(*body)(void *baton,
-                                         apr_pool_t *pool),
-                    void *baton,
-                    const char *lock_filename,
-                    svn_boolean_t is_global_lock,
-                    apr_pool_t *pool)
+/* Structure defining a file system lock to be acquired and the function
+   to be executed while the lock is held.
+
+   Instances of this structure may be nested to allow for multiple locks to
+   be taken out before executing the user-provided body.  In that case, BODY
+   and BATON of the outer instances will be with_lock and a with_lock_baton_t
+   instance (transparently, no special treatment is required.).  It is
+   illegal to attempt to acquire the same lock twice within the same lock
+   chain or via nesting calls using separate lock chains.
+
+   All instances along the chain share the same LOCK_POOL such that only one
+   pool needs to be created and cleared for all locks.  We also allocate as
+   much data from that lock pool as possible to minimize memory usage in
+   caller pools. */
+typedef struct with_lock_baton_t
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err = get_lock_on_filesystem(lock_filename, subpool);
+  /* The filesystem we operate on.  Same for all instances along the chain. */
+  svn_fs_t *fs;
+
+  /* Mutex to complement the lock file in an APR threaded process.
+     No-op object for non-threaded processes but never NULL. */
+  svn_mutex__t *mutex;
+
+  /* Path to the file to lock. */
+  const char *lock_path;
+
+  /* If true, set FS->HAS_WRITE_LOCK after we acquired the lock. */
+  svn_boolean_t is_global_lock;
+
+  /* Function body to execute after we acquired the lock.
+     This may be user-provided or a nested call to with_lock(). */
+  svn_error_t *(*body)(void *baton,
+                       apr_pool_t *pool);
+
+  /* Baton to pass to BODY; possibly NULL.
+     This may be user-provided or a nested lock baton instance. */
+  void *baton;
+
+  /* Pool for all allocations along the lock chain and BODY.  Will hold the
+     file locks and gets destroyed after the outermost BODY returned,
+     releasing all file locks.
+     Same for all instances along the chain. */
+  apr_pool_t *lock_pool;
+
+  /* TRUE, iff BODY is the user-provided body. */
+  svn_boolean_t is_inner_most_lock;
+
+  /* TRUE, iff this is not a nested lock.
+     Then responsible for destroying LOCK_POOL. */
+  svn_boolean_t is_outer_most_lock;
+} with_lock_baton_t;
+
+/* Obtain a write lock on the file BATON->LOCK_PATH and call BATON->BODY
+   with BATON->BATON.  If this is the outermost lock call, release all file
+   locks after the body returned.  If BATON->IS_GLOBAL_LOCK is set, set the
+   HAS_WRITE_LOCK flag while we keep the write lock. */
+static svn_error_t *
+with_some_lock_file(with_lock_baton_t *baton)
+{
+  apr_pool_t *pool = baton->lock_pool;
+  svn_error_t *err = get_lock_on_filesystem(baton->lock_path, pool);
 
   if (!err)
     {
+      svn_fs_t *fs = baton->fs;
       fs_x_data_t *ffd = fs->fsap_data;
 
-      if (is_global_lock)
+      if (baton->is_global_lock)
         {
           /* set the "got the lock" flag and register reset function */
-          apr_pool_cleanup_register(subpool,
+          apr_pool_cleanup_register(pool,
                                     ffd,
                                     reset_lock_flag,
                                     apr_pool_cleanup_null);
@@ -245,14 +291,149 @@ with_some_lock_file(svn_fs_t *fs,
 
       /* nobody else will modify the repo state
          => read HEAD & pack info once */
-      SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
-      SVN_ERR(svn_fs_x__youngest_rev(&ffd->youngest_rev_cache, fs, pool));
-      err = body(baton, subpool);
+      if (baton->is_inner_most_lock)
+        {
+          err = svn_fs_x__update_min_unpacked_rev(fs, pool);
+          if (!err)
+            err = svn_fs_x__youngest_rev(&ffd->youngest_rev_cache, fs, pool);
+        }
+
+      if (!err)
+        err = baton->body(baton->baton, pool);
     }
 
-  svn_pool_destroy(subpool);
+  if (baton->is_outer_most_lock)
+    svn_pool_destroy(pool);
 
   return svn_error_trace(err);
+}
+
+/* Wraps with_some_lock_file, protecting it with BATON->MUTEX.
+
+   POOL is unused here and only provided for signature compatibility with
+   WITH_LOCK_BATON_T.BODY. */
+static svn_error_t *
+with_lock(void *baton,
+          apr_pool_t *pool)
+{
+  with_lock_baton_t *lock_baton = baton;
+  SVN_MUTEX__WITH_LOCK(lock_baton->mutex, with_some_lock_file(lock_baton));
+
+  return SVN_NO_ERROR;
+}
+
+/* Enum identifying a filesystem lock. */
+typedef enum lock_id_t
+{
+  write_lock,
+  txn_lock,
+  pack_lock
+} lock_id_t;
+
+/* Initialize BATON->MUTEX, BATON->LOCK_PATH and BATON->IS_GLOBAL_LOCK
+   according to the LOCK_ID.  All other members of BATON must already be
+   valid. */
+static void
+init_lock_baton(with_lock_baton_t *baton,
+                lock_id_t lock_id)
+{
+  fs_x_data_t *ffd = baton->fs->fsap_data;
+  fs_x_shared_data_t *ffsd = ffd->shared;
+
+  switch (lock_id)
+    {
+    case write_lock:
+      baton->mutex = ffsd->fs_write_lock;
+      baton->lock_path = svn_fs_x__path_lock(baton->fs, baton->lock_pool);
+      baton->is_global_lock = TRUE;
+      break;
+
+    case txn_lock:
+      baton->mutex = ffsd->txn_current_lock;
+      baton->lock_path = svn_fs_x__path_txn_current_lock(baton->fs,
+                                                         baton->lock_pool);
+      baton->is_global_lock = FALSE;
+      break;
+
+    case pack_lock:
+      baton->mutex = ffsd->fs_pack_lock;
+      baton->lock_path = svn_fs_x__path_pack_lock(baton->fs,
+                                                  baton->lock_pool);
+      baton->is_global_lock = FALSE;
+      break;
+    }
+}
+
+/* Return the  baton for the innermost lock of a (potential) lock chain.
+   The baton shall take out LOCK_ID from FS and execute BODY with BATON
+   while the lock is being held.  Allocate the result in a sub-pool of POOL.
+ */
+static with_lock_baton_t *
+create_lock_baton(svn_fs_t *fs,
+                  lock_id_t lock_id,
+                  svn_error_t *(*body)(void *baton,
+                                       apr_pool_t *pool),
+                  void *baton,
+                  apr_pool_t *pool)
+{
+  /* Allocate everything along the lock chain into a single sub-pool.
+     This minimizes memory usage and cleanup overhead. */
+  apr_pool_t *lock_pool = svn_pool_create(pool);
+  with_lock_baton_t *result = apr_pcalloc(lock_pool, sizeof(*result));
+
+  /* Store parameters. */
+  result->fs = fs;
+  result->body = body;
+  result->baton = baton;
+
+  /* File locks etc. will use this pool as well for easy cleanup. */
+  result->lock_pool = lock_pool;
+
+  /* Right now, we are the first, (only, ) and last struct in the chain. */
+  result->is_inner_most_lock = TRUE;
+  result->is_outer_most_lock = TRUE;
+
+  /* Select mutex and lock file path depending on LOCK_ID.
+     Also, initialize dependent members (IS_GLOBAL_LOCK only, ATM). */
+  init_lock_baton(result, lock_id);
+
+  return result;
+}
+
+/* Return a baton that wraps NESTED and requests LOCK_ID as additional lock.
+ *
+ * That means, when you create a lock chain, start with the last / innermost
+ * lock to take out and add the first / outermost lock last.
+ */
+static with_lock_baton_t *
+chain_lock_baton(lock_id_t lock_id,
+                 with_lock_baton_t *nested)
+{
+  /* Use the same pool for batons along the lock chain. */
+  apr_pool_t *lock_pool = nested->lock_pool;
+  with_lock_baton_t *result = apr_pcalloc(lock_pool, sizeof(*result));
+
+  /* All locks along the chain operate on the same FS. */
+  result->fs = nested->fs;
+
+  /* Execution of this baton means acquiring the nested lock and its
+     execution. */
+  result->body = with_lock;
+  result->baton = nested;
+
+  /* Shared among all locks along the chain. */
+  result->lock_pool = lock_pool;
+
+  /* We are the new outermost lock but surely not the innermost lock. */
+  result->is_inner_most_lock = FALSE;
+  result->is_outer_most_lock = TRUE;
+  nested->is_outer_most_lock = FALSE;
+
+  /* Select mutex and lock file path depending on LOCK_ID.
+     Also, initialize dependent members (IS_GLOBAL_LOCK only, ATM). */
+  init_lock_baton(result, lock_id);
+
+  return result;
 }
 
 svn_error_t *
@@ -262,38 +443,56 @@ svn_fs_x__with_write_lock(svn_fs_t *fs,
                           void *baton,
                           apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
-
-  SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
-                       with_some_lock_file(fs, body, baton,
-                                           svn_fs_x__path_lock(fs, pool),
-                                           TRUE,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(
+           with_lock(create_lock_baton(fs, write_lock, body, baton, pool),
+                     pool));
 }
 
-/* Run BODY (with BATON and POOL) while the txn-current file
-   of FS is locked. */
-static svn_error_t *
-with_txn_current_lock(svn_fs_t *fs,
-                      svn_error_t *(*body)(void *baton,
-                                           apr_pool_t *pool),
-                      void *baton,
-                      apr_pool_t *pool)
+svn_error_t *
+svn_fs_x__with_pack_lock(svn_fs_t *fs,
+                         svn_error_t *(*body)(void *baton,
+                                              apr_pool_t *pool),
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(
+           with_lock(create_lock_baton(fs, pack_lock, body, baton, pool),
+                     pool));
+}
+
+svn_error_t *
+svn_fs_x__with_txn_current_lock(svn_fs_t *fs,
+                                svn_error_t *(*body)(void *baton,
+                                                     apr_pool_t *pool),
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  return svn_error_trace(
+           with_lock(create_lock_baton(fs, txn_lock, body, baton, pool),
+                     pool));
+}
+
+svn_error_t *
+svn_fs_x__with_all_locks(svn_fs_t *fs,
+                         svn_error_t *(*body)(void *baton,
+                                              apr_pool_t *pool),
+                         void *baton,
+                         apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
 
-  SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
-                       with_some_lock_file(fs, body, baton,
-                                svn_fs_x__path_txn_current_lock(fs, pool),
-                                FALSE,
-                                pool));
+  /* Be sure to use the correct lock ordering as documented in
+     fs_fs_shared_data_t.  The lock chain is being created in 
+     innermost (last to acquire) -> outermost (first to acquire) order. */
+  with_lock_baton_t *lock_baton
+    = create_lock_baton(fs, write_lock, body, baton, pool);
 
-  return SVN_NO_ERROR;
+  lock_baton = chain_lock_baton(pack_lock, lock_baton);
+  lock_baton = chain_lock_baton(txn_lock, lock_baton);
+
+  return svn_error_trace(with_lock(lock_baton, pool));
 }
+
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
    which see. */
@@ -1015,10 +1214,10 @@ create_txn_dir(const char **id_p,
      number the transaction is based off into the transaction id. */
   cb.pool = pool;
   cb.fs = fs;
-  SVN_ERR(with_txn_current_lock(fs,
-                                get_and_increment_txn_key_body,
-                                &cb,
-                                pool));
+  SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
+                                          get_and_increment_txn_key_body,
+                                          &cb,
+                                          pool));
   *txn_id = cb.txn_number;
 
   *id_p = svn_fs_x__txn_name(*txn_id, pool);

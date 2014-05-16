@@ -55,6 +55,7 @@ extern "C" {
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
 #define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
@@ -147,17 +148,6 @@ typedef struct fs_x_shared_txn_data_t
   apr_pool_t *pool;
 } fs_x_shared_txn_data_t;
 
-/* On most operating systems apr implements file locks per process, not
-   per file.  On Windows apr implements the locking as per file handle
-   locks, so we don't have to add our own mutex for just in-process
-   synchronization. */
-/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
-#if APR_HAS_THREADS && !defined(WIN32)
-#define SVN_FS_X__USE_LOCK_MUTEX 1
-#else
-#define SVN_FS_X__USE_LOCK_MUTEX 0
-#endif
-
 /* Private FSX-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
@@ -173,12 +163,22 @@ typedef struct fs_x_shared_data_t
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_x_shared_txn_data_t *free_txn;
 
+  /* The following lock must be taken out in reverse order of their
+     declaration here.  Any subset may be acquired and held at any given
+     time but their relative acquisition order must not change.
+
+     (lock 'txn-current' before 'pack' before 'write' before 'txn-list') */
+
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
 
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   svn_mutex__t *fs_write_lock;
+
+  /* A lock for intra-process synchronization when grabbing the
+     repository pack operation lock. */
+  svn_mutex__t *fs_pack_lock;
 
   /* A lock for intra-process synchronization when locking the
      txn-current file. */

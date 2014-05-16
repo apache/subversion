@@ -525,7 +525,7 @@ svn_fs_x__upgrade(svn_fs_t *fs,
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
   
-  return svn_fs_x__with_write_lock(fs, upgrade_body, (void *)&baton, pool);
+  return svn_fs_x__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
 }
 
 
