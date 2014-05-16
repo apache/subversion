@@ -862,6 +862,26 @@ read_change(change_t **change_p,
                               _("Invalid prop-mod flag in rev-file"));
     }
 
+  /* Get the mergeinfo-mod flag. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  if (strcmp(str, FLAG_TRUE) == 0)
+    {
+      info->mergeinfo_mod = svn_tristate_true;
+    }
+  else if (strcmp(str, FLAG_FALSE) == 0)
+    {
+      info->mergeinfo_mod = svn_tristate_false;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Invalid mergeinfo-mod flag in rev-file"));
+    }
+
   /* Get the changed path. */
   change->path.data = auto_unescape_path(apr_pstrmemdup(pool, last_str,
                                                         strlen(last_str)),
@@ -974,10 +994,12 @@ write_change_entry(svn_stream_t *stream,
                               change->node_kind == svn_node_dir
                               ? SVN_FS_X__KIND_DIR
                               : SVN_FS_X__KIND_FILE);
-  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s %s\n",
+  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s %s %s\n",
                               idstr, change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
+                              change->mergeinfo_mod == svn_tristate_true
+                                               ? FLAG_TRUE : FLAG_FALSE,
                               auto_escape_path(path, pool));
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
