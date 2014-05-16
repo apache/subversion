@@ -588,10 +588,10 @@ svn_fs_x__read_content(svn_stringbuf_t **content,
   int i;
   *content = NULL;
 
-  for (i = 0; !*content && (i < RECOVERABLE_RETRY_COUNT); ++i)
+  for (i = 0; !*content && (i < SVN_FS_X__RECOVERABLE_RETRY_COUNT); ++i)
     SVN_ERR(svn_fs_x__try_stringbuf_from_file(content, NULL,
-                                    fname, i + 1 < RECOVERABLE_RETRY_COUNT,
-                                    pool));
+                           fname, i + 1 < SVN_FS_X__RECOVERABLE_RETRY_COUNT,
+                           pool));
 
   if (!*content)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
