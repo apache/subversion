@@ -26,6 +26,7 @@
 #include "svn_sorts.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -170,13 +171,14 @@ read_header_block(apr_hash_t **headers,
                   svn_stream_t *stream,
                   apr_pool_t *pool)
 {
-  *headers = apr_hash_make(pool);
+  *headers = svn_hash__make(pool);
 
   while (1)
     {
       svn_stringbuf_t *header_str;
       const char *name, *value;
-      apr_size_t i = 0;
+      apr_ssize_t i = 0;
+      apr_ssize_t name_len;
       svn_boolean_t eof;
 
       SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof, pool));
@@ -197,6 +199,7 @@ read_header_block(apr_hash_t **headers,
       /* Create a 'name' string and point to it. */
       header_str->data[i] = '\0';
       name = header_str->data;
+      name_len = i;
 
       /* Skip over the NULL byte and the space following it. */
       i += 2;
@@ -216,7 +219,7 @@ read_header_block(apr_hash_t **headers,
 
       /* header_str is safely in our pool, so we can use bits of it as
          key and value. */
-      svn_hash_sets(*headers, name, value);
+      apr_hash_set(*headers, name, name_len, value);
     }
 
   return SVN_NO_ERROR;
