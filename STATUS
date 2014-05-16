@@ -177,7 +177,7 @@ Candidate changes:
      +1: julianfoad
 
  * r1594223, r1553501, r1553556, r1559197
-   Fix a URI-escaping bug in serf and add a regression test for it.
+   Fix a URI-escaping bug in ra_serf and add a regression test for it.
    Justification:
      Committing a deletion of a locked path should work.
    Notes:
