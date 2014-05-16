@@ -104,26 +104,6 @@ path_txn_next_ids(svn_fs_t *fs,
                          PATH_NEXT_IDS, pool);
 }
 
-static APR_INLINE const char *
-path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
-{
-  const char *path;
-  apr_off_t offset = 0;
-  svn_error_t *err;
-
-  err = svn_io_file_name_get(&path, file, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      path = "(unknown)";
-    }
-
-  if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
-    offset = -1;
-
-  return apr_psprintf(pool, "%s:%" APR_OFF_T_FMT, path, offset);
-}
-
 
 /* The vtable associated with an open transaction object. */
 static txn_vtable_t txn_vtable = {
