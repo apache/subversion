@@ -3446,7 +3446,7 @@ commit_body(void *baton, apr_pool_t *pool)
     }
 
   /* Convert the index files from the proto format into their form
-      in their final location */
+     in their final location */
   SVN_ERR(svn_fs_x__l2p_index_create(cb->fs,
                     svn_fs_x__path_l2p_index(cb->fs, new_rev, pool),
                     svn_fs_x__path_l2p_proto_index(cb->fs, txn_id, pool),
@@ -3456,7 +3456,11 @@ commit_body(void *baton, apr_pool_t *pool)
                     svn_fs_x__path_p2l_proto_index(cb->fs, txn_id, pool),
                     new_rev, pool));
 
-  /* Move the finished rev file into place. */
+  /* Move the finished rev file into place.
+
+     ### This "breaks" the transaction by removing the protorev file
+     ### but the revision is not yet complete.  If this commit does
+     ### not complete for any reason the transaction will be lost. */
   old_rev_filename = svn_fs_x__path_rev_absolute(cb->fs, old_rev, pool);
 
   rev_filename = svn_fs_x__path_rev(cb->fs, new_rev, pool);
