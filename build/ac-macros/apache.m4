@@ -157,6 +157,8 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
     fi
 
+    AC_CHECK_HEADERS(unistd.h, [AC_CHECK_FUNCS(getpid)], [])
+
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true

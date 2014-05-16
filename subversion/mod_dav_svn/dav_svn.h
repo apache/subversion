@@ -482,6 +482,8 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 /* POST request handler.  (Used by HTTP protocol v2 clients only.)  */
 int dav_svn__method_post(request_rec *r);
 
+/* Request handler to GET Subversion internal status (FSFS cache). */
+int dav_svn__status(request_rec *r);
 
 /*** repos.c ***/
 
