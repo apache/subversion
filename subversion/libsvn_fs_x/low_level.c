@@ -579,9 +579,6 @@ svn_fs_x__unparse_representation(representation_t *rep,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
                          !rep->has_sha1, pool));
-
-#undef DISPLAY_MAYBE_NULL_CHECKSUM
-
 }
 
 
