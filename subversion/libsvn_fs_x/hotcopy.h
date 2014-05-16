@@ -25,13 +25,21 @@
 
 #include "fs.h"
 
-/* Copy the fsx filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
- * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
- * exists in DST_FS. Use POOL for temporary allocations. */
+/* Create an empty copy of the fsfs filesystem SRC_FS into a new DST_FS at
+ * DST_PATH.  If INCREMENTAL is TRUE, perform a few pre-checks only if
+ * a repo already exists at DST_PATH. Use POOL for temporary allocations. */
+svn_error_t *
+svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
+                                 svn_fs_t *dst_fs,
+                                 const char *dst_path,
+                                 svn_boolean_t incremental,
+                                 apr_pool_t *pool);
+
+/* Copy the fsfs filesystem SRC_FS into DST_FS. If INCREMENTAL is TRUE, do
+ * not re-copy data which already exists in DST_FS. Use POOL for temporary
+ * allocations. */
 svn_error_t * svn_fs_x__hotcopy(svn_fs_t *src_fs,
                                 svn_fs_t *dst_fs,
-                                const char *src_path,
-                                const char *dst_path,
                                 svn_boolean_t incremental,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
