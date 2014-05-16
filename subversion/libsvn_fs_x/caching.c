@@ -135,8 +135,8 @@ read_config(const char **cache_namespace,
                                    ""), "2"))
     *cache_revprops
       = svn_hash__get_bool(fs->config,
-                          SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                          FALSE);
+                           SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                           FALSE);
   else
     *cache_revprops = svn_named_atomic__is_efficient();
 
