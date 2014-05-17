@@ -645,8 +645,10 @@ def simple_property_merges(sbox):
   def error_message(property, old_value, new_value):
     return "Trying to change property '%s'\n" \
            "but the property has been locally deleted.\n" \
-           "<<<<<<< (local property value)\n=======\n" \
-           "%s>>>>>>> (incoming property value)\n" % (property, new_value)
+           "<<<<<<< (local property value)\n" \
+           "||||||| (incoming 'changed from' value)\n" \
+           "%s=======\n" \
+           "%s>>>>>>> (incoming 'changed to' value)\n" % (property, old_value, new_value)
 
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({

@@ -1140,29 +1140,33 @@ def property_merge(sbox):
 """Trying to add new property 'key1'
 but the property already exists.
 <<<<<<< (local property value)
-value2=======
-value3>>>>>>> (incoming property value)
+value2||||||| (incoming 'changed from' value)
+=======
+value3>>>>>>> (incoming 'changed to' value)
 """),
       'A/C2/D5/dir_conflicts.prej' : Item(contents=
 """Trying to change property 'key1'
 but the property has already been locally changed to a different value.
 <<<<<<< (local property value)
-value2=======
-value3>>>>>>> (incoming property value)
+value2||||||| (incoming 'changed from' value)
+value1=======
+value3>>>>>>> (incoming 'changed to' value)
 """),
       'A/C2/f4.prej' : Item(contents=
 """Trying to add new property 'key1'
 but the property already exists.
 <<<<<<< (local property value)
-value2=======
-value3>>>>>>> (incoming property value)
+value2||||||| (incoming 'changed from' value)
+=======
+value3>>>>>>> (incoming 'changed to' value)
 """),
       'A/C2/f5.prej' : Item(contents=
 """Trying to change property 'key1'
 but the property has already been locally changed to a different value.
 <<<<<<< (local property value)
-value2=======
-value3>>>>>>> (incoming property value)
+value2||||||| (incoming 'changed from' value)
+value1=======
+value3>>>>>>> (incoming 'changed to' value)
 """),
       })
 
