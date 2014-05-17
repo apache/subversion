@@ -120,7 +120,7 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- r1594156
+ * r1594156
    Fix a problem with the Unix build that could result in linking to the wrong
    Subversion libraries at build time or at run time.
    Justification:
@@ -129,6 +129,13 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1594157
    Votes:
      +1: julianfoad
+
+ * r1595431
+   Use a proper intermediate directory when building with VS 2003-2008.
+   Justification:
+     Reported as a build problem by some of our usual dist signers.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
