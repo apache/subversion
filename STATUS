@@ -197,6 +197,13 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1595431
+   Use a proper intermediate directory when building with VS 2003-2008.
+   Justification:
+     Reported as a build problem by some of our usual dist signers.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
