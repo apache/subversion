@@ -1878,8 +1878,9 @@ def prop_reject_grind(sbox):
     "Trying to change property 'edit.none'\n"
     "but the property does not exist locally.\n"
     "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.del'\n"
     "but the property has been locally deleted and had a different value.\n",
@@ -1887,75 +1888,84 @@ def prop_reject_grind(sbox):
     "Trying to delete property 'del.edit'\n"
     "but the local property value is different.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.del'\n"
     "but the property has been locally deleted.\n"
     "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.edit'\n"
     "but the property has already been locally changed to a different value.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.edit2'\n"
     "but the property has been locally modified.\n"
     "<<<<<<< (local property value)\n"
-    "repos.changed=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "repos.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.add'\n"
     "but the property has been locally added.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.diff'\n"
     "but the local property value is different.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.add'\n"
     "but the property has been locally added with a different value.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.diff'\n"
     "but the local property value conflicts with the incoming change.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.add'\n"
     "but the property already exists.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.diff'\n"
     "but the property already exists.\n"
-    "Local property value:\n"
-    "local\n"
-    "Incoming property value:\n"
-    "repos\n",
+    "<<<<<<< (local property value)\n"
+    "local||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.del'\n"
     "but the property has been locally deleted.\n"
-    "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "Incoming property value:\n"
+    "repos\n",
 
     "Trying to add new property 'add.edit'\n"
     "but the property already exists.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
   ]
 
   # Get the contents of mu.prej.  The error messages are in the prej file
@@ -2338,6 +2348,7 @@ def file_matching_dir_prop_reject(sbox):
   expected_status.tweak(wc_rev=2)
   expected_status.tweak('A', 'A/dir_conflicts', status=' C')
 
+  # Conflict: BASE=val2 WORKING=val3 INCOMING_OLD=val2 INCOMING_NEW=val1
   extra_files = ['dir_conflicts.prej', 'dir_conflicts.2.prej']
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
