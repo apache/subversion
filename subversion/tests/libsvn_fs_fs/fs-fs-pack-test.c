@@ -1156,6 +1156,11 @@ recursive_locking(const svn_test_opts_t *opts,
 {
   svn_fs_t *fs;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "bdb") == 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "BDB won't test for recursive locks");
+
   SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
   SVN_ERR(svn_fs_fs__with_all_locks(fs, lock_again, fs, pool));
 
