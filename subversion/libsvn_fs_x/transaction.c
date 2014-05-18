@@ -3555,7 +3555,7 @@ write_reps_to_cache(svn_fs_t *fs,
 
       /* FALSE because we don't care if another parallel commit happened to
        * collide with us.  (Non-parallel collisions will not be detected.) */
-      SVN_ERR(svn_fs_x__set_rep_reference(fs, rep, FALSE, scratch_pool));
+      SVN_ERR(svn_fs_x__set_rep_reference(fs, rep, scratch_pool));
     }
 
   return SVN_NO_ERROR;
