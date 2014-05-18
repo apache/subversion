@@ -28,7 +28,6 @@
 #include <apr_network_io.h>
 #include <apr_md5.h>
 #include <apr_sha1.h>
-#include <apr_poll.h>
 
 #include "svn_fs.h"
 #include "svn_config.h"
