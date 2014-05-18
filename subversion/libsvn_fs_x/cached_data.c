@@ -723,13 +723,21 @@ svn_fs_x__check_rep(representation_t *rep,
    Do any allocations in POOL. */
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
+                           int *shard_count,
                            representation_t *rep,
                            svn_fs_t *fs,
                            apr_pool_t *pool)
 {
-  int count = 0;
+  fs_x_data_t *ffd = fs->fsap_data;
+  svn_revnum_t shard_size = ffd->max_files_per_dir
+                          ? ffd->max_files_per_dir
+                          : 1;
   apr_pool_t *sub_pool = svn_pool_create(pool);
   svn_boolean_t is_delta = FALSE;
+  int count = 0;
+  int shards = 1;
+  svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
+  svn_revnum_t last_shard = revision / shard_size;
   
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
@@ -746,6 +754,13 @@ svn_fs_x__rep_chain_length(int *chain_length,
   do
     {
       rep_state_t *rep_state;
+      revision = svn_fs_x__get_revnum(base_rep.id.change_set);
+      if (revision / shard_size != last_shard)
+        {
+          last_shard = revision / shard_size;
+          ++shards;
+        }
+
       SVN_ERR(create_rep_state_body(&rep_state,
                                     &header,
                                     &file_hint,
@@ -769,6 +784,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
   while (is_delta && base_rep.id.change_set);
 
   *chain_length = count;
+  *shard_count = shards;
   svn_pool_destroy(sub_pool);
 
   return SVN_NO_ERROR;
@@ -1501,22 +1517,33 @@ init_rep_state(rep_state_t *rs,
 
 /* Walk through all windows in the representation addressed by RS in FS
  * (excluding the delta bases) and put those not already cached into the
- * window caches.  As a side effect, return the total sum of all expanded
- * window sizes in *FULLTEXT_LEN.  Use POOL for temporary allocations.
+ * window caches.  If MAX_OFFSET is not -1, don't read windows that start
+ * at or beyond that offset.  As a side effect, return the total sum of all
+ * expanded window sizes in *FULLTEXT_LEN.
+ * Use POOL for temporary allocations.
  */
 static svn_error_t *
 cache_windows(svn_filesize_t *fulltext_len,
               svn_fs_t *fs,
               rep_state_t *rs,
+              apr_off_t max_offset,
               apr_pool_t *pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(pool);
   *fulltext_len = 0;
 
   while (rs->current < rs->size)
     {
       svn_boolean_t is_cached = FALSE;
       window_sizes_t *window_sizes;
-      
+
+      svn_pool_clear(iterpool);
+      if (max_offset != -1 && rs->start + rs->current >= max_offset)
+        {
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
+
       /* efficiently skip windows that are still being cached instead
        * of fully decoding them */
       SVN_ERR(get_cached_window_sizes(&window_sizes, rs, &is_cached, pool));
@@ -1558,6 +1585,8 @@ cache_windows(svn_filesize_t *fulltext_len,
 
       rs->chunk_index++;
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1623,7 +1652,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   *packed_len = rs.size;
-  SVN_ERR(cache_windows(expanded_len, fs, &rs, pool));
+  SVN_ERR(cache_windows(expanded_len, fs, &rs, -1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1902,6 +1931,48 @@ struct delta_read_baton
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 };
 
+/* This implements the svn_txdelta_next_window_fn_t interface. */
+static svn_error_t *
+delta_read_next_window(svn_txdelta_window_t **window, void *baton,
+                       apr_pool_t *pool)
+{
+  struct delta_read_baton *drb = baton;
+
+  *window = NULL;
+  if (drb->rs->current < drb->rs->size)
+    {
+      SVN_ERR(read_delta_window(window, drb->rs->chunk_index, drb->rs, pool));
+      drb->rs->chunk_index++;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements the svn_txdelta_md5_digest_fn_t interface. */
+static const unsigned char *
+delta_read_md5_digest(void *baton)
+{
+  struct delta_read_baton *drb = baton;
+  return drb->md5_digest;
+}
+
+/* Return a txdelta stream for on-disk representation REP_STATE
+ * of TARGET.  Allocate the result in POOL.
+ */
+static svn_txdelta_stream_t *
+get_storaged_delta_stream(rep_state_t *rep_state,
+                          node_revision_t *target,
+                          apr_pool_t *pool)
+{
+  /* Create the delta read baton. */
+  struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
+  drb->rs = rep_state;
+  memcpy(drb->md5_digest, target->data_rep->md5_digest,
+         sizeof(drb->md5_digest));
+  return svn_txdelta_stream_create(drb, delta_read_next_window,
+                                   delta_read_md5_digest, pool);
+}
+
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
@@ -1910,6 +1981,54 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 apr_pool_t *pool)
 {
   svn_stream_t *source_stream, *target_stream;
+  rep_state_t *rep_state;
+  svn_fs_x__rep_header_t *rep_header;
+  fs_x_data_t *ffd = fs->fsap_data;
+
+  /* Try a shortcut: if the target is stored as a delta against the source,
+     then just use that delta.  However, prefer using the fulltext cache
+     whenever that is available. */
+  if (target->data_rep && (source || !ffd->fulltext_cache))
+    {
+      /* Read target's base rep if any. */
+      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
+                                target->data_rep, fs, pool));
+
+      /* Try a shortcut: if the target is stored as a delta against the source,
+         then just use that delta. */
+      if (source && source->data_rep && target->data_rep)
+        {
+          /* If that matches source, then use this delta as is.
+             Note that we want an actual delta here.  E.g. a self-delta would
+             not be good enough. */
+          if (rep_header->type == svn_fs_x__rep_delta
+              && rep_header->base_revision
+                 == svn_fs_x__get_revnum(source->data_rep->id.change_set)
+              && rep_header->base_item_index == source->data_rep->id.number)
+            {
+              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              return SVN_NO_ERROR;
+            }
+        }
+      else if (!source)
+        {
+          /* We want a self-delta. There is a fair chance that TARGET got
+             added in this revision and is already stored in the requested
+             format. */
+          if (rep_header->type == svn_fs_x__rep_self_delta)
+            {
+              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              return SVN_NO_ERROR;
+            }
+        }
+
+      /* Don't keep file handles open for longer than necessary. */
+      if (rep_state->file->file)
+        {
+          SVN_ERR(svn_io_file_close(rep_state->file->file, pool));
+          rep_state->file->file = NULL;
+        }
+    }
 
   /* Read both fulltexts and construct a delta. */
   if (source)
@@ -2374,45 +2493,37 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
+/* Fetch the representation data (header, txdelta / plain windows)
+ * addressed by ENTRY->ITEM in FS and cache it if caches are enabled.
+ * Read the data from the already open FILE and the wrapping
+ * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
+ * at or beyond that offset.  Use POOL for allocations.
+ */
 static svn_error_t *
-block_read_windows(svn_fs_x__rep_header_t *rep_header,
-                   svn_fs_t *fs,
-                   apr_file_t *file,
-                   svn_stream_t *stream,
-                   svn_fs_x__p2l_entry_t* entry,
-                   apr_pool_t *pool)
-{
-  fs_x_data_t *ffd = fs->fsap_data;
-  rep_state_t rs = { 0 };
-  svn_filesize_t fulltext_len;
-
-  if (!ffd->txdelta_window_cache || !ffd->combined_window_cache)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(init_rep_state(&rs, rep_header, fs, file, stream, entry, pool));
-  SVN_ERR(cache_windows(&fulltext_len, fs, &rs, pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-block_read_contents(svn_stringbuf_t **item,
-                    svn_fs_t *fs,
+block_read_contents(svn_fs_t *fs,
                     apr_file_t *file,
                     svn_stream_t *stream,
                     svn_fs_x__p2l_entry_t* entry,
                     pair_cache_key_t *key,
+                    apr_off_t max_offset,
                     apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = fs->fsap_data;
   representation_cache_key_t header_key = { 0 };
+  rep_state_t rs = { 0 };
+  svn_filesize_t fulltext_len;
   svn_fs_x__rep_header_t *rep_header;
+
+  if (!ffd->txdelta_window_cache || !ffd->combined_window_cache)
+    return SVN_NO_ERROR;
 
   header_key.revision = (apr_int32_t)key->revision;
   header_key.is_packed = svn_fs_x__is_packed_rev(fs, header_key.revision);
   header_key.item_index = key->second;
 
   SVN_ERR(read_rep_header(&rep_header, fs, stream, &header_key, pool));
-  SVN_ERR(block_read_windows(rep_header, fs, file, stream, entry, pool));
+  SVN_ERR(init_rep_state(&rs, rep_header, fs, file, stream, entry, pool));
+  SVN_ERR(cache_windows(&fulltext_len, fs, &rs, max_offset, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2709,7 +2820,7 @@ block_read(void **result,
       /* read all items from the block */
       for (i = 0; i < entries->nelts; ++i)
         {
-          svn_boolean_t is_result;
+          svn_boolean_t is_result, is_wanted;
           apr_pool_t *pool;
 
           svn_fs_x__p2l_entry_t* entry
@@ -2720,11 +2831,11 @@ block_read(void **result,
             continue;
 
           /* the item / container we were looking for? */
-          is_result =    result
-                      && entry->offset == wanted_offset
+          is_wanted =    entry->offset == wanted_offset
                       && entry->item_count >= wanted_sub_item
                       && svn_fs_x__id_part_eq(entry->items + wanted_sub_item,
                                               id);
+          is_result = result && is_wanted;
 
           /* select the pool that we want the item to be allocated in */
           pool = is_result ? result_pool : iterpool;
@@ -2748,9 +2859,12 @@ block_read(void **result,
                   case SVN_FS_X__ITEM_TYPE_DIR_REP:
                   case SVN_FS_X__ITEM_TYPE_FILE_PROPS:
                   case SVN_FS_X__ITEM_TYPE_DIR_PROPS:
-                    SVN_ERR(block_read_contents((svn_stringbuf_t **)&item,
-                                                fs, revision_file, stream,
-                                                entry, &key, pool));
+                    SVN_ERR(block_read_contents(fs, revision_file, stream,
+                                                entry, &key,
+                                                is_wanted
+                                                  ? -1
+                                                  : block_start + ffd->block_size,
+                                                pool));
                     break;
 
                   case SVN_FS_X__ITEM_TYPE_NODEREV:
