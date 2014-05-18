@@ -29,7 +29,6 @@
 #include "svn_fs.h"
 #include "svn_props.h"
 #include "private/svn_mutex.h"
-#include <apr_poll.h>
 
 #ifdef __cplusplus
 extern "C" {
