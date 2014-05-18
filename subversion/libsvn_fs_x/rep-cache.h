@@ -62,7 +62,8 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
    REP is allocated in POOL.  If the rep cache database has not been
-   opened, just set *REP to NULL. */
+   opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if
+   a reference beyond HEAD is detected. */
 svn_error_t *
 svn_fs_x__get_rep_reference(representation_t **rep,
                             svn_fs_t *fs,
@@ -70,16 +71,13 @@ svn_fs_x__get_rep_reference(representation_t **rep,
                             apr_pool_t *pool);
 
 /* Set the representation REP in FS, using REP->CHECKSUM.
-   Use POOL for temporary allocations.
+   Use POOL for temporary allocations.  Returns SVN_ERR_FS_CORRUPT if
+   an existing reference beyond HEAD is detected.
 
-   If the rep cache database has not been opened, this may be a no op.
-
-   If REJECT_DUP is TRUE, return an error if there is an existing
-   match for REP->CHECKSUM. */
+   If the rep cache database has not been opened, this may be a no op. */
 svn_error_t *
 svn_fs_x__set_rep_reference(svn_fs_t *fs,
                             representation_t *rep,
-                            svn_boolean_t reject_dup,
                             apr_pool_t *pool);
 
 /* Delete from the cache all reps corresponding to revisions younger
