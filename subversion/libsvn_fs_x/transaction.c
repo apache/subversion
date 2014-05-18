@@ -1056,6 +1056,9 @@ process_changes(apr_hash_t *changed_paths,
 
   for (i = 0; i < changes->nelts; ++i)
     {
+      /* The ITERPOOL will be cleared at the end of this function
+       * since it is only used rarely and for a single hash iterator.
+       */
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
 
       SVN_ERR(fold_change(changed_paths, change));
