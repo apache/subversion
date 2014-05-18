@@ -84,6 +84,23 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                              pool);
 }
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as a format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format(int format)
+{
+  /* Put blacklisted versions here. */
+
+  /* We support all formats from 1-current simultaneously */
+  if (1 <= format && format <= SVN_FS_X__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+     _("Expected FS format between '1' and '%d'; found format '%d'"),
+     SVN_FS_X__FORMAT_NUMBER, format);
+}
+
 static svn_error_t *
 read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
@@ -107,6 +124,9 @@ read_format(int *pformat, int *max_files_per_dir,
   /* Check that the first line contains only digits. */
   SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
   SVN_ERR(svn_cstring_atoi(pformat, buf->data));
+
+  /* Check that we support this format at all */
+  SVN_ERR(check_format(*pformat));
 
   /* Read any options. */
   SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
@@ -160,21 +180,6 @@ svn_fs_x__write_format(svn_fs_t *fs,
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
-}
-
-/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
-   number is not the same as a format number supported by this
-   Subversion. */
-static svn_error_t *
-check_format(int format)
-{
-  /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_X__FORMAT_NUMBER)
-    return SVN_NO_ERROR;
-
-  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-     _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_X__FORMAT_NUMBER, format);
 }
 
 /* Find the youngest revision in a repository at path FS_PATH and
@@ -452,7 +457,6 @@ svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_fs_x__path_format(fs, pool), pool));
-  SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
@@ -498,7 +502,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
-  SVN_ERR(check_format(format));
 
   /* If we're already up-to-date, there's nothing else to be done here. */
   if (format == SVN_FS_X__FORMAT_NUMBER)
