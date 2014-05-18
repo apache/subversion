@@ -2701,9 +2701,10 @@ block_read(void **result,
   offset = wanted_offset;
   do
     {
-      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, revision, offset,
-                                         scratch_pool));
+      /* fetch list of items in the block surrounding OFFSET */
       SVN_ERR(aligned_seek(fs, revision_file, &block_start, offset, iterpool));
+      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, revision, block_start,
+                                         ffd->block_size, scratch_pool));
 
       /* read all items from the block */
       for (i = 0; i < entries->nelts; ++i)

@@ -252,7 +252,7 @@ read_config(fs_x_data_t *ffd,
   SVN_ERR(svn_config_get_int64(config, &ffd->p2l_page_size,
                                CONFIG_SECTION_IO,
                                CONFIG_OPTION_P2L_PAGE_SIZE,
-                               64));
+                               0x400));
 
   ffd->block_size *= 0x400;
   ffd->p2l_page_size *= 0x400;
@@ -428,11 +428,10 @@ write_config(svn_fs_t *fs,
 "### of tens of MB each,  increasing the page size will shorten the index"   NL
 "### file at the expense of a slightly increased latency in sections with"   NL
 "### smaller changes."                                                       NL
-"### For practical reasons,  this should match block-size.  Differing"       NL
-"### values are perfectly legal but may result in some processing overhead." NL
+"### For source code repositories, this should be about 16x the block-size." NL
 "### Must be a power of 2."                                                  NL
-"### p2l-page-size is 64 kBytes by default."                                 NL
-"# " CONFIG_OPTION_P2L_PAGE_SIZE " = 64"                                     NL
+"### p2l-page-size is 1024 kBytes by default."                               NL
+"# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),

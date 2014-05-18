@@ -1756,6 +1756,7 @@ static svn_error_t *
 pack_range(pack_context_t *context,
            apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = context->fs->fsap_data;
   apr_pool_t *revpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -1788,9 +1789,11 @@ pack_range(pack_context_t *context,
           /* read one cluster */
           int i;
           apr_array_header_t *entries;
+          svn_pool_clear(iterpool);
+
           SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs,
                                              revision, offset,
-                                             iterpool));
+                                             ffd->p2l_page_size, iterpool));
 
           for (i = 0; i < entries->nelts; ++i)
             {
@@ -1840,8 +1843,6 @@ pack_range(pack_context_t *context,
 
           if (context->cancel_func)
             SVN_ERR(context->cancel_func(context->cancel_baton));
-
-          svn_pool_clear(iterpool);
         }
 
       svn_pool_clear(revpool);
@@ -1887,6 +1888,7 @@ static svn_error_t *
 append_revision(pack_context_t *context,
                 apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = context->fs->fsap_data;
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_file_t *rev_file;
@@ -1919,7 +1921,7 @@ append_revision(pack_context_t *context,
       apr_array_header_t *entries;
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs,
                                           context->start_rev, offset,
-                                          iterpool));
+                                          ffd->p2l_page_size, iterpool));
 
       for (i = 0; i < entries->nelts; ++i)
         {
