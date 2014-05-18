@@ -922,7 +922,7 @@ svn_fs_x__dag_get_contents(svn_stream_t **contents_p,
 
   /* Get a stream to the contents. */
   SVN_ERR(svn_fs_x__get_contents(&contents, file->fs,
-                                 noderev->data_rep, pool));
+                                 noderev->data_rep, TRUE, pool));
 
   *contents_p = contents;
 

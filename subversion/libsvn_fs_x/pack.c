@@ -1268,7 +1268,7 @@ write_reps_containers(pack_context_t *context,
                                              context->fs, temp_file,
                                              temp_stream, entry, iterpool));
       SVN_ERR(svn_fs_x__get_contents(&stream, context->fs, &representation,
-                                      iterpool));
+                                     FALSE, iterpool));
       contents = svn_stringbuf_create_ensure(representation.expanded_size,
                                              iterpool);
       contents->len = representation.expanded_size;
