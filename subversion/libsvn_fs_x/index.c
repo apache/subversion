@@ -652,6 +652,22 @@ encode_l2p_page(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
+{
+  /* remove any old index file
+   * (it would probably be r/o and simply re-writing it would fail) */
+  SVN_ERR(svn_io_remove_file2(file_name, TRUE, pool));
+
+  /* We most likely own the write lock to the repo, so this should
+   * either just work or fail indicating a serious problem. */
+  SVN_ERR(svn_io_file_open(index_file, file_name,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_x__l2p_index_create(svn_fs_t *fs,
                            const char *file_name,
@@ -756,9 +772,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write header info */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
@@ -1888,9 +1902,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write the start revision and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
