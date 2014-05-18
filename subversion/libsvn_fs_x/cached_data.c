@@ -2427,7 +2427,7 @@ read_dir_entries(apr_array_header_t *entries,
     }
 
   if (!sorted(entries))
-    qsort(entries->elts, entries->nelts, entries->elt_size, compare_dirents);
+    svn_sort__array(entries, compare_dirents);
 
   svn_pool_destroy(iterpool);
 
