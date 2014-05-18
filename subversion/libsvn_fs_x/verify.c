@@ -250,6 +250,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                          void *cancel_baton,
                          apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
@@ -267,7 +268,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
 
       /* get all entries for the current block */
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, start, offset,
-                                         iterpool));
+                                         ffd->p2l_page_size, iterpool));
       if (entries->nelts == 0)
         return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
                                  NULL,

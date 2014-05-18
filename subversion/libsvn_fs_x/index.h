@@ -168,9 +168,9 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
                            apr_pool_t *pool);
 
 /* Use the phys-to-log mapping files in FS to build a list of entries
- * that (partly) share in the same cluster as the item at global OFFSET
- * in the rep file containing REVISION.  Return the array in *ENTRIES,
- * elements being of type svn_fs_x__p2l_entry_t.
+ * that (at least partly) overlap with the range given by BLOCK_START
+ * offset and BLOCK_SIZE in the rep / pack file containing REVISION.
+ * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements.
  * Use POOL for allocations.
  *
  * Note that (only) the first and the last mapping may cross a cluster
@@ -180,7 +180,8 @@ svn_error_t *
 svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
                            svn_fs_t *fs,
                            svn_revnum_t revision,
-                           apr_off_t offset,
+                           apr_off_t block_start,
+                           apr_off_t block_size,
                            apr_pool_t *pool);
 
 /* Use the phys-to-log mapping files in FS to return the entry for the
