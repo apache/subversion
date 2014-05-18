@@ -2470,8 +2470,7 @@ get_dir_contents(apr_array_header_t **entries,
        */
       apr_pool_t *text_pool = svn_pool_create(scratch_pool);
       apr_size_t len = noderev->data_rep->expanded_size;
-      svn_stringbuf_t *text = svn_stringbuf_create_ensure(len, text_pool);
-      text->len = len;
+      svn_stringbuf_t *text;
 
       /* The representation is immutable.  Read it normally. */
       SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep,

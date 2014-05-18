@@ -56,6 +56,9 @@
 
 
 
+/* Initialize the part of FS that requires global serialization across all
+   instances.  The caller is responsible of ensuring that serialization.
+   Use COMMON_POOL for process-wide and POOL for temporary allocations. */
 static svn_error_t *
 x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
@@ -273,15 +276,19 @@ x_open(svn_fs_t *fs,
        apr_pool_t *pool,
        apr_pool_t *common_pool)
 {
+  apr_pool_t *subpool = svn_pool_create(pool);
+
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   SVN_ERR(initialize_fs_struct(fs));
 
-  SVN_ERR(svn_fs_x__open(fs, path, pool));
+  SVN_ERR(svn_fs_x__open(fs, path, subpool));
 
-  SVN_ERR(svn_fs_x__initialize_caches(fs, pool));
+  SVN_ERR(svn_fs_x__initialize_caches(fs, subpool));
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       x_serialized_init(fs, common_pool, pool));
+                       x_serialized_init(fs, common_pool, subpool));
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
