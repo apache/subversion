@@ -44,6 +44,7 @@
 #include "reps.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "../libsvn_delta/delta.h"  /* for SVN_DELTA_WINDOW_SIZE */
 
 #include "svn_private_config.h"
 
@@ -513,6 +514,7 @@ create_rep_state_body(rep_state_t **rep_state,
   svn_fs_x__rep_header_t *rh;
   svn_boolean_t is_cached = FALSE;
   svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
+  apr_uint64_t estimated_window_storage;
 
   /* If the hint is
    * - given,
@@ -538,11 +540,31 @@ create_rep_state_body(rep_state_t **rep_state,
   /* continue constructing RS and RA */
   rs->size = rep->size;
   rs->rep_id = rep->id;
-  rs->window_cache = ffd->txdelta_window_cache;
-  rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
   rs->start = -1;
 
+  /* Very long files stored as self-delta will produce a huge number of
+     delta windows.  Don't cache them lest we don't thrash the cache.
+     Since we don't know the depth of the delta chain, let's assume, the
+     whole contents get rewritten 3 times.
+   */
+  estimated_window_storage
+    = 4 * (  (rep->expanded_size ? rep->expanded_size : rep->size)
+           + SVN_DELTA_WINDOW_SIZE);
+  estimated_window_storage = MIN(estimated_window_storage, APR_SIZE_MAX);
+
+  rs->window_cache =    ffd->txdelta_window_cache
+                     && svn_cache__is_cachable(ffd->txdelta_window_cache,
+                                       (apr_size_t)estimated_window_storage)
+                   ? ffd->txdelta_window_cache
+                   : NULL;
+  rs->combined_cache =    ffd->combined_window_cache
+                       && svn_cache__is_cachable(ffd->combined_window_cache,
+                                       (apr_size_t)estimated_window_storage)
+                     ? ffd->combined_window_cache
+                     : NULL;
+
+  /* cache lookup, i.e. skip reading the rep header if possible */
   if (ffd->rep_header_cache && SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
                            ffd->rep_header_cache, &key, pool));
@@ -796,6 +818,9 @@ struct rep_read_baton
   /* The FS from which we're reading. */
   svn_fs_t *fs;
 
+  /* Representation to read. */
+  representation_t rep;
+
   /* If not NULL, this is the base for the first delta window in rs_list */
   svn_stringbuf_t *base_window;
 
@@ -834,6 +859,15 @@ struct rep_read_baton
   pair_cache_key_t fulltext_cache_key;
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
+
+  /* If not NULL, attempt to read the data from this cache. 
+     Once that lookup fails, reset it to NULL. */
+  svn_cache__t *fulltext_cache;
+
+  /* Bytes delivered from the FULLTEXT_CACHE so far.  If the next
+     lookup fails, we need to skip that much data from the reconstructed
+     window stream before we continue normal operation. */
+  svn_filesize_t fulltext_delivered;
 
   /* Used for temporary allocations during the read. */
   apr_pool_t *pool;
@@ -1151,6 +1185,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
   b->fs = fs;
+  b->rep = *rep;
   b->base_window = NULL;
   b->chunk_index = 0;
   b->buf = NULL;
@@ -1162,16 +1197,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->fulltext_cache_key = fulltext_cache_key;
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
-
-  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window, &b->src_state,
-                         fs, rep, b->filehandle_pool));
-
-  if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
-    b->current_fulltext = svn_stringbuf_create_ensure
-                            ((apr_size_t)b->len,
-                             b->filehandle_pool);
-  else
-    b->current_fulltext = NULL;
+  b->fulltext_cache = NULL;
+  b->fulltext_delivered = 0;
+  b->current_fulltext = NULL;
 
   /* Save our output baton. */
   *rb_p = b;
@@ -1657,11 +1685,12 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
   return SVN_NO_ERROR;
 }
 
-/* Return the next *LEN bytes of the rep and store them in *BUF. */
+/* Return the next *LEN bytes of the rep from our plain / delta windows
+   and store them in *BUF. */
 static svn_error_t *
-get_contents(struct rep_read_baton *rb,
-             char *buf,
-             apr_size_t *len)
+get_contents_from_windows(struct rep_read_baton *rb,
+                          char *buf,
+                          apr_size_t *len)
 {
   apr_size_t copy_len, remaining = *len;
   char *cur = buf;
@@ -1751,6 +1780,192 @@ get_contents(struct rep_read_baton *rb,
   return SVN_NO_ERROR;
 }
 
+/* Baton type for get_fulltext_partial. */
+typedef struct fulltext_baton_t
+{
+  /* Target buffer to write to; of at least LEN bytes. */
+  char *buffer;
+
+  /* Offset within the respective fulltext at which we shall start to
+     copy data into BUFFER. */
+  apr_size_t start;
+
+  /* Number of bytes to copy.  The actual amount may be less in case
+     the fulltext is short(er). */
+  apr_size_t len;
+
+  /* Number of bytes actually copied into BUFFER. */
+  apr_size_t read;
+} fulltext_baton_t;
+
+/* Implement svn_cache__partial_getter_func_t for fulltext caches.
+ * From the fulltext in DATA, we copy the range specified by the
+ * fulltext_baton_t* BATON into the buffer provided by that baton.
+ * OUT and RESULT_POOL are not used.
+ */
+static svn_error_t *
+get_fulltext_partial(void **out,
+                     const void *data,
+                     apr_size_t data_len,
+                     void *baton,
+                     apr_pool_t *result_pool)
+{
+  fulltext_baton_t *fulltext_baton = baton;
+
+  /* We cached the fulltext with an NUL appended to it. */
+  apr_size_t fulltext_len = data_len - 1;
+
+  /* Clip the copy range to what the fulltext size allows. */
+  apr_size_t start = MIN(fulltext_baton->start, fulltext_len);
+  fulltext_baton->read = MIN(fulltext_len - start, fulltext_baton->len);
+
+  /* Copy the data to the output buffer and be done. */
+  memcpy(fulltext_baton->buffer, (const char *)data + start,
+         fulltext_baton->read);
+
+  return SVN_NO_ERROR;
+}
+
+/* Find the fulltext specified in BATON in the fulltext cache given
+ * as well by BATON.  If that succeeds, set *CACHED to TRUE and copy
+ * up to the next *LEN bytes into BUFFER.  Set *LEN to the actual
+ * number of bytes copied.
+ */
+static svn_error_t *
+get_contents_from_fulltext(svn_boolean_t *cached,
+                           struct rep_read_baton *baton,
+                           char *buffer,
+                           apr_size_t *len)
+{
+  void *dummy;
+  fulltext_baton_t fulltext_baton;
+
+  SVN_ERR_ASSERT((apr_size_t)baton->fulltext_delivered
+                 == baton->fulltext_delivered);
+  fulltext_baton.buffer = buffer;
+  fulltext_baton.start = (apr_size_t)baton->fulltext_delivered;
+  fulltext_baton.len = *len;
+  fulltext_baton.read = 0;
+
+  SVN_ERR(svn_cache__get_partial(&dummy, cached, baton->fulltext_cache,
+                                 &baton->fulltext_cache_key,
+                                 get_fulltext_partial, &fulltext_baton,
+                                 baton->pool));
+
+  if (*cached)
+    {
+      baton->fulltext_delivered += fulltext_baton.read;
+      *len = fulltext_baton.read;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Determine the optimal size of a string buf that shall receive a
+ * (full-) text of NEEDED bytes.
+ *
+ * The critical point is that those buffers may be very large and
+ * can cause memory fragmentation.  We apply simple heuristics to
+ * make fragmentation less likely.
+ */
+static apr_size_t
+optimimal_allocation_size(apr_size_t needed)
+{
+  /* For all allocations, assume some overhead that is shared between
+   * OS memory managemnt, APR memory management and svn_stringbuf_t. */
+  const apr_size_t overhead = 0x400;
+  apr_size_t optimal;
+
+  /* If an allocation size if safe for other ephemeral buffers, it should
+   * be safe for ours. */
+  if (needed <= SVN__STREAM_CHUNK_SIZE)
+    return needed;
+
+  /* Paranoia edge case:
+   * Skip our heuristics if they created arithmetical overflow.
+   * Beware to make this test work for NEEDED = APR_SIZE_MAX as well! */
+  if (needed >= APR_SIZE_MAX / 2 - overhead)
+    return needed;
+
+  /* As per definition SVN__STREAM_CHUNK_SIZE is a power of two.
+   * Since we know NEEDED to be larger than that, use it as the
+   * starting point.
+   *
+   * Heuristics: Allocate a power-of-two number of bytes that fit
+   *             NEEDED plus some OVERHEAD.  The APR allocator
+   *             will round it up to the next full page size.
+   */
+  optimal = SVN__STREAM_CHUNK_SIZE;
+  while (optimal - overhead < needed)
+    optimal *= 2;
+
+  /* This is above or equal to NEEDED. */
+  return optimal - overhead;
+}
+
+/* After a fulltext cache lookup failure, we will continue to read from
+ * combined delta or plain windows.  However, we must first make that data
+ * stream in BATON catch up tho the position LEN already delivered from the
+ * fulltext cache.  Also, we need to store the reconstructed fulltext if we
+ * want to cache it at the end.
+ */
+static svn_error_t *
+skip_contents(struct rep_read_baton *baton,
+              svn_filesize_t len)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Do we want to cache the reconstructed fulltext? */
+  if (SVN_IS_VALID_REVNUM(baton->fulltext_cache_key.revision))
+    {
+      char *buffer;
+      svn_filesize_t to_alloc = MAX(len, baton->len);
+
+      /* This should only be happening if BATON->LEN and LEN are
+       * cacheable, implying they fit into memory. */
+      SVN_ERR_ASSERT((apr_size_t)to_alloc == to_alloc);
+
+      /* Allocate the fulltext buffer. */
+      baton->current_fulltext = svn_stringbuf_create_ensure(
+                        optimimal_allocation_size((apr_size_t)to_alloc),
+                        baton->filehandle_pool);
+
+      /* Read LEN bytes from the window stream and store the data
+       * in the fulltext buffer (will be filled by further reads later). */
+      baton->current_fulltext->len = (apr_size_t)len;
+      baton->current_fulltext->data[(apr_size_t)len] = 0;
+
+      buffer = baton->current_fulltext->data;
+      while (len > 0 && !err)
+        {
+          apr_size_t to_read = (apr_size_t)len;
+          err = get_contents_from_windows(baton, buffer, &to_read);
+          len -= to_read;
+          buffer += to_read;
+        }
+    }
+  else if (len > 0)
+    {
+      /* Simply drain LEN bytes from the window stream. */
+      apr_pool_t *subpool = subpool = svn_pool_create(baton->pool);
+      char *buffer = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
+
+      while (len > 0 && !err)
+        {
+          apr_size_t to_read = len > SVN__STREAM_CHUNK_SIZE
+                            ? SVN__STREAM_CHUNK_SIZE
+                            : (apr_size_t)len;
+
+          err = get_contents_from_windows(baton, buffer, &to_read);
+          len -= to_read;
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  return svn_error_trace(err);
+}
+
 /* BATON is of type `rep_read_baton'; read the next *LEN bytes of the
    representation and store them in *BUF.  Sum as we read and verify
    the MD5 sum at the end. */
@@ -1761,8 +1976,35 @@ rep_read_contents(void *baton,
 {
   struct rep_read_baton *rb = baton;
 
+  /* Get data from the fulltext cache for as long as we can. */
+  if (rb->fulltext_cache)
+    {
+      svn_boolean_t cached;
+      SVN_ERR(get_contents_from_fulltext(&cached, rb, buf, len));
+      if (cached)
+        return SVN_NO_ERROR;
+
+      /* Cache miss.  From now on, we will never read from the fulltext
+       * cache for this representation anymore. */
+      rb->fulltext_cache = NULL;
+    }
+
+  /* No fulltext cache to help us.  We must read from the window stream. */
+  if (!rb->rs_list)
+    {
+      /* Window stream not initialized, yet.  Do it now. */
+      SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
+                             &rb->src_state, rb->fs, &rb->rep,
+                             rb->filehandle_pool));
+
+      /* In case we did read from the fulltext cache before, make the 
+       * window stream catch up.  Also, initialize the fulltext buffer
+       * if we want to cache the fulltext at the end. */
+      SVN_ERR(skip_contents(rb, rb->fulltext_delivered));
+    }
+
   /* Get the next block of data. */
-  SVN_ERR(get_contents(rb, buf, len));
+  SVN_ERR(get_contents_from_windows(rb, buf, len));
 
   if (rb->current_fulltext)
     svn_stringbuf_appendbytes(rb->current_fulltext, buf, *len);
@@ -1809,6 +2051,7 @@ svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
                        representation_t *rep,
+                       svn_boolean_t cache_fulltext,
                        apr_pool_t *pool)
 {
   if (! rep)
@@ -1818,31 +2061,33 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
   else
     {
       fs_x_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t fulltext_cache_key = { 0 };
       svn_filesize_t len = rep->expanded_size;
       struct rep_read_baton *rb;
       svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
 
+      pair_cache_key_t fulltext_cache_key = { 0 };
       fulltext_cache_key.revision = revision;
       fulltext_cache_key.second = rep->id.number;
-      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(revision)
+
+      /* Initialize the reader baton.  Some members may added lazily
+       * while reading from the stream */
+      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
+
+      /* Make the stream attempt fulltext cache lookups if the fulltext
+       * is cacheable.  If it is not, then also don't try to buffer and
+       * cache it. */
+      if (ffd->fulltext_cache && cache_fulltext
+          && SVN_IS_VALID_REVNUM(revision)
           && fulltext_size_is_cachable(ffd, len))
         {
-          svn_stringbuf_t *fulltext;
-          svn_boolean_t is_cached;
-          SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, &fulltext_cache_key,
-                                 pool));
-          if (is_cached)
-            {
-              *contents_p = svn_stream_from_stringbuf(fulltext, pool);
-              return SVN_NO_ERROR;
-            }
+          rb->fulltext_cache = ffd->fulltext_cache;
         }
       else
-        fulltext_cache_key.revision = SVN_INVALID_REVNUM;
-
-      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
+        {
+          /* This will also prevent the reconstructed fulltext from being
+             put into the cache. */
+          rb->fulltext_cache_key.revision = SVN_INVALID_REVNUM;
+        }
 
       *contents_p = svn_stream_create(rb, pool);
       svn_stream_set_read2(*contents_p, NULL /* only full read support */,
@@ -2032,10 +2277,12 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
   /* Read both fulltexts and construct a delta. */
   if (source)
-    SVN_ERR(svn_fs_x__get_contents(&source_stream, fs, source->data_rep, pool));
+    SVN_ERR(svn_fs_x__get_contents(&source_stream, fs, source->data_rep,
+                                   TRUE, pool));
   else
     source_stream = svn_stream_empty(pool);
-  SVN_ERR(svn_fs_x__get_contents(&target_stream, fs, target->data_rep, pool));
+  SVN_ERR(svn_fs_x__get_contents(&target_stream, fs, target->data_rep,
+                                 TRUE, pool));
 
   /* Because source and target stream will already verify their content,
    * there is no need to do this once more.  In particular if the stream
@@ -2227,8 +2474,9 @@ get_dir_contents(apr_array_header_t **entries,
       text->len = len;
 
       /* The representation is immutable.  Read it normally. */
-      SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep, text_pool));
-      SVN_ERR(svn_stream_read_full(contents, text->data, &text->len));
+      SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep,
+                                     FALSE, text_pool));
+      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, text_pool));
       SVN_ERR(svn_stream_close(contents));
 
       /* de-serialize hash */
@@ -2411,7 +2659,8 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
         }
 
       proplist = apr_hash_make(pool);
-      SVN_ERR(svn_fs_x__get_contents(&stream, fs, noderev->prop_rep, pool));
+      SVN_ERR(svn_fs_x__get_contents(&stream, fs, noderev->prop_rep, FALSE,
+                                     pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
 

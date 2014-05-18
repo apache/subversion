@@ -398,7 +398,8 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
 
   svn_stream_t *stream;
   svn_string_t *contents;
-  SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, scratch_pool));
+  SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, FALSE,
+                                 scratch_pool));
   SVN_ERR(svn_string_from_stream(&contents, stream, scratch_pool,
                                  scratch_pool));
 
