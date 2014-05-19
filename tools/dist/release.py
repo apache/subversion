@@ -164,6 +164,18 @@ class Version(object):
     def is_prerelease(self):
         return self.pre != None
 
+    def is_recommended(self):
+        return self.branch == recommended_release
+
+    def get_download_anchor(self):
+        if self.is_prerelease():
+            return 'pre-releases'
+        else:
+            if self.is_recommended():
+                return 'recommended-release'
+            else:
+                return 'supported-releases'
+
     def __lt__(self, that):
         if self.major < that.major: return True
         if self.major > that.major: return False
@@ -717,24 +729,19 @@ def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
     siginfo = "\n".join(get_siginfo(args, True)) + "\n"
-    major_minor = '%d.%d' % (args.version.major, args.version.minor)
 
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : siginfo,
-             'major-minor'          : major_minor,
+             'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
+             'anchor'               : args.version.get_download_anchor(),
            }
 
     if args.version.is_prerelease():
         template_filename = 'rc-release-ann.ezt'
-        data['anchor'] = 'pre-releases'
     else:
         template_filename = 'stable-release-ann.ezt'
-        if major_minor == recommended_release:
-            data['anchor'] = 'recommended-release'
-        else:
-            data['anchor'] = 'supported-releases'
 
     template = ezt.Template(compress_whitespace = False)
     template.parse(get_tmplfile(template_filename).read())
