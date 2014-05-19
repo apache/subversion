@@ -684,7 +684,7 @@ def write_news(args):
     'Write text for the Subversion website.'
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
-             'major-minor' : '%d.%d' % (args.version.major, args.version.minor),
+             'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
              'anchor': args.version.get_download_anchor(),
