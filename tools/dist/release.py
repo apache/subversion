@@ -687,6 +687,7 @@ def write_news(args):
              'major-minor' : '%d.%d' % (args.version.major, args.version.minor),
              'version' : str(args.version),
              'version_base' : args.version.base,
+             'anchor': args.version.get_download_anchor(),
            }
 
     if args.version.is_prerelease():
