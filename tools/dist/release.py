@@ -111,6 +111,9 @@ tool_versions = {
   },
 }
 
+# The version that is our current recommended release
+recommended_release = '1.8'
+
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
 secure_repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -714,19 +717,24 @@ def write_announcement(args):
     'Write the release announcement.'
     sha1info = get_sha1info(args)
     siginfo = "\n".join(get_siginfo(args, True)) + "\n"
+    major_minor = '%d.%d' % (args.version.major, args.version.minor)
 
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : siginfo,
-             'major-minor'          : '%d.%d' % (args.version.major,
-                                                 args.version.minor),
+             'major-minor'          : major_minor,
              'major-minor-patch'    : args.version.base,
            }
 
     if args.version.is_prerelease():
         template_filename = 'rc-release-ann.ezt'
+        data['anchor'] = 'pre-releases'
     else:
         template_filename = 'stable-release-ann.ezt'
+        if major_minor == recommended_release:
+            data['anchor'] = 'recommended-release'
+        else:
+            data['anchor'] = 'supported-releases'
 
     template = ezt.Template(compress_whitespace = False)
     template.parse(get_tmplfile(template_filename).read())
