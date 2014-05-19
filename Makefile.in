@@ -212,10 +212,35 @@ COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 COMPILE_JAVAHL_COMPAT_JAVAC = $(JAVAC) $(JAVAC_COMPAT_FLAGS)
 
-# export an env variable so that the tests can run without being installed
+# On Mac OS X, export an env variable so that the tests can run without
+# being installed. OS X needs the DYLD_LIBRARY_PATH env variable set in
+# order to find the libraries to link against, because we can't effectively
+# use rpath due to way rpath is implemented in the Mach executable format.
 TEST_SHLIB_VAR_JAVAHL=\
   if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(abs_builddir)/subversion/libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+TEST_SHLIB_VAR_SWIG_PY=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+TEST_SHLIB_VAR_SWIG_RB=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_RB_DIR)/libsvn_swig_ruby $(SWIG_RB_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
       else \
@@ -314,19 +339,6 @@ INSTALL_EXTRA_SWIG_PY=\
     compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
     "$(swig_pydir_extra)");'
 
-# export an env variable so that the tests can run without being installed
-TEST_SHLIB_VAR_SWIG_PY=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
-    for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
-      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
-        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
-      else \
-        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
-      fi; \
-    done; \
-    export @SVN_APR_SHLIB_PATH_VAR@; \
-  fi;
-
 # The path to generated and complementary source files for the SWIG
 # bindings.
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
@@ -356,19 +368,6 @@ INSTALL_EXTRA_SWIG_RB=\
     echo $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn; \
     $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn; \
   done
-
-# export an env variable so that the tests can run without being installed
-TEST_SHLIB_VAR_SWIG_RB=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
-    for d in $(SWIG_RB_DIR)/libsvn_swig_ruby $(SWIG_RB_DIR)/../../../libsvn_*; do \
-      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
-        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
-      else \
-        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
-      fi; \
-    done; \
-    export @SVN_APR_SHLIB_PATH_VAR@; \
-  fi;
 
 APXS = @APXS@
 
