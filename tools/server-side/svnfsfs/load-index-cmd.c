@@ -292,11 +292,15 @@ parse_index_line(svn_fs_fs__p2l_entry_t **entry,
   apr_array_header_t *tokens = svn_cstring_split(line->data, " ", TRUE,
                                                  scratch_pool);
   svn_fs_fs__p2l_entry_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  apr_int64_t value;
 
   /* Parse the hex columns. */
-  SVN_ERR(token_to_i64(&result->offset, tokens, 0));
-  SVN_ERR(token_to_i64(&result->size, tokens, 1));
-  SVN_ERR(token_to_i64(&result->item.number, tokens, 4));
+  SVN_ERR(token_to_i64(&value, tokens, 0));
+  result->offset = (apr_off_t)value;
+  SVN_ERR(token_to_i64(&value, tokens, 1));
+  result->size = (apr_off_t)value;
+  SVN_ERR(token_to_i64(&value, tokens, 4));
+  result->item.number = (apr_uint64_t)value;
 
   /* We now know that there were at least 5 columns.
    * Parse the non-hex columns without index check. */
