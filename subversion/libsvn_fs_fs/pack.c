@@ -74,8 +74,9 @@
  * - changed paths lists
  * - node property
  * - directory properties
- * - noderevs and representations, lexical path order with special
- *   treatment of "trunk" and "branches"
+ * - directory representations corresponding noderevs, lexical path order
+ *   with special treatment of "trunk" and "branches"
+ * - same for file representations
  *
  * Step 4 copies the items from the temporary buckets into the final
  * pack file and writes the temporary index files.
@@ -258,7 +259,7 @@ initialize_pack_context(pack_context_t *context,
   
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
-  
+
   /* where we will place our various temp files */
   SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
 
@@ -314,7 +315,7 @@ initialize_pack_context(pack_context_t *context,
   context->path_order = apr_array_make(pool, max_items,
                                        sizeof(path_order_t *));
   context->references = apr_array_make(pool, max_items,
-                                           sizeof(reference_t *));
+                                       sizeof(reference_t *));
   context->reps = apr_array_make(pool, max_items,
                                  sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
@@ -360,9 +361,11 @@ close_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
 {
   const char *l2p_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_L2P_INDEX, NULL);
+    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_L2P_INDEX,
+                  SVN_VA_NULL);
   const char *p2l_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_P2L_INDEX, NULL);
+    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_P2L_INDEX,
+                  SVN_VA_NULL);
   const char *proto_l2p_index_path;
   const char *proto_p2l_index_path;
 
@@ -985,12 +988,10 @@ sort_reps(pack_context_t *context)
 
   /* Sort containers by path and IDs, respectively.
    */
-  qsort(context->path_order->elts, context->path_order->nelts,
-        context->path_order->elt_size,
-        (int (*)(const void *, const void *))compare_path_order);
-  qsort(context->references->elts, context->references->nelts,
-        context->references->elt_size,
-        (int (*)(const void *, const void *))compare_references);
+  svn_sort__array(context->path_order,
+                  (int (*)(const void *, const void *))compare_path_order);
+  svn_sort__array(context->references,
+                  (int (*)(const void *, const void *))compare_references);
 
   /* Directories are already in front; sort directories section and files
    * section separately but use the same heuristics (see sub-function).
@@ -1035,8 +1036,8 @@ compare_p2l_info(const svn_fs_fs__p2l_entry_t * const * lhs,
 static void
 sort_items(apr_array_header_t *entries)
 {
-  qsort(entries->elts, entries->nelts, entries->elt_size,
-        (int (*)(const void *, const void *))compare_p2l_info);
+  svn_sort__array(entries,
+                  (int (*)(const void *, const void *))compare_p2l_info);
 }
 
 /* Return the remaining unused bytes in the current block in CONTEXT's
@@ -1241,8 +1242,8 @@ write_l2p_index(pack_context_t *context,
   context->reps->nelts = dest;
 
   /* we need to write the l2p index revision by revision */
-  qsort(context->reps->elts, context->reps->nelts, sizeof(void*),
-        (int (*)(const void *, const void *))compare_p2l_info_rev);
+  svn_sort__array(context->reps,
+                  (int (*)(const void *, const void *))compare_p2l_info_rev);
 
   /* write index entries */
   for (i = 0; i < context->reps->nelts; ++i)
