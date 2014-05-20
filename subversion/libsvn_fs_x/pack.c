@@ -46,7 +46,7 @@
 #include "svn_private_config.h"
 #include "temp_serializer.h"
 
-/* Format 7 packing logic:
+/* Packing logic:
  *
  * We pack files on a pack file basis (e.g. 1000 revs) without changing
  * existing pack files nor the revision files outside the range to pack.
@@ -57,7 +57,7 @@
  * memory to track it.  A MAX_MEM parameter sets a limit to the number of
  * items we may place in one go.  That means, we may not be able to add
  * all revisions at once.  Instead, we will run the placement for a subset
- * of revisions at a time.  T very unlikely worst case will simply append
+ * of revisions at a time.  The very unlikely worst case will simply append
  * all revision data with just a little reshuffling inside each revision.
  *
  * In a second step, we read all revisions in the selected range, build
@@ -70,12 +70,25 @@
  * each of the 4 buckets separately.  The first three will simply order
  * their items by revision, starting with the newest once.  Placing rep
  * and noderev items is a more elaborate process documented in the code.
+ * 
+ * In short, we store items in the following order:
+ * - changed paths lists
+ * - node property
+ * - directory properties
+ * - directory representations corresponding noderevs, lexical path order
+ *   with special treatment of "trunk" and "branches"
+ * - same for file representations
  *
  * Step 4 copies the items from the temporary buckets into the final
- * pack file and write the temporary index files.
+ * pack file and writes the temporary index files.
  *
  * Finally, after the last range of revisions, create the final indexes.
  */
+
+/* Maximum amount of memory we allocate for placement information during
+ * the pack process.
+ */
+#define DEFAULT_MAX_MEM (64 * 1024 * 1024)
 
 /* Data structure describing a node change at PATH, REVISION.
  * We will sort these instances by PATH and NODE_ID such that we can combine
@@ -92,6 +105,9 @@ typedef struct path_order_t
 
   /* when this change happened */
   svn_revnum_t revision;
+
+  /* this is a directory node */
+  svn_boolean_t is_dir;
 
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
@@ -193,8 +209,9 @@ typedef struct pack_context_t
    * after each revision range.  Sorted by PATH, NODE_ID. */
   apr_array_header_t *path_order;
 
-  /* array of reference_t *.  Will be filled in phase 2 and be cleared
-   * after each revision range.  It will be sorted by the TO members. */
+  /* array of reference_t* linking representations to their delta bases.
+   * Will be filled in phase 2 and be cleared after each revision range.
+   * It will be sorted by the FROM members (for rep->base rep lookup). */
   apr_array_header_t *references;
 
   /* array of svn_fs_x__p2l_entry_t*.  Will be filled in phase 2 and be
@@ -207,7 +224,7 @@ typedef struct pack_context_t
    * each revision range. */
   apr_array_header_t *rev_offsets;
 
-  /* temp file receiving all items referenced by REPS_INFOS.
+  /* temp file receiving all items referenced by REPS.
    * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *reps_file;
 
@@ -236,7 +253,7 @@ initialize_pack_context(pack_context_t *context,
 {
   fs_x_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
-  apr_size_t max_revs = MIN(ffd->max_files_per_dir, max_items);
+  int max_revs = MIN(ffd->max_files_per_dir, max_items);
 
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
 
@@ -263,14 +280,14 @@ initialize_pack_context(pack_context_t *context,
                              | APR_CREATE, APR_OS_DEFAULT, pool));
 
   /* Proto index files */
-  SVN_ERR(svn_fs_x__l2p_proto_index_open
-            (&context->proto_l2p_index,
+  SVN_ERR(svn_fs_x__l2p_proto_index_open(
+             &context->proto_l2p_index,
              svn_dirent_join(pack_file_dir,
                              PATH_INDEX PATH_EXT_L2P_INDEX,
                              pool),
              pool));
-  SVN_ERR(svn_fs_x__p2l_proto_index_open
-            (&context->proto_p2l_index,
+  SVN_ERR(svn_fs_x__p2l_proto_index_open(
+             &context->proto_p2l_index,
              svn_dirent_join(pack_file_dir,
                              PATH_INDEX PATH_EXT_P2L_INDEX,
                              pool),
@@ -292,8 +309,10 @@ initialize_pack_context(pack_context_t *context,
 
   /* noderev and representation item bucket */
   context->rev_offsets = apr_array_make(pool, max_revs, sizeof(int));
-  context->path_order = apr_array_make(pool, max_items, sizeof(path_order_t *));
-  context->references = apr_array_make(pool, max_items, sizeof(reference_t *));
+  context->path_order = apr_array_make(pool, max_items,
+                                       sizeof(path_order_t *));
+  context->references = apr_array_make(pool, max_items,
+                                       sizeof(reference_t *));
   context->reps = apr_array_make(pool, max_items,
                                  sizeof(svn_fs_x__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
@@ -472,7 +491,7 @@ copy_item_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Return the offset within CONTEXT->REPS_INFOS that corresponds to item
+/* Return the offset within CONTEXT->REPS that corresponds to item
  * ITEM_INDEX in  REVISION.
  */
 static int
@@ -486,8 +505,8 @@ get_item_array_index(pack_context_t *context,
                                          int);
 }
 
-/* Write INFO to the correct position in CONTEXT->REP_INFOS.  The latter
- * may need auto-expanding.  Overwriting an array element is not allowed.
+/* Write INFO to the correct position in CONTEXT->REPS.  The latter may
+ * need auto-expanding.  Overwriting an array element is not allowed.
  */
 static void
 add_item_rep_mapping(pack_context_t *context,
@@ -601,7 +620,7 @@ compare_dir_entries(const svn_sort__item_t *a,
   if (lhs->kind != rhs->kind)
     return lhs->kind == svn_node_dir ? -1 : 1;
 
-  return 0 - strcmp(lhs->name, rhs->name);
+  return strcmp(lhs->name, rhs->name);
 }
 
 apr_array_header_t *
@@ -623,6 +642,37 @@ svn_fs_x__order_dir_entries(svn_fs_t *fs,
   return result;
 }
 
+/* Return a duplicate of the the ORIGINAL path and with special sub-strins
+ * (e.g. "trunk") modified in such a way that have a lower lexicographic
+ * value than any other "normal" file name.
+ */
+static const char *
+tweak_path_for_ordering(const char *original,
+                        apr_pool_t *pool)
+{
+  /* We may add further special cases as needed. */
+  enum {SPECIAL_COUNT = 2};
+  static const char *special[SPECIAL_COUNT] = {"trunk", "branch"};
+  char *pos;
+  char *path = apr_pstrdup(pool, original);
+  int i;
+
+  /* Replace the first char of any "special" sub-string we find by
+   * a control char, i.e. '\1' .. '\31'.  In the rare event that this
+   * would clash with existing paths, no data will be lost but merely
+   * the node ordering will be sub-optimal.
+   */
+  for (i = 0; i < SPECIAL_COUNT; ++i)
+    for (pos = strstr(path, special[i]);
+         pos;
+         pos = strstr(pos + 1, special[i]))
+      {
+        *pos = (char)(i + '\1');
+      }
+
+   return path;
+}
+
 /* Copy node revision item identified by ENTRY from the current position
  * in REV_FILE into CONTEXT->REPS_FILE.  Add all tracking into needed by
  * our placement algorithm to CONTEXT.  Use POOL for temporary allocations.
@@ -636,6 +686,7 @@ copy_node_to_temp(pack_context_t *context,
   path_order_t *path_order = apr_pcalloc(context->info_pool,
                                          sizeof(*path_order));
   node_revision_t *noderev;
+  const char *sort_path;
   svn_stream_t *stream;
   apr_off_t source_offset = entry->offset;
 
@@ -676,10 +727,13 @@ copy_node_to_temp(pack_context_t *context,
       path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
-  path_order->path = svn_prefix_string__create(context->paths,
-                                               noderev->created_path);
+  /* Sort path is the key used for ordering noderevs and associated reps.
+   * It will not be stored in the final pack file. */
+  sort_path = tweak_path_for_ordering(noderev->created_path, pool);
+  path_order->path = svn_prefix_string__create(context->paths, sort_path);
   path_order->node_id = *svn_fs_x__id_node_id(noderev->id);
   path_order->revision = svn_fs_x__id_rev(noderev->id);
+  path_order->is_dir = noderev->kind == svn_node_dir;
   path_order->noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
@@ -710,8 +764,8 @@ compare_p2l_info(const svn_fs_x__p2l_entry_t * const * lhs,
 static void
 sort_items(apr_array_header_t *entries)
 {
-  qsort(entries->elts, entries->nelts, entries->elt_size,
-        (int (*)(const void *, const void *))compare_p2l_info);
+  svn_sort__array(entries,
+                  (int (*)(const void *, const void *))compare_p2l_info);
 }
 
 /* Decorator for svn_fs_x__p2l_entry_t that associates it with a sorted
@@ -775,8 +829,13 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * lhs = *lhs_p;
   const path_order_t * rhs = *rhs_p;
 
-  /* reverse lexicographic order on path and node (i.e. latest first) */
-  int diff = svn_prefix_string__compare(rhs->path, lhs->path);
+  /* cluster all directories */
+  int diff = rhs->is_dir - lhs->is_dir;
+  if (diff)
+    return diff;
+
+  /* lexicographic order on path and node (i.e. latest first) */
+  diff = svn_prefix_string__compare(lhs->path, rhs->path);
   if (diff)
     return diff;
 
@@ -811,12 +870,10 @@ compare_references(const reference_t * const * lhs_p,
 static void
 sort_reps(pack_context_t *context)
 {
-  qsort(context->path_order->elts, context->path_order->nelts,
-        context->path_order->elt_size,
-        (int (*)(const void *, const void *))compare_path_order);
-  qsort(context->references->elts, context->references->nelts,
-        context->references->elt_size,
-        (int (*)(const void *, const void *))compare_references);
+  svn_sort__array(context->path_order,
+                  (int (*)(const void *, const void *))compare_path_order);
+  svn_sort__array(context->references,
+                  (int (*)(const void *, const void *))compare_references);
 }
 
 /* Return the remaining unused bytes in the current block in CONTEXT's
@@ -2206,7 +2263,7 @@ pack_shard(const char *revs_dir,
 
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(fs, rev_pack_file_dir, rev_shard_path,
-                         shard, max_files_per_dir, 64 * 1024 * 1024,
+                         shard, max_files_per_dir, DEFAULT_MAX_MEM,
                          cancel_func, cancel_baton, pool));
 
   /* if enabled, pack the revprops in an equivalent way */
@@ -2362,5 +2419,5 @@ svn_fs_x__pack(svn_fs_t *fs,
   pb.notify_baton = notify_baton;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
-  return svn_fs_x__with_write_lock(fs, pack_body, &pb, pool);
+  return svn_fs_x__with_pack_lock(fs, pack_body, &pb, pool);
 }
