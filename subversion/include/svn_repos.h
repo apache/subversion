@@ -958,7 +958,7 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  * when using larger values here.  Pass 0 for @a zero_copy_limit to
  * disable this optimization altogether.
  *
- * @a note Never activate this optimization if @a editor might access
+ * @note Never activate this optimization if @a editor might access
  * any FSFS data structures (and, hence, caches).  So, it is basically
  * safe for networked editors only.
  *
