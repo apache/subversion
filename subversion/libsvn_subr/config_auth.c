@@ -122,7 +122,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
 {
   apr_file_t *authfile = NULL;
   svn_stream_t *stream;
-  const char *auth_path;
+  const char *auth_path, *tmp_path;
 
   SVN_ERR(svn_auth__file_path(&auth_path, cred_kind, realmstring, config_dir,
                               pool));
@@ -131,25 +131,25 @@ svn_config_write_auth_data(apr_hash_t *hash,
                             _("Unable to locate auth file"));
 
   /* Add the realmstring to the hash, so programs (or users) can
-     verify exactly which set of credentials this file holds.  */
+     verify exactly which set of credentials this file holds.
+     ### What if realmstring key is already in the hash? */
   svn_hash_sets(hash, SVN_CONFIG_REALMSTRING_KEY,
                 svn_string_create(realmstring, pool));
 
-  SVN_ERR_W(svn_io_file_open(&authfile, auth_path,
-                             (APR_WRITE | APR_CREATE | APR_TRUNCATE
-                              | APR_BUFFERED),
-                             APR_OS_DEFAULT, pool),
+  SVN_ERR_W(svn_stream_open_unique(&stream, &tmp_path,
+                                   svn_dirent_dirname(auth_path, pool),
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool),
             _("Unable to open auth file for writing"));
-
-  stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
   SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Error writing hash to '%s'"),
                          svn_dirent_local_style(auth_path, pool)));
-
   SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_io_file_rename(tmp_path, auth_path, pool));
 
   /* To be nice, remove the realmstring from the hash again, just in
-     case the caller wants their hash unchanged. */
+     case the caller wants their hash unchanged.
+     ### Should we also do this when a write error occurs? */
   svn_hash_sets(hash, SVN_CONFIG_REALMSTRING_KEY, NULL);
 
   return SVN_NO_ERROR;
