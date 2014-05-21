@@ -4691,6 +4691,33 @@ close_file(void *file_baton,
 }
 
 
+/* Implements svn_wc__proplist_receiver_t.  */
+static svn_error_t *
+update_keywords_after_switch_cb(void *baton,
+                                const char *local_abspath,
+                                apr_hash_t *props,
+                                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_string_t *propval;
+  svn_skel_t *work_item;
+
+  propval = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  if (!propval)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__wq_build_file_install(&work_item, eb->db,
+                                        local_abspath, NULL,
+                                        eb->use_commit_times,
+                                        TRUE, scratch_pool,
+                                        scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add(eb->db, local_abspath, work_item,
+                            scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
@@ -4785,6 +4812,27 @@ close_edit(void *edit_baton,
                                              NULL, NULL, scratch_pool));
             }
         }
+    }
+
+  /* Update keywords in switched files.
+     GOTO #1975 (the year of the Altair 8800). */
+  if (eb->switch_repos_relpath)
+    {
+      svn_depth_t depth;
+
+      depth = (eb->requested_depth == svn_depth_unknown
+                ? svn_depth_infinity
+                : eb->requested_depth);
+      SVN_ERR(svn_wc__db_read_props_streamily(eb->db,
+                                              eb->target_abspath,
+                                              depth,
+                                              FALSE, /* pristine */
+                                              NULL, /* changelists */
+                                              update_keywords_after_switch_cb,
+                                              eb,
+                                              eb->cancel_func,
+                                              eb->cancel_baton,
+                                              scratch_pool));
     }
 
   /* The edit is over: run the wq with proper cancel support,
