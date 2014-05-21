@@ -183,6 +183,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * diff: improve resolving peg revisions (r1570205 et al)
     * diff: fix bug in calculating header paths (r1570584)
     * ra_serf: add SSL certificate issuers common name to output (r1573728)
+    * updates keywords in files not modified during 'svn switch' (issue #1975)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
