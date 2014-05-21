@@ -4691,6 +4691,78 @@ close_file(void *file_baton,
 }
 
 
+/* Implements svn_wc__proplist_receiver_t.
+ * Check for the presence of an svn:keywords property and queues an install_file
+ * work queue item if present. Thus, when the work queue is run to complete the
+ * switch operation, all files with keywords will go through the translation
+ * process so URLs etc are updated. */
+static svn_error_t *
+update_keywords_after_switch_cb(void *baton,
+                                const char *local_abspath,
+                                apr_hash_t *props,
+                                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_string_t *propval;
+  svn_boolean_t modified;
+  svn_boolean_t record_fileinfo;
+  svn_skel_t *work_items;
+  const char *install_from;
+
+  propval = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  if (!propval)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
+                                           local_abspath, FALSE,
+                                           scratch_pool));
+  if (modified)
+    {
+      const char *temp_dir_abspath;
+      svn_stream_t *working_stream;
+      svn_stream_t *install_from_stream;
+
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, eb->db,
+                                             local_abspath, scratch_pool,
+                                             scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&working_stream, local_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_unique(&install_from_stream, &install_from,
+                                     temp_dir_abspath, svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(working_stream, install_from_stream,
+                               eb->cancel_func, eb->cancel_baton,
+                               scratch_pool));
+      record_fileinfo = FALSE;
+    }
+  else
+    {
+      install_from = NULL;
+      record_fileinfo = TRUE;
+    }
+    
+  SVN_ERR(svn_wc__wq_build_file_install(&work_items, eb->db, local_abspath,
+                                        install_from,
+                                        eb->use_commit_times,
+                                        record_fileinfo,
+                                        scratch_pool, scratch_pool));
+  if (install_from)
+    {
+      svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           local_abspath, install_from,
+                                           scratch_pool, scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+    }
+
+  SVN_ERR(svn_wc__db_wq_add(eb->db, local_abspath, work_items,
+                            scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
@@ -4785,6 +4857,29 @@ close_edit(void *edit_baton,
                                              NULL, NULL, scratch_pool));
             }
         }
+    }
+
+  /* Update keywords in switched files.
+     GOTO #1975 (the year of the Altair 8800). */
+  if (eb->switch_repos_relpath)
+    {
+      svn_depth_t depth;
+      
+      if (eb->requested_depth > svn_depth_empty)
+        depth = eb->requested_depth;
+      else
+        depth = svn_depth_infinity;
+
+      SVN_ERR(svn_wc__db_read_props_streamily(eb->db,
+                                              eb->target_abspath,
+                                              depth,
+                                              FALSE, /* pristine */
+                                              NULL, /* changelists */
+                                              update_keywords_after_switch_cb,
+                                              eb,
+                                              eb->cancel_func,
+                                              eb->cancel_baton,
+                                              scratch_pool));
     }
 
   /* The edit is over: run the wq with proper cancel support,

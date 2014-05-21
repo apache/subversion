@@ -2766,6 +2766,94 @@ def switch_across_replacement(sbox):
                                         None, None, None, None, None, False,
                                         '-r1')
 
+@Issue(1975)
+def switch_keywords(sbox):
+  "switch and svn:keywords"
+  sbox.build()
+  gamma_path = sbox.ospath('A/D/gamma')
+  psi_path = sbox.ospath('A/D/H/psi')
+
+  sbox.simple_propset('svn:keywords', 'URL', 'A/D/gamma')
+  svntest.main.file_write(gamma_path, "$URL$\n")
+  sbox.simple_propset('svn:keywords', 'URL', 'A/D/H/psi')
+  svntest.main.file_write(psi_path, "$URL$\n")
+  sbox.simple_commit()
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma',
+                      contents="$URL: %s/A/D/gamma $\n" % sbox.repo_url)
+  expected_disk.tweak('A/D/H/psi',
+                      contents="$URL: %s/A/D/H/psi $\n" % sbox.repo_url)
+
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        None, expected_disk,
+                                        None, None, None, None, None, None)
+  sbox.simple_copy('A', 'A_copy')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Next, we're going to switch A to A_copy, and expect keywords
+  # in the switched files gamma and psi to be updated accordingly.
+
+  expected_disk.add({
+    'A_copy/D/H/chi'    : Item(contents="This is the file 'chi'.\n"),
+    'A_copy/D/H/psi'    : Item(contents="$URL: %s/A_copy/D/H/psi $\n"
+                                        % sbox.repo_url),
+    'A_copy/D/H/omega'  : Item(contents="This is the file 'omega'.\n"),
+    'A_copy/D/G/pi'     : Item(contents="This is the file 'pi'.\n"),
+    'A_copy/D/G/tau'    : Item(contents="This is the file 'tau'.\n"),
+    'A_copy/D/G/rho'    : Item(contents="This is the file 'rho'.\n"),
+    'A_copy/D/gamma'    : Item(contents="$URL: %s/A_copy/D/gamma $\n"
+                                        % sbox.repo_url),
+    'A_copy/B/F'        : Item(),
+    'A_copy/B/E/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'A_copy/B/E/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A_copy/B/lambda'   : Item(contents="This is the file 'lambda'.\n"),
+    'A_copy/mu'         : Item(contents="This is the file 'mu'.\n"),
+    'A_copy/C'          : Item(),
+    })
+
+  # update expected URL for switched gamma
+  expected_disk.tweak('A/D/gamma',
+                      contents="$URL: %s/A_copy/D/gamma $\n" % sbox.repo_url)
+
+  # leave gamma unmodified, locally modify psi
+  svntest.main.file_write(psi_path, "$URL$\nnew line\n")
+  # update expected URL for switched psi
+  expected_disk.tweak('A/D/H/psi',
+                      contents="$URL: %s/A_copy/D/H/psi $\nnew line\n"
+                               % sbox.repo_url)
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 3)
+  expected_status.add({
+    'A_copy'            : Item(status='  ', wc_rev='3'),
+    'A_copy/mu'         : Item(status='  ', wc_rev='3'),
+    'A_copy/D'          : Item(status='  ', wc_rev='3'),
+    'A_copy/D/H'        : Item(status='  ', wc_rev='3'),
+    'A_copy/D/H/psi'    : Item(status='  ', wc_rev='3'),
+    'A_copy/D/H/chi'    : Item(status='  ', wc_rev='3'),
+    'A_copy/D/H/omega'  : Item(status='  ', wc_rev='3'),
+    'A_copy/D/gamma'    : Item(status='  ', wc_rev='3'),
+    'A_copy/D/G'        : Item(status='  ', wc_rev='3'),
+    'A_copy/D/G/rho'    : Item(status='  ', wc_rev='3'),
+    'A_copy/D/G/tau'    : Item(status='  ', wc_rev='3'),
+    'A_copy/D/G/pi'     : Item(status='  ', wc_rev='3'),
+    'A_copy/B'          : Item(status='  ', wc_rev='3'),
+    'A_copy/B/E'        : Item(status='  ', wc_rev='3'),
+    'A_copy/B/E/alpha'  : Item(status='  ', wc_rev='3'),
+    'A_copy/B/E/beta'   : Item(status='  ', wc_rev='3'),
+    'A_copy/B/F'        : Item(status='  ', wc_rev='3'),
+    'A_copy/B/lambda'   : Item(status='  ', wc_rev='3'),
+    'A_copy/C'          : Item(status='  ', wc_rev='3'),
+  })
+  expected_status.tweak('A', switched='S')
+  expected_status.tweak('A/D/H/psi', status='M ')
+
+  # both gamma and psi should have update URLs after the switch
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A'), '^/A_copy',
+                                        None, expected_disk, expected_status,
+                                        None, None, None, None, None)
+
 ########################################################################
 # Run the tests
 
@@ -2808,6 +2896,7 @@ test_list = [ None,
               different_node_kind,
               switch_to_spaces,
               switch_across_replacement,
+              switch_keywords,
               ]
 
 if __name__ == '__main__':
