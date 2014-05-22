@@ -102,7 +102,9 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  tmp_dir = os.path.join(os.path.abspath(svntest.main.temp_dir), sbox.name)
+  if not os.path.isdir(tmp_dir):
+    os.makedirs(tmp_dir)
   config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 

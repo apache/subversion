@@ -790,14 +790,10 @@ const char* known_exception_to_cstring(apr_pool_t* pool)
 
 const char* exception_to_cstring(apr_pool_t* pool)
 {
-  const char *msg;
+  const char *msg = NULL;
   if (JNIUtil::getEnv()->ExceptionCheck())
     {
       msg = known_exception_to_cstring(pool);
-    }
-  else
-    {
-      msg = NULL;
     }
   return msg;
 }
