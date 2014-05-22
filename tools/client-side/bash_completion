@@ -162,7 +162,7 @@ _svn()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
-	cmds='add blame annotate praise cat changelist cl checkout co cleanup'
+	cmds='add auth blame annotate praise cat changelist cl checkout co cleanup'
 	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
@@ -797,6 +797,9 @@ _svn()
 	add)
 		cmdOpts="--auto-props --no-auto-props --force --targets \
 		         --no-ignore --parents $nOpts $qOpts $pOpts"
+		;;
+	auth)
+		cmdOpts="--remove --show-passwords $pOpts"
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
