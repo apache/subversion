@@ -204,6 +204,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1596866
+   Fix another instance of issue #3014, "svn log | head" should not
+   print "Write error: Broken pipe"
+   Justification:
+     Minor annoyance, already fixed for other cases.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
