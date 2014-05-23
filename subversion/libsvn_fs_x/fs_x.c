@@ -271,6 +271,12 @@ read_config(fs_x_data_t *ffd,
   ffd->block_size *= 0x400;
   ffd->p2l_page_size *= 0x400;
 
+  /* Debug options. */
+  SVN_ERR(svn_config_get_bool(config, &ffd->pack_after_commit,
+                              CONFIG_SECTION_DEBUG,
+                              CONFIG_OPTION_PACK_AFTER_COMMIT,
+                              FALSE));
+
   /* memcached configuration */
   SVN_ERR(svn_cache__make_memcache_from_config(&ffd->memcache, config,
                                                result_pool, scratch_pool));

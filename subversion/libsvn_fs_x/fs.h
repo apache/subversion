@@ -115,6 +115,8 @@ extern "C" {
 #define CONFIG_OPTION_BLOCK_SIZE         "block-size"
 #define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
 #define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
+#define CONFIG_SECTION_DEBUG             "debug"
+#define CONFIG_OPTION_PACK_AFTER_COMMIT  "pack-after-commit"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -403,6 +405,9 @@ typedef struct fs_x_data_t
 
   /* Compression level to use with txdelta storage format in new revs. */
   int delta_compression_level;
+
+  /* Pack after every commit. */
+  svn_boolean_t pack_after_commit;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
