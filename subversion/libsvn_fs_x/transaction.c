@@ -1917,11 +1917,7 @@ rep_write_contents(void *baton,
   SVN_ERR(svn_checksum_update(b->sha1_checksum_ctx, data, *len));
   b->rep_size += *len;
 
-  /* If we are writing a delta, use that stream. */
-  if (b->delta_stream)
-    return svn_stream_write(b->delta_stream, data, len);
-  else
-    return svn_stream_write(b->rep_stream, data, len);
+  return svn_stream_write(b->delta_stream, data, len);
 }
 
 /* Set *SPANNED to the number of shards touched when walking WALK steps on
@@ -2103,7 +2099,6 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
-
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
@@ -2172,7 +2167,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&wh,
                           &whb,
-                          b->rep_stream,
+                          svn_stream_disown(b->rep_stream, b->pool),
                           diff_version,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                           pool);
@@ -2323,8 +2318,7 @@ rep_write_contents_close(void *baton)
 
   /* Close our delta stream so the last bits of svndiff are written
      out. */
-  if (b->delta_stream)
-    SVN_ERR(svn_stream_close(b->delta_stream));
+  SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
   SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->pool));
@@ -2361,6 +2355,8 @@ rep_write_contents_close(void *baton)
 
       b->noderev->data_rep = rep;
     }
+
+  SVN_ERR(svn_stream_close(b->rep_stream));
 
   /* Remove cleanup callback. */
   apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
@@ -2637,7 +2633,7 @@ write_container_delta_rep(representation_t *rep,
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&diff_wh,
                           &diff_whb,
-                          file_stream,
+                          svn_stream_disown(file_stream, pool),
                           diff_version,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                           pool);
@@ -2664,6 +2660,8 @@ write_container_delta_rep(representation_t *rep,
 
   if (old_rep)
     {
+      SVN_ERR(svn_stream_close(file_stream));
+
       /* We need to erase from the protorev the data we just wrote. */
       SVN_ERR(svn_io_file_trunc(file, offset, pool));
 
@@ -2678,6 +2676,7 @@ write_container_delta_rep(representation_t *rep,
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_fs_x__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
+      SVN_ERR(svn_stream_close(file_stream));
 
       SVN_ERR(allocate_item_index(&rep->id.number, fs, txn_id, pool));
       SVN_ERR(store_l2p_index_entry(fs, txn_id, offset, rep->id.number, pool));
@@ -2981,9 +2980,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   return SVN_NO_ERROR;
 }
 
-/* Write the changed path info CHANGED_PATHS of transaction TXN_ID to the
+/* Write the changed path info CHANGED_PATHS from transaction TXN_ID to the
    permanent rev-file FILE representing NEW_REV in filesystem FS.  *OFFSET_P
    is set the to offset in the file of the beginning of this information.
+   NEW_REV is the revision currently being committed.
    Perform temporary allocations in POOL. */
 static svn_error_t *
 write_final_changed_path_info(apr_off_t *offset_p,
