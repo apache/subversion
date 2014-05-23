@@ -914,6 +914,7 @@ auto_pad_block(pack_context_t *context,
       null_entry.offset = context->pack_offset;
       null_entry.size = padding;
       null_entry.type = SVN_FS_X__ITEM_TYPE_UNUSED;
+      null_entry.fnv1_checksum = 0;
       null_entry.item_count = 0;
       null_entry.items = NULL;
 
@@ -1082,17 +1083,20 @@ write_nodes_container(pack_context_t *context,
     return SVN_NO_ERROR;
 
   /* serialize container */
-  pack_stream = svn_stream_from_aprfile2(context->pack_file, TRUE,
-                                         scratch_pool);
-
+  container_entry = apr_palloc(context->info_pool, sizeof(*container_entry));
+  pack_stream = svn_checksum__wrap_write_stream_fnv1a_32x4
+                                (&container_entry->fnv1_checksum,
+                                 svn_stream_from_aprfile2(context->pack_file,
+                                                          TRUE, scratch_pool),
+                                 scratch_pool);
   SVN_ERR(svn_fs_x__write_noderevs_container(pack_stream, *container,
-                                              scratch_pool));
+                                             scratch_pool));
+  SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_file_seek(context->pack_file, APR_CUR, &offset,
                            scratch_pool));
 
   /* replace first noderev item in ENTRIES with the container
-    and set all others to NULL */
-  container_entry = apr_palloc(context->info_pool, sizeof(*container_entry));
+     and set all others to NULL */
   container_entry->offset = context->pack_offset;
   container_entry->size = offset - container_entry->offset;
   container_entry->type = SVN_FS_X__ITEM_TYPE_NODEREVS_CONT;
@@ -1233,9 +1237,14 @@ write_reps_container(pack_context_t *context,
   svn_fs_x__p2l_entry_t container_entry;
 
   svn_stream_t *pack_stream
-    = svn_stream_from_aprfile2(context->pack_file, TRUE, pool);
+    = svn_checksum__wrap_write_stream_fnv1a_32x4
+                                (&container_entry.fnv1_checksum,
+                                 svn_stream_from_aprfile2(context->pack_file,
+                                                          TRUE, pool),
+                                 pool);
 
   SVN_ERR(svn_fs_x__write_reps_container(pack_stream, container, pool));
+  SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
 
   container_entry.offset = context->pack_offset;
@@ -1539,11 +1548,16 @@ write_changes_container(pack_context_t *context,
   svn_fs_x__p2l_entry_t container_entry;
 
   svn_stream_t *pack_stream
-    = svn_stream_from_aprfile2(context->pack_file, TRUE, pool);
+    = svn_checksum__wrap_write_stream_fnv1a_32x4
+                                (&container_entry.fnv1_checksum,
+                                 svn_stream_from_aprfile2(context->pack_file,
+                                                          TRUE, pool),
+                                 pool);
 
   SVN_ERR(svn_fs_x__write_changes_container(pack_stream,
                                              container,
                                              pool));
+  SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
 
   container_entry.offset = context->pack_offset;

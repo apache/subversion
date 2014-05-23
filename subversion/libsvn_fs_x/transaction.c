@@ -1898,6 +1898,9 @@ struct rep_write_baton
   svn_checksum_ctx_t *md5_checksum_ctx;
   svn_checksum_ctx_t *sha1_checksum_ctx;
 
+  /* Receives the low-level checksum when closing REP_STREAM. */
+  apr_uint32_t fnv1a_checksum;
+
   apr_pool_t *pool;
 
   apr_pool_t *parent_pool;
@@ -2135,7 +2138,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                                  b->pool));
 
   b->file = file;
-  b->rep_stream = svn_stream_from_aprfile2(file, TRUE, b->pool);
+  b->rep_stream = svn_checksum__wrap_write_stream_fnv1a_32x4(
+                              &b->fnv1a_checksum,
+                              svn_stream_from_aprfile2(file, TRUE, b->pool),
+                              b->pool);
 
   SVN_ERR(svn_fs_x__get_file_offset(&b->rep_offset, file, b->pool));
 
@@ -2368,6 +2374,7 @@ rep_write_contents_close(void *baton)
     {
       svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_part_t noderev_id;
+      svn_checksum_t *checksum;
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
       noderev_id.number = rep->id.number;
 
@@ -2377,6 +2384,7 @@ rep_write_contents_close(void *baton)
       entry.type = SVN_FS_X__ITEM_TYPE_FILE_REP;
       entry.item_count = 1;
       entry.items = &noderev_id;
+      entry.fnv1_checksum = b->fnv1a_checksum;
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
       SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->pool));
@@ -2595,6 +2603,7 @@ write_container_delta_rep(representation_t *rep,
   svn_stream_t *stream;
   representation_t *base_rep;
   representation_t *old_rep;
+  svn_fs_x__p2l_entry_t entry;
   svn_stream_t *source;
   svn_fs_x__rep_header_t header = { 0 };
 
@@ -2626,7 +2635,10 @@ write_container_delta_rep(representation_t *rep,
       header.type = svn_fs_x__rep_self_delta;
     }
 
-  file_stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  file_stream = svn_checksum__wrap_write_stream_fnv1a_32x4(
+                                  &entry.fnv1_checksum,
+                                  svn_stream_from_aprfile2(file, TRUE, pool),
+                                  pool);
   SVN_ERR(svn_fs_x__write_rep_header(&header, file_stream, pool));
   SVN_ERR(svn_fs_x__get_file_offset(&delta_start, file, pool));
 
@@ -2670,7 +2682,6 @@ write_container_delta_rep(representation_t *rep,
     }
   else
     {
-      svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_part_t noderev_id;
 
       /* Write out our cosmetic end marker. */
@@ -2820,6 +2831,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__id_txn_id(id);
   svn_fs_x__p2l_entry_t entry;
   svn_fs_x__change_set_t change_set = svn_fs_x__change_set_by_rev(rev);
+  svn_stream_t *file_stream;
 
   *new_id_p = NULL;
 
@@ -2959,8 +2971,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
 
-  SVN_ERR(svn_fs_x__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                  noderev, ffd->format, pool));
+  file_stream = svn_checksum__wrap_write_stream_fnv1a_32x4(
+                                  &entry.fnv1_checksum,
+                                  svn_stream_from_aprfile2(file, TRUE, pool),
+                                  pool);
+  SVN_ERR(svn_fs_x__write_noderev(file_stream, noderev, ffd->format, pool));
+  SVN_ERR(svn_stream_close(file_stream));
 
   /* reference the root noderev from the log-to-phys index */
   noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
@@ -2995,6 +3011,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
                               apr_pool_t *pool)
 {
   apr_off_t offset;
+  svn_stream_t *stream;
   apr_hash_index_t *hi;
   svn_fs_x__p2l_entry_t entry;
   svn_fs_x__id_part_t rev_item
@@ -3013,8 +3030,12 @@ write_final_changed_path_info(apr_off_t *offset_p,
         change->copyfrom_rev = new_rev - 1;
     }
 
-  SVN_ERR(svn_fs_x__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
-                                  fs, changed_paths, TRUE, pool));
+  /* write to target file & calculate checksum */
+  stream = svn_checksum__wrap_write_stream_fnv1a_32x4(&entry.fnv1_checksum,
+                             svn_stream_from_aprfile2(file, TRUE, pool),
+                             pool);
+  SVN_ERR(svn_fs_x__write_changes(stream, fs, changed_paths, TRUE, pool));
+  SVN_ERR(svn_stream_close(stream));
 
   *offset_p = offset;
 

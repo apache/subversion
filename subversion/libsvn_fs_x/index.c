@@ -1925,6 +1925,9 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.type + entry.item_count * 16),
                                   iter_pool));
+      SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
+                                  encode_uint(encoded, entry.fnv1_checksum),
+                                  iter_pool));
 
       /* container contents (only one for non-container items) */
       for (sub_item = 0; sub_item < entry.item_count; ++sub_item)
@@ -2227,6 +2230,8 @@ read_entry(packed_number_stream_t *stream,
   SVN_ERR(packed_stream_get(&value, stream));
   entry.type = (int)value % 16;
   entry.item_count = (apr_uint32_t)(value / 16);
+  SVN_ERR(packed_stream_get(&value, stream));
+  entry.fnv1_checksum = (apr_uint32_t)value;
 
   if (entry.item_count == 0)
     {
@@ -2672,6 +2677,7 @@ p2l_index_lookup(apr_array_header_t *entries,
               entry->offset = entry_end;
               entry->size = block_end - entry_end;
               entry->type = SVN_FS_X__ITEM_TYPE_UNUSED;
+              entry->fnv1_checksum = 0;
               entry->item_count = 0;
               entry->items = NULL;
             }

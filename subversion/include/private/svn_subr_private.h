@@ -270,6 +270,32 @@ svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
 
 
 /**
+ * Return a stream that calculates a checksum of type @a kind over all
+ * data written to the @a inner_stream.  When the returned stream gets
+ * closed, write the checksum to @a *checksum.
+ * Allocate the result in @a pool.
+ *
+ * @note The stream returned only supports #svn_stream_write and
+ * #svn_stream_close.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream(svn_checksum_t **checksum,
+                                svn_stream_t *inner_stream,
+                                svn_checksum_kind_t kind,
+                                apr_pool_t *pool);
+
+/**
+ * Return a stream that calculates a 32 bit modified FNV-1a checksum
+ * over all data written to the @a inner_stream and writes the digest
+ * to @a *digest when the returned stream gets closed.
+ * Allocate the stream in @a pool.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream_fnv1a_32x4(apr_uint32_t *digest,
+                                           svn_stream_t *inner_stream,
+                                           apr_pool_t *pool);
+
+/**
  * Return a 32 bit FNV-1a checksum for the first @a len bytes in @a input.
  * The representation is in Big Endian.
  *

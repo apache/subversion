@@ -661,3 +661,140 @@ svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
         SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 }
+
+/* Checksum calculating stream wrappers.
+ */
+
+/* Baton used by write_handler and close_handler to calculate the checksum
+ * and return the result to the stream creator.  It accommodates the data
+ * needed by svn_checksum__wrap_write_stream_fnv1a_32x4 as well as
+ * svn_checksum__wrap_write_stream.
+ */
+typedef struct stream_baton_t
+{
+  /* Stream we are wrapping. Forward write() and close() operations to it. */
+  svn_stream_t *inner_stream;
+
+  /* Build the checksum data in here. */
+  svn_checksum_ctx_t *context;
+
+  /* Write the final checksum here. May be NULL. */
+  svn_checksum_t **checksum;
+
+  /* Copy the digest of the final checksum. May be NULL. */
+  unsigned char *digest;
+
+  /* Allocate the resulting checksum here. */
+  apr_pool_t *pool;
+} stream_baton_t;
+
+/* Implement svn_write_fn_t.
+ * Update checksum and pass data on to inner stream.
+ */
+static svn_error_t *
+write_handler(void *baton,
+              const char *data,
+              apr_size_t *len)
+{
+  stream_baton_t *b = baton;
+
+  SVN_ERR(svn_checksum_update(b->context, data, *len));
+  SVN_ERR(svn_stream_write(b->inner_stream, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_close_fn_t.
+ * Finalize checksum calculation and write results. Close inner stream.
+ */
+static svn_error_t *
+close_handler(void *baton)
+{
+  stream_baton_t *b = baton;
+  svn_checksum_t *local_checksum;
+
+  /* Ensure we can always write to *B->CHECKSUM. */
+  if (!b->checksum)
+    b->checksum = &local_checksum;
+
+  /* Get the final checksum. */
+  SVN_ERR(svn_checksum_final(b->checksum, b->context, b->pool));
+
+  /* Extract digest, if wanted. */
+  if (b->digest)
+    {
+      apr_size_t digest_size = DIGESTSIZE((*b->checksum)->kind);
+      memcpy(b->digest, (*b->checksum)->digest, digest_size);
+    }
+
+  /* Done here.  Now, close the underlying stream as well. */
+  return svn_error_trace(svn_stream_close(b->inner_stream));
+}
+
+/* Common constructor function for svn_checksum__wrap_write_stream and
+ * svn_checksum__wrap_write_stream_fnv1a_32x4, taking the superset of their
+ * respecting parameters.
+ *
+ * In the current usage, either CHECKSUM or DIGEST will be NULL but this
+ * function does not enforce any such restriction.  Also, the caller must
+ * make sure that DIGEST refers to a buffer of sufficient length.
+ */
+svn_stream_t *
+wrap_write_stream(svn_checksum_t **checksum,
+                  unsigned char *digest,
+                  svn_stream_t *inner_stream,
+                  svn_checksum_kind_t kind,
+                  apr_pool_t *pool)
+{
+  svn_stream_t *outer_stream;
+
+  stream_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->inner_stream = inner_stream;
+  baton->context = svn_checksum_ctx_create(kind, pool);
+  baton->checksum = checksum;
+  baton->digest = digest;
+  baton->pool = pool;
+
+  outer_stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(outer_stream, write_handler);
+  svn_stream_set_close(outer_stream, close_handler);
+
+  return outer_stream;
+}
+
+svn_stream_t *
+svn_checksum__wrap_write_stream(svn_checksum_t **checksum,
+                                svn_stream_t *inner_stream,
+                                svn_checksum_kind_t kind,
+                                apr_pool_t *pool)
+{
+  return wrap_write_stream(checksum, NULL, inner_stream, kind, pool);
+}
+
+/* Implement svn_close_fn_t.
+ * For FNV-1a-like checksums, we want the checksum as 32 bit integer instead
+ * of a big endian 4 byte sequence.  This simply wraps close_handler adding
+ * the digest conversion.
+ */
+static svn_error_t *
+close_handler_fnv1a_32x4(void *baton)
+{
+  stream_baton_t *b = baton;
+  SVN_ERR(close_handler(baton));
+
+  *(apr_uint32_t *)b->digest = ntohl(*(apr_uint32_t *)b->digest);
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_checksum__wrap_write_stream_fnv1a_32x4(apr_uint32_t *digest,
+                                           svn_stream_t *inner_stream,
+                                           apr_pool_t *pool)
+{
+  svn_stream_t *result
+    = wrap_write_stream(NULL, (unsigned char *)digest, inner_stream,
+                        svn_checksum_fnv1a_32x4, pool);
+  svn_stream_set_close(result, close_handler_fnv1a_32x4);
+
+  return result;
+}

@@ -829,14 +829,16 @@ write_revision_zero(svn_fs_t *fs)
   path = svn_fs_x__path_p2l_index(fs, 0, fs->pool);
   SVN_ERR(svn_io_file_create_binary
               (path,
-              "\0"                /* start rev */
-              "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
+              "\0\x7b"            /* start rev, rev file size */
+              "\x80\x80\4\1\x21"  /* 64k pages, 1 page using 33 bytes */
               "\0"                /* offset entry 0 page 1 */
-              "\x1d\x11\0\6"      /* len, type + 16 * count, (rev, 2*item)* */
-              "\x5d\x15\0\4"
-              "\1\x16\0\2"
-              "\x85\xff\3\0",     /* last entry fills up 64k page */
-              23,
+                                  /* len, type & count, checksum,
+                                     (rev, 2*item)* */
+              "\x1d\x11\x8e\xef\xf2\xd6\x01\0\6"
+              "\x5d\x15\xb6\xea\x97\xe0\x0f\0\4"
+              "\1\x16\x9d\x9e\xa9\x94\x0f\0\2"
+              "\x85\xff\3\0\0",   /* last entry fills up 64k page */
+              40,
               fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
