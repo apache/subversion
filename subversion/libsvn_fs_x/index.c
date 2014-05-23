@@ -472,6 +472,8 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
 }
 
 /* Encode VALUE as 7/8b into P and return the number of bytes written.
+ * This will be used when _writing_ packed data.  packed_stream_* is for
+ * read operations only.
  */
 static apr_size_t
 encode_uint(unsigned char *p, apr_uint64_t value)
@@ -489,6 +491,7 @@ encode_uint(unsigned char *p, apr_uint64_t value)
 }
 
 /* Encode VALUE as 7/8b into P and return the number of bytes written.
+ * This maps signed ints onto unsigned ones.
  */
 static apr_size_t
 encode_int(unsigned char *p, apr_int64_t value)
@@ -556,7 +559,7 @@ compare_l2p_entries_by_offset(const l2p_page_entry_t *lhs,
 
 /* Write the log-2-phys index page description for the l2p_page_entry_t
  * array ENTRIES, starting with element START up to but not including END.
- * Write the resulting representation into BUFFER.  Use POOL for tempoary
+ * Write the resulting representation into BUFFER.  Use POOL for temporary
  * allocations.
  */
 static svn_error_t *
@@ -1323,7 +1326,7 @@ typedef struct l2p_page_table_baton_t
 } l2p_page_table_baton_t;
 
 /* Implement svn_cache__partial_getter_func_t: copy the data requested in
- * l2p_page_baton_t *BATON from l2p_page_t *DATA into apr_off_t *OUT.
+ * l2p_page_baton_t *BATON from l2p_page_t *DATA into BATON->PAGES and *OUT.
  */
 static svn_error_t *
 l2p_page_table_access_func(void **out,
@@ -1367,6 +1370,7 @@ l2p_page_table_access_func(void **out,
  * re-used); existing entries will be removed before writing the result.
  * If the data cannot be found in the cache, the result will be empty
  * (it never can be empty for a valid REVISION if the data is cached).
+ * Use the info from REV_FILE to determine pack / rev file properties.
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
@@ -1399,6 +1403,8 @@ get_l2p_page_table(apr_array_header_t *pages,
  * range in the l2p index file.  The index is being identified by
  * FIRST_REVISION.  PAGES is a scratch container provided by the caller.
  * SCRATCH_POOL is used for temporary allocations.
+ *
+ * This function may be a no-op if the header cache lookup fails / misses.
  */
 static svn_error_t *
 prefetch_l2p_pages(svn_boolean_t *end,
@@ -1440,6 +1446,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
 
       l2p_page_table_entry_t *entry
         = &APR_ARRAY_IDX(pages, i, l2p_page_table_entry_t);
+      svn_pool_clear(iterpool);
+
       if (i == exlcuded_page_no)
         continue;
 
@@ -1466,8 +1474,6 @@ prefetch_l2p_pages(svn_boolean_t *end,
           SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page,
                                  iterpool));
         }
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1551,12 +1557,13 @@ l2p_index_lookup(apr_off_t *offset,
           int excluded_page_no = prefetch_revision == revision
                                ? info_baton.page_no
                                : -1;
+          svn_pool_clear(iterpool);
+
           SVN_ERR(prefetch_l2p_pages(&end, fs, stream,
                                      info_baton.first_revision,
                                      prefetch_revision, pages,
                                      excluded_page_no, min_offset,
                                      max_offset, iterpool));
-          svn_pool_clear(iterpool);
         }
 
       end = FALSE;
@@ -1564,11 +1571,12 @@ l2p_index_lookup(apr_off_t *offset,
            prefetch_revision >= info_baton.first_revision && !end;
            --prefetch_revision)
         {
+          svn_pool_clear(iterpool);
+
           SVN_ERR(prefetch_l2p_pages(&end, fs, stream,
                                      info_baton.first_revision,
                                      prefetch_revision, pages, -1,
                                      min_offset, max_offset, iterpool));
-          svn_pool_clear(iterpool);
         }
 
       svn_pool_destroy(iterpool);
@@ -1656,7 +1664,9 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
       if (revision >= header->first_revision + header->revision_count)
         {
           /* need to read the next index. Clear up memory used for the
-           * previous one. */
+           * previous one.  Note that intermittent pack runs do not change
+           * the number of items in a revision, i.e. there is no consistency
+           * issue here. */
           svn_pool_clear(header_pool);
           SVN_ERR(get_l2p_header(&header, &stream, fs, revision,
                                  header_pool));
@@ -1699,6 +1709,9 @@ svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
   return new_entry;
 }
 
+/*
+ * phys-to-log index
+ */
 svn_error_t *
 svn_fs_x__p2l_proto_index_open(apr_file_t **proto_index,
                                const char *file_name,
@@ -1833,6 +1846,8 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       svn_revnum_t last_revision = revision;
       apr_uint64_t last_number = 0;
 
+      svn_pool_clear(iter_pool);
+
       /* (attempt to) read the next entry from the source */
       SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
                                      &read, &eof, iter_pool));
@@ -1927,11 +1942,9 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
         }
 
       last_entry_end = entry_end;
-
-      svn_pool_clear(iter_pool);
     }
 
-  /* we are now done with the source file */
+  /* close the source file */
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* store length of last table */
@@ -1941,7 +1954,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   /* create the target file */
   SVN_ERR(index_create(&index_file, file_name, local_pool));
 
-  /* write the start revision and page size */
+  /* write the start revision, file size and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
                                  encode_uint(encoded, revision),
                                  NULL, local_pool));
