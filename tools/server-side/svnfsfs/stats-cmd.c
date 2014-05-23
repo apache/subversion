@@ -1811,14 +1811,14 @@ print_extensions_by_changes(fs_t *fs,
     {
       extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
       sum += info->node_histogram.total.count;
-      printf(_("  %9s %12s (%2d%%) changes\n"),
+      printf(_("%11s %20s (%2d%%) representations\n"),
              info->extension,
              svn__i64toa_sep(info->node_histogram.total.count, ',', pool),
              (int)(info->node_histogram.total.count * 100 /
                    fs->file_histogram.total.count));
     }
 
-  printf(_("  %9s %12s (%2d%%) changes\n"),
+  printf(_("%11s %20s (%2d%%) representations\n"),
          "(others)",
          svn__i64toa_sep(fs->file_histogram.total.count - sum, ',', pool),
          (int)((fs->file_histogram.total.count - sum) * 100 /
@@ -1840,14 +1840,14 @@ print_extensions_by_nodes(fs_t *fs,
     {
       extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
       sum += info->node_histogram.total.sum;
-      printf(_("  %9s %20s (%2d%%) bytes\n"),
+      printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__i64toa_sep(info->node_histogram.total.sum, ',', pool),
              (int)(info->node_histogram.total.sum * 100 /
                    fs->file_histogram.total.sum));
     }
 
-  printf(_("  %9s %20s (%2d%%) bytes\n"),
+  printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
          svn__i64toa_sep(fs->file_histogram.total.sum - sum, ',', pool),
          (int)((fs->file_histogram.total.sum - sum) * 100 /
@@ -1869,14 +1869,14 @@ print_extensions_by_reps(fs_t *fs,
     {
       extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
       sum += info->rep_histogram.total.sum;
-      printf(_("  %9s %20s (%2d%%) bytes\n"),
+      printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__i64toa_sep(info->rep_histogram.total.sum, ',', pool),
              (int)(info->rep_histogram.total.sum * 100 /
                    fs->rep_size_histogram.total.sum));
     }
 
-  printf(_("  %9s %20s (%2d%%) bytes\n"),
+  printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
          svn__i64toa_sep(fs->rep_size_histogram.total.sum - sum, ',', pool),
          (int)((fs->rep_size_histogram.total.sum - sum) * 100 /
@@ -2042,7 +2042,7 @@ print_stats(fs_t *fs,
 
   printf("\nLargest representations:\n");
   print_largest_reps(fs->largest_changes, pool);
-  printf("\nExtensions by number of changes:\n");
+  printf("\nExtensions by number of representations:\n");
   print_extensions_by_changes(fs, pool);
   printf("\nExtensions by size of changed files:\n");
   print_extensions_by_nodes(fs, pool);
