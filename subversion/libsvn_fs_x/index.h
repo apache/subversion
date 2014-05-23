@@ -67,6 +67,9 @@ typedef struct svn_fs_x__p2l_entry_t
   /* type of the item (see SVN_FS_X__ITEM_TYPE_*) defines */
   unsigned type;
 
+  /* modified FNV-1a checksum.  0 if unknown checksum */
+  apr_uint32_t fnv1_checksum;
+
   /* Number of items in this block / container.  Their list can be found
    * in *ITEMS.  0 for unused sections.  1 for non-container items,
    * > 1 for containers. */

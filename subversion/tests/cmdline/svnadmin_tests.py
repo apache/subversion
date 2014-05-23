@@ -2478,7 +2478,7 @@ def verify_metadata_only(sbox):
       'STDOUT', [], output)
 
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
+@Skip(svntest.main.is_fs_type_bdb)
 def verify_quickly(sbox):
   "verify quickly using metadata"
 
