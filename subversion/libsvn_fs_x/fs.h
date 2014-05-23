@@ -107,6 +107,7 @@ extern "C" {
 #define CONFIG_SECTION_DELTIFICATION     "deltification"
 #define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
 #define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
+#define CONFIG_OPTION_COMPRESSION_LEVEL  "compression-level"
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
@@ -399,6 +400,9 @@ typedef struct fs_x_data_t
   /* Maximum number of length of the linear part at the top of the
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
+
+  /* Compression level to use with txdelta storage format in new revs. */
+  int delta_compression_level;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
