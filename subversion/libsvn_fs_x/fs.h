@@ -194,14 +194,15 @@ typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
 
 /* Key type for all caches that use revision + offset / counter as key.
 
-   NOTE: always initialize this using calloc() or '= {0};'!  This is used
-   as a cache key and the padding bytes on 32 bit archs should be zero for
-   cache effectiveness. */
+   Note: Cache keys should be 16 bytes for best performance and there
+         should be no padding. */
 typedef struct pair_cache_key_t
 {
-  svn_revnum_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  apr_uint64_t second;
+  /* Sub-address: item index, revprop generation, packed flag, etc. */
+  apr_int64_t second;
 } pair_cache_key_t;
 
 /* Key type that identifies a representation / rep header. */
@@ -217,14 +218,16 @@ typedef struct representation_cache_key_t
   apr_uint64_t item_index;
 } representation_cache_key_t;
 
-/* Key type that identifies a txdelta window. */
+/* Key type that identifies a txdelta window.
+
+   Note: Cache keys should require no padding. */
 typedef struct window_cache_key_t
 {
-  /* Revision that contains the representation */
-  apr_uint32_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  /* Window number within that representation */
-  int chunk_index;
+  /* Window number within that representation. */
+  apr_int64_t chunk_index;
 
   /* Item index of the representation */
   apr_uint64_t item_index;
