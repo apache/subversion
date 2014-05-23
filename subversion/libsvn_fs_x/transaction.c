@@ -2112,6 +2112,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                     node_revision_t *noderev,
                     apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = fs->fsap_data;
   struct rep_write_baton *b;
   apr_file_t *file;
   representation_t *base_rep;
@@ -2175,7 +2176,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                           &whb,
                           svn_stream_disown(b->rep_stream, b->pool),
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
@@ -2596,6 +2597,7 @@ write_container_delta_rep(representation_t *rep,
                           svn_revnum_t final_revision,
                           apr_pool_t *pool)
 {
+  fs_x_data_t *ffd = fs->fsap_data;
   svn_txdelta_window_handler_t diff_wh;
   void *diff_whb;
 
@@ -2647,7 +2649,7 @@ write_container_delta_rep(representation_t *rep,
                           &diff_whb,
                           svn_stream_disown(file_stream, pool),
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   whb = apr_pcalloc(pool, sizeof(*whb));
