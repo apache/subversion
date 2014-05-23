@@ -4201,7 +4201,7 @@ make_txn_root(svn_fs_root_t **root_p,
 
 
 /* Verify. */
-static APR_INLINE const char *
+static const char *
 stringify_node(dag_node_t *node,
                apr_pool_t *pool)
 {
