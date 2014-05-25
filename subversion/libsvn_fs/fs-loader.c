@@ -499,7 +499,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, pool);
 
   SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
@@ -515,7 +515,7 @@ svn_fs_open2(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, result_pool);
   SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, scratch_pool,
                           common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
@@ -749,7 +749,7 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
 
   /* Perform the actual creation. */
   SVN_ERR(vtable->create(fs, path, common_pool_lock, fs->pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
@@ -761,7 +761,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_ERR(vtable->open_fs(fs, path, common_pool_lock, fs->pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }

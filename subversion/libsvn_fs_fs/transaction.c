@@ -3205,6 +3205,7 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
                            svn_uuid_generate(pool));
   SVN_ERR(ffd->svn_fs_open_(&ft, fs->path,
                             fs_config,
+                            pool,
                             pool));
   ft_ffd = ft->fsap_data;
   /* Don't let FT consult rep-cache.db, either. */
