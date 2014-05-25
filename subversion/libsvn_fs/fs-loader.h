@@ -152,6 +152,7 @@ typedef struct fs_library_vtable_t
                                   svn_error_t *(*svn_fs_open_)(svn_fs_t **,
                                                                const char *,
                                                                apr_hash_t *,
+                                                               apr_pool_t *,
                                                                apr_pool_t *));
   /* For svn_fs_info_fsfs_dup(). */
   void *(*info_fsap_dup)(const void *fsap_info,

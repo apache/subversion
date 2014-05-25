@@ -459,6 +459,7 @@ fs_set_svn_fs_open(svn_fs_t *fs,
                    svn_error_t *(*svn_fs_open_)(svn_fs_t **,
                                                 const char *,
                                                 apr_hash_t *,
+                                                apr_pool_t *,
                                                 apr_pool_t *))
 {
   fs_fs_data_t *ffd = fs->fsap_data;

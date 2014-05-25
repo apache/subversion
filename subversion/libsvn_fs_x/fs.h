@@ -411,7 +411,7 @@ typedef struct fs_x_data_t
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
-                               apr_pool_t *);
+                               apr_pool_t *, apr_pool_t *);
 } fs_x_data_t;
 
 
