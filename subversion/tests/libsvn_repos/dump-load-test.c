@@ -63,14 +63,14 @@ test_dump_r0_mergeinfo(const svn_test_opts_t *opts,
   fs = svn_repos_fs(repos);
 
   /* Revision 1:  Any commit will do, here  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 2:  Add bad mergeinfo */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/bar", "svn:mergeinfo", bad_mergeinfo, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
