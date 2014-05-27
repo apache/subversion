@@ -296,7 +296,7 @@ apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
     svn_boolean_t croak_on_error = FALSE;
     svn_opt_revision_range_t *range;
 
-    if (range = convert_pl_revision_range(source, &croak_on_error, pool)) {
+    if ((range = convert_pl_revision_range(source, &croak_on_error, pool))) {
         apr_array_header_t *temp = apr_array_make(pool, 1, 
                                                   sizeof(svn_opt_revision_range_t *));
         temp->nelts = 1;
