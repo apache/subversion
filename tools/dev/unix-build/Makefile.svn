@@ -1485,6 +1485,10 @@ endif
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNParentPath /tmp'
 	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    #AuthType Basic'
+	echo >>$@.tmp '    #AuthName "Subversion Repository"'
+	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    #Require valid-user'
 ifeq ($(USE_HTTPV1),yes)
 	echo >> $@.tmp '   SVNAdvertiseV2Protocol off'
 endif
