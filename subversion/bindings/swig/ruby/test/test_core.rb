@@ -33,9 +33,9 @@ class SvnCoreTest < Test::Unit::TestCase
     setup_default_variables
     @config_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_CONFIG)
     @servers_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_SERVERS)
+    setup_tmp
     setup_repository(@repos_path)
     setup_config
-    setup_tmp
   end
 
   def teardown
