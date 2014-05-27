@@ -1,5 +1,5 @@
 /*
- * main.c:  Subversion command line client.
+ * svn-bench.c:  Subversion benchmark client.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
