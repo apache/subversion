@@ -464,7 +464,7 @@ static PyObject *make_ob_wc_adm_access(void *adm_access)
 
 /* Conversion from Python single objects (not hashes/lists/etc.) to
    Subversion types. */
-static const char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
+static char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
 {
   if (ob == Py_None)
     return NULL;
