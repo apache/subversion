@@ -1565,7 +1565,7 @@ start-httpd-debug: $(HTTPD_CHECK_CONF)
 	@sleep 1
 	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
 
-stop-httpd:
+stop-httpd: $(HTTPD_CHECK_CONF)
 	$(HTTPD_STOP_CMD)
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
