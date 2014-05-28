@@ -262,7 +262,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = PythonThunk;
+  $1 = ($1_ltype) PythonThunk;
   $2 = $input;
 }
 %enddef
@@ -270,7 +270,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   /* FIXME: Handle the NULL case. */
-  $1 = PythonThunk;
+  $1 = ($1_ltype) PythonThunk;
   $2 = $input;
 }
 %enddef
@@ -280,7 +280,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = PerlThunk;
+  $1 = ($1_ltype) PerlThunk;
   $2 = $input;
 }
 %enddef
@@ -288,10 +288,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (SvOK($input)) {
-    $1 = PerlThunk;
+    $1 = ($1_ltype) PerlThunk;
     $2 = $input;
   } else {
-    $1 = NULL;
+    $1 = ($1_ltype) NULL;
     $2 = NULL;
   }
 }
@@ -302,7 +302,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = RubyThunk;
+  $1 = ($1_ltype) RubyThunk;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 %enddef
@@ -310,10 +310,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (NIL_P($input)) {
-    $1 = NULL;
+    $1 = ($1_ltype) NULL;
     $2 = NULL;
   } else {
-    $1 = RubyThunk;
+    $1 = ($1_ltype) RubyThunk;
     $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
