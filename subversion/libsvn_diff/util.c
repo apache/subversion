@@ -454,6 +454,14 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
                               new_mergeinfo_hash,
                               TRUE, pool, pool));
 
+  /* Print a hint for 'svn patch' or smilar tools, indicating the
+   * number of reverse-merges and forward-merges. */
+  SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, pool,
+                                      "## -0,%u +0,%u ##%s",
+                                      apr_hash_count(deleted),
+                                      apr_hash_count(added),
+                                      APR_EOL_STR));
+
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
