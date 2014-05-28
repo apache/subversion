@@ -1342,6 +1342,7 @@ def merge_in_new_file_and_diff(sbox):
     "Property changes on: " + url_branch_path + "\n",
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
+    "## -0,0 +0,1 ##\n",
     "   Merged /A/B/E:r2-3\n",
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
