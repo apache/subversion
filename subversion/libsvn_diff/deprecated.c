@@ -166,6 +166,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                                             header_encoding,
                                             relative_to_dir,
                                             show_c_function,
+                                            -1 /* context_size */,
                                             NULL, NULL, /* cancel */
                                             pool));
 }

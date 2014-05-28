@@ -1062,7 +1062,7 @@ print_diff_tree(svn_stream_t *out_stream,
                            out_stream, diff, orig_path, new_path,
                            orig_label, new_label,
                            svn_cmdline_output_encoding(pool), NULL,
-                           opts->show_c_function, 
+                           opts->show_c_function, opts->context_size,
                            check_cancel, NULL, pool));
                   SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                       "\n"));
