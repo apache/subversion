@@ -331,9 +331,6 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *to_root,
                                 const char *path,
                                 apr_pool_t *pool);
-  svn_error_t *(*move)(svn_fs_root_t *from_root, const char *from_path,
-                       svn_fs_root_t *to_root, const char *to_path,
-                       apr_pool_t *pool);
   svn_error_t *(*copied_from)(svn_revnum_t *rev_p, const char **path_p,
                               svn_fs_root_t *root, const char *path,
                               apr_pool_t *pool);

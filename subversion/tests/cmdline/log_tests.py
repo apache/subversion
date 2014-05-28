@@ -32,7 +32,6 @@ import svntest
 from svntest import wc
 
 from svntest.main import server_has_mergeinfo
-from svntest.main import server_has_auto_move
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.mergetrees import set_up_branch
 from svntest.verify import make_diff_header, make_no_diff_deleted_header
@@ -2514,53 +2513,6 @@ def log_multiple_revs_spanning_rename(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [1,4])
 
-#----------------------------------------------------------------------
-def verify_move_log(sbox, flag, has_moves):
-  "result checker for log_auto_move"
-
-  trunk_path = os.path.join(sbox.wc_dir, 'trunk')
-
-  exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', '-r3', '-v', trunk_path, flag)
-  log_chain = parse_log_output(output)
-  check_log_chain(log_chain, [3], [2])
-
-  paths = log_chain[0]['paths']
-  if paths[0][0] != 'D' or paths[0][1] != '/A':
-    raise SVNLogParseError("Deletion of '/A' expected, %s of %s found" % paths[0])
-  if has_moves:
-    if paths[1][0] != 'V' or paths[1][1] != '/trunk (from /A:2)':
-      raise SVNLogParseError("Move of '/A' to '/trunk' expected, %s of %s found" % paths[1])
-  else:
-    if paths[1][0] != 'A' or paths[1][1] != '/trunk (from /A:2)':
-      raise SVNLogParseError("Addition of '/A' to '/trunk' expected, %s of %s found" % paths[1])
-
-  exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', '-r5', '-v', trunk_path, flag)
-  log_chain = parse_log_output(output)
-  check_log_chain(log_chain, [5], [2])
-
-  paths = log_chain[0]['paths']
-  if has_moves:
-    if paths[0][0] != 'E' or paths[0][1] != '/trunk/C (from /trunk/D:4)':
-      raise SVNLogParseError("Replacing move of '/trunk/C' with '/trunk/D' expected, %s of %s found" % paths[0])
-    if paths[1][0] != 'E' or paths[1][1] != '/trunk/D (from /trunk/C:4)':
-      raise SVNLogParseError("Replacing move of '/trunk/D' with '/trunk/C' expected, %s of %s found" % paths[1])
-  else:
-    if paths[0][0] != 'R' or paths[0][1] != '/trunk/C (from /trunk/D:4)':
-      raise SVNLogParseError("Replace of '/trunk/C' with '/trunk/D' expected, %s of %s found" % paths[0])
-    if paths[1][0] != 'R' or paths[1][1] != '/trunk/D (from /trunk/C:4)':
-      raise SVNLogParseError("Replace of '/trunk/D' with '/trunk/C' expected, %s of %s found" % paths[1])
-
-@Issue(4355)
-@SkipUnless(server_has_auto_move)
-def log_auto_move(sbox):
-  "test --auto-moves flag"
-
-  create_renaming_history_repos(sbox)
-  verify_move_log(sbox, '--auto-moves', server_has_auto_move())
-  verify_move_log(sbox, '-v', 0)
-
 @SkipUnless(server_has_mergeinfo)
 def mergeinfo_log(sbox):
   "'mergeinfo --log' on a path with mergeinfo"
@@ -2723,7 +2675,6 @@ test_list = [ None,
               log_search,
               merge_sensitive_log_with_search,
               log_multiple_revs_spanning_rename,
-              log_auto_move,
               mergeinfo_log,
               merge_sensitive_log_xml_reverse_merges,
              ]

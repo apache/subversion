@@ -94,9 +94,7 @@ index_revision_adds(int *count, svn_fs_t *fs,
       apr_hash_this(hi, &path, NULL, &val);
       change = val;
       if ((change->change_kind == svn_fs_path_change_add)
-          || (change->change_kind == svn_fs_path_change_replace)
-          || (change->change_kind == svn_fs_path_change_move)
-          || (change->change_kind == svn_fs_path_change_movereplace))
+          || (change->change_kind == svn_fs_path_change_replace))
         {
           if (! (change->copyfrom_path
                             && SVN_IS_VALID_REVNUM(change->copyfrom_rev)))

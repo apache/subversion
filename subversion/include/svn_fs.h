@@ -1364,15 +1364,6 @@ typedef enum svn_fs_path_change_kind_t
 
   /** ignore all previous change items for path (internal-use only) */
   svn_fs_path_change_reset,
-
-  /** moved to this path in txn
-   * @since New in 1.9 */
-  svn_fs_path_change_move,
-
-  /** path removed and replaced by moved path in txn
-   * @since New in 1.9 */
-  svn_fs_path_change_movereplace
-
 } svn_fs_path_change_kind_t;
 
 /** Change descriptor.
@@ -2069,37 +2060,6 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
                      svn_fs_root_t *to_root,
                      const char *path,
                      apr_pool_t *pool);
-
-/** Create a copy of @a from_path in @a from_root named @a to_path in
- * @a to_root and record it as a Move.  If @a from_path in @a from_root is
- * a directory, copy the tree it refers to recursively.  @a from_root must
- * be @a to_root's base revision.
- *
- * The move will remember its source; use svn_fs_copied_from() to
- * access this information.
- *
- * @a to_root must be the root of a transaction based on that revision.
- * Further, @a to_root and @a from_root must represent the same filesystem.
- *
- * Do any necessary temporary allocation in @a pool.
- *
- * @note This will not implicitly delete the @a from_path in @a to_root
- *       but the deletion must be reported just as if this was a
- *       #svn_fs_copy call.
- *
- * @warning This function is marked as @b experimental.  That means this
- *          function will probably be supported in future releases but
- *          might change in signature or various aspects of its semantics.
- *
- * @since New in 1.9.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_fs_move(svn_fs_root_t *from_root,
-            const char *from_path,
-            svn_fs_root_t *to_root,
-            const char *to_path,
-            apr_pool_t *pool);
 
 
 /* Files.  */

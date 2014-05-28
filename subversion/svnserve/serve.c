@@ -2214,19 +2214,17 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   int i;
   apr_uint64_t limit, include_merged_revs_param;
   const char *move_behavior_param;
-  svn_move_behavior_t move_behavior;
   log_baton_t lb;
   authz_baton_t ab;
 
   ab.server = b;
   ab.conn = conn;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?w", &paths,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
                                   &start_rev, &end_rev, &send_changed_paths,
                                   &strict_node, &limit,
                                   &include_merged_revs_param,
-                                  &revprop_word, &revprop_items,
-                                  &move_behavior_param));
+                                  &revprop_word, &revprop_items));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
@@ -2257,8 +2255,6 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
-
-  move_behavior = svn_move_behavior_from_word(move_behavior_param);
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
@@ -2291,12 +2287,11 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->repository->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs5(b->repository->repos, full_paths, start_rev,
+  err = svn_repos_get_logs4(b->repository->repos, full_paths, start_rev,
                             end_rev, (int) limit, send_changed_paths,
                             strict_node, include_merged_revisions,
-                            move_behavior, revprops,
-                            authz_check_access_cb_func(b),
-                            &ab, log_receiver, &lb, pool);
+                            revprops, authz_check_access_cb_func(b), &ab,
+                            log_receiver, &lb, pool);
 
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)

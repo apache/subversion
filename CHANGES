@@ -39,7 +39,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * reimplement UTF-8 fuzzy conversion using utf8proc (r1511676)
     * svnadmin verify: speed up for repos with large directories (r1520419)
     * merge: interactive conflict merge option tries external tools (r1524145)
-    * log: support for displaying moves (r1525464 et al)
     * minor speed up in string to time conversion (r1533387)
     * list: remove some unnecessary work from implementation (r1533392)
     * windows: speed up console output (r1533994)
@@ -235,7 +234,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs-access-map: deal with strace format issues (r1505065)
     * fsfs-access-map: update to know about index files (r1505065)
     * svn-bench: add null-info command (r1532196)
-    * svn-bench: add --auto-moves to null-log (r1532200)
     * svnlook.py: made usable as a library by adding getter methods (r1541558)
     * svn-bench, svnraisetreeconflict, svnauthz, svn-rep-sharing-stats: More
       consistent error reporting, following pattern of core command-line
@@ -320,7 +318,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * New apis svn_io_file_create_empty() and svn_io_file_create_binary()
       (r1505006)
     * New api svn_ver_check_list2() (r1502267)
-    * New experimental api svn_fs_move() to support moves in backend (r1525442)
     * svn_fs_paths_changed() gains support for moves (r1525448)
     * New api svn_repos_get_logs5() adds support for moves (r1525453)
     * New api svn_ra_get_log3() adds support for moves (r1525460)

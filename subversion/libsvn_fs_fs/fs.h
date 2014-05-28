@@ -179,9 +179,6 @@ extern "C" {
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
 #define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
 
-/* Minimum format number that will record moves */
-#define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
-
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
