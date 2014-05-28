@@ -408,11 +408,6 @@ dav_svn__log_report(const dav_resource *resource,
                                     resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
-      else if (strcmp(child->name, "move-behavior") == 0)
-        {
-          const char *value = dav_xml_get_cdata(child, resource->pool, 1);
-          move_behavior = svn_move_behavior_from_word(value);
-        }
       /* else unknown element; skip it */
     }
 

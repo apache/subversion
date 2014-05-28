@@ -155,8 +155,6 @@ do_resources(const dav_svn_repos *repos,
 
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
-        case svn_fs_path_change_move:
-        case svn_fs_path_change_movereplace:
           send_self = TRUE;
           send_parent = TRUE;
           break;
