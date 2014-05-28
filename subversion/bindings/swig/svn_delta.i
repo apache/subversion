@@ -173,7 +173,7 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %ignore svn_txdelta_window_t::ops;
 %extend svn_txdelta_window_t {
 
-void _ops_get(int *num_ops, svn_txdelta_op_t **ops)
+void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
 {
   *num_ops = self->num_ops;
   *ops = self->ops;
