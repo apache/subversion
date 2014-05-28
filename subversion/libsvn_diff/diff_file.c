@@ -31,6 +31,8 @@
 #include <apr_mmap.h>
 #include <apr_getopt.h>
 
+#include <assert.h>
+
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
@@ -1410,6 +1412,8 @@ typedef struct svn_diff__file_output_baton_t
   /* Extra context for the current hunk. */
   char hunk_extra_context[SVN_DIFF__EXTRA_CONTEXT_LENGTH + 1];
 
+  int context_size;
+
   apr_pool_t *pool;
 } svn_diff__file_output_baton_t;
 
@@ -1615,7 +1619,7 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
     }
 
   target_line = baton->hunk_start[0] + baton->hunk_length[0]
-                + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+                + baton->context_size;
 
   /* Add trailing context to the hunk */
   SVN_ERR(output_unified_diff_range(baton, 0 /* original */,
@@ -1666,8 +1670,8 @@ output_unified_diff_modified(void *baton,
   apr_off_t prev_context_end;
   svn_boolean_t init_hunk = FALSE;
 
-  if (original_start > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
-    context_prefix_length = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  if (original_start > output_baton->context_size)
+    context_prefix_length = output_baton->context_size;
   else
     context_prefix_length = original_start;
 
@@ -1677,7 +1681,7 @@ output_unified_diff_modified(void *baton,
     {
       prev_context_end = output_baton->hunk_start[0]
                          + output_baton->hunk_length[0]
-                         + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+                         + output_baton->context_size;
     }
   else
     {
@@ -1842,6 +1846,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create_empty(pool);
+      baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       if (show_c_function)
         {
@@ -1942,8 +1947,9 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
    *pointers! */
 typedef struct context_saver_t {
   svn_stream_t *stream;
-  const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
-  apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
+  int context_size;
+  const char **data; /* const char *data[context_size] */
+  apr_size_t *len;   /* apr_size_t len[context_size] */
   apr_size_t next_slot;
   apr_size_t total_written;
 } context_saver_t;
@@ -1957,7 +1963,7 @@ context_saver_stream_write(void *baton,
   context_saver_t *cs = baton;
   cs->data[cs->next_slot] = data;
   cs->len[cs->next_slot] = *len;
-  cs->next_slot = (cs->next_slot + 1) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  cs->next_slot = (cs->next_slot + 1) % cs->context_size;
   cs->total_written++;
   return SVN_NO_ERROR;
 }
@@ -1983,6 +1989,7 @@ typedef struct svn_diff3__file_output_baton_t
   const char *marker_eol;
 
   svn_diff_conflict_display_style_t conflict_style;
+  int context_size;
 
   /* The rest of the fields are for
      svn_diff_conflict_display_only_conflicts only.  Note that for
@@ -2002,9 +2009,9 @@ flush_context_saver(context_saver_t *cs,
                     svn_stream_t *output_stream)
 {
   int i;
-  for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
+  for (i = 0; i < cs->context_size; i++)
     {
-      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % cs->context_size;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];
@@ -2019,6 +2026,8 @@ make_context_saver(svn_diff3__file_output_baton_t *fob)
 {
   context_saver_t *cs;
 
+  assert(fob->context_size > 0); /* Or nothing to save */
+
   svn_pool_clear(fob->pool);
   cs = apr_pcalloc(fob->pool, sizeof(*cs));
   cs->stream = svn_stream_empty(fob->pool);
@@ -2026,10 +2035,13 @@ make_context_saver(svn_diff3__file_output_baton_t *fob)
   svn_stream_set_write(cs->stream, context_saver_stream_write);
   fob->context_saver = cs;
   fob->output_stream = cs->stream;
+  cs->context_size = fob->context_size;
+  cs->data = apr_pcalloc(fob->pool, sizeof(*cs->data) * cs->context_size);
+  cs->len = apr_pcalloc(fob->pool, sizeof(*cs->len) * cs->context_size);
 }
 
 
-/* A stream which prints SVN_DIFF__UNIFIED_CONTEXT_SIZE lines to
+/* A stream which prints LINES_TO_PRINT (based on context size) lines to
    BATON->REAL_OUTPUT_STREAM, and then changes BATON->OUTPUT_STREAM to
    a context_saver; used for *trailing* context. */
 
@@ -2064,7 +2076,7 @@ make_trailing_context_printer(svn_diff3__file_output_baton_t *btn)
   svn_pool_clear(btn->pool);
 
   tcp = apr_pcalloc(btn->pool, sizeof(*tcp));
-  tcp->lines_to_print = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  tcp->lines_to_print = btn->context_size;
   tcp->fob = btn;
   s = svn_stream_empty(btn->pool);
   svn_stream_set_baton(s, tcp);
@@ -2227,7 +2239,7 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
      trailing context)?  If so, flush it. */
   if (btn->output_stream == btn->context_saver->stream)
     {
-      if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+      if (btn->context_saver->total_written > btn->context_size)
         SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
@@ -2344,6 +2356,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
     (style == svn_diff_conflict_display_only_conflicts);
 
   memset(&baton, 0, sizeof(baton));
+  baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
   if (conflicts_only)
     {
       baton.pool = svn_pool_create(pool);
