@@ -192,7 +192,9 @@ show_diff(const svn_wc_conflict_description2_t *desc,
                                        path1, path2,
                                        label1, label2,
                                        APR_LOCALE_CHARSET,
-                                       NULL, FALSE,
+                                       NULL,
+                                       options->show_c_function,
+                                       options->context_size,
                                        cancel_func, cancel_baton,
                                        pool);
 }

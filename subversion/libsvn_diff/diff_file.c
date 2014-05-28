@@ -1204,7 +1204,11 @@ static const apr_getopt_option_t diff_options[] =
 svn_diff_file_options_t *
 svn_diff_file_options_create(apr_pool_t *pool)
 {
-  return apr_pcalloc(pool, sizeof(svn_diff_file_options_t));
+  svn_diff_file_options_t * opts = apr_pcalloc(pool, sizeof(*opts));
+
+  opts->context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+
+  return opts;
 }
 
 /* A baton for use with opt_parsing_error_func(). */
@@ -1828,6 +1832,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               const char *header_encoding,
                               const char *relative_to_dir,
                               svn_boolean_t show_c_function,
+                              int context_size,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *pool)
@@ -1846,7 +1851,8 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create_empty(pool);
-      baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      baton.context_size = (context_size > 0) ? context_size
+                                              : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       if (show_c_function)
         {

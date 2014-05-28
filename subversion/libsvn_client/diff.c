@@ -861,6 +861,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      tmpfile1, tmpfile2, label1, label2,
                      dwi->header_encoding, rel_to_dir,
                      dwi->options.for_internal->show_c_function,
+                     dwi->options.for_internal->context_size,
                      dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
 
