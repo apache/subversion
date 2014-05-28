@@ -773,10 +773,10 @@ AH_BOTTOM([
 # define SVN__FORCE_INLINE
 # define SVN__PREVENT_INLINE
 #elif defined(__GNUC__)
-# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__FORCE_INLINE APR_INLINE __attribute__ ((always_inline))
 # define SVN__PREVENT_INLINE __attribute__ ((noinline))
 #else
-# define SVN__FORCE_INLINE
+# define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
 ])
