@@ -2461,9 +2461,6 @@ typedef enum copy_type_t
 
   /* add with history */
   copy_type_add_with_history,
-
-  /* move (always with history) */
-  copy_type_move
 } copy_type_t;
 
 /* Set CHANGES to TRUE if PATH in ROOT is unchanged in REVISION if the
@@ -2562,37 +2559,6 @@ copy_helper(svn_fs_root_t *from_root,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Copy immutable tree not supported"));
 
-  /* move support comes with a number of conditions ... */
-  if (copy_type == copy_type_move)
-    {
-      /* if we don't copy from the TXN's base rev, check that the path has
-         not been touched in that revision range */
-      if (from_root->rev != to_root->rev)
-        {
-          svn_boolean_t changed = TRUE;
-          svn_error_t *err = is_changed_node(&changed, from_root,
-                                             from_path, to_root->rev,
-                                             pool);
-
-          /* Only "not found" is considered to be caused by out-of-date-ness.
-             Everything else means something got very wrong ... */
-          if (err && err->apr_err != SVN_ERR_FS_NOT_FOUND)
-            return svn_error_trace(err);
-
-          /* here error means "out of data" */
-          if (err || changed)
-            {
-              svn_error_clear(err);
-              return svn_error_create(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                      _("Move-from node is out-of-date"));
-            }
-
-          /* always move from the txn's base rev */
-          SVN_ERR(svn_fs_x__revision_root(&from_root, from_root->fs,
-                                          to_root->rev, pool));
-        }
-    }
-
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR(get_dag(&from_node, from_root, from_path, TRUE, pool));
 
@@ -2629,19 +2595,13 @@ copy_helper(svn_fs_root_t *from_root,
          operation is a replacement, not an addition. */
       if (to_parent_path->node)
         {
-          kind = copy_type == copy_type_move
-               ? svn_fs_path_change_movereplace
-               : svn_fs_path_change_replace;
-
+          kind = svn_fs_path_change_replace;
           SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_start,
                                                     to_parent_path->node));
         }
       else
         {
-          kind = copy_type == copy_type_move
-               ? svn_fs_path_change_move
-               : svn_fs_path_change_add;
-
+          kind = svn_fs_path_change_add;
           mergeinfo_start = 0;
         }
 
@@ -2735,26 +2695,6 @@ x_revision_link(svn_fs_root_t *from_root,
   path = svn_fs__canonicalize_abspath(path, pool);
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
                                      copy_type_plain_add, pool));
-}
-
-
-/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT and mark
-   it as a Move.  If FROM_PATH is a directory, copy it recursively. 
-   Temporary allocations are from POOL.*/
-static svn_error_t *
-x_move(svn_fs_root_t *from_root,
-       const char *from_path,
-       svn_fs_root_t *to_root,
-       const char *to_path,
-       apr_pool_t *pool)
-{
-  return svn_error_trace(copy_helper(from_root,
-                                     svn_fs__canonicalize_abspath(from_path,
-                                                                  pool),
-                                     to_root,
-                                     svn_fs__canonicalize_abspath(to_path,
-                                                                  pool),
-                                     copy_type_move, pool));
 }
 
 
@@ -4111,7 +4051,6 @@ static root_vtable_t root_vtable = {
   x_delete_node,
   x_copy,
   x_revision_link,
-  x_move,
   x_copied_from,
   x_closest_copy,
   x_node_prop,

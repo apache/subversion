@@ -315,9 +315,7 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
   svn_boolean_t strict_node_history = FALSE;         /* off by default */
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
-  svn_move_behavior_t move_behavior = svn_move_behavior_no_moves;
-                                             /* no moves by default */
-  
+
   apr_array_header_t *revprops = apr_array_make(resource->pool, 3,
                                                 sizeof(const char *));
   apr_array_header_t *paths
@@ -444,7 +442,7 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs5(repos->repos,
+  serr = svn_repos_get_logs4(repos->repos,
                              paths,
                              start,
                              end,
@@ -452,7 +450,6 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
-                             move_behavior,
                              revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,

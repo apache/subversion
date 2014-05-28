@@ -1054,48 +1054,6 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *message,
   apr_pool_t *pool);
 
-/**
- * This enumeration contains the various options how SVN shall report
- * and process explicit MOVes as well as ADD+DEL pairs.
- *
- * @since New in 1.9.
- */
-typedef enum svn_move_behavior_t
-{
-  /** report all moves as ADD with history.
-     This also provides backward compatibility with 1.8 clients. */
-  svn_move_behavior_no_moves = 0,
-
-  /** report all changes, including moves, as they were reported.
-     This is option with the least overhead. */
-  svn_move_behavior_explicit_moves,
-
-  /** in addition to explicit moves, try to find matching DEL + ADD pairs
-     and report the ADD in those as moves as well.  Which of the eligible
-     DEL + ADD pairs will be detected is implementation-dependent. */
-  svn_move_behavior_auto_moves
-} svn_move_behavior_t;
-
-/** Return a constant string expressing @a value as an English word,
- * e.g., "none", "explicit", etc.  The string is not localized,
- * as it may be used for client<->server communications.
- *
- * @since New in 1.9.
- */
-const char *
-svn_move_behavior_to_word(svn_move_behavior_t value);
-
-/** Return the appropriate move behavior for @a word.  @a word is as
- * returned from svn_move_behavior_to_word().  If @a word does not
- * represent a recognized behavior, return #svn_move_behavior_explicit_moves.
- *
- * @since New in 1.9.
- */
-svn_move_behavior_t
-svn_move_behavior_from_word(const char *word);
-
-
-
 
 /** Callback function type for commits.
  *

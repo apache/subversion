@@ -940,8 +940,6 @@ fold_change(apr_hash_t *changes,
       if ((old_change->change_kind == svn_fs_path_change_delete)
           && (! ((info->change_kind == svn_fs_path_change_replace)
                  || (info->change_kind == svn_fs_path_change_reset)
-                 || (info->change_kind == svn_fs_path_change_movereplace)
-                 || (info->change_kind == svn_fs_path_change_move)
                  || (info->change_kind == svn_fs_path_change_add))))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -949,8 +947,7 @@ fold_change(apr_hash_t *changes,
 
       /* Sanity check: an add can't follow anything except
          a delete or reset.  */
-      if ((   (info->change_kind == svn_fs_path_change_add)
-           || (info->change_kind == svn_fs_path_change_move))
+      if ((info->change_kind == svn_fs_path_change_add)
           && (old_change->change_kind != svn_fs_path_change_delete)
           && (old_change->change_kind != svn_fs_path_change_reset))
         return svn_error_create
@@ -967,8 +964,7 @@ fold_change(apr_hash_t *changes,
           break;
 
         case svn_fs_path_change_delete:
-          if ((old_change->change_kind == svn_fs_path_change_add)
-              || (old_change->change_kind == svn_fs_path_change_move))
+          if (old_change->change_kind == svn_fs_path_change_add)
             {
               /* If the path was introduced in this transaction via an
                  add, and we are deleting it, just remove the path
@@ -993,14 +989,6 @@ fold_change(apr_hash_t *changes,
              so treat it just like a replace. */
           replace_change(old_change, info, pool);
           old_change->change_kind = svn_fs_path_change_replace;
-          break;
-
-        case svn_fs_path_change_move:
-        case svn_fs_path_change_movereplace:
-          /* A move at this point must be following a previous delete,
-             so treat it just like a replacing move. */
-          replace_change(old_change, info, pool);
-          old_change->change_kind = svn_fs_path_change_movereplace;
           break;
 
         case svn_fs_path_change_modify:
@@ -1072,8 +1060,7 @@ process_changes(apr_hash_t *changed_paths,
       */
 
       if ((change->info.change_kind == svn_fs_path_change_delete)
-           || (change->info.change_kind == svn_fs_path_change_replace)
-           || (change->info.change_kind == svn_fs_path_change_movereplace))
+           || (change->info.change_kind == svn_fs_path_change_replace))
         {
           apr_hash_index_t *hi;
 
@@ -3021,17 +3008,6 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
 
-  /* all moves specify the "copy-from-rev" as REV-1 */
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_path_change2_t *change;
-      apr_hash_this(hi, NULL, NULL, (void **)&change);
-
-      if (   (change->change_kind == svn_fs_path_change_move)
-          || (change->change_kind == svn_fs_path_change_movereplace))
-        change->copyfrom_rev = new_rev - 1;
-    }
-
   /* write to target file & calculate checksum */
   stream = svn_checksum__wrap_write_stream_fnv1a_32x4(&entry.fnv1_checksum,
                              svn_stream_from_aprfile2(file, TRUE, pool),
@@ -3176,168 +3152,6 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* If CHANGE is move, verify that there is no other move with the same
-   copy-from path in SOURCE_PATHS already (parent or sub-node moves are fine).
-   Add the source path to SOURCE_PATHS after successful verification.
-   Allocate the hashed strings in POOL. */
-static svn_error_t *
-check_for_duplicate_move_source(apr_hash_t *source_paths,
-                                svn_fs_path_change2_t *change,
-                                apr_pool_t *pool)
-{
-  if (   change->change_kind == svn_fs_path_change_move
-      || change->change_kind == svn_fs_path_change_movereplace)
-    if (change->copyfrom_path)
-      {
-        apr_size_t len = strlen(change->copyfrom_path);
-        if (apr_hash_get(source_paths, change->copyfrom_path, len))
-          return svn_error_createf(SVN_ERR_FS_AMBIGUOUS_MOVE, NULL,
-                      _("Path '%s' has been moved to more than one target"),
-                                   change->copyfrom_path);
-
-        apr_hash_set(source_paths,
-                     apr_pstrmemdup(pool, change->copyfrom_path, len),
-                     len,
-                     change->copyfrom_path);
-      }
-
-  return SVN_NO_ERROR;
-}
-
-/* Verify that the moves we are about to commit with TXN_ID in FS are unique
-   and the respective copy sources have been deleted.  OLD_REV is the last
-   committed revision.  CHANGED_PATHS is the list of changes paths in this
-   txn.  Use POOL for temporary allocations. */
-static svn_error_t *
-verify_moves(svn_fs_t *fs,
-             const svn_fs_txn_t *txn,
-             svn_revnum_t old_rev,
-             apr_hash_t *changed_paths,
-             apr_pool_t *pool)
-{
-  apr_hash_t *source_paths = apr_hash_make(pool);
-  svn_revnum_t revision;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_index_t *hi;
-  int i;
-  apr_array_header_t *moves
-    = apr_array_make(pool, 16, sizeof(svn_sort__item_t));
-  apr_array_header_t *deletions
-    = apr_array_make(pool, 16, sizeof(const char *));
-
-  /* extract moves and deletions from the current txn's change list */
-
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-    {
-      const char *path;
-      apr_ssize_t len;
-      svn_fs_path_change2_t *change;
-      apr_hash_this(hi, (const void**)&path, &len, (void**)&change);
-
-      if (   change->copyfrom_path
-          && (   change->change_kind == svn_fs_path_change_move
-              || change->change_kind == svn_fs_path_change_movereplace))
-        {
-          svn_sort__item_t *item = apr_array_push(moves);
-          item->key = path;
-          item->klen = len;
-          item->value = change;
-        }
-
-      if (   change->change_kind == svn_fs_path_change_delete
-          || change->change_kind == svn_fs_path_change_replace
-          || change->change_kind == svn_fs_path_change_movereplace)
-        APR_ARRAY_PUSH(deletions, const char *) = path;
-    }
-
-  /* no moves? -> done here */
-
-  if (moves->nelts == 0)
-    return SVN_NO_ERROR;
-
-  /* correct the deletions that refer to moved paths and make them refer to
-     the paths in OLD_REV */
-
-  svn_sort__array(moves, svn_sort_compare_paths);
-
-  for (i = 0; i < deletions->nelts; ++i)
-    {
-      const char *deleted_path = APR_ARRAY_IDX(deletions, i, const char*);
-      int closest_move_idx
-        = svn_sort__bsearch_lower_bound(moves, deleted_path,
-                                        svn_sort_compare_paths);
-
-      if (closest_move_idx < moves->nelts)
-        {
-          svn_sort__item_t *closest_move_item
-            = &APR_ARRAY_IDX(moves, closest_move_idx, svn_sort__item_t);
-          const char *relpath
-            = svn_dirent_skip_ancestor(closest_move_item->key,
-                                       deleted_path);
-          if (relpath)
-            {
-              svn_fs_path_change2_t *closed_move = closest_move_item->value;
-              APR_ARRAY_IDX(deletions, i, const char*)
-                = svn_dirent_join(closed_move->copyfrom_path, relpath, pool);
-            }
-        }
-    }
-
-  svn_sort__array(deletions, svn_sort_compare_paths);
-
-  /* The _same_ source paths must never occur more than once in any move 
-     since our base revision. */
-
-  for (i = 0; moves->nelts; ++i)
-    SVN_ERR(check_for_duplicate_move_source (source_paths,
-                          APR_ARRAY_IDX(moves, i, svn_sort__item_t).value,
-                          pool));
-
-  for (revision = txn->base_rev + 1; revision <= old_rev; ++revision)
-    {
-      apr_array_header_t *changes;
-      change_t **changes_p;
-
-      svn_pool_clear(iterpool);
-      svn_fs_x__get_changes(&changes, fs, revision, iterpool);
-
-      changes_p = (change_t **)&changes->elts;
-      for (i = 0; i < changes->nelts; ++i)
-        SVN_ERR(check_for_duplicate_move_source(source_paths,
-                                                &changes_p[i]->info,
-                                                pool));
-    }
-
-  /* The move source paths must been deleted in this txn. */
-
-  for (i = 0; i < moves->nelts; ++i)
-    {
-      svn_fs_path_change2_t *change
-        = APR_ARRAY_IDX(moves, i, svn_sort__item_t).value;
-
-      /* there must be a deletion of move's copy-from path
-         (or any of its parents) */
-
-      int closest_deletion_idx
-        = svn_sort__bsearch_lower_bound(deletions, change->copyfrom_path,
-                                        svn_sort_compare_paths);
-      if (closest_deletion_idx < deletions->nelts)
-        {
-          const char *closest_deleted_path
-            = APR_ARRAY_IDX(deletions, closest_deletion_idx, const char *);
-          if (!svn_dirent_is_ancestor(closest_deleted_path,
-                                      change->copyfrom_path))
-            return svn_error_createf(SVN_ERR_FS_INCOMPLETE_MOVE, NULL,
-                        _("Path '%s' has been moved without being deleted"),
-                                     change->copyfrom_path);
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Return in *PATH the path to a file containing the properties that
    make up the final revision properties file.  This involves setting
    svn:date and removing any temporary properties associated with the
@@ -3445,8 +3259,6 @@ commit_body(void *baton, apr_pool_t *pool)
      to the final rev file */
   SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, cb->fs, txn_id,
                                       pool));
-
-  SVN_ERR(verify_moves(cb->fs, cb->txn, old_rev, changed_paths, pool));
 
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
