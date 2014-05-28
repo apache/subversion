@@ -156,7 +156,7 @@ def prop_conflict_resolution(sbox):
 
     """Revert the WC, update it to r2, and set the following properties:
 
-    itoa      : 'propname' = 'local_edit'
+    iota      : 'propname' = 'local_edit'
                 'newprop'  = 'new-val-no-incoming'
     A/mu      : 'propname' = 'local_edit'
     A/D/gamma : 'propname' = 'incoming-no-conflict'
@@ -168,9 +168,9 @@ def prop_conflict_resolution(sbox):
     Using svn propget, check that the resolution results in the following
     properties:
 
-    itoa      : 'propname' = RESOLVED_EDITED_PROP_VAL_OUTPUT
+    iota      : 'propname' = RESOLVED_DELETED_PROP_VAL_OUTPUT
                 'newprop'  = 'new-val-no-incoming'
-    A/mu      : 'propname' = RESOLVED_DELETED_PROP_VAL_OUTPUT
+    A/mu      : 'propname' = RESOLVED_EDITED_PROP_VAL_OUTPUT
     A/D/gamma : 'propname' = 'incoming-no-conflict'
     A/D/H/psi : 'newprop'  = 'new-val-no-incoming'
 
