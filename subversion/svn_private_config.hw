@@ -111,7 +111,7 @@
 # define SVN__FORCE_INLINE __forceinline
 # define SVN__PREVENT_INLINE __declspec(noinline)
 #else
-# define SVN__FORCE_INLINE
+# define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
 
