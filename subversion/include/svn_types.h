@@ -1100,12 +1100,8 @@ typedef svn_error_t *(*svn_commit_callback_t)(
  *
  * NOTE: This is an internal macro, put here for convenience.
  * No public API may depend on the particular value of this macro.
- *
- * NOTE: The implementation assumes that this is a power of two >= 4k.
- *       Moreover, it should be less than 80kB to prevent memory
- *       fragmentation in the APR memory allocator.
  */
-#define SVN__STREAM_CHUNK_SIZE 0x10000
+#define SVN__STREAM_CHUNK_SIZE 16384
 #endif
 
 /** The maximum amount we can ever hold in memory. */

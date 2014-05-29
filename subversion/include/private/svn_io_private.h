@@ -72,14 +72,6 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
                            apr_finfo_t *file_info,
                            apr_pool_t *pool);
 
-/** Given that @a total_read bytes have already been read from a file or
- * stream, return a suggestion for the size of the next block to process.
- * This value will be <= #SVN__STREAM_CHUNK_SIZE.
- *
- * @since New in 1.9.
- */
-apr_size_t
-svn_io__next_chunk_size(apr_off_t total_read);
 
 /** Buffer test handler function for a generic stream. @see svn_stream_t
  * and svn_stream__is_buffered().
