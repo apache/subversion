@@ -585,20 +585,14 @@ svn_stream_contents_same2(svn_boolean_t *same,
 {
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t to_read = 0;
-  apr_size_t bytes_read1 = 0;
-  apr_size_t bytes_read2 = 0;
-  apr_off_t total_read = 0;
+  apr_size_t bytes_read1 = SVN__STREAM_CHUNK_SIZE;
+  apr_size_t bytes_read2 = SVN__STREAM_CHUNK_SIZE;
   svn_error_t *err = NULL;
 
   *same = TRUE;  /* assume TRUE, until disproved below */
-  while (bytes_read1 == to_read && bytes_read2 == to_read)
+  while (bytes_read1 == SVN__STREAM_CHUNK_SIZE
+         && bytes_read2 == SVN__STREAM_CHUNK_SIZE)
     {
-      to_read = svn_io__next_chunk_size(total_read);
-      bytes_read1 = to_read;
-      bytes_read2 = to_read;
-      total_read += to_read;
-
       err = svn_stream_read_full(stream1, buf1, &bytes_read1);
       if (err)
         break;

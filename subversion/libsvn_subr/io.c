@@ -63,7 +63,6 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 #include "svn_ctype.h"
-#include "svn_sorts.h"
 
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
@@ -4502,18 +4501,6 @@ svn_io_read_version_file(int *version,
 }
 
 
-apr_size_t
-svn_io__next_chunk_size(apr_off_t total_read)
-{
-  /* Started with total_read==0, this will generate a sequence ensuring
-     aligned access with increasing block size up to SVN__STREAM_CHUNK_SIZE:
-     4k@ offset 0, 4k@ offset 4k, 8k@ offset 8k, 16k@ offset 16k etc.
-     */
-  return total_read ? (apr_size_t)MIN(total_read, SVN__STREAM_CHUNK_SIZE)
-                    : (apr_size_t)4096;
-}
-
-
 /* Do a byte-for-byte comparison of FILE1 and FILE2. */
 static svn_error_t *
 contents_identical_p(svn_boolean_t *identical_p,
@@ -4529,7 +4516,6 @@ contents_identical_p(svn_boolean_t *identical_p,
   apr_file_t *file2_h;
   svn_boolean_t eof1 = FALSE;
   svn_boolean_t eof2 = FALSE;
-  apr_off_t total_read = 0;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            pool));
@@ -4545,17 +4531,14 @@ contents_identical_p(svn_boolean_t *identical_p,
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   while (!err && !eof1 && !eof2)
     {
-      apr_size_t to_read = svn_io__next_chunk_size(total_read);
-      total_read += to_read;
-
       err = svn_io_file_read_full2(file1_h, buf1,
-                                   to_read, &bytes_read1,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1,
                                    &eof1, pool);
       if (err)
           break;
 
       err = svn_io_file_read_full2(file2_h, buf2,
-                                   to_read, &bytes_read2,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2,
                                    &eof2, pool);
       if (err)
           break;
@@ -4601,7 +4584,6 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
   svn_boolean_t eof1 = FALSE;
   svn_boolean_t eof2 = FALSE;
   svn_boolean_t eof3 = FALSE;
-  apr_off_t total_read = 0;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            scratch_pool));
@@ -4638,9 +4620,6 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
       apr_size_t bytes_read1, bytes_read2, bytes_read3;
       svn_boolean_t read_1, read_2, read_3;
 
-      apr_size_t to_read = svn_io__next_chunk_size(total_read);
-      total_read += to_read;
-
       read_1 = read_2 = read_3 = FALSE;
 
       /* As long as a file is not at the end yet, and it is still
@@ -4648,8 +4627,8 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
       if (!eof1 && (*identical_p12 || *identical_p13))
         {
           err = svn_io_file_read_full2(file1_h, buf1,
-                                       to_read, &bytes_read1,
-                                       &eof1, scratch_pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1,
+                                   &eof1, scratch_pool);
           if (err)
               break;
           read_1 = TRUE;
@@ -4658,8 +4637,8 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
       if (!eof2 && (*identical_p12 || *identical_p23))
         {
           err = svn_io_file_read_full2(file2_h, buf2,
-                                       to_read, &bytes_read2,
-                                       &eof2, scratch_pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2,
+                                   &eof2, scratch_pool);
           if (err)
               break;
           read_2 = TRUE;
@@ -4668,8 +4647,8 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
       if (!eof3 && (*identical_p13 || *identical_p23))
         {
           err = svn_io_file_read_full2(file3_h, buf3,
-                                       to_read, &bytes_read3,
-                                       &eof3, scratch_pool);
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read3,
+                                   &eof3, scratch_pool);
           if (err)
               break;
           read_3 = TRUE;
