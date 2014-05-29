@@ -55,14 +55,11 @@ svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
                        svn_revnum_t rev,
                        apr_pool_t *pool);
 
-/* Verify that representation REP in FS can be accessed.  Successive calls
-   to this function should pass a non-NULL value to HINT.  In that case,
-   many file open / close operations can be eliminated.
+/* Verify that representation REP in FS can be accessed.
    Do any allocations in POOL. */
 svn_error_t *
 svn_fs_x__check_rep(representation_t *rep,
                     svn_fs_t *fs,
-                    void **hint,
                     apr_pool_t *pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The

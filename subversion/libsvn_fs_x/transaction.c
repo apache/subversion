@@ -2216,7 +2216,7 @@ get_shared_rep(representation_t **old_rep,
       if (err == SVN_NO_ERROR)
         {
           if (*old_rep)
-            SVN_ERR(svn_fs_x__check_rep(*old_rep, fs, NULL, pool));
+            SVN_ERR(svn_fs_x__check_rep(*old_rep, fs, pool));
         }
       else if (err->apr_err == SVN_ERR_FS_CORRUPT
                || SVN_ERROR_IN_CATEGORY(err->apr_err,
