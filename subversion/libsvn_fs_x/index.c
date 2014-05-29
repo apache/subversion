@@ -209,8 +209,9 @@ stream_error_create(packed_number_stream_t *stream,
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
  * STREAM->FILE and buffer them.
  *
- * We don't want GCC and others to inline this function into get() because
- * it prevents get() from being inlined itself.
+ * We don't want GCC and others to inline this (infrequently called)
+ * function into packed_stream_get() because it prevents the latter from
+ * being inlined itself.
  */
 SVN__PREVENT_INLINE
 static svn_error_t *
@@ -348,8 +349,10 @@ packed_stream_close(packed_number_stream_t *stream)
 }
 
 /*
- * The forced inline is required as e.g. GCC would inline read() into here
- * instead of lining the simple buffer access into callers of get().
+ * The forced inline is required for performance reasons:  This is a very
+ * hot code path (called for every item we read) but e.g. GCC would rather
+ * chose to inline packed_stream_read() here, preventing packed_stream_get
+ * from being inlined itself.
  */
 SVN__FORCE_INLINE
 static svn_error_t*
