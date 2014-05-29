@@ -394,6 +394,10 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* This is a hot function calling a cold function.  GCC and others tend to
+ * inline the cold sub-function instead of this hot one.  Therefore, be
+ * very insistent on lining this one.  It is not a correctness issue, though.
+ */
 static SVN__FORCE_INLINE svn_error_t *
 readbuf_getchar(svn_ra_svn_conn_t *conn, apr_pool_t *pool, char *result)
 {
