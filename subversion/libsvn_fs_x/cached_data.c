@@ -728,15 +728,32 @@ create_rep_state(rep_state_t **rep_state,
 svn_error_t *
 svn_fs_x__check_rep(representation_t *rep,
                     svn_fs_t *fs,
-                    void **hint,
                     apr_pool_t *pool)
 {
-  rep_state_t *rs;
-  svn_fs_x__rep_header_t *rep_header;
+  apr_off_t offset;
+  apr_uint32_t sub_item;
+  svn_fs_x__p2l_entry_t *entry;
+  svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
 
-  /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint, rep,
-                           fs, pool));
+  /* Does REP->ID refer to an actual item? Which one is it? */
+  SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, &rep->id, pool));
+
+  /* What is the type of that item? */
+  SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, revision, offset, pool));
+
+  /* Verify that we've got an item that is actually a representation. */
+  if (   entry == NULL
+      || (   entry->type != SVN_FS_X__ITEM_TYPE_FILE_REP
+          && entry->type != SVN_FS_X__ITEM_TYPE_DIR_REP
+          && entry->type != SVN_FS_X__ITEM_TYPE_FILE_PROPS
+          && entry->type != SVN_FS_X__ITEM_TYPE_DIR_PROPS
+          && entry->type != SVN_FS_X__ITEM_TYPE_REPS_CONT))
+    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+                              _("No representation found at offset %s "
+                                "for item %" APR_UINT64_T_FMT
+                                " in revision %ld"),
+                              apr_off_t_toa(pool, offset),
+                              rep->id.number, revision);
 
   return SVN_NO_ERROR;
 }

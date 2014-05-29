@@ -36,17 +36,13 @@
 
 /** Verifying. **/
 
-/* Baton type expected by verify_walker().  The purpose is to reuse open
- * rev / pack file handles between calls.  Its contents need to be cleaned
- * periodically to limit resource usage.
+/* Baton type expected by verify_walker().  The purpose is to limit the
+ * number of notifications sent.
  */
 typedef struct verify_walker_baton_t
 {
   /* number of calls to verify_walker() since the last clean */
   int iteration_count;
-
-  /* number of files opened since the last clean */
-  int file_count;
 
   /* progress notification callback to invoke periodically (may be NULL) */
   svn_fs_progress_notify_func_t notify_func;
@@ -56,12 +52,6 @@ typedef struct verify_walker_baton_t
 
   /* remember the last revision for which we called notify_func */
   svn_revnum_t last_notified_revision;
-
-  /* cached hint for successive calls to svn_fs_x__check_rep() */
-  void *hint;
-
-  /* pool to use for the file handles etc. */
-  apr_pool_t *pool;
 } verify_walker_baton_t;
 
 /* Used by svn_fs_x__verify().
@@ -73,11 +63,9 @@ verify_walker(representation_t *rep,
               apr_pool_t *scratch_pool)
 {
   verify_walker_baton_t *walker_baton = baton;
-  void *previous_hint;
 
   /* notify and free resources periodically */
-  if (   walker_baton->iteration_count > 1000
-      || walker_baton->file_count > 16)
+  if (walker_baton->iteration_count > 1000)
     {
       svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
       if (   walker_baton->notify_func
@@ -89,22 +77,14 @@ verify_walker(representation_t *rep,
           walker_baton->last_notified_revision = revision;
         }
 
-      svn_pool_clear(walker_baton->pool);
-
       walker_baton->iteration_count = 0;
-      walker_baton->file_count = 0;
-      walker_baton->hint = NULL;
     }
 
   /* access the repo data */
-  previous_hint = walker_baton->hint;
-  SVN_ERR(svn_fs_x__check_rep(rep, fs, &walker_baton->hint,
-                               walker_baton->pool));
+  SVN_ERR(svn_fs_x__check_rep(rep, fs, scratch_pool));
 
   /* update resource usage counters */
   walker_baton->iteration_count++;
-  if (previous_hint != walker_baton->hint)
-    walker_baton->file_count++;
 
   return SVN_NO_ERROR;
 }
@@ -133,14 +113,13 @@ verify_rep_cache(svn_fs_t *fs,
       /* provide a baton to allow the reuse of open file handles between
          iterations (saves 2/3 of OS level file operations). */
       verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
-      baton->pool = svn_pool_create(pool);
       baton->last_notified_revision = SVN_INVALID_REVNUM;
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
 
       /* tell the user that we are now ready to do *something* */
       if (notify_func)
-        notify_func(SVN_INVALID_REVNUM, notify_baton, baton->pool);
+        notify_func(SVN_INVALID_REVNUM, notify_baton, pool);
 
       /* Do not attempt to walk the rep-cache database if its file does
          not exist,  since doing so would create it --- which may confuse
@@ -149,9 +128,6 @@ verify_rep_cache(svn_fs_t *fs,
                                            verify_walker, baton,
                                            cancel_func, cancel_baton,
                                            pool));
-
-      /* walker resource cleanup */
-      svn_pool_destroy(baton->pool);
     }
 
   return SVN_NO_ERROR;
