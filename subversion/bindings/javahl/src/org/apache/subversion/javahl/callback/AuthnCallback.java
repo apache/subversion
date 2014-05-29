@@ -39,23 +39,22 @@ import java.util.logging.Logger;
 public interface AuthnCallback
 {
     /**
-     * retrieve the username entered during the prompt call
-     * @return the username
+     * Abstract base class for callback results.
      */
-    public String getUsername();
+    public abstract class AuthnResult
+    {
+        protected boolean save = false;   // Allow saving the credentials
+        protected boolean trust = false;  // SSL server cert trust
+        protected String identity = null; // Username or client cert filename
+        protected String secret = null;   // Password or client cert passphrase
+    }
 
     /**
-     * retrieve the password entered during the prompt call
-     * @return the password
+     * The result type used by {@see #usernamePrompt}.
      */
-    public String getPassword();
-
-
-    /**
-     * The callback implementation stores the result of each method
-     * call in objects of this class.
-     */
-    public static class Result implements java.io.Serializable
+    public static final class UsernameResult
+        extends AuthnResult
+        implements java.io.Serializable
     {
         // Update the serialVersionUID when there is a incompatible change made to
         // this class.  See the java documentation for when a change is incompatible.
@@ -63,63 +62,93 @@ public interface AuthnCallback
         private static final long serialVersionUID = 1L;
 
         /**
-         * Call this method if the interaction with the user was
-         * interrupted (e.g., a GUI dialogue was cancelled).
-         * The return value of the callback is ignored if this flag is set.
+         * Set the username in the result.
+         * Assumes the result may not be stored permanently.
+         * @param username The username.
          */
-        public void cancel()
+        public UsernameResult(String username)
         {
-            cancelled = true;
+            identity = username;
         }
 
         /**
-         * Call this method to allow permanently storing the result of
-         * the callback in the credentials store.
+         * Set the username in the result.
+         * @param username The username.
+         * @param maySave Set if the result may be stored permanently.
          */
-        public void allowSave()
+        public UsernameResult(String username, boolean maySave)
         {
-            save = true;
+            save = maySave;
+            identity = username;
         }
-
-        /**
-         * Call this method to forbid storing the result of the
-         * callback in the credentials store. This is the default.
-         */
-        public void forbidSave()
-        {
-            save = false;
-        }
-
-        private boolean cancelled = false;
-        private boolean save = false;
     }
 
     /**
      * Ask for a username.
      * @param realm    The realm from which the question originates.
      * @param maySave  Indiceates whether saving credentials is allowed;
-     *                 if <code>false</code>, calling result.allowSave()
-     *                 will have no effect.
-     * @param result   The result of the callback.
-     * @return The username for the <code>realm</code>.
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
      */
-    public String usernamePrompt(String realm,
-                                 boolean maySave, Result result);
+    public UsernameResult usernamePrompt(String realm, boolean maySave);
+
 
     /**
-     * Ask for a password.
-     * @param realm    The realm from which the question originates.
-     * @param username The username for the realm.
-     * @param maySave  Indiceates whether saving credentials is allowed;
-     *                 if <code>false</code>, calling result.allowSave()
-     *                 will have no effect.
-     * @param result   The result of the callback.
-     * @return The password for <code>username</code> in the <code>realm</code>.
+     * The result type used by {@see #userPasswordPrompt}.
      */
-    public String passwordPrompt(String realm, String username,
-                                 boolean maySave, Result result);
+    public static final class UserPasswordResult
+        extends AuthnResult
+        implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Set the username and password in the result.
+         * Assumes the result may not be stored permanently.
+         * @param username The username.
+         * @param password The password.
+         */
+        public UserPasswordResult(String username, String password)
+        {
+            identity = username;
+            secret = password;
+        }
+
+        /**
+         * Set the username and password in the result.
+         * @param username The user name.
+         * @param password The password.
+         * @param maySave Set if the result may be stored permanently.
+         */
+        public UserPasswordResult(String username, String password,
+                                  boolean maySave)
+        {
+            save = maySave;
+            identity = username;
+            secret = password;
+        }
+    }
+
+    /**
+     * Ask for a username and password.
+     * @param realm    The realm from which the question originates.
+     * @param username The username for the realm, if known; may be <code>null</code>.
+     * @param maySave  Indiceates whether saving credentials is allowed;
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
+     */
+    public UserPasswordResult userPasswordPrompt(String realm, String username,
+                                                 boolean maySave);
 
 
+    /**
+     * Information about why parsing a server SSL certificate failed.
+     */
     public static class SSLServerCertFailures implements java.io.Serializable
     {
         // Update the serialVersionUID when there is a incompatible change made to
@@ -208,128 +237,239 @@ public interface AuthnCallback
         /**
          * @return The primary CN of the certificate.
          */
-        public String hostname()
+        public String getHostname()
         {
-            return cn;
+            return hostname;
         }
 
         /**
          * @return The text representation of the certificate fingerprint.
          */
-        public String fingerprint()
+        public String getFingerprint()
         {
-            return fpr;
+            return fingerprint;
         }
 
         /**
          * @return The text represent representation of the date from
          *         which the certificate is valid.
          */
-        public String validFrom()
+        public String getValidFrom()
         {
-            return startDate;
+            return validFrom;
         }
 
         /**
          * @return The text represent representation of the date after
          *         which the certificate is no longer valid.
          */
-        public String validUntil()
+        public String getValidUntil()
         {
-            return endDate;
+            return validUntil;
         }
 
         /**
          * @return The DN of the certificate issuer.
          */
-        public String issuer()
+        public String getIssuer()
         {
-            return dn;
+            return issuer;
         }
 
         /**
          * @return the Base64-encoded DER representation of the certificate.
          */
-        public String text()
+        public String getDER()
         {
             return der;
         }
 
         /* This private constructor is used by the native implementation. */
-        private SSLServerCertInfo(String cn, String fpr,
-                                  String startDate, String endDate,
-                                  String dn, String der)
+        private SSLServerCertInfo(String hostname, String fingerprint,
+                                  String validFrom, String validUntil,
+                                  String issuer, String der)
         {
-            this.cn = cn;
-            this.fpr = fpr;
-            this.startDate = startDate;
-            this.endDate = endDate;
-            this.dn = dn;
+            this.hostname = hostname;
+            this.fingerprint = fingerprint;
+            this.validFrom = validFrom;
+            this.validUntil = validUntil;
+            this.issuer = issuer;
             this.der = der;
         }
 
-        private String cn;
-        private String fpr;
-        private String startDate;
-        private String endDate;
-        private String dn;
+        private String hostname;
+        private String fingerprint;
+        private String validFrom;
+        private String validUntil;
+        private String issuer;
         private String der;
+    }
+
+    /**
+     * The result type used by {@see #sslServerTrustPrompt}.
+     */
+    public static final class SSLServerTrustResult
+        extends AuthnResult
+        implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Create a result that rejects the certificate.
+         */
+        public static SSLServerTrustResult reject()
+        {
+            return new SSLServerTrustResult(false, false);
+        }
+
+        /**
+         * Create a result that temporarily accepts the certificate,
+         * for the duration of the current connection.
+         */
+        public static SSLServerTrustResult acceptTemporarily()
+        {
+            return new SSLServerTrustResult(true, false);
+        }
+
+        /**
+         * Create a result that permanently accepts the certificate.
+         */
+        public static SSLServerTrustResult acceptPermanently()
+        {
+            return new SSLServerTrustResult(true, true);
+        }
+
+        private SSLServerTrustResult(boolean accept, boolean maySave)
+        {
+            save = maySave;
+            trust = accept;
+        }
     }
 
     /**
      * Ask if we trust the server certificate.
      * @param realm    The realm from which the question originates.
      * @param failures The result of parsing the certificate;
-     *                 if <code>null</code>, there were no failures..
+     *                 if <code>null</code>, there were no failures.
      * @param info     Information extracted from the certificate.
      * @param maySave  Indiceates whether saving credentials is allowed;
-     *                 if <code>false</code>, calling result.allowSave()
-     *                 will have no effect.
-     * @param result   The result of the callback.
-     * @return <code>false</code> to reject server certificate; otherwise,
-     *         {@see Result#forbidSave()} indicates that the cert should be
-     *         accepted for only one operation.
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
      */
-    public boolean sslServerTrustPrompt(String realm,
-                                        SSLServerCertFailures failures,
-                                        SSLServerCertInfo info,
-                                        boolean maySave, Result result);
+    public SSLServerTrustResult
+        sslServerTrustPrompt(String realm,
+                             SSLServerCertFailures failures,
+                             SSLServerCertInfo info,
+                             boolean maySave);
+
+
+    /**
+     * The result type used by {@see #sslClientCertPrompt}.
+     */
+    public static final class SSLClientCertResult
+        extends AuthnResult
+        implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Set the absolute path of the cerfiticate file in the result.
+         * Assumes the result may not be stored permanently.
+         * @param path The absolute path of the certificate.
+         */
+        public SSLClientCertResult(String path)
+        {
+            identity = path;
+        }
+
+        /**
+         * Set the absolute path of the cerfiticate file in the result.
+         * @param path The absolute path of the certificate.
+         * @param maySave Set if the result may be stored permanently.
+         */
+        public SSLClientCertResult(String path, boolean maySave)
+        {
+            save = maySave;
+            identity = path;
+        }
+    }
 
     /**
      * Ask for the (local) file name of a client SSL certificate.
      * @param realm    The realm from which the question originates.
      * @param maySave  Indiceates whether saving credentials is allowed;
-     *                 if <code>false</code>, calling result.allowSave()
-     *                 will have no effect.
-     * @param result   The result of the callback.
-     * @return The file name of a client certificate for <code>realm</code>.
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
      */
-    public String sslClientCertPrompt(String realm, boolean maySave,
-                                      Result result);
+    public SSLClientCertResult
+        sslClientCertPrompt(String realm, boolean maySave);
+
+
+    /**
+     * The result type used by {@see #sslClientCertPassphrasePrompt}.
+     */
+    public static final class SSLClientCertPassphraseResult
+        extends AuthnResult
+        implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Set the cerfiticate passphrase in the result.
+         * Assumes the result may not be stored permanently.
+         * @param passphrase The passphrase for decrypting the certificate.
+         */
+        public SSLClientCertPassphraseResult(String passphrase)
+        {
+            secret = passphrase;
+        }
+
+        /**
+         * Set the cerfiticate passphrase in the result.
+         * @param passphrase The passphrase for decrypting the certificate.
+         * @param maySave Set if the result may be stored permanently.
+         */
+        public SSLClientCertPassphraseResult(String passphrase, boolean maySave)
+        {
+            save = maySave;
+            secret = passphrase;
+        }
+    }
 
     /**
      * Ask for passphrase for decrypting a client SSL certificate.
      * @param realm    The realm from which the question originates.
      * @param maySave  Indiceates whether saving credentials is allowed;
-     *                 if <code>false</code>, calling result.allowSave()
-     *                 will have no effect.
-     * @param result   The result of the callback.
-     * @return The the passphrase for the client certificate.
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
      */
-    public String sslClientCertPassphrasePrompt(String realm, boolean maySave,
-                                                Result result);
+    public SSLClientCertPassphraseResult
+        sslClientCertPassphrasePrompt(String realm, boolean maySave);
+
 
     /**
      * Ask if a password may be stored on disk in plaintext.
      * @param realm    The realm from which the question originates.
      * @return <code>true</code> if the password may be stored in plaintext.
      */
-    public boolean storePlaintextPasswordPrompt(String realm);
+    public boolean allowStorePlaintextPassword(String realm);
 
     /**
      * Ask if a certificate passphrase may be stored on disk in plaintext.
      * @param realm    The realm from which the question originates.
      * @return <code>true</code> if the passphrase may be stored in plaintext.
      */
-    public boolean storePlaintextPassphrasePrompt(String realm);
+    public boolean allowStorePlaintextPassphrase(String realm);
 }
