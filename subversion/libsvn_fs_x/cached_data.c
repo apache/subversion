@@ -749,11 +749,12 @@ svn_fs_x__check_rep(representation_t *rep,
           && entry->type != SVN_FS_X__ITEM_TYPE_DIR_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_REPS_CONT))
     return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
-                              _("No representation found at offset %s "
-                                "for item %" APR_UINT64_T_FMT
-                                " in revision %ld"),
-                              apr_off_t_toa(pool, offset),
-                              rep->id.number, revision);
+                             _("No representation found at offset %s "
+                               "for item %s in revision %ld"),
+                             apr_off_t_toa(pool, offset),
+                             apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                                          rep->id.number),
+                             revision);
 
   return SVN_NO_ERROR;
 }

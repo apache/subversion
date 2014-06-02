@@ -594,9 +594,10 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                            _("L2P index page size  %" APR_UINT64_T_FMT
+                            _("L2P index page size  %s" 
                               " exceeds current limit of 2G entries"),
-                            ffd->l2p_page_size);
+                            apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
+                                         ffd->l2p_page_size));
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -654,10 +655,10 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
           /* store the mapping in our array */
           if (proto_entry.item_index > APR_INT32_MAX)
             return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                                    _("Item index %" APR_UINT64_T_FMT
-                                      " too large in l2p proto index for"
-                                      " revision %ld"),
-                                    proto_entry.item_index,
+                                    _("Item index %s too large "
+                                      "in l2p proto index for revision %ld"),
+                                    apr_psprintf(local_pool, "%" APR_UINT64_T_FMT, 
+                                                 proto_entry.item_index),
                                     revision + page_counts->nelts);
 
           idx = (int)proto_entry.item_index;
@@ -894,13 +895,14 @@ typedef struct l2p_page_info_baton_t
 
 /* Utility function that copies the info requested by BATON->REVISION and
  * BATON->ITEM_INDEX and from HEADER and PAGE_TABLE into the output fields
- * of *BATON.
+ * of *BATON.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 l2p_page_info_copy(l2p_page_info_baton_t *baton,
                    const l2p_header_t *header,
                    const l2p_page_table_entry_t *page_table,
-                   const apr_size_t *page_table_index)
+                   const apr_size_t *page_table_index,
+                   apr_pool_t *scratch_pool)
 {
   /* revision offset within the index file */
   apr_size_t rel_revision = baton->revision - header->first_revision;
@@ -932,10 +934,14 @@ l2p_page_info_copy(l2p_page_info_baton_t *baton,
                        * (last_entry - first_entry);
       if (baton->item_index >= max_item_index)
         return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                                _("Item index %" APR_UINT64_T_FMT
-                                  " exceeds l2p limit of %" APR_UINT64_T_FMT
-                                  " for revision %ld"),
-                                baton->item_index, max_item_index,
+                                _("Item index %s exceeds l2p limit "
+                                  "of %s for revision %ld"),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_FMT,
+                                             baton->item_index),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_FMT,
+                                             max_item_index),
                                 baton->revision);
 
       /* all pages are of the same size and full, except for the last one */
@@ -970,7 +976,8 @@ l2p_page_info_access_func(void **out,
                            (const void *const *)&header->page_table_index);
 
   /* copy the info */
-  return l2p_page_info_copy(baton, header, page_table, page_table_index);
+  return l2p_page_info_copy(baton, header, page_table, page_table_index,
+                            result_pool);
 }
 
 /* Get the page info requested in *BATON from FS and set the output fields
@@ -1002,7 +1009,7 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   /* read from disk, cache and copy the result */
   SVN_ERR(get_l2p_header_body(&result, rev_file, fs, baton->revision, pool));
   SVN_ERR(l2p_page_info_copy(baton, result, result->page_table,
-                             result->page_table_index));
+                             result->page_table_index, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1241,14 +1248,17 @@ typedef struct l2p_entry_baton_t
 static svn_error_t *
 l2p_page_get_entry(l2p_entry_baton_t *baton,
                    const l2p_page_t *page,
-                   const apr_uint64_t *offsets)
+                   const apr_uint64_t *offsets,
+                   apr_pool_t *scratch_pool)
 {
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                             _("Item index %" APR_UINT64_T_FMT
+                             _("Item index %s"
                                " too large in revision %ld"),
-                             baton->item_index, baton->revision);
+                             apr_psprintf(scratch_pool, "%" APR_UINT64_T_FMT,
+                                          baton->item_index),
+                             baton->revision);
 
   /* return the result */
   baton->offset = offsets[baton->page_offset];
@@ -1273,7 +1283,7 @@ l2p_entry_access_func(void **out,
     = svn_temp_deserializer__ptr(page, (const void *const *)&page->offsets);
 
   /* return the requested data */
-  return l2p_page_get_entry(baton, page, offsets);
+  return l2p_page_get_entry(baton, page, offsets, result_pool);
 }
 
 /* Using the log-to-phys indexes in FS, find the absolute offset in the
@@ -1338,7 +1348,7 @@ l2p_index_lookup(apr_off_t *offset,
 
       /* cache the page and extract the result we need */
       SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, pool));
-      SVN_ERR(l2p_page_get_entry(&page_baton, page, page->offsets));
+      SVN_ERR(l2p_page_get_entry(&page_baton, page, page->offsets, pool));
 
       /* prefetch pages from following and preceding revisions */
       pages = apr_array_make(pool, 16, sizeof(l2p_page_table_entry_t));
