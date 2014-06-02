@@ -124,6 +124,7 @@ private:
  * cache should therefore be kept to a reasonable minimum.
  *
  * @since New in 1.9.
+ * @todo ### Change implementation to load classes at first use.
  */
 class ClassCache
 {
@@ -161,6 +162,12 @@ class ClassCache
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(byte_buffer);
 
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(subversion_exception);
+
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_cb);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_result);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_failures);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_info);
+
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(external_item);
 
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_base_cb);
