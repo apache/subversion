@@ -36,6 +36,7 @@
 #include "jni_string_map.hpp"
 
 #include "../SubversionException.hpp"
+#include "../AuthnCallback.hpp"
 #include "../ExternalItem.hpp"
 #include "../EditorCallbacks.hpp"
 
@@ -120,6 +121,18 @@ ClassCache::ClassCache(Env env)
 
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
                                            ::JavaHL::SubversionException),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(authn_cb,
+                                           ::JavaHL::AuthnCallback),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        authn_result, ::JavaHL::AuthnCallback::AuthnResult),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        authn_ssl_server_cert_failures,
+        ::JavaHL::AuthnCallback::SSLServerCertFailures),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        authn_ssl_server_cert_info,
+        ::JavaHL::AuthnCallback::SSLServerCertInfo),
+
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
                                            ::JavaHL::ExternalItem),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_base_cb,
@@ -156,7 +169,13 @@ ClassCache::ClassCache(Env env)
   ByteChannel::ByteBuffer::static_init(env);
 
   // no-op: ::JavaHL::SubversionException::static_init(env);
+  ::JavaHL::AuthnCallback::static_init(env);
+  ::JavaHL::AuthnCallback::AuthnResult::static_init(env);
+  ::JavaHL::AuthnCallback::SSLServerCertFailures::static_init(env);
+  ::JavaHL::AuthnCallback::SSLServerCertInfo::static_init(env);
+
   ::JavaHL::ExternalItem::static_init(env);
+
   ::JavaHL::ProvideBaseCallback::static_init(env);
   ::JavaHL::ProvideBaseCallback::ReturnValue::static_init(env);
   ::JavaHL::ProvidePropsCallback::static_init(env);
