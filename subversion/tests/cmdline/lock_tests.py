@@ -2276,14 +2276,27 @@ def delete_locked_file_with_percent(sbox):
   "lock and delete a file called 'a %( ) .txt'"
 
   sbox.build()
+  wc_dir = sbox.wc_dir
 
   locked_filename = 'a %( ) .txt'
   locked_path = sbox.ospath(locked_filename)
   svntest.main.file_write(locked_path, "content\n")
   sbox.simple_add(locked_filename)
   sbox.simple_commit()
-  
+
   sbox.simple_lock(locked_filename)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'a %( ) .txt' : Item(status='  ', wc_rev='2', writelocked='K')
+  })
+  expected_infos = [
+      { 'Lock Owner' : 'jrandom' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.path('A %( ) .txt'),
+                                      '-rHEAD')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
   sbox.simple_rm(locked_filename)
 
   # XFAIL: With a 1.8.x client, this commit fails with:
