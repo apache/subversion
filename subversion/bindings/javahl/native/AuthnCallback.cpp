@@ -47,36 +47,36 @@ void AuthnCallback::static_init(::Java::Env env)
     env.GetMethodID(cls, "usernamePrompt",
                     "(Ljava/lang/String;Z)"
                     "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$UsernameResult");
+                    "$UsernameResult;");
 
   m_mid_user_password_prompt =
     env.GetMethodID(cls, "userPasswordPrompt",
-                    "(Ljava/lang/String;"
+                    "(Ljava/lang/String;Ljava/lang/String;Z)"
                     "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$SSLServerCertFailures"
-                    "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$SSLServerCertInfo"
-                    "Z)"
-                    "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$SSLServerTrustResult");
+                    "$UserPasswordResult;");
 
   m_mid_ssl_server_trust_prompt =
     env.GetMethodID(cls, "sslServerTrustPrompt",
-                    "(Ljava/lang/String;Ljava/lang/String;Z)"
+                    "(Ljava/lang/String;"
                     "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$UserPasswordResult");
+                    "$SSLServerCertFailures;"
+                    "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                    "$SSLServerCertInfo;"
+                    "Z)"
+                    "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                    "$SSLServerTrustResult;");
 
   m_mid_ssl_client_cert_prompt =
     env.GetMethodID(cls, "sslClientCertPrompt",
                     "(Ljava/lang/String;Z)"
                     "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$SSLClientCertResult");
+                    "$SSLClientCertResult;");
 
   m_mid_ssl_client_cert_passphrase_prompt =
     env.GetMethodID(cls, "sslClientCertPassphrasePrompt",
                     "(Ljava/lang/String;Z)"
                     "L"JAVA_PACKAGE"/callback/AuthnCallback"
-                    "$SSLClientCertPassphraseResult");
+                    "$SSLClientCertPassphraseResult;");
 
   m_mid_allow_store_plaintext_password =
     env.GetMethodID(cls, "allowStorePlaintextPassword",
@@ -132,7 +132,7 @@ AuthnCallback::SSLServerCertFailures::SSLServerCertFailures(
 
 // Class JavaHL::AuthnCallback::SSLServerCertInfo
 const char* const AuthnCallback::SSLServerCertInfo::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertFailures";
+  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertInfo";
 
 ::Java::MethodID AuthnCallback::SSLServerCertInfo::m_mid_ctor;
 
