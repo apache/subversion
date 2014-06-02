@@ -2293,7 +2293,7 @@ def delete_locked_file_with_percent(sbox):
   expected_infos = [
       { 'Lock Owner' : 'jrandom' },
     ]
-  svntest.actions.run_and_verify_info(expected_infos, sbox.path('A %( ) .txt'),
+  svntest.actions.run_and_verify_info(expected_infos, sbox.path('a %( ) .txt'),
                                       '-rHEAD')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
