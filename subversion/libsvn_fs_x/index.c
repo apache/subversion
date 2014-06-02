@@ -719,9 +719,10 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                            _("L2P index page size  %" APR_UINT64_T_FMT
+                            _("L2P index page size  %s" 
                               " exceeds current limit of 2G entries"),
-                            ffd->l2p_page_size);
+                            apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
+                                         ffd->l2p_page_size));
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -781,10 +782,11 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
 
           if (proto_entry.item_index > APR_INT32_MAX)
             return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                                    _("Item index %" APR_UINT64_T_FMT
-                                      " too large in l2p proto index for"
-                                      " revision %ld"),
-                                    proto_entry.item_index,
+                                    _("Item index %s too large "
+                                      "in l2p proto index for revision %ld"),
+                                    apr_psprintf(local_pool,
+                                                 "%" APR_UINT64_T_FMT,
+                                                proto_entry.item_index),
                                     revision + page_counts->nelts);
 
           idx = (int)proto_entry.item_index;
@@ -901,13 +903,14 @@ typedef struct l2p_page_info_baton_t
 
 /* Utility function that copies the info requested by BATON->REVISION and
  * BATON->ITEM_INDEX and from HEADER and PAGE_TABLE into the output fields
- * of *BATON.
+ * of *BATON.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 l2p_header_copy(l2p_page_info_baton_t *baton,
                 const l2p_header_t *header,
                 const l2p_page_table_entry_t *page_table,
-                const apr_size_t *page_table_index)
+                const apr_size_t *page_table_index,
+                apr_pool_t *scratch_pool)
 {
   /* revision offset within the index file */
   apr_size_t rel_revision = baton->revision - header->first_revision;
@@ -939,10 +942,14 @@ l2p_header_copy(l2p_page_info_baton_t *baton,
                        * (last_entry - first_entry);
       if (baton->item_index >= max_item_index)
         return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                                _("Item index %" APR_UINT64_T_FMT
-                                  " exceeds l2p limit of %" APR_UINT64_T_FMT
-                                  " for revision %ld"),
-                                baton->item_index, max_item_index,
+                                _("Item index %s exceeds l2p limit "
+                                  "of %s for revision %ld"),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_FMT,
+                                             baton->item_index),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_FMT,
+                                             max_item_index),
                                 baton->revision);
 
       /* all pages are of the same size and full, except for the last one */
@@ -977,7 +984,8 @@ l2p_header_access_func(void **out,
                            (const void *const *)&header->page_table_index);
 
   /* copy the info */
-  return l2p_header_copy(baton, header, page_table, page_table_index);
+  return l2p_header_copy(baton, header, page_table, page_table_index,
+                         result_pool);
 }
 
 /* Read COUNT run-length-encoded (see rle_array) uint64 from STREAM and
@@ -1139,7 +1147,7 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   /* read from disk, cache and copy the result */
   SVN_ERR(get_l2p_header_body(&result, stream, fs, baton->revision, pool));
   SVN_ERR(l2p_header_copy(baton, result, result->page_table,
-                          result->page_table_index));
+                          result->page_table_index, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1285,11 +1293,11 @@ l2p_page_get_offset(l2p_page_baton_t *baton,
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                             apr_psprintf(pool,
-                                          _("Item index %%%s too large in"
-                                            " revision %%ld"),
-                                          APR_UINT64_T_FMT),
-                             baton->item_index, baton->revision);
+                             _("Item index %s too large in"
+                               " revision %ld"),
+                             apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                                          baton->item_index),
+                             baton->revision);
 
   /* return the result */
   baton->offset = offsets[baton->page_offset];
