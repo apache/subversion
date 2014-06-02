@@ -51,6 +51,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+#if defined(HAVE_TERMIOS_H)
+#include <termios.h>
+#endif
+
 /* Baton for functions in this file which implement svn_diff_output_fns_t. */
 struct file_merge_baton {
   /* The files being merged. */
