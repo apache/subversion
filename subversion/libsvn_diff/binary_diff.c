@@ -118,7 +118,7 @@ write_literal(svn_filesize_t uncompressed_size,
   do
     {
       char chunk[GIT_BASE85_CHUNKSIZE];
-      const char *next;
+      const unsigned char *next;
       int left;
 
       rd = sizeof(chunk);
@@ -134,7 +134,7 @@ write_literal(svn_filesize_t uncompressed_size,
       }
 
       left = rd;
-      next = chunk;
+      next = (void*)chunk;
       while (left)
       {
         char five[5];

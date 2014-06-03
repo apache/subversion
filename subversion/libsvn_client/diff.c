@@ -710,8 +710,29 @@ diff_content_changed(svn_boolean_t *wrote_header,
         {
           svn_stream_t *left_stream;
           svn_stream_t *right_stream;
+          const char *repos_relpath1;
+          const char *repos_relpath2;
 
-          /* ### We might miss some git headers? */
+          SVN_ERR(make_repos_relpath(&repos_relpath1, diff_relpath,
+                                      dwi->ddi.orig_path_1,
+                                      dwi->ddi.session_relpath,
+                                      dwi->wc_ctx,
+                                      dwi->ddi.anchor,
+                                      scratch_pool, scratch_pool));
+          SVN_ERR(make_repos_relpath(&repos_relpath2, diff_relpath,
+                                      dwi->ddi.orig_path_2,
+                                      dwi->ddi.session_relpath,
+                                      dwi->wc_ctx,
+                                      dwi->ddi.anchor,
+                                      scratch_pool, scratch_pool));
+          SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
+                                        operation,
+                                        repos_relpath1, repos_relpath2,
+                                        rev1, rev2,
+                                        copyfrom_path,
+                                        copyfrom_rev,
+                                        dwi->header_encoding,
+                                        scratch_pool));
 
           SVN_ERR(svn_stream_open_readonly(&left_stream, tmpfile1,
                                            scratch_pool, scratch_pool));
