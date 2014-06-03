@@ -749,7 +749,25 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_boolean_t display_resolved_conflicts,
                            apr_pool_t *pool);
 
-
+/** Creates a git-like binary diff hunk describing the differences between
+ * @a original and @a latest. It does this by either producing either the
+ * literal content of both versions in a compressed format, or by describing
+ * one way transforms.
+ *
+ * Either @a original or @a latest may be NULL to describe that the version
+ * didn't exist.
+ *
+ * Writes the ouput to @a output_stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_diff_output_binary(svn_stream_t *output_stream,
+                       svn_stream_t *original,
+                       svn_stream_t *latest,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool);
 
 /* Diffs on in-memory structures */
 

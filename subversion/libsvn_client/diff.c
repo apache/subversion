@@ -706,31 +706,50 @@ diff_content_changed(svn_boolean_t *wrote_header,
 
       /* ### Print git diff headers. */
 
-      SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               dwi->header_encoding, scratch_pool,
-               _("Cannot display: file marked as a binary type.%s"),
-               APR_EOL_STR));
-
-      if (mt1_binary && !mt2_binary)
-        SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                 dwi->header_encoding, scratch_pool,
-                 "svn:mime-type = %s" APR_EOL_STR, mimetype1));
-      else if (mt2_binary && !mt1_binary)
-        SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                 dwi->header_encoding, scratch_pool,
-                 "svn:mime-type = %s" APR_EOL_STR, mimetype2));
-      else if (mt1_binary && mt2_binary)
+      if (dwi->use_git_diff_format)
         {
-          if (strcmp(mimetype1, mimetype2) == 0)
+          svn_stream_t *left_stream;
+          svn_stream_t *right_stream;
+
+          /* ### We might miss some git headers? */
+
+          SVN_ERR(svn_stream_open_readonly(&left_stream, tmpfile1,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&right_stream, tmpfile2,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_diff_output_binary(outstream,
+                                         left_stream, right_stream,
+                                         dwi->cancel_func, dwi->cancel_baton,
+                                         scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                   dwi->header_encoding, scratch_pool,
+                   _("Cannot display: file marked as a binary type.%s"),
+                   APR_EOL_STR));
+
+          if (mt1_binary && !mt2_binary)
             SVN_ERR(svn_stream_printf_from_utf8(outstream,
                      dwi->header_encoding, scratch_pool,
-                     "svn:mime-type = %s" APR_EOL_STR,
-                     mimetype1));
-          else
+                     "svn:mime-type = %s" APR_EOL_STR, mimetype1));
+          else if (mt2_binary && !mt1_binary)
             SVN_ERR(svn_stream_printf_from_utf8(outstream,
                      dwi->header_encoding, scratch_pool,
-                     "svn:mime-type = (%s, %s)" APR_EOL_STR,
-                     mimetype1, mimetype2));
+                     "svn:mime-type = %s" APR_EOL_STR, mimetype2));
+          else if (mt1_binary && mt2_binary)
+            {
+              if (strcmp(mimetype1, mimetype2) == 0)
+                SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                         dwi->header_encoding, scratch_pool,
+                         "svn:mime-type = %s" APR_EOL_STR,
+                         mimetype1));
+              else
+                SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                         dwi->header_encoding, scratch_pool,
+                         "svn:mime-type = (%s, %s)" APR_EOL_STR,
+                         mimetype1, mimetype2));
+            }
         }
 
       /* Exit early. */
