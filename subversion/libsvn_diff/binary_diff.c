@@ -116,50 +116,51 @@ write_literal(svn_filesize_t uncompressed_size,
                             uncompressed_size));
 
   do
-  {
-    char chunk[GIT_BASE85_CHUNKSIZE];
-    rd = sizeof(chunk);
-    const char *next;
-    int left;
-
-    if (cancel_func)
-      SVN_ERR(cancel_func(cancel_baton));
-
-    SVN_ERR(svn_stream_read_full(compressed_data, chunk, &rd));
-
     {
-      apr_size_t one = 1;
-      SVN_ERR(svn_stream_write(output_stream, &b85lenstr[rd-1], &one));
-    }
+      char chunk[GIT_BASE85_CHUNKSIZE];
+      const char *next;
+      int left;
 
-    left = rd;
-    next = chunk;
-    while (left)
-    {
-      char five[5];
-      unsigned info = 0;
-      int n;
-      apr_size_t five_sz;
+      rd = sizeof(chunk);
 
-      /* Push 4 bytes into the 32 bit info, when available */
-      for (n = 24; n >= 0 && left; n -= 8, next++, left--)
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      SVN_ERR(svn_stream_read_full(compressed_data, chunk, &rd));
+
       {
-          info |= (*next) << n;
+        apr_size_t one = 1;
+        SVN_ERR(svn_stream_write(output_stream, &b85lenstr[rd-1], &one));
       }
 
-      /* Write out info as base85 */
-      for (n = 4; n >= 0; n--)
+      left = rd;
+      next = chunk;
+      while (left)
       {
-          five[n] = b85str[info % 85];
-          info /= 85;
+        char five[5];
+        unsigned info = 0;
+        int n;
+        apr_size_t five_sz;
+
+        /* Push 4 bytes into the 32 bit info, when available */
+        for (n = 24; n >= 0 && left; n -= 8, next++, left--)
+        {
+            info |= (*next) << n;
+        }
+
+        /* Write out info as base85 */
+        for (n = 4; n >= 0; n--)
+        {
+            five[n] = b85str[info % 85];
+            info /= 85;
+        }
+
+        five_sz = 5;
+        SVN_ERR(svn_stream_write(output_stream, five, &five_sz));
       }
 
-      five_sz = 5;
-      SVN_ERR(svn_stream_write(output_stream, five, &five_sz));
+      SVN_ERR(svn_stream_puts(output_stream, APR_EOL_STR));
     }
-
-    SVN_ERR(svn_stream_puts(output_stream, APR_EOL_STR));
-  }
   while (rd == GIT_BASE85_CHUNKSIZE);
 
   return SVN_NO_ERROR;
