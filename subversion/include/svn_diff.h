@@ -55,6 +55,7 @@
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
 #include "svn_string.h"
+#include "svn_mergeinfo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1141,6 +1142,14 @@ typedef struct svn_patch_t {
   /**
    * Indicates whether the patch is being interpreted in reverse. */
   svn_boolean_t reverse;
+
+  /**
+   * Mergeinfo parsed from svn:mergeinfo diff data, with one entry for
+   * forward merges and one for reverse merges.
+   * Either entry can be @c NULL if no such merges are part of the diff.
+   * @since New in 1.9. */
+  svn_mergeinfo_t mergeinfo;
+  svn_mergeinfo_t reverse_mergeinfo;
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.
