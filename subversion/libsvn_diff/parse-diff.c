@@ -490,8 +490,6 @@ parse_mergeinfo(svn_boolean_t *found_mergeinfo,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  apr_uint64_t reverse_merges = hunk->original_length;
-  apr_uint64_t forward_merges = hunk->modified_length;
   char *slash = strchr(line->data, '/');
   char *colon = strrchr(line->data, ':');
 
@@ -537,23 +535,18 @@ parse_mergeinfo(svn_boolean_t *found_mergeinfo,
                             
       if (mergeinfo)
         {
-          svn_boolean_t is_forward_merge = TRUE;
-
-          if (reverse_merges > 0)
+          if (hunk->original_length > 0) /* reverse merges */
             {
               if (patch->reverse_mergeinfo == NULL)
                 patch->reverse_mergeinfo = mergeinfo;
-              
-              is_forward_merge = (apr_hash_count(patch->reverse_mergeinfo)
-                                  > reverse_merges);
-              if (!is_forward_merge)
+              else
                 SVN_ERR(svn_mergeinfo_merge2(patch->reverse_mergeinfo,
                                              mergeinfo,
                                              result_pool,
                                              scratch_pool));
+              hunk->original_length--;
             }
-
-          if (forward_merges > 0 && is_forward_merge)
+          else if (hunk->modified_length > 0) /* forward merges */
             {
               if (patch->mergeinfo == NULL)
                 patch->mergeinfo = mergeinfo;
@@ -562,6 +555,7 @@ parse_mergeinfo(svn_boolean_t *found_mergeinfo,
                                              mergeinfo,
                                              result_pool,
                                              scratch_pool));
+              hunk->modified_length--;
             }
 
           *found_mergeinfo = TRUE;
