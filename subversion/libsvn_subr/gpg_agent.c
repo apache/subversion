@@ -72,6 +72,8 @@
 #include "svn_cmdline.h"
 #include "svn_checksum.h"
 #include "svn_string.h"
+#include "svn_user.h"
+#include "svn_dirent_uri.h"
 
 #include "auth.h"
 #include "private/svn_auth_private.h"
@@ -185,17 +187,30 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
 
   *new_sd = -1;
 
+  /* This implements the method of finding the socket as described in
+   * the gpg-agent man page under the --use-standard-socket option.
+   * The manage page misleadingly says the standard socket is 
+   * "named 'S.gpg-agent' located in the home directory."  The standard
+   * socket path is actually in the .gnupg directory in the home directory,
+   * i.e. ~/.gnupg/S.gpg-agent */
   gpg_agent_info = getenv("GPG_AGENT_INFO");
   if (gpg_agent_info != NULL)
     {
       apr_array_header_t *socket_details;
 
+      /* For reference GPG_AGENT_INFO consists of 3 : separated fields.
+       * The path to the socket, the pid of the gpg-agent process and 
+       * finally the version of the protocol the agent talks. */
       socket_details = svn_cstring_split(gpg_agent_info, ":", TRUE,
                                          pool);
       socket_name = APR_ARRAY_IDX(socket_details, 0, const char *);
     }
   else
-    return SVN_NO_ERROR;
+    {
+      const char *homedir = svn_user_get_homedir(pool);
+      socket_name = svn_dirent_join_many(pool, homedir, ".gnupg",
+                                         "S.gpg-agent", SVN_VA_NULL);
+    }
 
   if (socket_name != NULL)
     {
