@@ -1017,7 +1017,9 @@ svn_client__handle_externals(apr_hash_t *externals_new,
 
         parent_abspath = svn_dirent_dirname(parent_abspath, iterpool);
         SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, parent_abspath,
-                                  TRUE, FALSE, iterpool));
+                                  FALSE /* show_deleted*/,
+                                  FALSE /* show_hidden */,
+                                  iterpool));
         if (kind == svn_node_none)
           {
             svn_error_t *err;
@@ -1026,7 +1028,12 @@ svn_client__handle_externals(apr_hash_t *externals_new,
             if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
               {
                 svn_error_clear(err);
-                break;
+                break; /* No parents to delete */
+              }
+            else if (err && APR_STATUS_IS_ENOTDIR(err->apr_err))
+              {
+                svn_error_clear(err);
+                /* Fall through; parent dir might be unversioned */
               }
             else
               SVN_ERR(err);
