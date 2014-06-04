@@ -3413,7 +3413,6 @@ def update_external_peg_rev(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'status', '-u', sbox.wc_dir)
 
-@XFail()
 def update_deletes_file_external(sbox):
   "update deletes a file external"
 
