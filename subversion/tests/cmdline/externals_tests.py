@@ -3419,7 +3419,6 @@ def update_deletes_file_external(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  other_wc_dir  = sbox.add_wc_path('other')
 
   sbox.simple_propset('svn:externals', '../D/gamma gamma', 'A/C')
   sbox.simple_commit()
