@@ -211,7 +211,7 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
 
       if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         {
-          bye_gpg_agent(sd);
+          close(sd);
           return SVN_NO_ERROR;
         }
     }
