@@ -157,6 +157,17 @@ send_option(int sd, char *buf, size_t n, const char *option, const char *value,
   return (strncmp(buf, "OK", 2) == 0);
 }
 
+/* Send the BYE command and disconnect from the gpg-agent.  Doing this avoids
+ * gpg-agent emitting a "Connection reset by peer" log message with some
+ * versions of gpg-agent. */
+static void
+bye_gpg_agent(int sd)
+{
+  /* don't bother to check the result of the write, it either worked or it
+   * didn't, but either way we're closing. */
+  write(sd, "BYE\n", 4);
+  close(sd);
+}
 
 /* Locate a running GPG Agent, and return an open file descriptor
  * for communication with the agent in *NEW_SD. If no running agent
@@ -200,7 +211,7 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
 
       if (connect(sd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         {
-          close(sd);
+          bye_gpg_agent(sd);
           return SVN_NO_ERROR;
         }
     }
@@ -211,13 +222,13 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
   buffer = apr_palloc(pool, BUFFER_SIZE);
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
 
   if (strncmp(buffer, "OK", 2) != 0)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
 
@@ -227,19 +238,19 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
   request = "GETINFO socket_name\n";
   if (write(sd, request, strlen(request)) == -1)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   if (strncmp(buffer, "D", 1) == 0)
     p = &buffer[2];
   if (!p)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   ep = strchr(p, '\n');
@@ -247,18 +258,18 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
     *ep = '\0';
   if (strcmp(socket_name, p) != 0)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   /* The agent will terminate its response with "OK". */
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   if (strncmp(buffer, "OK", 2) != 0)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
 
@@ -306,7 +317,7 @@ password_get_gpg_agent(svn_boolean_t *done,
     {
       if (!send_option(sd, buffer, BUFFER_SIZE, "ttyname", tty_name, pool))
         {
-          close(sd);
+          bye_gpg_agent(sd);
           return SVN_NO_ERROR;
         }
     }
@@ -317,7 +328,7 @@ password_get_gpg_agent(svn_boolean_t *done,
     {
       if (!send_option(sd, buffer, BUFFER_SIZE, "ttytype", tty_type, pool))
         {
-          close(sd);
+          bye_gpg_agent(sd);
           return SVN_NO_ERROR;
         }
     }
@@ -334,7 +345,7 @@ password_get_gpg_agent(svn_boolean_t *done,
     {
       if (!send_option(sd, buffer, BUFFER_SIZE, "lc-ctype", lc_ctype, pool))
         {
-          close(sd);
+          bye_gpg_agent(sd);
           return SVN_NO_ERROR;
         }
     }
@@ -345,7 +356,7 @@ password_get_gpg_agent(svn_boolean_t *done,
     {
       if (!send_option(sd, buffer, BUFFER_SIZE, "display", display, pool))
         {
-          close(sd);
+          bye_gpg_agent(sd);
           return SVN_NO_ERROR;
         }
     }
@@ -369,16 +380,16 @@ password_get_gpg_agent(svn_boolean_t *done,
 
   if (write(sd, request, strlen(request)) == -1)
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
   if (!receive_from_gpg_agent(sd, buffer, BUFFER_SIZE))
     {
-      close(sd);
+      bye_gpg_agent(sd);
       return SVN_NO_ERROR;
     }
 
-  close(sd);
+  bye_gpg_agent(sd);
 
   if (strncmp(buffer, "ERR", 3) == 0)
     return SVN_NO_ERROR;
@@ -425,7 +436,7 @@ password_set_gpg_agent(svn_boolean_t *done,
   if (sd == -1)
     return SVN_NO_ERROR;
 
-  close(sd);
+  bye_gpg_agent(sd);
   *done = TRUE;
 
   return SVN_NO_ERROR;
