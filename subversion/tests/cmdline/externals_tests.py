@@ -3413,6 +3413,40 @@ def update_external_peg_rev(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'status', '-u', sbox.wc_dir)
 
+@XFail()
+def update_deletes_file_external(sbox):
+  "update deletes a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  other_wc_dir  = sbox.add_wc_path('other')
+
+  sbox.simple_propset('svn:externals', '../D/gamma gamma', 'A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     '-m', 'create branch',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/A_copy')
+
+  # Update the working copy
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Remove the branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     '-m', 'remove branch',
+                                     sbox.repo_url + '/A_copy')
+
+  # As of r1448345, this update fails:
+  # E000002: Can't remove directory '.../A_copy/C': No such file or directory
+  sbox.simple_update()
+  
+
 ########################################################################
 # Run the tests
 
@@ -3469,6 +3503,7 @@ test_list = [ None,
               file_external_unversioned_obstruction,
               file_external_versioned_obstruction,
               update_external_peg_rev,
+              update_deletes_file_external
              ]
 
 if __name__ == '__main__':
