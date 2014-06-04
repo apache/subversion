@@ -35,6 +35,8 @@
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
+#include "svn_ctype.h"
+#include "svn_mergeinfo.h"
 
 #include "private/svn_eol_private.h"
 #include "private/svn_dep_compat.h"
@@ -448,6 +450,127 @@ parse_prop_name(const char **prop_name, const char *header,
   return SVN_NO_ERROR;
 }
 
+
+/* A helper function to parse svn:mergeinfo diffs.
+ *
+ * These diffs use a special pretty-print format, for instance:
+ *
+ * Added: svn:mergeinfo
+ * ## -0,0 +0,1 ##
+ *   Merged /trunk:r2-3
+ *
+ * The hunk header has the following format:
+ * ## -0,NUMBER_OF_REVERSE_MERGES +0,NUMBER_OF_FORWARD_MERGES ##
+ *
+ * At this point, the number of reverse merges has already been
+ * parsed into HUNK->ORIGINAL_LENGTH, and the number of forward
+ * merges has been parsed into HUNK->MODIFIED_LENGTH.
+ *
+ * The header is followed by a list of mergeinfo, one path per line.
+ * This function parses such lines. Lines describing reverse merges
+ * appear first, and then all lines describing forward merges appear.
+ *
+ * Parts of the line are affected by i18n. The words 'Merged'
+ * and 'Reverse-merged' can appear in any language and at any
+ * position within the line. We can only assume that a leading
+ * '/' starts the merge source path, the path is followed by
+ * ":r", which in turn is followed by a mergeinfo revision range,
+ *  which is terminated by whitespace or end-of-string.
+ *
+ * If the current line meets the above criteria and we're able
+ * to parse valid mergeinfo from it, the resulting mergeinfo
+ * is added to patch->mergeinfo or patch->reverse_mergeinfo,
+ * and we proceed to the next line.
+ */
+static svn_error_t *
+parse_mergeinfo(svn_boolean_t *found_mergeinfo,
+                svn_stringbuf_t *line,
+                svn_diff_hunk_t *hunk,
+                svn_patch_t *patch,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_uint64_t reverse_merges = hunk->original_length;
+  apr_uint64_t forward_merges = hunk->modified_length;
+  char *slash = strchr(line->data, '/');
+  char *colon = strrchr(line->data, ':');
+
+  *found_mergeinfo = FALSE;
+
+  if (slash && colon && colon[1] == 'r' && slash < colon)
+    {
+      svn_stringbuf_t *input;
+      svn_mergeinfo_t mergeinfo = NULL;
+      char *s;
+      svn_error_t *err;
+
+      input = svn_stringbuf_create_ensure(line->len, scratch_pool);
+
+      /* Copy the merge source path + colon */
+      s = slash;
+      while (s <= colon)
+        {
+          svn_stringbuf_appendbyte(input, *s);
+          s++;
+        }
+
+      /* skip 'r' after colon */
+      s++;
+
+      /* Copy the revision range. */
+      while (s < line->data + line->len)
+        {
+          if (svn_ctype_isspace(*s))
+            break;
+          svn_stringbuf_appendbyte(input, *s);
+          s++;
+        }
+
+      err = svn_mergeinfo_parse(&mergeinfo, input->data, result_pool);
+      if (err && err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
+        {
+          svn_error_clear(err);
+          mergeinfo = NULL;
+        }
+      else
+        SVN_ERR(err);
+                            
+      if (mergeinfo)
+        {
+          svn_boolean_t is_forward_merge = TRUE;
+
+          if (reverse_merges > 0)
+            {
+              if (patch->reverse_mergeinfo == NULL)
+                patch->reverse_mergeinfo = mergeinfo;
+              
+              is_forward_merge = (apr_hash_count(patch->reverse_mergeinfo)
+                                  > reverse_merges);
+              if (!is_forward_merge)
+                SVN_ERR(svn_mergeinfo_merge2(patch->reverse_mergeinfo,
+                                             mergeinfo,
+                                             result_pool,
+                                             scratch_pool));
+            }
+
+          if (forward_merges > 0 && is_forward_merge)
+            {
+              if (patch->mergeinfo == NULL)
+                patch->mergeinfo = mergeinfo;
+              else
+                SVN_ERR(svn_mergeinfo_merge2(patch->mergeinfo,
+                                             mergeinfo,
+                                             result_pool,
+                                             scratch_pool));
+            }
+
+          *found_mergeinfo = TRUE;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the next *HUNK from a PATCH in APR_FILE.
  * If no hunk can be found, set *HUNK to NULL.
  * Set IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK
@@ -575,6 +698,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           continue;
+        }
+
+      if (in_hunk && *is_property && *prop_name &&
+          strcmp(*prop_name, SVN_PROP_MERGEINFO) == 0)
+        {
+          svn_boolean_t found_mergeinfo;
+
+          SVN_ERR(parse_mergeinfo(&found_mergeinfo, line, *hunk, patch,
+                                  result_pool, iterpool));
+          if (found_mergeinfo)
+            continue; /* Proceed to the next line in the patch. */
         }
 
       if (in_hunk)
@@ -1169,6 +1303,13 @@ parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
             prop_name = last_prop_name;
           else
             last_prop_name = prop_name;
+
+          /* Skip svn:mergeinfo properties.
+           * Mergeinfo data cannot be represented as a hunk and
+           * is therefore stored in PATCH itself. */
+          if (strcmp(prop_name, SVN_PROP_MERGEINFO) == 0)
+            continue;
+
           SVN_ERR(add_property_hunk(patch, prop_name, hunk, prop_operation,
                                     result_pool));
         }
