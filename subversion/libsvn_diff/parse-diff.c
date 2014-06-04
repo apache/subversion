@@ -537,24 +537,50 @@ parse_mergeinfo(svn_boolean_t *found_mergeinfo,
         {
           if (hunk->original_length > 0) /* reverse merges */
             {
-              if (patch->reverse_mergeinfo == NULL)
-                patch->reverse_mergeinfo = mergeinfo;
+              if (patch->reverse)
+                {
+                  if (patch->mergeinfo == NULL)
+                    patch->mergeinfo = mergeinfo;
+                  else
+                    SVN_ERR(svn_mergeinfo_merge2(patch->mergeinfo,
+                                                 mergeinfo,
+                                                 result_pool,
+                                                 scratch_pool));
+                }
               else
-                SVN_ERR(svn_mergeinfo_merge2(patch->reverse_mergeinfo,
-                                             mergeinfo,
-                                             result_pool,
-                                             scratch_pool));
+                {
+                  if (patch->reverse_mergeinfo == NULL)
+                    patch->reverse_mergeinfo = mergeinfo;
+                  else
+                    SVN_ERR(svn_mergeinfo_merge2(patch->reverse_mergeinfo,
+                                                 mergeinfo,
+                                                 result_pool,
+                                                 scratch_pool));
+                }
               hunk->original_length--;
             }
           else if (hunk->modified_length > 0) /* forward merges */
             {
-              if (patch->mergeinfo == NULL)
-                patch->mergeinfo = mergeinfo;
+              if (patch->reverse)
+                {
+                  if (patch->reverse_mergeinfo == NULL)
+                    patch->reverse_mergeinfo = mergeinfo;
+                  else
+                    SVN_ERR(svn_mergeinfo_merge2(patch->reverse_mergeinfo,
+                                                 mergeinfo,
+                                                 result_pool,
+                                                 scratch_pool));
+                }
               else
-                SVN_ERR(svn_mergeinfo_merge2(patch->mergeinfo,
-                                             mergeinfo,
-                                             result_pool,
-                                             scratch_pool));
+                {
+                  if (patch->mergeinfo == NULL)
+                    patch->mergeinfo = mergeinfo;
+                  else
+                    SVN_ERR(svn_mergeinfo_merge2(patch->mergeinfo,
+                                                 mergeinfo,
+                                                 result_pool,
+                                                 scratch_pool));
+                }
               hunk->modified_length--;
             }
 
