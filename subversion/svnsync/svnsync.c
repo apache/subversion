@@ -238,7 +238,7 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "svnsync instance.")},
     {"memory-cache-size", 'M', 1,
-                       N_("size of the extra in-memory cache in MB used to"
+                       N_("size of the extra in-memory cache in MB used to\n"
                           "                             "
                           "minimize operations for local 'file' scheme.\n")},
     {"version",        svnsync_opt_version, 0,
