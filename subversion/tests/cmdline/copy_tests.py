@@ -1039,8 +1039,8 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-  # Validate the merge info of the copy destination (we expect none)
-  svntest.actions.run_and_verify_svn(None, [], [],
+  # Validate the mergeinfo of the copy destination (we expect none)
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(D_dir, 'B'))
 
@@ -2737,8 +2737,8 @@ def copy_added_paths_to_URL(sbox):
                                      'cp', '-m', '',
                                      upsilon_path, upsilon_copy_URL)
 
-  # Validate the merge info of the copy destination (we expect none).
-  svntest.actions.run_and_verify_svn(None, [], [],
+  # Validate the mergeinfo of the copy destination (we expect none).
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget',
                                      SVN_PROP_MERGEINFO, upsilon_copy_URL)
 
@@ -3428,7 +3428,7 @@ def copy_peg_rev_url(sbox):
                                      sigma_url + '@', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO, sigma_url)
 
   # Update to HEAD and verify disk contents

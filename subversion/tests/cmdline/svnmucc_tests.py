@@ -353,7 +353,8 @@ def propset_root_internal(sbox, target):
                                          '-m', 'log msg',
                                          'propdel', 'foo',
                                          target)
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [],
+                                     '.*W200017: Property.*not found',
                                      'propget', '--strict', 'foo',
                                      target)
 

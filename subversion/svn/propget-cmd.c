@@ -320,6 +320,7 @@ svn_cl__propget(apr_getopt_t *os,
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   svn_stream_t *out;
+  svn_boolean_t warned = FALSE;
 
   if (opt_state->verbose && (opt_state->revprop || opt_state->strict
                              || opt_state->xml))
@@ -480,6 +481,21 @@ svn_cl__propget(apr_getopt_t *os,
           omit_newline = opt_state->strict;
           like_proplist = opt_state->verbose && !opt_state->strict;
 
+          /* If there are no properties, and exactly one node was queried,
+             then warn. */
+          if (opt_state->depth == svn_depth_empty
+              && !opt_state->show_inherited_props
+              && apr_hash_count(props) == 0)
+            {
+              svn_error_t *err;
+              err = svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+                                      _("Property '%s' not found on '%s'"), 
+                                      pname_utf8, target);
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(err);
+              warned = TRUE;
+            }
+
           if (opt_state->xml)
             SVN_ERR(print_properties_xml(
               pname_utf8, props,
@@ -499,6 +515,9 @@ svn_cl__propget(apr_getopt_t *os,
 
       svn_pool_destroy(subpool);
     }
+
+  if (warned)
+    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
 
   return SVN_NO_ERROR;
 }

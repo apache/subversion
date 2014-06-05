@@ -2528,7 +2528,9 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Verify that merge results in no subtree mergeinfo
-  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+  expected_stderr = '.*W200017: Property.*not found'
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/A/B2/E')
 
   # Merge trunk to branch-2
@@ -2537,7 +2539,8 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Verify that there is still no subtree mergeinfo
-  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/A/B2/E')
 
   # Reintegrate branch-2 to trunk, this fails in 1.6.x from 1.6.13.

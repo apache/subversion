@@ -355,7 +355,7 @@ def textual_merges_galore(sbox):
     svntest.tree.detect_conflict_files, list(tau_conflict_support_files))
 
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(other_wc,
                                                   "A", "D", "G", "rho"))
@@ -4895,7 +4895,7 @@ def mergeinfo_elision(sbox):
   svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
 
   # Once again A_COPY/B/E/beta has no mergeinfo.
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      beta_COPY_path)
 
@@ -5978,7 +5978,8 @@ def empty_mergeinfo(sbox):
                                      A_COPY_path)
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
   # Check that A_COPY's mergeinfo is gone.
-  svntest.actions.run_and_verify_svn(None, [], [], 'pg', 'svn:mergeinfo',
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
+                                     'pg', 'svn:mergeinfo',
                                      A_COPY_path)
 
 #----------------------------------------------------------------------

@@ -1601,12 +1601,13 @@ def props_over_time(sbox):
         pget_expected = expected
         if pget_expected:
           pget_expected = [ pget_expected + "\n" ]
+        expected_err = [] if expected else '.*W200017: Property.*not found.*'
         if op_rev != 0:
-          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+          svntest.actions.run_and_verify_svn(None, pget_expected, expected_err,
                                              'propget', 'revision', peg_path,
                                              '-r', str(op_rev))
         else:
-          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+          svntest.actions.run_and_verify_svn(None, pget_expected, expected_err,
                                              'propget', 'revision', peg_path)
 
         ### Test 'svn proplist -v'
