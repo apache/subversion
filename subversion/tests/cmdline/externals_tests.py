@@ -3029,9 +3029,9 @@ def duplicate_targets(sbox):
     'svn:externals', '^/A/B/E ././barf\n^/A/D/G .//barf', wc_dir)
 
   # svn pg svn:externals .
-  expected_stdout = []
+  expected_stderr = '.*W200017: Property.*not found'
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'pg',
     'svn:externals', wc_dir)
 
   # svn ps svn:externals "^/A/B/E ok" .
