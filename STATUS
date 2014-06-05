@@ -222,6 +222,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+  * r1600331, r1600348, 1600368, r1600563, r1600781
+    Improve gpg-agent support.
+    Justification: Avoids spurious error logs, supports standard socket
+      locations and removes double prompts from pinentry.  Without these
+      changes it's far less desireable to use.
+    Notes:
+      Branch is needed since SVN_VA_NULL is not available in 1.8.x.
+      This does change the behavior of gpg-agent from prompting twice
+      for the password with pinentry to confirm the user hasn't entered
+      an incorrect password to instead clearing bad cached passwords and
+      reprompting.  See my email on the subject: https://mail-archives.apache.org/mod_mbox/subversion-dev/201406.mbox/%3C538D2BE5.3070706%40reser.org%3E
+    Branch:
+      ^/subversion/branches/1.8.x-gpg-agent
+    Votes:
+      +1: breser
+
 Veto-blocked changes:
 =====================
 
