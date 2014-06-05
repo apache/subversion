@@ -208,6 +208,10 @@ find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
   else
     {
       const char *homedir = svn_user_get_homedir(pool);
+
+      if (!homedir)
+        return SVN_NO_ERROR;
+
       socket_name = svn_dirent_join_many(pool, homedir, ".gnupg",
                                          "S.gpg-agent", SVN_VA_NULL);
     }
