@@ -212,6 +212,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1600311, r1600315, r1600323, r1600393
+   Properly delete ancestor directories of externals when removing the
+   external by changing the svn:externals value.
+   Justification:
+     Regression against 1.7.x
+   Branch:
+     ^/subversion/branches/1.8.x-rm-external-dir
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
