@@ -101,23 +101,16 @@ RemoteSession::open(jint jretryAttempts,
     return NULL;
   env->DeleteLocalRef(jpassword);
 
-  Prompter *prompter = NULL;
-  if (jprompter != NULL)
-    {
-      prompter = Prompter::makeCPrompter(jprompter);
-      if (JNIUtil::isExceptionThrown())
-        return NULL;
-    }
+  Prompter::UniquePtr prompter(CompatPrompter::create(jprompter));
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
       usernameStr, passwordStr, prompter, jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
-    {
-      delete prompter;
-      jremoteSession = NULL;
-    }
+    jremoteSession = NULL;
   return jremoteSession;
 }
 
@@ -126,7 +119,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter*& prompter, jobject jprogress,
+                    Prompter::UniquePtr prompter, jobject jprogress,
                     jobject jcfgcb, jobject jtunnelcb)
 {
   RemoteSession* session = new RemoteSession(
@@ -193,7 +186,7 @@ RemoteSession::RemoteSession(int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
                              const char*  username, const char*  password,
-                             Prompter*& prompter,
+                             Prompter::UniquePtr prompter,
                              jobject jcfgcb, jobject jtunnelcb)
   : m_session(NULL), m_context(NULL)
 {
@@ -201,14 +194,6 @@ RemoteSession::RemoteSession(int retryAttempts,
       pool, configDirectory, username, password, prompter, jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-
-  // Avoid double-free in RemoteSession::open and
-  // SVNClient::openRemoteSession if the svn_ra_open call fails. The
-  // prompter object is now owned by m_context.
-  //
-  // FIXME: Should be using smart pointers, really -- but JavaHL
-  // currently doesn't. Future enhancements FTW.
-  prompter = NULL;
 
   const char* corrected_url = NULL;
   bool cycle_detected = false;

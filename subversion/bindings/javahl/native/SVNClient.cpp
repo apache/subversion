@@ -1509,18 +1509,15 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
 
     /* Decouple the RemoteSession's context from SVNClient's context
        by creating a copy of the prompter here. */
-    Prompter* prompter = Prompter::makeCPrompter(context.getPrompter());
-    if (!prompter)
-      return NULL;
 
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
-        prompter, context.getSelf(),
+        context.clonePrompter(), context.getSelf(),
         context.getConfigEventHandler(), context.getTunnelCallback());
     if (JNIUtil::isJavaExceptionThrown())
-      delete prompter;
+      jremoteSession = NULL;
 
     return jremoteSession;
 }

@@ -268,7 +268,7 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Prompter *prompter = Prompter::makeCPrompter(jprompter);
+  Prompter::UniquePtr prompter(CompatPrompter::create(jprompter));
   if (JNIUtil::isExceptionThrown())
     return;
 
