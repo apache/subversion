@@ -120,7 +120,6 @@ svn_config_write_auth_data(apr_hash_t *hash,
                            const char *config_dir,
                            apr_pool_t *pool)
 {
-  apr_file_t *authfile = NULL;
   svn_stream_t *stream;
   const char *auth_path, *tmp_path;
 
