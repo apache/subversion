@@ -4049,7 +4049,10 @@ public class BasicTests extends SVNTests
         SVNClient cl = new SVNClient();
         try {
             cl.notification2(new MyNotifier());
-            cl.setPrompt(new DefaultPromptUserPassword());
+            if (DefaultAuthn.useDeprecated())
+                cl.setPrompt(DefaultAuthn.getDeprecated());
+            else
+                cl.setPrompt(DefaultAuthn.getDefault());
             cl.username(USERNAME);
             cl.setProgressCallback(new DefaultProgressListener());
             cl.setConfigDirectory(conf.getAbsolutePath());

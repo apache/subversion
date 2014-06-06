@@ -258,7 +258,25 @@ Java_org_apache_subversion_javahl_SVNClient_password
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setPrompt
+Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_javahl_callback_AuthnCallback_2
+(JNIEnv *env, jobject jthis, jobject jprompter)
+{
+  JNIEntry(SVNClient, setPrompt);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  Prompter::UniquePtr prompter(Prompter::create(jprompter));
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->getClientContext().setPrompt(prompter);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_javahl_callback_UserPasswordCallback_2
 (JNIEnv *env, jobject jthis, jobject jprompter)
 {
   JNIEntry(SVNClient, setPrompt);

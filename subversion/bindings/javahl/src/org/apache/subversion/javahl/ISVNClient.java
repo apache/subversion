@@ -160,6 +160,16 @@ public interface ISVNClient
      * accepted by the command-line client.
      * @param prompt the callback interface
      */
+    void setPrompt(AuthnCallback prompt);
+
+    /**
+     * Register callback interface to supply username and password on demand.
+     * This callback can also be used to provide theequivalent of the
+     * <code>--no-auth-cache</code> and <code>--non-interactive</code> arguments
+     * accepted by the command-line client.
+     * @param prompt the callback interface
+     */
+    @SuppressWarnings("deprecation")
     void setPrompt(UserPasswordCallback prompt);
 
     /**

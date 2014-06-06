@@ -150,6 +150,9 @@ public class SVNClient implements ISVNClient
 
     public native void password(String password);
 
+    public native void setPrompt(AuthnCallback prompt);
+
+    @SuppressWarnings("deprecation")
     public native void setPrompt(UserPasswordCallback prompt);
 
     public native void setTunnelAgent(TunnelAgent tunnelAgent);

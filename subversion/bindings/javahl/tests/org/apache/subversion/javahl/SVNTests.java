@@ -296,62 +296,136 @@ class SVNTests extends TestCase
     {
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
-        this.client.setPrompt(new DefaultPromptUserPassword());
+        if (DefaultAuthn.useDeprecated())
+            this.client.setPrompt(DefaultAuthn.getDeprecated());
+        else
+            this.client.setPrompt(DefaultAuthn.getDefault());
         this.client.username(USERNAME);
         this.client.setProgressCallback(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap<String, MyCommitItem>();
     }
     /**
-     * the default prompt : never prompts the user, provides defaults answers
+     * the default prompts : never prompt the user, provide default answers
      */
-    protected static class DefaultPromptUserPassword implements UserPasswordCallback
+    protected static class DefaultAuthn
     {
-
-        public int askTrustSSLServer(String info, boolean allowPermanently)
+        public static boolean useDeprecated()
         {
-            return UserPasswordCallback.AcceptTemporary;
+            String prop = System.getProperty("test.authn.deprecated");
+            return (prop != null && !prop.isEmpty());
         }
 
-        public String askQuestion(String realm, String question, boolean showAnswer)
+        public static AuthnCallback getDefault()
         {
-            return "";
+            return new DefaultAuthnCallback();
         }
 
-        public boolean askYesNo(String realm, String question, boolean yesIsDefault)
+        @SuppressWarnings("deprecation")
+        public static UserPasswordCallback getDeprecated()
         {
-            return yesIsDefault;
+            return new DeprecatedAuthnCallback();
         }
 
-        public String getPassword()
+        private static class DefaultAuthnCallback
+            implements AuthnCallback
         {
-            return PASSWORD;
+            public UsernameResult
+                usernamePrompt(String realm, boolean maySave)
+            {
+                return new UsernameResult(USERNAME);
+            }
+
+            public UserPasswordResult
+                userPasswordPrompt(String realm, String username,
+                                   boolean maySave)
+            {
+                return new UserPasswordResult(USERNAME, PASSWORD);
+            }
+
+            public SSLServerTrustResult
+                sslServerTrustPrompt(String realm,
+                                     SSLServerCertFailures failures,
+                                     SSLServerCertInfo info,
+                                     boolean maySave)
+            {
+                return SSLServerTrustResult.acceptTemporarily();
+            }
+
+            public SSLClientCertResult
+                sslClientCertPrompt(String realm, boolean maySave)
+            {
+                return null;
+            }
+
+            public SSLClientCertPassphraseResult
+                sslClientCertPassphrasePrompt(String realm, boolean maySave)
+            {
+                return null;
+            }
+
+            public boolean allowStorePlaintextPassword(String realm)
+            {
+                return false;
+            }
+
+            public boolean allowStorePlaintextPassphrase(String realm)
+            {
+                return false;
+            }
         }
 
-        public String getUsername()
+        @SuppressWarnings("deprecation")
+        private static class DeprecatedAuthnCallback
+            implements UserPasswordCallback
         {
-            return USERNAME;
-        }
+            public int askTrustSSLServer(String info, boolean allowPermanently)
+            {
+                return UserPasswordCallback.AcceptTemporary;
+            }
 
-        public boolean prompt(String realm, String username)
-        {
-            return true;
-        }
+            public String askQuestion(String realm, String question,
+                                      boolean showAnswer)
+            {
+                return "";
+            }
 
-        public boolean prompt(String realm, String username, boolean maySave)
-        {
-            return true;
-        }
+            public boolean askYesNo(String realm, String question,
+                                    boolean yesIsDefault)
+            {
+                return yesIsDefault;
+            }
 
-        public String askQuestion(String realm, String question,
-                boolean showAnswer, boolean maySave)
-        {
-            return "";
-        }
+            public String getPassword()
+            {
+                return PASSWORD;
+            }
 
-        public boolean userAllowedSave()
-        {
-            return false;
+            public String getUsername()
+            {
+                return USERNAME;
+            }
+
+            public boolean prompt(String realm, String username)
+            {
+                return true;
+            }
+
+            public boolean prompt(String realm, String username, boolean maySave)
+            {
+                return true;
+            }
+
+            public String askQuestion(String realm, String question,
+                                      boolean showAnswer, boolean maySave)
+            {
+                return "";
+            }
+
+            public boolean userAllowedSave()
+            {
+                return false;
+            }
         }
     }
 
