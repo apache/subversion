@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import stat, os, re, shutil, logging, sys
+import stat, os, re, shutil, logging
 
 logger = logging.getLogger()
 
@@ -5793,16 +5793,9 @@ def copy_relocate(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  tmp_dir = sbox.add_wc_path('relocated')
+  tmp_dir, url = sbox.add_repo_path('relocated')
 
   shutil.copytree(sbox.repo_dir, tmp_dir)
-
-  url = 'file://'
-
-  if sys.platform == 'win32':
-    url += '/'
-
-  url += os.path.abspath(tmp_dir).replace(os.path.sep, '/')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'relocate', url, wc_dir)
