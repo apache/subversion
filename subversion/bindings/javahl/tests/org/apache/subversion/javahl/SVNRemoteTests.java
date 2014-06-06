@@ -78,7 +78,7 @@ public class SVNRemoteTests extends SVNTests
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
             factory.setUsername(USERNAME);
-            factory.setPassword(PASSWORD);
+            // Do not set default password, exercise prompter instead.
             factory.setPrompt(new DefaultPromptUserPassword());
 
             ISVNRemote raSession = factory.openRemoteSession(url);
@@ -113,7 +113,8 @@ public class SVNRemoteTests extends SVNTests
         {
             session = new RemoteFactory(
                 super.conf.getAbsolutePath(),
-                USERNAME, PASSWORD,
+                USERNAME, null, // Do not set default password.
+
                 new DefaultPromptUserPassword(),
                 null, null, null)
                 .openRemoteSession(getTestRepoUrl());
@@ -141,7 +142,7 @@ public class SVNRemoteTests extends SVNTests
                     0, 1 + getTestRepoUrl().lastIndexOf("/"));
                 new RemoteFactory(
                     super.conf.getAbsolutePath(),
-                    USERNAME, PASSWORD,
+                    USERNAME, null, // Do not set default password.
                     new DefaultPromptUserPassword(),
                     null, null, null)
                     .openRemoteSession(prefix + "repositorydoesnotexisthere");
@@ -987,7 +988,7 @@ public class SVNRemoteTests extends SVNTests
         {
             session = new RemoteFactory(
                 super.conf.getAbsolutePath(),
-                USERNAME, PASSWORD,
+                USERNAME, null, // Do not set default password.
                 new DefaultPromptUserPassword(),
                 null, handler, null)
                 .openRemoteSession(getTestRepoUrl());
