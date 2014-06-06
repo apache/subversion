@@ -309,12 +309,12 @@ class SVNTests extends TestCase
 
         public boolean prompt(String realm, String username)
         {
-            return false;
+            return true;
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return false;
+            return true;
         }
 
         public String askQuestion(String realm, String question,
