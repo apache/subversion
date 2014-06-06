@@ -101,12 +101,12 @@ svn_config_read_auth_data(apr_hash_t **hash,
                 apr_psprintf(pool, _("Error parsing '%s'"),
                              svn_dirent_local_style(auth_path, pool)));
 
-      SVN_ERR(svn_stream_close(stream));
-
       stored_realm = svn_hash_gets(*hash, SVN_CONFIG_REALMSTRING_KEY);
 
       if (!stored_realm || strcmp(stored_realm->data, realmstring) != 0)
         *hash = NULL; /* Hash collision, or somebody tampering with storage */
+
+      SVN_ERR(svn_stream_close(stream));
     }
 
   return SVN_NO_ERROR;
