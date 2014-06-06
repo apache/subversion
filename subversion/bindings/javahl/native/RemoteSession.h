@@ -48,8 +48,8 @@ class RemoteSession : public SVNBase
                         jstring jurl, jstring juuid,
                         jstring jconfigDirectory,
                         jstring jusername, jstring jpassword,
-                        jobject jprompter, jobject jprogress,
-                        jobject jcfgcb, jobject jtunnelcb);
+                        jobject jprompter, jobject jdeprecatedPrompter,
+                        jobject jprogress, jobject jcfgcb, jobject jtunnelcb);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,

@@ -68,9 +68,11 @@ RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
                     jstring jusername, jstring jpassword,
-                    jobject jprompter, jobject jprogress,
-                    jobject jcfgcb, jobject jtunnelcb)
+                    jobject jprompter, jobject jdeprecatedPrompter,
+                    jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
+  SVN_ERR_ASSERT_NO_RETURN(!jprompter != !jdeprecatedPrompter);
+
   JNIEnv *env = JNIUtil::getEnv();
 
   SVN::Pool requestPool;
@@ -101,7 +103,8 @@ RemoteSession::open(jint jretryAttempts,
     return NULL;
   env->DeleteLocalRef(jpassword);
 
-  Prompter::UniquePtr prompter(CompatPrompter::create(jprompter));
+  Prompter::UniquePtr prompter(jprompter ? Prompter::create(jprompter)
+                               : CompatPrompter::create(jdeprecatedPrompter));
   if (JNIUtil::isExceptionThrown())
     return NULL;
 

@@ -40,8 +40,8 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
     jstring jurl, jstring juuid,
     jstring jconfigDirectory,
     jstring jusername, jstring jpassword,
-    jobject jprompter, jobject jprogress,
-    jobject jcfgcb, jobject jtunnelcb)
+    jobject jprompter, jobject jdeprecatedPrompter,
+    jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
   //JNI macros need jthis but this is a static call
   JNIEntryStatic(RemoteFactory, open);
@@ -51,8 +51,9 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
    */
   jobject jremoteSession = RemoteSession::open(
       jretryAttempts, jurl, juuid,
-      jconfigDirectory, jusername, jpassword, jprompter, jprogress,
-      jcfgcb, jtunnelcb);
+      jconfigDirectory, jusername, jpassword,
+      jprompter, jdeprecatedPrompter,
+      jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
