@@ -3114,7 +3114,6 @@ write_final_changed_path_info(apr_off_t *offset_p,
   apr_off_t offset;
   svn_stream_t *stream;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
-  apr_hash_index_t *hi;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 

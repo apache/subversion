@@ -2213,7 +2213,6 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_ra_svn_item_t *elt;
   int i;
   apr_uint64_t limit, include_merged_revs_param;
-  const char *move_behavior_param;
   log_baton_t lb;
   authz_baton_t ab;
 
