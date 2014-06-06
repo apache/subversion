@@ -27,6 +27,8 @@
 #include <cstring>
 #include <string>
 
+#include <apr_pools.h>
+
 #include "jni_object.hpp"
 
 namespace Java {
@@ -88,6 +90,12 @@ public:
     {
       return m_env.GetStringUTFLength(get());
     }
+
+  /**
+   * Copies the contents of the modified UTF-8 representation of the
+   * string into @a pool.
+   */
+  const char* strdup(apr_pool_t* pool) const;
 
   /**
    * Accessor class for the contents of the string.

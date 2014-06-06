@@ -254,6 +254,11 @@ jstring Class::get_name() const
 
 const char* const String::m_class_name = "java/lang/String";
 
+const char* String::strdup(apr_pool_t* pool) const
+{
+  return apr_pstrdup(pool, String::Contents(*this).c_str());
+}
+
 void String::MutableContents::set_value(const char* new_text)
 {
   if (!m_new_text)
