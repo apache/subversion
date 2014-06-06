@@ -377,7 +377,10 @@ public class SVNClient implements SVNClientInterface
 
         public boolean userAllowedSave()
         {
-            return false;
+            if (oldPrompt3 != null)
+                return oldPrompt3.userAllowedSave();
+            else
+                return false;
         }
 
         public String askQuestion(String realm, String question,
