@@ -171,8 +171,8 @@ public:
   /**
    * Invokes the Java method AuthnCallback.sslClientCertPassphrasePrompt().
    */
-  jobject ssl_client_cert_passphrase_prompt(const ::Java::String&
-                                            realm, bool may_save);
+  jobject ssl_client_cert_passphrase_prompt(const ::Java::String& realm,
+                                            bool may_save);
 
   /**
    * Invokes the Java method AuthnCallback.allowStorePlaintextPassword().
