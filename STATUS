@@ -137,6 +137,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1550691, r1550772, r1600909
+   Guard against MD5 hash collisions when finding cached credentials.
+   Justification:
+     MD5 collision attacks exist and could be used to trick a client into
+     sending cached credentials to a server other than what they were
+     cached for.
+   Notes:
+     Branch is required due to svn_hash_gets() not being available in 1.7.x
+   Branch:
+     ^/subversion/branches/1.7.x-md5-collision
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
