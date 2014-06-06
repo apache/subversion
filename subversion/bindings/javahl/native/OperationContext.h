@@ -28,6 +28,7 @@
 #define JAVAHL_OPERATION_CONTEXT_H
 
 #include <string>
+#include <memory>
 
 #include "svn_types.h"
 #include "svn_client.h"
@@ -51,7 +52,7 @@ class OperationContext
 
   apr_hash_t * m_config;
 
-  Prompter *m_prompter;
+  std::auto_ptr<Prompter> m_prompter;
   svn_atomic_t m_cancelOperation;
 
  protected:
@@ -89,7 +90,7 @@ class OperationContext
 
   virtual void username(const char *pi_username);
   virtual void password(const char *pi_password);
-  virtual void setPrompt(Prompter *prompter);
+  virtual void setPrompt(std::auto_ptr<Prompter> prompter);
   svn_auth_baton_t *getAuthBaton(SVN::Pool &in_pool);
 
   void cancelOperation();
@@ -99,7 +100,7 @@ class OperationContext
   const char *getConfigDirectory() const;
   const char *getUsername() const;
   const char *getPassword() const;
-  const Prompter& getPrompter() const;
+  std::auto_ptr<Prompter> clonePrompter() const;
 
   /**
    * Set the configuration directory, taking the usual steps to
