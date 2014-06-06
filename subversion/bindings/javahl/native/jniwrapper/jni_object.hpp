@@ -167,6 +167,7 @@ class ClassCache
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_result);
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_failures);
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_info);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(user_passwd_cb);
 
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(external_item);
 

@@ -132,6 +132,8 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
         authn_ssl_server_cert_info,
         ::JavaHL::AuthnCallback::SSLServerCertInfo),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(user_passwd_cb,
+                                           ::JavaHL::UserPasswordCallback),
 
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
                                            ::JavaHL::ExternalItem),
@@ -173,6 +175,7 @@ ClassCache::ClassCache(Env env)
   ::JavaHL::AuthnCallback::AuthnResult::static_init(env);
   ::JavaHL::AuthnCallback::SSLServerCertFailures::static_init(env);
   ::JavaHL::AuthnCallback::SSLServerCertInfo::static_init(env);
+  ::JavaHL::UserPasswordCallback::static_init(env);
 
   ::JavaHL::ExternalItem::static_init(env);
 

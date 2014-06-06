@@ -87,6 +87,64 @@ void AuthnCallback::static_init(::Java::Env env)
                     "(Ljava/lang/String;)Z");
 }
 
+jobject AuthnCallback::username_prompt(const ::Java::String& realm,
+                                       bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis, m_mid_username_prompt,
+                                realm.get(), jboolean(may_save));
+}
+
+
+jobject AuthnCallback::user_password_prompt(const ::Java::String& realm,
+                                            const ::Java::String& username,
+                                            bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis, m_mid_user_password_prompt,
+                                realm.get(), username.get(),
+                                jboolean(may_save));
+}
+
+jobject AuthnCallback::ssl_server_trust_prompt(
+    const ::Java::String& realm,
+    const SSLServerCertFailures& failures,
+    const SSLServerCertInfo& info,
+    bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis, m_mid_ssl_server_trust_prompt,
+                                realm.get(), failures.get(), info.get(),
+                                jboolean(may_save));
+}
+
+jobject AuthnCallback::ssl_client_cert_prompt(const ::Java::String&
+                                              realm, bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis, m_mid_ssl_client_cert_prompt,
+                                realm.get(), jboolean(may_save));
+}
+
+jobject AuthnCallback::ssl_client_cert_passphrase_prompt(
+    const ::Java::String& realm,
+    bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis,
+                                m_mid_ssl_client_cert_passphrase_prompt,
+                                realm.get(), jboolean(may_save));
+}
+
+bool AuthnCallback::allow_store_plaintext_password(const ::Java::String& realm)
+{
+  return m_env.CallBooleanMethod(m_jthis,
+                                 m_mid_allow_store_plaintext_password,
+                                 realm.get());
+}
+
+bool AuthnCallback::allow_store_plaintext_passphrase(const ::Java::String& realm)
+{
+  return m_env.CallBooleanMethod(m_jthis,
+                                 m_mid_allow_store_plaintext_passphrase,
+                                 realm.get());
+}
+
 
 // Class JavaHL::AuthnCallback::AuthnResult
 const char* const AuthnCallback::AuthnResult::m_class_name =
@@ -164,5 +222,129 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
                     validFrom.get(), validUntil.get(),
                     issuer.get(), der.get()))
 {}
+
+
+// Class JavaHL::UserPasswordCallback
+const char* const UserPasswordCallback::m_class_name =
+  JAVA_PACKAGE"/callback/UserPasswordCallback";
+
+::Java::MethodID UserPasswordCallback::m_mid_ask_trust_ssl_server;
+::Java::MethodID UserPasswordCallback::m_mid_prompt_2arg;
+::Java::MethodID UserPasswordCallback::m_mid_ask_yes_no;
+::Java::MethodID UserPasswordCallback::m_mid_ask_question_3arg;
+::Java::MethodID UserPasswordCallback::m_mid_get_username;
+::Java::MethodID UserPasswordCallback::m_mid_get_password;
+::Java::MethodID UserPasswordCallback::m_mid_prompt;
+::Java::MethodID UserPasswordCallback::m_mid_ask_question;
+::Java::MethodID UserPasswordCallback::m_mid_user_allowed_save;
+
+void UserPasswordCallback::static_init(::Java::Env env)
+{
+  const jclass cls = ::Java::ClassCache::get_user_passwd_cb();
+
+  m_mid_ask_trust_ssl_server =
+    env.GetMethodID(cls, "askTrustSSLServer",
+                    "(Ljava/lang/String;Z)I");
+
+  m_mid_prompt_2arg =
+    env.GetMethodID(cls, "prompt",
+                    "(Ljava/lang/String;Ljava/lang/String;)Z");
+
+  m_mid_ask_yes_no =
+    env.GetMethodID(cls, "askYesNo",
+                    "(Ljava/lang/String;Ljava/lang/String;Z)Z");
+
+  m_mid_ask_question_3arg =
+    env.GetMethodID(cls, "askQuestion",
+                    "(Ljava/lang/String;Ljava/lang/String;Z)"
+                    "Ljava/lang/String;");
+
+  m_mid_get_username =
+    env.GetMethodID(cls, "getUsername",
+                    "()Ljava/lang/String;");
+
+  m_mid_get_password =
+    env.GetMethodID(cls, "getPassword",
+                    "()Ljava/lang/String;");
+
+  m_mid_prompt =
+    env.GetMethodID(cls, "prompt",
+                    "(Ljava/lang/String;Ljava/lang/String;Z)Z");
+
+  m_mid_ask_question =
+    env.GetMethodID(cls, "askQuestion",
+                    "(Ljava/lang/String;Ljava/lang/String;ZZ)"
+                    "Ljava/lang/String;");
+
+  m_mid_user_allowed_save =
+    env.GetMethodID(cls, "userAllowedSave", "()Z");
+}
+
+
+jint UserPasswordCallback::ask_trust_ssl_server(const ::Java::String& info,
+                                                bool allow_permanently)
+{
+  return m_env.CallIntMethod(m_jthis, m_mid_ask_trust_ssl_server,
+                             info.get(), jboolean(allow_permanently));
+}
+
+bool UserPasswordCallback::prompt(const ::Java::String& realm,
+                                  const ::Java::String& username)
+{
+  return m_env.CallBooleanMethod(m_jthis, m_mid_prompt_2arg,
+                                 realm.get(), username.get());
+}
+
+bool UserPasswordCallback::ask_yes_no(const ::Java::String& realm,
+                                      const ::Java::String& question,
+                                      bool yes_is_default)
+{
+  return m_env.CallBooleanMethod(m_jthis, m_mid_ask_yes_no,
+                                 realm.get(), question.get(),
+                                 jboolean(yes_is_default));
+}
+
+jstring UserPasswordCallback::ask_question(const ::Java::String& realm,
+                                           const ::Java::String& question,
+                                           bool show_answer)
+{
+  return jstring(m_env.CallObjectMethod(m_jthis, m_mid_ask_question_3arg,
+                                        realm.get(), question.get(),
+                                        jboolean(show_answer)));
+}
+
+jstring UserPasswordCallback::get_username()
+{
+  return jstring(m_env.CallObjectMethod(m_jthis, m_mid_get_username));
+}
+
+jstring UserPasswordCallback::get_password()
+{
+  return jstring(m_env.CallObjectMethod(m_jthis, m_mid_get_password));
+}
+
+bool UserPasswordCallback::prompt(const ::Java::String& realm,
+                                  const ::Java::String& username,
+                                  bool may_save)
+{
+  return m_env.CallBooleanMethod(m_jthis, m_mid_prompt,
+                                 realm.get(), username.get(),
+                                 jboolean(may_save));
+}
+
+jstring UserPasswordCallback::ask_question(const ::Java::String& realm,
+                                           const ::Java::String& question,
+                                           bool show_answer, bool may_save)
+{
+  return jstring(m_env.CallObjectMethod(m_jthis, m_mid_ask_question,
+                                        realm.get(), question.get(),
+                                        jboolean(show_answer),
+                                        jboolean(may_save)));
+}
+
+bool UserPasswordCallback::user_allowed_save()
+{
+  return m_env.CallBooleanMethod(m_jthis, m_mid_user_allowed_save);
+}
 
 } // namespace JavaHL
