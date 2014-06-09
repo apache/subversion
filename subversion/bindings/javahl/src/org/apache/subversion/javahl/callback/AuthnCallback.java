@@ -197,6 +197,12 @@ public interface AuthnCallback
             return ((failures & OTHER) != 0);
         }
 
+        /** @return the internal bitfield representation of the failures. */
+        public int getFailures()
+        {
+            return failures;
+        }
+
         private static final int NOT_YET_VALID = 0x00000001;
         private static final int EXPIRED       = 0x00000002;
         private static final int CN_MISMATCH   = 0x00000004;

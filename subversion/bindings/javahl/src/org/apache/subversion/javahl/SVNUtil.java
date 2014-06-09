@@ -92,6 +92,421 @@ public class SVNUtil
       }
 
     //
+    // Credentials management
+    //
+
+    /**
+     * Generic credential description. Provides default accessors for
+     * concrete implementations.
+     */
+    public static abstract class Credential
+    {
+        /**
+         * Describes the kind of the credential.
+         */
+        public static enum Kind
+        {
+            /** The username for a realm. */
+            username            ("svn.username"),
+
+            /** The username and password for a realm. */
+            simple              ("svn.simple"),
+
+            /** The trusted SSL server certificate for a realm. */
+            sslServer           ("svn.ssl.server"),
+
+            /** The client certificate passphrase for a realm. */
+            sslClientPassphrase ("svn.ssl.client-passphrase");
+
+            private String token;
+
+            Kind(String token)
+            {
+                this.token = token;
+            }
+
+            /** @return the string representation of the enumeration. */
+            public String toString()
+            {
+                return this.token;
+            }
+        }
+
+        /** @return the kind of the credential. */
+        public Kind getKind()
+        {
+            return kind;
+        }
+
+        /** @return the realm that the credential is valid for. */
+        public String getRealm()
+        {
+            return realm;
+        }
+
+        /**
+         * @return the type of the secure store used for the secret
+         * parts of this credential; may be <code>null</code> if the
+         * credential does not contain any secrets bits.
+         */
+        public String getSecureStore()
+        {
+            return store;
+        }
+
+        /**
+         * @return the username associated with the credential, or
+         * <code>null</code>, if there is no username in the concrete
+         * credential type.
+         */
+        public String getUsername()
+        {
+            return null;
+        }
+
+        /**
+         * @return the password associated with the credential, or
+         * <code>null</code>, if there is no password in the concrete
+         * credential type.
+         */
+        public String getPassword()
+        {
+            return null;
+        }
+
+        /**
+         * @return the server certificate info associated with the
+         * credential, or <code>null</code>, if there is no server
+         * certificate in the concrete credential type.
+         */
+        public AuthnCallback.SSLServerCertInfo getServerCertInfo()
+        {
+            return null;
+        }
+
+        /**
+         * @return the accepted server certificate failures associated
+         * with the credential, or <code>null</code>, if there is no
+         * server certificate in the concrete credential type.
+         */
+        public AuthnCallback.SSLServerCertFailures getServerCertFailures()
+        {
+            return null;
+        }
+
+        /**
+         * @return the client certificate passphrase associated with
+         * the credential, or <code>null</code>, if there is no client
+         * certificate in the concrete credential type.
+         */
+        public String getClientCertPassphrase()
+        {
+            return null;
+        }
+
+        /** Protected constructor used by subclasses. */
+        protected Credential(Kind kind, String realm, String store)
+        {
+            this.kind = kind;
+            this.realm = realm;
+            this.store = store;
+        }
+
+        protected Kind kind;
+        protected String realm;
+        protected String store;
+    }
+
+    /**
+     * A credential that defines a username.
+     */
+    public static class UsernameCredential extends Credential
+    {
+        /** Constructs a username credential. */
+        public UsernameCredential(String realm, String username)
+        {
+            super(Kind.username, realm, null);
+            this.username = username;
+        }
+
+        /** @return the username associated with the credential. */
+        public String getUsername()
+        {
+            return username;
+        }
+
+        /** Protected constructor used by subclasses. */
+        protected UsernameCredential(Kind kind, String realm, String store,
+                                     String username)
+        {
+            super(kind, realm, null);
+            this.username = username;
+        }
+
+        /** Protected constructor used by the native implementation. */
+        protected UsernameCredential(String realm, String store,
+                                     String username)
+        {
+            super(Kind.username, realm, store);
+            this.username = username;
+        }
+
+        protected String username;
+    }
+
+    /**
+     * A credential that defines a username and password.
+     */
+    public static class SimpleCredential extends UsernameCredential
+    {
+        /** Constructs a simple credential. */
+        public SimpleCredential(String realm, String username, String password)
+        {
+            super(Kind.simple, realm, null, username);
+            this.password = password;
+        }
+
+        /** @return the password associated with the credential. */
+        public String getPassword()
+        {
+            return password;
+        }
+
+        /** Protected constructor used by the native implementation. */
+        protected SimpleCredential(String realm, String store,
+                                   String username, String password)
+        {
+            super(Kind.simple, realm, store, username);
+            this.password = password;
+        }
+
+        protected String password;
+    }
+
+    /**
+     * A credential that defines a trusted SSL server certificate.
+     */
+    public static class SSLServerCertCredential extends Credential
+    {
+        /** Constructs an SSL server certificate credential. */
+        public SSLServerCertCredential(String realm,
+                                       AuthnCallback.SSLServerCertInfo info,
+                                       AuthnCallback.SSLServerCertFailures failures)
+        {
+            super(Kind.sslServer, realm, null);
+            this.info = info;
+            this.failures = failures;
+        }
+
+        /**
+         * @return the server certificate info associated with the
+         * credential.
+         */
+        public AuthnCallback.SSLServerCertInfo getServerCertInfo()
+        {
+            return info;
+        }
+
+        /**
+         * @return the accepted server certificate failures associated
+         * with the credential.
+         */
+        public AuthnCallback.SSLServerCertFailures getServerCertFailures()
+        {
+            return failures;
+        }
+
+        /** Protected constructor used by the native implementation. */
+        protected SSLServerCertCredential(String realm, String store,
+                                          AuthnCallback.SSLServerCertInfo info,
+                                          AuthnCallback.SSLServerCertFailures failures)
+        {
+            super(Kind.sslServer, realm, store);
+            this.info = info;
+            this.failures = failures;
+        }
+
+        protected AuthnCallback.SSLServerCertInfo info;
+        protected AuthnCallback.SSLServerCertFailures failures;
+    }
+
+    /**
+     * A credential that defines an SSL client certificate passphrase.
+     */
+    public static class SSLClientCertPassphraseCredential extends Credential
+    {
+        /** Constructs an SSL client certificate passphrase credential. */
+        public SSLClientCertPassphraseCredential(String realm, String passprase)
+        {
+            super(Kind.sslClientPassphrase, realm, null);
+            this.passphrase = passphrase;
+        }
+
+        /**
+         * @return the client certificate passphrase associated with
+         * the credential.
+         */
+        public String getClientCertPassphrase()
+        {
+            return passphrase;
+        }
+
+        /** Protected constructor used by the native implementation. */
+        protected SSLClientCertPassphraseCredential(String realm, String store,
+                                                    String passprase)
+        {
+            super(Kind.sslClientPassphrase, realm, store);
+            this.passphrase = passphrase;
+        }
+
+        protected String passphrase;
+    }
+
+    /**
+     * Find a stored credential.
+     * Unlike {@link #searchCredentials}, the the realm name is not
+     * a glob pattern.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; may not be <code>null</code>.
+     * @param realm The realm name; may not be <code>null</code>.
+     * @return the matching credential, or <code>null</code> if not found.
+     */
+    public static Credential getCredential(String configDir,
+                                           Credential.Kind kind,
+                                           String realm)
+        throws ClientException
+    {
+        return configLib.getCredential(configDir, kind, realm);
+    }
+
+    /**
+     * Remove a stored credential.
+     * Unlike {@link #deleteCredentials}, the the realm name is not
+     * a glob pattern.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; may not be <code>null</code>.
+     * @param realm The realm name; may not be <code>null</code>.
+     * @return the deleted credential, or <code>null</code> if not found.
+     */
+    public static Credential removeCredential(String configDir,
+                                              Credential.Kind kind,
+                                              String realm)
+        throws ClientException
+    {
+        return configLib.removeCredential(configDir, kind, realm);
+    }
+
+    /**
+     * Store a new credential, or replace an existing credential.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param credential The credential to store.
+     * @param replace If <code>true</code>, any existing matching
+     *        credential will be replaced.
+     *
+     * @return the stored credential. If <code>replace</code> was
+     * <code>false</code>, and a credential with the same kind and
+     * for the same realm exists, it will be returned. If the given
+     * credential was successfully added, the same object reference
+     * will be returned (the calling code can compare reference values
+     * to determine this). Will return <code>null</code> if the
+     * credential could not be stored for any reason.
+     */
+    public static Credential addCredential(String configDir,
+                                           Credential credential,
+                                           boolean replace)
+        throws ClientException
+    {
+        return configLib.addCredential(configDir, credential, replace);
+    }
+
+    /**
+     * Find stored credentials that match the given search criteria.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; if <code>null</code>,
+     *             all matching credential types will be returned.
+     * @param realmPattern A glob pattern for the realm string;
+     *             if <code>null</code>, all realms will be considered;
+     *             otherwise, only those credentials whose realm matches
+     *             the pattern will be returned.
+     * @param usernamePattern A glob pattern for the username;
+     *             if <code>null</code>, all credentials will be considered;
+     *             otherwise, only those credentials that have a username,
+     *             and where the username matches the pattern, will be
+     *             returned.
+     * @param hostnamePattern A glob pattern for the hostname (CN) of
+     *             a server certificate; if <code>null</code>, all credntials
+     *             will be considered; otherwise, only those credentials
+     *             that have a server certificate with a hostname that
+     *             matches the pattern will be returned.
+     * @param textPattern A glob pattern that must match any textual
+     *             information in a credential, for example, a realm,
+     *             username, certificate details, etc; passwords, passphrases
+     *             and other info considered secret will not be matched;
+     * @return the list of matching credentials.
+     */
+    public static List<Credential>
+        searchCredentials(String configDir,
+                          Credential.Kind kind,
+                          String realmPattern,
+                          String usernamePattern,
+                          String hostnamePattern,
+                          String textPattern)
+        throws ClientException
+    {
+        return configLib.searchCredentials(configDir, kind, realmPattern,
+                                           usernamePattern, hostnamePattern,
+                                           textPattern);
+    }
+
+    /**
+     * Delete stored credentials that match the given search criteria.
+     * The parameters of this method are the same as for
+     * {@link #searchCredentials}.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @return the list of deleted credentials.
+     */
+    public static List<Credential>
+        deleteCredentials(String configDir,
+                          Credential.Kind kind,
+                          String realmPattern,
+                          String usernamePattern,
+                          String hostnamePattern,
+                          String textPattern)
+        throws ClientException
+    {
+        return configLib.deleteCredentials(configDir, kind, realmPattern,
+                                           usernamePattern, hostnamePattern,
+                                           textPattern);
+    }
+
+    //
     // Diff and Merge
     //
     private static final DiffLib diffLib = new DiffLib();
