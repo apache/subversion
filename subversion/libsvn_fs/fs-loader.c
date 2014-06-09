@@ -240,6 +240,7 @@ get_or_allocate_third(struct fs_type_defn **fst,
   (*fst)->fs_type = apr_pstrdup(common_pool, fs_type);
   (*fst)->fsap_name = (*fst)->fs_type;
   (*fst)->initfunc = NULL;
+  (*fst)->vtable = NULL;
   (*fst)->next = NULL;
 
   return SVN_NO_ERROR;
@@ -255,16 +256,22 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
   struct fs_type_defn **fst;
   svn_boolean_t known = FALSE;
 
-  /* There are two FS module definitions known at compile time.  We
+  /* There are three FS module definitions known at compile time.  We
      want to check these without any locking overhead even when
      dynamic third party modules are enabled.  The third party modules
      cannot be checked until the lock is held.  */
   for (fst = &fs_modules; *fst; fst = &(*fst)->next)
-    if (strcmp(fs_type, (*fst)->fs_type) == 0)
-      {
-        known = TRUE;
-        break;
-      }
+    {
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        {
+          known = TRUE;
+          break;
+        }
+      else if (!(*fst)->next)
+        {
+          break;
+        }
+    }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
