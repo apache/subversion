@@ -102,7 +102,8 @@ enum
     svnlook__ignore_properties,
     svnlook__properties_only,
     svnlook__diff_cmd,
-    svnlook__show_inherited_props
+    svnlook__show_inherited_props,
+    svnlook__no_newline
   };
 
 /*
@@ -142,6 +143,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"properties-only",   svnlook__properties_only, 0,
    N_("show only properties during the operation")},
+
+  {"no-newline",        svnlook__no_newline, 0,
+   N_("do not output the trailing newline")},
 
   {"non-recursive",     'N', 0,
    N_("operate on single directory only")},
@@ -300,7 +304,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"youngest", subcommand_youngest, {0},
    N_("usage: svnlook youngest REPOS_PATH\n\n"
       "Print the youngest revision number.\n"),
-   {0} },
+   {svnlook__no_newline} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -333,6 +337,7 @@ struct svnlook_opt_state
   svn_boolean_t properties_only;    /* --properties-only */
   const char *diff_cmd;           /* --diff-cmd */
   svn_boolean_t show_inherited_props; /*  --show-inherited-props */
+  svn_boolean_t no_newline;       /* --no-newline */
 };
 
 
@@ -2412,7 +2417,8 @@ subcommand_youngest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
-  SVN_ERR(svn_cmdline_printf(pool, "%ld\n", c->rev_id));
+  SVN_ERR(svn_cmdline_printf(pool, "%ld%s", c->rev_id,
+                             opt_state->no_newline ? "" : "\n"));
   return SVN_NO_ERROR;
 }
 
@@ -2601,6 +2607,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case svnlook__show_inherited_props:
           opt_state.show_inherited_props = TRUE;
+          break;
+
+        case svnlook__no_newline:
+          opt_state.no_newline = TRUE;
           break;
 
         default:
