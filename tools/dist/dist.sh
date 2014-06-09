@@ -292,6 +292,10 @@ if [ -z "$ZIP" ] ; then
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
 
+# Generate the .pot file, for use by translators.
+echo "Running po-update.sh in sandbox, to create subversion.pot..."
+(cd "$DISTPATH" && tools/po/po-update.sh pot) || exit 1
+
 # Pre-translate the various sql-derived header files
 echo "Generating SQL-derived headers..."
 for f in `find "$DISTPATH/subversion" -name '*.sql'`; do
