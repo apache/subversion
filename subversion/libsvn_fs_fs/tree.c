@@ -2518,17 +2518,6 @@ fs_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
-/* Type to select the various behavioral modes of copy_helper.
- */
-typedef enum copy_type_t
-{
-  /* add without history */
-  copy_type_plain_add,
-
-  /* add with history */
-  copy_type_add_with_history,
-} copy_type_t;
-
 /* Set CHANGES to TRUE if PATH in ROOT is unchanged in REVISION if the
    same files system.  If the content is identical, parent path copies and
    deletions still count as changes.  Use POOL for temporary allocations.
@@ -2589,15 +2578,14 @@ is_changed_node(svn_boolean_t *changed,
 
 
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
-   TO_ROOT.  COPY_TYPE determines whether then the copy is recorded in
-   the copies table and whether it is being marked as a move.
-   Perform temporary allocations in POOL. */
+   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
+   the copies table.  Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper(svn_fs_root_t *from_root,
             const char *from_path,
             svn_fs_root_t *to_root,
             const char *to_path,
-            copy_type_t copy_type,
+            svn_boolean_t preserve_history,
             apr_pool_t *pool)
 {
   dag_node_t *from_node;
@@ -2686,7 +2674,7 @@ copy_helper(svn_fs_root_t *from_root,
       SVN_ERR(svn_fs_fs__dag_copy(to_parent_path->parent->node,
                                   to_parent_path->entry,
                                   from_node,
-                                  copy_type != copy_type_plain_add,
+                                  preserve_history,
                                   from_root->rev,
                                   from_canonpath,
                                   txn_id, pool));
@@ -2748,7 +2736,7 @@ fs_copy(svn_fs_root_t *from_root,
                                      to_root,
                                      svn_fs__canonicalize_abspath(to_path,
                                                                   pool),
-                                     copy_type_add_with_history, pool));
+                                     TRUE, pool));
 }
 
 
@@ -2766,7 +2754,7 @@ fs_revision_link(svn_fs_root_t *from_root,
 
   path = svn_fs__canonicalize_abspath(path, pool);
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                     copy_type_plain_add, pool));
+                                     FALSE, pool));
 }
 
 
