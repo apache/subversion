@@ -842,23 +842,13 @@ SVN_ERROR_START
              "Index files are inconsistent.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_AMBIGUOUS_MOVE,
-             SVN_ERR_FS_CATEGORY_START + 59,
-             "Ambiguous move")
-
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_INCOMPLETE_MOVE,
-             SVN_ERR_FS_CATEGORY_START + 60,
-             "Move without a suitable deletion")
-
-  /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_FS_LOCK_OPERATION_FAILED,
-             SVN_ERR_FS_CATEGORY_START + 61,
+             SVN_ERR_FS_CATEGORY_START + 59,
              "Lock operation failed")
 
   /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_FS_UNSUPPORTED_TYPE,
-             SVN_ERR_FS_CATEGORY_START + 62,
+             SVN_ERR_FS_CATEGORY_START + 60,
              "Unsupported FS type")
 
   /* repos errors */
