@@ -63,11 +63,11 @@ $svn export --force -r $head $repo/trunk/build/generator/ezt.py@$head $dir/ezt.p
 # Create the environment
 cd roll
 echo '----------------building environment------------------'
-../release.py --base-dir ${abscwd}/roll build-env trunk-nightly
+../release.py --verbose --base-dir ${abscwd}/roll build-env trunk-nightly
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-../release.py --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
+../release.py --verbose --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
 cd ..
 
 # Create the information page
