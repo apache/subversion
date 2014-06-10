@@ -297,8 +297,8 @@ echo "Running po-update.sh in sandbox, to create subversion.pot..."
 # Can't use the po-update.sh in the packaged export since it might have CRLF
 # line endings, in which case it won't run.  So first we export it again.
 ${svn:-svn} export -q -r "$REVISION"  \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
-     --username none --password none "$DIST_SANDBOX/find_python.sh"
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
+     --username none --password none "$DIST_SANDBOX/po-update.sh"
 (cd "$DISTPATH" && ../po-update.sh pot) || exit 1
 
 # Pre-translate the various sql-derived header files
