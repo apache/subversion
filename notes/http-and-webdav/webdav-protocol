@@ -354,7 +354,6 @@ Request:
     <S:discover-changed-paths/> (optional)
     <S:strict-node-history/> (optional)
     <S:include-merged-revisions/> (optional)
-    <S:move-behavior>0</S:move-behavior> (optional, see below for values)
     <S:encode-binary-props> (optional)
     <S:revprop>REVPROP</S:revprop>... | <S:all-revprops/> | <S:no-revprops/>
       ('revprop', 'all-revprops', and 'no-revprops' are all optional)
@@ -375,20 +374,11 @@ Response:
       <S:has-children/> (optional)
       <S:added-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:added-path>... (optional)
       <S:replaced-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:replaced-path>... (optional)
-      <S:moved-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:moved-path>... (optional)
-      <S:replaced-by-moved-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:replaced-by-moved-path>... (optional)
       <S:deleted-path>PATH</S:deleted-path>... (optional)
       <S:modified-path>PATH</S:modified-path>... (optional)
     </S:log-item>
     ...multiple log-items for each returned revision...
   </S:log-report>
-
-Move behavior values (see svn_move_behavior_t in svn_types.h):
-
-  0 .. send all moves as adds / replaces (default if not specified)
-  1 .. send moves only when stored as such in the repository
-  2 .. send moves as stored in the repository and also send send
-       suitable adds / replacements as moves
 
 mergeinfo-report
 ----------------
