@@ -203,13 +203,6 @@ do_git_fetch(svn_ra_git__session_baton_t *sess)
   if (sess->fetch_done)
     return SVN_NO_ERROR;
 
-  if (!git_remote_connected(sess->remote))
-    {
-      git_err = git_remote_connect(sess->remote, GIT_DIRECTION_FETCH);
-      if (git_err)
-        return svn_error_trace(svn_ra_git__wrap_git_error());
-    }
-
   SVN_DBG(("fetching from %s\n", git_remote_url(sess->remote)));
 
   git_err = git_remote_fetch(sess->remote);
@@ -1974,11 +1967,11 @@ svn_ra_git__stat(svn_ra_session_t *session,
         }
 
       type = git_tree_entry_type(entry);
-      if (type == GIT_OBJ_TREE) 
+      if (type == GIT_OBJ_TREE || type == GIT_OBJ_BLOB)
         {
-          git_tree *this_tree;
+          git_object *object;
 
-          git_err = git_tree_lookup(&this_tree, sess->repos, git_tree_entry_id(entry));
+          git_err = git_object_lookup(&object, sess->repos, git_tree_entry_id(entry), type);
           if (git_err)
             {
               git_tree_entry_free(entry);
@@ -1989,24 +1982,8 @@ svn_ra_git__stat(svn_ra_session_t *session,
             }
 
           SVN_ERR(map_obj_to_dirent(dirent, sess->revmap, path, revision, SVN_DIRENT_ALL,
-                                    sess->repos, commit, (git_object *)this_tree, pool));
-          git_tree_free(this_tree);
-        }
-      else if (type == GIT_OBJ_BLOB)
-        {
-          git_blob *blob;
-
-          git_err = git_blob_lookup(&blob, sess->repos, git_tree_entry_id(entry));
-          if (git_err)
-            {
-              git_tree_free(tree);
-              git_commit_free(commit);
-              return svn_error_trace(svn_ra_git__wrap_git_error());
-            }
-
-          SVN_ERR(map_obj_to_dirent(dirent, sess->revmap, path, revision, SVN_DIRENT_ALL,
-                                    sess->repos, commit, (git_object *)blob, pool));
-          git_blob_free(blob);
+                                    sess->repos, commit, object, pool));
+          git_object_free(object);
         }
       else
         {
