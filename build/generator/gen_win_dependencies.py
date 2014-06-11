@@ -218,22 +218,22 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       elif opt == '-D':
         self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
-        if val == '2002' or re.match('7(\.\d+)?$', val):
+        if val == '2002' or re.match('^7(\.\d+)?$', val):
           self.vs_version = '2002'
           self.sln_version = '7.00'
           self.vcproj_version = '7.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('8(\.\d+)?$', val):
+        elif val == '2003' or re.match('^8(\.\d+)?$', val):
           self.vs_version = '2003'
           self.sln_version = '8.00'
           self.vcproj_version = '7.10'
           self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('9(\.\d+)?$', val):
+        elif val == '2005' or re.match('^9(\.\d+)?$', val):
           self.vs_version = '2005'
           self.sln_version = '9.00'
           self.vcproj_version = '8.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('10(\.\d+)?$', val):
+        elif val == '2008' or re.match('^10(\.\d+)?$', val):
           self.vs_version = '2008'
           self.sln_version = '10.00'
           self.vcproj_version = '9.00'
@@ -252,10 +252,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.vs_version = '2013'
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
-          self.vcproj_extension = '.vcxproj'          
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
-          self.vsversion = val
-          self.sln_version = val + '.00'
+          self.vs_version = val
+          self.sln_version = '12.00'
           self.vcproj_version = val + '.0'
           self.vcproj_extension = '.vcxproj'
         else:
