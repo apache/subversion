@@ -164,7 +164,7 @@ adjust_paths_for_diff_labels(const char **index_path,
     svn_boolean_t is_url1;
     svn_boolean_t is_url2;
     /* ### Holy cow.  Due to anchor/target weirdness, we can't
-       simply join diff_cmd_baton->orig_path_1 with path, ditto for
+       simply join dwi->orig_path_1 with path, ditto for
        orig_path_2.  That will work when they're directory URLs, but
        not for file URLs.  Nor can we just use anchor1 and anchor2
        from do_diff(), at least not without some more logic here.
@@ -606,13 +606,13 @@ diff_props_changed(const char *diff_relpath,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
                    svn_boolean_t show_diff_header,
-                   diff_writer_info_t *diff_cmd_baton,
+                   diff_writer_info_t *dwi,
                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
 
   /* If property differences are ignored, there's nothing to do. */
-  if (diff_cmd_baton->ignore_properties)
+  if (dwi->ignore_properties)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
@@ -620,23 +620,23 @@ diff_props_changed(const char *diff_relpath,
 
   if (props->nelts > 0)
     {
-      /* We're using the revnums from the diff_cmd_baton since there's
+      /* We're using the revnums from the dwi since there's
        * no revision argument to the svn_wc_diff_callback_t
        * dir_props_changed(). */
       SVN_ERR(display_prop_diffs(props, original_props,
                                  diff_relpath,
-                                 diff_cmd_baton->ddi.anchor,
-                                 diff_cmd_baton->ddi.orig_path_1,
-                                 diff_cmd_baton->ddi.orig_path_2,
+                                 dwi->ddi.anchor,
+                                 dwi->ddi.orig_path_1,
+                                 dwi->ddi.orig_path_2,
                                  rev1,
                                  rev2,
-                                 diff_cmd_baton->header_encoding,
-                                 diff_cmd_baton->outstream,
-                                 diff_cmd_baton->relative_to_dir,
+                                 dwi->header_encoding,
+                                 dwi->outstream,
+                                 dwi->relative_to_dir,
                                  show_diff_header,
-                                 diff_cmd_baton->use_git_diff_format,
-                                 diff_cmd_baton->ddi.session_relpath,
-                                 diff_cmd_baton->wc_ctx,
+                                 dwi->use_git_diff_format,
+                                 dwi->ddi.session_relpath,
+                                 dwi->wc_ctx,
                                  scratch_pool));
     }
 
@@ -2339,7 +2339,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  diff_writer_info_t diff_cmd_baton = { 0 };
+  diff_writer_info_t dwi = { 0 };
   svn_opt_revision_t peg_revision;
   const svn_diff_tree_processor_t *diff_processor;
   svn_diff_tree_processor_t *processor;
@@ -2353,33 +2353,33 @@ svn_client_diff6(const apr_array_header_t *options,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   /* setup callback and baton */
-  diff_cmd_baton.ddi.orig_path_1 = path_or_url1;
-  diff_cmd_baton.ddi.orig_path_2 = path_or_url2;
+  dwi.ddi.orig_path_1 = path_or_url1;
+  dwi.ddi.orig_path_2 = path_or_url2;
 
-  SVN_ERR(create_diff_writer_info(&diff_cmd_baton, options,
+  SVN_ERR(create_diff_writer_info(&dwi, options,
                                   ctx->config, pool));
-  diff_cmd_baton.pool = pool;
-  diff_cmd_baton.outstream = outstream;
-  diff_cmd_baton.errstream = errstream;
-  diff_cmd_baton.header_encoding = header_encoding;
+  dwi.pool = pool;
+  dwi.outstream = outstream;
+  dwi.errstream = errstream;
+  dwi.header_encoding = header_encoding;
 
-  diff_cmd_baton.force_binary = ignore_content_type;
-  diff_cmd_baton.ignore_properties = ignore_properties;
-  diff_cmd_baton.properties_only = properties_only;
-  diff_cmd_baton.relative_to_dir = relative_to_dir;
-  diff_cmd_baton.use_git_diff_format = use_git_diff_format;
-  diff_cmd_baton.no_diff_added = no_diff_added;
-  diff_cmd_baton.no_diff_deleted = no_diff_deleted;
-  diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
+  dwi.force_binary = ignore_content_type;
+  dwi.ignore_properties = ignore_properties;
+  dwi.properties_only = properties_only;
+  dwi.relative_to_dir = relative_to_dir;
+  dwi.use_git_diff_format = use_git_diff_format;
+  dwi.no_diff_added = no_diff_added;
+  dwi.no_diff_deleted = no_diff_deleted;
+  dwi.show_copies_as_adds = show_copies_as_adds;
 
-  diff_cmd_baton.cancel_func = ctx->cancel_func;
-  diff_cmd_baton.cancel_baton = ctx->cancel_baton;
+  dwi.cancel_func = ctx->cancel_func;
+  dwi.cancel_baton = ctx->cancel_baton;
 
-  diff_cmd_baton.wc_ctx = ctx->wc_ctx;
-  diff_cmd_baton.ddi.session_relpath = NULL;
-  diff_cmd_baton.ddi.anchor = NULL;
+  dwi.wc_ctx = ctx->wc_ctx;
+  dwi.ddi.session_relpath = NULL;
+  dwi.ddi.anchor = NULL;
 
-  processor = svn_diff__tree_processor_create(&diff_cmd_baton, pool);
+  processor = svn_diff__tree_processor_create(&dwi, pool);
 
   processor->dir_added = diff_dir_added;
   processor->dir_changed = diff_dir_changed;
@@ -2395,7 +2395,7 @@ svn_client_diff6(const apr_array_header_t *options,
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, NULL, &diff_cmd_baton.ddi,
+  return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
                                  path_or_url1, path_or_url2,
                                  revision1, revision2, &peg_revision,
                                  depth, ignore_ancestry, changelists,
@@ -2426,7 +2426,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  diff_writer_info_t diff_cmd_baton = { 0 };
+  diff_writer_info_t dwi = { 0 };
   const svn_diff_tree_processor_t *diff_processor;
   svn_diff_tree_processor_t *processor;
 
@@ -2436,33 +2436,33 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                               "properties at the same time"));
 
   /* setup callback and baton */
-  diff_cmd_baton.ddi.orig_path_1 = path_or_url;
-  diff_cmd_baton.ddi.orig_path_2 = path_or_url;
+  dwi.ddi.orig_path_1 = path_or_url;
+  dwi.ddi.orig_path_2 = path_or_url;
 
-  SVN_ERR(create_diff_writer_info(&diff_cmd_baton, options,
+  SVN_ERR(create_diff_writer_info(&dwi, options,
                                   ctx->config, pool));
-  diff_cmd_baton.pool = pool;
-  diff_cmd_baton.outstream = outstream;
-  diff_cmd_baton.errstream = errstream;
-  diff_cmd_baton.header_encoding = header_encoding;
+  dwi.pool = pool;
+  dwi.outstream = outstream;
+  dwi.errstream = errstream;
+  dwi.header_encoding = header_encoding;
 
-  diff_cmd_baton.force_binary = ignore_content_type;
-  diff_cmd_baton.ignore_properties = ignore_properties;
-  diff_cmd_baton.properties_only = properties_only;
-  diff_cmd_baton.relative_to_dir = relative_to_dir;
-  diff_cmd_baton.use_git_diff_format = use_git_diff_format;
-  diff_cmd_baton.no_diff_added = no_diff_added;
-  diff_cmd_baton.no_diff_deleted = no_diff_deleted;
-  diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
+  dwi.force_binary = ignore_content_type;
+  dwi.ignore_properties = ignore_properties;
+  dwi.properties_only = properties_only;
+  dwi.relative_to_dir = relative_to_dir;
+  dwi.use_git_diff_format = use_git_diff_format;
+  dwi.no_diff_added = no_diff_added;
+  dwi.no_diff_deleted = no_diff_deleted;
+  dwi.show_copies_as_adds = show_copies_as_adds;
 
-  diff_cmd_baton.cancel_func = ctx->cancel_func;
-  diff_cmd_baton.cancel_baton = ctx->cancel_baton;
+  dwi.cancel_func = ctx->cancel_func;
+  dwi.cancel_baton = ctx->cancel_baton;
 
-  diff_cmd_baton.wc_ctx = ctx->wc_ctx;
-  diff_cmd_baton.ddi.session_relpath = NULL;
-  diff_cmd_baton.ddi.anchor = NULL;
+  dwi.wc_ctx = ctx->wc_ctx;
+  dwi.ddi.session_relpath = NULL;
+  dwi.ddi.anchor = NULL;
 
-  processor = svn_diff__tree_processor_create(&diff_cmd_baton, pool);
+  processor = svn_diff__tree_processor_create(&dwi, pool);
 
   processor->dir_added = diff_dir_added;
   processor->dir_changed = diff_dir_changed;
@@ -2478,7 +2478,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, NULL, &diff_cmd_baton.ddi,
+  return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
                                  path_or_url, path_or_url,
                                  start_revision, end_revision, peg_revision,
                                  depth, ignore_ancestry, changelists,
