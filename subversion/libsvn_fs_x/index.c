@@ -2548,7 +2548,6 @@ p2l_entries_func(void **out,
   apr_array_header_t *entries = *(apr_array_header_t **)out;
   const apr_array_header_t *raw_page = data;
   p2l_entries_baton_t *block = baton;
-  int i;
 
   /* Make PAGE a readable APR array. */
   apr_array_header_t page = *raw_page;
