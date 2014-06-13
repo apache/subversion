@@ -479,8 +479,6 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
                          void *baton,
                          apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
-
   /* Be sure to use the correct lock ordering as documented in
      fs_fs_shared_data_t.  The lock chain is being created in 
      innermost (last to acquire) -> outermost (first to acquire) order. */
@@ -2362,7 +2360,6 @@ rep_write_contents_close(void *baton)
     {
       svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_part_t noderev_id;
-      svn_checksum_t *checksum;
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
       noderev_id.number = rep->id.number;
 
@@ -3001,7 +2998,6 @@ write_final_changed_path_info(apr_off_t *offset_p,
 {
   apr_off_t offset;
   svn_stream_t *stream;
-  apr_hash_index_t *hi;
   svn_fs_x__p2l_entry_t entry;
   svn_fs_x__id_part_t rev_item
     = {SVN_INVALID_REVNUM, SVN_FS_X__ITEM_INDEX_CHANGES};

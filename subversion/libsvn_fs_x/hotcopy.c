@@ -586,7 +586,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   svn_fs_t *src_fs = hbb->src_fs;
   fs_x_data_t *src_ffd = src_fs->fsap_data;
   svn_fs_t *dst_fs = hbb->dst_fs;
-  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
   int max_files_per_dir = src_ffd->max_files_per_dir;
   svn_boolean_t incremental = hbb->incremental;
   svn_cancel_func_t cancel_func = hbb->cancel_func;
@@ -908,7 +907,6 @@ static svn_error_t *
 hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
 {
   struct hotcopy_body_baton *hbb = baton;
-  fs_x_data_t *src_ffd = hbb->src_fs->fsap_data;
 
   return svn_error_trace(svn_fs_x__with_pack_lock(hbb->src_fs, hotcopy_body,
                                                   baton, pool));
