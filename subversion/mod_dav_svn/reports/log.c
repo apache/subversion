@@ -104,11 +104,6 @@ start_path_with_copy_from(const char **element,
                 break;
       case 'R': *element = "S:replaced-path";
                 break;
-      case 'V': *element = "S:moved-path";
-                break;
-      case 'E': *element = "S:replaced-by-moved-path";
-                break;
-
       default:  /* Caller, you did wrong! */
                 SVN_ERR_MALFUNCTION();
     }
@@ -246,8 +241,6 @@ log_receiver(void *baton,
             {
             case 'A':
             case 'R':
-            case 'V':
-            case 'E':
               SVN_ERR(start_path_with_copy_from(&close_element, lrb,
                                                 log_item, iterpool));
               break;

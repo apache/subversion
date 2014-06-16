@@ -815,7 +815,7 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
  */
 typedef struct svn_log_changed_path2_t
 {
-  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify, mo'V'ed, move-replac'E'd */
+  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
   char action;
 
   /** Source path of copy (if any). */

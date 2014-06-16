@@ -304,8 +304,7 @@ detect_changed(apr_hash_t **changed,
         }
 
 
-      if (   (action == 'A') || (action == 'R')
-          || (action == 'V') || (action == 'E'))
+      if ((action == 'A') || (action == 'R'))
         {
           const char *copyfrom_path = change->copyfrom_path;
           svn_revnum_t copyfrom_rev = change->copyfrom_rev;
