@@ -74,12 +74,31 @@ protected:
   const ovector m_contents;
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_size;
+    const MethodID m_mid_get;
+  };
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
-  static MethodID m_mid_size;
-  static MethodID m_mid_get;
   static ovector convert_to_vector(Env env, jobject jlist);
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
 };
 
 /**
@@ -154,7 +173,7 @@ public:
    */
   void clear()
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_clear);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_clear);
     }
 
   /**
@@ -162,7 +181,7 @@ public:
    */
   jint length() const
     {
-      return m_env.CallIntMethod(m_jthis, m_mid_size);
+      return m_env.CallIntMethod(m_jthis, impl().m_mid_size);
     }
 
   /**
@@ -178,7 +197,7 @@ protected:
    * Constructs the list wrapper, deriving the class from @a jlist.
    */
   explicit BaseMutableList(Env env, jobject jlist)
-    : Object(env, jlist)
+    : Object(env, ClassCache::get_array_list(), jlist)
     {}
 
   /**
@@ -186,9 +205,10 @@ protected:
    * with initial allocation size @a length.
    */
   explicit BaseMutableList(Env env, jint length)
-    : Object(env, ClassCache::get_array_list(),
-             env.NewObject(ClassCache::get_array_list(), m_mid_ctor, length))
-    {}
+    : Object(env, ClassCache::get_array_list())
+    {
+      set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
+    }
 
 
   /**
@@ -196,7 +216,7 @@ protected:
    */
   void add(jobject obj)
     {
-      m_env.CallBooleanMethod(m_jthis, m_mid_add, obj);
+      m_env.CallBooleanMethod(m_jthis, impl().m_mid_add, obj);
     }
 
   /**
@@ -205,18 +225,37 @@ protected:
    */
   jobject operator[](jint index) const
     {
-      return m_env.CallObjectMethod(m_jthis, m_mid_get, index);
+      return m_env.CallObjectMethod(m_jthis, impl().m_mid_get, index);
     }
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_ctor;
+    const MethodID m_mid_add;
+    const MethodID m_mid_clear;
+    const MethodID m_mid_get;
+    const MethodID m_mid_size;
+  };
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
-  static MethodID m_mid_ctor;
-  static MethodID m_mid_add;
-  static MethodID m_mid_clear;
-  static MethodID m_mid_get;
-  static MethodID m_mid_size;
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
 };
 
 /**

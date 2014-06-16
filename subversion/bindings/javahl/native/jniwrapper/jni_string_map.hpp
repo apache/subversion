@@ -72,36 +72,108 @@ protected:
   const somap m_contents;
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_size;
+    const MethodID m_mid_entry_set;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
+  static somap convert_to_map(Env env, jobject jmap);
 
   struct Set
   {
-    static MethodID m_mid_iterator;
-    static void static_init(Env env);
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const MethodID m_mid_iterator;
+    };
+
     static const char* const m_class_name;
+    static const ClassImpl& impl()
+      {
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_set());
+      }
   };
 
   struct Iterator
   {
-    static MethodID m_mid_has_next;
-    static MethodID m_mid_next;
-    static void static_init(Env env);
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const MethodID m_mid_has_next;
+      const MethodID m_mid_next;
+    };
+
     static const char* const m_class_name;
+    static const ClassImpl& impl()
+      {
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_iterator());
+      }
   };
 
   struct Entry
   {
-    static MethodID m_mid_get_key;
-    static MethodID m_mid_get_value;
-    static void static_init(Env env);
-    static const char* const m_class_name;
-  };
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ClassCacheImpl;
 
-  static MethodID m_mid_size;
-  static MethodID m_mid_entry_set;
-  static somap convert_to_map(Env env, jobject jmap);
+    protected:
+      explicit ClassImpl(Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const MethodID m_mid_get_key;
+      const MethodID m_mid_get_value;
+    };
+
+    static const char* const m_class_name;
+    static const ClassImpl& impl()
+      {
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_map_entry());
+      }
+  };
 };
 
 /**
@@ -181,7 +253,7 @@ public:
    */
   void clear()
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_clear);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_clear);
     }
 
   /**
@@ -189,7 +261,7 @@ public:
    */
   jint length() const
     {
-      return m_env.CallIntMethod(m_jthis, m_mid_size);
+      return m_env.CallIntMethod(m_jthis, impl().m_mid_size);
     }
 
   /**
@@ -205,7 +277,7 @@ protected:
    * Constructs the map wrapper, deriving the class from @a jmap.
    */
   explicit BaseMutableMap(Env env, jobject jmap)
-    : Object(env, jmap)
+    : Object(env, ClassCache::get_hash_map(), jmap)
     {}
 
   /**
@@ -213,9 +285,10 @@ protected:
    * with initial allocation size @a length.
    */
   explicit BaseMutableMap(Env env, jint length)
-    : Object(env, ClassCache::get_hash_map(),
-             env.NewObject(ClassCache::get_hash_map(), m_mid_ctor, length))
-    {}
+    : Object(env, ClassCache::get_hash_map())
+    {
+      set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
+    }
 
 
   /**
@@ -223,7 +296,7 @@ protected:
    */
   void put(const std::string& key, jobject obj)
     {
-      m_env.CallObjectMethod(m_jthis, m_mid_put,
+      m_env.CallObjectMethod(m_jthis, impl().m_mid_put,
                              String(m_env, key).get(), obj);
     }
 
@@ -234,15 +307,34 @@ protected:
   jobject operator[](const std::string& index) const;
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_ctor;
+    const MethodID m_mid_put;
+    const MethodID m_mid_clear;
+    const MethodID m_mid_has_key;
+    const MethodID m_mid_get;
+    const MethodID m_mid_size;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
-  static MethodID m_mid_ctor;
-  static MethodID m_mid_put;
-  static MethodID m_mid_clear;
-  static MethodID m_mid_has_key;
-  static MethodID m_mid_get;
-  static MethodID m_mid_size;
 };
 
 /**

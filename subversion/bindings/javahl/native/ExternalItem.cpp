@@ -31,27 +31,22 @@ namespace JavaHL {
 const char* const ExternalItem::m_class_name =
   JAVA_PACKAGE"/types/ExternalItem";
 
-::Java::MethodID ExternalItem::m_mid_ctor;
-::Java::FieldID ExternalItem::m_fid_target_dir;
-::Java::FieldID ExternalItem::m_fid_url;
-::Java::FieldID ExternalItem::m_fid_revision;
-::Java::FieldID ExternalItem::m_fid_peg_revision;
+ExternalItem::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_mid_ctor(
+        env.GetMethodID(cls, "<init>",
+                        "(ZLjava/lang/String;Ljava/lang/String;"
+                        "L"JAVA_PACKAGE"/types/Revision;"
+                        "L"JAVA_PACKAGE"/types/Revision;)V")),
+    m_fid_target_dir(env.GetFieldID(cls, "targetDir", "Ljava/lang/String;")),
+    m_fid_url(env.GetFieldID(cls, "url", "Ljava/lang/String;")),
+    m_fid_revision(env.GetFieldID(cls, "revision",
+                                  "L"JAVA_PACKAGE"/types/Revision;")),
+    m_fid_peg_revision(env.GetFieldID(cls, "pegRevision",
+                                      "L"JAVA_PACKAGE"/types/Revision;"))
+{}
 
-void ExternalItem::static_init(::Java::Env env)
-{
-  const jclass cls = ::Java::ClassCache::get_external_item();
-  m_mid_ctor =
-    env.GetMethodID(cls, "<init>",
-                    "(ZLjava/lang/String;Ljava/lang/String;"
-                    "L"JAVA_PACKAGE"/types/Revision;"
-                    "L"JAVA_PACKAGE"/types/Revision;)V");
-  m_fid_target_dir = env.GetFieldID(cls, "targetDir", "Ljava/lang/String;");
-  m_fid_url = env.GetFieldID(cls, "url", "Ljava/lang/String;");
-  m_fid_revision = env.GetFieldID(cls, "revision",
-                                  "L"JAVA_PACKAGE"/types/Revision;");
-  m_fid_peg_revision = env.GetFieldID(cls, "pegRevision",
-                                      "L"JAVA_PACKAGE"/types/Revision;");
-}
+ExternalItem::ClassImpl::~ClassImpl() {}
 
 namespace {
 inline jstring
@@ -70,13 +65,14 @@ get_revision_field(::Java::Env env, jobject jthis,
 }
 
 inline jobject
-make_external_item(::Java::Env env, const ::Java::MethodID& mid_ctor,
+make_external_item(::Java::Env env,
+                   jclass cls, const ::Java::MethodID& mid_ctor,
                    const char* target_dir,
                    const char* url,
                    const svn_opt_revision_t* revision,
                    const svn_opt_revision_t* peg_revision)
 {
-  return env.NewObject(::Java::ClassCache::get_external_item(), mid_ctor,
+  return env.NewObject(cls, mid_ctor,
                        JNI_FALSE,
                        env.NewStringUTF(target_dir),
                        env.NewStringUTF(url),
@@ -87,10 +83,10 @@ make_external_item(::Java::Env env, const ::Java::MethodID& mid_ctor,
 
 ExternalItem::ExternalItem(::Java::Env env, jobject jthis)
   : Object(env, ::Java::ClassCache::get_external_item(), jthis),
-    m_target_dir(env, get_string_field(env, jthis, m_fid_target_dir)),
-    m_url(env, get_string_field(env, jthis, m_fid_url)),
-    m_revision(get_revision_field(env, jthis, m_fid_revision)),
-    m_peg_revision(get_revision_field(env, jthis, m_fid_peg_revision))
+    m_target_dir(env, get_string_field(env, jthis, impl().m_fid_target_dir)),
+    m_url(env, get_string_field(env, jthis, impl().m_fid_url)),
+    m_revision(get_revision_field(env, jthis, impl().m_fid_revision)),
+    m_peg_revision(get_revision_field(env, jthis, impl().m_fid_peg_revision))
 {}
 
 ExternalItem::ExternalItem(::Java::Env env,
@@ -98,14 +94,15 @@ ExternalItem::ExternalItem(::Java::Env env,
                            const char* url,
                            const svn_opt_revision_t* revision,
                            const svn_opt_revision_t* peg_revision)
-  : Object(env, ::Java::ClassCache::get_external_item(),
-           make_external_item(env, m_mid_ctor, target_dir, url,
-                              revision, peg_revision)),
+  : Object(env, ::Java::ClassCache::get_external_item()),
     m_target_dir(env, target_dir),
     m_url(env, url),
     m_revision(*revision),
     m_peg_revision(*peg_revision)
-{}
+{
+  set_this(make_external_item(env, get_class(), impl().m_mid_ctor,
+                              target_dir, url, revision, peg_revision));
+}
 
 svn_wc_external_item2_t*
 ExternalItem::get_external_item(SVN::Pool& svnpool) const

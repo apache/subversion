@@ -46,7 +46,9 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit ProvideBaseCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, jthis)
+    : ::Java::Object(env,
+                     ::Java::ClassCache::get_editor_provide_base_cb(),
+                     jthis)
     {}
 
   /**
@@ -54,7 +56,8 @@ public:
    */
   jobject operator()(jstring relpath) const
     {
-      return m_env.CallObjectMethod(m_jthis, m_mid_get_contents, relpath);
+      return m_env.CallObjectMethod(m_jthis, impl().m_mid_get_contents,
+                                    relpath);
     }
 
   class ReturnValue : public ::Java::Object
@@ -65,7 +68,9 @@ public:
      * The constructor does not verify the class of the wrapped object.
      */
     explicit ReturnValue(::Java::Env env, jobject jthis)
-      : Java::Object(env, jthis)
+      : Java::Object(env,
+                     ::Java::ClassCache::get_editor_provide_base_cb_ret(),
+                     jthis)
       {}
 
     /**
@@ -90,22 +95,60 @@ public:
      */
     jlong get_revision() const
       {
-        return m_env.GetLongField(m_jthis, m_fid_revision);
+        return m_env.GetLongField(m_jthis, impl().m_fid_revision);
       }
 
   private:
-    friend class ::Java::ClassCache;
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ::Java::ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(::Java::Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const ::Java::FieldID m_fid_contents;
+      const ::Java::FieldID m_fid_revision;
+    };
+
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+
+    friend class ::Java::ClassCacheImpl;
     static const char* const m_class_name;
-    static void static_init(::Java::Env env);
-    static ::Java::FieldID m_fid_contents;
-    static ::Java::FieldID m_fid_revision;
   };
 
 private:
-  friend class ::Java::ClassCache;
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_get_contents;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
-  static void static_init(::Java::Env env);
-  static ::Java::MethodID m_mid_get_contents;
 };
 
 
@@ -123,7 +166,9 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit ProvidePropsCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, jthis)
+    : ::Java::Object(env,
+                     ::Java::ClassCache::get_editor_provide_props_cb(),
+                     jthis)
     {}
 
   /**
@@ -131,7 +176,7 @@ public:
    */
   jobject operator()(jstring relpath) const
     {
-      return m_env.CallObjectMethod(m_jthis, m_mid_get_props, relpath);
+      return m_env.CallObjectMethod(m_jthis, impl().m_mid_get_props, relpath);
     }
 
   class ReturnValue : public ::Java::Object
@@ -142,7 +187,9 @@ public:
      * The constructor does not verify the class of the wrapped object.
      */
     explicit ReturnValue(::Java::Env env, jobject jthis)
-      : Java::Object(env, jthis)
+      : Java::Object(env,
+                     ::Java::ClassCache::get_editor_provide_props_cb_ret(),
+                     jthis)
       {}
 
     /**
@@ -165,22 +212,60 @@ public:
      */
     jlong get_revision() const
       {
-        return m_env.GetLongField(m_jthis, m_fid_revision);
+        return m_env.GetLongField(m_jthis, impl().m_fid_revision);
       }
 
   private:
-    friend class ::Java::ClassCache;
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ::Java::ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(::Java::Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const ::Java::FieldID m_fid_properties;
+      const ::Java::FieldID m_fid_revision;
+    };
+
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+
+    friend class ::Java::ClassCacheImpl;
     static const char* const m_class_name;
-    static void static_init(::Java::Env env);
-    static ::Java::FieldID m_fid_properties;
-    static ::Java::FieldID m_fid_revision;
   };
 
 private:
-  friend class ::Java::ClassCache;
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_get_props;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
-  static void static_init(::Java::Env env);
-  static ::Java::MethodID m_mid_get_props;
 };
 
 
@@ -198,7 +283,9 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit GetNodeKindCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, jthis)
+    : ::Java::Object(env,
+                     ::Java::ClassCache::get_editor_get_kind_cb(),
+                     jthis)
     {}
 
   /**
@@ -206,15 +293,34 @@ public:
    */
   jobject operator()(jstring relpath, jlong revision) const
     {
-      return m_env.CallObjectMethod(m_jthis, m_mid_get_kind,
+      return m_env.CallObjectMethod(m_jthis, impl().m_mid_get_kind,
                                     relpath, revision);
     }
 
 private:
-  friend class ::Java::ClassCache;
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_get_kind;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
-  static void static_init(::Java::Env env);
-  static ::Java::MethodID m_mid_get_kind;
 };
 
 } // namespace JavaHL

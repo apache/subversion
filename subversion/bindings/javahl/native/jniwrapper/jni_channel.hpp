@@ -125,20 +125,39 @@ private:
   static ChannelReader& m_null_reader;
   static ChannelWriter& m_null_writer;
 
+  friend class ClassCacheImpl;
+
   // Private references for the java.nio.ByteBuffer class.
-  friend class ClassCache;
   struct ByteBuffer
   {
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const MethodID m_mid_has_array;
+      const MethodID m_mid_get_array;
+      const MethodID m_mid_get_array_offset;
+      const MethodID m_mid_get_remaining;
+      const MethodID m_mid_get_position;
+      const MethodID m_mid_set_position;
+      const MethodID m_mid_get_bytearray;
+      const MethodID m_mid_put_bytearray;
+    };
+
     static const char* const m_class_name;
-    static void static_init(Env env);
-    static MethodID m_mid_has_array;
-    static MethodID m_mid_get_array;
-    static MethodID m_mid_get_array_offset;
-    static MethodID m_mid_get_remaining;
-    static MethodID m_mid_get_position;
-    static MethodID m_mid_set_position;
-    static MethodID m_mid_get_bytearray;
-    static MethodID m_mid_put_bytearray;
+    static const ClassImpl& impl()
+      {
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_byte_buffer());
+      }
   };
 };
 

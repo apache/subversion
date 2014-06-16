@@ -39,14 +39,16 @@ namespace Java {
  *
  * @since New in 1.9.
  */
-class Exception : public Object
+class Exception
 {
 public:
   /**
    * Constructs a wrapper for the @c jthrowable object @a exc.
    */
   explicit Exception(Env env, jthrowable exc)
-    : Object(env, exc)
+    : m_env(env),
+      m_jthis(exc),
+      m_class(env.GetObjectClass(exc))
     {}
 
   /**
@@ -106,7 +108,7 @@ public:
    */
   jthrowable throwable() const
     {
-      return jthrowable(Object::get());
+      return m_jthis;
     }
 
   /**
@@ -115,25 +117,74 @@ public:
    */
   jstring get_message() const;
 
+
+  /**
+   * Returns the wrapped exception instance.
+   */
+  jobject get() const
+    {
+      return m_jthis;
+    }
+
+  /**
+   * Returns the wrapped exception class.
+   */
+  jclass get_class() const
+    {
+      return m_class;
+    }
+
+  /**
+   * Returns the wrapped enviromnment reference.
+   */
+  Env get_env() const
+    {
+      return m_env;
+    }
+
 protected:
   /**
    * Constructs an exception generator with the concrete class
    * @a class_name.
    */
   explicit Exception(Env env, const char* class_name)
-    : Object(env, class_name, NULL)
+    : m_env(env),
+      m_jthis(NULL),
+      m_class(env.FindClass(class_name))
     {}
 
   /**
    * Constructs an exception generator with the concrete class @a cls.
    */
-  explicit Exception(Env env, jclass cls)
-    : Object(env, cls, NULL)
+  explicit Exception(Env env, const Object::ClassImpl* impl)
+    : m_env(env),
+      m_jthis(NULL),
+      m_class(impl->get_class())
     {}
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls)
+      : Object::ClassImpl(env, cls)
+      {}
+
+  public:
+    virtual ~ClassImpl();
+  };
+
+  const Env m_env;
+  jthrowable m_jthis;
+  jclass m_class;
+
+  friend class ClassCacheImpl;
+  static void static_init(Env env, jclass cls);
   static const char* const m_class_name;
   static MethodID m_mid_get_message;
 };
