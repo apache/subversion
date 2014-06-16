@@ -58,7 +58,7 @@ public:
    */
   jclass get_class() const
     {
-      return m_class;
+      return m_impl->get_class();
     }
 
   /**
@@ -69,45 +69,68 @@ public:
       return m_env;
     }
 
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl
+  {
+  public:
+    jclass get_class() const
+      {
+        return m_class.get();
+      }
+
+    virtual ~ClassImpl();
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls)
+      : m_class(env, cls)
+      {}
+
+  private:
+    friend class ClassCacheImpl;
+
+    GlobalClass m_class;  ///< Class reference for this object wrapper
+
+    // Non-copyable
+    ClassImpl(const ClassImpl&);
+    ClassImpl& operator=(const ClassImpl&);
+  };
+
 protected:
   /**
-   * Constructs an object wrapper given the @a class_name and an
+   * constructs an object wrapper given the class @a impl and an
    * object reference @a jthis.
    */
-  Object(Env env, const char* class_name, jobject jthis)
+  Object(Env env, const ClassImpl* impl, jobject jthis = NULL)
     : m_env(env),
-      m_class(env.FindClass(class_name)),
+      m_impl(impl),
       m_jthis(jthis)
     {}
+
+  const Env m_env;               ///< JVM environment wrapper
+  const ClassImpl* const m_impl; ///< Class implementation details
+  const jobject m_jthis;         ///< @c this object reference
 
   /**
-   * Constructs an object wrapper given a class reference @a cls and
-   * an object reference @a jthis.
+   * Certain subclasses need a fully constructed base Object before
+   * they can create the wrapped JNI object. They can use this
+   * function to oveerride the constness of @c m_jthis, but only if
+   * they're changing a @c NULL @c m_jthis to a concrete value.
    */
-  Object(Env env, jclass cls, jobject jthis)
-    : m_env(env),
-      m_class(cls),
-      m_jthis(jthis)
-    {}
-
-  /**
-   * Constructs an object wrapper given an object reference @a jthis
-   * and derives the class reference from it.
-   */
-  Object(Env env, jobject jthis)
-    : m_env(env),
-      m_class(env.GetObjectClass(jthis)),
-      m_jthis(jthis)
-    {}
-
-  const Env m_env;        ///< JVM environment wrapper
-  const jclass m_class;   ///< Class reference for this object wrapper
-  const jobject m_jthis;  ///< @c this object reference
+  void set_this(jobject jthis)
+    {
+      if (!m_jthis && jthis)
+        *const_cast<jobject*>(&m_jthis) = jthis;
+    }
 
 private:
-  friend class ClassCache;
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
 };
+
+// Forward declaration
+class ClassCacheImpl;
 
 /**
  * A singleton cache for global class references.
@@ -124,59 +147,14 @@ private:
  * cache should therefore be kept to a reasonable minimum.
  *
  * @since New in 1.9.
- * @todo ### Change implementation to load classes at first use.
  */
 class ClassCache
 {
-  explicit ClassCache(Env env);
+  // Cannot create instances of this type.
+  ClassCache();
   ~ClassCache();
 
-  static const ClassCache* m_instance;
-
-#define SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(N)   \
- private:                                       \
-   GlobalClass m_##N;                           \
- public:                                        \
-  static jclass get_##N()                       \
-  {                                             \
-    return m_instance->m_##N.get();             \
-  }                                             \
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(object);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(classtype);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(throwable);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(string);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(list);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(array_list);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(map);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(set);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(iterator);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(map_entry);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(hash_map);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(input_stream);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(output_stream);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(byte_buffer);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(subversion_exception);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_cb);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_result);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_failures);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(authn_ssl_server_cert_info);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(user_passwd_cb);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(external_item);
-
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_base_cb);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_base_cb_return_value);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_props_cb);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_props_cb_return_value);
-  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_get_kind_cb);
-#undef SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS
+  static ClassCacheImpl* m_impl;
 
 public:
   /* This static initializer must only be called by JNI_OnLoad */
@@ -184,6 +162,45 @@ public:
 
   /* This static finalizer must only be called by JNI_OnUnload */
   static void destroy();
+
+#define JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(M)     \
+  static const Object::ClassImpl* get_##M();
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(object);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(classtype);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(throwable);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(string);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(list);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(array_list);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(map);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(set);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(iterator);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(map_entry);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(hash_map);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(input_stream);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(output_stream);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(byte_buffer);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(subversion_exception);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(authn_cb);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(authn_result);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(authn_ssl_server_cert_failures);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(authn_ssl_server_cert_info);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(user_passwd_cb);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(external_item);
+
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(editor_provide_base_cb);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(editor_provide_base_cb_ret);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(editor_provide_props_cb);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(editor_provide_props_cb_ret);
+  JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(editor_get_kind_cb);
+#undef JNIWRAPPER_DECLARE_CACHED_CLASS
 };
 
 
@@ -195,7 +212,7 @@ public:
  *
  * @since New in 1.9.
  */
-class Class : public Object
+class Class
 {
 public:
   /**
@@ -213,10 +230,46 @@ public:
    */
   jstring get_name() const;
 
+  /**
+   * Returns the wrapped class instance.
+   */
+  jobject get() const
+    {
+      return m_jthis;
+    }
+
+  /**
+   * Returns the wrapped enviromnment reference.
+   */
+  Env get_env() const
+    {
+      return m_env;
+    }
+
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls)
+      : Object::ClassImpl(env, cls)
+      {}
+
+  public:
+    virtual ~ClassImpl();
+  };
+
+  const Env m_env;        ///< JVM environment wrapper
+  const jobject m_jthis;  ///< Class instance
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
+  static void static_init(Env env, jclass class_type);
+
   static MethodID m_mid_get_class;
   static MethodID m_mid_get_name;
 };

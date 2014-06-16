@@ -23,6 +23,8 @@
 
 #include <stdexcept>
 
+#include <apr_atomic.h>
+
 #define SVN_JAVAHL_JNIWRAPPER_LOG(expr)
 #include "jni_env.hpp"
 #include "jni_globalref.hpp"
@@ -40,9 +42,175 @@
 #include "../ExternalItem.hpp"
 #include "../EditorCallbacks.hpp"
 
+namespace
+{
+/* This class behaves like a dumbed-down std:auto_ptr, but it
+   implements atomic access and modification of the wrapped
+   pointer. */
+class ClassImplPtr
+{
+  typedef ::Java::Object::ClassImpl ClassImpl;
+
+ public:
+  /* Default constructor; initializes the wrapped pointer to NULL */
+  explicit ClassImplPtr()
+    : m_ptr(NULL)
+  {}
+
+  /* Initializing constructor; sets the wrapped pointer to PTR */
+  explicit ClassImplPtr(ClassImpl* ptr)
+    : m_ptr(ptr)
+  {}
+
+  /* Destructor deletes the object and resets the wrapped pointer to NULL. */
+  ~ClassImplPtr()
+    {
+      delete static_cast<ClassImpl*>(
+          apr_atomic_casptr(&m_ptr, NULL, get()));
+    }
+
+  /* Sets the wrapped pointer to PTR iff it is NULL, and returns the
+     old value. */
+  ClassImpl* test_and_set(ClassImpl* ptr)
+    {
+      return static_cast<ClassImpl*>(
+          apr_atomic_casptr(&m_ptr, ptr, NULL));
+    }
+
+  /* Returns the current value of the the wrapped pointer. */
+  ClassImpl* get() const
+    {
+      return static_cast<ClassImpl*>(
+          apr_atomic_casptr(&m_ptr, NULL, NULL));
+    }
+
+private:
+  // Non-copyable
+  ClassImplPtr(const ClassImplPtr&);
+  ClassImplPtr& operator=(const ClassImplPtr&);
+
+  mutable volatile void* m_ptr;
+};
+} // anonymous namespace
+
+
 namespace Java {
 
-const ClassCache* ClassCache::m_instance = NULL;
+class ClassCacheImpl
+{
+
+  friend class ClassCache;
+  const Env m_env;
+
+  // We only statically initialize a few of the common class wrappers.
+  explicit ClassCacheImpl(Env env)
+    : m_env(env),
+
+#define JNIWRAPPER_INIT_CACHED_CLASS(M, C)     \
+  m_impl_##M(new C::ClassImpl(env, env.FindClass(C::m_class_name)))
+
+      JNIWRAPPER_INIT_CACHED_CLASS(object, Object),
+      JNIWRAPPER_INIT_CACHED_CLASS(classtype, Class),
+      JNIWRAPPER_INIT_CACHED_CLASS(throwable, Exception),
+      JNIWRAPPER_INIT_CACHED_CLASS(string, String)
+#undef JNIWRAPPER_INIT_CACHED_CLASS
+    {}
+
+  // We can't do this in the constructor above, because the satic
+  // initializers will expect that ClassCache::m_impl is already set;
+  // that doesn't happen until the constructor returns.
+  void static_init()
+    {
+#define JNIWRAPPER_STATIC_CACHED_CLASS(M, C)     \
+      C::static_init(m_env, m_impl_##M->get_class())
+
+      // No-op JNIWRAPPER_STATIC_CACHED_CLASS(object, Object);
+      JNIWRAPPER_STATIC_CACHED_CLASS(classtype, Class);
+      JNIWRAPPER_STATIC_CACHED_CLASS(throwable, Exception);
+      // No-op JNIWRAPPER_STATIC_CACHED_CLASS(string, String);
+#undef JNIWRAPPER_STATIC_CACHED_CLASS
+    }
+
+  // The statically initialized calss wrappers are always defined and
+  // therefore do not need atomic access.
+#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)            \
+  std::auto_ptr<Object::ClassImpl> m_impl_##M;          \
+  const Object::ClassImpl* get_##M()                    \
+    {                                                   \
+      return m_impl_##M.get();                          \
+    }
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(object, Object)
+  JNIWRAPPER_DEFINE_CACHED_CLASS(classtype, Class)
+  JNIWRAPPER_DEFINE_CACHED_CLASS(throwable, Exception)
+  JNIWRAPPER_DEFINE_CACHED_CLASS(string, String)
+#undef JNIWRAPPER_DEFINE_CACHED_CLASS
+
+  // All other class wrappers must be atomically initialized
+#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)                    \
+  ClassImplPtr m_impl_##M;                                      \
+  const Object::ClassImpl* get_##M()                            \
+    {                                                           \
+      Object::ClassImpl* pimpl = m_impl_##M.get();              \
+      if (!pimpl)                                               \
+        {                                                       \
+          std::auto_ptr<Object::ClassImpl> tmp(                 \
+              new C::ClassImpl(                                 \
+                  m_env, m_env.FindClass(C::m_class_name)));    \
+          pimpl = m_impl_##M.test_and_set(tmp.get());           \
+          if (!pimpl)                                           \
+            pimpl = tmp.release();                              \
+        }                                                       \
+      return pimpl;                                             \
+    }
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseList);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseMutableList);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseMap);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseMap::Set);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(iterator, BaseMap::Iterator);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseMap::Entry);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMutableMap);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(input_stream, InputStream);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(output_stream, OutputStream);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(byte_buffer,
+                                 ByteChannel::ByteBuffer);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(subversion_exception,
+                                 ::JavaHL::SubversionException);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(authn_cb,
+                                 ::JavaHL::AuthnCallback);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(authn_result,
+                                 ::JavaHL::AuthnCallback::AuthnResult);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(authn_ssl_server_cert_failures,
+                                 ::JavaHL::AuthnCallback::SSLServerCertFailures);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(authn_ssl_server_cert_info,
+                                 ::JavaHL::AuthnCallback::SSLServerCertInfo);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(user_passwd_cb,
+                                 ::JavaHL::UserPasswordCallback);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(external_item,
+                                 ::JavaHL::ExternalItem);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(editor_provide_base_cb,
+                                 ::JavaHL::ProvideBaseCallback);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(editor_provide_base_cb_ret,
+                                 ::JavaHL::ProvideBaseCallback::ReturnValue);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(editor_provide_props_cb,
+                                 ::JavaHL::ProvidePropsCallback);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(editor_provide_props_cb_ret,
+                                 ::JavaHL::ProvidePropsCallback::ReturnValue);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(editor_get_kind_cb,
+                                 ::JavaHL::GetNodeKindCallback);
+#undef JNIWRAPPER_DEFINE_CACHED_CLASS
+};
+
+
+ClassCacheImpl* ClassCache::m_impl = NULL;
 
 void ClassCache::create()
 {
@@ -50,7 +218,8 @@ void ClassCache::create()
 
   try
     {
-      new ClassCache(Env());
+      m_impl = new ClassCacheImpl(Env());
+      m_impl->static_init();
     }
   catch (const SignalExceptionThrown&)
     {}
@@ -89,102 +258,51 @@ void ClassCache::create()
 
 void ClassCache::destroy()
 {
-  const ClassCache* const instance = m_instance;
-  m_instance = NULL;
-  delete instance;
+  ClassCacheImpl* const pimpl = m_impl;
+  m_impl = NULL;
+  delete pimpl;
 }
 
-ClassCache::~ClassCache() {}
-
-#define SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(M, C)    \
-  m_##M(env, env.FindClass(C::m_class_name))
-ClassCache::ClassCache(Env env)
-  : SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(object, Object),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(classtype, Class),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(throwable, Exception),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(string, String),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(list, BaseList),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(array_list, BaseMutableList),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map, BaseMap),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(set, BaseMap::Set),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(iterator, BaseMap::Iterator),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map_entry, BaseMap::Entry),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(hash_map, BaseMutableMap),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(input_stream, InputStream),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(output_stream, OutputStream),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(byte_buffer,
-                                           ByteChannel::ByteBuffer),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
-                                           ::JavaHL::SubversionException),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(authn_cb,
-                                           ::JavaHL::AuthnCallback),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
-        authn_result, ::JavaHL::AuthnCallback::AuthnResult),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
-        authn_ssl_server_cert_failures,
-        ::JavaHL::AuthnCallback::SSLServerCertFailures),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
-        authn_ssl_server_cert_info,
-        ::JavaHL::AuthnCallback::SSLServerCertInfo),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(user_passwd_cb,
-                                           ::JavaHL::UserPasswordCallback),
-
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
-                                           ::JavaHL::ExternalItem),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_base_cb,
-                                           ::JavaHL::ProvideBaseCallback),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
-        editor_provide_base_cb_return_value,
-        ::JavaHL::ProvideBaseCallback::ReturnValue),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_props_cb,
-                                           ::JavaHL::ProvidePropsCallback),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
-        editor_provide_props_cb_return_value,
-        ::JavaHL::ProvidePropsCallback::ReturnValue),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_get_kind_cb,
-                                           ::JavaHL::GetNodeKindCallback)
-{
-  m_instance = this;
-  // no-op: Object::static_init(env);
-  Class::static_init(env);
-  Exception::static_init(env);
-  // no-op: String::static_init(env);
-
-  BaseList::static_init(env);
-  BaseMutableList::static_init(env);
-
-  BaseMap::static_init(env);
-  BaseMap::Set::static_init(env);
-  BaseMap::Iterator::static_init(env);
-  BaseMap::Entry::static_init(env);
-  BaseMutableMap::static_init(env);
-
-  InputStream::static_init(env);
-  OutputStream::static_init(env);
-
-  ByteChannel::ByteBuffer::static_init(env);
-
-  // no-op: ::JavaHL::SubversionException::static_init(env);
-  ::JavaHL::AuthnCallback::static_init(env);
-  ::JavaHL::AuthnCallback::AuthnResult::static_init(env);
-  ::JavaHL::AuthnCallback::SSLServerCertFailures::static_init(env);
-  ::JavaHL::AuthnCallback::SSLServerCertInfo::static_init(env);
-  ::JavaHL::UserPasswordCallback::static_init(env);
-
-  ::JavaHL::ExternalItem::static_init(env);
-
-  ::JavaHL::ProvideBaseCallback::static_init(env);
-  ::JavaHL::ProvideBaseCallback::ReturnValue::static_init(env);
-  ::JavaHL::ProvidePropsCallback::static_init(env);
-  ::JavaHL::ProvidePropsCallback::ReturnValue::static_init(env);
-  ::JavaHL::GetNodeKindCallback::static_init(env);
+#define JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(M)         \
+const Object::ClassImpl* ClassCache::get_##M()          \
+{                                                       \
+  return m_impl->get_##M();                             \
 }
-#undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(object);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(classtype);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(throwable);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(string);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(list);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(array_list);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(map);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(set);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(iterator);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(map_entry);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(hash_map);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(input_stream);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(output_stream);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(byte_buffer);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(subversion_exception);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_cb);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_result);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_ssl_server_cert_failures);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_ssl_server_cert_info);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(user_passwd_cb);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(external_item);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(editor_provide_base_cb);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(editor_provide_base_cb_ret);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(editor_provide_props_cb);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(editor_provide_props_cb_ret);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(editor_get_kind_cb);
+#undef JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR
 
 } // namespace Java

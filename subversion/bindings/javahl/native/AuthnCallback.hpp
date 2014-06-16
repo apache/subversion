@@ -52,38 +52,56 @@ public:
      * The constructor does not verify the class of the wrapped object.
      */
     explicit AuthnResult(::Java::Env env, jobject jthis)
-      : ::Java::Object(env, jthis)
+      : ::Java::Object(env, ::Java::ClassCache::get_authn_result(), jthis)
       {}
 
     bool save() const
       {
-        return (0 != m_env.GetBooleanField(m_jthis, m_fid_save));
+        return (0 != m_env.GetBooleanField(m_jthis, impl().m_fid_save));
       }
 
     bool trust() const
       {
-        return (0 != m_env.GetBooleanField(m_jthis, m_fid_trust));
+        return (0 != m_env.GetBooleanField(m_jthis, impl().m_fid_trust));
       }
 
     jstring identity() const
       {
-        return jstring(m_env.GetObjectField(m_jthis, m_fid_identity));
+        return jstring(m_env.GetObjectField(m_jthis, impl().m_fid_identity));
       }
 
     jstring secret() const
       {
-        return jstring(m_env.GetObjectField(m_jthis, m_fid_secret));
+        return jstring(m_env.GetObjectField(m_jthis, impl().m_fid_secret));
       }
 
   private:
-    friend class ::Java::ClassCache;
-    static const char* const m_class_name;
-    static void static_init(::Java::Env env);
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ::Java::ClassCacheImpl;
 
-    static ::Java::FieldID m_fid_save;
-    static ::Java::FieldID m_fid_trust;
-    static ::Java::FieldID m_fid_identity;
-    static ::Java::FieldID m_fid_secret;
+    protected:
+      explicit ClassImpl(::Java::Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const ::Java::FieldID m_fid_save;
+      const ::Java::FieldID m_fid_trust;
+      const ::Java::FieldID m_fid_identity;
+      const ::Java::FieldID m_fid_secret;
+    };
+
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+
+    friend class ::Java::ClassCacheImpl;
+    static const char* const m_class_name;
   };
 
 
@@ -100,11 +118,29 @@ public:
     explicit SSLServerCertFailures(::Java::Env env, jint failures);
 
   private:
-    friend class ::Java::ClassCache;
-    static const char* const m_class_name;
-    static void static_init(::Java::Env env);
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ::Java::ClassCacheImpl;
 
-    static ::Java::MethodID m_mid_ctor;
+    protected:
+      explicit ClassImpl(::Java::Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const ::Java::MethodID m_mid_ctor;
+    };
+
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+
+    friend class ::Java::ClassCacheImpl;
+    static const char* const m_class_name;
   };
 
 
@@ -126,11 +162,29 @@ public:
                                const ::Java::String& der);
 
   private:
-    friend class ::Java::ClassCache;
-    static const char* const m_class_name;
-    static void static_init(::Java::Env env);
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ::Java::ClassCacheImpl;
 
-    static ::Java::MethodID m_mid_ctor;
+    protected:
+      explicit ClassImpl(::Java::Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const ::Java::MethodID m_mid_ctor;
+    };
+
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+
+    friend class ::Java::ClassCacheImpl;
+    static const char* const m_class_name;
   };
 
 
@@ -139,7 +193,7 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit AuthnCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, jthis)
+    : ::Java::Object(env, ::Java::ClassCache::get_authn_cb(), jthis)
     {}
 
   /**
@@ -185,17 +239,35 @@ public:
   bool allow_store_plaintext_passphrase(const ::Java::String& realm);
 
 private:
-  friend class ::Java::ClassCache;
-  static const char* const m_class_name;
-  static void static_init(::Java::Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
 
-  static ::Java::MethodID m_mid_username_prompt;
-  static ::Java::MethodID m_mid_user_password_prompt;
-  static ::Java::MethodID m_mid_ssl_server_trust_prompt;
-  static ::Java::MethodID m_mid_ssl_client_cert_prompt;
-  static ::Java::MethodID m_mid_ssl_client_cert_passphrase_prompt;
-  static ::Java::MethodID m_mid_allow_store_plaintext_password;
-  static ::Java::MethodID m_mid_allow_store_plaintext_passphrase;
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_username_prompt;
+    const ::Java::MethodID m_mid_user_password_prompt;
+    const ::Java::MethodID m_mid_ssl_server_trust_prompt;
+    const ::Java::MethodID m_mid_ssl_client_cert_prompt;
+    const ::Java::MethodID m_mid_ssl_client_cert_passphrase_prompt;
+    const ::Java::MethodID m_mid_allow_store_plaintext_password;
+    const ::Java::MethodID m_mid_allow_store_plaintext_passphrase;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
+  static const char* const m_class_name;
 };
 
 
@@ -213,7 +285,7 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit UserPasswordCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, jthis)
+    : ::Java::Object(env, ::Java::ClassCache::get_user_passwd_cb(), jthis)
     {}
 
   /**
@@ -272,19 +344,37 @@ public:
   bool user_allowed_save();
 
 private:
-  friend class ::Java::ClassCache;
-  static const char* const m_class_name;
-  static void static_init(::Java::Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
 
-  static ::Java::MethodID m_mid_ask_trust_ssl_server;
-  static ::Java::MethodID m_mid_prompt_2arg;
-  static ::Java::MethodID m_mid_ask_yes_no;
-  static ::Java::MethodID m_mid_ask_question_3arg;
-  static ::Java::MethodID m_mid_get_username;
-  static ::Java::MethodID m_mid_get_password;
-  static ::Java::MethodID m_mid_prompt;
-  static ::Java::MethodID m_mid_ask_question;
-  static ::Java::MethodID m_mid_user_allowed_save;
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_ask_trust_ssl_server;
+    const ::Java::MethodID m_mid_prompt_2arg;
+    const ::Java::MethodID m_mid_ask_yes_no;
+    const ::Java::MethodID m_mid_ask_question_3arg;
+    const ::Java::MethodID m_mid_get_username;
+    const ::Java::MethodID m_mid_get_password;
+    const ::Java::MethodID m_mid_prompt;
+    const ::Java::MethodID m_mid_ask_question;
+    const ::Java::MethodID m_mid_user_allowed_save;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
+  static const char* const m_class_name;
 };
 
 } // namespace JavaHL

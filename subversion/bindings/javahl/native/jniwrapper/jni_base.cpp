@@ -206,21 +206,24 @@ GlobalClass& GlobalClass::operator=(jclass that)
 // Class Java::Object
 
 const char* const Object::m_class_name = "java/lang/Object";
+Object::ClassImpl::~ClassImpl() {}
 
 
 // Class Java::Class
 
 const char* const Class::m_class_name = "java/lang/Class";
+Class::ClassImpl::~ClassImpl() {}
+
 MethodID Class::m_mid_get_class;
 MethodID Class::m_mid_get_name;
-void Class::static_init(Env env)
+
+void Class::static_init(Env env, jclass cls)
 {
   m_mid_get_class = env.GetMethodID(
-      ClassCache::get_object(),
+      ClassCache::get_object()->get_class(),
       "getClass", "()Ljava/lang/Class;");
   m_mid_get_name = env.GetMethodID(
-      ClassCache::get_classtype(),
-      "getName",  "()Ljava/lang/String;");
+      cls, "getName",  "()Ljava/lang/String;");
 }
 
 namespace{
@@ -233,13 +236,13 @@ jobject get_class_of_object(Env env, jobject obj, jmethodID mid_get_class)
 } // anonymous namespace
 
 Class::Class(Env env, jobject obj)
-  : Object(env, ClassCache::get_classtype(),
-           get_class_of_object(env, obj, m_mid_get_class))
+  : m_env(env),
+    m_jthis(get_class_of_object(env, obj, m_mid_get_class))
 {}
 
 Class::Class(const Object& obj)
-  : Object(obj.get_env(), ClassCache::get_classtype(),
-           get_class_of_object(obj.get_env(), obj.get(), m_mid_get_class))
+  : m_env(obj.get_env()),
+    m_jthis(get_class_of_object(obj.get_env(), obj.get(), m_mid_get_class))
 {}
 
 jstring Class::get_name() const
@@ -253,6 +256,7 @@ jstring Class::get_name() const
 // Class Java::String
 
 const char* const String::m_class_name = "java/lang/String";
+String::ClassImpl::~ClassImpl() {}
 
 const char* String::strdup(apr_pool_t* pool) const
 {
@@ -279,7 +283,7 @@ void String::MutableContents::set_value(const char* new_text)
 void Exception::throw_java_exception() const
 {
   if (instantiated()
-      ? m_env.Throw(throwable())
+      ? m_env.Throw(m_jthis)
       : m_env.ThrowNew(m_class, NULL))
     throw std::runtime_error(_("Could not throw Java exception"));
 }
@@ -299,12 +303,13 @@ jstring Exception::get_message() const
 }
 
 const char* const Exception::m_class_name = "java/lang/Throwable";
+Exception::ClassImpl::~ClassImpl() {}
+
 MethodID Exception::m_mid_get_message;
-void Exception::static_init(Env env)
+void Exception::static_init(Env env, jclass cls)
 {
   m_mid_get_message = env.GetMethodID(
-      ClassCache::get_throwable(),
-      "getMessage", "()Ljava/lang/String;");
+      cls, "getMessage", "()Ljava/lang/String;");
 }
 
 // Other exception class initializers
@@ -337,7 +342,8 @@ void handle_svn_error(Env env, ::svn_error_t* err)
   if (env.ExceptionCheck())
     {
       cause = env.ExceptionOccurred();
-      if (env.IsInstanceOf(cause, ClassCache::get_subversion_exception()))
+      if (env.IsInstanceOf(
+              cause, ClassCache::get_subversion_exception()->get_class()))
         {
           // XXX FIXME: Should really have a special error code
           // specifically for propagating Java exceptions from

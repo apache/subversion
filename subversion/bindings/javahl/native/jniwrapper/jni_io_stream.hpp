@@ -73,7 +73,7 @@ public:
    */
   void close()
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_close);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_close);
     }
 
   /**
@@ -81,7 +81,7 @@ public:
    */
   bool mark_supported()
     {
-      return m_env.CallBooleanMethod(m_jthis, m_mid_mark_supported);
+      return m_env.CallBooleanMethod(m_jthis, impl().m_mid_mark_supported);
     }
 
   /**
@@ -89,7 +89,7 @@ public:
    */
   void mark(jint readlimit)
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_mark, readlimit);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_mark, readlimit);
     }
 
   /**
@@ -97,7 +97,7 @@ public:
    */
   void reset()
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_reset);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_reset);
     }
 
   /**
@@ -105,7 +105,7 @@ public:
    */
   jint read()
     {
-      return m_env.CallIntMethod(m_jthis, m_mid_read_byte);
+      return m_env.CallIntMethod(m_jthis, impl().m_mid_read_byte);
     }
 
   /**
@@ -113,7 +113,7 @@ public:
    */
   jint read(ByteArray& dst, jint length = -1, jint offset = 0)
     {
-      return m_env.CallIntMethod(m_jthis, m_mid_read_bytearray,
+      return m_env.CallIntMethod(m_jthis, impl().m_mid_read_bytearray,
                                  dst.get(), offset,
                                  (length >= 0 ? length
                                   : dst.length() - offset));
@@ -129,20 +129,39 @@ public:
    */
   jlong skip(jlong count)
     {
-      return m_env.CallLongMethod(m_jthis, m_mid_skip, count);
+      return m_env.CallLongMethod(m_jthis, impl().m_mid_skip, count);
     }
 
 private:
-  friend class ClassCache;
-  static void static_init(Env env);
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_close;
+    const MethodID m_mid_mark_supported;
+    const MethodID m_mid_mark;
+    const MethodID m_mid_reset;
+    const MethodID m_mid_read_byte;
+    const MethodID m_mid_read_bytearray;
+    const MethodID m_mid_skip;
+  };
+
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
-  static MethodID m_mid_close;
-  static MethodID m_mid_mark_supported;
-  static MethodID m_mid_mark;
-  static MethodID m_mid_reset;
-  static MethodID m_mid_read_byte;
-  static MethodID m_mid_read_bytearray;
-  static MethodID m_mid_skip;
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
 };
 
 
@@ -182,7 +201,7 @@ public:
    */
   void close()
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_close);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_close);
     }
 
   /**
@@ -190,7 +209,7 @@ public:
    */
   void write(jint byte)
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_write_byte, byte);
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_write_byte, byte);
     }
 
   /**
@@ -198,7 +217,7 @@ public:
    */
   void write(const ByteArray& src, jint length = -1, jint offset = 0)
     {
-      m_env.CallVoidMethod(m_jthis, m_mid_write_bytearray,
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_write_bytearray,
                            src.get(), offset,
                            (length >= 0 ? length
                             : src.length() - offset));
@@ -229,12 +248,32 @@ public:
     }
 
 private:
-  friend class ClassCache;
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const MethodID m_mid_close;
+    const MethodID m_mid_write_byte;
+    const MethodID m_mid_write_bytearray;
+  };
+
+  friend class ClassCacheImpl;
   static void static_init(Env env);
   static const char* const m_class_name;
-  static MethodID m_mid_close;
-  static MethodID m_mid_write_byte;
-  static MethodID m_mid_write_bytearray;
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
 };
 
 } // namespace Java

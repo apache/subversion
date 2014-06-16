@@ -45,7 +45,7 @@ public:
     {}
 
 private:
-  friend class ::Java::ClassCache;
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
 };
 

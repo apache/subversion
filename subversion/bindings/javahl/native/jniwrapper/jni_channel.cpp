@@ -116,36 +116,29 @@ ChannelWriter& ByteChannel::m_null_writer = bad_reader_writer;
 const char* const ByteChannel::ByteBuffer::m_class_name =
   "java/nio/ByteBuffer";
 
-MethodID ByteChannel::ByteBuffer::m_mid_has_array;
-MethodID ByteChannel::ByteBuffer::m_mid_get_array;
-MethodID ByteChannel::ByteBuffer::m_mid_get_array_offset;
-MethodID ByteChannel::ByteBuffer::m_mid_get_remaining;
-MethodID ByteChannel::ByteBuffer::m_mid_get_position;
-MethodID ByteChannel::ByteBuffer::m_mid_set_position;
-MethodID ByteChannel::ByteBuffer::m_mid_get_bytearray;
-MethodID ByteChannel::ByteBuffer::m_mid_put_bytearray;
+ByteChannel::ByteBuffer::ClassImpl::ClassImpl(Env env, jclass cls)
+  : Object::ClassImpl(env, cls),
+    m_mid_has_array(env.GetMethodID(cls, "hasArray", "()Z")),
+    m_mid_get_array(env.GetMethodID(cls, "array", "()[B")),
+    m_mid_get_array_offset(env.GetMethodID(cls, "arrayOffset", "()I")),
+    m_mid_get_remaining(env.GetMethodID(cls, "remaining", "()I")),
+    m_mid_get_position(env.GetMethodID(cls, "position", "()I")),
+    m_mid_set_position(env.GetMethodID(cls,  "position",
+                                       "(I)Ljava/nio/Buffer;")),
+    m_mid_get_bytearray(env.GetMethodID(cls, "get",
+                                        "([BII)Ljava/nio/ByteBuffer;")),
+    m_mid_put_bytearray(env.GetMethodID(cls, "put",
+                                        "([BII)Ljava/nio/ByteBuffer;"))
+{}
 
-void ByteChannel::ByteBuffer::static_init(Env env)
-{
-  const jclass cls = ClassCache::get_byte_buffer();
-  m_mid_has_array = env.GetMethodID(cls, "hasArray", "()Z");
-  m_mid_get_array = env.GetMethodID(cls, "array", "()[B");
-  m_mid_get_array_offset = env.GetMethodID(cls, "arrayOffset", "()I");
-  m_mid_get_remaining = env.GetMethodID(cls, "remaining", "()I");
-  m_mid_get_position = env.GetMethodID(cls, "position", "()I");
-  m_mid_set_position = env.GetMethodID(cls,  "position",
-                                       "(I)Ljava/nio/Buffer;");
-  m_mid_get_bytearray = env.GetMethodID(cls, "get",
-                                        "([BII)Ljava/nio/ByteBuffer;");
-  m_mid_put_bytearray = env.GetMethodID(cls, "put",
-                                        "([BII)Ljava/nio/ByteBuffer;");
-}
-
+ByteChannel::ByteBuffer::ClassImpl::~ClassImpl() {}
 
 jint ByteChannel::read(jobject destination)
 {
+  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl();
+
   const jint remaining = get_remaining(m_env, destination,
-                                       ByteBuffer::m_mid_get_remaining);
+                                       bufimpl.m_mid_get_remaining);
   if (!remaining)
     {
       // No space in the buffer; don't try to read anything.
@@ -153,7 +146,7 @@ jint ByteChannel::read(jobject destination)
     }
 
   const jint position = get_position(m_env, destination,
-                                     ByteBuffer::m_mid_get_position);
+                                     bufimpl.m_mid_get_position);
 
   jint bytes_read = 0;
   void* data = m_env.GetDirectBufferAddress(destination);
@@ -166,13 +159,13 @@ jint ByteChannel::read(jobject destination)
     {
       // It was not a direct buffer ... see if it has an array.
       jbyteArray raw_array = get_array(m_env, destination,
-                                       ByteBuffer::m_mid_has_array,
-                                       ByteBuffer::m_mid_get_array);
+                                       bufimpl.m_mid_has_array,
+                                       bufimpl.m_mid_get_array);
       if (raw_array)
         {
           const jint array_offset = get_array_offset(
               m_env, destination,
-              ByteBuffer::m_mid_get_array_offset);
+              bufimpl.m_mid_get_array_offset);
           ByteArray array(m_env, raw_array);
           ByteArray::MutableContents contents(array);
           data = contents.data();
@@ -184,7 +177,7 @@ jint ByteChannel::read(jobject destination)
     {
       if (bytes_read > 0)
         set_position(m_env, destination,
-                     ByteBuffer::m_mid_set_position,
+                     bufimpl.m_mid_set_position,
                      position + bytes_read);
       return bytes_read;
     }
@@ -196,15 +189,17 @@ jint ByteChannel::read(jobject destination)
   bytes_read = m_reader(m_env, contents.data(), contents.length());
   if (bytes_read > 0)
     put_bytearray(m_env, destination,
-                  ByteBuffer::m_mid_put_bytearray,
+                  bufimpl.m_mid_put_bytearray,
                   array, bytes_read);
   return bytes_read;
 }
 
 jint ByteChannel::write(jobject source)
 {
+  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl();
+
   const jint remaining = get_remaining(m_env, source,
-                                       ByteBuffer::m_mid_get_remaining);
+                                       bufimpl.m_mid_get_remaining);
   if (!remaining)
     {
       // No data in the buffer; don't try to write anything.
@@ -212,7 +207,7 @@ jint ByteChannel::write(jobject source)
     }
 
   const jint position = get_position(m_env, source,
-                                     ByteBuffer::m_mid_get_position);
+                                     bufimpl.m_mid_get_position);
 
   jint bytes_written = 0;
   const void* data = m_env.GetDirectBufferAddress(source);
@@ -225,13 +220,13 @@ jint ByteChannel::write(jobject source)
     {
       // It was not a direct buffer ... see if it has an array.
       jbyteArray raw_array = get_array(m_env, source,
-                                       ByteBuffer::m_mid_has_array,
-                                       ByteBuffer::m_mid_get_array);
+                                       bufimpl.m_mid_has_array,
+                                       bufimpl.m_mid_get_array);
       if (raw_array)
         {
           const jint array_offset = get_array_offset(
               m_env, source,
-              ByteBuffer::m_mid_get_array_offset);
+              bufimpl.m_mid_get_array_offset);
           const ByteArray array(m_env, raw_array);
           ByteArray::Contents contents(array);
           data = contents.data();
@@ -243,7 +238,7 @@ jint ByteChannel::write(jobject source)
     {
       if (bytes_written > 0)
         set_position(m_env, source,
-                     ByteBuffer::m_mid_set_position,
+                     bufimpl.m_mid_set_position,
                      position + bytes_written);
       return bytes_written;
     }
@@ -252,7 +247,7 @@ jint ByteChannel::write(jobject source)
   // buffer and read data from that.
   ByteArray array(m_env, remaining);
   get_bytearray(m_env, source,
-                ByteBuffer::m_mid_get_bytearray,
+                bufimpl.m_mid_get_bytearray,
                 array);
   ByteArray::Contents contents(array);
   bytes_written = m_writer(m_env, contents.data(), contents.length());
