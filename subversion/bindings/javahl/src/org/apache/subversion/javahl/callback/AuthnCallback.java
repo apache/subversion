@@ -194,7 +194,7 @@ public interface AuthnCallback
          */
         public boolean other()
         {
-            return ((failures & OTHER) != 0);
+            return ((failures & OTHER) != 0 || (failures & ~ALL_KNOWN) != 0);
         }
 
         /** @return the internal bitfield representation of the failures. */
@@ -209,19 +209,21 @@ public interface AuthnCallback
         private static final int UNKNOWN_CA    = 0x00000008;
         private static final int OTHER         = 0x40000000;
 
+        private static final int ALL_KNOWN     = (NOT_YET_VALID | EXPIRED
+                                                  | CN_MISMATCH | UNKNOWN_CA
+                                                  | OTHER);
+
         /* This private constructor is used by the native implementation. */
         private SSLServerCertFailures(int failures)
         {
             /* Double-check that we did not forget to map any of the
                failure flags, and flag an "other" failure. */
-            final int missing = failures & ~(NOT_YET_VALID | EXPIRED
-                                             | CN_MISMATCH | UNKNOWN_CA
-                                             | OTHER);
+            final int missing = (failures & ~ALL_KNOWN);
+
             if (missing != 0) {
                 Logger log = Logger.getLogger("org.apache.subversion.javahl");
                 log.warning(String.format("Unknown SSL certificate parsing "
                                           + "failure flags: %1$x", missing));
-                failures |= OTHER;
             }
 
             this.failures = failures;
