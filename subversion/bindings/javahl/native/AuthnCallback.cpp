@@ -194,7 +194,7 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
     const ::Java::String& issuer,
     const ::Java::String& der)
   : ::Java::Object(env,
-                   ::Java::ClassCache::get_authn_ssl_server_cert_failures())
+                   ::Java::ClassCache::get_authn_ssl_server_cert_info())
 {
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
                          hostname.get(), fingerprint.get(),
