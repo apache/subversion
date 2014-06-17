@@ -290,6 +290,15 @@ public:
     }
 
   /** Wrapped JNI function. */
+  jmethodID GetStaticMethodID(jclass cls, const char* name,
+                              const char* sig) const
+    {
+      jmethodID mid = m_env->GetStaticMethodID(cls, name, sig);
+      check_java_exception();
+      return mid;
+    }
+
+  /** Wrapped JNI function. */
   jfieldID GetFieldID(jclass cls, const char* name, const char* sig) const
     {
       jfieldID fid = m_env->GetFieldID(cls, name, sig);
@@ -385,6 +394,28 @@ public:
   SVN_JAVAHL_JNIWRAPPER_CALL_X_METHOD(jfloat, Float)
   SVN_JAVAHL_JNIWRAPPER_CALL_X_METHOD(jdouble, Double)
 #undef SVN_JAVAHL_JNIWRAPPER_CALL_X_METHOD
+
+  /** Boilerplate generator for wrapped JNI functions. */
+#define SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(T, N)                \
+  T CallStatic##N##Method(jclass obj, jmethodID mid, ...) const         \
+    {                                                                   \
+      std::va_list args;                                                \
+      va_start(args, mid);                                              \
+      T ret = m_env->CallStatic##N##MethodV(obj, mid, args);            \
+      va_end(args);                                                     \
+      check_java_exception();                                           \
+      return ret;                                                       \
+    }
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jobject, Object)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jboolean, Boolean)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jbyte, Byte)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jchar, Char)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jshort, Short)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jint, Int)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jlong, Long)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jfloat, Float)
+  SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD(jdouble, Double)
+#undef SVN_JAVAHL_JNIWRAPPER_CALL_STATIC_X_METHOD
 
   /** Boilerplate generator for wrapped JNI functions. */
 #define SVN_JAVAHL_JNIWRAPPER_GET_X_FIELD(T, N)                 \
