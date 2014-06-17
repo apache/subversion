@@ -39,6 +39,7 @@
 
 #include "../SubversionException.hpp"
 #include "../AuthnCallback.hpp"
+#include "../Credential.hpp"
 #include "../ExternalItem.hpp"
 #include "../EditorCallbacks.hpp"
 
@@ -193,6 +194,11 @@ class ClassCacheImpl
   JNIWRAPPER_DEFINE_CACHED_CLASS(user_passwd_cb,
                                  ::JavaHL::UserPasswordCallback);
 
+  JNIWRAPPER_DEFINE_CACHED_CLASS(credential,
+                                 ::JavaHL::Credential);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(credential_kind,
+                                 ::JavaHL::Credential::Kind);
+
   JNIWRAPPER_DEFINE_CACHED_CLASS(external_item,
                                  ::JavaHL::ExternalItem);
 
@@ -295,6 +301,10 @@ JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_result);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_ssl_server_cert_failures);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(authn_ssl_server_cert_info);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(user_passwd_cb);
+
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(credential);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(credential_kind);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(external_item);
 

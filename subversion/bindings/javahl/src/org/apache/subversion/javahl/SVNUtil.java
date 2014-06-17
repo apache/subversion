@@ -96,11 +96,34 @@ public class SVNUtil
     //
 
     /**
+     * Exception used by calling the wrong accessor on Credential for
+     * the given credential type.
+     */
+    public static class CredentialTypeMismatch extends SubversionException
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        public CredentialTypeMismatch(Credential.Kind kind, String attribute)
+        {
+            super("Credential type '" + kind.toString()
+                  + "'  does not have the attribute '" + attribute + "'");
+        }
+    }
+
+    /**
      * Generic credential description. Provides default accessors for
      * concrete implementations.
      */
-    public static abstract class Credential
+    public static class Credential implements java.io.Serializable
     {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
         /**
          * Describes the kind of the credential.
          */
@@ -130,6 +153,16 @@ public class SVNUtil
             {
                 return this.token;
             }
+
+            /* Factory used by the native implementation */
+            private static Kind fromString(String stringrep)
+            {
+                for (Kind kind : Kind.values()) {
+                    if (kind.toString().equals(stringrep))
+                        return kind;
+                }
+                return null;
+            }
         }
 
         /** @return the kind of the credential. */
@@ -150,7 +183,11 @@ public class SVNUtil
          * credential does not contain any secrets bits.
          */
         public String getSecureStore()
+            throws CredentialTypeMismatch
         {
+            if (kind != Kind.simple && kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "secure store");
+
             return store;
         }
 
@@ -160,8 +197,12 @@ public class SVNUtil
          * credential type.
          */
         public String getUsername()
+            throws CredentialTypeMismatch
         {
-            return null;
+            if (kind != Kind.username && kind != Kind.simple)
+                throw new CredentialTypeMismatch(kind, "username");
+
+            return username;
         }
 
         /**
@@ -170,8 +211,12 @@ public class SVNUtil
          * credential type.
          */
         public String getPassword()
+            throws CredentialTypeMismatch
         {
-            return null;
+            if (kind != Kind.simple && kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "password");
+
+            return password;
         }
 
         /**
@@ -180,8 +225,12 @@ public class SVNUtil
          * certificate in the concrete credential type.
          */
         public AuthnCallback.SSLServerCertInfo getServerCertInfo()
+            throws CredentialTypeMismatch
         {
-            return null;
+            if (kind != Kind.sslServer)
+                throw new CredentialTypeMismatch(kind, "server cert info");
+
+            return info;
         }
 
         /**
@@ -190,8 +239,12 @@ public class SVNUtil
          * server certificate in the concrete credential type.
          */
         public AuthnCallback.SSLServerCertFailures getServerCertFailures()
+            throws CredentialTypeMismatch
         {
-            return null;
+            if (kind != Kind.sslServer)
+                throw new CredentialTypeMismatch(kind, "server cert failures");
+
+            return failures;
         }
 
         /**
@@ -200,166 +253,119 @@ public class SVNUtil
          * certificate in the concrete credential type.
          */
         public String getClientCertPassphrase()
+            throws CredentialTypeMismatch
         {
-            return null;
-        }
+            if (kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "passphrase");
 
-        /** Protected constructor used by subclasses. */
-        protected Credential(Kind kind, String realm, String store)
-        {
-            this.kind = kind;
-            this.realm = realm;
-            this.store = store;
-        }
-
-        protected Kind kind;
-        protected String realm;
-        protected String store;
-    }
-
-    /**
-     * A credential that defines a username.
-     */
-    public static class UsernameCredential extends Credential
-    {
-        /** Constructs a username credential. */
-        public UsernameCredential(String realm, String username)
-        {
-            super(Kind.username, realm, null);
-            this.username = username;
-        }
-
-        /** @return the username associated with the credential. */
-        public String getUsername()
-        {
-            return username;
-        }
-
-        /** Protected constructor used by subclasses. */
-        protected UsernameCredential(Kind kind, String realm, String store,
-                                     String username)
-        {
-            super(kind, realm, null);
-            this.username = username;
-        }
-
-        /** Protected constructor used by the native implementation. */
-        protected UsernameCredential(String realm, String store,
-                                     String username)
-        {
-            super(Kind.username, realm, store);
-            this.username = username;
-        }
-
-        protected String username;
-    }
-
-    /**
-     * A credential that defines a username and password.
-     */
-    public static class SimpleCredential extends UsernameCredential
-    {
-        /** Constructs a simple credential. */
-        public SimpleCredential(String realm, String username, String password)
-        {
-            super(Kind.simple, realm, null, username);
-            this.password = password;
-        }
-
-        /** @return the password associated with the credential. */
-        public String getPassword()
-        {
-            return password;
-        }
-
-        /** Protected constructor used by the native implementation. */
-        protected SimpleCredential(String realm, String store,
-                                   String username, String password)
-        {
-            super(Kind.simple, realm, store, username);
-            this.password = password;
-        }
-
-        protected String password;
-    }
-
-    /**
-     * A credential that defines a trusted SSL server certificate.
-     */
-    public static class SSLServerCertCredential extends Credential
-    {
-        /** Constructs an SSL server certificate credential. */
-        public SSLServerCertCredential(String realm,
-                                       AuthnCallback.SSLServerCertInfo info,
-                                       AuthnCallback.SSLServerCertFailures failures)
-        {
-            super(Kind.sslServer, realm, null);
-            this.info = info;
-            this.failures = failures;
-        }
-
-        /**
-         * @return the server certificate info associated with the
-         * credential.
-         */
-        public AuthnCallback.SSLServerCertInfo getServerCertInfo()
-        {
-            return info;
-        }
-
-        /**
-         * @return the accepted server certificate failures associated
-         * with the credential.
-         */
-        public AuthnCallback.SSLServerCertFailures getServerCertFailures()
-        {
-            return failures;
-        }
-
-        /** Protected constructor used by the native implementation. */
-        protected SSLServerCertCredential(String realm, String store,
-                                          AuthnCallback.SSLServerCertInfo info,
-                                          AuthnCallback.SSLServerCertFailures failures)
-        {
-            super(Kind.sslServer, realm, store);
-            this.info = info;
-            this.failures = failures;
-        }
-
-        protected AuthnCallback.SSLServerCertInfo info;
-        protected AuthnCallback.SSLServerCertFailures failures;
-    }
-
-    /**
-     * A credential that defines an SSL client certificate passphrase.
-     */
-    public static class SSLClientCertPassphraseCredential extends Credential
-    {
-        /** Constructs an SSL client certificate passphrase credential. */
-        public SSLClientCertPassphraseCredential(String realm, String passprase)
-        {
-            super(Kind.sslClientPassphrase, realm, null);
-            this.passphrase = passphrase;
-        }
-
-        /**
-         * @return the client certificate passphrase associated with
-         * the credential.
-         */
-        public String getClientCertPassphrase()
-        {
             return passphrase;
         }
 
-        /** Protected constructor used by the native implementation. */
-        protected SSLClientCertPassphraseCredential(String realm, String store,
-                                                    String passprase)
+        // ### TODO: There are currently no proper APIs in Subversion
+        //           for adding credentials. These factory methods are
+        //           placeholders.
+        //
+        ///**
+        // * Creates an "svn.username" credential.
+        // * @param realm The realm string.
+        // * @param username The username for <code>realm</code>.
+        // */
+        //public static Credential
+        //    createUsername(String realm, String username)
+        //{
+        //    return new Credential(Kind.username, realm, null,
+        //                          username, null, null, null, null);
+        //}
+        //
+        ///**
+        // * Creates an "svn.simple" credential.
+        // * @param realm The realm string.
+        // * @param username The username for <code>realm</code>.
+        // * @param password The password for <code>username</code>.
+        // */
+        //public static Credential
+        //    createSimple(String realm, String username, String password)
+        //{
+        //    return new Credential(Kind.simple, realm, null,
+        //                          username, password, null, null, null);
+        //}
+        //
+        ///** Creates an "svn.ssl.server" credential. */
+        //public static Credential
+        //    createSSLServerCertTrust(String realm,
+        //                             AuthnCallback.SSLServerCertInfo info,
+        //                             AuthnCallback.SSLServerCertFailures failures)
+        //{
+        //    return new Credential(Kind.sslServer, realm, null,
+        //                          null, null, info, failures, null);
+        //}
+        //
+        ///**
+        // * Creates an "svn.ssl.client-passphrase" credential.
+        // * @param realm The realm string.
+        // * @param passphrase The passphrase for for the client certificate
+        // *        used for <code>realm</code>.
+        // */
+        //public static Credential
+        //    createSSLClientCertPassphrase(String realm, String passphrase)
+        //{
+        //    return new Credential(Kind.simple, realm, null,
+        //                          null, null, null, null, passphrase);
+        //}
+
+        private Credential(Kind kind, String realm, String store,
+                           String username, String password,
+                           AuthnCallback.SSLServerCertInfo info,
+                           AuthnCallback.SSLServerCertFailures failures,
+                           String passphrase)
         {
-            super(Kind.sslClientPassphrase, realm, store);
+            assert(kind != null && realm != null);
+            switch (kind) {
+            case username:
+                assert(username != null && password == null
+                       && info == null && failures == null
+                       && passphrase == null);
+                break;
+            case simple:
+                assert(username != null && password != null
+                       && info == null && failures == null
+                       && passphrase == null);
+                break;
+            case sslServer:
+                assert(username == null && password == null
+                       && info != null && failures != null
+                       && passphrase == null);
+                break;
+            case sslClientPassphrase:
+                assert(username == null && password == null
+                       && info == null && failures == null
+                       && passphrase != null);
+                break;
+            default:
+                assert(kind == Kind.username
+                       || kind == Kind.simple
+                       || kind == Kind.sslServer
+                       || kind == Kind.sslClientPassphrase);
+            }
+
+            this.kind = kind;
+            this.realm = realm;
+            this.store = store;
+            this.username = username;
+            this.password = password;
+            this.info = info;
+            this.failures = failures;
             this.passphrase = passphrase;
         }
 
-        protected String passphrase;
+        private Kind kind;
+        private String realm;
+        private String store;
+        private String username;
+        private String password;
+        private AuthnCallback.SSLServerCertInfo info;
+        private AuthnCallback.SSLServerCertFailures failures;
+        private String passphrase;
     }
 
     /**
@@ -380,7 +386,7 @@ public class SVNUtil
     public static Credential getCredential(String configDir,
                                            Credential.Kind kind,
                                            String realm)
-        throws ClientException
+        throws ClientException, SubversionException
     {
         return configLib.getCredential(configDir, kind, realm);
     }
@@ -403,39 +409,42 @@ public class SVNUtil
     public static Credential removeCredential(String configDir,
                                               Credential.Kind kind,
                                               String realm)
-        throws ClientException
+        throws ClientException, SubversionException
     {
         return configLib.removeCredential(configDir, kind, realm);
     }
 
-    /**
-     * Store a new credential, or replace an existing credential.
-     * <p>
-     * <b>Note:</b> If the native credentials store is disabled, this
-     *              method will always return <code>null</code>.
-     *
-     * @param configDir The path to the configuration directory; if
-     *        <code>null</code>, the default (system-specific) user
-     *        configuration path will be used.
-     * @param credential The credential to store.
-     * @param replace If <code>true</code>, any existing matching
-     *        credential will be replaced.
-     *
-     * @return the stored credential. If <code>replace</code> was
-     * <code>false</code>, and a credential with the same kind and
-     * for the same realm exists, it will be returned. If the given
-     * credential was successfully added, the same object reference
-     * will be returned (the calling code can compare reference values
-     * to determine this). Will return <code>null</code> if the
-     * credential could not be stored for any reason.
-     */
-    public static Credential addCredential(String configDir,
-                                           Credential credential,
-                                           boolean replace)
-        throws ClientException
-    {
-        return configLib.addCredential(configDir, credential, replace);
-    }
+    // ### TODO: There are currently no proper APIs in Subversion for
+    //           adding credentials. This method is a placeholder.
+    //
+    ///**
+    // * Store a new credential, or replace an existing credential.
+    // * <p>
+    // * <b>Note:</b> If the native credentials store is disabled, this
+    // *              method will always return <code>null</code>.
+    // *
+    // * @param configDir The path to the configuration directory; if
+    // *        <code>null</code>, the default (system-specific) user
+    // *        configuration path will be used.
+    // * @param credential The credential to store.
+    // * @param replace If <code>true</code>, any existing matching
+    // *        credential will be replaced.
+    // *
+    // * @return the stored credential. If <code>replace</code> was
+    // * <code>false</code>, and a credential with the same kind and
+    // * for the same realm exists, it will be returned. If the given
+    // * credential was successfully added, the same object reference
+    // * will be returned (the calling code can compare reference values
+    // * to determine this). Will return <code>null</code> if the
+    // * credential could not be stored for any reason.
+    // */
+    //public static Credential addCredential(String configDir,
+    //                                       Credential credential,
+    //                                       boolean replace)
+    //    throws ClientException, SubversionException
+    //{
+    //    return configLib.addCredential(configDir, credential, replace);
+    //}
 
     /**
      * Find stored credentials that match the given search criteria.
@@ -475,33 +484,9 @@ public class SVNUtil
                           String usernamePattern,
                           String hostnamePattern,
                           String textPattern)
-        throws ClientException
+        throws ClientException, SubversionException
     {
         return configLib.searchCredentials(configDir, kind, realmPattern,
-                                           usernamePattern, hostnamePattern,
-                                           textPattern);
-    }
-
-    /**
-     * Delete stored credentials that match the given search criteria.
-     * The parameters of this method are the same as for
-     * {@link #searchCredentials}.
-     * <p>
-     * <b>Note:</b> If the native credentials store is disabled, this
-     *              method will always return <code>null</code>.
-     *
-     * @return the list of deleted credentials.
-     */
-    public static List<Credential>
-        deleteCredentials(String configDir,
-                          Credential.Kind kind,
-                          String realmPattern,
-                          String usernamePattern,
-                          String hostnamePattern,
-                          String textPattern)
-        throws ClientException
-    {
-        return configLib.deleteCredentials(configDir, kind, realmPattern,
                                            usernamePattern, hostnamePattern,
                                            textPattern);
     }
