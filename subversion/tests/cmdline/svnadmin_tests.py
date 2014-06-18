@@ -2328,23 +2328,115 @@ def load_ignore_dates(sbox):
 
 @XFail()
 @SkipUnless(svntest.main.is_fs_type_fsfs)
-def fsfs_hotcopy_old_with_propchanges(sbox):
-  "hotcopy --compatible-version=1.3 with propchanges"
+def fsfs_hotcopy_old_with_id_changes(sbox):
+  "fsfs hotcopy old with node-id and copy-id changes"
 
   # Around trunk@1573728, running 'svnadmin hotcopy' for the
-  # --compatible-version=1.3 repository with property changes
-  # ended with mismatching db/current in source and destination:
-  # (source: "2 l 1", destination: "2 k 1").
-
+  # --compatible-version=1.3 repository with certain node-id and copy-id
+  # changes ended with mismatching db/current in source and destination:
+  #
+  #   source: "2 l 1"  destination: "2 k 1",
+  #           "3 l 2"               "3 4 2"
+  #           (and so on...)
+  #
+  # We test this case by creating a --compatible-version=1.3 repository
+  # and committing things that result in node-id and copy-id changes.
+  # After every commit, we hotcopy the repository to a new destination
+  # and check whether the source of the backup and the backup itself are
+  # identical.  We also maintain a separate --incremental backup, which
+  # is updated and checked after every commit.
   sbox.build(create_wc=True, minor_version=3)
-  sbox.simple_propset('foo', 'bar', 'A/mu')
-  sbox.simple_commit()
 
-  backup_dir, backup_url = sbox.add_repo_path('backup')
+  inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
+
+  # r1 = Initial greek tree sandbox.
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r1')
   svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
                                           sbox.repo_dir, backup_dir)
-
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
   check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r2 = Add a new property.
+  sbox.simple_propset('foo', 'bar', 'A/mu')
+  sbox.simple_commit(message='r2')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r2')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r3 = Copy a file.
+  sbox.simple_copy('A/B/E', 'A/B/E1')
+  sbox.simple_commit(message='r3')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r3')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r4 = Remove an existing file ...
+  sbox.simple_rm('A/D/gamma')
+  sbox.simple_commit(message='r4')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r4')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r5 = ...and replace it with a new file here.
+  sbox.simple_add_text("This is the replaced file.\n", 'A/D/gamma')
+  sbox.simple_commit(message='r5')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r5')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r6 = Add an entirely new file.
+  sbox.simple_add_text('This is an entirely new file.\n', 'A/C/mu1')
+  sbox.simple_commit(message='r6')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r6')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
+
+  # r7 = Change the content of the existing file (this changeset does
+  #      not bump the next-id and copy-id counters in the repository).
+  sbox.simple_append('A/mu', 'This is change in the existing file.\n')
+  sbox.simple_commit(message='r7')
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-after-r7')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          "--incremental",
+                                          sbox.repo_dir, inc_backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  check_hotcopy_fsfs(sbox.repo_dir, inc_backup_dir)
 
 
 @SkipUnless(svntest.main.fs_has_pack)
@@ -2554,7 +2646,7 @@ test_list = [ None,
               fsfs_recover_old_non_empty,
               fsfs_hotcopy_old_non_empty,
               load_ignore_dates,
-              fsfs_hotcopy_old_with_propchanges,
+              fsfs_hotcopy_old_with_id_changes,
               verify_packed,
               freeze_freeze,
               verify_metadata_only,
