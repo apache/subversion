@@ -316,6 +316,14 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
  jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
+
+  if (jlong(int(jlimit)) != jlimit)
+    {
+      JNIUtil::raiseThrowable("java/lang/IllegalArgumentException",
+                              "The value of 'limit' is too large");
+      return;
+    }
+
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -357,7 +365,7 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, static_cast<long>(jlimit), &callback);
+                  revProps, int(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL

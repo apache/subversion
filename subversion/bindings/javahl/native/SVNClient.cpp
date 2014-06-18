@@ -258,7 +258,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             std::vector<RevisionRange> &logRanges,
                             bool stopOnCopy, bool discoverPaths,
                             bool includeMergedRevisions, StringArray &revProps,
-                            long limit, LogMessageCallback *callback)
+                            int limit, LogMessageCallback *callback)
 {
     SVN::Pool subPool(pool);
 
