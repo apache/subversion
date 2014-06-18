@@ -165,14 +165,20 @@ def commit_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   sbox.simple_append('A/mu', 'Tweak!\n')
-  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(verb='Sending'),
+  })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.tweak('iota', wc_rev=2)
 
-  # Make sure the file is unlocked
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # Make sure both iota an mu are unlocked, but only mu is bumped
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 def commit_propchange(sbox):
@@ -2305,7 +2311,6 @@ def delete_locked_file_with_percent(sbox):
   #  Invalid percent encoded URI in tagged If-header [400, #104]
   sbox.simple_commit()
 
-@XFail()
 def lock_commit_bump(sbox):
   "a commit should not bump just locked files"
 
