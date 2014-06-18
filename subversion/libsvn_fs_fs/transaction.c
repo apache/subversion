@@ -3602,8 +3602,8 @@ commit_body(void *baton, apr_pool_t *pool)
      discovered locks. */
   SVN_ERR(verify_locks(cb->fs, txn_id, pool));
 
-  /* we need the changes list for verification as well as for writing it
-     to the final rev file */
+  /* We need the changes list for verification as well as for writing it
+     to the final rev file. */
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, cb->fs, txn_id,
                                        pool));
 
