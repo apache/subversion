@@ -539,11 +539,32 @@ public class SVNUtil
             this.ignoreSpace = ignoreSpace;
             this.ignoreEolStyle = ignoreEolStyle;
             this.showCFunction = showCFunction;
+            this.contextSize = -1;
+        }
+
+        /**
+         * Like the {@see #DiffOptions(IgnoreSpace,boolean,boolean)},
+         * but with an additional parameter.
+         * @param contextSize If this is greater than 0, then this
+         * number of context lines will be used in the generated diff
+         * output. Otherwise the legacy compile time default will be
+         * used.
+         */
+        public DiffOptions(IgnoreSpace ignoreSpace,
+                           boolean ignoreEolStyle,
+                           boolean showCFunction,
+                           int contextSize)
+        {
+            this.ignoreSpace = ignoreSpace;
+            this.ignoreEolStyle = ignoreEolStyle;
+            this.showCFunction = showCFunction;
+            this.contextSize = contextSize;
         }
 
         public final IgnoreSpace ignoreSpace;
         public final boolean ignoreEolStyle;
         public final boolean showCFunction;
+        public final int contextSize;
     }
 
     /** Style for displaying conflicts in merge output. */
@@ -613,6 +634,7 @@ public class SVNUtil
                                    OutputStream resultStream)
         throws ClientException
     {
+        // ### TODO: Support cancellation as in svn_diff_file_output_unified3.
         return diffLib.fileDiff(originalFile, modifiedFile, diffOptions,
                                 originalHeader, modifiedHeader,
                                 headerEncoding,
