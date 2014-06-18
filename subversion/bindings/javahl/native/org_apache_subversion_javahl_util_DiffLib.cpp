@@ -44,6 +44,7 @@ Java_org_apache_subversion_javahl_util_DiffLib_nativeFileDiff(
     jint jignore_space_ordinal,
     jboolean jignore_eol_style,
     jboolean jshow_c_function,
+    jint jcontext_size,
 
     jstring joriginal_header,
     jstring jmodified_header,
@@ -102,13 +103,13 @@ Java_org_apache_subversion_javahl_util_DiffLib_nativeFileDiff(
 
   OutputStream result_stream(jresult_stream);
 
-  SVN_JNI_ERR(svn_diff_file_output_unified3(
+  SVN_JNI_ERR(svn_diff_file_output_unified4(
                   result_stream.getStream(pool), diff,
                   original.c_str(), modified.c_str(),
                   original_header.c_str(), modified_header.c_str(),
                   header_encoding.c_str(), relative_to_dir.c_str(),
-                  diff_options->show_c_function,
-                  pool.getPool()),
+                  diff_options->show_c_function, int(jcontext_size),
+                  NULL, NULL, pool.getPool()),
               false);
 
   return diffs;
