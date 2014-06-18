@@ -2777,8 +2777,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      apr_pool_t *scratch_pool);
 
 /**
- * Like svn_repos_verify_fs3(), but with @a keep_going and
- * @a check_normalization set to @c FALSE.
+ * Like svn_repos_verify_fs3(), but with @a keep_going,
+ * @a check_normalization and @a metadata_only set to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
