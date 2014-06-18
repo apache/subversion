@@ -176,7 +176,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 }
 
 svn_error_t *
-svn_client_cat3(apr_hash_t **props,
+svn_client_cat3(apr_hash_t **returned_props,
                 svn_stream_t *out,
                 const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
@@ -190,13 +190,10 @@ svn_client_cat3(apr_hash_t **props,
   svn_client__pathrev_t *loc;
   svn_string_t *eol_style;
   svn_string_t *keywords;
-  apr_hash_t *pprops = NULL;
+  apr_hash_t *props = NULL;
   const char *repos_root_url;
   svn_stream_t *output = out;
   svn_error_t *err;
-
-  if (!props)
-    props = &pprops;
 
   /* ### Inconsistent default revision logic in this command. */
   if (peg_revision->kind == svn_opt_revision_unspecified)
@@ -228,8 +225,8 @@ svn_client_cat3(apr_hash_t **props,
       /* We don't promise to close output, so disown it to ensure we don't. */
       output = svn_stream_disown(output, scratch_pool);
 
-      if (props)
-        SVN_ERR(svn_wc_prop_list2(props, ctx->wc_ctx, local_abspath,
+      if (returned_props)
+        SVN_ERR(svn_wc_prop_list2(returned_props, ctx->wc_ctx, local_abspath,
                                   result_pool, scratch_pool));
 
       return svn_error_trace(svn_stream_copy3(normal_stream, output,
@@ -248,7 +245,7 @@ svn_client_cat3(apr_hash_t **props,
 
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, props,
+  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props,
                         result_pool);
   if (err)
     {
@@ -264,8 +261,8 @@ svn_client_cat3(apr_hash_t **props,
         }
     }
 
-  eol_style = svn_hash_gets(*props, SVN_PROP_EOL_STYLE);
-  keywords = svn_hash_gets(*props, SVN_PROP_KEYWORDS);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
 
   if (eol_style || keywords)
     {
@@ -288,9 +285,9 @@ svn_client_cat3(apr_hash_t **props,
           svn_string_t *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          cmt_rev = svn_hash_gets(*props, SVN_PROP_ENTRY_COMMITTED_REV);
-          cmt_date = svn_hash_gets(*props, SVN_PROP_ENTRY_COMMITTED_DATE);
-          cmt_author = svn_hash_gets(*props, SVN_PROP_ENTRY_LAST_AUTHOR);
+          cmt_rev = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV);
+          cmt_date = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+          cmt_author = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR);
           if (cmt_date)
             SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, scratch_pool));
 
@@ -309,6 +306,24 @@ svn_client_cat3(apr_hash_t **props,
                                                              scratch_pool),
                                            eol_str, FALSE, kw, TRUE,
                                            scratch_pool);
+    }
+
+  if (returned_props)
+    {
+      /* filter entry and WC props */
+      apr_hash_index_t *hi;
+      const void *key;
+      apr_ssize_t klen;
+
+      for (hi = apr_hash_first(scratch_pool, props);
+           hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &key, &klen, NULL);
+          if (!svn_wc_is_normal_prop(key))
+            apr_hash_set(props, key, klen, NULL);
+        }
+
+      *returned_props = props;
     }
 
   SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL,
