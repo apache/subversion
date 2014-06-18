@@ -322,6 +322,18 @@ svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
                                   svn_revnum_t revnum,
                                   apr_pool_t *scratch_pool);
 
+/* Set *REV, *NEXT_NODE_ID and *NEXT_COPY_ID to the values read from the
+ * 'current' file.  For new FS formats, which only store the youngest
+ * revision, set the *NEXT_NODE_ID and *NEXT_COPY_ID to 0.  Perform
+ * temporary allocations in POOL.
+ */
+svn_error_t *
+svn_fs_fs__read_current(svn_revnum_t *rev,
+                        apr_uint64_t *next_node_id,
+                        apr_uint64_t *next_copy_id,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool);
+
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be 0 if the FS format does not use them.)

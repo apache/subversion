@@ -2326,7 +2326,6 @@ def load_ignore_dates(sbox):
                             % (rev, str(rev_time), str(start_time)))
 
 
-@XFail()
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def fsfs_hotcopy_old_with_id_changes(sbox):
   "fsfs hotcopy old with node-id and copy-id changes"

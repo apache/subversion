@@ -441,6 +441,47 @@ svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__read_current(svn_revnum_t *rev,
+                        apr_uint64_t *next_node_id,
+                        apr_uint64_t *next_copy_id,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_stringbuf_t *content;
+
+  SVN_ERR(svn_fs_fs__read_content(&content,
+                                  svn_fs_fs__path_current(fs, pool),
+                                  pool));
+
+  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    {
+      SVN_ERR(svn_revnum_parse(rev, content->data, NULL));
+
+      *next_node_id = 0;
+      *next_copy_id = 0;
+    }
+  else
+    {
+      const char *str;
+
+      SVN_ERR(svn_revnum_parse(rev, content->data, &str));
+      if (*str != ' ')
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Corrupt 'current' file"));
+
+      *next_node_id = svn__base36toui64(&str, str + 1);
+      if (*str != ' ')
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Corrupt 'current' file"));
+
+      *next_copy_id = svn__base36toui64(NULL, str + 1);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__write_current(svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_uint64_t next_node_id,
