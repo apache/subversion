@@ -1938,6 +1938,15 @@ svn_client__do_commit(const char *base_url,
       svn_pool_destroy(mod->file_pool);
     }
 
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(base_url,
+                                        svn_wc_notify_commit_finalizing,
+                                        iterpool);
+      ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+    }
+
   svn_pool_destroy(iterpool);
 
   /* Close the edit. */

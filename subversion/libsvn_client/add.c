@@ -1241,6 +1241,15 @@ mkdir_urls(const apr_array_header_t *urls,
                 svn_error_trace(editor->abort_edit(edit_baton, pool)));
     }
 
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(common,
+                                        svn_wc_notify_commit_finalizing,
+                                        pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+    }
+
   /* Close the edit. */
   return svn_error_trace(editor->close_edit(edit_baton, pool));
 }

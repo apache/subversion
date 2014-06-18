@@ -641,6 +641,7 @@ import_dir(const svn_delta_editor_t *editor,
  */
 static svn_error_t *
 import(const char *local_abspath,
+       const char *url,
        const apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
        void *edit_baton,
@@ -774,7 +775,18 @@ import(const char *local_abspath,
     }
 
   if (import_ctx->repos_changed)
-    return svn_error_trace(editor->close_edit(edit_baton, pool));
+    {
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+          notify = svn_wc_create_notify_url(url,
+                                            svn_wc_notify_commit_finalizing,
+                                            pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
+        }
+
+      return svn_error_trace(editor->close_edit(edit_baton, pool));
+    }
   else
     return svn_error_trace(editor->abort_edit(edit_baton, pool));
 }
@@ -978,7 +990,7 @@ svn_client_import5(const char *path,
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(local_abspath, new_entries, editor, edit_baton,
+  if ((err = import(local_abspath, url, new_entries, editor, edit_baton,
                     depth, base_rev, excludes, autoprops, local_ignores_arr,
                     global_ignores, no_ignore, no_autoprops,
                     ignore_unknown_node_types, filter_callback,

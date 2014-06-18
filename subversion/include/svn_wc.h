@@ -1268,8 +1268,11 @@ typedef enum svn_wc_notify_action_t
 
   /** Running info on an external module.
    * @since New in 1.9. */
-  svn_wc_notify_info_external
+  svn_wc_notify_info_external,
 
+  /** Finalizing commit.
+   * @since New in 1.9. */
+  svn_wc_notify_commit_finalizing
 } svn_wc_notify_action_t;
 
 

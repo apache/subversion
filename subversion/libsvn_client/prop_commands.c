@@ -240,6 +240,14 @@ propset_on_url(const char *propname,
       return svn_error_trace(err);
     }
 
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(target,
+                                        svn_wc_notify_commit_finalizing,
+                                        pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+    }
   /* Close the edit. */
   return editor->close_edit(edit_baton, pool);
 }
