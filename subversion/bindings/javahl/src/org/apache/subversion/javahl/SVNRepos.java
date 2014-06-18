@@ -159,6 +159,18 @@ public class SVNRepos implements ISVNRepos
             throws ClientException;
 
     public void load(File path, InputStream dataInput,
+                     Revision start, Revision end,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+            throws ClientException
+    {
+        load(path, dataInput, start, end,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             false, false, relativePath, callback);
+    }
+
+    public void load(File path, InputStream dataInput,
                      boolean ignoreUUID, boolean forceUUID,
                      boolean usePreCommitHook, boolean usePostCommitHook,
                      String relativePath, ReposNotifyCallback callback)
@@ -166,13 +178,14 @@ public class SVNRepos implements ISVNRepos
     {
         load(path, dataInput, Revision.START, Revision.HEAD,
              ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             relativePath, callback);
+             false, false, relativePath, callback);
     }
 
     public native void load(File path, InputStream dataInput,
                             Revision start, Revision end,
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
+                            boolean validateProps, boolean ignoreDates,
                             String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 
@@ -221,7 +234,16 @@ public class SVNRepos implements ISVNRepos
                                   boolean usePostRevPropChangeHook)
             throws SubversionException;
 
+    public void verify(File path, Revision start, Revision end,
+                       ReposNotifyCallback callback)
+            throws ClientException
+    {
+        verify(path, start, end, false, false, false, callback);
+    }
+
     public native void verify(File path, Revision start, Revision end,
+                              boolean keepGoing, boolean checkNormalization,
+                              boolean metadataOnly,
                               ReposNotifyCallback callback)
             throws ClientException;
 

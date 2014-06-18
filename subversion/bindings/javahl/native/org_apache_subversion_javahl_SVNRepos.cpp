@@ -239,11 +239,13 @@ Java_org_apache_subversion_javahl_SVNRepos_listUnusedDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNRepos_load
-(JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
- jobject jrevisionStart, jobject jrevisionEnd,
- jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
- jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
+Java_org_apache_subversion_javahl_SVNRepos_load(
+    JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
+    jobject jrevisionStart, jobject jrevisionEnd,
+    jboolean jignoreUUID, jboolean jforceUUID,
+    jboolean jusePreCommitHook, jboolean jusePostCommitHook,
+    jboolean jvalidateProps, jboolean jignoreDates,
+    jstring jrelativePath, jobject jnotifyCallback)
 {
   JNIEntry(SVNRepos, load);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -280,6 +282,8 @@ Java_org_apache_subversion_javahl_SVNRepos_load
            jforceUUID ? true : false,
            jusePreCommitHook ? true : false,
            jusePostCommitHook ? true : false,
+           jvalidateProps ? true : false,
+           jignoreDates ? true : false,
            relativePath,
            (jnotifyCallback != NULL ? &notifyCallback : NULL));
 }
@@ -409,9 +413,11 @@ Java_org_apache_subversion_javahl_SVNRepos_setRevProp
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNRepos_verify
-(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
- jobject jrevisionEnd, jobject jcallback)
+Java_org_apache_subversion_javahl_SVNRepos_verify(
+    JNIEnv *env, jobject jthis, jobject jpath,
+    jobject jrevisionStart, jobject jrevisionEnd,
+    jboolean jkeepGoing, jboolean jcheckNormalization, jboolean jmetadataOnly,
+    jobject jcallback)
 {
   JNIEntry(SVNRepos, verify);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -438,6 +444,7 @@ Java_org_apache_subversion_javahl_SVNRepos_verify
     return;
 
   cl->verify(path, revisionStart, revisionEnd,
+             jkeepGoing, jcheckNormalization, jmetadataOnly,
              jcallback != NULL ? &callback : NULL);
 }
 
