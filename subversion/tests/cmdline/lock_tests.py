@@ -2305,6 +2305,39 @@ def delete_locked_file_with_percent(sbox):
   #  Invalid percent encoded URI in tagged If-header [400, #104]
   sbox.simple_commit()
 
+@XFail()
+def lock_commit_bump(sbox):
+  "a commit should not bump just locked files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_lock('iota')
+
+  changed_file = sbox.ospath('changed')
+  sbox.simple_append('changed', 'Changed!')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'unlock', '--force',
+                                     sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'put', changed_file, 'iota')
+
+  sbox.simple_append('A/mu', 'GOAAAAAAAAL!')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(verb='Sending'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=3)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2368,6 +2401,7 @@ test_list = [ None,
               many_locks_hooks,
               dav_lock_refresh,
               delete_locked_file_with_percent,
+              lock_commit_bump,
             ]
 
 if __name__ == '__main__':
