@@ -66,10 +66,11 @@ class SVNClient :public SVNBase
   void patch(const char *patchPath, const char *targetPath, bool dryRun,
              int stripCount, bool reverse, bool ignoreWhitespace,
              bool removeTempfiles, PatchCallback *callback);
-  void info2(const char *path,
-             Revision &revision, Revision &pegRevision, svn_depth_t depth,
-             svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
-             StringArray &changelists, InfoCallback *callback);
+  void info(const char *path,
+            Revision &revision, Revision &pegRevision, svn_depth_t depth,
+            svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
+            svn_boolean_t includeExternals,
+            StringArray &changelists, InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobject revProperties(const char *path, Revision &revision);
@@ -80,8 +81,10 @@ class SVNClient :public SVNBase
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool ignoreExternals);
-  void streamFileContent(const char *path, Revision &revision,
-                         Revision &pegRevision, OutputStream &outputStream);
+  apr_hash_t *streamFileContent(const char *path,
+                                Revision &revision, Revision &pegRevision,
+                                bool expand_keywords, bool return_props,
+                                OutputStream &outputStream);
   void propertySetLocal(Targets &targets, const char *name, JNIByteArray &value,
                         svn_depth_t depth, StringArray &changelists,
                         bool force);
@@ -148,7 +151,8 @@ class SVNClient :public SVNBase
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force,
            bool no_ignore, bool no_autoprops, bool add_parents);
-  void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists);
+  void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists,
+              bool clear_changelists);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, PropertyTable &revprops,
               CommitCallback *callback);
