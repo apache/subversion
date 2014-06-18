@@ -945,7 +945,6 @@ svn_client_commit6(const apr_array_header_t *targets,
 
           if (! (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
             {
-              SVN_DBG(("Skip handling for: %s: %d", item->path, item->state_flags));
               continue; /* Nothing to post process via the queue */
             }
 
