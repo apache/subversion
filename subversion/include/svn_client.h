@@ -5786,6 +5786,10 @@ svn_client_ls(apr_hash_t **dirents,
  *         determined. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
+ * If @a *props is not NULL it is set to a hash of all the files properties,
+ * including its entry props. If it is NULL, the properties are only used
+ * for determining how and if the file should be translated.
+ *
  * @see #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
  *
