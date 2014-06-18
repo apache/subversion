@@ -321,29 +321,6 @@ recover_get_root_offset(apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs,
-                        svn_revnum_t youngest,
-                        apr_uint64_t *max_node_id,
-                        apr_uint64_t *max_copy_id,
-                        apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  apr_off_t root_offset;
-  svn_fs_fs__revision_file_t *rev_file;
-
-  /* call this function for old repo formats only */
-  SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
-
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
-  SVN_ERR(recover_get_root_offset(&root_offset, youngest, rev_file, pool));
-  SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
-                               max_node_id, max_copy_id, pool));
-  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
-
-  return SVN_NO_ERROR;
-}
-
 /* Baton used for recover_body below. */
 struct recover_baton {
   svn_fs_t *fs;
@@ -425,13 +402,19 @@ recover_body(void *baton, apr_pool_t *pool)
 
       for (rev = 0; rev <= max_rev; rev++)
         {
+          svn_fs_fs__revision_file_t *rev_file;
+          apr_off_t root_offset;
+
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__find_max_ids(fs, rev, &next_node_id,
-                                          &next_copy_id, iterpool));
+          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
+          SVN_ERR(recover_get_root_offset(&root_offset, rev, rev_file, pool));
+          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+                                       &next_node_id, &next_copy_id, pool));
+          SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
         }
       svn_pool_destroy(iterpool);
 
