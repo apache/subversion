@@ -159,7 +159,7 @@ class SVNClient :public SVNBase
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
-                   long limit, LogMessageCallback *callback);
+                   int limit, LogMessageCallback *callback);
   jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
