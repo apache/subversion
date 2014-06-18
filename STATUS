@@ -247,6 +247,16 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * ^/subversion/branches/1.8.x-VS2013-14
+   Enable support for generating VS2013 and later ("14"+) project files.
+   Justification:
+     This makes it possible to build with recent Visual Studio versions
+     without local patches.
+   Branch:
+     ^/subversion/branches/1.8.x-VS2013-14
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
