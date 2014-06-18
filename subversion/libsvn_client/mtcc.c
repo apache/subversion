@@ -1407,7 +1407,18 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
                            root_baton, session_url, mtcc->ctx, scratch_pool);
 
   if (!err)
-    SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
+    {
+      if (mtcc->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+          notify = svn_wc_create_notify_url(session_url,
+                                            svn_wc_notify_commit_finalizing,
+                                            scratch_pool);
+          mtcc->ctx->notify_func2(mtcc->ctx->notify_baton2, notify,
+                                  scratch_pool);
+        }
+      SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
+    }
   else
     err = svn_error_compose_create(err,
                                    editor->abort_edit(edit_baton, scratch_pool));

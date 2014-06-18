@@ -1181,6 +1181,15 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     editor->abort_edit(edit_baton, pool));
     }
 
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(top_url,
+                                        svn_wc_notify_commit_finalizing,
+                                        pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+    }
+
   /* Close the edit. */
   return svn_error_trace(editor->close_edit(edit_baton, pool));
 }
