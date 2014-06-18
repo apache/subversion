@@ -249,10 +249,38 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     remove_lock = TRUE;
 
-  return svn_wc_queue_committed3(queue, wc_ctx, item->path,
-                                 loop_recurse, item->incoming_prop_changes,
+  return svn_error_trace(
+         svn_wc_queue_committed3(queue, wc_ctx, item->path,
+                                 loop_recurse,
+                                 item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 sha1_checksum, scratch_pool);
+                                 sha1_checksum, scratch_pool));
+}
+
+/* Do similar handling as post_process_commit_item() but for items that
+ * are commit items, but aren't actual changes. Most importantly
+ * remove lock tokens. */
+static svn_error_t *
+post_process_no_commit_item(const svn_client_commit_item3_t *item,
+                            svn_wc_context_t *wc_ctx,
+                            svn_boolean_t keep_changelists,
+                            svn_boolean_t keep_locks,
+                            apr_pool_t *scratch_pool)
+{
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+      && !keep_locks)
+    {
+      SVN_ERR(svn_wc_remove_lock2(wc_ctx, item->path, scratch_pool));
+    }
+
+  if (!keep_changelists)
+    SVN_ERR(svn_wc_set_changelist2(wc_ctx, item->path, NULL,
+                                   svn_depth_empty, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL,
+                                   scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Given a list of committables described by their common base abspath
@@ -915,6 +943,12 @@ svn_client_commit6(const apr_array_header_t *targets,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
+          if (! (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
+            {
+              SVN_DBG(("Skip handling for: %s: %d", item->path, item->state_flags));
+              continue; /* Nothing to post process via the queue */
+            }
+
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
@@ -933,6 +967,26 @@ svn_client_commit6(const apr_array_header_t *targets,
                    commit_info->author,
                    ctx->cancel_func, ctx->cancel_baton,
                    iterpool);
+
+      if (bump_err)
+        goto cleanup;
+
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+          if (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            continue; /* Already processed via the queue */
+
+          svn_pool_clear(iterpool);
+          bump_err = post_process_no_commit_item(
+                       item, ctx->wc_ctx,
+                       keep_changelists, keep_locks,
+                       iterpool);
+          if (bump_err)
+            goto cleanup;
+        }
     }
 
  cleanup:
