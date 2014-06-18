@@ -259,11 +259,26 @@ public interface ISVNClient
      * @param path      A set of paths to revert.
      * @param depth     the depth to recurse into subdirectories
      * @param changelists changelists to filter by
+     * @param clearChangelists If set, will clear changelist association
+     *                         from the reverted paths.
      * @throws ClientException
      * @since 1.9
      */
-    void revert(Set<String> paths, Depth depth, Collection<String> changelists)
+    void revert(Set<String> paths, Depth depth,
+                Collection<String> changelists,
+                boolean clearChangelists)
             throws ClientException;
+
+    /**
+     * Reverts set of files or directories to a pristine state.
+     * <p>
+     * Behaves like the 1.9 version with <code>clearChangelists</code>
+     * set to <code>false</code>;
+     */
+    void revert(Set<String> paths, Depth depth,
+                Collection<String> changelists)
+            throws ClientException;
+
 
     /**
      * Reverts a file to a pristine state.
@@ -1203,6 +1218,9 @@ public interface ISVNClient
 
     /**
      * Retrieve the content of a file
+     *
+     * Always expands keywords and never returns properties.
+     *
      * @param path      the path of the file
      * @param revision  the revision to retrieve
      * @param pegRevision the revision to interpret path
@@ -1221,11 +1239,40 @@ public interface ISVNClient
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
      * @param stream      the stream to write the file's content to
+     * @param returnProps whether to return the file's own (not inherited)
+     *                    properties dalong with the contents
+     * @return The file's properties if <code>returnProps</code> is
+     *         set (which may yield an empty map), otherwise
+     *         <code>null</code>.
+     * @throws ClientException
+     * @see java.io.PipedOutputStream
+     * @see java.io.PipedInputStream
+     * @since 1.9
+     */
+    Map<String, byte[]>
+        streamFileContent(String path,
+                          Revision revision, Revision pegRevision,
+                          boolean expandKeywords, boolean returnProps,
+                          OutputStream stream)
+        throws ClientException;
+
+    /**
+     * Write the file's content to the specified output stream.  If
+     * you need an InputStream, use a
+     * PipedInputStream/PipedOutputStream combination.
+     *
+     * Always expands keywords and never returns properties.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
      * @see java.io.PipedOutputStream
      * @see java.io.PipedInputStream
      */
-    void streamFileContent(String path, Revision revision, Revision pegRevision,
+    void streamFileContent(String path,
+                           Revision revision, Revision pegRevision,
                            OutputStream stream)
         throws ClientException;
 
@@ -1384,8 +1431,23 @@ public interface ISVNClient
      * @param fetchActualOnly when <code>true</code>, retrieve
      * information about node that are not versioned, but are still
      * tree conflicted.
+     * @param includeExternals Recurs into externals directories
      * @param changelists   if non-null, filter paths using changelists
      * @param callback      a callback to receive the infos retrieved
+     * @since 1.9
+     */
+    void info(String pathOrUrl,
+              Revision revision, Revision pegRevision, Depth depth,
+              boolean fetchExcluded, boolean fetchActualOnly,
+              boolean includeExternals,
+              Collection<String> changelists, InfoCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve information about repository or working copy items.
+     * <p>
+     * Behaves like {@see ISVNClient#info} with
+     * <code>includeExternals</code> set to <code>fals</code>
      * @since 1.9
      */
     void info2(String pathOrUrl,

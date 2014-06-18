@@ -193,14 +193,22 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void revert(Set<String> paths, Depth depth,
-                              Collection<String> changelists)
+                              Collection<String> changelists,
+                              boolean clearChangelists)
             throws ClientException;
+
+    public void revert(Set<String> paths, Depth depth,
+                       Collection<String> changelists)
+            throws ClientException
+    {
+        revert(paths, depth, changelists, false);
+    }
 
     public void revert(String path, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(Collections.singleton(path), depth, changelists);
+        revert(Collections.singleton(path), depth, changelists, false);
     }
 
     public native void add(String path, Depth depth, boolean force,
@@ -610,14 +618,24 @@ public class SVNClient implements ISVNClient
     {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
-        streamFileContent(path, revision, pegRevision, stream);
+        streamFileContent(path, revision, pegRevision, true, false, stream);
         return stream.toByteArray();
     }
 
-    public native void streamFileContent(String path, Revision revision,
-                                         Revision pegRevision,
-                                         OutputStream stream)
+    public native Map<String, byte[]>
+        streamFileContent(String path,
+                          Revision revision, Revision pegRevision,
+                          boolean expandKeywords, boolean returnProps,
+                          OutputStream stream)
             throws ClientException;
+
+    public void streamFileContent(String path, Revision revision,
+                                  Revision pegRevision,
+                                  OutputStream stream)
+        throws ClientException
+    {
+        streamFileContent(path, revision, pegRevision, true, false, stream);
+    }
 
     public native void relocate(String from, String to, String path,
                                 boolean ignoreExternals)
@@ -726,12 +744,24 @@ public class SVNClient implements ISVNClient
     public native void unlock(Set<String> paths, boolean force)
             throws ClientException;
 
-    public native void info2(String pathOrUrl, Revision revision,
-                             Revision pegRevision, Depth depth,
-                             boolean fetchExcluded, boolean fetchActualOnly,
-                             Collection<String> changelists,
-                             InfoCallback callback)
+    public native void info(String pathOrUrl, Revision revision,
+                            Revision pegRevision, Depth depth,
+                            boolean fetchExcluded, boolean fetchActualOnly,
+                            boolean includeExternals,
+                            Collection<String> changelists,
+                            InfoCallback callback)
             throws ClientException;
+
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, Depth depth,
+                      boolean fetchExcluded, boolean fetchActualOnly,
+                      Collection<String> changelists,
+                      InfoCallback callback)
+            throws ClientException
+    {
+        info(pathOrUrl, revision, pegRevision, depth,
+             fetchExcluded, fetchActualOnly, false, changelists, callback);
+    }
 
     public void info2(String pathOrUrl, Revision revision,
                       Revision pegRevision, Depth depth,
@@ -739,8 +769,8 @@ public class SVNClient implements ISVNClient
                       InfoCallback callback)
             throws ClientException
     {
-        info2(pathOrUrl, revision, pegRevision, depth,
-              false, true, changelists, callback);
+        info(pathOrUrl, revision, pegRevision, depth,
+             false, true, false, changelists, callback);
     }
 
     public native void patch(String patchPath, String targetPath,
