@@ -210,6 +210,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "  --ignore-eol-style: Ignore changes in EOL style\n"
                        "                             "
+                       "  -U ARG, --context ARG: Show ARG lines of context\n"
+                       "                             "
                        "  -p, --show-c-function: Show C function name")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
