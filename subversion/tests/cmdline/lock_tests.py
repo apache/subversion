@@ -2335,12 +2335,21 @@ def lock_commit_bump(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
-
+  
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None, wc_dir)
 
+  # We explicitly check both the Revision and Last Changed Revision.
+  expected_infos = [ { 
+    'Revision'           : '1' ,
+    'Last Changed Rev'   : '1' ,
+    'URL'                : '.*',
+    'Lock Token'         : None, }
+  ]
+  svntest.actions.run_and_verify_info(expected_infos, 
+                                      sbox.ospath('iota'))
 
 
 ########################################################################
