@@ -244,6 +244,14 @@ const char *
 svn_test_data_path(const char* basename, apr_pool_t *result_pool);
 
 
+/* Some tests require the --srcdir option and should use this function
+ * to get it. If not provided, print a warning and attempt to run the
+ * tests under the assumption that --srcdir is the current directory. */
+svn_error_t *
+svn_test_get_srcdir(const char **srcdir,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
