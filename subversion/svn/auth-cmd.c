@@ -41,10 +41,12 @@
 #include "svn_config.h"
 #include "svn_auth.h"
 #include "svn_sorts.h"
+#include "svn_base64.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_token.h"
 #include "private/svn_sorts_private.h"
+#include "libsvn_subr/x509.h"
 
 #include "cl.h"
 
@@ -168,6 +170,56 @@ match_credential(svn_boolean_t *match,
 }
 
 static svn_error_t *
+show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
+{
+  const svn_string_t *der_cert;
+  int x509_err;
+  x509_cert *cert;
+  char name[1024];
+
+  /* Convert header-less PEM to DER by undoing base64 encoding. */
+  der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
+
+  x509_err = svn_x509_parse_cert(&cert, der_cert->data, der_cert->len,
+                                scratch_pool, scratch_pool);
+  if (x509_err)
+    {
+      svn_cmdline_printf(scratch_pool, _("Error parsing certificate: 0x%x\n"), -x509_err);
+      return SVN_NO_ERROR;
+    }
+
+  if (cert == NULL)
+    {
+      svn_cmdline_printf(scratch_pool, _("Error parsing certificate\n"));
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %4d/%02d/%02d %02d:%02d:%02d\n"),
+                             cert->valid_from.year,
+                             cert->valid_from.mon,
+                             cert->valid_from.day,
+                             cert->valid_from.hour,
+                             cert->valid_from.min,
+                             cert->valid_from.sec));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid until: %4d/%02d/%02d %02d:%02d:%02d\n"),
+                             cert->valid_to.year,
+                             cert->valid_to.mon,
+                             cert->valid_to.day,
+                             cert->valid_to.hour,
+                             cert->valid_to.min,
+                             cert->valid_to.sec));
+  x509parse_dn_gets(name, name + sizeof(name), &cert->issuer);
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"), name));
+#if 0
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"), cert->subject_id.p));
+  SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
+  SVN_ERR(svn_cmdline_printf(iterpool, _("Fingerprint: %s\n"),
+                             value->data));
+#endif
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 list_credential(const char *cred_kind,
                 const char *realmstring,
                 apr_array_header_t *cred_items,
@@ -218,9 +270,10 @@ list_credential(const char *cred_kind,
       else if (strcmp(key, SVN_CONFIG_AUTHN_USERNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
-        continue; /* don't show data which is not human-readable */
+       SVN_ERR(show_cert(value, iterpool));
       else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Hostname: %s\n"), value->data));
+#if 0
       else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_FROM_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Valid from: %s\n"),
                                    value->data));
@@ -236,6 +289,7 @@ list_credential(const char *cred_kind,
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
         SVN_ERR(svn_cmdline_printf(iterpool, "%s: %s\n", key, value->data));
+#endif
     }
   svn_pool_destroy(iterpool);
 
