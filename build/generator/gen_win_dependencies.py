@@ -321,7 +321,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
       inc_path = inc_base
     else:
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
+      sys.stderr.write("ERROR: 'apr_version' not found.\n")
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
       sys.exit(1)
 
