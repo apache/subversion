@@ -56,7 +56,7 @@
 /*
  * ASN.1 DER decoding routines
  */
-static int asn1_get_len(unsigned char **p, const unsigned char *end, int *len)
+static int asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
 {
   if ((end - *p) < 1)
     return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
@@ -93,7 +93,7 @@ static int asn1_get_len(unsigned char **p, const unsigned char *end, int *len)
   return (0);
 }
 
-static int asn1_get_tag(unsigned char **p,
+static int asn1_get_tag(const unsigned char **p,
       const unsigned char *end, int *len, int tag)
 {
   if ((end - *p) < 1)
@@ -107,7 +107,7 @@ static int asn1_get_tag(unsigned char **p,
   return (asn1_get_len(p, end, len));
 }
 
-static int asn1_get_int(unsigned char **p, const unsigned char *end, int *val)
+static int asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 {
   int ret, len;
 
@@ -130,7 +130,7 @@ static int asn1_get_int(unsigned char **p, const unsigned char *end, int *val)
 /*
  *  Version   ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
  */
-static int x509_get_version(unsigned char **p, const unsigned char *end, int *ver)
+static int x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
 {
   int ret, len;
 
@@ -158,7 +158,7 @@ static int x509_get_version(unsigned char **p, const unsigned char *end, int *ve
 /*
  *  CertificateSerialNumber   ::=  INTEGER
  */
-static int x509_get_serial(unsigned char **p,
+static int x509_get_serial(const unsigned char **p,
          const unsigned char *end, x509_buf * serial)
 {
   int ret;
@@ -188,7 +188,7 @@ static int x509_get_serial(unsigned char **p,
  *     algorithm         OBJECT IDENTIFIER,
  *     parameters         ANY DEFINED BY algorithm OPTIONAL  }
  */
-static int x509_get_alg(unsigned char **p, const unsigned char *end, x509_buf * alg)
+static int x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 {
   int ret, len;
 
@@ -233,7 +233,7 @@ static int x509_get_alg(unsigned char **p, const unsigned char *end, x509_buf * 
  *
  *  AttributeValue ::= ANY DEFINED BY AttributeType
  */
-static int x509_get_name(unsigned char **p, const unsigned char *end, x509_name * cur)
+static int x509_get_name(const unsigned char **p, const unsigned char *end, x509_name * cur)
 {
   int ret, len;
   const unsigned char *end2;
@@ -312,7 +312,7 @@ static int x509_get_name(unsigned char **p, const unsigned char *end, x509_name 
  *     utcTime    UTCTime,
  *     generalTime  GeneralizedTime }
  */
-static int x509_get_dates(unsigned char **p,
+static int x509_get_dates(const unsigned char **p,
         const unsigned char *end, x509_time * from, x509_time * to)
 {
   int ret, len;
@@ -368,7 +368,7 @@ static int x509_get_dates(unsigned char **p,
   return (0);
 }
 
-static int x509_get_sig(unsigned char **p, const unsigned char *end, x509_buf * sig)
+static int x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
 {
   int ret, len;
 
@@ -391,7 +391,7 @@ static int x509_get_sig(unsigned char **p, const unsigned char *end, x509_buf * 
 /*
  * X.509 v2/v3 unique identifier (not parsed)
  */
-static int x509_get_uid(unsigned char **p,
+static int x509_get_uid(const unsigned char **p,
       const unsigned char *end, x509_buf * uid, int n)
 {
   int ret;
@@ -421,18 +421,18 @@ static int x509_get_uid(unsigned char **p,
  */
 int
 svn_x509_parse_cert(x509_cert **cert,
-                    unsigned char *buf,
+                    const char *buf,
                     int buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   int ret, len;
-  unsigned char *p;
+  const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
 
   crt = apr_pcalloc(result_pool, sizeof(*crt));
-  p = buf;
+  p = (const unsigned char *)buf;
   len = buflen;
   end = p + len;
 
