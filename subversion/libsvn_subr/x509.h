@@ -186,11 +186,6 @@ extern "C" {
 	 */
 	int x509parse_crt(x509_cert * chain, const unsigned char *buf, int buflen);
 
-	/**
-	 * \brief          Unallocate all certificate data
-	 */
-	void x509_free(x509_cert * crt);
-
 #ifdef __cplusplus
 }
 #endif
