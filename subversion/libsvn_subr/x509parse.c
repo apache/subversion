@@ -450,12 +450,10 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	 */
 	if ((ret = asn1_get_tag(&p, end, &len,
 				ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT);
 	}
 
 	if (len != (int)(end - p)) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
 			TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
 	}
@@ -467,7 +465,6 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 
 	if ((ret = asn1_get_tag(&p, end, &len,
 				ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
 	}
 
@@ -484,25 +481,21 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	if ((ret = x509_get_version(&p, end, &crt->version)) != 0 ||
 	    (ret = x509_get_serial(&p, end, &crt->serial)) != 0 ||
 	    (ret = x509_get_alg(&p, end, &crt->sig_oid1)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
 	crt->version++;
 
 	if (crt->version > 3) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_UNKNOWN_VERSION);
 	}
 
 	if (crt->sig_oid1.len != 9 ||
 	    memcmp(crt->sig_oid1.p, OID_PKCS1, 8) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_UNKNOWN_SIG_ALG);
 	}
 
 	if (crt->sig_oid1.p[8] < 2 || crt->sig_oid1.p[8] > 5) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_UNKNOWN_SIG_ALG);
 	}
 
@@ -513,12 +506,10 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 
 	if ((ret = asn1_get_tag(&p, end, &len,
 				ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
 	}
 
 	if ((ret = x509_get_name(&p, p + len, &crt->issuer)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
@@ -532,7 +523,6 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	 */
 	if ((ret = x509_get_dates(&p, end, &crt->valid_from,
 				  &crt->valid_to)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
@@ -543,12 +533,10 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 
 	if ((ret = asn1_get_tag(&p, end, &len,
 				ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
 	}
 
 	if ((ret = x509_get_name(&p, p + len, &crt->subject)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
@@ -561,7 +549,6 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	 */
 	if ((ret = asn1_get_tag(&p, end, &len,
 				ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
 	}
 
@@ -579,7 +566,6 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	if (crt->version == 2 || crt->version == 3) {
 		ret = x509_get_uid(&p, end, &crt->issuer_id, 1);
 		if (ret != 0) {
-			x509_free(crt);
 			return (ret);
 		}
 	}
@@ -587,13 +573,11 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	if (crt->version == 2 || crt->version == 3) {
 		ret = x509_get_uid(&p, end, &crt->subject_id, 2);
 		if (ret != 0) {
-			x509_free(crt);
 			return (ret);
 		}
 	}
 
 	if (p != end) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
 			TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
 	}
@@ -605,22 +589,18 @@ static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
 	 *      signatureValue           BIT STRING
 	 */
 	if ((ret = x509_get_alg(&p, end, &crt->sig_oid2)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
 	if (memcmp(crt->sig_oid1.p, crt->sig_oid2.p, 9) != 0) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_SIG_MISMATCH);
 	}
 
 	if ((ret = x509_get_sig(&p, end, &crt->sig)) != 0) {
-		x509_free(crt);
 		return (ret);
 	}
 
 	if (p != end) {
-		x509_free(crt);
 		return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
 			TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
 	}
