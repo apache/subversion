@@ -123,50 +123,50 @@
  * Structures for parsing X.509 certificates
  */
 typedef struct _x509_buf {
-	int tag;
-	int len;
-	unsigned char *p;
+  int tag;
+  int len;
+  unsigned char *p;
 } x509_buf;
 
 typedef struct _x509_name {
-	x509_buf oid;
-	x509_buf val;
-	struct _x509_name *next;
+  x509_buf oid;
+  x509_buf val;
+  struct _x509_name *next;
 } x509_name;
 
 typedef struct _x509_time {
-	int year, mon, day;
-	int hour, min, sec;
+  int year, mon, day;
+  int hour, min, sec;
 } x509_time;
 
 typedef struct _x509_cert {
-	x509_buf raw;
-	x509_buf tbs;
+  x509_buf raw;
+  x509_buf tbs;
 
-	int version;
-	x509_buf serial;
-	x509_buf sig_oid1;
+  int version;
+  x509_buf serial;
+  x509_buf sig_oid1;
 
-	x509_buf issuer_raw;
-	x509_buf subject_raw;
+  x509_buf issuer_raw;
+  x509_buf subject_raw;
 
-	x509_name issuer;
-	x509_name subject;
+  x509_name issuer;
+  x509_name subject;
 
-	x509_time valid_from;
-	x509_time valid_to;
+  x509_time valid_from;
+  x509_time valid_to;
 
-	x509_buf pk_oid;
+  x509_buf pk_oid;
 
-	x509_buf issuer_id;
-	x509_buf subject_id;
-	x509_buf v3_ext;
+  x509_buf issuer_id;
+  x509_buf subject_id;
+  x509_buf v3_ext;
 
-	int ca_istrue;
-	int max_pathlen;
+  int ca_istrue;
+  int max_pathlen;
 
-	x509_buf sig_oid2;
-	x509_buf sig;
+  x509_buf sig_oid2;
+  x509_buf sig;
 
 } x509_cert;
 
@@ -174,19 +174,19 @@ typedef struct _x509_cert {
 extern "C" {
 #endif
 
-	/**
-	 * \brief          Parse one or more certificates and add them
-	 *                 to the chained list
-	 *
-	 * \param chain    points to the start of the chain
-	 * \param buf      buffer holding the certificate data
-	 * \param buflen   size of the buffer
-	 *
-	 * \return         0 if successful, or a specific X509 error code
-	 */
-	int x509parse_crt(x509_cert * chain, const unsigned char *buf, int buflen);
+  /**
+   * \brief          Parse one or more certificates and add them
+   *                 to the chained list
+   *
+   * \param chain    points to the start of the chain
+   * \param buf      buffer holding the certificate data
+   * \param buflen   size of the buffer
+   *
+   * \return         0 if successful, or a specific X509 error code
+   */
+  int x509parse_crt(x509_cert * chain, const unsigned char *buf, int buflen);
 
 #ifdef __cplusplus
 }
 #endif
-#endif				/* x509.h */
+#endif        /* x509.h */
