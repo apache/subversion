@@ -140,7 +140,6 @@ typedef struct _x509_time {
 } x509_time;
 
 typedef struct _x509_cert {
-  x509_buf raw;
   x509_buf tbs;
 
   int version;
@@ -177,7 +176,7 @@ extern "C" {
   /* Parse x509 DER certificate data from BUF (with length BUFLEN),
    * returning a structured representation in *CERT, allocated in RESULT_POOL. */
   int svn_x509_parse_cert(x509_cert **cert,
-                          const unsigned char *buf,
+                          unsigned char *buf,
                           int buflen,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);

@@ -421,7 +421,7 @@ static int x509_get_uid(unsigned char **p,
  */
 int
 svn_x509_parse_cert(x509_cert **cert,
-                    const unsigned char *buf,
+                    unsigned char *buf,
                     int buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -432,21 +432,8 @@ svn_x509_parse_cert(x509_cert **cert,
   x509_cert *crt;
 
   crt = apr_pcalloc(result_pool, sizeof(*crt));
-
-  /*
-   * Copy the raw DER data.
-   */
-  p = (unsigned char *)malloc(len = buflen);
-
-  if (p == NULL)
-    return (1);
-
-  memcpy(p, buf, buflen);
-
-  buflen = 0;
-
-  crt->raw.p = p;
-  crt->raw.len = len;
+  p = buf;
+  len = buflen;
   end = p + len;
 
   /*
@@ -589,7 +576,7 @@ svn_x509_parse_cert(x509_cert **cert,
       TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
   }
 
-  end = crt->raw.p + crt->raw.len;
+  end = buf + buflen;
 
   /*
    *      signatureAlgorithm       AlgorithmIdentifier,
