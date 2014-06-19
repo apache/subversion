@@ -44,6 +44,8 @@
  *  http://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
  */
 
+#include <apr_pools.h>
+
 #include "x509.h"
 
 #include <string.h>
@@ -417,14 +419,19 @@ static int x509_get_uid(unsigned char **p,
 /*
  * Parse one certificate.
  */
-static int _x509parse_crt_1(x509_cert * chain, unsigned char *buf, int buflen)
+int
+svn_x509_parse_cert(x509_cert **cert,
+                    const unsigned char *buf,
+                    int buflen,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   int ret, len;
   unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
 
-  crt = chain;
+  crt = apr_pcalloc(result_pool, sizeof(*crt));
 
   /*
    * Copy the raw DER data.

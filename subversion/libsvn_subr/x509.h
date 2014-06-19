@@ -174,17 +174,13 @@ typedef struct _x509_cert {
 extern "C" {
 #endif
 
-  /**
-   * \brief          Parse one or more certificates and add them
-   *                 to the chained list
-   *
-   * \param chain    points to the start of the chain
-   * \param buf      buffer holding the certificate data
-   * \param buflen   size of the buffer
-   *
-   * \return         0 if successful, or a specific X509 error code
-   */
-  int x509parse_crt(x509_cert * chain, const unsigned char *buf, int buflen);
+  /* Parse x509 DER certificate data from BUF (with length BUFLEN),
+   * returning a structured representation in *CERT, allocated in RESULT_POOL. */
+  int svn_x509_parse_cert(x509_cert **cert,
+                          const unsigned char *buf,
+                          int buflen,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
