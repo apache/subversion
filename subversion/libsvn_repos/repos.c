@@ -267,9 +267,9 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
 
 
 #define HOOKS_ENVIRONMENT_TEXT                                                \
-  "# The hook program typically does not inherit the environment of"       NL \
-  "# its parent process.  For example, a common problem is for the"        NL \
-  "# PATH environment variable to not be set to its usual value, so"       NL \
+  "# The hook program runs in an empty environment, unless the server is"  NL \
+  "# explicitly configured otherwise.  For example, a common problem is for" NL \
+  "# the PATH environment variable to not be set to its usual value, so"   NL \
   "# that subprograms fail to launch unless invoked via absolute path."    NL \
   "# If you're having unexpected problems with a hook program, the"        NL \
   "# culprit may be unusual (or missing) environment variables."           NL
