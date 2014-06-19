@@ -1198,6 +1198,7 @@ static const apr_getopt_option_t diff_options[] =
   /* ### For compatibility; we don't support the argument to -u, because
    * ### we don't have optional argument support. */
   { "unified", 'u', 0, NULL },
+  { "context", 'U', 1, NULL },
   { NULL, 0, 0, NULL }
 };
 
@@ -1296,6 +1297,11 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
           break;
         case 'p':
           options->show_c_function = TRUE;
+          break;
+        case 'U':
+          SVN_ERR(svn_cstring_atoi(&options->context_size, opt_arg));
+          if (options->context_size < 1)
+            options->context_size = 1;
           break;
         default:
           break;
