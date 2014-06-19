@@ -117,7 +117,7 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 FETCH_CMD	= wget -c
 
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
-BDB_URL		= http://ftp2.de.freebsd.org/pub/FreeBSD/distfiles/bdb/$(BDB_DIST)
+BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= http://svn.apache.org/repos/asf/apr/apr
 APR_PATCHES_URL	= http://www.apache.org/dist/apr/patches
 APR_ICONV_URL	= http://www.apache.org/dist/apr/$(APR_ICONV_DIST)

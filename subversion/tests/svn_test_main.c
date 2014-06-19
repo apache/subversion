@@ -131,7 +131,7 @@ static const apr_getopt_option_t cl_options[] =
   {"allow-segfaults", allow_segfault_opt, 0,
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
-                    N_("source directory")},
+                    N_("directory which contains test's C source files")},
   {"sqlite-logging", sqlite_log_opt, 0,
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
@@ -664,6 +664,26 @@ svn_test_data_path(const char *base_name, apr_pool_t *result_pool)
   return svn_dirent_join(data_path, base_name, result_pool);
 }
 
+svn_error_t *
+svn_test_get_srcdir(const char **srcdir,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  const char *cwd;
+
+  if (opts->srcdir)
+    {
+      *srcdir = opts->srcdir;
+      return SVN_NO_ERROR;
+    }
+
+  fprintf(stderr, "WARNING: missing '--srcdir' option");
+  SVN_ERR(svn_dirent_get_absolute(&cwd, ".", pool));
+  fprintf(stderr, ", assuming '%s'\n", cwd);
+  *srcdir = cwd;
+
+  return SVN_NO_ERROR;
+}
 
 /* Standard svn test program */
 int
