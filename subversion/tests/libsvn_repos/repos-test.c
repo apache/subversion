@@ -3331,6 +3331,7 @@ test_config_pool(const svn_test_opts_t *opts,
   svn_fs_root_t *root, *rev_root;
   svn_revnum_t rev;
   const char *repo_root_url;
+  const char *srcdir;
   svn_error_t *err;
 
   svn_repos__config_pool_t *config_pool;
@@ -3348,9 +3349,10 @@ test_config_pool(const svn_test_opts_t *opts,
                                         config_pool_pool));
 
   /* have two different configurations  */
+  SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
   SVN_ERR(svn_stringbuf_from_file2(
                         &cfg_buffer1,
-                        svn_dirent_join(opts->srcdir,
+                        svn_dirent_join(srcdir,
                                         "../libsvn_subr/config-test.cfg",
                                         pool),
                         pool));
