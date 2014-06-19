@@ -1300,8 +1300,6 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
           break;
         case 'U':
           SVN_ERR(svn_cstring_atoi(&options->context_size, opt_arg));
-          if (options->context_size < 1)
-            options->context_size = 1;
           break;
         default:
           break;
