@@ -181,6 +181,12 @@ extern "C" {
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/*
+ * Store the name in printable form into buf; no more
+ * than (end - buf) characters will be written
+ */
+int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn);
+
 #ifdef __cplusplus
 }
 #endif
