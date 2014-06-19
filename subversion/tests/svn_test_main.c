@@ -131,7 +131,7 @@ static const apr_getopt_option_t cl_options[] =
   {"allow-segfaults", allow_segfault_opt, 0,
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
-                    N_("source directory")},
+                    N_("directory which contains test's C source files")},
   {"sqlite-logging", sqlite_log_opt, 0,
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
