@@ -429,12 +429,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       sys.exit(1)
 
     version_file_path = os.path.join(inc_path, 'apu_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
-      sys.exit(1)
-
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
