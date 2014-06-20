@@ -68,6 +68,20 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
                         apr_pool_t *pool);
 
+typedef svn_error_t *(*svn_fs_fs__change_receiver_t)(
+  void *baton,
+  change_t *change,
+  apr_pool_t *scratch_pool);
+
+/* Read all the changes from STREAM and invoke CHANGE_RECEIVER on each change.
+   Do all allocations in POOL. */
+svn_error_t *
+svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
+                                      svn_fs_fs__change_receiver_t
+                                        change_receiver,
+                                      void *change_receiver_baton,
+                                      apr_pool_t *scratch_pool);
+
 /* Write the changed path info from CHANGES in filesystem FS to the
    output stream STREAM.  You may call this function multiple time on
    the same stream but the last call should set TERMINATE_LIST to write

@@ -777,83 +777,71 @@ fold_change(apr_hash_t *changed_paths,
   return SVN_NO_ERROR;
 }
 
-/* Examine all the changed path entries in CHANGES and store them in
+/* An implementation of svn_fs_fs__change_receiver_t.
+   Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
    data. Do all allocations in POOL. */
 static svn_error_t *
-process_changes(apr_hash_t *changed_paths,
-                apr_array_header_t *changes,
-                apr_pool_t *pool)
+process_changes(void *baton,
+                change_t *change,
+                apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  int i;
+  apr_hash_t *changed_paths = baton;
 
-  /* Read in the changes one by one, folding them into our local hash
-     as necessary. */
+  SVN_ERR(fold_change(changed_paths, change));
 
-  for (i = 0; i < changes->nelts; ++i)
+  /* Now, if our change was a deletion or replacement, we have to
+     blow away any changes thus far on paths that are (or, were)
+     children of this path.
+     ### i won't bother with another iteration pool here -- at
+     most we talking about a few extra dups of paths into what
+     is already a temporary subpool.
+  */
+
+  if ((change->info.change_kind == svn_fs_path_change_delete)
+       || (change->info.change_kind == svn_fs_path_change_replace))
     {
-      /* The ITERPOOL will be cleared at the end of this function
-       * since it is only used rarely and for a single hash iterator.
-       */
-      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool;
 
-      SVN_ERR(fold_change(changed_paths, change));
-
-      /* Now, if our change was a deletion or replacement, we have to
-         blow away any changes thus far on paths that are (or, were)
-         children of this path.
-         ### i won't bother with another iteration pool here -- at
-         most we talking about a few extra dups of paths into what
-         is already a temporary subpool.
+      /* a potential child path must contain at least 2 more chars
+         (the path separator plus at least one char for the name).
+         Also, we should not assume that all paths have been normalized
+         i.e. some might have trailing path separators.
       */
+      apr_ssize_t path_len = change->path.len;
+      apr_ssize_t min_child_len = path_len == 0
+                                ? 1
+                                : change->path.data[path_len-1] == '/'
+                                    ? path_len + 1
+                                    : path_len + 2;
 
-      if ((change->info.change_kind == svn_fs_path_change_delete)
-           || (change->info.change_kind == svn_fs_path_change_replace))
+      /* CAUTION: This is the inner loop of an O(n^2) algorithm.
+         The number of changes to process may be >> 1000.
+         Therefore, keep the inner loop as tight as possible.
+      */
+      iterpool = svn_pool_create(scratch_pool);
+      for (hi = apr_hash_first(scratch_pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          apr_hash_index_t *hi;
+          /* KEY is the path. */
+          const void *path;
+          apr_ssize_t klen;
+          apr_hash_this(hi, &path, &klen, NULL);
 
-          /* a potential child path must contain at least 2 more chars
-             (the path separator plus at least one char for the name).
-             Also, we should not assume that all paths have been normalized
-             i.e. some might have trailing path separators.
-          */
-          apr_ssize_t path_len = change->path.len;
-          apr_ssize_t min_child_len = path_len == 0
-                                    ? 1
-                                    : change->path.data[path_len-1] == '/'
-                                        ? path_len + 1
-                                        : path_len + 2;
-
-          /* CAUTION: This is the inner loop of an O(n^2) algorithm.
-             The number of changes to process may be >> 1000.
-             Therefore, keep the inner loop as tight as possible.
-          */
-          for (hi = apr_hash_first(iterpool, changed_paths);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              /* KEY is the path. */
-              const void *path;
-              apr_ssize_t klen;
-              apr_hash_this(hi, &path, &klen, NULL);
-
-              /* If we come across a child of our path, remove it.
-                 Call svn_dirent_is_child only if there is a chance that
-                 this is actually a sub-path.
-               */
-              if (   klen >= min_child_len
-                  && svn_dirent_is_child(change->path.data, path, iterpool))
-                apr_hash_set(changed_paths, path, klen, NULL);
-            }
-
-          /* Clear the per-iteration subpool. */
           svn_pool_clear(iterpool);
-        }
-    }
 
-  /* Destroy the per-iteration subpool. */
-  svn_pool_destroy(iterpool);
+          /* If we come across a child of our path, remove it.
+             Call svn_dirent_is_child only if there is a chance that
+             this is actually a sub-path.
+           */
+          if (   klen >= min_child_len
+              && svn_dirent_is_child(change->path.data, path, iterpool))
+            apr_hash_set(changed_paths, path, klen, NULL);
+        }
+      svn_pool_destroy(iterpool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -866,7 +854,6 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
 {
   apr_file_t *file;
   apr_hash_t *changed_paths = apr_hash_make(pool);
-  apr_array_header_t *changes;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(svn_io_file_open(&file,
@@ -874,11 +861,11 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            scratch_pool));
 
-  SVN_ERR(svn_fs_fs__read_changes(&changes,
+  SVN_ERR(svn_fs_fs__read_changes_incrementally(
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
+                                  process_changes, changed_paths,
                                   scratch_pool));
-  SVN_ERR(process_changes(changed_paths, changes, pool));
   svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;
