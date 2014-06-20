@@ -375,25 +375,6 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Make sure the length ACTUAL_LENGTH of the proto-revision file PROTO_REV
-   of transaction TXN_ID in filesystem FS matches the proto-index file.
-   Trim any crash / failure related extra data from the proto-rev file.
-
-   If the prototype revision file is too short, we can't do much but bail out.
-
-   Perform all allocations in POOL. */
-static svn_error_t *
-auto_truncate_proto_rev(svn_fs_t *fs,
-                        apr_file_t *proto_rev,
-                        apr_off_t actual_length,
-                        const svn_fs_fs__id_part_t *txn_id,
-                        apr_pool_t *pool)
-{
-  /* Only relevant for newer FSFS formats. */
-
-  return SVN_NO_ERROR;
-}
-
 /* Get a handle to the prototype revision file for transaction TXN_ID in
    filesystem FS, and lock it for writing.  Return FILE, a file handle
    positioned at the end of the file, and LOCKCOOKIE, a cookie that
@@ -435,14 +416,6 @@ get_writable_proto_rev(apr_file_t **file,
      able to read the current file position later). */
   if (!err)
     err = svn_io_file_seek(*file, APR_END, &end_offset, pool);
-
-  /* We don't want unused sections (such as leftovers from failed delta
-     stream) in our file.  If we use log addressing, we would need an
-     index entry for the unused section and that section would need to 
-     be all NUL by convention.  So, detect and fix those cases by truncating
-     the protorev file. */
-  if (!err)
-    err = auto_truncate_proto_rev(fs, *file, end_offset, txn_id, pool);
 
   if (err)
     {
