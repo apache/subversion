@@ -650,18 +650,18 @@ replace_change(svn_fs_path_change2_t *old_change,
 }
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
-   svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
+   svn_fs_path_change2_t CHANGED_PATHS, collapsing multiple changes into a
    single summarical (is that real word?) change per path.  */
 static svn_error_t *
-fold_change(apr_hash_t *changes,
+fold_change(apr_hash_t *changed_paths,
             const change_t *change)
 {
-  apr_pool_t *pool = apr_hash_pool_get(changes);
+  apr_pool_t *pool = apr_hash_pool_get(changed_paths);
   svn_fs_path_change2_t *old_change, *new_change;
   const svn_string_t *path = &change->path;
   const svn_fs_path_change2_t *info = &change->info;
 
-  if ((old_change = apr_hash_get(changes, path->data, path->len)))
+  if ((old_change = apr_hash_get(changed_paths, path->data, path->len)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
@@ -754,7 +754,7 @@ fold_change(apr_hash_t *changes,
 
       /* remove old_change from the cache if it is no longer needed. */
       if (old_change == NULL)
-        apr_hash_set(changes, path->data, path->len, NULL);
+        apr_hash_set(changed_paths, path->data, path->len, NULL);
     }
   else
     {
@@ -769,7 +769,7 @@ fold_change(apr_hash_t *changes,
       /* Add this path.  The API makes no guarantees that this (new) key
         will not be retained.  Thus, we copy the key into the target pool
         to ensure a proper lifetime.  */
-      apr_hash_set(changes,
+      apr_hash_set(changed_paths,
                    apr_pstrmemdup(pool, path->data, path->len), path->len,
                    new_change);
     }
