@@ -87,9 +87,6 @@ extern "C" {
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 #define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
 #define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
-#define PATH_TXN_ITEM_INDEX "itemidx"      /* File containing the current item
-                                              index number */
-#define PATH_INDEX          "index"        /* name of index files w/o ext */
 
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */

@@ -48,28 +48,6 @@
 #define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
                                               Only used in pre-format7. */
 
-/* (user visible) entry in the phys-to-log index.  It describes a section
- * of some packed / non-packed rev file as containing a specific item.
- * There must be no overlapping / conflicting entries.
- */
-typedef struct svn_fs_fs__p2l_entry_t
-{
-  /* offset of the first byte that belongs to the item */
-  apr_off_t offset;
-  
-  /* length of the item in bytes */
-  apr_off_t size;
-
-  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
-  unsigned type;
-
-  /* modified FNV-1a checksum.  0 if unknown checksum */
-  apr_uint32_t fnv1_checksum;
-
-  /* item in that block */
-  svn_fs_fs__id_part_t item;
-} svn_fs_fs__p2l_entry_t;
-
 /* For ITEM_INDEX within REV in FS, return the position in the respective
  * rev or pack file in *ABSOLUTE_POSITION.  If TXN_ID is not NULL, return
  * the file offset within that transaction and REV should be given as
