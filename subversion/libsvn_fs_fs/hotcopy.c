@@ -235,7 +235,6 @@ hotcopy_copy_shard_file(const char *src_subdir,
                         const char *dst_subdir,
                         svn_revnum_t rev,
                         int max_files_per_dir,
-                        svn_boolean_t include_indexes,
                         apr_pool_t *scratch_pool)
 {
   const char *src_subdir_shard = src_subdir,
@@ -259,18 +258,6 @@ hotcopy_copy_shard_file(const char *src_subdir,
   SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(scratch_pool, "%ld", rev),
                                    scratch_pool));
-
-  if (include_indexes)
-    {
-      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
-                                       apr_psprintf(scratch_pool, "%ld.l2p",
-                                                    rev),
-                                       scratch_pool));
-      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
-                                       apr_psprintf(scratch_pool, "%ld.p2l",
-                                                    rev),
-                                       scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -327,7 +314,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
 
           SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
                                           revprop_rev, max_files_per_dir,
-                                          FALSE, iterpool));
+                                          iterpool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -336,7 +323,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
       /* revprop for revision 0 will never be packed */
       if (rev == 0)
         SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                        0, max_files_per_dir, FALSE,
+                                        0, max_files_per_dir,
                                         scratch_pool));
 
       /* packed revprops folder */
@@ -469,15 +456,6 @@ hotcopy_remove_files(svn_fs_t *dst_fs,
       SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
                                   apr_psprintf(iterpool, "%ld", rev),
                                   iterpool));
-      if (remove_indexes && svn_fs_fs__use_log_addressing(dst_fs, rev))
-        {
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.p2l", rev),
-                                      iterpool));
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.l2p", rev),
-                                      iterpool));
-        }
     }
 
   svn_pool_destroy(iterpool);
@@ -717,7 +695,6 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
       /* Copy the rev file. */
       err = hotcopy_copy_shard_file(src_revs_dir, dst_revs_dir,
                                     rev, max_files_per_dir,
-                                    svn_fs_fs__use_log_addressing(src_fs, rev),
                                     iterpool);
       if (err)
         {
@@ -768,7 +745,7 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
       /* Copy the revprop file. */
       SVN_ERR(hotcopy_copy_shard_file(src_revprops_dir,
                                       dst_revprops_dir,
-                                      rev, max_files_per_dir, FALSE,
+                                      rev, max_files_per_dir,
                                       iterpool));
 
       /* After completing a full shard, update 'current'. */
@@ -1082,7 +1059,6 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
   dst_fs->path = apr_pstrdup(pool, dst_path);
 
   dst_ffd->max_files_per_dir = src_ffd->max_files_per_dir;
-  dst_ffd->min_log_addressing_rev = src_ffd->min_log_addressing_rev;
   dst_ffd->format = src_ffd->format;
 
   /* Create the revision data directories. */

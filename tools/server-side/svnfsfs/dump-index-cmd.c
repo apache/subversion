@@ -70,55 +70,7 @@ dump_index(const char *path,
   SVN_ERR(open_fs(&fs, path, pool));
   ffd = fs->fsap_data;
 
-  /* Check the FS format. */
-  if (! svn_fs_fs__use_log_addressing(fs, revision))
-    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
-
-  /* Revision & index file access object. */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision, pool));
-
-  /* Offset range to cover. */
-  SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, rev_file, revision,
-                                        pool));
-
-  /* Write header line. */
-  printf("       Start       Length Type   Revision     Item Checksum\n");
-
-  /* Walk through all P2L index entries in offset order. */
-  for (offset = 0; offset < max_offset; )
-    {
-      apr_array_header_t *entries;
-
-      /* Read entries for the next block.  There will be no overlaps since
-       * we start at the first offset not covered. */
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, rev_file, revision,
-                                          offset, ffd->p2l_page_size,
-                                          iterpool));
-
-      /* Print entries for this block, one line per entry. */
-      for (i = 0; i < entries->nelts && offset < max_offset; ++i)
-        {
-          const svn_fs_fs__p2l_entry_t *entry
-            = &APR_ARRAY_IDX(entries, i, const svn_fs_fs__p2l_entry_t);
-          const char *type_str
-            = entry->type < (sizeof(item_type_str) / sizeof(item_type_str[0]))
-            ? item_type_str[entry->type]
-            : "???";
-
-          offset = entry->offset + entry->size;
-
-          printf("%12" APR_UINT64_T_HEX_FMT " %12" APR_UINT64_T_HEX_FMT
-                 " %s %9ld %8" APR_UINT64_T_HEX_FMT " %s\n",
-                 (apr_uint64_t)entry->offset, (apr_uint64_t)entry->size,
-                 type_str, entry->item.revision, entry->item.number,
-                 fnv1_to_string(entry->fnv1_checksum, iterpool));
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
+  return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
 }
 
 /* This implements `svn_opt_subcommand_t'. */

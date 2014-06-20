@@ -22,7 +22,6 @@
 
 #include "rev_file.h"
 #include "fs_fs.h"
-#include "index.h"
 #include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -44,8 +43,6 @@ svn_fs_fs__init_revision_file(svn_fs_fs__revision_file_t *file,
 
   file->file = NULL;
   file->stream = NULL;
-  file->p2l_stream = NULL;
-  file->l2p_stream = NULL;
   file->pool = pool;
 }
 
@@ -165,13 +162,8 @@ svn_fs_fs__close_revision_file(svn_fs_fs__revision_file_t *file)
   if (file->file)
     SVN_ERR(svn_io_file_close(file->file, file->pool));
 
-  SVN_ERR(svn_fs_fs__packed_stream_close(file->l2p_stream));
-  SVN_ERR(svn_fs_fs__packed_stream_close(file->p2l_stream));
-
   file->file = NULL;
   file->stream = NULL;
-  file->l2p_stream = NULL;
-  file->p2l_stream = NULL;
 
   return SVN_NO_ERROR;
 }

@@ -55,12 +55,6 @@ typedef struct svn_fs_fs__revision_file_t
   /* stream based on FILE and not NULL exactly when FILE is not NULL */
   svn_stream_t *stream;
 
-  /* the opened P2L index or NULL.  Always NULL for txns. */
-  svn_fs_fs__packed_number_stream_t *p2l_stream;
-
-  /* the opened L2P index or NULL.  Always NULL for txns. */
-  svn_fs_fs__packed_number_stream_t *l2p_stream;
-
   /* pool containing this object */
   apr_pool_t *pool;
 } svn_fs_fs__revision_file_t;

@@ -56,35 +56,16 @@ write_format(const char *path,
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
-      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n"
-                                    "addressing logical 0\n",
-                                    format, max_files_per_dir);
-          else
-            /* linear layouts never use logical addressing */
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n"
-                                    "addressing physical\n",
-                                    format);
-        }
+      if (max_files_per_dir)
+        contents = apr_psprintf(pool,
+                                "%d\n"
+                                "layout sharded %d\n",
+                                format, max_files_per_dir);
       else
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n",
-                                    format, max_files_per_dir);
-          else
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n",
-                                    format);
-        }
+        contents = apr_psprintf(pool,
+                                "%d\n"
+                                "layout linear\n",
+                                format);
     }
   else
     {
@@ -336,37 +317,14 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      if (opts->server_minor_version && (opts->server_minor_version < 9))
-        {
-          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                      "manifest", SVN_VA_NULL);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
-          if (kind != svn_node_file)
-            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                     "Expected manifest file '%s' not found",
-                                     path);
-        }
-      else
-        {
-          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                      "pack.l2p", SVN_VA_NULL);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
-          if (kind != svn_node_file)
-            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                     "Expected log-to-phys index file '%s' not found",
-                                     path);
-
-          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                      "pack.p2l", NULL);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
-          if (kind != svn_node_file)
-            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                     "Expected phys-to-log index file '%s' not found",
-                                     path);
-        }
+      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                  "manifest", SVN_VA_NULL);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      if (kind != svn_node_file)
+        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                  "Expected manifest file '%s' not found",
+                                  path);
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",

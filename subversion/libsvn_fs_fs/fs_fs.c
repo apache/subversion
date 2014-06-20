@@ -466,19 +466,15 @@ check_format(int format)
 }
 
 /* Read the format number and maximum number of files per directory
-   from PATH and return them in *PFORMAT, *MAX_FILES_PER_DIR and
-   MIN_LOG_ADDRESSING_REV respectively.
+   from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR respectively.
 
    *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
    will be set to zero if a linear scheme should be used.
-   *MIN_LOG_ADDRESSING_REV is obtained from the 'addressing' format option,
-   and will be set to SVN_INVALID_REVNUM for physical addressing.
 
    Use POOL for temporary allocation. */
 static svn_error_t *
 read_format(int *pformat,
             int *max_files_per_dir,
-            svn_revnum_t *min_log_addressing_rev,
             const char *path,
             apr_pool_t *pool)
 {
@@ -525,7 +521,6 @@ read_format(int *pformat,
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
-  *min_log_addressing_rev = SVN_INVALID_REVNUM;
 
   /* Read any options. */
   while (!eos)
@@ -552,40 +547,10 @@ read_format(int *pformat,
             }
         }
 
-      if (*pformat >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT &&
-          strncmp(buf->data, "addressing ", 11) == 0)
-        {
-          if (strcmp(buf->data + 11, "physical") == 0)
-            {
-              *min_log_addressing_rev = SVN_INVALID_REVNUM;
-              continue;
-            }
-
-          if (strncmp(buf->data + 11, "logical ", 8) == 0)
-            {
-              int value;
-
-              /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf->data, 19, path, pool));
-              SVN_ERR(svn_cstring_atoi(&value, buf->data + 19));
-              *min_log_addressing_rev = value;
-              continue;
-            }
-        }
-
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
          svn_dirent_local_style(path, pool), buf->data);
     }
-
-  /* Non-sharded repositories never use logical addressing.
-   * If the format file is inconsistent in that respect, something
-   * probably went wrong.
-   */
-  if (*min_log_addressing_rev != SVN_INVALID_REVNUM && !*max_files_per_dir)
-    return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-       _("'%s' specifies logical addressing for a non-sharded repository"),
-       svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -616,17 +581,6 @@ svn_fs_fs__write_format(svn_fs_t *fs,
                                                   ffd->max_files_per_dir));
       else
         svn_stringbuf_appendcstr(sb, "layout linear\n");
-    }
-
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      if (ffd->min_log_addressing_rev == SVN_INVALID_REVNUM)
-        svn_stringbuf_appendcstr(sb, "addressing physical\n");
-      else
-        svn_stringbuf_appendcstr(sb,
-                                 apr_psprintf(pool,
-                                              "addressing logical %ld\n",
-                                              ffd->min_log_addressing_rev));
     }
 
   /* svn_io_write_version_file() does a load of magic to allow it to
@@ -738,31 +692,8 @@ read_config(fs_fs_data_t *ffd,
       ffd->compress_packed_revprops = FALSE;
     }
 
-  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    {
-      SVN_ERR(svn_config_get_int64(config, &ffd->block_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_BLOCK_SIZE,
-                                   64));
-      SVN_ERR(svn_config_get_int64(config, &ffd->l2p_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_L2P_PAGE_SIZE,
-                                   0x2000));
-      SVN_ERR(svn_config_get_int64(config, &ffd->p2l_page_size,
-                                   CONFIG_SECTION_IO,
-                                   CONFIG_OPTION_P2L_PAGE_SIZE,
-                                   0x400));
-
-      ffd->block_size *= 0x400;
-      ffd->p2l_page_size *= 0x400;
-    }
-  else
-    {
-      /* should be irrelevant but we initialize them anyway */
-      ffd->block_size = 0x1000;
-      ffd->l2p_page_size = 0x2000;
-      ffd->p2l_page_size = 0x100000;
-    }
+  /* should be irrelevant but we initialize them anyway */
+  ffd->block_size = 0x1000;
 
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
@@ -954,39 +885,6 @@ write_config(svn_fs_t *fs,
 "### Can be changed at any time but must be a power of 2."                   NL
 "### block-size is 64 kBytes by default."                                    NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
-"###"                                                                        NL
-"### The log-to-phys index maps data item numbers to offsets within the"     NL
-"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
-"### per changed path.  For each revision, at least one page is being"       NL
-"### allocated in the l2p index with unused parts resulting in no wasted"    NL
-"### space."                                                                 NL
-"### Changing this parameter only affects larger revisions with thousands"   NL
-"### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions, increasing the size of the page table"    NL
-"### meaning it takes longer to read that table (once).  Access to each"     NL
-"### page is then faster because less data has to read.  So, if you have"    NL
-"### several extremely large revisions (approaching 1 mio changes),  think"  NL
-"### about increasing this setting.  Reducing the value will rarely result"  NL
-"### in a net speedup."                                                      NL
-"### This is an expert setting.  Any non-zero value is possible."            NL
-"### l2p-page-size is 8192 entries by default."                              NL
-"# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
-"###"                                                                        NL
-"### The phys-to-log index maps positions within the rev or pack file to"    NL
-"### to data items,  i.e. describes what piece of information is being"      NL
-"### stored at any particular offset.  The index describes the rev file"     NL
-"### in chunks (pages) and keeps a global list of all those pages.  Large"   NL
-"### pages mean a shorter page table but a larger per-page description of"   NL
-"### data items in it.  The latency sweetspot depends on the change size"    NL
-"### distribution but covers a relatively wide range."                       NL
-"### If the repository contains very large files,  i.e. individual changes"  NL
-"### of tens of MB each,  increasing the page size will shorten the index"   NL
-"### file at the expense of a slightly increased latency in sections with"   NL
-"### smaller changes."                                                       NL
-"### For source code repositories, this should be about 16x the block-size." NL
-"### Must be a power of 2."                                                  NL
-"### p2l-page-size is 1024 kBytes by default."                               NL
-"# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -999,20 +897,18 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *uuid_file;
   int format, max_files_per_dir;
-  svn_revnum_t min_log_addressing_rev;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
   /* Read the FS format number. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
+  SVN_ERR(read_format(&format, &max_files_per_dir,
                       path_format(fs, pool), pool));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
-  ffd->min_log_addressing_rev = min_log_addressing_rev;
 
   /* Read in and cache the repository uuid. */
   SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
@@ -1067,13 +963,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
-  svn_revnum_t min_log_addressing_rev;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
+  SVN_ERR(read_format(&format, &max_files_per_dir,
                       format_path, pool));
 
   /* If the config file does not exist, create one. */
@@ -1142,18 +1037,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
                                                pool));
     }
 
-  if (   format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
-      && max_files_per_dir > 0)
-    {
-      min_log_addressing_rev
-        = (ffd->youngest_rev_cache / max_files_per_dir + 1)
-        * max_files_per_dir;
-    }
-
   /* Bump the format file. */
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
-  ffd->min_log_addressing_rev = min_log_addressing_rev;
 
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
   if (upgrade_baton->notify_func)
@@ -1448,57 +1334,17 @@ write_revision_zero(svn_fs_t *fs)
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  if (svn_fs_fs__use_log_addressing(fs, 0))
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/2\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 3 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n", fs->pool));
-  else
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n17 107\n", fs->pool));
+  SVN_ERR(svn_io_file_create(path_revision_zero,
+                              "PLAIN\nEND\nENDREP\n"
+                              "id: 0.0.r0/17\n"
+                              "type: dir\n"
+                              "count: 0\n"
+                              "text: 0 0 4 4 "
+                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                              "cpath: /\n"
+                              "\n\n17 107\n", fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
-
-  if (svn_fs_fs__use_log_addressing(fs, 0))
-    {
-      const char *path = svn_fs_fs__path_l2p_index(fs, 0, FALSE, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\x80\x40"       /* rev 0, 8k entries per page */
-                  "\1\1\1"           /* 1 rev, 1 page, 1 page in 1st rev */
-                  "\6\4"             /* page size: bytes, count */
-                  "\0\xd6\1\xb1\1\x21",  /* phys offsets + 1 */
-                  14,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-
-      path = svn_fs_fs__path_p2l_index(fs, 0, FALSE, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\x6b"              /* start rev, rev file size */
-                  "\x80\x80\4\1\x1D"    /* 64k pages, 1 page using 29 bytes */
-                  "\0"                  /* offset entry 0 page 1 */
-                                        /* len, item & type, rev, checksum */
-                  "\x11\x34\0\xf5\xd6\x8c\x81\x06"
-                  "\x59\x09\0\xc8\xfc\xf6\x81\x04"
-                  "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
-                  "\x95\xff\3\x1b\0\0", /* last entry fills up 64k page */
-                  38,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-    }
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
@@ -1556,12 +1402,6 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* Override the default linear layout if this is a new-enough format. */
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
-
-  /* Select the addressing mode depending on the format. */
-  if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    ffd->min_log_addressing_rev = 0;
-  else
-    ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
 
   /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
