@@ -584,7 +584,8 @@ def eol_change_is_text_mod(sbox):
 
   # check 1: did new contents get transmitted?
   expected_output = ["Sending        " + foo_path + "\n",
-                     "Transmitting file data .\n",
+                     "Transmitting file data .done\n",
+                     "Committing transaction...\n",
                      "Committed revision 3.\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'ci', '-m', 'log msg', foo_path)

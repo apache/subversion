@@ -1056,6 +1056,14 @@ notify_body(struct notify_baton *nb,
                  path_local));
       break;
 
+    case svn_wc_notify_commit_finalizing:
+      if (nb->sent_first_txdelta)
+        {
+          SVN_ERR(svn_cmdline_printf(pool, _("done\n")));
+          SVN_ERR(svn_cmdline_printf(pool, _("Committing transaction...")));
+      }
+      break;
+
     default:
       break;
     }
