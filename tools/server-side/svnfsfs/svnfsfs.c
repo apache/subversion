@@ -148,16 +148,6 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Describe the usage of this program or its subcommands.\n"),
    {0} },
 
-  {"dump-index", subcommand__dump_index, {0}, N_
-   ("usage: svnfsfs dump-index REPOS_PATH\n\n"
-    "Dump the index contents to console.\n"),
-   {'r', 'M'} },
-
-  {"load-index", subcommand__load_index, {0}, N_
-   ("usage: svnfsfs load-index REPOS_PATH\n\n"
-    "Read the index contents to console.\n"),
-   {'M'} },
-
   {"stats", subcommand__stats, {0}, N_
    ("usage: svnfsfs stats REPOS_PATH\n\n"
     "Write object size statistics to console.\n"),
