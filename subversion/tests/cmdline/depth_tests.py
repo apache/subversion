@@ -1135,6 +1135,7 @@ def commit_depth_immediates(sbox):
   #    Sending        A/D/G/rho
   #    Sending        iota
   #    Transmitting file data ..
+  #    Committing transaction...
   #    Committed revision 2.
 
   iota_path = sbox.ospath('iota')
