@@ -621,7 +621,15 @@ def verify_windows_paths_in_repos(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  if svntest.main.fs_has_rep_sharing():
+  if svntest.main.is_fs_log_addressing():
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
+  elif svntest.main.fs_has_rep_sharing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDOUT', ["* Verifying repository metadata ...\n",
@@ -1772,7 +1780,8 @@ def locking(sbox):
   svntest.main.file_write(comment_path, "dummy comment")
 
   invalid_comment_path = os.path.join(svntest.main.temp_dir, "invalid_comment")
-  svntest.main.file_write(invalid_comment_path, "character  is invalid")
+  svntest.main.file_write(invalid_comment_path, "character 
+ is invalid")
 
   # Test illegal character in comment file.
   expected_error = ".*svnadmin: E130004:.*"
@@ -2182,6 +2191,9 @@ def verify_denormalized_names(sbox):
   if (svntest.main.fs_has_rep_sharing()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
 
+  if svntest.main.is_fs_log_addressing():
+    expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0.*")
+
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
   exp_err = svntest.verify.ExpectedOutput([])
 
@@ -2411,13 +2423,25 @@ def verify_packed(sbox):
     svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
                                             "pack", sbox.repo_dir)
 
-  expected_output = ["* Verifying repository metadata ...\n",
-                     "* Verified revision 0.\n",
-                     "* Verified revision 1.\n",
-                     "* Verified revision 2.\n",
-                     "* Verified revision 3.\n",
-                     "* Verified revision 4.\n",
-                     "* Verified revision 5.\n"]
+  if svntest.main.is_fs_log_addressing():
+    expected_output = ["* Verifying metadata at revision 0 ...\n",
+                       "* Verifying metadata at revision 2 ...\n",
+                       "* Verifying metadata at revision 4 ...\n",
+                       "* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
+  else:
+    expected_output = ["* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
 
   svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
                                           "verify", sbox.repo_dir)
@@ -2465,7 +2489,12 @@ def verify_metadata_only(sbox):
   # Unfortunately, older formats won't test as thoroughly than newer ones
   # resulting in different progress output. BDB will do a full check but
   # not produce any output.
-  if svntest.main.fs_has_rep_sharing() \
+  if svntest.main.is_fs_log_addressing():
+    svntest.verify.compare_and_display_lines(
+      "Unexpected error while running 'svnadmin verify'.",
+      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n"], output)
+  elif svntest.main.fs_has_rep_sharing() \
        and not svntest.main.is_fs_type_bdb():
     svntest.verify.compare_and_display_lines(
       "Unexpected error while running 'svnadmin verify'.",
@@ -2494,8 +2523,13 @@ def verify_quickly(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  exp_out = svntest.verify.RegexListOutput([])
-  exp_err = svntest.verify.RegexListOutput([])
+  if svntest.main.is_fs_log_addressing():
+    exp_out = svntest.verify.RegexListOutput([])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                              "svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([])
+    exp_err = svntest.verify.RegexListOutput([])
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
