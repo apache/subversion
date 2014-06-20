@@ -365,6 +365,31 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
+                                      svn_fs_fs__change_receiver_t
+                                        change_receiver,
+                                      void *change_receiver_baton,
+                                      apr_pool_t *pool)
+{
+  change_t *change;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(read_change(&change, stream, iterpool));
+      if (change)
+        SVN_ERR(change_receiver(change_receiver_baton, change, iterpool));
+    }
+  while (change);
+  svn_pool_destroy(iterpool);
+  
+  return SVN_NO_ERROR;
+}
+
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
    string COPYFROM, into the file specified by FILE.  Only include the
    node kind field if INCLUDE_NODE_KIND is true.  Only include the
