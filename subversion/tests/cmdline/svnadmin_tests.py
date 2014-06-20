@@ -262,48 +262,6 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def read_l2p(sbox, revision, item):
-  """ For the format 7+ repository in SBOX, return the physical offset
-      of ITEM in REVISION.  This code supports only small, nonpacked revs. """
-
-  filename = fsfs_file(sbox.repo_dir, 'revs', str(revision) + ".l2p")
-
-  fp = open(filename, 'rb')
-  contents = fp.read()
-  length = len(contents)
-  fp.close()
-
-  # decode numbers
-  numbers = []
-  value = 0
-  shift = 0
-  for c in contents:
-    char = ord(c)
-    value += (char & 127) << shift
-    if char < 128:
-      numbers.append(value)
-      shift = 0
-      value = 0
-    else:
-      shift += 7
-
-  # decode offsets
-  numbers[7] = -1
-  for i in range(8, len(numbers)):
-    if numbers[i] & 1 == 1:
-      numbers[i] = - (numbers[i] + 1) / 2
-    else:
-      numbers[i] = numbers[i] / 2
-    numbers[i] += numbers[i-1]
-
-  # we support only small, unpacked rev files
-  if numbers[1] < len(numbers) or numbers[3] != 1 :
-    raise svntest.Failure("More than 1 page in %s" % filename)
-  if numbers[2] != 1:
-    raise svntest.Failure("More than 1 rev in %s" % filename)
-
-  return numbers[item + 7]
-
 def repo_format(sbox):
   """ Return the repository format number for SBOX."""
 
@@ -321,18 +279,10 @@ def set_changed_path_list(sbox, revision, changes):
   fp = open(fsfs_file(sbox.repo_dir, 'revs', str(revision)), 'r+b')
   contents = fp.read()
 
-  if repo_format(sbox) < 7:
-    # replace the changed paths list
-    length = len(contents)
-    header = contents[contents.rfind('\n', length - 64, length - 1):]
-    body_len = long(header.split(' ')[1])
-
-  else:
-    # we will invalidate the l2p index but that's ok for the
-    # kind of tests we run here. The p2l index remains valid
-    # because the offset of the last item does not change
-    body_len = read_l2p(sbox, revision, 1)
-    header = '\n'
+  # replace the changed paths list
+  length = len(contents)
+  header = contents[contents.rfind('\n', length - 64, length - 1):]
+  body_len = long(header.split(' ')[1])
 
   contents = contents[:body_len] + changes + header
 
@@ -671,15 +621,7 @@ def verify_windows_paths_in_repos(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  if svntest.main.is_fs_log_addressing():
-    svntest.verify.compare_and_display_lines(
-      "Error while running 'svnadmin verify'.",
-      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
-                 "* Verifying repository metadata ...\n",
-                 "* Verified revision 0.\n",
-                 "* Verified revision 1.\n",
-                 "* Verified revision 2.\n"], output)
-  elif svntest.main.fs_has_rep_sharing():
+  if svntest.main.fs_has_rep_sharing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDOUT', ["* Verifying repository metadata ...\n",
@@ -1790,7 +1732,7 @@ def hotcopy_incremental_packed(sbox):
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
   if svntest.main.options.server_minor_version >= 9:
-    format_file.write("7\nlayout sharded 2\naddressing logical 0\n")
+    format_file.write("7\nlayout sharded 2\n")
   else:
     format_file.write("6\nlayout sharded 2\n")
   format_file.close()
@@ -2028,24 +1970,17 @@ def verify_keep_going(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  if svntest.main.is_fs_log_addressing():
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                             ".*Verified revision 1.",
-                                             ".*Verified revision 2.",
-                                             ".*Verified revision 3."])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E165011:.*"], False)
-  else:
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                              ".*Verified revision 1.",
-                                              ".*Error verifying revision 2.",
-                                              ".*Error verifying revision 3.",
-                                              ".*",
-                                              ".*Summary.*",
-                                              ".*r2: E160004:.*",
-                                              ".*r3: E160004:.*",
-                                              ".*r3: E160004:.*"])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                              "svnadmin: E165011:.*"], False)
+  exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2.",
+                                            ".*Error verifying revision 3.",
+                                            ".*",
+                                            ".*Summary.*",
+                                            ".*r2: E160004:.*",
+                                            ".*r3: E160004:.*",
+                                            ".*r3: E160004:.*"])
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
@@ -2057,14 +1992,11 @@ def verify_keep_going(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  if (svntest.main.is_fs_log_addressing()):
-    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
-  else:
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                             ".*Verified revision 1.",
-                                             ".*Error verifying revision 2."])
-    if (svntest.main.fs_has_rep_sharing()):
-      exp_out.insert(0, ".*Verifying repository metadata.*")
+  exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2."])
+  if (svntest.main.fs_has_rep_sharing()):
+    exp_out.insert(0, ".*Verifying repository metadata.*")
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -2193,16 +2125,11 @@ def verify_invalid_path_changes(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  if svntest.main.is_fs_log_addressing():
-    exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160058:.*",
-                                              "svnadmin: E165011:.*"], False)
-  else:
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                              ".*Verified revision 1.",
-                                              ".*Error verifying revision 2."])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                              "svnadmin: E165011:.*"], False)
+  exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2."])
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
+                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
@@ -2254,9 +2181,6 @@ def verify_denormalized_names(sbox):
   # The BDB backend doesn't do global metadata verification.
   if (svntest.main.fs_has_rep_sharing()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
-
-  if svntest.main.is_fs_log_addressing():
-    expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0.*")
 
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
   exp_err = svntest.verify.ExpectedOutput([])
@@ -2448,7 +2372,7 @@ def verify_packed(sbox):
     format = "1\nlayout sharded 2\n"
   elif svntest.main.is_fs_type_fsfs and \
        svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 2\naddressing logical 0\n"
+    format = "7\nlayout sharded 2\n"
   elif svntest.main.is_fs_type_fsfs and \
        svntest.main.options.server_minor_version < 9:
     format = "6\nlayout sharded 2\n"
@@ -2487,25 +2411,13 @@ def verify_packed(sbox):
     svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
                                             "pack", sbox.repo_dir)
 
-  if svntest.main.is_fs_log_addressing():
-    expected_output = ["* Verifying metadata at revision 0 ...\n",
-                       "* Verifying metadata at revision 2 ...\n",
-                       "* Verifying metadata at revision 4 ...\n",
-                       "* Verifying repository metadata ...\n",
-                       "* Verified revision 0.\n",
-                       "* Verified revision 1.\n",
-                       "* Verified revision 2.\n",
-                       "* Verified revision 3.\n",
-                       "* Verified revision 4.\n",
-                       "* Verified revision 5.\n"]
-  else:
-    expected_output = ["* Verifying repository metadata ...\n",
-                       "* Verified revision 0.\n",
-                       "* Verified revision 1.\n",
-                       "* Verified revision 2.\n",
-                       "* Verified revision 3.\n",
-                       "* Verified revision 4.\n",
-                       "* Verified revision 5.\n"]
+  expected_output = ["* Verifying repository metadata ...\n",
+                     "* Verified revision 0.\n",
+                     "* Verified revision 1.\n",
+                     "* Verified revision 2.\n",
+                     "* Verified revision 3.\n",
+                     "* Verified revision 4.\n",
+                     "* Verified revision 5.\n"]
 
   svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
                                           "verify", sbox.repo_dir)
@@ -2553,12 +2465,7 @@ def verify_metadata_only(sbox):
   # Unfortunately, older formats won't test as thoroughly than newer ones
   # resulting in different progress output. BDB will do a full check but
   # not produce any output.
-  if svntest.main.is_fs_log_addressing():
-    svntest.verify.compare_and_display_lines(
-      "Unexpected error while running 'svnadmin verify'.",
-      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
-                 "* Verifying repository metadata ...\n"], output)
-  elif svntest.main.fs_has_rep_sharing() \
+  if svntest.main.fs_has_rep_sharing() \
        and not svntest.main.is_fs_type_bdb():
     svntest.verify.compare_and_display_lines(
       "Unexpected error while running 'svnadmin verify'.",
@@ -2587,13 +2494,8 @@ def verify_quickly(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  if svntest.main.is_fs_log_addressing():
-    exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                              "svnadmin: E165011:.*"], False)
-  else:
-    exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput([])
+  exp_out = svntest.verify.RegexListOutput([])
+  exp_err = svntest.verify.RegexListOutput([])
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
