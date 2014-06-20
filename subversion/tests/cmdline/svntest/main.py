@@ -1363,7 +1363,7 @@ def is_fs_type_bdb():
   return options.fs_type == 'bdb'
 
 def is_fs_log_addressing():
-]  return is_fs_type_fsx()
+  return is_fs_type_fsx()
 
 def fs_has_rep_sharing():
   return is_fs_type_fsx() or \
