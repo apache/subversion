@@ -1780,8 +1780,7 @@ def locking(sbox):
   svntest.main.file_write(comment_path, "dummy comment")
 
   invalid_comment_path = os.path.join(svntest.main.temp_dir, "invalid_comment")
-  svntest.main.file_write(invalid_comment_path, "character 
- is invalid")
+  svntest.main.file_write(invalid_comment_path, "character  is invalid")
 
   # Test illegal character in comment file.
   expected_error = ".*svnadmin: E130004:.*"
