@@ -44,92 +44,6 @@
 #include "svn_private_config.h"
 #include "temp_serializer.h"
 
-/* Logical addressing packing logic:
- *
- * We pack files on a pack file basis (e.g. 1000 revs) without changing
- * existing pack files nor the revision files outside the range to pack.
- *
- * First, we will scan the revision file indexes to determine the number
- * of items to "place" (i.e. determine their optimal position within the
- * future pack file).  For each item, we will need a constant amount of
- * memory to track it.  A MAX_MEM parameter sets a limit to the number of
- * items we may place in one go.  That means, we may not be able to add
- * all revisions at once.  Instead, we will run the placement for a subset
- * of revisions at a time.  The very unlikely worst case will simply append
- * all revision data with just a little reshuffling inside each revision.
- *
- * In a second step, we read all revisions in the selected range, build
- * the item tracking information and copy the items themselves from the
- * revision files to temporary files.  The latter serve as buckets for a
- * very coarse bucket presort:  Separate change lists, file properties,
- * directory properties and noderevs + representations from one another.
- *
- * The third step will determine an optimized placement for the items in
- * each of the 4 buckets separately.  The first three will simply order
- * their items by revision, starting with the newest once.  Placing rep
- * and noderev items is a more elaborate process documented in the code.
- * 
- * In short, we store items in the following order:
- * - changed paths lists
- * - node property
- * - directory properties
- * - directory representations corresponding noderevs, lexical path order
- *   with special treatment of "trunk" and "branches"
- * - same for file representations
- *
- * Step 4 copies the items from the temporary buckets into the final
- * pack file and writes the temporary index files.
- *
- * Finally, after the last range of revisions, create the final indexes.
- */
-
-/* Maximum amount of memory we allocate for placement information during
- * the pack process.
- */
-#define DEFAULT_MAX_MEM (64 * 1024 * 1024)
-
-/* Data structure describing a node change at PATH, REVISION.
- * We will sort these instances by PATH and NODE_ID such that we can combine
- * similar nodes in the same reps container and store containers in path
- * major order.
- */
-typedef struct path_order_t
-{
-  /* changed path */
-  svn_prefix_string__t *path;
-
-  /* node ID for this PATH in REVISION */
-  svn_fs_fs__id_part_t node_id;
-
-  /* when this change happened */
-  svn_revnum_t revision;
-
-  /* noderev predecessor count */
-  int predecessor_count;
-
-  /* this is a directory node */
-  svn_boolean_t is_dir;
-
-  /* length of the expanded representation content */
-  apr_int64_t expanded_size;
-
-  /* item ID of the noderev linked to the change. May be (0, 0). */
-  svn_fs_fs__id_part_t noderev_id;
-
-  /* item ID of the representation containing the new data. May be (0, 0). */
-  svn_fs_fs__id_part_t rep_id;
-} path_order_t;
-
-/* Represents a reference from item FROM to item TO.  FROM may be a noderev
- * or rep_id while TO is (currently) always a representation.  We will sort
- * them by TO which allows us to collect all dependent items.
- */
-typedef struct reference_t
-{
-  svn_fs_fs__id_part_t to;
-  svn_fs_fs__id_part_t from;
-} reference_t;
-
 /* Directories entries sorted by revision (decreasing - to max cache hits)
  * and offset (increasing - to max benefit from APR file buffering).
  */
@@ -336,7 +250,6 @@ pack_rev_shard(svn_fs_t *fs,
                const char *shard_path,
                apr_int64_t shard,
                int max_files_per_dir,
-               apr_size_t max_mem,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool)
@@ -496,7 +409,7 @@ pack_shard(struct pack_baton *baton,
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(baton->fs, rev_pack_file_dir, baton->rev_shard_path,
                          baton->shard, ffd->max_files_per_dir,
-                         DEFAULT_MAX_MEM, baton->cancel_func,
+                         baton->cancel_func,
                          baton->cancel_baton, pool));
 
   /* For newer repo formats, we only acquired the pack lock so far.
