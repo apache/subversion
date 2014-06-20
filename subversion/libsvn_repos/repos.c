@@ -280,6 +280,16 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
   "# http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/ and"        NL \
   "# http://svn.apache.org/repos/asf/subversion/trunk/contrib/hook-scripts/"          NL
 
+#define HOOKS_QUOTE_ARGUMENTS_TEXT                                            \
+  "# CAUTION:"                                                             NL \
+  "# For security reasons, you MUST always properly quote arguments when"  NL \
+  "# you use them, as those arguments could contain whitespace or other"   NL \
+  "# problematic characters. Additionally, you should delimit the list"    NL \
+  "# of options with \"--\" before passing the arguments, so malicious"    NL \
+  "# clients cannot bootleg unexpected options to the commands your"       NL \
+  "# script aims to execute."                                              NL \
+  "# For similar reasons, you should also add a trailing @ to URLs which"  NL \
+  "# are passed to SVN commands accepting URLs with peg revisions."        NL
 
 static svn_error_t *
 create_hooks(svn_repos_t *repos, apr_pool_t *pool)
@@ -353,6 +363,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# but the basic idea is the same."                                          NL
 "# "                                                                         NL
 HOOKS_ENVIRONMENT_TEXT
+"# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
 "# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
 PREWRITTEN_HOOKS_TEXT
@@ -439,6 +451,8 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 HOOKS_ENVIRONMENT_TEXT
 "# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
 PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
@@ -522,6 +536,8 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 HOOKS_ENVIRONMENT_TEXT
 "# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
 PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
@@ -594,6 +610,8 @@ PREWRITTEN_HOOKS_TEXT
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
 "#"                                                                          NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
 ""                                                                           NL
 "REPOS=\"$1\""                                                               NL
@@ -681,6 +699,8 @@ PREWRITTEN_HOOKS_TEXT
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
 "#"                                                                          NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
 ""                                                                           NL
 "REPOS=\"$1\""                                                               NL
@@ -767,6 +787,8 @@ PREWRITTEN_HOOKS_TEXT
 "# "                                                                         NL
 HOOKS_ENVIRONMENT_TEXT
 "# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
 PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
@@ -830,6 +852,8 @@ PREWRITTEN_HOOKS_TEXT
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
 "# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
 ""                                                                           NL
 "REPOS=\"$1\""                                                               NL
@@ -887,6 +911,8 @@ PREWRITTEN_HOOKS_TEXT
 "# On a Windows system, you should name the hook program"                    NL
 "# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
 "# but the basic idea is the same."                                          NL
+"# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
 "# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
 ""                                                                           NL
@@ -950,6 +976,8 @@ PREWRITTEN_HOOKS_TEXT
 "# but the basic idea is the same."                                          NL
 "# "                                                                         NL
 HOOKS_ENVIRONMENT_TEXT
+"# "                                                                         NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
 "# "                                                                         NL
 "# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
 PREWRITTEN_HOOKS_TEXT
