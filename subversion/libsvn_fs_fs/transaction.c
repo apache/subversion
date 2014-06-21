@@ -43,6 +43,7 @@
 #include "rep-cache.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
@@ -802,7 +803,6 @@ process_changes(void *baton,
        || (change->info.change_kind == svn_fs_path_change_replace))
     {
       apr_hash_index_t *hi;
-      apr_pool_t *iterpool;
 
       /* a potential child path must contain at least 2 more chars
          (the path separator plus at least one char for the name).
@@ -820,7 +820,6 @@ process_changes(void *baton,
          The number of changes to process may be >> 1000.
          Therefore, keep the inner loop as tight as possible.
       */
-      iterpool = svn_pool_create(scratch_pool);
       for (hi = apr_hash_first(scratch_pool, changed_paths);
            hi;
            hi = apr_hash_next(hi))
@@ -830,17 +829,19 @@ process_changes(void *baton,
           apr_ssize_t klen;
           apr_hash_this(hi, &path, &klen, NULL);
 
-          svn_pool_clear(iterpool);
-
           /* If we come across a child of our path, remove it.
-             Call svn_dirent_is_child only if there is a chance that
+             Call svn_fspath__skip_ancestor only if there is a chance that
              this is actually a sub-path.
            */
-          if (   klen >= min_child_len
-              && svn_dirent_is_child(change->path.data, path, iterpool))
-            apr_hash_set(changed_paths, path, klen, NULL);
+          if (klen >= min_child_len)
+            {
+              const char *child;
+
+              child = svn_fspath__skip_ancestor(change->path.data, path);
+              if (child && child[0] != '\0')
+                apr_hash_set(changed_paths, path, klen, NULL);
+            }
         }
-      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
