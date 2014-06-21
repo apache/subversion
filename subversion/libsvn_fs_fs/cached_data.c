@@ -3162,37 +3162,12 @@ block_read(void **result,
    */
   do
     {
-      svn_error_t *err;
-
       /* fetch list of items in the block surrounding OFFSET */
       block_start = offset - (offset % ffd->block_size);
-      err = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
-                                        revision, block_start,
-                                        ffd->block_size, scratch_pool);
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
+                                          revision, block_start,
+                                          ffd->block_size, scratch_pool));
 
-      /* if the revision got packed in the meantime and we still need
-       * to actually read some item, we retry the whole process */
-      if (err)
-        {
-          /* We failed for the first time. Refresh cache & retry. */
-          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
-          if (   revision_file->is_packed
-              != svn_fs_fs__is_packed_rev(fs, revision))
-            {
-              if (result && !*result)
-                {
-                  SVN_ERR(svn_fs_fs__reopen_revision_file(revision_file, fs, 
-                                                          revision));
-                  SVN_ERR(block_read(result, fs, revision, item_index,
-                                     revision_file, result_pool,
-                                     scratch_pool));
-                }
-
-              return SVN_NO_ERROR;
-            }
-        }
-
-      SVN_ERR(err);
       SVN_ERR(aligned_seek(fs, revision_file->file, &block_start, offset,
                            iterpool));
 

@@ -28,6 +28,7 @@
 #include "private/svn_sorts_private.h"
 
 #include "../../../subversion/libsvn_fs_fs/index.h"
+#include "../../../subversion/libsvn_fs_fs/transaction.h"
 #include "../../../subversion/libsvn_fs_fs/util.h"
 
 #include "svn_private_config.h"
@@ -77,35 +78,33 @@ calc_fnv1(svn_fs_fs__p2l_entry_t *entry,
   return SVN_NO_ERROR;
 }
 
-/* In FS, (re-)write the P2L index for the revision file starting at
- * REVISION.  All entries to write are of type svn_fs_fs__p2l_entry_t* and
- * given in ENTRIES.  The FVN1 checksums are not taken from ENTRIES but are
- * begin calculated as we go.  Use POOL for temporary allocations.
+/* For FS, create a new P2L auto-deleting proto index file in POOL and return
+ * its name in *INDEX_NAME.  All entries to write are given in ENTRIES and
+ * of type svn_fs_fs__p2l_entry_t*.  The FVN1 checksums are not taken from
+ * ENTRIES but are begin calculated from the current contents of REV_FILE
+ * as we go.  Use POOL for allocations.
  */
 static svn_error_t *
-write_p2l_index(svn_fs_t *fs,
-                svn_revnum_t revision,
+write_p2l_index(const char **index_name,
+                svn_fs_t *fs,
+                svn_fs_fs__revision_file_t *rev_file,
                 apr_array_header_t *entries,
                 apr_pool_t *pool)
 {
   apr_file_t *proto_index;
-  const char *protoname, *filename;
 
   /* Use a subpool for immediate temp file cleanup at the end of this
    * function. */
-  apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_fs_fs__revision_file_t *rev_file;
   int i;
 
   /* Create a proto-index file. */
-  SVN_ERR(svn_io_open_unique_file3(NULL, &protoname, NULL,
+  SVN_ERR(svn_io_open_unique_file3(NULL, index_name, NULL,
                                    svn_io_file_del_on_pool_cleanup,
-                                   subpool, subpool));
-  SVN_ERR(svn_fs_fs__p2l_proto_index_open(&proto_index, protoname, subpool));
+                                   pool, iterpool));
+  SVN_ERR(svn_fs_fs__p2l_proto_index_open(&proto_index, *index_name, pool));
 
   /* Write ENTRIES to proto-index file and calculate checksums as we go. */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision, pool));
   for (i = 0; i < entries->nelts; ++i)
     {
       svn_fs_fs__p2l_entry_t *entry
@@ -121,15 +120,10 @@ write_p2l_index(svn_fs_t *fs,
    * Note that REV_FILE contains the start revision of the shard file if it
    * has been packed while REVISION may be somewhere in the middle.  For
    * non-packed shards, they will have identical values. */
-  SVN_ERR(svn_io_file_flush(proto_index, iterpool));
-  filename = svn_fs_fs__path_p2l_index(fs, rev_file->start_revision,
-                                       rev_file->is_packed, subpool);
-  SVN_ERR(svn_fs_fs__p2l_index_create(fs, filename, protoname,
-                                      rev_file->start_revision, subpool));
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
 
   /* Temp file cleanup. */
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -151,22 +145,22 @@ compare_p2l_entry_revision(const void *lhs,
   return lhs_entry->item.revision == rhs_entry->item.revision ? 0 : 1;
 }
 
-/* In FS, (re-)write the L2P index with all entries taken from ENTRIES.
- * The revisions found in ENTRIES define the index file to write.  The
- * entries are given as svn_fs_fs__p2l_entry_t* (sic!) and the ENTRIES
- * array will be reordered.  Use POOL for temporary allocations.
+/* For FS, create a new L2P auto-deleting proto index file in POOL and return
+ * its name in *INDEX_NAME.  All entries to write are given in ENTRIES and
+ * entries are of type svn_fs_fs__p2l_entry_t* (sic!).  The ENTRIES array
+ * will be reordered.  Use POOL for allocations.
  */
 static svn_error_t *
-write_l2p_index(svn_fs_t *fs,
+write_l2p_index(const char **index_name,
+                svn_fs_t *fs,
                 apr_array_header_t *entries,
                 apr_pool_t *pool)
 {
   apr_file_t *proto_index;
-  const char *protoname, *filename;
+  const char *filename;
 
   /* Use a subpool for immediate temp file cleanup at the end of this
    * function. */
-  apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
   svn_revnum_t last_revision = SVN_INVALID_REVNUM;
@@ -183,10 +177,11 @@ write_l2p_index(svn_fs_t *fs,
                ->item.revision;
 
   /* Create the temporary proto-rev file. */
-  SVN_ERR(svn_io_open_unique_file3(NULL, &protoname, NULL,
+  SVN_ERR(svn_io_open_unique_file3(NULL, index_name, NULL,
                                    svn_io_file_del_on_pool_cleanup,
-                                   subpool, subpool));
-  SVN_ERR(svn_fs_fs__l2p_proto_index_open(&proto_index, protoname, subpool));
+                                   pool, iterpool));
+  SVN_ERR(svn_fs_fs__l2p_proto_index_open(&proto_index, *index_name,
+                                          iterpool));
 
   /*  Write all entries. */
   for (i = 0; i < entries->nelts; ++i)
@@ -211,16 +206,10 @@ write_l2p_index(svn_fs_t *fs,
     }
 
   /* Convert proto-index into final index and move it into position. */
-  SVN_ERR(svn_io_file_flush(proto_index, iterpool));
-  filename = svn_fs_fs__path_l2p_index(fs, revision,
-                                       svn_fs_fs__is_packed_rev(fs, revision),
-                                       subpool);
-  SVN_ERR(svn_fs_fs__l2p_index_create(fs, filename, protoname, revision,
-                                      subpool));
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
 
   /* Temp file cleanup. */
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -371,8 +360,26 @@ load_index(const char *path,
   /* Treat an empty array as a no-op instead error. */
   if (entries->nelts != 0)
     {
-      SVN_ERR(write_p2l_index(fs, revision, entries, pool));
-      SVN_ERR(write_l2p_index(fs, entries, pool));
+      const char *l2p_proto_index;
+      const char *p2l_proto_index;
+      svn_fs_fs__revision_file_t *rev_file;
+
+      /* Open rev / pack file & trim indexes + footer off it. */
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
+                                               iterpool));
+      SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
+      SVN_ERR(svn_io_file_trunc(rev_file->file, rev_file->l2p_offset,
+                                iterpool));
+
+      /* Create proto index files for the new index data
+       * (will be cleaned up automatically with iterpool). */
+      SVN_ERR(write_p2l_index(&p2l_proto_index, fs, rev_file, entries,
+                              iterpool));
+      SVN_ERR(write_l2p_index(&l2p_proto_index, fs, entries, iterpool));
+
+      /* Combine rev data with new index data. */
+      SVN_ERR(svn_fs_fs__add_index_data(fs, rev_file->file, l2p_proto_index,
+                                        p2l_proto_index, revision, iterpool));
     }
 
   svn_pool_destroy(iterpool);

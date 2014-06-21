@@ -3540,6 +3540,42 @@ write_final_revprop(const char **path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__add_index_data(svn_fs_t *fs,
+                          apr_file_t *file,
+                          const char *l2p_proto_index,
+                          const char *p2l_proto_index,
+                          svn_revnum_t revision,
+                          apr_pool_t *pool)
+{
+  apr_off_t l2p_offset;
+  apr_off_t p2l_offset;
+  svn_stringbuf_t *footer;
+  unsigned char footer_length;
+
+  /* Append the actual index data to the pack file. */
+  l2p_offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &l2p_offset, pool));
+  SVN_ERR(svn_fs_fs__l2p_index_append(fs, file, l2p_proto_index, revision,
+                                      pool));
+
+  p2l_offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &p2l_offset, pool));
+  SVN_ERR(svn_fs_fs__p2l_index_append(fs, file, p2l_proto_index, revision,
+                                      pool));
+
+  /* Append footer. */
+  footer = svn_fs_fs__unparse_footer(l2p_offset, p2l_offset, pool);
+  SVN_ERR(svn_io_file_write_full(file, footer->data, footer->len, NULL,
+                                 pool));
+
+  footer_length = footer->len;
+  SVN_ERR_ASSERT(footer_length == footer->len);
+  SVN_ERR(svn_io_file_write_full(file, &footer_length, 1, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 struct commit_baton {
   svn_revnum_t *new_rev_p;
@@ -3638,6 +3674,15 @@ commit_body(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
                                      NULL, pool));
     }
+  else
+    {
+      /* Append the index data to the rev file. */
+      SVN_ERR(svn_fs_fs__add_index_data(cb->fs, proto_file,
+                      svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
+                      svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
+                      new_rev, pool));
+    }
+
 
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
@@ -3681,20 +3726,6 @@ commit_body(void *baton, apr_pool_t *pool)
                                                     pool),
                                     new_dir, pool));
         }
-    }
-
-  if (svn_fs_fs__use_log_addressing(cb->fs, new_rev))
-    {
-      /* Convert the index files from the proto format into their form
-         in their final location */
-      SVN_ERR(svn_fs_fs__l2p_index_create(cb->fs,
-                      svn_fs_fs__path_l2p_index(cb->fs, new_rev, FALSE, pool),
-                      svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
-                      new_rev, pool));
-      SVN_ERR(svn_fs_fs__p2l_index_create(cb->fs,
-                      svn_fs_fs__path_p2l_index(cb->fs, new_rev, FALSE, pool),
-                      svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
-                      new_rev, pool));
     }
 
   /* Move the finished rev file into place.

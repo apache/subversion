@@ -23,6 +23,7 @@
 #include "rev_file.h"
 #include "fs_fs.h"
 #include "index.h"
+#include "low_level.h"
 #include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -46,6 +47,10 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   file->stream = NULL;
   file->p2l_stream = NULL;
   file->l2p_stream = NULL;
+  file->block_size = ffd->block_size;
+  file->l2p_offset = -1;
+  file->p2l_offset = -1;
+  file->footer_offset = -1;
   file->pool = pool;
 }
 
@@ -127,14 +132,40 @@ svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
 }
 
 svn_error_t *
-svn_fs_fs__reopen_revision_file(svn_fs_fs__revision_file_t *file,
-                                svn_fs_t *fs,
-                                svn_revnum_t rev)
+svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file)
 {
-  if (file->file)
-    svn_fs_fs__close_revision_file(file);
+  if (file->l2p_offset == -1)
+    {
+      apr_off_t filesize = 0;
+      unsigned char footer_length;
+      svn_stringbuf_t *footer;
 
-  return svn_error_trace(open_pack_or_rev_file(file, fs, rev, file->pool));
+      /* Determine file size. */
+      SVN_ERR(svn_io_file_seek(file->file, APR_END, &filesize, file->pool));
+
+      /* Read last byte (containing the length of the footer). */
+      SVN_ERR(svn_io_file_aligned_seek(file->file, file->block_size, NULL,
+                                       filesize - 1, file->pool));
+      SVN_ERR(svn_io_file_read_full2(file->file, &footer_length,
+                                     sizeof(footer_length), NULL, NULL,
+                                     file->pool));
+
+      /* Read footer. */
+      footer = svn_stringbuf_create_ensure(footer_length, file->pool);
+      SVN_ERR(svn_io_file_aligned_seek(file->file, file->block_size, NULL,
+                                       filesize - 1 - footer_length,
+                                       file->pool));
+      SVN_ERR(svn_io_file_read_full2(file->file, footer->data, footer_length,
+                                     &footer->len, NULL, file->pool));
+      footer->data[footer->len] = '\0';
+
+      /* Extract index locations. */
+      SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->p2l_offset,
+                                      footer, file->start_revision));
+      file->footer_offset = filesize - footer_length - 1;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -164,9 +195,6 @@ svn_fs_fs__close_revision_file(svn_fs_fs__revision_file_t *file)
     SVN_ERR(svn_stream_close(file->stream));
   if (file->file)
     SVN_ERR(svn_io_file_close(file->file, file->pool));
-
-  SVN_ERR(svn_fs_fs__packed_stream_close(file->l2p_stream));
-  SVN_ERR(svn_fs_fs__packed_stream_close(file->p2l_stream));
 
   file->file = NULL;
   file->stream = NULL;

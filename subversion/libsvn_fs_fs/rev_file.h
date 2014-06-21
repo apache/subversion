@@ -38,7 +38,9 @@
 typedef struct svn_fs_fs__packed_number_stream_t
   svn_fs_fs__packed_number_stream_t;
 
-/* All files and associated properties for START_REVISION.
+/* Data file, including indexes data, and associated properties for
+ * START_REVISION.  As the FILE is kept open, background pack operations
+ * will not cause access to this file to fail.
  */
 typedef struct svn_fs_fs__revision_file_t
 {
@@ -49,17 +51,36 @@ typedef struct svn_fs_fs__revision_file_t
   /* the revision was packed when the first file / stream got opened */
   svn_boolean_t is_packed;
 
-  /* rev / pack file or NULL if not opened, yet */
+  /* rev / pack file */
   apr_file_t *file;
 
   /* stream based on FILE and not NULL exactly when FILE is not NULL */
   svn_stream_t *stream;
 
-  /* the opened P2L index or NULL.  Always NULL for txns. */
+  /* the opened P2L index stream or NULL.  Always NULL for txns. */
   svn_fs_fs__packed_number_stream_t *p2l_stream;
 
-  /* the opened L2P index or NULL.  Always NULL for txns. */
+  /* the opened L2P index stream or NULL.  Always NULL for txns. */
   svn_fs_fs__packed_number_stream_t *l2p_stream;
+
+  /* Copied from FS->FFD->BLOCK_SIZE upon creation.  It allows us to
+   * use aligned seek() without having the FS handy. */
+  apr_off_t block_size;
+
+  /* Offset within FILE at which the rev data ends and the L2P index
+   * data starts. Less than P2L_OFFSET. -1 if svn_fs_fs__auto_read_footer
+   * has not been called, yet. */
+  apr_off_t l2p_offset;
+
+  /* Offset within FILE at which the L2P index ends and the P2L index
+   * data starts. Greater than L2P_OFFSET. -1 if svn_fs_fs__auto_read_footer
+   * has not been called, yet. */
+  apr_off_t p2l_offset;
+
+  /* Offset within FILE at which the P2L index ends and the footer starts.
+   * Greater than P2L_OFFSET. -1 if svn_fs_fs__auto_read_footer has not
+   * been called, yet. */
+  apr_off_t footer_offset;
 
   /* pool containing this object */
   apr_pool_t *pool;
@@ -75,15 +96,13 @@ svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
                                  svn_revnum_t rev,
                                  apr_pool_t *pool);
 
-/* Close previous files as well as streams in FILE (if open) and open the
- * rev / pack file for REVISION in FS.  This is useful when a pack operation
- * made the current files outdated or no longer available and the caller
- * wants to keep the same revision file data structure.
+/* If the footer data in FILE has not been read, yet, do so now.
+ * Index locations will only be read upon request as we assume they get
+ * cached and the FILE is usually used for REP data access only.
+ * Hence, the separate step.
  */
 svn_error_t *
-svn_fs_fs__reopen_revision_file(svn_fs_fs__revision_file_t *file,
-                                svn_fs_t *fs,
-                                svn_revnum_t revision);
+svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file);
 
 /* Open the proto-rev file of transaction TXN_ID in FS and return it in *FILE.
  * Use POOL for allocations. */
