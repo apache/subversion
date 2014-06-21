@@ -262,16 +262,9 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def read_l2p(sbox, revision, item):
-  """ For the format 7+ repository in SBOX, return the physical offset
-      of ITEM in REVISION.  This code supports only small, nonpacked revs. """
-
-  filename = fsfs_file(sbox.repo_dir, 'revs', str(revision) + ".l2p")
-
-  fp = open(filename, 'rb')
-  contents = fp.read()
-  length = len(contents)
-  fp.close()
+def read_l2p(contents, item):
+  """ For the format 7+ revision file CONTENTS, return the physical offset
+      of ITEM.  This code supports only small, nonpacked revs. """
 
   # decode numbers
   numbers = []
@@ -320,10 +313,10 @@ def set_changed_path_list(sbox, revision, changes):
   # read full file
   fp = open(fsfs_file(sbox.repo_dir, 'revs', str(revision)), 'r+b')
   contents = fp.read()
+  length = len(contents)
 
   if repo_format(sbox) < 7:
     # replace the changed paths list
-    length = len(contents)
     header = contents[contents.rfind('\n', length - 64, length - 1):]
     body_len = long(header.split(' ')[1])
 
@@ -331,8 +324,24 @@ def set_changed_path_list(sbox, revision, changes):
     # we will invalidate the l2p index but that's ok for the
     # kind of tests we run here. The p2l index remains valid
     # because the offset of the last item does not change
-    body_len = read_l2p(sbox, revision, 1)
-    header = '\n'
+
+    # read & parse revision file footer
+    footer_length = ord(contents[length-1]);
+    footer = contents[length - footer_length - 1:length-1]
+    l2p_offset = long(footer.split(' ')[0])
+    p2l_offset = long(footer.split(' ')[1])
+
+    # split file contents
+    body_len = read_l2p(contents[l2p_offset:], 1)
+    indexes = contents[l2p_offset:length - footer_length - 1]
+
+    # construct new footer, include indexes as are
+    file_len = body_len + len(changes) + 1
+    p2l_offset += file_len - l2p_offset
+
+    header = str(file_len) + ' ' + str(p2l_offset)
+    header += chr(len(header))
+    header = '\n' + indexes + header
 
   contents = contents[:body_len] + changes + header
 

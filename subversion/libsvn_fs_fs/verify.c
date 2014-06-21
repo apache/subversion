@@ -503,15 +503,15 @@ compare_p2l_to_rev(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, start, pool));
 
   /* check file size vs. range covered by index */
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &offset, pool));
+  SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
   SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, rev_file, start,
                                         pool));
 
-  if (offset != max_offset)
+  if (rev_file->l2p_offset != max_offset)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT, NULL,
                              _("File size of %s for revision r%ld does "
                                "not match p2l index size of %s"),
-                             apr_off_t_toa(pool, offset), start,
+                             apr_off_t_toa(pool, rev_file->l2p_offset), start,
                              apr_off_t_toa(pool, max_offset));
 
   SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,

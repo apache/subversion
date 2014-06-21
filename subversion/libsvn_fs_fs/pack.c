@@ -360,12 +360,6 @@ static svn_error_t *
 close_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
 {
-  const char *l2p_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_L2P_INDEX,
-                  SVN_VA_NULL);
-  const char *p2l_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_P2L_INDEX,
-                  SVN_VA_NULL);
   const char *proto_l2p_index_path;
   const char *proto_p2l_index_path;
 
@@ -374,18 +368,17 @@ close_pack_context(pack_context_t *context,
                                context->proto_l2p_index, pool));
   SVN_ERR(svn_io_file_name_get(&proto_p2l_index_path,
                                context->proto_p2l_index, pool));
-  
+
   /* finalize proto index files */
   SVN_ERR(svn_io_file_close(context->proto_l2p_index, pool));
   SVN_ERR(svn_io_file_close(context->proto_p2l_index, pool));
 
-  /* Create the actual index files*/
-  SVN_ERR(svn_fs_fs__l2p_index_create(context->fs, l2p_index_path,
-                                      proto_l2p_index_path,
-                                      context->shard_rev, pool));
-  SVN_ERR(svn_fs_fs__p2l_index_create(context->fs, p2l_index_path,
-                                      proto_p2l_index_path,
-                                      context->shard_rev, pool));
+  /* Append the actual index data to the pack file. */
+  SVN_ERR(svn_fs_fs__add_index_data(context->fs, context->pack_file,
+                                    proto_l2p_index_path,
+                                    proto_p2l_index_path,
+                                    context->shard_rev, 
+                                    pool));
 
   /* remove proto index files */
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, pool));
@@ -1294,26 +1287,21 @@ pack_range(pack_context_t *context,
   for (revision = context->start_rev; revision < context->end_rev; ++revision)
     {
       apr_off_t offset = 0;
-      apr_finfo_t finfo;
       svn_fs_fs__revision_file_t *rev_file;
-      const char *path;
 
       svn_pool_clear(revpool);
 
-      /* Get the size of the file. */
-      path = svn_dirent_join(context->shard_dir,
-                             apr_psprintf(revpool, "%ld", revision),
-                             revpool);
-      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, revpool));
+      /* Get the rev file dimensions (mainly index locations). */
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, context->fs,
                                                revision, revpool));
+      SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
   
       /* read the phys-to-log index file until we covered the whole rev file.
        * That index contains enough info to build both target indexes from it. */
-      while (offset < finfo.size)
+      while (offset < rev_file->l2p_offset)
         {
           /* read one cluster */
           int i;
@@ -1339,7 +1327,7 @@ pack_range(pack_context_t *context,
 
               /* process entry while inside the rev file */
               offset = entry->offset;
-              if (offset < finfo.size)
+              if (offset < rev_file->l2p_offset)
                 {
                   SVN_ERR(svn_io_file_seek(rev_file->file, SEEK_SET, &offset,
                                            iterpool2));
