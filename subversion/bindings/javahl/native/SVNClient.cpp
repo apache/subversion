@@ -510,7 +510,12 @@ void SVNClient::mkdir(Targets &targets, CommitMessage *message,
                                   ctx, subPool.getPool()), );
 }
 
-void SVNClient::cleanup(const char *path)
+void SVNClient::cleanup(const char *path,
+                        bool break_locks,
+                        bool fix_recorded_timestamps,
+                        bool clear_dav_cache,
+                        bool remove_unused_pristines,
+                        bool include_externals)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -521,7 +526,13 @@ void SVNClient::cleanup(const char *path)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_cleanup(intPath.c_str(), ctx, subPool.getPool()),);
+    SVN_JNI_ERR(svn_client_cleanup2(intPath.c_str(),
+                                    break_locks,
+                                    fix_recorded_timestamps,
+                                    clear_dav_cache,
+                                    remove_unused_pristines,
+                                    include_externals,
+                                    ctx, subPool.getPool()),);
 }
 
 void SVNClient::resolve(const char *path, svn_depth_t depth,
@@ -1477,6 +1488,29 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, subPool.getPool()), );
+}
+
+void SVNClient::vacuum(const char *path,
+                       bool remove_unversioned_items,
+                       bool remove_ignored_items,
+                       bool fix_recorded_timestamps,
+                       bool remove_unused_pristines,
+                       bool include_externals)
+{
+    SVN_JNI_NULL_PTR_EX(path, "path", );
+
+    SVN::Pool subPool(pool);
+    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_vacuum(path,
+                                  remove_unversioned_items,
+                                  remove_ignored_items,
+                                  fix_recorded_timestamps,
+                                  remove_unused_pristines,
+                                  include_externals,
+                                  ctx, subPool.getPool()), );
 }
 
 jobject
