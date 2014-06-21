@@ -722,7 +722,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_int64(config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -927,15 +927,15 @@ write_config(svn_fs_t *fs,
 "### ineffective."                                                           NL
 "### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
 "### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 256"                                NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is enabled by default."                     NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
+"### Compressing packed revprops is disabled by default."                    NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
 "### Parameters in this section control the data access granularity in"      NL
