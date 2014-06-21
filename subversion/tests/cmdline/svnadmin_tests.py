@@ -2021,31 +2021,25 @@ def verify_keep_going(sbox):
                                      C_url)
   
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
-  fp = open(r2, 'a')
+  fp = open(r2, 'r+b')
   fp.write("""inserting junk to corrupt the rev""")
   fp.close()
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  if svntest.main.is_fs_log_addressing():
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                             ".*Verified revision 1.",
-                                             ".*Verified revision 2.",
-                                             ".*Verified revision 3."])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E165011:.*"], False)
-  else:
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                              ".*Verified revision 1.",
-                                              ".*Error verifying revision 2.",
-                                              ".*Error verifying revision 3.",
-                                              ".*",
-                                              ".*Summary.*",
-                                              ".*r2: E160004:.*",
-                                              ".*r3: E160004:.*",
-                                              ".*r3: E160004:.*"])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                              "svnadmin: E165011:.*"], False)
+  exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2.",
+                                            ".*Error verifying revision 3.",
+                                            ".*",
+                                            ".*Summary.*",
+                                            ".*r2: E160004:.*",
+                                            ".*r2: E160004:.*",
+                                            ".*r3: E160004:.*",
+                                            ".*r3: E160004:.*"])
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
