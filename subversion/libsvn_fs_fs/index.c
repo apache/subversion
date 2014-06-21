@@ -159,6 +159,15 @@ struct svn_fs_fs__packed_number_stream_t
   /* underlying data file containing the packed values */
   apr_file_t *file;
 
+  /* Offset within FILE at which the stream data starts
+   * (i.e. which offset will reported as offset 0 by packed_stream_offset). */
+  apr_off_t stream_start;
+
+  /* First offset within FILE after the stream data.
+   * Attempts to read beyond this will cause an "Unexpected End Of Stream"
+   * error. */
+  apr_off_t stream_end;
+
   /* number of used entries in BUFFER (starting at index 0) */
   apr_size_t used;
 
@@ -240,6 +249,10 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   if (block_left >= 10 && block_left < read)
     read = block_left;
 
+  /* Don't read beyond the end of the file section that belongs to this
+   * index / stream. */
+  read = MIN(read, stream->stream_end - stream->next_offset);
+
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
@@ -318,10 +331,15 @@ packed_stream_open(svn_fs_fs__packed_number_stream_t **stream,
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            result->pool));
 
+  result->stream_start = 0;
+  result->stream_end = 0;
+  SVN_ERR(svn_io_file_seek(result->file, APR_END, &result->stream_end,
+                           result->pool));
+
   result->used = 0;
   result->current = 0;
-  result->start_offset = 0;
-  result->next_offset = 0;
+  result->start_offset = result->stream_start;
+  result->next_offset = result->stream_start;
   result->block_size = block_size;
 
   *stream = result;
@@ -363,20 +381,22 @@ packed_stream_get(apr_uint64_t *value,
   return SVN_NO_ERROR;
 }
 
-/* Navigate STREAM to packed file offset OFFSET.  There will be no checks
+/* Navigate STREAM to packed stream offset OFFSET.  There will be no checks
  * whether the given OFFSET is valid.
  */
 static void
 packed_stream_seek(svn_fs_fs__packed_number_stream_t *stream,
                    apr_off_t offset)
 {
+  apr_off_t file_offset = offset + stream->stream_start;
+
   if (   stream->used == 0
       || offset < stream->start_offset
       || offset >= stream->next_offset)
     {
       /* outside buffered data.  Next get() will read() from OFFSET. */
-      stream->start_offset = offset;
-      stream->next_offset = offset;
+      stream->start_offset = file_offset;
+      stream->next_offset = file_offset;
       stream->current = 0;
       stream->used = 0;
     }
@@ -387,22 +407,25 @@ packed_stream_seek(svn_fs_fs__packed_number_stream_t *stream,
        * it for the desired position. */
       apr_size_t i;
       for (i = 0; i < stream->used; ++i)
-        if (stream->buffer[i].total_len > offset - stream->start_offset)
+        if (stream->buffer[i].total_len > file_offset - stream->start_offset)
           break;
 
       stream->current = i;
     }
 }
 
-/* Return the packed file offset of at which the next number in the stream
+/* Return the packed stream offset of at which the next number in the stream
  * can be found.
  */
 static apr_off_t
 packed_stream_offset(svn_fs_fs__packed_number_stream_t *stream)
 {
-  return stream->current == 0
+  apr_off_t file_offset
+       = stream->current == 0
        ? stream->start_offset
        : stream->buffer[stream->current-1].total_len + stream->start_offset;
+
+  return file_offset - stream->stream_start;
 }
 
 /* Encode VALUE as 7/8b into P and return the number of bytes written.
