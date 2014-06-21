@@ -311,9 +311,9 @@ read_change(change_t **change_p,
         }
     }
   
-  /* Get the changed path. */
+  /* Get the changed path (LAST_STR is was allocated in POOL). */
   change->path.len = strlen(last_str);
-  change->path.data = apr_pstrmemdup(pool, last_str, change->path.len);
+  change->path.data = last_str;
 
   /* Read the next line, the copyfrom line. */
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
@@ -336,7 +336,8 @@ read_change(change_t **change_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid changes line in rev-file"));
 
-      info->copyfrom_path = apr_pstrdup(pool, last_str);
+      /* LAST_STR is was allocated in POOL. */
+      info->copyfrom_path = last_str;
     }
 
   *change_p = change;
