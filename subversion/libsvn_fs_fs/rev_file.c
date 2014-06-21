@@ -30,10 +30,10 @@
 #include "svn_private_config.h"
 
 void
-svn_fs_fs__init_revision_file(svn_fs_fs__revision_file_t *file,
-                              svn_fs_t *fs,
-                              svn_revnum_t revision,
-                              apr_pool_t *pool)
+init_revision_file(svn_fs_fs__revision_file_t *file,
+                   svn_fs_t *fs,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -121,7 +121,7 @@ svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
                                  apr_pool_t *pool)
 {
   *file = apr_palloc(pool, sizeof(**file));
-  svn_fs_fs__init_revision_file(*file, fs, rev, pool);
+  init_revision_file(*file, fs, rev, pool);
 
   return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, pool));
 }

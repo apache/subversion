@@ -1494,13 +1494,14 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
   l2p_header_t *header = NULL;
   svn_revnum_t revision;
   svn_revnum_t last_rev = (svn_revnum_t)(start_rev + count);
-  svn_fs_fs__revision_file_t rev_file;
+  svn_fs_fs__revision_file_t *rev_file;
   apr_pool_t *header_pool = svn_pool_create(pool);
 
   /* read index master data structure for the index covering START_REV */
-  svn_fs_fs__init_revision_file(&rev_file, fs, start_rev, header_pool);
-  SVN_ERR(get_l2p_header(&header, &rev_file, fs, start_rev, header_pool));
-  SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, start_rev,
+                                           header_pool));
+  SVN_ERR(get_l2p_header(&header, rev_file, fs, start_rev, header_pool));
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
   /* Determine the length of the item index list for each rev.
    * Read new index headers as required. */
@@ -1518,10 +1519,11 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
            * the number of items in a revision, i.e. there is no consistency
            * issue here. */
           svn_pool_clear(header_pool);
-          rev_file.start_revision = revision;
-          SVN_ERR(get_l2p_header(&header, &rev_file, fs, revision,
+          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
+                                                  header_pool));
+          SVN_ERR(get_l2p_header(&header, rev_file, fs, revision,
                                  header_pool));
-          SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
+          SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
         }
 
       /* in a revision with N index pages, the first N-1 index pages are

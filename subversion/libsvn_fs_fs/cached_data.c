@@ -88,12 +88,13 @@ dbg_log_access(svn_fs_t *fs,
   const char *type = types[item_type];
   const char *pack = "";
   apr_off_t offset;
-  svn_fs_fs__revision_file_t rev_file;
+  svn_fs_fs__revision_file_t *rev_file;
 
-  svn_fs_fs__init_revision_file(&rev_file, fs, revision, scratch_pool);
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
+                                           scratch_pool));
 
   /* determine rev / pack file offset */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, revision, NULL,
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, revision, NULL,
                                  item_index, scratch_pool));
 
   /* constructing the pack file description */
@@ -156,7 +157,7 @@ dbg_log_access(svn_fs_t *fs,
   if (svn_fs_fs__use_log_addressing(fs, revision))
     {
       /* reverse index lookup: get item description in ENTRY */
-      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, &rev_file, revision,
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
                                           offset, scratch_pool));
       if (entry)
         {
@@ -906,23 +907,24 @@ svn_fs_fs__check_rep(representation_t *rep,
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
 
-      svn_fs_fs__revision_file_t rev_file;
-      svn_fs_fs__init_revision_file(&rev_file, fs, rep->revision, pool);
+      svn_fs_fs__revision_file_t *rev_file;
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
+                                               pool));
 
       /* This will auto-retry if there was a background pack. */
-      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, rep->revision,
+      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rep->revision,
                                      NULL, rep->item_index, pool));
 
       /* This may fail if there is a background pack operation (can't auto-
          retry because the item offset lookup has to be redone as well). */
-      err = svn_fs_fs__p2l_entry_lookup(&entry, fs, &rev_file, rep->revision,
+      err = svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, rep->revision,
                                         offset, pool);
 
       /* Retry if the packing state may have changed, i.e. if we got an
          error while opening the index for a non-packed rev file. */
-      if (err && !rev_file.is_packed)
+      if (err && !rev_file->is_packed)
         {
-          SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
+          SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
           /* Be sure to know the latest pack status of REP. */
           SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
@@ -948,7 +950,7 @@ svn_fs_fs__check_rep(representation_t *rep,
                                               rep->item_index),
                                  rep->revision);
 
-      SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
+      SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
     }
   else
     {
