@@ -1300,6 +1300,8 @@ send_log(svn_revnum_t rev,
      revision. */
   if (found_rev_of_interest)
     {
+      apr_pool_t *scratch_pool;
+
       /* Is REV a merged revision we've already sent? */
       if (nested_merges && handling_merged_revision)
         {
@@ -1317,12 +1319,14 @@ send_log(svn_revnum_t rev,
             }
         }
 
-      return (*receiver)(receiver_baton, log_entry, pool);
+      /* Pass a scratch pool to ensure no temporary state stored
+         by the receiver callback persists. */
+      scratch_pool = svn_pool_create(pool);
+      SVN_ERR(receiver(receiver_baton, log_entry, scratch_pool));
+      svn_pool_destroy(scratch_pool);
     }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
+
+  return SVN_NO_ERROR;
 }
 
 /* This controls how many history objects we keep open.  For any targets
