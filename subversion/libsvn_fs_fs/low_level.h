@@ -83,12 +83,13 @@ svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
                           apr_off_t p2l_offset,
                           apr_pool_t *pool);
 
-/* Read all the changes from STREAM and store them in *CHANGES.  Do all
-   allocations in POOL. */
+/* Read all the changes from STREAM and store them in *CHANGES,
+   allocated in RESULT_POOL. Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_fs_fs__change_receiver_t)(
   void *baton,
