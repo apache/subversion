@@ -194,8 +194,8 @@ typedef struct svn_fs_fs__rep_header_t
   apr_size_t header_size;
 } svn_fs_fs__rep_header_t;
 
-/* Read the next line from file FILE and parse it as a text
-   representation entry.  Return the parsed entry in *REP_ARGS_P.
+/* Read the next line from STREAM and parse it as a text
+   representation header.  Return the parsed entry in *HEADER.
    Perform all allocations in POOL. */
 svn_error_t *
 svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
