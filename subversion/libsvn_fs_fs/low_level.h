@@ -118,11 +118,12 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
                          apr_pool_t *pool);
 
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
-   allocated in POOL. */
+   allocated in RESULT_POOL. */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if

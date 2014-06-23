@@ -758,16 +758,17 @@ read_rep_offsets(representation_t **rep_p,
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev_p,
                         svn_stream_t *stream,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   apr_hash_t *headers;
   node_revision_t *noderev;
   char *value;
   const char *noderev_id;
 
-  SVN_ERR(read_header_block(&headers, stream, pool));
+  SVN_ERR(read_header_block(&headers, stream, scratch_pool));
 
-  noderev = apr_pcalloc(pool, sizeof(*noderev));
+  noderev = apr_pcalloc(result_pool, sizeof(*noderev));
 
   /* Read the node-rev id. */
   value = svn_hash_gets(headers, HEADER_ID);
@@ -778,7 +779,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_fs__id_parse(value, strlen(value), pool);
+  noderev->id = svn_fs_fs__id_parse(value, strlen(value), result_pool);
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -808,7 +809,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               noderev->id, pool));
+                               noderev->id, result_pool));
     }
 
   /* Get the data location. */
@@ -816,7 +817,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               noderev->id, pool));
+                               noderev->id, result_pool));
     }
 
   /* Get the created path. */
@@ -829,20 +830,20 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      noderev->created_path = apr_pstrdup(pool, value);
+      noderev->created_path = apr_pstrdup(result_pool, value);
     }
 
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
     noderev->predecessor_id = svn_fs_fs__id_parse(value, strlen(value),
-                                                  pool);
+                                                  result_pool);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
   if (value == NULL)
     {
-      noderev->copyroot_path = apr_pstrdup(pool, noderev->created_path);
+      noderev->copyroot_path = apr_pstrdup(result_pool, noderev->created_path);
       noderev->copyroot_rev = svn_fs_fs__id_rev(noderev->id);
     }
   else
@@ -861,7 +862,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyroot_path = apr_pstrdup(pool, value);
+      noderev->copyroot_path = apr_pstrdup(result_pool, value);
     }
 
   /* Get the copyfrom. */
@@ -885,7 +886,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyfrom line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyfrom_path = apr_pstrdup(pool, value);
+      noderev->copyfrom_path = apr_pstrdup(result_pool, value);
     }
 
   /* Get whether this is a fresh txn root. */

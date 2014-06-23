@@ -1088,7 +1088,7 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   *txn_p = txn;
 
   /* Create a new root node for this transaction. */
-  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool, pool));
   SVN_ERR(create_new_txn_noderev_from_rev(fs, &ftd->txn_id, root_id, pool));
 
   /* Create an empty rev file. */
@@ -3408,7 +3408,7 @@ upgrade_transaction(svn_fs_t *fs,
                                APR_OS_DEFAULT,
                                iterpool));
       stream = svn_stream_from_aprfile2(file, TRUE, iterpool);
-      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, iterpool));
+      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, iterpool, iterpool));
       if (   noderev->data_rep == NULL
           || noderev->data_rep->revision != SVN_INVALID_REVNUM
           || noderev->kind != svn_node_file)
