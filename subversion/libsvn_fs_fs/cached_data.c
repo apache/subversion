@@ -717,10 +717,11 @@ create_rep_state_body(rep_state_t **rep_state,
                       shared_file_t **shared_file,
                       representation_t *rep,
                       svn_fs_t *fs,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
+  rep_state_t *rs = apr_pcalloc(result_pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
   svn_boolean_t is_cached = FALSE;
   apr_uint64_t estimated_window_storage;
@@ -777,7 +778,7 @@ create_rep_state_body(rep_state_t **rep_state,
   /* cache lookup, i.e. skip reading the rep header if possible */
   if (ffd->rep_header_cache && !svn_fs_fs__id_txn_used(&rep->txn_id))
     SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
-                           ffd->rep_header_cache, &key, pool));
+                           ffd->rep_header_cache, &key, result_pool));
 
   /* initialize the (shared) FILE member in RS */
   if (reuse_shared_file)
@@ -786,9 +787,9 @@ create_rep_state_body(rep_state_t **rep_state,
     }
   else
     {
-      shared_file_t *file = apr_pcalloc(pool, sizeof(*file));
+      shared_file_t *file = apr_pcalloc(result_pool, sizeof(*file));
       file->revision = rep->revision;
-      file->pool = pool;
+      file->pool = result_pool;
       file->fs = fs;
       rs->sfile = file;
 
@@ -812,8 +813,8 @@ create_rep_state_body(rep_state_t **rep_state,
           SVN_ERR(auto_open_shared_file(rs->sfile));
           SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rs->sfile->rfile,
                                          rep->revision, NULL, rep->item_index,
-                                         pool));
-          SVN_ERR(rs_aligned_seek(rs, NULL, offset, pool));
+                                         scratch_pool));
+          SVN_ERR(rs_aligned_seek(rs, NULL, offset, scratch_pool));
         }
       else
         {
@@ -821,27 +822,29 @@ create_rep_state_body(rep_state_t **rep_state,
            * an in-txn file.
            */
           SVN_ERR(open_and_seek_representation(&rs->sfile->rfile, fs, rep,
-                                               pool));
+                                               result_pool));
         }
 
-      SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->sfile->rfile->stream, pool));
-      SVN_ERR(get_file_offset(&rs->start, rs, pool));
+      SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->sfile->rfile->stream,
+                                         result_pool));
+      SVN_ERR(get_file_offset(&rs->start, rs, result_pool));
 
       /* populate the cache if appropriate */
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
           if (svn_fs_fs__use_log_addressing(fs, rep->revision))
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
-                               rs->sfile->rfile, pool, pool));
+                               rs->sfile->rfile, result_pool, scratch_pool));
           else
             if (ffd->rep_header_cache)
-              SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, pool));
+              SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
+                                     scratch_pool));
         }
     }
 
   /* finalize */
   SVN_ERR(dbg_log_access(fs, rep->revision, rep->item_index, rh,
-                         SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+                         SVN_FS_FS__ITEM_TYPE_ANY_REP, scratch_pool));
 
   rs->header_size = rh->header_size;
   *rep_state = rs;
@@ -874,10 +877,12 @@ create_rep_state(rep_state_t **rep_state,
                  shared_file_t **shared_file,
                  representation_t *rep,
                  svn_fs_t *fs,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err = create_rep_state_body(rep_state, rep_header,
-                                           shared_file, rep, fs, pool);
+                                           shared_file, rep, fs,
+                                           result_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
@@ -893,7 +898,7 @@ create_rep_state(rep_state_t **rep_state,
                                "Corrupt representation '%s'",
                                rep
                                ? svn_fs_fs__unparse_representation
-                                   (rep, ffd->format, TRUE, pool)->data
+                                   (rep, ffd->format, TRUE, scratch_pool)->data
                                : "(null)");
     }
   /* ### Call representation_string() ? */
@@ -964,7 +969,7 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       /* ### Should this be using read_rep_line() directly? */
       SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
-                               rep, fs, pool));
+                               rep, fs, pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -982,6 +987,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                           ? ffd->max_files_per_dir
                           : 1;
   apr_pool_t *sub_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t is_delta = FALSE;
   int count = 0;
   int shards = 1;
@@ -1002,6 +1008,9 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   do
     {
       rep_state_t *rep_state;
+
+      svn_pool_clear(iterpool);
+
       if (base_rep.revision / shard_size != last_shard)
         {
           last_shard = base_rep.revision / shard_size;
@@ -1013,7 +1022,8 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                                     &file_hint,
                                     &base_rep,
                                     fs,
-                                    sub_pool));
+                                    sub_pool,
+                                    iterpool));
 
       base_rep.revision = header->base_revision;
       base_rep.item_index = header->base_item_index;
@@ -1033,6 +1043,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   *chain_length = count;
   *shard_count = shards;
   svn_pool_destroy(sub_pool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1319,6 +1330,7 @@ build_rep_list(apr_array_header_t **list,
   svn_fs_fs__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
   shared_file_t *shared_file = NULL;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
@@ -1328,7 +1340,8 @@ build_rep_list(apr_array_header_t **list,
   *expanded_size = first_rep->expanded_size;
 
   /* for the top-level rep, we need the rep_args */
-  SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool));
+  SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool,
+                           iterpool));
 
   /* Unknown size or empty representation?
      That implies the this being the first iteration.
@@ -1342,10 +1355,12 @@ build_rep_list(apr_array_header_t **list,
 
   while (1)
     {
+      svn_pool_clear(iterpool);
+
       /* fetch state, if that has not been done already */
       if (!rs)
         SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file,
-                                 &rep, fs, pool));
+                                 &rep, fs, pool, iterpool));
 
       /* for txn reps, there won't be a cached combined window */
       if (!svn_fs_fs__id_txn_used(&rep.txn_id))
@@ -1359,14 +1374,14 @@ build_rep_list(apr_array_header_t **list,
           rs->current = 0;
           rs->size = (*window_p)->len;
           *src_state = rs;
-          return SVN_NO_ERROR;
+          break;
         }
 
       if (rep_header->type == svn_fs_fs__rep_plain)
         {
           /* This is a plaintext, so just return the current rep_state. */
           *src_state = rs;
-          return SVN_NO_ERROR;
+          break;
         }
 
       /* Push this rep onto the list.  If it's self-compressed, we're done. */
@@ -1374,7 +1389,7 @@ build_rep_list(apr_array_header_t **list,
       if (rep_header->type == svn_fs_fs__rep_self_delta)
         {
           *src_state = NULL;
-          return SVN_NO_ERROR;
+          break;
         }
 
       rep.revision = rep_header->base_revision;
@@ -1384,6 +1399,9 @@ build_rep_list(apr_array_header_t **list,
 
       rs = NULL;
     }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2194,7 +2212,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
     {
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
-                                target->data_rep, fs, pool));
+                                target->data_rep, fs, pool, pool));
 
       if (source && source->data_rep && target->data_rep)
         {
