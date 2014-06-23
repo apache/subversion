@@ -383,20 +383,22 @@ read_change(change_t **change_p,
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   change_t *change;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool;
 
   /* pre-allocate enough room for most change lists
      (will be auto-expanded as necessary) */
-  *changes = apr_array_make(pool, 30, sizeof(change_t *));
+  *changes = apr_array_make(result_pool, 30, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, pool, iterpool));
+  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
   while (change)
     {
       APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, pool, iterpool));
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
       svn_pool_clear(iterpool);
     }
   svn_pool_destroy(iterpool);
