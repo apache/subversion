@@ -157,7 +157,6 @@ write_l2p_index(const char **index_name,
                 apr_pool_t *pool)
 {
   apr_file_t *proto_index;
-  const char *filename;
 
   /* Use a subpool for immediate temp file cleanup at the end of this
    * function. */
