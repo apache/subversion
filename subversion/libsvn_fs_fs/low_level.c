@@ -200,7 +200,8 @@ svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
 static svn_error_t *
 read_change(change_t **change_p,
             svn_stream_t *stream,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line;
   svn_boolean_t eof = TRUE;
@@ -211,13 +212,13 @@ read_change(change_t **change_p,
   /* Default return value. */
   *change_p = NULL;
 
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
 
   /* Check for a blank line. */
   if (eof || (line->len == 0))
     return SVN_NO_ERROR;
 
-  change = apr_pcalloc(pool, sizeof(*change));
+  change = apr_pcalloc(result_pool, sizeof(*change));
   info = &change->info;
   last_str = line->data;
 
@@ -227,7 +228,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  info->node_rev_id = svn_fs_fs__id_parse(str, strlen(str), pool);
+  info->node_rev_id = svn_fs_fs__id_parse(str, strlen(str), result_pool);
   if (info->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
@@ -346,12 +347,12 @@ read_change(change_t **change_p,
         }
     }
   
-  /* Get the changed path (LAST_STR is was allocated in POOL). */
+  /* Get the changed path. */
   change->path.len = strlen(last_str);
-  change->path.data = last_str;
+  change->path.data = apr_pstrdup(result_pool, last_str);
 
   /* Read the next line, the copyfrom line. */
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   info->copyfrom_known = TRUE;
   if (eof || line->len == 0)
     {
@@ -371,8 +372,7 @@ read_change(change_t **change_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid changes line in rev-file"));
 
-      /* LAST_STR is was allocated in POOL. */
-      info->copyfrom_path = last_str;
+      info->copyfrom_path = apr_pstrdup(result_pool, last_str);
     }
 
   *change_p = change;
@@ -386,17 +386,20 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
                         apr_pool_t *pool)
 {
   change_t *change;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* pre-allocate enough room for most change lists
      (will be auto-expanded as necessary) */
   *changes = apr_array_make(pool, 30, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, pool));
+  SVN_ERR(read_change(&change, stream, pool, iterpool));
   while (change)
     {
       APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, pool));
+      SVN_ERR(read_change(&change, stream, pool, iterpool));
+      svn_pool_clear(iterpool);
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -416,7 +419,7 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
     {
       svn_pool_clear(iterpool);
 
-      SVN_ERR(read_change(&change, stream, iterpool));
+      SVN_ERR(read_change(&change, stream, iterpool, iterpool));
       if (change)
         SVN_ERR(change_receiver(change_receiver_baton, change, iterpool));
     }
