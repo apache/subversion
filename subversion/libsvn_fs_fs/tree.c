@@ -1863,11 +1863,19 @@ merge(svn_stringbuf_t *conflict_p,
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
     svn_boolean_t same;
+    apr_pool_t *scratch_pool;
 
     /* Get node revisions for our id's. */
-    SVN_ERR(svn_fs_fs__get_node_revision(&tgt_nr, fs, target_id, pool));
-    SVN_ERR(svn_fs_fs__get_node_revision(&anc_nr, fs, ancestor_id, pool));
-    SVN_ERR(svn_fs_fs__get_node_revision(&src_nr, fs, source_id, pool));
+    scratch_pool = svn_pool_create(pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&tgt_nr, fs, target_id, pool,
+                                         scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&anc_nr, fs, ancestor_id, pool,
+                                         scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&src_nr, fs, source_id, pool,
+                                         scratch_pool));
+    svn_pool_destroy(scratch_pool);
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -4423,7 +4431,7 @@ verify_node(dag_node_t *node,
               /* access mergeinfo counter with minimal overhead */
               node_revision_t *noderev;
               SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, dirent->id,
-                                                   iterpool));
+                                                   iterpool, iterpool));
               child_mergeinfo = noderev->mergeinfo_count;
             }
 
