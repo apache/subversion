@@ -831,7 +831,7 @@ create_rep_state_body(rep_state_t **rep_state,
         }
 
       SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->sfile->rfile->stream,
-                                         result_pool));
+                                         result_pool, scratch_pool));
       SVN_ERR(get_file_offset(&rs->start, rs, result_pool));
 
       /* populate the cache if appropriate */
@@ -2994,7 +2994,8 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_fs_fs__read_rep_header(rep_header, stream, result_pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(rep_header, stream, result_pool,
+                                     scratch_pool));
 
   if (ffd->rep_header_cache)
     SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header,

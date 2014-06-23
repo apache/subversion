@@ -195,12 +195,13 @@ typedef struct svn_fs_fs__rep_header_t
 } svn_fs_fs__rep_header_t;
 
 /* Read the next line from STREAM and parse it as a text
-   representation header.  Return the parsed entry in *HEADER.
-   Perform all allocations in POOL. */
+   representation header.  Return the parsed entry in *HEADER, allocated
+   in RESULT_POOL. Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
                            svn_stream_t *stream,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Write the representation HEADER to STREAM.  Use POOL for allocations. */
 svn_error_t *

@@ -1036,16 +1036,17 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 svn_error_t *
 svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
                            svn_stream_t *stream,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *buffer;
   char *str, *last_str;
   apr_int64_t val;
   svn_boolean_t eol = FALSE;
 
-  SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, pool));
+  SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, scratch_pool));
 
-  *header = apr_pcalloc(pool, sizeof(**header));
+  *header = apr_pcalloc(result_pool, sizeof(**header));
   (*header)->header_size = buffer->len + 1;
   if (strcmp(buffer->data, REP_PLAIN) == 0)
     {
