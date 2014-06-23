@@ -303,7 +303,11 @@ typedef struct fs_fs_data_t
 
   /* Rev / pack file granularity covered by phys-to-log index pages */
   apr_int64_t p2l_page_size;
-  
+
+  /* If set, parse and cache *all* data of each block that we read
+   * (not just the one bit that we need, atm). */
+  svn_boolean_t use_block_read;
+
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 

@@ -3210,7 +3210,14 @@ block_read(void **result,
   apr_array_header_t *entries;
   int run_count = 0;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
+
+  /* Block read is an optional feature. If the caller does not want anything
+   * specific we may not have to read anything. */
+  if (!result && !ffd->use_block_read)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   /* don't try this on transaction protorev files */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
@@ -3267,7 +3274,8 @@ block_read(void **result,
           /* handle all items that start within this block and are relatively
            * small (i.e. < block size).  Always read the item we need to return.
            */
-          if (is_result || (   entry->offset >= block_start
+          if (is_result || (   ffd->use_block_read
+                            && entry->offset >= block_start
                             && entry->size < ffd->block_size))
             {
               void *item = NULL;
