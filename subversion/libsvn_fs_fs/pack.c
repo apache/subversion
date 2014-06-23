@@ -573,7 +573,7 @@ copy_rep_to_temp(pack_context_t *context,
 
   /* read & parse the representation header */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool, pool));
   svn_stream_close(stream);
 
   /* if the representation is a delta against some other rep, link the two */

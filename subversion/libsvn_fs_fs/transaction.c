@@ -3447,7 +3447,7 @@ upgrade_transaction(svn_fs_t *fs,
                                    iterpool));
           SVN_ERR(svn_fs_fs__read_rep_header(&header,
                     svn_stream_from_aprfile2(proto_file, TRUE, iterpool),
-                    iterpool));
+                    iterpool, iterpool));
 
           /* Create the corresponding entry for the P2L proto-index.
 
