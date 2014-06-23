@@ -43,6 +43,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* The default maximum number of files per directory to store in the
@@ -993,6 +994,18 @@ write_config(svn_fs_t *fs,
                             fsfs_conf_contents, pool);
 }
 
+/* Read / Evaluate the global configuration in FS->CONFIG to set up
+ * parameters in FS. */
+static svn_error_t *
+read_global_config(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  ffd->use_block_read 
+    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, TRUE);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -1030,6 +1043,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -1604,6 +1620,9 @@ svn_fs_fs__create(svn_fs_t *fs,
     SVN_ERR(write_config(fs, pool));
 
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
