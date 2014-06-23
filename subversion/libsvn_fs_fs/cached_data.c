@@ -1456,6 +1456,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   svn_boolean_t is_cached;
   apr_off_t start_offset;
   apr_off_t end_offset;
+  apr_pool_t *iterpool;
+
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
   SVN_ERR(dbg_log_access(rs->sfile->fs, rs->revision, rs->item_index,
@@ -1498,12 +1500,14 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
+  iterpool = svn_pool_create(pool);
   while (rs->chunk_index < this_chunk)
     {
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_txdelta_skip_svndiff_window(rs->sfile->rfile->file,
-                                              rs->ver, pool));
+                                              rs->ver, iterpool));
       rs->chunk_index++;
-      SVN_ERR(get_file_offset(&start_offset, rs, pool));
+      SVN_ERR(get_file_offset(&start_offset, rs, iterpool));
       rs->current = start_offset - rs->start;
       if (rs->current >= rs->size)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1511,6 +1515,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
                                   "beyond the end of the "
                                   "representation"));
     }
+  svn_pool_destroy(iterpool);
 
   /* Actually read the next window. */
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, rs->sfile->rfile->stream,
