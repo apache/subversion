@@ -318,7 +318,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                       svn_stream_from_aprfile2(file,
                                                                FALSE,
                                                                scratch_pool),
-                                      result_pool));
+                                      result_pool, scratch_pool));
     }
   else
     {
@@ -365,7 +365,8 @@ get_node_revision_body(node_revision_t **noderev_p,
           /* physical addressing mode reading, parsing and caching */
           SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
                                           revision_file->stream,
-                                          result_pool));
+                                          result_pool,
+                                          scratch_pool));
 
           /* Workaround issue #4031: is-fresh-txn-root in revision files. */
           (*noderev_p)->is_fresh_txn_root = FALSE;
@@ -430,7 +431,7 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   SVN_ERR(aligned_seek(fs, rev_file->file, NULL, offset, pool));
   SVN_ERR(svn_fs_fs__read_noderev(&noderev,
                                   rev_file->stream,
-                                  pool));
+                                  pool, pool));
 
   /* noderev->id is const, get rid of that */
   *id_p = svn_fs_fs__id_copy(noderev->id, pool);
@@ -543,14 +544,15 @@ svn_error_t *
 svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
 
   if (svn_fs_fs__use_log_addressing(fs, rev))
     {
-      *root_id_p = svn_fs_fs__id_create_root(rev, pool);
+      *root_id_p = svn_fs_fs__id_create_root(rev, result_pool);
     }
   else
     {
@@ -560,20 +562,23 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
       svn_boolean_t is_cached;
 
       SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                            ffd->rev_root_id_cache, &rev, pool));
+                            ffd->rev_root_id_cache, &rev, result_pool));
       if (is_cached)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
+                                               scratch_pool));
       SVN_ERR(get_root_changes_offset(&root_offset, NULL,
-                                      revision_file->file, fs, rev, pool));
+                                      revision_file->file, fs, rev,
+                                      scratch_pool));
 
       SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                                  root_offset, pool));
+                                  root_offset, result_pool));
 
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
 
-      SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
+      SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id,
+                             scratch_pool));
 
       *root_id_p = root_id;
     }
@@ -3144,7 +3149,8 @@ block_read_noderev(node_revision_t **noderev_p,
 
   /* read node rev from revision file */
 
-  SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream, result_pool));
+  SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
+                                  result_pool, scratch_pool));
 
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   (*noderev_p)->is_fresh_txn_root = FALSE;

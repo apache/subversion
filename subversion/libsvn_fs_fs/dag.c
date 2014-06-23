@@ -617,7 +617,7 @@ svn_fs_fs__dag_revision_root(dag_node_t **node_p,
   /* Construct the node. */
   new_node = apr_pcalloc(pool, sizeof(*new_node));
   new_node->fs = fs;
-  SVN_ERR(svn_fs_fs__rev_get_root(&new_node->id, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__rev_get_root(&new_node->id, fs, rev, pool, pool));
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = pool;

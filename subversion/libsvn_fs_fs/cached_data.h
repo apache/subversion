@@ -45,7 +45,8 @@ svn_error_t *
 svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.  Successive calls
    to this function should pass a non-NULL value to HINT.  In that case,

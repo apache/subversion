@@ -161,7 +161,7 @@ recover_find_max_ids(svn_fs_t *fs,
 
   baton.stream = rev_file->stream;
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool, pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
