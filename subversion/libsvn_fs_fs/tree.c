@@ -416,7 +416,9 @@ cache_lookup( fs_fs_dag_cache_t *cache
 /* 2nd level cache */
 
 /* Find and return the DAG node cache for ROOT and the key that
-   should be used for PATH. */
+   should be used for PATH.
+
+   Pool will only be used for allocating a new keys if necessary */
 static void
 locate_cache(svn_cache__t **cache,
              const char **key,
@@ -427,15 +429,20 @@ locate_cache(svn_cache__t **cache,
   if (root->is_txn_root)
     {
       fs_txn_root_data_t *frd = root->fsap_data;
-      if (cache) *cache = frd->txn_node_cache;
-      if (key && path) *key = path;
+
+      if (cache)
+        *cache = frd->txn_node_cache;
+      if (key && path)
+        *key = path;
     }
   else
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key
-        = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
+
+      if (cache)
+        *cache = ffd->rev_node_cache;
+      if (key && path)
+        *key = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
     }
 }
 
