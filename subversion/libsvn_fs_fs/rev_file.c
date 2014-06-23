@@ -30,7 +30,7 @@
 
 #include "svn_private_config.h"
 
-void
+static void
 init_revision_file(svn_fs_fs__revision_file_t *file,
                    svn_fs_t *fs,
                    svn_revnum_t revision,
