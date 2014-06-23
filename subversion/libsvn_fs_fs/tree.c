@@ -2518,65 +2518,6 @@ fs_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
-/* Set CHANGES to TRUE if PATH in ROOT is unchanged in REVISION if the
-   same files system.  If the content is identical, parent path copies and
-   deletions still count as changes.  Use POOL for temporary allocations.
-   Not that we will return an error if PATH does not exist in ROOT or
-   REVISION- */
-static svn_error_t *
-is_changed_node(svn_boolean_t *changed,
-                svn_fs_root_t *root,
-                const char *path,
-                svn_revnum_t revision,
-                apr_pool_t *pool)
-{
-  dag_node_t *node, *rev_node;
-  svn_fs_root_t *rev_root;
-  svn_fs_root_t *copy_from_root1, *copy_from_root2;
-  const char *copy_from_path1, *copy_from_path2;
-
-  SVN_ERR(svn_fs_fs__revision_root(&rev_root, root->fs, revision, pool));
-
-  /* Get the NODE for FROM_PATH in FROM_ROOT.*/
-  SVN_ERR(get_dag(&node, root, path, TRUE, pool));
-  SVN_ERR(get_dag(&rev_node, rev_root, path, TRUE, pool));
-
-  /* different ID -> got changed */
-  if (!svn_fs_fs__id_eq(svn_fs_fs__dag_get_id(node),
-                        svn_fs_fs__dag_get_id(rev_node)))
-    {
-      *changed = TRUE;
-       return SVN_NO_ERROR;
-    }
-
-  /* same node. might still be a lazy copy with separate history */
-  SVN_ERR(fs_closest_copy(&copy_from_root1, &copy_from_path1, root,
-                          path, pool));
-  SVN_ERR(fs_closest_copy(&copy_from_root2, &copy_from_path2, rev_root,
-                          path, pool));
-
-  if (copy_from_root1 == NULL && copy_from_root2 == NULL)
-    {
-      /* never copied -> same line of history */
-      *changed = FALSE;
-    }
-  else if (copy_from_root1 != NULL && copy_from_root2 != NULL)
-    {
-      /* both got copied. At the same time & location? */
-      *changed = (copy_from_root1->rev != copy_from_root2->rev)
-                 || strcmp(copy_from_path1, copy_from_path2);
-    }
-  else
-    {
-      /* one is a copy while the other one is not
-       * -> different lines of history */
-      *changed = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
    TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
    the copies table.  Perform temporary allocations in POOL. */
