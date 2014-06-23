@@ -4675,20 +4675,56 @@ def diff_switched_file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r', '1', sbox.ospath(''))
 
-@XFail()
 def diff_parent_dir(sbox):
   "diff parent directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'mkdir', 'A/ZZZ',
+                                         'propset', 'A', 'B', 'A/ZZZ')
+
   was_cwd = os.getcwd()
   os.chdir(os.path.join(wc_dir, 'A', 'B'))
   try:
     # This currently (1.8.9, 1.9.0 development) triggers an assertion failure
     # as a non canonical relpath ".." is used as diff target
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                     'diff', '-r', '1', '..')
+
+    expected_output = [
+      'Index: ../ZZZ\n',
+      '===================================================================\n',
+      '--- ../ZZZ	(revision 2)\n',
+      '+++ ../ZZZ	(nonexistent)\n',
+      '\n',
+      'Property changes on: ../ZZZ\n',
+      '___________________________________________________________________\n',
+      'Deleted: A\n',
+      '## -1 +0,0 ##\n',
+      '-B\n',
+      '\ No newline at end of property\n',
+    ]
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '2', '..')
+
+    expected_output = [
+      'Index: ../../A/ZZZ\n',
+      '===================================================================\n',
+      '--- ../../A/ZZZ	(revision 2)\n',
+      '+++ ../../A/ZZZ	(nonexistent)\n',
+      '\n',
+      'Property changes on: ../../A/ZZZ\n',
+      '___________________________________________________________________\n',
+      'Deleted: A\n',
+      '## -1 +0,0 ##\n',
+      '-B\n',
+      '\ No newline at end of property\n',
+    ]
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '2', '../..')
   finally:
     os.chdir(was_cwd)
 
