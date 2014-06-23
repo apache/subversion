@@ -124,9 +124,12 @@ Candidate changes:
    Make property output in 'svn diff' stable
    Justification:
      Local change that makes it easier to compare patch files.
+   Branch:
+     ^/subversion/branches/1.8.x-r1589360
    Votes:
      +1: rhuijben
-     -0: stefan2 (compiler misses "private/svn_sorts_private.h")
+     -0: stefan2 (compiler misses "private/svn_sorts_private.h",
+                  before branch)
      
  * r1589460, r1589486
    Fix copying parents of locally deleted nodes between working copies.
