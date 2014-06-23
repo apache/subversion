@@ -160,10 +160,13 @@ get_node_revision(node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       node_revision_t *noderev;
+      apr_pool_t *scratch_pool = svn_pool_create(node->node_pool);
 
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, node->fs,
-                                           node->id, node->node_pool));
+                                           node->id, node->node_pool,
+                                           scratch_pool));
       node->node_revision = noderev;
+      svn_pool_destroy(scratch_pool);
     }
 
   /* Now NODE->node_revision is set.  */

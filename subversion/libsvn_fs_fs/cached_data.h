@@ -36,7 +36,8 @@ svn_error_t *
 svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                              svn_fs_t *fs,
                              const svn_fs_id_t *id,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */

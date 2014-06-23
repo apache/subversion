@@ -304,7 +304,8 @@ process_one_revision(svn_fs_t *fs,
       the_id = node_rev_id2;
 
       /* Get the node_rev using the chosen node_rev_id. */
-      SVN_ERR(svn_fs_fs__get_node_revision(&node_rev, fs, the_id, scratch_pool));
+      SVN_ERR(svn_fs_fs__get_node_revision(&node_rev, fs, the_id,
+                                           scratch_pool, scratch_pool));
 
       /* Maybe record the sha1's. */
       SVN_ERR(record(prop_reps, node_rev->prop_rep, result_pool));

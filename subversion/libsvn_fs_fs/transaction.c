@@ -912,7 +912,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   node_revision_t *noderev;
   const svn_fs_fs__id_part_t *node_id, *copy_id;
 
-  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, src, pool));
+  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, src, pool, pool));
 
   if (svn_fs_fs__id_is_txn(noderev->id))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1236,7 +1236,7 @@ svn_fs_fs__get_txn(transaction_t **txn_p,
   SVN_ERR(get_txn_proplist(txn->proplist, fs, txn_id, pool));
   root_id = svn_fs_fs__id_txn_create_root(txn_id, pool);
 
-  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, root_id, pool));
+  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, root_id, pool, pool));
 
   txn->root_id = svn_fs_fs__id_copy(noderev->id, pool);
   txn->base_id = svn_fs_fs__id_copy(noderev->predecessor_id, pool);
@@ -1854,13 +1854,17 @@ shards_spanned(int *spanned,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
+  apr_pool_t *iterpool;
 
   int count = walk ? 1 : 0; /* The start of a walk already touches a shard. */
   svn_revnum_t shard, last_shard = ffd->youngest_rev_cache / shard_size;
+  iterpool = svn_pool_create(pool);
   while (walk-- && noderev->predecessor_count)
     {
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs,
-                                           noderev->predecessor_id, pool));
+                                           noderev->predecessor_id, pool,
+                                           iterpool));
       shard = svn_fs_fs__id_rev(noderev->id) / shard_size;
       if (shard != last_shard)
         {
@@ -1868,6 +1872,7 @@ shards_spanned(int *spanned,
           last_shard = shard;
         }
     }
+  svn_pool_destroy(iterpool);
 
   *spanned = count;
   return SVN_NO_ERROR;
@@ -1894,6 +1899,7 @@ choose_delta_base(representation_t **rep,
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *iterpool;
 
   /* If we have no predecessors, or that one is empty, then use the empty
    * stream as a base. */
@@ -1940,9 +1946,15 @@ choose_delta_base(representation_t **rep,
      if noderev has ten predecessors and we want the eighth file rev,
      walk back two predecessors.) */
   base = noderev;
+  iterpool = svn_pool_create(pool);
   while ((count++) < noderev->predecessor_count)
-    SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
-                                         base->predecessor_id, pool));
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
+                                           base->predecessor_id, pool,
+                                           iterpool));
+    }
+  svn_pool_destroy(iterpool);
 
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
@@ -2736,8 +2748,7 @@ validate_root_noderev(svn_fs_t *fs,
     SVN_ERR(svn_fs_fs__revision_root(&head_revision, fs, head_revnum, pool));
     SVN_ERR(svn_fs_fs__node_id(&head_root_id, head_revision, "/", pool));
     SVN_ERR(svn_fs_fs__get_node_revision(&head_root_noderev, fs, head_root_id,
-                                         pool));
-
+                                         pool, pool));
     head_predecessor_count = head_root_noderev->predecessor_count;
   }
 
@@ -2843,6 +2854,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__id_txn_id(id);
   svn_stream_t *file_stream;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
+  apr_pool_t *subpool;
 
   *new_id_p = NULL;
 
@@ -2850,16 +2862,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (! svn_fs_fs__id_is_txn(id))
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));
+  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool, subpool));
 
   if (noderev->kind == svn_node_dir)
     {
-      apr_pool_t *subpool;
       apr_array_header_t *entries;
       int i;
 
       /* This is a directory.  Write out all the children first. */
-      subpool = svn_pool_create(pool);
 
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool,
                                           subpool));
@@ -2876,7 +2887,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
-      svn_pool_destroy(subpool);
 
       if (noderev->data_rep && is_txn_rep(noderev->data_rep))
         {
@@ -2921,6 +2931,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
             }
         }
     }
+
+  svn_pool_destroy(subpool);
 
   /* Fix up the property reps. */
   if (noderev->prop_rep && is_txn_rep(noderev->prop_rep))
@@ -3950,7 +3962,7 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));
+  SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool, pool));
 
   /* Delete any mutable property representation. */
   if (noderev->prop_rep && is_txn_rep(noderev->prop_rep))
