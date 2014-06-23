@@ -1171,8 +1171,8 @@ parse_raw_window(void **out,
  * rep state RS from the current FSFS session's cache.  This will be a
  * no-op and IS_CACHED will be set to FALSE if no cache has been given.
  * If a cache is available IS_CACHED will inform the caller about the
- * success of the lookup. Allocations (of the window in particualar) will
- * be made from POOL.
+ * success of the lookup. Allocations of the window in will be made
+ * from RESULT_POOL. Use SCRATCH_POOL for temporary allocations.
  *
  * If the information could be found, put RS to CHUNK_INDEX.
  */
@@ -1181,7 +1181,8 @@ get_cached_window(svn_txdelta_window_t **window_p,
                   rep_state_t *rs,
                   int chunk_index,
                   svn_boolean_t *is_cached,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   if (! rs->window_cache)
     {
@@ -1199,7 +1200,7 @@ get_cached_window(svn_txdelta_window_t **window_p,
                              is_cached,
                              rs->window_cache,
                              &key,
-                             pool));
+                             result_pool));
 
       /* If we did not find a parsed txdelta window, we might have a raw
          version of it in our cache.  If so, read, parse and re-cache it. */
@@ -1207,10 +1208,10 @@ get_cached_window(svn_txdelta_window_t **window_p,
         {
           SVN_ERR(svn_cache__get_partial((void **) &cached_window, is_cached,
                                          rs->raw_window_cache, &key,
-                                         parse_raw_window, NULL, pool));
+                                         parse_raw_window, NULL, result_pool));
           if (*is_cached)
             SVN_ERR(svn_cache__set(rs->window_cache, &key, cached_window,
-                                   pool));
+                                   scratch_pool));
         }
 
       /* Return cached information. */
@@ -1451,7 +1452,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
    than THIS_CHUNK + 1 when this function returns. */
 static svn_error_t *
 read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
-                  rep_state_t *rs, apr_pool_t *pool)
+                  rep_state_t *rs, apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_cached;
   apr_off_t start_offset;
@@ -1461,10 +1463,11 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
   SVN_ERR(dbg_log_access(rs->sfile->fs, rs->revision, rs->item_index,
-                         NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+                         NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, scratch_pool));
 
   /* Read the next window.  But first, try to find it in the cache. */
-  SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
+  SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached,
+                            result_pool, scratch_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
@@ -1480,27 +1483,28 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
       && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
-                         rs->sfile->rfile, pool, pool));
+                         rs->sfile->rfile, result_pool, scratch_pool));
 
       /* reading the whole block probably also provided us with the
          desired txdelta window */
-      SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached, pool));
+      SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached,
+                                result_pool, scratch_pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
 
   /* data is still not cached -> we need to read it.
      Make sure we have all the necessary info. */
-  SVN_ERR(auto_set_start_offset(rs, pool));
-  SVN_ERR(auto_read_diff_version(rs, pool));
+  SVN_ERR(auto_set_start_offset(rs, scratch_pool));
+  SVN_ERR(auto_read_diff_version(rs, scratch_pool));
 
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   start_offset = rs->start + rs->current;
-  SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
+  SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, scratch_pool));
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   while (rs->chunk_index < this_chunk)
     {
       svn_pool_clear(iterpool);
@@ -1519,8 +1523,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 
   /* Actually read the next window. */
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, rs->sfile->rfile->stream,
-                                          rs->ver, pool));
-  SVN_ERR(get_file_offset(&end_offset, rs, pool));
+                                          rs->ver, result_pool));
+  SVN_ERR(get_file_offset(&end_offset, rs, scratch_pool));
   rs->current = end_offset - rs->start;
   if (rs->current > rs->size)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1530,7 +1534,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   /* the window has not been cached before, thus cache it now
    * (if caching is used for them at all) */
   if (SVN_IS_VALID_REVNUM(rs->revision))
-    SVN_ERR(set_cached_window(*nwin, rs, pool));
+    SVN_ERR(set_cached_window(*nwin, rs, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1538,22 +1542,23 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 /* Read SIZE bytes from the representation RS and return it in *NWIN. */
 static svn_error_t *
 read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
-                  apr_size_t size, apr_pool_t *pool)
+                  apr_size_t size, apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
   
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   SVN_ERR(auto_open_shared_file(rs->sfile));
-  SVN_ERR(auto_set_start_offset(rs, pool));
+  SVN_ERR(auto_set_start_offset(rs, scratch_pool));
 
   offset = rs->start + rs->current;
-  SVN_ERR(rs_aligned_seek(rs, NULL, offset, pool));
+  SVN_ERR(rs_aligned_seek(rs, NULL, offset, scratch_pool));
 
   /* Read the plain data. */
-  *nwin = svn_stringbuf_create_ensure(size, pool);
+  *nwin = svn_stringbuf_create_ensure(size, result_pool);
   SVN_ERR(svn_io_file_read_full2(rs->sfile->rfile->file, (*nwin)->data, size,
-                                 NULL, NULL, pool));
+                                 NULL, NULL, result_pool));
   (*nwin)->data[size] = 0;
 
   /* Update RS. */
@@ -1574,6 +1579,7 @@ get_combined_window(svn_stringbuf_t **result,
   apr_array_header_t *windows;
   svn_stringbuf_t *source, *buf = rb->base_window;
   rep_state_t *rs;
+  apr_pool_t *iterpool;
 
   /* Read all windows that we need to combine. This is fine because
      the size of each window is relatively small (100kB) and skip-
@@ -1581,12 +1587,16 @@ get_combined_window(svn_stringbuf_t **result,
      Stop early if one of them does not depend on its predecessors. */
   window_pool = svn_pool_create(rb->pool);
   windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
+  iterpool = svn_pool_create(rb->pool);
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
       svn_txdelta_window_t *window;
 
+      svn_pool_clear(iterpool);
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
-      SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
+      SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool,
+                                iterpool));
 
       APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
       if (window->src_ops == 0)
@@ -1602,6 +1612,8 @@ get_combined_window(svn_stringbuf_t **result,
     {
       svn_txdelta_window_t *window;
 
+      svn_pool_clear(iterpool);
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
@@ -1612,7 +1624,7 @@ get_combined_window(svn_stringbuf_t **result,
       source = buf;
       if (source == NULL && rb->src_state != NULL)
         SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
-                                  pool));
+                                  pool, iterpool));
 
       /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
@@ -1639,6 +1651,7 @@ get_combined_window(svn_stringbuf_t **result,
       svn_pool_destroy(pool);
       pool = new_pool;
     }
+  svn_pool_destroy(iterpool);
 
   svn_pool_destroy(window_pool);
 
@@ -2167,13 +2180,17 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
                        apr_pool_t *pool)
 {
   struct delta_read_baton *drb = baton;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   *window = NULL;
   if (drb->rs->current < drb->rs->size)
     {
-      SVN_ERR(read_delta_window(window, drb->rs->chunk_index, drb->rs, pool));
+      SVN_ERR(read_delta_window(window, drb->rs->chunk_index, drb->rs, pool,
+                                scratch_pool));
       drb->rs->chunk_index++;
     }
+
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
