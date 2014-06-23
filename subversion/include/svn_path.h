@@ -722,7 +722,7 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
  * characters have been escaped using the form "\NNN" (where NNN is the
  * octal representation of the byte's ordinal value).
  *
- * @since New in 1.9. */
+ * @since New in 1.8. */
 const char *
 svn_path_illegal_path_escape(const char *path, apr_pool_t *pool);
 
