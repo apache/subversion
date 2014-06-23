@@ -4675,6 +4675,23 @@ def diff_switched_file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r', '1', sbox.ospath(''))
 
+@XFail()
+def diff_parent_dir(sbox):
+  "diff parent directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  was_cwd = os.getcwd()
+  os.chdir(os.path.join(wc_dir, 'A', 'B'))
+  try:
+    # This currently (1.8.9, 1.9.0 development) triggers an assertion failure
+    # as a non canonical relpath ".." is used as diff target
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', '-r', '1', '..')
+  finally:
+    os.chdir(was_cwd)
+
 
 ########################################################################
 #Run the tests
@@ -4762,6 +4779,7 @@ test_list = [ None,
               diff_repo_wc_file_props,
               diff_repo_repo_added_file_mime_type,
               diff_switched_file,
+              diff_parent_dir,
               ]
 
 if __name__ == '__main__':
