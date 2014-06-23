@@ -1159,7 +1159,7 @@ svn_fs_fs__serialize_changes(void **data,
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&changes,
                                       sizeof(changes),
-                                      changes.count * 100,
+                                      changes.count * 250,
                                       pool);
 
   svn_temp_serializer__push(context,
