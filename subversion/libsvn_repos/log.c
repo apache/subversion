@@ -193,9 +193,18 @@ detect_changed(apr_hash_t **changed,
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
 
-  *changed = svn_hash__make(pool);
+  /* If we create the CHANGES hash ourselves, we can reuse it as the
+   * result hash as it contains the exact same keys - but with _all_
+   * values being replaced by structs of a different type. */
   if (changes == NULL)
-    SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+    {
+      SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+      *changed = changes;
+    }
+  else
+    {
+      *changed = svn_hash__make(pool);
+    }
 
   if (apr_hash_count(changes) == 0)
     /* No paths changed in this revision?  Uh, sure, I guess the
