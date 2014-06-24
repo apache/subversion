@@ -1068,6 +1068,15 @@ svn__strtoul(const char* buffer, const char** end)
   return result;
 }
 
+long
+svn__strtol(const char* buffer, const char** end)
+{
+  if (*buffer == '-')
+    return -(long)svn__strtoul(buffer+1, end);
+  else
+    return (long)svn__strtoul(buffer, end);
+}
+
 
 /* "Precalculated" itoa values for 2 places (including leading zeros).
  * For maximum performance, make sure all table entries are word-aligned.

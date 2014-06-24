@@ -139,6 +139,13 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
 unsigned long
 svn__strtoul(const char *buffer, const char **end);
 
+/** Like strtol but with a fixed base of 10 and without overflow checks.
+ * This allows the compiler to generate massively faster code.
+ * (E.g. Avoiding locale specific processing)
+ */
+long
+svn__strtol(const char *buffer, const char **end);
+
 /** Number of chars needed to represent signed (19 places + sign + NUL) or
  * unsigned (20 places + NUL) integers as strings.
  */
