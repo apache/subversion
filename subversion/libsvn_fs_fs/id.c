@@ -78,7 +78,10 @@ part_parse(svn_fs_fs__id_part_t *part,
       return *data == '\0';
     }
 
-  part->revision = SVN_STR_TO_REV(++data);
+  {
+    const char *end;
+    part->revision = svn__strtol(data+1, &end);
+  }
 
   return TRUE;
 }
@@ -90,8 +93,9 @@ static svn_boolean_t
 txn_id_parse(svn_fs_fs__id_part_t *txn_id,
              const char *data)
 {
-  txn_id->revision = SVN_STR_TO_REV(data);
-  data = strchr(data, '-');
+  const char *end;
+  txn_id->revision = svn__strtol(data, &end);
+  data = strchr(end, '-');
   if (data == NULL)
     return FALSE;
 
@@ -435,16 +439,11 @@ svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 
 
 svn_fs_id_t *
-svn_fs_fs__id_parse(const char *data,
-                    apr_size_t len,
+svn_fs_fs__id_parse(char *data,
                     apr_pool_t *pool)
 {
   fs_fs__id_t *id;
-  char *data_copy, *str;
-
-  /* Dup the ID data into POOL.  Our returned ID will have references
-     into this memory. */
-  data_copy = apr_pstrmemdup(pool, data, len);
+  char *str;
 
   /* Alloc a new svn_fs_id_t structure. */
   id = apr_pcalloc(pool, sizeof(*id));
@@ -458,40 +457,41 @@ svn_fs_fs__id_parse(const char *data,
      string.*/
 
   /* Node Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->private_id.node_id, str))
     return NULL;
 
   /* Copy Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->private_id.copy_id, str))
     return NULL;
 
   /* Txn/Rev Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
 
   if (str[0] == 'r')
     {
       apr_int64_t val;
+      const char *tmp;
       svn_error_t *err;
 
       /* This is a revision type ID */
       id->private_id.txn_id.revision = SVN_INVALID_REVNUM;
       id->private_id.txn_id.number = 0;
 
-      data_copy = str + 1;
-      str = svn_cstring_tokenize("/", &data_copy);
+      data = str + 1;
+      str = svn_cstring_tokenize("/", &data);
       if (str == NULL)
         return NULL;
-      id->private_id.rev_item.revision = SVN_STR_TO_REV(str);
+      id->private_id.rev_item.revision = svn__strtol(str, &tmp);
 
-      err = svn_cstring_atoi64(&val, data_copy);
+      err = svn_cstring_atoi64(&val, data);
       if (err)
         {
           svn_error_clear(err);

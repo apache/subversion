@@ -2141,7 +2141,8 @@ def post_commit_hook_test(sbox):
   # filesystem will report an absolute path because that's the way the
   # filesystem is created by this test suite.
   expected_output = [ "Sending        "+ iota_path + "\n",
-                      "Transmitting file data .\n",
+                      "Transmitting file data .done\n",
+                      "Committing transaction...\n",
                       "Committed revision 2.\n",
                       "\n",
                       "Warning: " +

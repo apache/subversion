@@ -179,7 +179,9 @@ class SvnClientTest < Test::Unit::TestCase
 
       infos = []
       ctx.set_notify_func do |notify|
-        infos << [notify.path, notify]
+        if notify.action != Svn::Wc::NOTIFY_COMMIT_FINALIZING
+          infos << [notify.path, notify]
+        end
       end
 
       assert_equal([false, false], dirs_path.collect {|path| path.exist?})
@@ -223,7 +225,9 @@ class SvnClientTest < Test::Unit::TestCase
 
       infos = []
       ctx.set_notify_func do |notify|
-        infos << [notify.path, notify]
+        if notify.action != Svn::Wc::NOTIFY_COMMIT_FINALIZING
+          infos << [notify.path, notify]
+        end
       end
 
       assert_equal([false, false], [dir_path.exist?, child_dir_path.exist?])
@@ -1228,10 +1232,12 @@ class SvnClientTest < Test::Unit::TestCase
       end
       ctx.ci(@wc_path)
 
-      assert_equal([full_path2.to_s].sort,
+      assert_equal([full_path2.to_s, '.'].sort,
                    infos.collect{|path, notify| path}.sort)
       path2_notify = infos.assoc(full_path2.to_s)[1]
       assert(path2_notify.commit_added?)
+      finalizing_notify = infos.assoc('.')[1]
+      assert(finalizing_notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING)
       assert_equal(File.open(path1) {|f| f.read},
                    File.open(path2) {|f| f.read})
     end
@@ -1259,12 +1265,16 @@ class SvnClientTest < Test::Unit::TestCase
       end
       ctx.ci(@wc_path)
 
-      assert_equal([path1, path2].sort.collect{|p|File.expand_path(p)},
+      assert_equal([path1, path2].collect do |p|
+                     File.expand_path(p)
+                   end.push('.').sort,
                    infos.collect{|path, notify| path}.sort)
       path1_notify = infos.assoc(File.expand_path(path1))[1]
       assert(path1_notify.commit_deleted?)
       path2_notify = infos.assoc(File.expand_path(path2))[1]
       assert(path2_notify.commit_added?)
+      finalizing_notify = infos.assoc('.')[1]
+      assert(finalizing_notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING)
       assert_equal(src, File.open(path2) {|f| f.read})
     end
   end
@@ -1303,7 +1313,9 @@ class SvnClientTest < Test::Unit::TestCase
       paths = notifies.collect do |notify|
         notify.path
       end
-      assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)},
+      assert_equal([path1, path2, path2].collect do |p|
+                     File.expand_path(p)
+                   end.push('.').sort,
                    paths.sort)
 
       deleted_paths = notifies.find_all do |notify|
@@ -1329,6 +1341,13 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                    postfix_txdelta_paths.sort)
+
+      finalizing_paths = notifies.find_all do |notify|
+        notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING
+      end.collect do |notify|
+        notify.path
+      end
+      assert_equal(['.'], finalizing_paths)
 
       assert_equal(src2, File.open(path2) {|f| f.read})
     end

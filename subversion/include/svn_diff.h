@@ -505,6 +505,7 @@ svn_diff_file_options_create(apr_pool_t *pool);
  * - --ignore-all-space, -w
  * - --ignore-eol-style
  * - --show-c-function, -p @since New in 1.5.
+ * - --context, -U ARG @since New in 1.9.
  * - --unified, -u (for compatibility, does nothing).
  */
 svn_error_t *

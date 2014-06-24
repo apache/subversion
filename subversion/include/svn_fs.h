@@ -110,6 +110,12 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
+/** Enable / disable the FSFS format 7 "block read" feature.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_BLOCK_READ           "fsfs-block-read"
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
@@ -1003,6 +1009,8 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 /** Allow the client to specify the final svn:date of the revision by
  * setting or deleting the corresponding transaction property rather
  * than have it set automatically when the transaction is committed.
+ *
+ * @since New in 1.9.
  */
 #define SVN_FS_TXN_CLIENT_DATE                   0x00004
 
@@ -2561,6 +2569,8 @@ void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
  *
  * If the callback returns an error no further callbacks will be made
  * and svn_fs_lock_many/svn_fs_unlock_many will return an error.
+ *
+ * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                const char *path,

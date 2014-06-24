@@ -416,7 +416,9 @@ cache_lookup( fs_fs_dag_cache_t *cache
 /* 2nd level cache */
 
 /* Find and return the DAG node cache for ROOT and the key that
-   should be used for PATH. */
+   should be used for PATH.
+
+   Pool will only be used for allocating a new keys if necessary */
 static void
 locate_cache(svn_cache__t **cache,
              const char **key,
@@ -427,15 +429,20 @@ locate_cache(svn_cache__t **cache,
   if (root->is_txn_root)
     {
       fs_txn_root_data_t *frd = root->fsap_data;
-      if (cache) *cache = frd->txn_node_cache;
-      if (key && path) *key = path;
+
+      if (cache)
+        *cache = frd->txn_node_cache;
+      if (key && path)
+        *key = path;
     }
   else
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key
-        = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
+
+      if (cache)
+        *cache = ffd->rev_node_cache;
+      if (key && path)
+        *key = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
     }
 }
 
@@ -1856,11 +1863,19 @@ merge(svn_stringbuf_t *conflict_p,
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
     svn_boolean_t same;
+    apr_pool_t *scratch_pool;
 
     /* Get node revisions for our id's. */
-    SVN_ERR(svn_fs_fs__get_node_revision(&tgt_nr, fs, target_id, pool));
-    SVN_ERR(svn_fs_fs__get_node_revision(&anc_nr, fs, ancestor_id, pool));
-    SVN_ERR(svn_fs_fs__get_node_revision(&src_nr, fs, source_id, pool));
+    scratch_pool = svn_pool_create(pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&tgt_nr, fs, target_id, pool,
+                                         scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&anc_nr, fs, ancestor_id, pool,
+                                         scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_fs__get_node_revision(&src_nr, fs, source_id, pool,
+                                         scratch_pool));
+    svn_pool_destroy(scratch_pool);
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -2517,65 +2532,6 @@ fs_same_p(svn_boolean_t *same_p,
   *same_p = ! strcmp(fs1->uuid, fs2->uuid);
   return SVN_NO_ERROR;
 }
-
-/* Set CHANGES to TRUE if PATH in ROOT is unchanged in REVISION if the
-   same files system.  If the content is identical, parent path copies and
-   deletions still count as changes.  Use POOL for temporary allocations.
-   Not that we will return an error if PATH does not exist in ROOT or
-   REVISION- */
-static svn_error_t *
-is_changed_node(svn_boolean_t *changed,
-                svn_fs_root_t *root,
-                const char *path,
-                svn_revnum_t revision,
-                apr_pool_t *pool)
-{
-  dag_node_t *node, *rev_node;
-  svn_fs_root_t *rev_root;
-  svn_fs_root_t *copy_from_root1, *copy_from_root2;
-  const char *copy_from_path1, *copy_from_path2;
-
-  SVN_ERR(svn_fs_fs__revision_root(&rev_root, root->fs, revision, pool));
-
-  /* Get the NODE for FROM_PATH in FROM_ROOT.*/
-  SVN_ERR(get_dag(&node, root, path, TRUE, pool));
-  SVN_ERR(get_dag(&rev_node, rev_root, path, TRUE, pool));
-
-  /* different ID -> got changed */
-  if (!svn_fs_fs__id_eq(svn_fs_fs__dag_get_id(node),
-                        svn_fs_fs__dag_get_id(rev_node)))
-    {
-      *changed = TRUE;
-       return SVN_NO_ERROR;
-    }
-
-  /* same node. might still be a lazy copy with separate history */
-  SVN_ERR(fs_closest_copy(&copy_from_root1, &copy_from_path1, root,
-                          path, pool));
-  SVN_ERR(fs_closest_copy(&copy_from_root2, &copy_from_path2, rev_root,
-                          path, pool));
-
-  if (copy_from_root1 == NULL && copy_from_root2 == NULL)
-    {
-      /* never copied -> same line of history */
-      *changed = FALSE;
-    }
-  else if (copy_from_root1 != NULL && copy_from_root2 != NULL)
-    {
-      /* both got copied. At the same time & location? */
-      *changed = (copy_from_root1->rev != copy_from_root2->rev)
-                 || strcmp(copy_from_path1, copy_from_path2);
-    }
-  else
-    {
-      /* one is a copy while the other one is not
-       * -> different lines of history */
-      *changed = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
    TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
@@ -4475,7 +4431,7 @@ verify_node(dag_node_t *node,
               /* access mergeinfo counter with minimal overhead */
               node_revision_t *noderev;
               SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, dirent->id,
-                                                   iterpool));
+                                                   iterpool, iterpool));
               child_mergeinfo = noderev->mergeinfo_count;
             }
 

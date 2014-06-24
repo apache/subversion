@@ -4130,8 +4130,22 @@ svn_client_vacuum(const char *dir_abspath,
                   apr_pool_t *scratch_pool);
 
 
-/** Recursively cleanup a working copy directory @a dir, finishing any
+/** Recursively cleanup a working copy directory @a dir_abspath, finishing any
  * incomplete operations, removing lockfiles, etc.
+ *
+ * If @a break_locks is @c TRUE, existing working copy locks at or below @a
+ * dir_abspath are broken, otherwise a normal write lock is obtained.
+ *
+ * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
+ * timestamps for unmodified files in the working copy, reducing comparision
+ * time on future checks.
+ *
+ * If @a clear_dav_cache is @c TRUE, the caching of DAV information for older
+ * mod_dav served repositories is cleared. This clearing invalidates some
+ * cached information used for pre-HTTPv2 repositories.
+ *
+ * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
+ * copy root unreferenced files in the pristine store are removed.
  *
  * If @a include_externals is @c TRUE, recurse into externals and clean
  * them up as well.
@@ -4160,6 +4174,7 @@ svn_client_cleanup2(const char *dir_abspath,
  *
  * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,

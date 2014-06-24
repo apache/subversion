@@ -120,6 +120,7 @@ open_repos(svn_repos_t **repos,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
                            svn_uuid_generate(pool));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "1");
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));

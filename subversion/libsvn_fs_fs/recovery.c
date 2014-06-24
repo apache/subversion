@@ -161,7 +161,7 @@ recover_find_max_ids(svn_fs_t *fs,
 
   baton.stream = rev_file->stream;
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool, pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
@@ -184,7 +184,7 @@ recover_find_max_ids(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL,
                                  noderev->data_rep->item_index, pool));
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool, pool));
   if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
@@ -244,7 +244,7 @@ recover_find_max_ids(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+      id = svn_fs_fs__id_parse(str, iterpool);
 
       rev_item = svn_fs_fs__id_rev_item(id);
       if (rev_item->revision != rev)

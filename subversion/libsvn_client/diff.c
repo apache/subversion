@@ -1926,6 +1926,13 @@ diff_repos_wc(const char **root_relpath,
       SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path2,
                                         scratch_pool, scratch_pool));
 
+      /* Handle the ugly case where target is ".." */
+      if (*target && !svn_path_is_single_path_component(target))
+        {
+          anchor = svn_dirent_join(anchor, target, scratch_pool);
+          target = "";
+        }
+
       if (root_relpath)
         *root_relpath = apr_pstrdup(result_pool, target);
       if (root_is_dir)

@@ -391,7 +391,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: new utility class SVNUtil (r1512354)
     * javahl: serialize init of native library (r1519803)
     * javahl: fix value truncation checks (r1519913)
-    * javahl: Add ISVNClient.info2 which exposes svn_client_info3 (r1527844)
+    * javahl: Add ISVNClient.info which exposes svn_client_info4 (r1603481)
     * javahl: include name of exception class in error messages (r1532117)
     * javahl: simplify JNI environment handling (r1533804)
     * javahl: Revsion.UNSPECIFIED added as alias to Revision.START (r1533928)
