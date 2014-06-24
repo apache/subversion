@@ -2466,11 +2466,9 @@ get_dir_contents(apr_array_header_t **entries,
     }
   else if (noderev->data_rep)
     {
-      /* use a temporary pool for temp objects.
-       * Also undeltify content before parsing it. Otherwise, we could only
+      /* Undeltify content before parsing it. Otherwise, we could only
        * parse it byte-by-byte.
        */
-      apr_pool_t *text_pool = svn_pool_create(scratch_pool);
       apr_size_t len = noderev->data_rep->expanded_size
                      ? (apr_size_t)noderev->data_rep->expanded_size
                      : (apr_size_t)noderev->data_rep->size;
@@ -2478,16 +2476,14 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* The representation is immutable.  Read it normally. */
       SVN_ERR(svn_fs_fs__get_contents(&contents, fs, noderev->data_rep,
-                                      FALSE, text_pool));
-      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, text_pool));
+                                      FALSE, scratch_pool));
+      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
 
       /* de-serialize hash */
-      contents = svn_stream_from_stringbuf(text, text_pool);
+      contents = svn_stream_from_stringbuf(text, scratch_pool);
       SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
                                result_pool, scratch_pool));
-
-      svn_pool_destroy(text_pool);
     }
 
   return SVN_NO_ERROR;
