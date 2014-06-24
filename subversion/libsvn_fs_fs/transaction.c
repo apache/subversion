@@ -1816,7 +1816,7 @@ struct rep_write_baton
   /* calculate a modified FNV-1a checksum of the on-disk representation */
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
-  /* Local / scratch pool, available temporary allocations. */
+  /* Local / scratch pool, available for temporary allocations. */
   apr_pool_t *scratch_pool;
 
   /* Outer / result pool. */
