@@ -173,19 +173,13 @@ static svn_error_t *
 show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
 {
   const svn_string_t *der_cert;
-  int x509_err;
   apr_hash_t *certinfo;
 
   /* Convert header-less PEM to DER by undoing base64 encoding. */
   der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
 
-  x509_err = svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
-                                 scratch_pool, scratch_pool);
-  if (x509_err)
-    {
-      svn_cmdline_printf(scratch_pool, _("Error parsing certificate: 0x%x\n"), -x509_err);
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                              scratch_pool, scratch_pool)); 
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
                              (const char *)svn_hash_gets(certinfo,

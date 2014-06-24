@@ -57,10 +57,11 @@
 /*
  * ASN.1 DER decoding routines
  */
-static int asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
+static svn_error_t *
+asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
 {
   if ((end - *p) < 1)
-    return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+    return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
   if ((**p & 0x80) == 0)
     *len = *(*p)++;
@@ -68,7 +69,7 @@ static int asn1_get_len(const unsigned char **p, const unsigned char *end, int *
     switch (**p & 0x7F) {
     case 1:
       if ((end - *p) < 2)
-        return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+        return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
       *len = (*p)[1];
       (*p) += 2;
@@ -76,47 +77,48 @@ static int asn1_get_len(const unsigned char **p, const unsigned char *end, int *
 
     case 2:
       if ((end - *p) < 3)
-        return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+        return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
       *len = ((*p)[1] << 8) | (*p)[2];
       (*p) += 3;
       break;
 
     default:
-      return (TROPICSSL_ERR_ASN1_INVALID_LENGTH);
+      return svn_error_create(SVN_ERR_ASN1_INVALID_LENGTH, NULL, NULL);
       break;
     }
   }
 
   if (*len > (int)(end - *p))
-    return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+    return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
-static int asn1_get_tag(const unsigned char **p,
-      const unsigned char *end, int *len, int tag)
+static svn_error_t *
+asn1_get_tag(const unsigned char **p,
+             const unsigned char *end, int *len, int tag)
 {
   if ((end - *p) < 1)
-    return (TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+    return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
   if (**p != tag)
-    return (TROPICSSL_ERR_ASN1_UNEXPECTED_TAG);
+    return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, NULL, NULL);
 
   (*p)++;
 
-  return (asn1_get_len(p, end, len));
+  return svn_error_trace(asn1_get_len(p, end, len));
 }
 
-static int asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
+static svn_error_t *
+asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 {
-  int ret, len;
+  int len;
 
-  if ((ret = asn1_get_tag(p, end, &len, ASN1_INTEGER)) != 0)
-    return (ret);
+  SVN_ERR(asn1_get_tag(p, end, &len, ASN1_INTEGER));
 
   if (len > (int)sizeof(int) || (**p & 0x80) != 0)
-    return (TROPICSSL_ERR_ASN1_INVALID_LENGTH);
+    return svn_error_create(SVN_ERR_ASN1_INVALID_LENGTH, NULL, NULL);
 
   *val = 0;
 
@@ -125,63 +127,79 @@ static int asn1_get_int(const unsigned char **p, const unsigned char *end, int *
     (*p)++;
   }
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
  *  Version   ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
  */
-static int x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
+static svn_error_t *
+x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
 
-  if ((ret = asn1_get_tag(p, end, &len,
-        ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 0))
-      != 0) {
-    if (ret == TROPICSSL_ERR_ASN1_UNEXPECTED_TAG)
-      return (*ver = 0);
+  err = asn1_get_tag(p, end, &len,
+                     ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 0);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
+        {
+          svn_error_clear(err);
+          *ver = 0;
+          return SVN_NO_ERROR;
+        }
 
-    return (ret);
-  }
+      return svn_error_trace(err);
+    }
 
   end = *p + len;
 
-  if ((ret = asn1_get_int(p, end, ver)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_VERSION | ret);
+  err = asn1_get_int(p, end, ver);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_VERSION, err, NULL);
 
   if (*p != end)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_VERSION |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_VERSION, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
  *  CertificateSerialNumber   ::=  INTEGER
  */
-static int x509_get_serial(const unsigned char **p,
-         const unsigned char *end, x509_buf * serial)
+static svn_error_t *
+x509_get_serial(const unsigned char **p,
+                const unsigned char *end, x509_buf * serial)
 {
-  int ret;
+  svn_error_t *err;
 
   if ((end - *p) < 1)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_SERIAL |
-      TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, err, NULL);
+    }
 
   if (**p != (ASN1_CONTEXT_SPECIFIC | ASN1_PRIMITIVE | 2) &&
       **p != ASN1_INTEGER)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_SERIAL |
-      TROPICSSL_ERR_ASN1_UNEXPECTED_TAG);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, err, NULL);
+    }
 
   serial->tag = *(*p)++;
 
-  if ((ret = asn1_get_len(p, end, &serial->len)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_SERIAL | ret);
+  err = asn1_get_len(p, end, &serial->len);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, err, NULL);
 
   serial->p = *p;
   *p += serial->len;
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -189,37 +207,43 @@ static int x509_get_serial(const unsigned char **p,
  *     algorithm         OBJECT IDENTIFIER,
  *     parameters         ANY DEFINED BY algorithm OPTIONAL  }
  */
-static int x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
+static svn_error_t *
+x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
 
-  if ((ret = asn1_get_tag(p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_ALG | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
 
   end = *p + len;
   alg->tag = **p;
 
-  if ((ret = asn1_get_tag(p, end, &alg->len, ASN1_OID)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_ALG | ret);
+  err = asn1_get_tag(p, end, &alg->len, ASN1_OID);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
 
   alg->p = *p;
   *p += alg->len;
 
   if (*p == end)
-    return (0);
+    return SVN_NO_ERROR;
 
   /*
    * assume the algorithm parameters must be NULL
    */
-  if ((ret = asn1_get_tag(p, end, &len, ASN1_NULL)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_ALG | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_NULL);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
 
   if (*p != end)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_ALG |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -234,52 +258,62 @@ static int x509_get_alg(const unsigned char **p, const unsigned char *end, x509_
  *
  *  AttributeValue ::= ANY DEFINED BY AttributeType
  */
-static int x509_get_name(const unsigned char **p, const unsigned char *end, x509_name * cur)
+static svn_error_t *
+x509_get_name(const unsigned char **p, const unsigned char *end, x509_name * cur)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
   const unsigned char *end2;
   x509_buf *oid;
   x509_buf *val;
 
-  if ((ret = asn1_get_tag(p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SET)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SET);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
   end2 = end;
   end = *p + len;
 
-  if ((ret = asn1_get_tag(p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
   if (*p + len != end)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
   oid = &cur->oid;
   oid->tag = **p;
 
-  if ((ret = asn1_get_tag(p, end, &oid->len, ASN1_OID)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME | ret);
+  err = asn1_get_tag(p, end, &oid->len, ASN1_OID);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
   oid->p = *p;
   *p += oid->len;
 
   if ((end - *p) < 1)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME |
-      TROPICSSL_ERR_ASN1_OUT_OF_DATA);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, err, NULL);
+    }
 
   if (**p != ASN1_BMP_STRING && **p != ASN1_UTF8_STRING &&
       **p != ASN1_T61_STRING && **p != ASN1_PRINTABLE_STRING &&
       **p != ASN1_IA5_STRING && **p != ASN1_UNIVERSAL_STRING)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME |
-      TROPICSSL_ERR_ASN1_UNEXPECTED_TAG);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, err, NULL);
+    }
 
   val = &cur->val;
   val->tag = *(*p)++;
 
-  if ((ret = asn1_get_len(p, end, &val->len)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME | ret);
+  err = asn1_get_len(p, end, &val->len);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
   val->p = *p;
   *p += val->len;
@@ -287,21 +321,23 @@ static int x509_get_name(const unsigned char **p, const unsigned char *end, x509
   cur->next = NULL;
 
   if (*p != end)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_NAME |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
   /*
    * recurse until end of SEQUENCE is reached
    */
   if (*p == end2)
-    return (0);
+    return SVN_NO_ERROR;
 
   cur->next = (x509_name *) malloc(sizeof(x509_name));
 
   if (cur->next == NULL)
-    return (1);
+    return SVN_NO_ERROR;
 
-  return (x509_get_name(p, end2, cur->next));
+  return svn_error_trace(x509_get_name(p, end2, cur->next));
 }
 
 /*
@@ -313,23 +349,26 @@ static int x509_get_name(const unsigned char **p, const unsigned char *end, x509
  *     utcTime    UTCTime,
  *     generalTime  GeneralizedTime }
  */
-static int x509_get_dates(const unsigned char **p,
-        const unsigned char *end, x509_time * from, x509_time * to)
+static svn_error_t *
+x509_get_dates(const unsigned char **p,
+               const unsigned char *end, x509_time * from, x509_time * to)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
   char date[64];
 
-  if ((ret = asn1_get_tag(p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, err, NULL);
 
   end = *p + len;
 
   /*
    * TODO: also handle GeneralizedTime
    */
-  if ((ret = asn1_get_tag(p, end, &len, ASN1_UTC_TIME)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_UTC_TIME);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, err, NULL);
 
   memset(date, 0, sizeof(date));
   memcpy(date, *p, (len < (int)sizeof(date) - 1) ?
@@ -338,15 +377,16 @@ static int x509_get_dates(const unsigned char **p,
   if (sscanf(date, "%2d%2d%2d%2d%2d%2d",
        &from->year, &from->mon, &from->day,
        &from->hour, &from->min, &from->sec) < 5)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
 
   from->year += 100 * (from->year < 90);
   from->year += 1900;
 
   *p += len;
 
-  if ((ret = asn1_get_tag(p, end, &len, ASN1_UTC_TIME)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_UTC_TIME);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, err, NULL);
 
   memset(date, 0, sizeof(date));
   memcpy(date, *p, (len < (int)sizeof(date) - 1) ?
@@ -355,7 +395,7 @@ static int x509_get_dates(const unsigned char **p,
   if (sscanf(date, "%2d%2d%2d%2d%2d%2d",
        &to->year, &to->mon, &to->day,
        &to->hour, &to->min, &to->sec) < 5)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
 
   to->year += 100 * (to->year < 90);
   to->year += 1900;
@@ -363,71 +403,81 @@ static int x509_get_dates(const unsigned char **p,
   *p += len;
 
   if (*p != end)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_DATE |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
-static int x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
+static svn_error_t *
+x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
 
   sig->tag = **p;
 
-  if ((ret = asn1_get_tag(p, end, &len, ASN1_BIT_STRING)) != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_SIGNATURE | ret);
+  err = asn1_get_tag(p, end, &len, ASN1_BIT_STRING);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_SIGNATURE, err, NULL);
 
   if (--len < 1 || *(*p)++ != 0)
-    return (TROPICSSL_ERR_X509_CERT_INVALID_SIGNATURE);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_SIGNATURE, NULL, NULL);
 
   sig->len = len;
   sig->p = *p;
 
   *p += len;
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
  * X.509 v2/v3 unique identifier (not parsed)
  */
-static int x509_get_uid(const unsigned char **p,
-      const unsigned char *end, x509_buf * uid, int n)
+static svn_error_t *
+x509_get_uid(const unsigned char **p,
+             const unsigned char *end, x509_buf * uid, int n)
 {
-  int ret;
+  svn_error_t *err;
 
   if (*p == end)
-    return (0);
+    return SVN_NO_ERROR;
 
   uid->tag = **p;
 
-  if ((ret = asn1_get_tag(p, end, &uid->len,
-        ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n))
-      != 0) {
-    if (ret == TROPICSSL_ERR_ASN1_UNEXPECTED_TAG)
-      return (0);
+  err = asn1_get_tag(p, end, &uid->len,
+        ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n);
+    {
+      if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
 
-    return (ret);
-  }
+      return svn_error_trace(err);
+    }
 
   uid->p = *p;
   *p += uid->len;
 
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
  * Parse one certificate.
  */
-int
+svn_error_t *
 svn_x509_parse_cert(apr_hash_t **certinfo,
                     const char *buf,
                     int buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  int ret, len;
+  svn_error_t *err;
+  int len;
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
@@ -444,25 +494,24 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *              signatureAlgorithm       AlgorithmIdentifier,
    *              signatureValue           BIT STRING      }
    */
-  if ((ret = asn1_get_tag(&p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT);
-  }
+  err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
 
-  if (len != (int)(end - p)) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
-  }
+  if (len != (int)(end - p))
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
   /*
    * TBSCertificate  ::=  SEQUENCE  {
    */
   crt->tbs.p = p;
 
-  if ((ret = asn1_get_tag(&p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
-  }
+  err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   end = p + len;
   crt->tbs.len = end - crt->tbs.p;
@@ -474,25 +523,23 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *
    * signature                    AlgorithmIdentifier
    */
-  if ((ret = x509_get_version(&p, end, &crt->version)) != 0 ||
-      (ret = x509_get_serial(&p, end, &crt->serial)) != 0 ||
-      (ret = x509_get_alg(&p, end, &crt->sig_oid1)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_version(&p, end, &crt->version));
+  SVN_ERR(x509_get_serial(&p, end, &crt->serial));
+  SVN_ERR(x509_get_alg(&p, end, &crt->sig_oid1));
 
   crt->version++;
 
   if (crt->version > 3) {
-    return (TROPICSSL_ERR_X509_CERT_UNKNOWN_VERSION);
+    return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_VERSION, NULL, NULL);
   }
 
   if (crt->sig_oid1.len != 9 ||
       memcmp(crt->sig_oid1.p, OID_PKCS1, 8) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_UNKNOWN_SIG_ALG);
+    return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_SIG_ALG, NULL, NULL);
   }
 
   if (crt->sig_oid1.p[8] < 2 || crt->sig_oid1.p[8] > 5) {
-    return (TROPICSSL_ERR_X509_CERT_UNKNOWN_SIG_ALG);
+    return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_SIG_ALG, NULL, NULL);
   }
 
   /*
@@ -500,14 +547,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    */
   crt->issuer_raw.p = p;
 
-  if ((ret = asn1_get_tag(&p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
-  }
+  err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
-  if ((ret = x509_get_name(&p, p + len, &crt->issuer)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_name(&p, p + len, &crt->issuer));
 
   crt->issuer_raw.len = p - crt->issuer_raw.p;
 
@@ -517,24 +561,18 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *              notAfter           Time }
    *
    */
-  if ((ret = x509_get_dates(&p, end, &crt->valid_from,
-          &crt->valid_to)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_dates(&p, end, &crt->valid_from, &crt->valid_to));
 
   /*
    * subject                              Name
    */
   crt->subject_raw.p = p;
 
-  if ((ret = asn1_get_tag(&p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
-  }
+  err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
-  if ((ret = x509_get_name(&p, p + len, &crt->subject)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_name(&p, p + len, &crt->subject));
 
   crt->subject_raw.len = p - crt->subject_raw.p;
 
@@ -543,10 +581,9 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *              algorithm                        AlgorithmIdentifier,
    *              subjectPublicKey         BIT STRING      }
    */
-  if ((ret = asn1_get_tag(&p, end, &len,
-        ASN1_CONSTRUCTED | ASN1_SEQUENCE)) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT | ret);
-  }
+  err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   /* Skip pubkey. */
   p += len;
@@ -560,22 +597,16 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *                                               -- If present, version shall be v3
    */
   if (crt->version == 2 || crt->version == 3) {
-    ret = x509_get_uid(&p, end, &crt->issuer_id, 1);
-    if (ret != 0) {
-      return (ret);
-    }
+    SVN_ERR(x509_get_uid(&p, end, &crt->issuer_id, 1));
   }
 
   if (crt->version == 2 || crt->version == 3) {
-    ret = x509_get_uid(&p, end, &crt->subject_id, 2);
-    if (ret != 0) {
-      return (ret);
-    }
+    SVN_ERR(x509_get_uid(&p, end, &crt->subject_id, 2));
   }
 
   if (p != end) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
+    err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
+    return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
   }
 
   end = buf + buflen;
@@ -584,22 +615,19 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *      signatureAlgorithm       AlgorithmIdentifier,
    *      signatureValue           BIT STRING
    */
-  if ((ret = x509_get_alg(&p, end, &crt->sig_oid2)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_alg(&p, end, &crt->sig_oid2));
 
   if (memcmp(crt->sig_oid1.p, crt->sig_oid2.p, 9) != 0) {
-    return (TROPICSSL_ERR_X509_CERT_SIG_MISMATCH);
+    return svn_error_create(SVN_ERR_X509_CERT_SIG_MISMATCH, NULL, NULL);
   }
 
-  if ((ret = x509_get_sig(&p, end, &crt->sig)) != 0) {
-    return (ret);
-  }
+  SVN_ERR(x509_get_sig(&p, end, &crt->sig));
 
-  if (p != end) {
-    return (TROPICSSL_ERR_X509_CERT_INVALID_FORMAT |
-      TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
-  }
+  if (p != end)
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
 
   *certinfo = apr_hash_make(result_pool);
 
@@ -626,7 +654,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
                              crt->valid_to.hour,
                              crt->valid_to.min,
                              crt->valid_to.sec));
-  return (0);
+  return SVN_NO_ERROR;
 }
 
 /*
