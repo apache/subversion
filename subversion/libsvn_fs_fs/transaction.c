@@ -565,7 +565,7 @@ store_sha1_rep_mapping(svn_fs_t *fs,
         = svn_fs_fs__unparse_representation(noderev->data_rep,
                                             ffd->format,
                                             (noderev->kind == svn_node_dir),
-                                            scratch_pool);
+                                            scratch_pool, scratch_pool);
       SVN_ERR(svn_io_file_open(&rep_file, file_name,
                                APR_WRITE | APR_CREATE | APR_TRUNCATE
                                | APR_BUFFERED, APR_OS_DEFAULT, scratch_pool));
@@ -2213,7 +2213,7 @@ get_shared_rep(representation_t **old_rep,
           SVN_ERR(svn_stringbuf_from_file2(&rep_string, file_name,
                                            scratch_pool));
           SVN_ERR(svn_fs_fs__parse_representation(old_rep, rep_string,
-                                                  result_pool));
+                                                  result_pool, scratch_pool));
         }
     }
 
