@@ -629,7 +629,8 @@ read_header_block(apr_hash_t **headers,
 svn_error_t *
 svn_fs_fs__parse_representation(representation_t **rep_p,
                                 svn_stringbuf_t *text,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   representation_t *rep;
   char *str;
@@ -638,7 +639,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   svn_checksum_t *checksum;
   const char *end;
 
-  rep = apr_pcalloc(pool, sizeof(*rep));
+  rep = apr_pcalloc(result_pool, sizeof(*rep));
   *rep_p = rep;
 
   str = svn_cstring_tokenize(" ", &string);
@@ -687,7 +688,8 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str,
+                                 scratch_pool));
   memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
   /* The remaining fields are only used for formats >= 4, so check that. */
@@ -700,7 +702,8 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
+                                 scratch_pool));
   rep->has_sha1 = checksum != NULL;
   memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
@@ -733,17 +736,22 @@ static svn_error_t *
 read_rep_offsets(representation_t **rep_p,
                  char *string,
                  const svn_fs_id_t *noderev_id,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err
     = svn_fs_fs__parse_representation(rep_p,
-                                      svn_stringbuf_create_wrap(string, pool),
-                                      pool);
+                                      svn_stringbuf_create_wrap(string,
+                                                                scratch_pool),
+                                      result_pool,
+                                      scratch_pool);
   if (err)
     {
-      const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(noderev_id, pool);
+      const svn_string_t *id_unparsed;
       const char *where;
-      where = apr_psprintf(pool,
+
+      id_unparsed = svn_fs_fs__id_unparse(noderev_id, scratch_pool);
+      where = apr_psprintf(scratch_pool,
                            _("While reading representation offsets "
                              "for node-revision '%s':"),
                            noderev_id ? id_unparsed->data : "(null)");
@@ -812,7 +820,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               noderev->id, result_pool));
+                               noderev->id, result_pool, scratch_pool));
     }
 
   /* Get the data location. */
@@ -820,7 +828,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               noderev->id, result_pool));
+                               noderev->id, result_pool, scratch_pool));
     }
 
   /* Get the created path. */
@@ -935,30 +943,34 @@ svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
                                   svn_boolean_t mutable_rep_truncated,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   char buffer[SVN_INT64_BUFFER_SIZE];
   if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
-    return svn_stringbuf_ncreate("-1", 2, pool);
+    return svn_stringbuf_ncreate("-1", 2, result_pool);
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
     return svn_stringbuf_createf
-            (pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
+            (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
              rep->revision, rep->item_index, rep->size,
              rep->expanded_size,
-             format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
+             format_digest(rep->md5_digest, svn_checksum_md5, FALSE,
+                           scratch_pool));
 
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
-          (pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
+          (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
-           format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
+           format_digest(rep->md5_digest, svn_checksum_md5,
+                         FALSE, scratch_pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
-                         !rep->has_sha1, pool),
-           svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id, pool),
+                         !rep->has_sha1, scratch_pool),
+           svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id,
+                                     scratch_pool),
            buffer);
 }
 
@@ -992,13 +1004,13 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                 (noderev->data_rep,
                                  format,
                                  noderev->kind == svn_node_dir,
-                                 scratch_pool)->data));
+                                 scratch_pool, scratch_pool)->data));
 
   if (noderev->prop_rep)
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PROPS ": %s\n",
                               svn_fs_fs__unparse_representation
                                 (noderev->prop_rep, format,
-                                 TRUE, scratch_pool)->data));
+                                 TRUE, scratch_pool, scratch_pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));

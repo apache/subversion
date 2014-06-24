@@ -142,23 +142,26 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          apr_pool_t *scratch_pool);
 
 /* Parse the description of a representation from TEXT and store it
-   into *REP_P.  Allocate *REP_P in POOL. */
+   into *REP_P.  TEXT will be invalidated by this call.  Allocate *REP_P in
+   RESULT_POOL and use SCRATCH_POOL for temporaries. */
 svn_error_t *
 svn_fs_fs__parse_representation(representation_t **rep_p,
                                 svn_stringbuf_t *text,
-                                apr_pool_t *pool);
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* Return a formatted string, compatible with filesystem format FORMAT,
    that represents the location of representation REP.  If
    MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
    and only a "-1" revision number will be given for a mutable rep.
    If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
-   Perform the allocation from POOL.  */
+   Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
                                   svn_boolean_t mutable_rep_truncated,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* This type enumerates all forms of representations that we support. */
 typedef enum svn_fs_fs__rep_type_t

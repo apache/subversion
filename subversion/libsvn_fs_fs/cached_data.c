@@ -891,6 +891,7 @@ create_rep_state(rep_state_t **rep_state,
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
+      const char *rep_str;
 
       /* ### This always returns "-1" for transaction reps, because
          ### this particular bit of code doesn't know if the rep is
@@ -899,12 +900,14 @@ create_rep_state(rep_state_t **rep_state,
          ### from the protorev file, though, so this is probably OK.
          ### And anyone going to debug corruption errors is probably
          ### going to jump straight to this comment anyway! */
+      rep_str = rep
+              ? svn_fs_fs__unparse_representation
+                  (rep, ffd->format, TRUE, scratch_pool, scratch_pool)->data
+              : "(null)";
+
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt representation '%s'",
-                               rep
-                               ? svn_fs_fs__unparse_representation
-                                   (rep, ffd->format, TRUE, scratch_pool)->data
-                               : "(null)");
+                               rep_str);
     }
   /* ### Call representation_string() ? */
   return svn_error_trace(err);
