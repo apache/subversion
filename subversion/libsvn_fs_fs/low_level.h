@@ -102,7 +102,7 @@ typedef svn_error_t *(*svn_fs_fs__change_receiver_t)(
   apr_pool_t *scratch_pool);
 
 /* Read all the changes from STREAM and invoke CHANGE_RECEIVER on each change.
-   Do all allocations in POOL. */
+   Do all allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
                                       svn_fs_fs__change_receiver_t

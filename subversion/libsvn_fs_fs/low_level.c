@@ -411,12 +411,12 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
                                       svn_fs_fs__change_receiver_t
                                         change_receiver,
                                       void *change_receiver_baton,
-                                      apr_pool_t *pool)
+                                      apr_pool_t *scratch_pool)
 {
   change_t *change;
   apr_pool_t *iterpool;
 
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   do
     {
       svn_pool_clear(iterpool);
@@ -435,14 +435,14 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
    string COPYFROM, into the file specified by FILE.  Only include the
    node kind field if INCLUDE_NODE_KIND is true.  Only include the
    mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
-   allocations are in POOL. */
+   allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
                    svn_fs_path_change2_t *change,
                    svn_boolean_t include_node_kind,
                    svn_boolean_t include_mergeinfo_mods,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   const char *idstr;
   const char *change_string = NULL;
@@ -475,7 +475,7 @@ write_change_entry(svn_stream_t *stream,
     }
 
   if (change->node_rev_id)
-    idstr = svn_fs_fs__id_unparse(change->node_rev_id, pool)->data;
+    idstr = svn_fs_fs__id_unparse(change->node_rev_id, scratch_pool)->data;
   else
     idstr = ACTION_RESET;
 
@@ -483,19 +483,19 @@ write_change_entry(svn_stream_t *stream,
     {
       SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                      || change->node_kind == svn_node_file);
-      kind_string = apr_psprintf(pool, "-%s",
+      kind_string = apr_psprintf(scratch_pool, "-%s",
                                  change->node_kind == svn_node_dir
                                  ? SVN_FS_FS__KIND_DIR
                                   : SVN_FS_FS__KIND_FILE);
     }
 
   if (include_mergeinfo_mods && change->mergeinfo_mod != svn_tristate_unknown)
-    mergeinfo_string = apr_psprintf(pool, " %s",
+    mergeinfo_string = apr_psprintf(scratch_pool, " %s",
                                     change->mergeinfo_mod == svn_tristate_true
                                       ? FLAG_TRUE
                                       : FLAG_FALSE);
 
-  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s%s %s\n",
+  buf = svn_stringbuf_createf(scratch_pool, "%s %s%s %s %s%s %s\n",
                               idstr, change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
@@ -504,7 +504,7 @@ write_change_entry(svn_stream_t *stream,
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
-      svn_stringbuf_appendcstr(buf, apr_psprintf(pool, "%ld %s",
+      svn_stringbuf_appendcstr(buf, apr_psprintf(scratch_pool, "%ld %s",
                                                  change->copyfrom_rev,
                                                  change->copyfrom_path));
     }
@@ -566,13 +566,13 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
-   POOL. */
+   RESULT_POOL. */
 static svn_error_t *
 read_header_block(apr_hash_t **headers,
                   svn_stream_t *stream,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
-  *headers = svn_hash__make(pool);
+  *headers = svn_hash__make(result_pool);
 
   while (1)
     {
@@ -582,7 +582,8 @@ read_header_block(apr_hash_t **headers,
       apr_ssize_t name_len;
       svn_boolean_t eof;
 
-      SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof, pool));
+      SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof,
+                                  result_pool));
 
       if (eof || header_str->len == 0)
         break; /* end of header block */
@@ -921,13 +922,13 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
 /* Return a textual representation of the DIGEST of given KIND.
  * If IS_NULL is TRUE, no digest is available.
- * Use POOL for allocations.
+ * Allocate the result in RESULT_POOL.
  */
 static const char *
 format_digest(const unsigned char *digest,
               svn_checksum_kind_t kind,
               svn_boolean_t is_null,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool)
 {
   svn_checksum_t checksum;
   checksum.digest = digest;
@@ -936,7 +937,7 @@ format_digest(const unsigned char *digest,
   if (is_null)
     return "(null)";
 
-  return svn_checksum_to_cstring_display(&checksum, pool);
+  return svn_checksum_to_cstring_display(&checksum, result_pool);
 }
 
 svn_stringbuf_t *
