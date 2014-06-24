@@ -1816,9 +1816,11 @@ struct rep_write_baton
   /* calculate a modified FNV-1a checksum of the on-disk representation */
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
-  apr_pool_t *pool;
+  /* Local / scratch pool, available temporary allocations. */
+  apr_pool_t *scratch_pool;
 
-  apr_pool_t *parent_pool;
+  /* Outer / result pool. */
+  apr_pool_t *result_pool;
 };
 
 /* Handler for the write method of the representation writable stream.
@@ -2012,8 +2014,9 @@ rep_write_cleanup(void *data)
   svn_error_t *err;
 
   /* Truncate and close the protorevfile. */
-  err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
-  err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
+  err = svn_io_file_trunc(b->file, b->rep_offset, b->scratch_pool);
+  err = svn_error_compose_create(err, svn_io_file_close(b->file,
+                                                        b->scratch_pool));
 
   /* Remove our lock regardless of any preceding errors so that the
      being_written flag is always removed and stays consistent with the
@@ -2022,7 +2025,7 @@ rep_write_cleanup(void *data)
   err = svn_error_compose_create(err,
                                  unlock_proto_rev(b->fs,
                                      svn_fs_fs__id_txn_id(b->noderev->id),
-                                     b->lockcookie, b->pool));
+                                     b->lockcookie, b->scratch_pool));
   if (err)
     {
       apr_status_t rc = err->apr_err;
@@ -2059,27 +2062,28 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   b->fs = fs;
-  b->parent_pool = pool;
-  b->pool = svn_pool_create(pool);
+  b->result_pool = pool;
+  b->scratch_pool = svn_pool_create(pool);
   b->rep_size = 0;
   b->noderev = noderev;
 
   /* Open the prototype rev file and seek to its end. */
   SVN_ERR(get_writable_proto_rev(&file, &b->lockcookie,
                                  fs, svn_fs_fs__id_txn_id(noderev->id),
-                                 b->pool));
+                                 b->scratch_pool));
 
   b->file = file;
   b->rep_stream = fnv1a_wrap_stream(&b->fnv1a_checksum_ctx,
                                     svn_stream_from_aprfile2(file, TRUE,
-                                                             b->pool),
-                                    b->pool);
+                                                             b->scratch_pool),
+                                    b->scratch_pool);
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&b->rep_offset, file, b->pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&b->rep_offset, file, b->scratch_pool));
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->pool));
-  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, TRUE, b->pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->scratch_pool));
+  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, TRUE,
+                                  b->scratch_pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2093,13 +2097,15 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
     {
       header.type = svn_fs_fs__rep_self_delta;
     }
-  SVN_ERR(svn_fs_fs__write_rep_header(&header, b->rep_stream, b->pool));
+  SVN_ERR(svn_fs_fs__write_rep_header(&header, b->rep_stream,
+                                      b->scratch_pool));
 
   /* Now determine the offset of the actual svndiff data. */
-  SVN_ERR(svn_fs_fs__get_file_offset(&b->delta_start, file, b->pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&b->delta_start, file,
+                                     b->scratch_pool));
 
   /* Cleanup in case something goes wrong. */
-  apr_pool_cleanup_register(b->pool, b, rep_write_cleanup,
+  apr_pool_cleanup_register(b->scratch_pool, b, rep_write_cleanup,
                             apr_pool_cleanup_null);
 
   /* Prepare to write the svndiff data. */
@@ -2110,7 +2116,8 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                           ffd->delta_compression_level,
                           pool);
 
-  b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
+  b->delta_stream = svn_txdelta_target_push(wh, whb, source,
+                                            b->scratch_pool);
 
   *wb_p = b;
 
@@ -2123,15 +2130,16 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
    representation_t*), otherwise pass in NULL for REPS_HASH.
-   POOL will be used for allocations. The lifetime of the returned rep is
-   limited by both, POOL and REP lifetime.
+   Use RESULT_POOL for *OLD_REP  allocations and SCRATCH_POOL for temporaries.
+   The lifetime of *OLD_REP is limited by both, RESULT_POOL and REP lifetime.
  */
 static svn_error_t *
 get_shared_rep(representation_t **old_rep,
                svn_fs_t *fs,
                representation_t *rep,
                apr_hash_t *reps_hash,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2155,12 +2163,12 @@ get_shared_rep(representation_t **old_rep,
       svn_checksum_t checksum;
       checksum.digest = rep->sha1_digest;
       checksum.kind = svn_checksum_sha1;
-      err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, pool);
+      err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, result_pool);
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
         {
           if (*old_rep)
-            SVN_ERR(svn_fs_fs__check_rep(*old_rep, fs, NULL, pool));
+            SVN_ERR(svn_fs_fs__check_rep(*old_rep, fs, NULL, scratch_pool));
         }
       else if (err->apr_err == SVN_ERR_FS_CORRUPT
                || SVN_ERROR_IN_CATEGORY(err->apr_err,
@@ -2193,17 +2201,19 @@ get_shared_rep(representation_t **old_rep,
     {
       svn_node_kind_t kind;
       const char *file_name
-        = path_txn_sha1(fs, &rep->txn_id, rep->sha1_digest, pool);
+        = path_txn_sha1(fs, &rep->txn_id, rep->sha1_digest, scratch_pool);
 
       /* in our txn, is there a rep file named with the wanted SHA1?
          If so, read it and use that rep.
        */
-      SVN_ERR(svn_io_check_path(file_name, &kind, pool));
+      SVN_ERR(svn_io_check_path(file_name, &kind, scratch_pool));
       if (kind == svn_node_file)
         {
           svn_stringbuf_t *rep_string;
-          SVN_ERR(svn_stringbuf_from_file2(&rep_string, file_name, pool));
-          SVN_ERR(svn_fs_fs__parse_representation(old_rep, rep_string, pool));
+          SVN_ERR(svn_stringbuf_from_file2(&rep_string, file_name,
+                                           scratch_pool));
+          SVN_ERR(svn_fs_fs__parse_representation(old_rep, rep_string,
+                                                  result_pool));
         }
     }
 
@@ -2250,7 +2260,7 @@ rep_write_contents_close(void *baton)
   representation_t *old_rep;
   apr_off_t offset;
 
-  rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
+  rep = apr_pcalloc(b->result_pool, sizeof(*rep));
 
   /* Close our delta stream so the last bits of svndiff are written
      out. */
@@ -2258,27 +2268,28 @@ rep_write_contents_close(void *baton)
     SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->scratch_pool));
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = *svn_fs_fs__id_txn_id(b->noderev->id);
-  SVN_ERR(set_uniquifier(b->fs, rep, b->pool));
+  SVN_ERR(set_uniquifier(b->fs, rep, b->scratch_pool));
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
   SVN_ERR(digests_final(rep, b->md5_checksum_ctx, b->sha1_checksum_ctx,
-                        b->parent_pool));
+                        b->result_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->parent_pool));
+  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->result_pool,
+                         b->scratch_pool));
 
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
+      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->scratch_pool));
 
       /* Use the old rep for this content. */
       b->noderev->data_rep = old_rep;
@@ -2289,39 +2300,40 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
       SVN_ERR(allocate_item_index(&rep->item_index, b->fs, &rep->txn_id,
                                   SVN_INVALID_REVNUM, b->rep_offset,
-                                  b->pool));
+                                  b->scratch_pool));
 
       b->noderev->data_rep = rep;
     }
 
   /* Remove cleanup callback. */
-  apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
+  apr_pool_cleanup_kill(b->scratch_pool, b, rep_write_cleanup);
 
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
-                                       FALSE, b->pool));
+                                       FALSE, b->scratch_pool));
   if (!old_rep)
     {
       svn_fs_fs__p2l_entry_t entry;
 
       entry.offset = b->rep_offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->scratch_pool));
       entry.size = offset - b->rep_offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
       SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
                                       b->fnv1a_checksum_ctx,
-                                      b->pool));
+                                      b->scratch_pool));
 
-      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
+      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->scratch_pool));
       SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, SVN_INVALID_REVNUM,
-                                    &entry, b->pool));
+                                    &entry, b->scratch_pool));
     }
 
-  SVN_ERR(svn_io_file_close(b->file, b->pool));
-  SVN_ERR(unlock_proto_rev(b->fs, &rep->txn_id, b->lockcookie, b->pool));
-  svn_pool_destroy(b->pool);
+  SVN_ERR(svn_io_file_close(b->file, b->scratch_pool));
+  SVN_ERR(unlock_proto_rev(b->fs, &rep->txn_id, b->lockcookie,
+                           b->scratch_pool));
+  svn_pool_destroy(b->scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2541,7 +2553,8 @@ write_container_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool));
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
+                         scratch_pool));
 
   if (old_rep)
     {
@@ -2683,7 +2696,8 @@ write_container_delta_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool));
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
+                         scratch_pool));
 
   if (old_rep)
     {
