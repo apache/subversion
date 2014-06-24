@@ -189,7 +189,7 @@ detect_changed(apr_hash_t **changed,
 {
   apr_hash_t *changes = prefetched_changes;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
 
@@ -202,8 +202,7 @@ detect_changed(apr_hash_t **changed,
        revision is readable, then.  */
     return SVN_NO_ERROR;
 
-  subpool = svn_pool_create(pool);
-
+  iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       /* NOTE:  Much of this loop is going to look quite similar to
@@ -215,7 +214,7 @@ detect_changed(apr_hash_t **changed,
       char action;
       svn_log_changed_path2_t *item;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* Skip path if unreadable. */
       if (authz_read_func)
@@ -223,7 +222,7 @@ detect_changed(apr_hash_t **changed,
           svn_boolean_t readable;
           SVN_ERR(authz_read_func(&readable,
                                   root, path,
-                                  authz_read_baton, subpool));
+                                  authz_read_baton, iterpool));
           if (! readable)
             {
               found_unreadable = TRUE;
@@ -281,26 +280,26 @@ detect_changed(apr_hash_t **changed,
               svn_revnum_t prev_rev;
               const char *parent_path, *name;
 
-              svn_fspath__split(&parent_path, &name, path, subpool);
+              svn_fspath__split(&parent_path, &name, path, iterpool);
 
               SVN_ERR(svn_fs_node_history2(&history, root, parent_path,
-                                           subpool, subpool));
+                                           iterpool, iterpool));
 
               /* Two calls because the first call returns the original
                  revision as the deleted child means it is 'interesting' */
-              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, subpool,
-                                           subpool));
-              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, subpool,
-                                           subpool));
+              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                           iterpool));
+              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                           iterpool));
 
               SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
-                                              subpool));
-              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, subpool));
-              check_path = svn_fspath__join(parent_path, name, subpool);
+                                              iterpool));
+              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, iterpool));
+              check_path = svn_fspath__join(parent_path, name, iterpool);
             }
 
           SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
-                                    subpool));
+                                    iterpool));
         }
 
 
@@ -315,7 +314,7 @@ detect_changed(apr_hash_t **changed,
           if (!change->copyfrom_known)
             {
               SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                        root, path, subpool));
+                                        root, path, iterpool));
               copyfrom_path = apr_pstrdup(pool, copyfrom_path);
             }
 
@@ -328,10 +327,10 @@ detect_changed(apr_hash_t **changed,
                   svn_fs_root_t *copyfrom_root;
 
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                               copyfrom_rev, subpool));
+                                               copyfrom_rev, iterpool));
                   SVN_ERR(authz_read_func(&readable,
                                           copyfrom_root, copyfrom_path,
-                                          authz_read_baton, subpool));
+                                          authz_read_baton, iterpool));
                   if (! readable)
                     found_unreadable = TRUE;
                 }
@@ -347,7 +346,7 @@ detect_changed(apr_hash_t **changed,
       apr_hash_set(*changed, path, path_len, item);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   if (! found_readable)
     /* Every changed-path was unreadable. */
