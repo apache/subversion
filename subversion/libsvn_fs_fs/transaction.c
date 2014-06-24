@@ -541,12 +541,12 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
 /* For the in-transaction NODEREV within FS, write the sha1->rep mapping
  * file in the respective transaction, if rep sharing has been enabled etc.
- * Use POOL for temporary allocations.
+ * Use SCATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 store_sha1_rep_mapping(svn_fs_t *fs,
                        node_revision_t *noderev,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -560,20 +560,20 @@ store_sha1_rep_mapping(svn_fs_t *fs,
       const char *file_name = path_txn_sha1(fs,
                                             &noderev->data_rep->txn_id,
                                             noderev->data_rep->sha1_digest,
-                                            pool);
+                                            scratch_pool);
       svn_stringbuf_t *rep_string
         = svn_fs_fs__unparse_representation(noderev->data_rep,
                                             ffd->format,
                                             (noderev->kind == svn_node_dir),
-                                            pool);
+                                            scratch_pool);
       SVN_ERR(svn_io_file_open(&rep_file, file_name,
                                APR_WRITE | APR_CREATE | APR_TRUNCATE
-                               | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                               | APR_BUFFERED, APR_OS_DEFAULT, scratch_pool));
 
       SVN_ERR(svn_io_file_write_full(rep_file, rep_string->data,
-                                     rep_string->len, NULL, pool));
+                                     rep_string->len, NULL, scratch_pool));
 
-      SVN_ERR(svn_io_file_close(rep_file, pool));
+      SVN_ERR(svn_io_file_close(rep_file, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2499,7 +2499,7 @@ write_directory_to_stream(svn_stream_t *stream,
    found, we will truncate the one just written from the file and return
    the existing rep.  If FINAL_REVISION is not SVN_INVALID_REVNUM, use it
    to determine whether to write to the proto-index files.
-   Perform temporary allocations in POOL. */
+   Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 write_container_rep(representation_t *rep,
                     apr_file_t *file,
@@ -2509,7 +2509,7 @@ write_container_rep(representation_t *rep,
                     apr_hash_t *reps_hash,
                     int item_type,
                     svn_revnum_t final_revision,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
   struct write_container_baton *whb;
@@ -2517,35 +2517,36 @@ write_container_rep(representation_t *rep,
   representation_t *old_rep;
   apr_off_t offset = 0;
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
 
-  whb = apr_pcalloc(pool, sizeof(*whb));
+  whb = apr_pcalloc(scratch_pool, sizeof(*whb));
 
   whb->stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                                  svn_stream_from_aprfile2(file, TRUE, pool),
-                                  pool);
+                                  svn_stream_from_aprfile2(file, TRUE,
+                                                           scratch_pool),
+                                  scratch_pool);
   whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
 
-  stream = svn_stream_create(whb, pool);
+  stream = svn_stream_create(whb, scratch_pool);
   svn_stream_set_write(stream, write_container_handler);
 
   SVN_ERR(svn_stream_puts(whb->stream, "PLAIN\n"));
 
-  SVN_ERR(writer(stream, collection, pool));
+  SVN_ERR(writer(stream, collection, scratch_pool));
 
   /* Store the results. */
-  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
+  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool));
 
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, pool));
+      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
@@ -2558,20 +2559,20 @@ write_container_rep(representation_t *rep,
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  final_revision, offset, pool));
+                                  final_revision, offset, scratch_pool));
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
       SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
                                       fnv1a_checksum_ctx,
-                                      pool));
+                                      scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, final_revision,
-                                    &entry, pool));
+                                    &entry, scratch_pool));
 
       /* update the representation */
       rep->size = whb->size;
@@ -2593,7 +2594,8 @@ write_container_rep(representation_t *rep,
    If ITEM_TYPE is IS_PROPS equals SVN_FS_FS__ITEM_TYPE_*_PROPS, assume
    that we want to a props representation as the base for our delta.
    If FINAL_REVISION is not SVN_INVALID_REVNUM, use it to determine whether
-   to write to the proto-index files.  Perform temporary allocations in POOL.
+   to write to the proto-index files.
+   Perform temporary allocations in SCRATCH_POOL.
  */
 static svn_error_t *
 write_container_delta_rep(representation_t *rep,
@@ -2605,7 +2607,7 @@ write_container_delta_rep(representation_t *rep,
                           apr_hash_t *reps_hash,
                           int item_type,
                           svn_revnum_t final_revision,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   svn_txdelta_window_handler_t diff_wh;
   void *diff_whb;
@@ -2629,10 +2631,10 @@ write_container_delta_rep(representation_t *rep,
                         || (item_type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, pool));
-  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, FALSE, pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, scratch_pool));
+  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, FALSE, scratch_pool));
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2648,10 +2650,11 @@ write_container_delta_rep(representation_t *rep,
     }
 
   file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                                  svn_stream_from_aprfile2(file, TRUE, pool),
-                                  pool);
-  SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, pool));
-  SVN_ERR(svn_fs_fs__get_file_offset(&delta_start, file, pool));
+                                  svn_stream_from_aprfile2(file, TRUE,
+                                                           scratch_pool),
+                                  scratch_pool);
+  SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, scratch_pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&delta_start, file, scratch_pool));
 
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&diff_wh,
@@ -2659,32 +2662,33 @@ write_container_delta_rep(representation_t *rep,
                           file_stream,
                           diff_version,
                           ffd->delta_compression_level,
-                          pool);
+                          scratch_pool);
 
-  whb = apr_pcalloc(pool, sizeof(*whb));
-  whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source, pool);
+  whb = apr_pcalloc(scratch_pool, sizeof(*whb));
+  whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source,
+                                        scratch_pool);
   whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
 
   /* serialize the hash */
-  stream = svn_stream_create(whb, pool);
+  stream = svn_stream_create(whb, scratch_pool);
   svn_stream_set_write(stream, write_container_handler);
 
-  SVN_ERR(writer(stream, collection, pool));
+  SVN_ERR(writer(stream, collection, scratch_pool));
   SVN_ERR(svn_stream_close(whb->stream));
 
   /* Store the results. */
-  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
+  SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool));
 
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, pool));
+      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
@@ -2694,24 +2698,24 @@ write_container_delta_rep(representation_t *rep,
       svn_fs_fs__p2l_entry_t entry;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  final_revision, offset, pool));
+                                  final_revision, offset, scratch_pool));
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
       SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
                                       fnv1a_checksum_ctx,
-                                      pool));
+                                      scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, final_revision,
-                                    &entry, pool));
+                                    &entry, scratch_pool));
 
       /* update the representation */
       rep->expanded_size = whb->size;
