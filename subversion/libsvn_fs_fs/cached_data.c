@@ -917,7 +917,7 @@ svn_error_t *
 svn_fs_fs__check_rep(representation_t *rep,
                      svn_fs_t *fs,
                      void **hint,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   if (svn_fs_fs__use_log_addressing(fs, rep->revision))
     {
@@ -927,16 +927,16 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       svn_fs_fs__revision_file_t *rev_file;
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
-                                               pool));
+                                               scratch_pool));
 
       /* This will auto-retry if there was a background pack. */
       SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rep->revision,
-                                     NULL, rep->item_index, pool));
+                                     NULL, rep->item_index, scratch_pool));
 
       /* This may fail if there is a background pack operation (can't auto-
          retry because the item offset lookup has to be redone as well). */
       err = svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, rep->revision,
-                                        offset, pool);
+                                        offset, scratch_pool);
 
       /* Retry if the packing state may have changed, i.e. if we got an
          error while opening the index for a non-packed rev file. */
@@ -945,13 +945,13 @@ svn_fs_fs__check_rep(representation_t *rep,
           SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
           /* Be sure to know the latest pack status of REP. */
-          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
           if (svn_fs_fs__is_packed_rev(fs, rep->revision))
             {
               /* REP got actually packed. Retry (can happen at most once). */
               svn_error_clear(err);
               return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint,
-                                                          pool));
+                                                          scratch_pool));
             }
         }
 
@@ -963,8 +963,9 @@ svn_fs_fs__check_rep(representation_t *rep,
         return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
                                  _("No representation found at offset %s "
                                    "for item %s in revision %ld"),
-                                 apr_off_t_toa(pool, offset),
-                                 apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                                 apr_off_t_toa(scratch_pool, offset),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_FMT,
                                               rep->item_index),
                                  rep->revision);
 
@@ -977,7 +978,7 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       /* ### Should this be using read_rep_line() directly? */
       SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
-                               rep, fs, pool, pool));
+                               rep, fs, scratch_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -988,14 +989,14 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                             int *shard_count,
                             representation_t *rep,
                             svn_fs_t *fs,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_revnum_t shard_size = ffd->max_files_per_dir
                           ? ffd->max_files_per_dir
                           : 1;
-  apr_pool_t *sub_pool = svn_pool_create(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *sub_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t is_delta = FALSE;
   int count = 0;
   int shards = 1;
