@@ -228,7 +228,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  info->node_rev_id = svn_fs_fs__id_parse(str, strlen(str), result_pool);
+  info->node_rev_id = svn_fs_fs__id_parse(str, result_pool);
   if (info->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
@@ -782,7 +782,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_fs__id_parse(value, strlen(value), result_pool);
+  noderev->id = svn_fs_fs__id_parse(value, result_pool);
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -839,8 +839,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    noderev->predecessor_id = svn_fs_fs__id_parse(value, strlen(value),
-                                                  result_pool);
+    noderev->predecessor_id = svn_fs_fs__id_parse(value, result_pool);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);

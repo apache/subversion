@@ -244,7 +244,7 @@ recover_find_max_ids(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+      id = svn_fs_fs__id_parse(str, iterpool);
 
       rev_item = svn_fs_fs__id_rev_item(id);
       if (rev_item->revision != rev)

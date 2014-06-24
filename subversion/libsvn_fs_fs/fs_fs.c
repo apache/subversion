@@ -1747,8 +1747,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
         = apr_hash_get(node_origins, node_id_ptr, len);
 
       if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
-                                         origin_id_str->len, pool);
+        *origin_id = svn_fs_fs__id_parse(apr_pstrdup(pool,
+                                                     origin_id_str->data),
+                                         pool);
     }
   return SVN_NO_ERROR;
 }
