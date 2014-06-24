@@ -43,6 +43,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* The default maximum number of files per directory to store in the
@@ -722,7 +723,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_int64(config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -927,15 +928,15 @@ write_config(svn_fs_t *fs,
 "### ineffective."                                                           NL
 "### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
 "### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 256"                                NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is enabled by default."                     NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
+"### Compressing packed revprops is disabled by default."                    NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
 "### Parameters in this section control the data access granularity in"      NL
@@ -993,6 +994,18 @@ write_config(svn_fs_t *fs,
                             fsfs_conf_contents, pool);
 }
 
+/* Read / Evaluate the global configuration in FS->CONFIG to set up
+ * parameters in FS. */
+static svn_error_t *
+read_global_config(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  ffd->use_block_read 
+    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, TRUE);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -1030,6 +1043,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -1449,15 +1465,35 @@ write_revision_zero(svn_fs_t *fs)
 
   /* Write out a rev file for revision 0. */
   if (svn_fs_fs__use_log_addressing(fs, 0))
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/2\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 3 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                               "\n\n", fs->pool));
+    SVN_ERR(svn_io_file_create_binary(path_revision_zero,
+                  "PLAIN\nEND\nENDREP\n"
+                  "id: 0.0.r0/2\n"
+                  "type: dir\n"
+                  "count: 0\n"
+                  "text: 0 3 4 4 "
+                  "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                  "cpath: /\n"
+                  "\n\n"
+
+                  /* L2P index */
+                  "\0\x80\x40"          /* rev 0, 8k entries per page */
+                  "\1\1\1"              /* 1 rev, 1 page, 1 page in 1st rev */
+                  "\6\4"                /* page size: bytes, count */
+                  "\0\xd6\1\xb1\1\x21"  /* phys offsets + 1 */
+
+                  /* P2L index */
+                  "\0\x6b"              /* start rev, rev file size */
+                  "\x80\x80\4\1\x1D"    /* 64k pages, 1 page using 29 bytes */
+                  "\0"                  /* offset entry 0 page 1 */
+                                        /* len, item & type, rev, checksum */
+                  "\x11\x34\0\xf5\xd6\x8c\x81\x06"
+                  "\x59\x09\0\xc8\xfc\xf6\x81\x04"
+                  "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
+                  "\x95\xff\3\x1b\0\0"  /* last entry fills up 64k page */
+
+                  /* Footer */
+                  "107 121\7",
+                  107 + 14 + 38 + 7 + 1, fs->pool));
   else
     SVN_ERR(svn_io_file_create(path_revision_zero,
                                "PLAIN\nEND\nENDREP\n"
@@ -1470,35 +1506,6 @@ write_revision_zero(svn_fs_t *fs)
                                "\n\n17 107\n", fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
-
-  if (svn_fs_fs__use_log_addressing(fs, 0))
-    {
-      const char *path = svn_fs_fs__path_l2p_index(fs, 0, FALSE, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\x80\x40"       /* rev 0, 8k entries per page */
-                  "\1\1\1"           /* 1 rev, 1 page, 1 page in 1st rev */
-                  "\6\4"             /* page size: bytes, count */
-                  "\0\xd6\1\xb1\1\x21",  /* phys offsets + 1 */
-                  14,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-
-      path = svn_fs_fs__path_p2l_index(fs, 0, FALSE, fs->pool);
-      SVN_ERR(svn_io_file_create_binary
-                 (path,
-                  "\0\x6b"              /* start rev, rev file size */
-                  "\x80\x80\4\1\x1D"    /* 64k pages, 1 page using 29 bytes */
-                  "\0"                  /* offset entry 0 page 1 */
-                                        /* len, item & type, rev, checksum */
-                  "\x11\x34\0\xf5\xd6\x8c\x81\x06"
-                  "\x59\x09\0\xc8\xfc\xf6\x81\x04"
-                  "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
-                  "\x95\xff\3\x1b\0\0", /* last entry fills up 64k page */
-                  38,
-                  fs->pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-    }
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
@@ -1613,6 +1620,9 @@ svn_fs_fs__create(svn_fs_t *fs,
     SVN_ERR(write_config(fs, pool));
 
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -1737,8 +1747,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
         = apr_hash_get(node_origins, node_id_ptr, len);
 
       if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
-                                         origin_id_str->len, pool);
+        *origin_id = svn_fs_fs__id_parse(apr_pstrdup(pool,
+                                                     origin_id_str->data),
+                                         pool);
     }
   return SVN_NO_ERROR;
 }

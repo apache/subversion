@@ -191,6 +191,8 @@ static const apr_getopt_option_t options_table[] =
       "                             "
       "  --ignore-eol-style: Ignore changes in EOL style\n"
       "                             "
+      "  -U ARG, --context ARG: Show ARG lines of context\n"
+      "                             "
       "  -p, --show-c-function: Show C function name")},
 
   {"quiet",             'q', 0,

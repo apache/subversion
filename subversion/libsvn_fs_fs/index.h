@@ -70,10 +70,6 @@ typedef struct svn_fs_fs__p2l_entry_t
   svn_fs_fs__id_part_t item;
 } svn_fs_fs__p2l_entry_t;
 
-/* Close the index file STREAM and underlying file handle. */
-svn_error_t *
-svn_fs_fs__packed_stream_close(svn_fs_fs__packed_number_stream_t *stream);
-
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
  * allocations.
@@ -105,14 +101,14 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                      apr_uint64_t item_index,
                                      apr_pool_t *pool);
 
-/* Use the proto index file stored at PROTO_FILE_NAME and construct the
- * final log-to-phys index file at FILE_NAME.  The first revision will
+/* Use the proto index file stored at PROTO_FILE_NAME, construct the final
+ * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
  * and so forth.  Use POOL for allocations.
  */
 svn_error_t *
-svn_fs_fs__l2p_index_create(svn_fs_t *fs,
-                            const char *file_name,
+svn_fs_fs__l2p_index_append(svn_fs_t *fs,
+                            apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
                             apr_pool_t *pool);
@@ -145,14 +141,14 @@ svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
                                        apr_file_t *proto_index,
                                        apr_pool_t *pool);
 
-/* Use the proto index file stored at PROTO_FILE_NAME and construct the
- * final phys-to-log index file at FILE_NAME.  Entries without a valid
+/* Use the proto index file stored at PROTO_FILE_NAME, construct the final
+ * phys-to-log index and append it to INDEX_FILE.  Entries without a valid
  * revision will be assigned to the REVISION given here.
  * Use POOL for allocations.
  */
 svn_error_t *
-svn_fs_fs__p2l_index_create(svn_fs_t *fs,
-                            const char *file_name,
+svn_fs_fs__p2l_index_append(svn_fs_t *fs,
+                            apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
                             apr_pool_t *pool);

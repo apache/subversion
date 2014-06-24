@@ -1108,6 +1108,7 @@ test_relpath_is_canonical(apr_pool_t *pool)
   static const testcase_is_canonical_t tests[] = {
     { "",                      TRUE },
     { ".",                     FALSE },
+    { "..",                    TRUE },
     { "/",                     FALSE },
     { "/.",                    FALSE },
     { "./",                    FALSE },

@@ -7362,8 +7362,13 @@ svn_wc_get_pristine_copy_path(const char *path,
  * files will be updated, which will improve performance of future is-modified
  * checks.
  *
+ * If @a clear_dav_cache is @c TRUE, the caching of DAV information for older
+ * mod_dav served repositories is cleared. This clearing invalidates some
+ * cached information used for pre-HTTPv2 repositories.
+ *
  * If @a vacuum_pristines is TRUE, try to remove unreferenced pristines from
- * the working copy.
+ * the working copy. (Will not remove anything unless the obtained lock applies
+ * to the entire working copy)
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically

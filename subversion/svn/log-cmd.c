@@ -364,6 +364,7 @@ svn_cl__log_entry_receiver(void *baton,
     {
       apr_array_header_t *sorted_paths;
       int i;
+      apr_pool_t *iterpool;
 
       /* Get an array of sorted hash keys. */
       sorted_paths = svn_sort__hash(log_entry->changed_paths2,
@@ -371,6 +372,7 @@ svn_cl__log_entry_receiver(void *baton,
 
       SVN_ERR(svn_cmdline_printf(pool,
                                  _("Changed paths:\n")));
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
@@ -379,6 +381,8 @@ svn_cl__log_entry_receiver(void *baton,
           svn_log_changed_path2_t *log_item = item->value;
           const char *copy_data = "";
 
+          svn_pool_clear(iterpool);
+
           if (lb->ctx->cancel_func)
             SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
@@ -386,34 +390,39 @@ svn_cl__log_entry_receiver(void *baton,
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
               copy_data
-                = apr_psprintf(pool,
+                = apr_psprintf(iterpool,
                                _(" (from %s:%ld)"),
                                log_item->copyfrom_path,
                                log_item->copyfrom_rev);
             }
-          SVN_ERR(svn_cmdline_printf(pool, "   %c %s%s\n",
+          SVN_ERR(svn_cmdline_printf(iterpool, "   %c %s%s\n",
                                      log_item->action, path,
                                      copy_data));
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (lb->merge_stack && lb->merge_stack->nelts > 0)
     {
       int i;
+      apr_pool_t *iterpool;
 
       /* Print the result of merge line */
       if (log_entry->subtractive_merge)
         SVN_ERR(svn_cmdline_printf(pool, _("Reverse merged via:")));
       else
         SVN_ERR(svn_cmdline_printf(pool, _("Merged via:")));
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < lb->merge_stack->nelts; i++)
         {
           svn_revnum_t rev = APR_ARRAY_IDX(lb->merge_stack, i, svn_revnum_t);
 
-          SVN_ERR(svn_cmdline_printf(pool, " r%ld%c", rev,
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_cmdline_printf(iterpool, " r%ld%c", rev,
                                      i == lb->merge_stack->nelts - 1 ?
                                                                   '\n' : ','));
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (message != NULL)

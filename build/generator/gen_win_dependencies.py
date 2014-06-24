@@ -321,7 +321,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
       inc_path = inc_base
     else:
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
+      sys.stderr.write("ERROR: 'apr_version' not found.\n")
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
       sys.exit(1)
 
@@ -429,12 +429,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       sys.exit(1)
 
     version_file_path = os.path.join(inc_path, 'apu_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
-      sys.exit(1)
-
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -564,7 +558,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                debug_lib_dir = debug_lib_dir,
                                                defines=['XML_STATIC'])
 
-  def _find_httpd(self, show_warning):
+  def _find_httpd(self, show_warnings):
     "Find Apache HTTPD and version"
 
     minimal_httpd_version = (2, 0, 0)
@@ -588,7 +582,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(inc_base, 'ap_release.h')):
       inc_path = inc_base
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'ap_release.h\' not found')
         print("Use '--with-httpd' to configure openssl location.");
       return
@@ -612,7 +606,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     httpd_version = '%d.%d.%d' % version
 
     if version < minimal_httpd_version:
-      if show_warning:
+      if show_warnings:
         print("WARNING: httpd %s or higher is required "
                         "(%s found)\n" % (
                           '.'.join(str(v) for v in minimal_httpd_version),
@@ -649,7 +643,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Source location
       inc_path = os.path.join(lib_base, 'modules/dav/main')
     else:
-      if show_warning:
+      if show_warnings:
         print("WARNING: Can't find mod_dav.h in the httpd directory")
         return
 
@@ -666,7 +660,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         debug_lib_dir = None
     else:
-      if show_warning:
+      if show_warnings:
         print("WARNING: Can't find mod_dav.lib in the httpd directory")
         return
 
@@ -836,7 +830,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         bin_dir = os.path.join(self.openssl_path, 'bin')
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'opensslv.h\' not found')
         print("Use '--with-openssl' to configure openssl location.");
       return
@@ -1045,7 +1039,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       return
 
     if version < minimal_jdk_version:
-      if show_warning:
+      if show_warnings:
         print('Found java jdk %s, but >= %s is required. '
               'javahl will not be built.\n' % \
               (versionstr, '.'.join(str(v) for v in minimal_jdk_version)))
@@ -1102,7 +1096,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     swig_ver = '%d.%d.%d' % (swig_version)
     if swig_version < minimal_swig_version:
-      if show_warning:
+      if show_warnings:
         print('Found swig %s, but >= %s is required. '
               'the swig bindings will not be built.\n' %
               (swig_version, '.'.join(str(v) for v in minimal_swig_version)))
@@ -1167,7 +1161,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     return serf_ver_maj, serf_ver_min, serf_ver_patch
 
-  def _find_serf(self, show_warning):
+  def _find_serf(self, show_warnings):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 3, 4)
@@ -1193,7 +1187,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'serf.h\' not found')
         print("Use '--with-serf' to configure serf location.");
       return
@@ -1202,7 +1196,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     serf_version = '.'.join(str(v) for v in version)
 
     if version < minimal_serf_version:
-      if show_warning:
+      if show_warnings:
         print('Found serf %s, but >= %s is required. '
               'ra_serf will not be built.\n' %
               (serf_version, '.'.join(str(v) for v in minimal_serf_version)))
@@ -1222,7 +1216,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                 debug_lib_dir=debug_lib_dir,
                                                 defines=defines)
 
-  def _find_sasl(self, show_warning):
+  def _find_sasl(self, show_warnings):
     "Check if sals is available"
 
     minimal_sasl_version = (2, 0, 0)
@@ -1235,7 +1229,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_dir, 'sasl.h')
 
     if not os.path.isfile(version_file_path):
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'%s\' not found' % (version_file_path,))
         print("Use '--with-sasl' to configure sasl location.");
       return
@@ -1255,7 +1249,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     sasl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sasl_version:
-      if show_warning:
+      if show_warnings:
         print('Found sasl %s, but >= %s is required. '
               'sals support will not be built.\n' %
               (sasl_version, '.'.join(str(v) for v in minimal_serf_version)))
@@ -1280,7 +1274,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                dll_name=dll_name,
                                                defines=['SVN_HAVE_SASL'])
 
-  def _find_libintl(self, show_warning):
+  def _find_libintl(self, show_warnings):
     "Find gettext support"
     minimal_libintl_version = (0, 14, 1)
 
@@ -1308,7 +1302,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_name = 'intl.lib'
       dll_name = 'intl.dll'
     else:
-      if (show_warning):
+      if (show_warnings):
         print('WARNING: \'libintl.h\' not found')
         print("Use '--with-libintl' to configure libintl location.")
       return
@@ -1325,7 +1319,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     libintl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_libintl_version:
-      if show_warning:
+      if show_warnings:
         print('Found libintl %s, but >= %s is required.\n' % \
               (libintl_version,
                '.'.join(str(v) for v in minimal_libintl_version)))

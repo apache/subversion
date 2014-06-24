@@ -252,9 +252,9 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 context->R12, context->R13, context->R14, context->R15);
 
   fprintf(log_file,
-                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x  ss=%04x\n",
-                context->SegCs, context->SegDs, context->SegEs,
-                context->SegFs, context->SegGs, context->SegSs);
+                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
+                context->SegCs, context->SegSs, context->SegDs,
+                context->SegEs, context->SegFs, context->SegGs);
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif

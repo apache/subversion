@@ -2278,7 +2278,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic SVNClient.info2 functionality.
+     * Test the basic SVNClient.info functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -4305,8 +4305,9 @@ public class BasicTests extends SVNTests
     {
        final List<Info> infos = new ArrayList<Info>();
 
-       client.info2(pathOrUrl, revision, pegRevision, depth, true, true,
-                     changelists, new InfoCallback () {
+       client.info(pathOrUrl, revision, pegRevision, depth,
+                   true, true, false,
+                   changelists, new InfoCallback () {
             public void singleInfo(Info info)
             { infos.add(info); }
         });

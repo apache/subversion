@@ -2839,6 +2839,10 @@ svn_io_start_cmd3(apr_proc_t *cmd_proc,
     {
       const char *path_apr;
 
+      /* APR doesn't like our canonical path format for current directory */
+      if (path[0] == '\0')
+        path = ".";
+
       SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
       apr_err = apr_procattr_dir_set(cmdproc_attr, path_apr);
       if (apr_err)

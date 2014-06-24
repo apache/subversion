@@ -209,6 +209,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_VIRTUAL_HOST    270
 #define SVNSERVE_OPT_MIN_THREADS     271
 #define SVNSERVE_OPT_MAX_THREADS     272
+#define SVNSERVE_OPT_BLOCK_READ      273
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -301,6 +302,14 @@ static const apr_getopt_option_t svnserve__options[] =
         "ARG Mbit/s.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
+    {"block-read", SVNSERVE_OPT_BLOCK_READ, 1,
+     N_("Parse and cache all data found in block instead\n"
+        "                             "
+        "of just the requested item.\n"
+        "                             "
+        "Default is no.\n"
+        "                             "
+        "[used for FSFS repositories in 1.9 format only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -671,6 +680,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t cache_fulltexts = TRUE;
   svn_boolean_t cache_txdeltas = TRUE;
   svn_boolean_t cache_revprops = FALSE;
+  svn_boolean_t use_block_read = FALSE;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
@@ -858,6 +868,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           cache_revprops = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
+        case SVNSERVE_OPT_BLOCK_READ:
+          use_block_read = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
         case SVNSERVE_OPT_CLIENT_SPEED:
           {
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
@@ -966,6 +980,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 cache_fulltexts ? "1" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                use_block_read ? "1" :"0");  
 
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,

@@ -105,6 +105,7 @@ typedef struct dir_conf_t {
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
+  enum conf_flag block_read;         /* whether to enable block read mode */
   const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
 
@@ -248,6 +249,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->revprop_cache = INHERIT_VALUE(parent, child, revprop_cache);
+  newconf->block_read = INHERIT_VALUE(parent, child, block_read);  
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
@@ -539,6 +541,19 @@ SVNCacheRevProps_cmd(cmd_parms *cmd, void *config, int arg)
     conf->revprop_cache = CONF_FLAG_ON;
   else
     conf->revprop_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNBlockRead_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->block_read = CONF_FLAG_ON;
+  else
+    conf->block_read = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -948,6 +963,15 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_block_read_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->block_read == CONF_FLAG_ON;
+}
+
 int
 dav_svn__get_compression_level(request_rec *r)
 {
@@ -1287,6 +1311,13 @@ static const command_rec cmds[] =
                "speeds up 'svn ls -v', export and checkout operations"
                "but should only be enabled under the conditions described"
                "in the documentation"
+               "(default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNBlockRead", SVNBlockRead_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up operations of FSFS 1.9+ repositories if large"
+               "caches (see SVNInMemoryCacheSize) have been configured."
                "(default is Off)."),
 
   /* per server */
