@@ -2738,8 +2738,18 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
           /* cache for future reference */
 
           if (ffd->changes_cache)
-            SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes,
-                                   scratch_pool));
+            {
+              /* Guesstimate for the size of the in-cache representation. */
+              apr_size_t estimated_size = (apr_size_t)250 * (*changes)->nelts;
+
+              /* Don't even serialize data that probably won't fit into the
+               * cache.  This often implies that either CHANGES is very
+               * large, memory is scarce or both.  Having a huge temporary
+               * copy would not be a good thing in either case. */
+              if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
+                SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes,
+                                       scratch_pool));
+            }
         }
 
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
