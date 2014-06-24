@@ -174,42 +174,28 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
 {
   const svn_string_t *der_cert;
   int x509_err;
-  x509_cert *cert;
-  char name[1024];
+  apr_hash_t *certinfo;
 
   /* Convert header-less PEM to DER by undoing base64 encoding. */
   der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
 
-  x509_err = svn_x509_parse_cert(&cert, der_cert->data, der_cert->len,
-                                scratch_pool, scratch_pool);
+  x509_err = svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                                 scratch_pool, scratch_pool);
   if (x509_err)
     {
       svn_cmdline_printf(scratch_pool, _("Error parsing certificate: 0x%x\n"), -x509_err);
       return SVN_NO_ERROR;
     }
 
-  if (cert == NULL)
-    {
-      svn_cmdline_printf(scratch_pool, _("Error parsing certificate\n"));
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %4d/%02d/%02d %02d:%02d:%02d\n"),
-                             cert->valid_from.year,
-                             cert->valid_from.mon,
-                             cert->valid_from.day,
-                             cert->valid_from.hour,
-                             cert->valid_from.min,
-                             cert->valid_from.sec));
-  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid until: %4d/%02d/%02d %02d:%02d:%02d\n"),
-                             cert->valid_to.year,
-                             cert->valid_to.mon,
-                             cert->valid_to.day,
-                             cert->valid_to.hour,
-                             cert->valid_to.min,
-                             cert->valid_to.sec));
-  x509parse_dn_gets(name, name + sizeof(name), &cert->issuer);
-  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"), name));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
+                             (const char *)svn_hash_gets(certinfo,
+                                             SVN_X509_CERTINFO_KEY_VALID_FROM)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid until: %s\n"),
+                             (const char *)svn_hash_gets(certinfo,
+                                             SVN_X509_CERTINFO_KEY_VALID_TO)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
+                             (const char *)svn_hash_gets(certinfo,
+                                             SVN_X509_CERTINFO_KEY_ISSUER)));
 #if 0
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"), cert->subject_id.p));
   SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));

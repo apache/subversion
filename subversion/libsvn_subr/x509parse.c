@@ -45,6 +45,7 @@
  */
 
 #include <apr_pools.h>
+#include <svn_hash.h>
 
 #include "x509.h"
 
@@ -420,7 +421,7 @@ static int x509_get_uid(const unsigned char **p,
  * Parse one certificate.
  */
 int
-svn_x509_parse_cert(x509_cert **cert,
+svn_x509_parse_cert(apr_hash_t **certinfo,
                     const char *buf,
                     int buflen,
                     apr_pool_t *result_pool,
@@ -430,8 +431,9 @@ svn_x509_parse_cert(x509_cert **cert,
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
+  char name[1024];
 
-  crt = apr_pcalloc(result_pool, sizeof(*crt));
+  crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
   len = buflen;
   end = p + len;
@@ -599,7 +601,31 @@ svn_x509_parse_cert(x509_cert **cert,
       TROPICSSL_ERR_ASN1_LENGTH_MISMATCH);
   }
 
-  *cert = crt;
+  *certinfo = apr_hash_make(result_pool);
+
+  x509parse_dn_gets(name, name + sizeof(name), &crt->issuer);
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER,
+                apr_pstrdup(result_pool, name));
+
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
+                apr_psprintf(result_pool,
+                             "%4d/%02d/%02d %02d:%02d:%02d",
+                             crt->valid_from.year,
+                             crt->valid_from.mon,
+                             crt->valid_from.day,
+                             crt->valid_from.hour,
+                             crt->valid_from.min,
+                             crt->valid_from.sec));
+
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_TO,
+                apr_psprintf(result_pool,
+                             "%4d/%02d/%02d %02d:%02d:%02d",
+                             crt->valid_to.year,
+                             crt->valid_to.mon,
+                             crt->valid_to.day,
+                             crt->valid_to.hour,
+                             crt->valid_to.min,
+                             crt->valid_to.sec));
   return (0);
 }
 
