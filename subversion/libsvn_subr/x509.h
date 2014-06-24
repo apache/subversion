@@ -141,27 +141,4 @@ typedef struct _x509_cert {
 #define SVN_X509_CERTINFO_KEY_VALID_FROM  "valid-from"
 #define SVN_X509_CERTINFO_KEY_VALID_TO    "valid-to"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-  /* Parse x509 DER certificate data from BUF with length BUFLEN
-   * and return certificate information in *CERT, allocated in
-   * RESULT_POOL. The certinfo hash contains values of type
-   * 'const char *' keyed by SVN_X509_CERTINFO_KEY_* macros. */
-  svn_error_t * svn_x509_parse_cert(apr_hash_t **certinfo,
-                                    const char *buf,
-                                    int buflen,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool);
-
-/*
- * Store the name in printable form into buf; no more
- * than (end - buf) characters will be written
- */
-int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn);
-
-#ifdef __cplusplus
-}
-#endif
 #endif        /* x509.h */

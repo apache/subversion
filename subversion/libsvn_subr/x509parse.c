@@ -467,6 +467,89 @@ x509_get_uid(const unsigned char **p,
 }
 
 /*
+ * Store the name in printable form into buf; no more
+ * than (end - buf) characters will be written
+ */
+static int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
+{
+  int i;
+  unsigned char c;
+  const x509_name *name;
+  char s[128], *p;
+
+  memset(s, 0, sizeof(s));
+
+  name = dn;
+  p = buf;
+
+  while (name != NULL) {
+    if (name != dn)
+      p += snprintf(p, end - p, ", ");
+
+    if (memcmp(name->oid.p, OID_X520, 2) == 0) {
+      switch (name->oid.p[2]) {
+      case X520_COMMON_NAME:
+        p += snprintf(p, end - p, "CN=");
+        break;
+
+      case X520_COUNTRY:
+        p += snprintf(p, end - p, "C=");
+        break;
+
+      case X520_LOCALITY:
+        p += snprintf(p, end - p, "L=");
+        break;
+
+      case X520_STATE:
+        p += snprintf(p, end - p, "ST=");
+        break;
+
+      case X520_ORGANIZATION:
+        p += snprintf(p, end - p, "O=");
+        break;
+
+      case X520_ORG_UNIT:
+        p += snprintf(p, end - p, "OU=");
+        break;
+
+      default:
+        p += snprintf(p, end - p, "0x%02X=",
+                name->oid.p[2]);
+        break;
+      }
+    } else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0) {
+      switch (name->oid.p[8]) {
+      case PKCS9_EMAIL:
+        p += snprintf(p, end - p, "emailAddress=");
+        break;
+
+      default:
+        p += snprintf(p, end - p, "0x%02X=",
+                name->oid.p[8]);
+        break;
+      }
+    } else
+      p += snprintf(p, end - p, "\?\?=");
+
+    for (i = 0; i < name->val.len; i++) {
+      if (i >= (int)sizeof(s) - 1)
+        break;
+
+      c = name->val.p[i];
+      if (c < 32 || c == 127 || (c > 128 && c < 160))
+        s[i] = '?';
+      else
+        s[i] = c;
+    }
+    s[i] = '\0';
+    p += snprintf(p, end - p, "%s", s);
+    name = name->next;
+  }
+
+  return (p - buf);
+}
+
+/*
  * Parse one certificate.
  */
 svn_error_t *
@@ -655,88 +738,5 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
                              crt->valid_to.min,
                              crt->valid_to.sec));
   return SVN_NO_ERROR;
-}
-
-/*
- * Store the name in printable form into buf; no more
- * than (end - buf) characters will be written
- */
-int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
-{
-  int i;
-  unsigned char c;
-  const x509_name *name;
-  char s[128], *p;
-
-  memset(s, 0, sizeof(s));
-
-  name = dn;
-  p = buf;
-
-  while (name != NULL) {
-    if (name != dn)
-      p += snprintf(p, end - p, ", ");
-
-    if (memcmp(name->oid.p, OID_X520, 2) == 0) {
-      switch (name->oid.p[2]) {
-      case X520_COMMON_NAME:
-        p += snprintf(p, end - p, "CN=");
-        break;
-
-      case X520_COUNTRY:
-        p += snprintf(p, end - p, "C=");
-        break;
-
-      case X520_LOCALITY:
-        p += snprintf(p, end - p, "L=");
-        break;
-
-      case X520_STATE:
-        p += snprintf(p, end - p, "ST=");
-        break;
-
-      case X520_ORGANIZATION:
-        p += snprintf(p, end - p, "O=");
-        break;
-
-      case X520_ORG_UNIT:
-        p += snprintf(p, end - p, "OU=");
-        break;
-
-      default:
-        p += snprintf(p, end - p, "0x%02X=",
-                name->oid.p[2]);
-        break;
-      }
-    } else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0) {
-      switch (name->oid.p[8]) {
-      case PKCS9_EMAIL:
-        p += snprintf(p, end - p, "emailAddress=");
-        break;
-
-      default:
-        p += snprintf(p, end - p, "0x%02X=",
-                name->oid.p[8]);
-        break;
-      }
-    } else
-      p += snprintf(p, end - p, "\?\?=");
-
-    for (i = 0; i < name->val.len; i++) {
-      if (i >= (int)sizeof(s) - 1)
-        break;
-
-      c = name->val.p[i];
-      if (c < 32 || c == 127 || (c > 128 && c < 160))
-        s[i] = '?';
-      else
-        s[i] = c;
-    }
-    s[i] = '\0';
-    p += snprintf(p, end - p, "%s", s);
-    name = name->next;
-  }
-
-  return (p - buf);
 }
 

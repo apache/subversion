@@ -42,11 +42,11 @@
 #include "svn_auth.h"
 #include "svn_sorts.h"
 #include "svn_base64.h"
+#include "svn_x509.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_token.h"
 #include "private/svn_sorts_private.h"
-#include "libsvn_subr/x509.h"
 
 #include "cl.h"
 
