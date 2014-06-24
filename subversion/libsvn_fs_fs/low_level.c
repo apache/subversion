@@ -150,9 +150,9 @@ svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
 svn_stringbuf_t *
 svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                     apr_off_t changes_offset,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *result_pool)
 {
-  return svn_stringbuf_createf(pool,
+  return svn_stringbuf_createf(result_pool,
                                "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                                root_offset,
                                changes_offset);
@@ -186,9 +186,9 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
 svn_stringbuf_t *
 svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
                           apr_off_t p2l_offset,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  return svn_stringbuf_createf(pool,
+  return svn_stringbuf_createf(result_pool,
                                "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
                                l2p_offset,
                                p2l_offset);
@@ -521,9 +521,9 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
                          svn_fs_t *fs,
                          apr_hash_t *changes,
                          svn_boolean_t terminate_list,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
@@ -536,7 +536,8 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
      that the final file is deterministic and repeatable, however the
      rest of the FSFS code doesn't require any particular order here. */
   sorted_changed_paths = svn_sort__hash(changes,
-                                        svn_sort_compare_items_lexically, pool);
+                                        svn_sort_compare_items_lexically,
+                                        scratch_pool);
 
   /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
@@ -968,50 +969,50 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
                          int format,
                          svn_boolean_t include_mergeinfo,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_ID ": %s\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_ID ": %s\n",
                             svn_fs_fs__id_unparse(noderev->id,
-                                                  pool)->data));
+                                                  scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TYPE ": %s\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_TYPE ": %s\n",
                             (noderev->kind == svn_node_file) ?
                             SVN_FS_FS__KIND_FILE : SVN_FS_FS__KIND_DIR));
 
   if (noderev->predecessor_id)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PRED ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PRED ": %s\n",
                               svn_fs_fs__id_unparse(noderev->predecessor_id,
-                                                    pool)->data));
+                                                    scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COUNT ": %d\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COUNT ": %d\n",
                             noderev->predecessor_count));
 
   if (noderev->data_rep)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TEXT ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_TEXT ": %s\n",
                               svn_fs_fs__unparse_representation
                                 (noderev->data_rep,
                                  format,
                                  noderev->kind == svn_node_dir,
-                                 pool)->data));
+                                 scratch_pool)->data));
 
   if (noderev->prop_rep)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PROPS ": %s\n",
                               svn_fs_fs__unparse_representation
                                 (noderev->prop_rep, format,
-                                 TRUE, pool)->data));
+                                 TRUE, scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_CPATH ": %s\n",
                             noderev->created_path));
 
   if (noderev->copyfrom_path)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYFROM ": %ld"
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPYFROM ": %ld"
                               " %s\n",
                               noderev->copyfrom_rev,
                               noderev->copyfrom_path));
 
   if ((noderev->copyroot_rev != svn_fs_fs__id_rev(noderev->id)) ||
       (strcmp(noderev->copyroot_path, noderev->created_path) != 0))
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYROOT ": %ld"
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPYROOT ": %ld"
                               " %s\n",
                               noderev->copyroot_rev,
                               noderev->copyroot_path));
@@ -1022,8 +1023,8 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
   if (include_mergeinfo)
     {
       if (noderev->mergeinfo_count > 0)
-        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
-                                  APR_INT64_T_FMT "\n",
+        SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_MINFO_CNT
+                                  ": %" APR_INT64_T_FMT "\n",
                                   noderev->mergeinfo_count));
 
       if (noderev->has_mergeinfo)
@@ -1096,7 +1097,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
 svn_error_t *
 svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
                             svn_stream_t *stream,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   const char *text;
   
@@ -1111,8 +1112,8 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
         break;
 
       default:
-        text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                            SVN_FILESIZE_T_FMT "\n",
+        text = apr_psprintf(scratch_pool, REP_DELTA " %ld %" APR_OFF_T_FMT
+                                          " %" SVN_FILESIZE_T_FMT "\n",
                             header->base_revision, header->base_item_index,
                             header->base_length);
     }
