@@ -389,9 +389,15 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
   change_t *change;
   apr_pool_t *iterpool;
 
-  /* pre-allocate enough room for most change lists
-     (will be auto-expanded as necessary) */
-  *changes = apr_array_make(result_pool, 30, sizeof(change_t *));
+  /* Pre-allocate enough room for most change lists.
+     (will be auto-expanded as necessary).
+
+     Chose the default to just below 2^N such that the doubling reallocs
+     will request roughly 2^M bytes from the OS without exceeding the
+     respective two-power by just a few bytes (leaves room array and APR
+     node overhead for large enough M).
+   */
+  *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
 
   SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
