@@ -427,6 +427,8 @@ typedef long int svn_revnum_t;
 #define SVN_IGNORED_REVNUM ((svn_revnum_t) -1)
 
 /** Convert NULL-terminated C string @a str to a revision number. */
+/* When in a hot path, consider using svn__strtol() instead; atol() may be
+   locale-aware and thus slower. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
 /**
