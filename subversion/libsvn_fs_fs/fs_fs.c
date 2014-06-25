@@ -1491,8 +1491,11 @@ write_revision_zero(svn_fs_t *fs)
                   "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
                   "\x95\xff\3\x1b\0\0"  /* last entry fills up 64k page */
 
-                  /* Footer */
+                  /* Footer:
+                     offsets of L2P and P2L index data, followed by length */
                   "107 121\7",
+                  /* Total content length:
+                     Rev data, L2P idx, P2L idx, footer, footer length byte */
                   107 + 14 + 38 + 7 + 1, fs->pool));
   else
     SVN_ERR(svn_io_file_create(path_revision_zero,
