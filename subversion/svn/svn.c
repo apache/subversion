@@ -1402,6 +1402,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        ^/   to the repository root\n"
      "        /    to the server root\n"
      "        //   to the URL scheme\n"
+     "      ^/../  to a sibling repository beneath the same SVNParentPath location\n"
      "      Use of the following format is discouraged but is supported for\n"
      "      interoperability with Subversion 1.4 and earlier clients:\n"
      "        LOCALPATH [-r PEG] URL\n"
