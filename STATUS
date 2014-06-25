@@ -167,12 +167,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1496127, r1567492, r1567494
-   Fix occasional failure of checkout_tests.py 12 due to dropping the
-   fractional seconds from the current time.
-   Justification:
-     Spurious FAILs confuse people testing the release.
-     This group was back-ported to 1.8.x in http://svn.apache.org/r1567731 .
-   Votes:
-     +1: julianfoad, danielsh, rhuijben
