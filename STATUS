@@ -77,7 +77,7 @@ Candidate changes:
      +1: stefan2
      -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
- * r1547454
+ * r1547454, r1561703
    In FSFS, omit config file when creating pre-1.5 format repositories.
    Justification:
      Old SVN versions won't preserve this file in hotcopy.  Later versions
@@ -85,7 +85,6 @@ Candidate changes:
      feature availability check is incomplete.
    Votes:
      +1: stefan2
-     -0: rhuijben (Might require r1561703 to avoid breaking tests)
 
  * r1561426
    In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
@@ -97,21 +96,6 @@ Candidate changes:
      cause problems with future changes.
    Votes:
      +1: stefan2
-
- * r1567996, r1568009, r1568062, r1568063
-   Fix a caching inefficiency in multi-threaded servers.
-   Justification:
-     .
-   Notes:
-     Due to going back and forth with different approaches to solve this
-     issue, the best way to review this 
-   Branch:
-     ^/subversion/branches/1.8.x-r1567996
-   Votes:
-     +1: stefan2
-     -0: rhuijben (incomplete (misses cache->total_reads accesses) and
-                   overkill. The whole thing can be implemented with simple
-                   atomic operations while mutexes may be a limited resource)
 
  * r1589184, r1589188
    Properly handle properties not present and excluded on cross wc copy
