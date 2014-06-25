@@ -1056,7 +1056,7 @@ svn__strtoul(const char* buffer, const char** end)
    */
   while (1)
     {
-      unsigned long c = *buffer - '0';
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
       if (c > 9)
         break;
 
@@ -1066,6 +1066,15 @@ svn__strtoul(const char* buffer, const char** end)
 
   *end = buffer;
   return result;
+}
+
+long
+svn__strtol(const char* buffer, const char** end)
+{
+  if (*buffer == '-')
+    return -(long)svn__strtoul(buffer+1, end);
+  else
+    return (long)svn__strtoul(buffer, end);
 }
 
 

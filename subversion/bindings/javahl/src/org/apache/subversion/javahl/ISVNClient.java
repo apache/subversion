@@ -446,6 +446,30 @@ public interface ISVNClient
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
      * @param path a local directory.
+     * @param breakLocks ### FIXME: Missing docstring in svn_client.h
+     * @param clearDavCache ### FIXME: Missing docstring in svn_client.h
+     * @param removeUnusedPristines ### FIXME: Missing docstring in svn_client.h
+     * @param includeExternals Recurse into externals working copies
+     *        and clean them up, too.
+     * @throws ClientException
+     * @since 1.9
+     */
+    void cleanup(String path,
+                 boolean breakLocks,
+                 boolean fixRecordedTimestamps,
+                 boolean clearDavCache,
+                 boolean removeUnusedPristines,
+                 boolean includeExternals)
+        throws ClientException;
+
+    /**
+     * Recursively cleans up a local directory, finishing any
+     * incomplete operations, removing lockfiles, etc.
+     * <p>
+     * Behaves like the 1.9 version with <code>breakLocks</code> and
+     * <code>includeExternals</code> set to <code>false<code>, and the
+     * other flags to <code>true</code>.
+     * @param path a local directory.
      * @throws ClientException
      */
     void cleanup(String path) throws ClientException;
@@ -1446,28 +1470,10 @@ public interface ISVNClient
     /**
      * Retrieve information about repository or working copy items.
      * <p>
-     * Behaves like {@see ISVNClient#info} with
-     * <code>includeExternals</code> set to <code>fals</code>
-     * @since 1.9
-     */
-    void info2(String pathOrUrl,
-               Revision revision, Revision pegRevision, Depth depth,
-               boolean fetchExcluded, boolean fetchActualOnly,
-               Collection<String> changelists, InfoCallback callback)
-        throws ClientException;
-
-    /**
-     * Retrieve information about repository or working copy items.
-     * <p>
      * Behaves like the 1.9 version, with <code>fetchExcluded</code>
-     * set to <code>false</code> and <code>fetchActualOnly</code> set
-     * to <code>true</code>.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param depth         the depth to recurse
-     * @param changelists   if non-null, filter paths using changelists
-     * @param callback      a callback to receive the infos retrieved
+     * set to <code>false</code>, <code>fetchActualOnly</code> set to
+     * <code>true</code> anf <code>includeExternals</code> set to
+     * <code>false</code>.
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
                Depth depth, Collection<String> changelists,
@@ -1508,6 +1514,37 @@ public interface ISVNClient
     void patch(String patchPath, String targetPath, boolean dryRun,
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
+            throws ClientException;
+
+    /**
+     * Recursively vacuum a working copy, removing unnecessary data.
+     * <p>
+     * This method will report an error when
+     * <code>removeUnversionedItems</code> or
+     * <code>removeIgnoredItems</code> are set, and the working copy
+     * is already locked. This prevents accidental corruption of the
+     * working copy if this method is invoked while another client is
+     * performing some other operation on the working copy.
+     * @param path The path of the working copy directory.
+     * @param removeUnversionedItems Remove unversioned items from the
+     *        working copy after it has been successfully cleaned up.
+     * @param removeIgnoredItems Remove unversioned items that are
+     *        ignored by Subversion, after the working copy has been
+     *        successfully cleaned up.
+     * @param fixRecordedTimestamps Update timestamps recorded in the
+     *        working copy database to their actual on-disk values.
+     * @param removeUnusedPristines Remove pristine files that are not
+     *        referenced by the working copy.
+     * @param includeExternals Recurse into externals working copies
+     *        and vacuum them, too.
+     * @since 1.9
+     */
+    void vacuum(String path,
+                boolean removeUnversionedItems,
+                boolean removeIgnoredItems,
+                boolean fixRecordedTimestamps,
+                boolean removeUnusedPristines,
+                boolean includeExternals)
             throws ClientException;
 
     /**

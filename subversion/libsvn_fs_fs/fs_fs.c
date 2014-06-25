@@ -43,6 +43,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* The default maximum number of files per directory to store in the
@@ -676,7 +677,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_int64(config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -858,15 +859,15 @@ write_config(svn_fs_t *fs,
 "### ineffective."                                                           NL
 "### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
 "### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 256"                                NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is enabled by default."                     NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
+"### Compressing packed revprops is disabled by default."                    NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
 "### Parameters in this section control the data access granularity in"      NL
@@ -889,6 +890,14 @@ write_config(svn_fs_t *fs,
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
                             fsfs_conf_contents, pool);
+}
+
+/* Read / Evaluate the global configuration in FS->CONFIG to set up
+ * parameters in FS. */
+static svn_error_t *
+read_global_config(svn_fs_t *fs)
+{
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -926,6 +935,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -1454,6 +1466,9 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
 
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
+
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
@@ -1577,8 +1592,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
         = apr_hash_get(node_origins, node_id_ptr, len);
 
       if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
-                                         origin_id_str->len, pool);
+        *origin_id = svn_fs_fs__id_parse(apr_pstrdup(pool,
+                                                     origin_id_str->data),
+                                         pool);
     }
   return SVN_NO_ERROR;
 }

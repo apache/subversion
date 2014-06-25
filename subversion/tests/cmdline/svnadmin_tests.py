@@ -1971,7 +1971,7 @@ def verify_keep_going(sbox):
                                      C_url)
   
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
-  fp = open(r2, 'a')
+  fp = open(r2, 'r+b')
   fp.write("""inserting junk to corrupt the rev""")
   fp.close()
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -1984,6 +1984,7 @@ def verify_keep_going(sbox):
                                             ".*Error verifying revision 3.",
                                             ".*",
                                             ".*Summary.*",
+                                            ".*r2: E160004:.*",
                                             ".*r2: E160004:.*",
                                             ".*r3: E160004:.*",
                                             ".*r3: E160004:.*"])

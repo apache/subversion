@@ -228,7 +228,6 @@ hotcopy_io_copy_dir_recursively(const char *src,
 
 /* Copy an un-packed revision or revprop file for revision REV from SRC_SUBDIR
  * to DST_SUBDIR. Assume a sharding layout based on MAX_FILES_PER_DIR.
- * If INCLUDE_INDEXES is set, copy rev index files as well.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_copy_shard_file(const char *src_subdir,

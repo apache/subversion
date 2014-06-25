@@ -63,6 +63,10 @@ class SVNClient :public SVNBase
 {
  public:
   jobject openRemoteSession(const char* path, int);
+  void vacuum(const char *path,
+              bool remove_unversioned_items, bool remove_ignored_items,
+              bool fix_recorded_timestamps, bool remove_unused_pristines,
+              bool include_externals);
   void patch(const char *patchPath, const char *targetPath, bool dryRun,
              int stripCount, bool reverse, bool ignoreWhitespace,
              bool removeTempfiles, PatchCallback *callback);
@@ -131,7 +135,12 @@ class SVNClient :public SVNBase
                  svn_depth_t depth, const char *nativeEOL);
   void resolve(const char *path, svn_depth_t depth,
                svn_wc_conflict_choice_t choice);
-  void cleanup(const char *path);
+  void cleanup(const char *path,
+               bool break_locks,
+               bool fix_recorded_timestamps,
+               bool clear_dav_cache,
+               bool remove_unused_pristines,
+               bool include_externals);
   void mkdir(Targets &targets, CommitMessage *message, bool makeParents,
              PropertyTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,

@@ -270,8 +270,18 @@ public class SVNClient implements ISVNClient
                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    public native void cleanup(String path)
-            throws ClientException;
+    public native void cleanup(String path,
+                               boolean breakLocks,
+                               boolean fixRecordedTimestamps,
+                               boolean clearDavCache,
+                               boolean removeUnusedPristines,
+                               boolean includeExternals)
+        throws ClientException;
+
+    public void cleanup(String path) throws ClientException
+    {
+        cleanup(path, false, true, true, true, false);
+    }
 
     public native void resolve(String path, Depth depth,
                                ConflictResult.Choice conflictResult)
@@ -754,17 +764,6 @@ public class SVNClient implements ISVNClient
 
     public void info2(String pathOrUrl, Revision revision,
                       Revision pegRevision, Depth depth,
-                      boolean fetchExcluded, boolean fetchActualOnly,
-                      Collection<String> changelists,
-                      InfoCallback callback)
-            throws ClientException
-    {
-        info(pathOrUrl, revision, pegRevision, depth,
-             fetchExcluded, fetchActualOnly, false, changelists, callback);
-    }
-
-    public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, Depth depth,
                       Collection<String> changelists,
                       InfoCallback callback)
             throws ClientException
@@ -777,6 +776,14 @@ public class SVNClient implements ISVNClient
                              boolean dryRun, int stripCount, boolean reverse,
                              boolean ignoreWhitespace, boolean removeTempfiles,
                              PatchCallback callback)
+            throws ClientException;
+
+    public native void vacuum(String wcPath,
+                              boolean removeUnversionedItems,
+                              boolean removeIgnoredItems,
+                              boolean fixRecordedTimestamps,
+                              boolean removeUnusedPristines,
+                              boolean includeExternals)
             throws ClientException;
 
     public ISVNRemote openRemoteSession(String pathOrUrl)

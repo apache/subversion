@@ -590,6 +590,9 @@ class State:
       if line.startswith('DBG:') or line.startswith('Transmitting'):
         continue
 
+      if line.startswith('Committing transaction'):
+        continue
+
       match = _re_parse_commit_ext.search(line)
       if match:
         desc[to_relpath(match.group(4))] = StateItem(verb=match.group(1))

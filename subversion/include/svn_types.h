@@ -149,10 +149,16 @@ typedef int svn_boolean_t;
 
 
 
-/** Declaration of the null pointer constant type. */
+/** Declaration of the null pointer constant type.
+ *
+ * @since New in 1.9.
+ */
 struct svn_null_pointer_constant_stdarg_sentinel_t;
 
-/** Null pointer constant used as a sentinel in variable argument lists. */
+/** Null pointer constant used as a sentinel in variable argument lists.
+ *
+ * @since New in 1.9.
+ */
 #define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
 /* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
@@ -421,6 +427,8 @@ typedef long int svn_revnum_t;
 #define SVN_IGNORED_REVNUM ((svn_revnum_t) -1)
 
 /** Convert NULL-terminated C string @a str to a revision number. */
+/* When in a hot path, consider using svn__strtol() instead; atol() may be
+   locale-aware and thus slower. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
 /**

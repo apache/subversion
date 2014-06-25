@@ -667,7 +667,10 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_cleanup
-(JNIEnv *env, jobject jthis, jstring jpath)
+(JNIEnv *env, jobject jthis, jstring jpath,
+ jboolean jbreakLocks, jboolean jfixRecordedTimestamps,
+ jboolean jclearDavCache, jboolean jremoveUnusedPristines,
+ jboolean jincludeExternals)
 {
   JNIEntry(SVNClient, cleanup);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -680,7 +683,9 @@ Java_org_apache_subversion_javahl_SVNClient_cleanup
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->cleanup(path);
+  cl->cleanup(path, jbreakLocks, jfixRecordedTimestamps,
+              jclearDavCache, jremoveUnusedPristines,
+              jincludeExternals);
 }
 
 JNIEXPORT void JNICALL
@@ -1945,6 +1950,28 @@ Java_org_apache_subversion_javahl_SVNClient_patch
             jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_vacuum
+(JNIEnv *env, jobject jthis, jstring jpath,
+ jboolean jremoveUnversionedItems, jboolean jremoveIgnoredItems,
+ jboolean jfixRecordedTimestamps, jboolean jremoveUnusedPristines,
+ jboolean jincludeExternals)
+{
+  JNIEntry(SVNClient, patch);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return;
+    }
+
+  JNIStringHolder path(jpath);
+  cl->vacuum(path,
+             jremoveUnversionedItems, jremoveIgnoredItems,
+             jfixRecordedTimestamps, jremoveUnusedPristines,
+             jincludeExternals);
 }
 
 JNIEXPORT jobject JNICALL

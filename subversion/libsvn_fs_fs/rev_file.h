@@ -38,7 +38,9 @@
 typedef struct svn_fs_fs__packed_number_stream_t
   svn_fs_fs__packed_number_stream_t;
 
-/* All files and associated properties for START_REVISION.
+/* Data file, including indexes data, and associated properties for
+ * START_REVISION.  As the FILE is kept open, background pack operations
+ * will not cause access to this file to fail.
  */
 typedef struct svn_fs_fs__revision_file_t
 {
@@ -49,7 +51,7 @@ typedef struct svn_fs_fs__revision_file_t
   /* the revision was packed when the first file / stream got opened */
   svn_boolean_t is_packed;
 
-  /* rev / pack file or NULL if not opened, yet */
+  /* rev / pack file */
   apr_file_t *file;
 
   /* stream based on FILE and not NULL exactly when FILE is not NULL */
@@ -58,15 +60,6 @@ typedef struct svn_fs_fs__revision_file_t
   /* pool containing this object */
   apr_pool_t *pool;
 } svn_fs_fs__revision_file_t;
-
-/* Initialize the FILE data structure for REVISION in FS without actually
- * opening any files.  Use POOL for all future allocations in FILE.
- */
-void
-svn_fs_fs__init_revision_file(svn_fs_fs__revision_file_t *file,
-                              svn_fs_t *fs,
-                              svn_revnum_t revision,
-                              apr_pool_t *pool);
 
 /* Open the correct revision file for REV.  If the filesystem FS has
  * been packed, *FILE will be set to the packed file; otherwise, set *FILE

@@ -739,7 +739,7 @@ close_handler(void *baton)
  * function does not enforce any such restriction.  Also, the caller must
  * make sure that DIGEST refers to a buffer of sufficient length.
  */
-svn_stream_t *
+static svn_stream_t *
 wrap_write_stream(svn_checksum_t **checksum,
                   unsigned char *digest,
                   svn_stream_t *inner_stream,
