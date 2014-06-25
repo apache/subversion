@@ -232,7 +232,7 @@ Candidate changes:
      sending cached credentials to a server other than what they were
      cached for.
    Votes:
-     +1: breser
+     +1: breser, danielsh
 
  * ^/subversion/branches/1.8.x-VS2013-14
    Enable support for generating VS2013 and later ("14"+) project files.
