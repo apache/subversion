@@ -4745,6 +4745,16 @@ def diff_deleted_in_move_against_repos(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', sbox.wc_dir)
 
+  # OK. Walks nodes locally from wc-root, notices ancestry
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r1',
+                                     '--notice-ancestry')
+
+  # OK. Walks nodes locally from BB, notices ancestry
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r2',
+                                     '--notice-ancestry')
+
   # OK. Walks nodes locally from wc-root
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', sbox.wc_dir, '-r1')
