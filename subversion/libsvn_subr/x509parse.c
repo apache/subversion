@@ -503,7 +503,8 @@ x509_skip_ext(const unsigned char **p,
  * Store the name in printable form into buf; no more
  * than (end - buf) characters will be written
  */
-static int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
+static void
+x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
 {
   int i;
   unsigned char c;
@@ -578,8 +579,6 @@ static int x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
     p += snprintf(p, end - p, "%s", s);
     name = name->next;
   }
-
-  return (p - buf);
 }
 
 /*
