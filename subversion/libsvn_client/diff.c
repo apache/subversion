@@ -2082,15 +2082,19 @@ diff_repos_wc(const char **root_relpath,
       if (cf_depth == svn_depth_unknown)
         cf_depth = svn_depth_infinity;
 
+      /* Reporting the in-wc revision as r0, makes the repository send
+         everything as added, which avoids using BASE for pristine information,
+         which is not there (or unrelated) for a copy */
+
       SVN_ERR(reporter->set_path(reporter_baton, "",
-                                 cf_revision,
+                                 ignore_ancestry ? 0 : cf_revision,
                                  cf_depth, FALSE, NULL, scratch_pool));
 
       if (*target)
         SVN_ERR(reporter->link_path(reporter_baton, target,
-                                      target_url,
-                                      cf_revision,
-                                      cf_depth, FALSE, NULL, scratch_pool));
+                                    target_url,
+                                    ignore_ancestry ? 0 : cf_revision,
+                                    cf_depth, FALSE, NULL, scratch_pool));
 
       /* Finish the report to generate the diff. */
       SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
