@@ -720,7 +720,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
     return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
   }
 
-  end = buf + buflen;
+  end = (const unsigned char*) buf + buflen;
 
   /*
    *      signatureAlgorithm       AlgorithmIdentifier,
