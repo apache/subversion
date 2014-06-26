@@ -477,7 +477,7 @@ x509_skip_ext(const unsigned char **p,
   svn_error_t *err;
   int len;
 
-  if (*p == *end)
+  if (*p == end)
     return SVN_NO_ERROR;
 
   err = asn1_get_tag(p, end, &len,
