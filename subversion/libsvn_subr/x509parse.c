@@ -502,11 +502,12 @@ x509_skip_ext(const unsigned char **p,
 }
 
 /*
- * Store the name in printable form into buf; no more
- * than (end - buf) characters will be written
+ * Store the name from dn in printable form into buf,
+ * using scratch_pool for any temporary allocations.
  */
 static void
-x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn, apr_pool_t *scratch_pool)
+x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
+                  apr_pool_t *scratch_pool)
 {
   int i;
   const x509_name *name;
