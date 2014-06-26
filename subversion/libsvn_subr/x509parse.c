@@ -649,15 +649,6 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
     return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_VERSION, NULL, NULL);
   }
 
-  if (crt->sig_oid1.len != 9 ||
-      memcmp(crt->sig_oid1.p, OID_PKCS1, 8) != 0) {
-    return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_SIG_ALG, NULL, NULL);
-  }
-
-  if (crt->sig_oid1.p[8] < 2 || crt->sig_oid1.p[8] > 5) {
-    return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_SIG_ALG, NULL, NULL);
-  }
-
   /*
    * issuer                               Name
    */
