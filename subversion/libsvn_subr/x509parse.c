@@ -260,7 +260,8 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
  *  AttributeValue ::= ANY DEFINED BY AttributeType
  */
 static svn_error_t *
-x509_get_name(const unsigned char **p, const unsigned char *end, x509_name * cur)
+x509_get_name(const unsigned char **p, const unsigned char *end,
+              x509_name * cur, apr_pool_t *result_pool)
 {
   svn_error_t *err;
   int len;
@@ -333,12 +334,12 @@ x509_get_name(const unsigned char **p, const unsigned char *end, x509_name * cur
   if (*p == end2)
     return SVN_NO_ERROR;
 
-  cur->next = (x509_name *) malloc(sizeof(x509_name));
+  cur->next = (x509_name *) apr_palloc(result_pool, sizeof(x509_name));
 
   if (cur->next == NULL)
     return SVN_NO_ERROR;
 
-  return svn_error_trace(x509_get_name(p, end2, cur->next));
+  return svn_error_trace(x509_get_name(p, end2, cur->next, result_pool));
 }
 
 /*
@@ -650,7 +651,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
-  SVN_ERR(x509_get_name(&p, p + len, &crt->issuer));
+  SVN_ERR(x509_get_name(&p, p + len, &crt->issuer, scratch_pool));
 
   crt->issuer_raw.len = (int) (p - crt->issuer_raw.p);
 
@@ -671,7 +672,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
-  SVN_ERR(x509_get_name(&p, p + len, &crt->subject));
+  SVN_ERR(x509_get_name(&p, p + len, &crt->subject, scratch_pool));
 
   crt->subject_raw.len = (int) (p - crt->subject_raw.p);
 
