@@ -4762,6 +4762,28 @@ def diff_deleted_in_move_against_repos(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', sbox.wc_dir, '-r2')
 
+@XFail()
+def diff_replaced_moved(sbox):
+  "diff against a replaced moved node"
+
+  sbox.build(read_only=True)
+  sbox.simple_move('A', 'AA')
+  sbox.simple_rm('AA/B')
+  sbox.simple_move('AA/D', 'AA/B')
+
+  # Ok
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('.'), '-r1')
+
+  # Ok (rhuijben: Works through a hack assuming some BASE knowledge)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('AA'), '-r1')
+
+  # Error (misses BASE node because the diff editor is driven incorrectly)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('AA/B'), '-r1')
+
+
 
 ########################################################################
 #Run the tests
@@ -4851,6 +4873,7 @@ test_list = [ None,
               diff_switched_file,
               diff_parent_dir,
               diff_deleted_in_move_against_repos,
+              diff_replaced_moved,
               ]
 
 if __name__ == '__main__':
