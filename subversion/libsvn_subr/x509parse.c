@@ -45,7 +45,7 @@
  */
 
 #include <apr_pools.h>
-#include <svn_hash.h>
+#include "svn_hash.h"
 
 #include "x509.h"
 
