@@ -450,6 +450,7 @@ x509_get_uid(const unsigned char **p,
 
   err = asn1_get_tag(p, end, &uid->len,
         ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n);
+  if (err)
     {
       if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
         {
