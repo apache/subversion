@@ -1681,20 +1681,16 @@ SVN_ERROR_START
              SVN_ERR_X509_CATEGORY_START + 16,
              "Unknown certificate version")
 
-  SVN_ERRDEF(SVN_ERR_X509_CERT_UNKNOWN_SIG_ALG,
-             SVN_ERR_X509_CATEGORY_START + 17,
-             "Certficate uses unknown signature algorithm")
-
   SVN_ERRDEF(SVN_ERR_X509_CERT_UNKNOWN_PK_ALG,
-             SVN_ERR_X509_CATEGORY_START + 18,
+             SVN_ERR_X509_CATEGORY_START + 17,
              "Certificate uses unknown public key algorithm")
 
   SVN_ERRDEF(SVN_ERR_X509_CERT_SIG_MISMATCH,
-             SVN_ERR_X509_CATEGORY_START + 19,
+             SVN_ERR_X509_CATEGORY_START + 18,
              "Certificate signature mismatch")
 
   SVN_ERRDEF(SVN_ERR_X509_CERT_VERIFY_FAILED,
-             SVN_ERR_X509_CATEGORY_START + 20,
+             SVN_ERR_X509_CATEGORY_START + 19,
              "Certficate verification failed")
 
 SVN_ERROR_END
