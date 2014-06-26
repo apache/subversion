@@ -4728,6 +4728,31 @@ def diff_parent_dir(sbox):
   finally:
     os.chdir(was_cwd)
 
+@XFail()
+def diff_deleted_in_move_against_repos(sbox):
+  "diff deleted in move against repository"
+
+  sbox.build()
+  sbox.simple_move('A/B', 'BB')
+  sbox.simple_move('BB/E/alpha', 'BB/q')
+  sbox.simple_rm('BB/E/beta')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.repo_url + '/BB/E',
+                                     '--parents', '-m', 'Create dir')
+
+  # OK. Local diff
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir)
+
+  # OK. Walks nodes locally from wc-root
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r1')
+
+  # Assertion. Walks nodes locally from BB.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r2')
+
 
 ########################################################################
 #Run the tests
@@ -4816,6 +4841,7 @@ test_list = [ None,
               diff_repo_repo_added_file_mime_type,
               diff_switched_file,
               diff_parent_dir,
+              diff_deleted_in_move_against_repos,
               ]
 
 if __name__ == '__main__':
