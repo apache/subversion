@@ -4728,7 +4728,6 @@ def diff_parent_dir(sbox):
   finally:
     os.chdir(was_cwd)
 
-@XFail()
 def diff_deleted_in_move_against_repos(sbox):
   "diff deleted in move against repository"
 

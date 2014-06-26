@@ -717,6 +717,9 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
           if (!info->have_base)
             {
               local_only = TRUE; /* Only report additions */
+
+              if (info->status == svn_wc__db_status_deleted)
+                continue; /* Nothing added (deleted copy) */
             }
           else if (info->status == svn_wc__db_status_normal)
             {
