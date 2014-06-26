@@ -225,23 +225,24 @@ public:
 
 class SimpleSearchCallback : public WalkCredentialsCallback
 {
+  const ::Java::Env m_env;
   const char* const m_cred_kind;
   const char* const m_realm;
   const bool m_delete_when_found;
-  apr_hash_t* m_cred;
+  jobject m_credential;
 
 public:
-  explicit SimpleSearchCallback(const char* cred_kind, const char* realm,
+  explicit SimpleSearchCallback(::Java::Env env,
+                                const char* cred_kind, const char* realm,
                                 bool delete_when_found)
-    : m_cred_kind(cred_kind),
+    : m_env(env),
+      m_cred_kind(cred_kind),
       m_realm(realm),
       m_delete_when_found(delete_when_found),
-      m_cred(NULL)
+      m_credential(NULL)
     {}
 
-  const char* cred_kind() const { return m_cred_kind; }
-  const char* realm() const { return m_realm; }
-  apr_hash_t* cred() const { return m_cred; }
+  jobject credential() const { return m_credential; }
 
   virtual svn_error_t* operator()(svn_boolean_t *delete_cred,
                                   const char *cred_kind,
@@ -252,7 +253,9 @@ public:
       if (0 == strcmp(cred_kind, m_cred_kind)
           && 0 == strcmp(realmstring, m_realm))
         {
-          m_cred = cred_hash;
+          m_credential = build_credential(m_env, cred_hash,
+                                          cred_kind, realmstring,
+                                          scratch_pool);
           *delete_cred = m_delete_when_found;
           return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, "");
         }
@@ -283,7 +286,8 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeGetCredential(
       // with its own pool around for these functions.
       SVN::Pool pool;
 
-      SimpleSearchCallback cb(cred_kind.strdup(pool.getPool()),
+      SimpleSearchCallback cb(env,
+                              cred_kind.strdup(pool.getPool()),
                               realm.strdup(pool.getPool()),
                               false);
 
@@ -291,10 +295,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeGetCredential(
                        svn_config_walk_auth_data(
                            Java::String::Contents(config_dir).c_str(),
                            cb.walk_func, &cb, pool.getPool()));
-      if (!cb.cred())
-        return NULL;
-      return build_credential(env, cb.cred(), cb.cred_kind(), cb.realm(),
-                              pool.getPool());
+      return cb.credential();
     }
   SVN_JAVAHL_JNI_CATCH;
   return NULL;
@@ -319,7 +320,8 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeRemoveCredential(
       // with its own pool around for these functions.
       SVN::Pool pool;
 
-      SimpleSearchCallback cb(cred_kind.strdup(pool.getPool()),
+      SimpleSearchCallback cb(env,
+                              cred_kind.strdup(pool.getPool()),
                               realm.strdup(pool.getPool()),
                               true);
 
@@ -327,11 +329,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeRemoveCredential(
                        svn_config_walk_auth_data(
                            Java::String::Contents(config_dir).c_str(),
                            cb.walk_func, &cb, pool.getPool()));
-      if (!cb.cred())
-        return NULL;
-
-      return build_credential(env, cb.cred(), cb.cred_kind(), cb.realm(),
-                              pool.getPool());
+      return cb.credential();
     }
   SVN_JAVAHL_JNI_CATCH;
   return NULL;
