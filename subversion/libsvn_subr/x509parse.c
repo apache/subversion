@@ -46,6 +46,7 @@
 
 #include <apr_pools.h>
 #include "svn_hash.h"
+#include "svn_string.h"
 #include "svn_x509.h"
 
 #include "x509.h"
@@ -505,79 +506,70 @@ x509_skip_ext(const unsigned char **p,
  * than (end - buf) characters will be written
  */
 static void
-x509parse_dn_gets(char *buf, const char *end, const x509_name * dn)
+x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn, apr_pool_t *scratch_pool)
 {
   int i;
-  unsigned char c;
   const x509_name *name;
-  char s[128], *p;
-
-  memset(s, 0, sizeof(s));
+  const char *temp;
 
   name = dn;
-  p = buf;
 
   while (name != NULL) {
     if (name != dn)
-      p += snprintf(p, end - p, ", ");
+      svn_stringbuf_appendcstr(buf, ", ");
 
     if (memcmp(name->oid.p, OID_X520, 2) == 0) {
       switch (name->oid.p[2]) {
       case X520_COMMON_NAME:
-        p += snprintf(p, end - p, "CN=");
+        svn_stringbuf_appendcstr(buf, "CN=");
         break;
 
       case X520_COUNTRY:
-        p += snprintf(p, end - p, "C=");
+        svn_stringbuf_appendcstr(buf, "C=");
         break;
 
       case X520_LOCALITY:
-        p += snprintf(p, end - p, "L=");
+        svn_stringbuf_appendcstr(buf, "L=");
         break;
 
       case X520_STATE:
-        p += snprintf(p, end - p, "ST=");
+        svn_stringbuf_appendcstr(buf, "ST=");
         break;
 
       case X520_ORGANIZATION:
-        p += snprintf(p, end - p, "O=");
+        svn_stringbuf_appendcstr(buf, "O=");
         break;
 
       case X520_ORG_UNIT:
-        p += snprintf(p, end - p, "OU=");
+        svn_stringbuf_appendcstr(buf, "OU=");
         break;
 
       default:
-        p += snprintf(p, end - p, "0x%02X=",
-                name->oid.p[2]);
+        temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[2]);
+        svn_stringbuf_appendcstr(buf, temp);
         break;
       }
     } else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0) {
       switch (name->oid.p[8]) {
       case PKCS9_EMAIL:
-        p += snprintf(p, end - p, "emailAddress=");
+        svn_stringbuf_appendcstr(buf, "emailAddress=");
         break;
 
       default:
-        p += snprintf(p, end - p, "0x%02X=",
-                name->oid.p[8]);
+        temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[8]);
+        svn_stringbuf_appendcstr(buf, temp);
         break;
       }
     } else
-      p += snprintf(p, end - p, "\?\?=");
+      svn_stringbuf_appendcstr(buf, "\?\?=");
 
     for (i = 0; i < name->val.len; i++) {
-      if (i >= (int)sizeof(s) - 1)
-        break;
-
-      c = name->val.p[i];
+      unsigned char c = name->val.p[i];
       if (c < 32 || c == 127 || (c > 128 && c < 160))
-        s[i] = '?';
+        svn_stringbuf_appendbyte(buf, '?');
       else
-        s[i] = c;
+        svn_stringbuf_appendbyte(buf, (char) c);
     }
-    s[i] = '\0';
-    p += snprintf(p, end - p, "%s", s);
     name = name->next;
   }
 }
@@ -597,7 +589,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
-  char name[1024];
+  svn_stringbuf_t *name;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
@@ -742,9 +734,9 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   *certinfo = apr_hash_make(result_pool);
 
-  x509parse_dn_gets(name, name + sizeof(name), &crt->issuer);
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER,
-                apr_pstrdup(result_pool, name));
+  name = svn_stringbuf_create_empty(result_pool);
+  x509parse_dn_gets(name, &crt->issuer, scratch_pool);
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, name->data);
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
                 apr_psprintf(result_pool,
