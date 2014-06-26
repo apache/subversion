@@ -49,7 +49,7 @@ public:
    * Constructs a wrapper around an existing @c InputStream @a jstream.
    */
   explicit InputStream(Env env, jobject jstream)
-    : Object(env, ClassCache::get_input_stream(), jstream)
+    : Object(env, ClassCache::get_input_stream(env), jstream)
     {}
 
   /**
@@ -177,7 +177,7 @@ public:
    * Constructs a wrapper around an existing @c OutputStream @a jstream.
    */
   explicit OutputStream(Env env, jobject jstream)
-    : Object(env, ClassCache::get_output_stream(), jstream)
+    : Object(env, ClassCache::get_output_stream(env), jstream)
     {}
 
   /**

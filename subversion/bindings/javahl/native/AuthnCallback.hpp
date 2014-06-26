@@ -52,7 +52,7 @@ public:
      * The constructor does not verify the class of the wrapped object.
      */
     explicit AuthnResult(::Java::Env env, jobject jthis)
-      : ::Java::Object(env, ::Java::ClassCache::get_authn_result(), jthis)
+      : ::Java::Object(env, ::Java::ClassCache::get_authn_result(env), jthis)
       {}
 
     bool save() const
@@ -193,7 +193,7 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit AuthnCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, ::Java::ClassCache::get_authn_cb(), jthis)
+    : ::Java::Object(env, ::Java::ClassCache::get_authn_cb(env), jthis)
     {}
 
   /**
@@ -285,7 +285,7 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit UserPasswordCallback(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, ::Java::ClassCache::get_user_passwd_cb(), jthis)
+    : ::Java::Object(env, ::Java::ClassCache::get_user_passwd_cb(env), jthis)
     {}
 
   /**

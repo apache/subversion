@@ -220,7 +220,7 @@ MethodID Class::m_mid_get_name;
 void Class::static_init(Env env, jclass cls)
 {
   m_mid_get_class = env.GetMethodID(
-      ClassCache::get_object()->get_class(),
+      ClassCache::get_object(env)->get_class(),
       "getClass", "()Ljava/lang/Class;");
   m_mid_get_name = env.GetMethodID(
       cls, "getName",  "()Ljava/lang/String;");
@@ -343,7 +343,7 @@ void handle_svn_error(Env env, ::svn_error_t* err)
     {
       cause = env.ExceptionOccurred();
       if (env.IsInstanceOf(
-              cause, ClassCache::get_subversion_exception()->get_class()))
+              cause, ClassCache::get_subversion_exception(env)->get_class()))
         {
           // XXX FIXME: Should really have a special error code
           // specifically for propagating Java exceptions from

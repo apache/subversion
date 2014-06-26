@@ -58,7 +58,7 @@ protected:
    * @c std::vector.
    */
   explicit BaseList(Env env, jobject jlist)
-    : Object(env, ClassCache::get_list(), jlist),
+    : Object(env, ClassCache::get_list(env), jlist),
       m_contents(convert_to_vector(env, m_jthis))
     {}
 
@@ -197,7 +197,7 @@ protected:
    * Constructs the list wrapper, deriving the class from @a jlist.
    */
   explicit BaseMutableList(Env env, jobject jlist)
-    : Object(env, ClassCache::get_array_list(), jlist)
+    : Object(env, ClassCache::get_array_list(env), jlist)
     {}
 
   /**
@@ -205,7 +205,7 @@ protected:
    * with initial allocation size @a length.
    */
   explicit BaseMutableList(Env env, jint length)
-    : Object(env, ClassCache::get_array_list())
+    : Object(env, ClassCache::get_array_list(env))
     {
       set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
     }
