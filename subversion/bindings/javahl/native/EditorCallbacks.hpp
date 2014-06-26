@@ -47,7 +47,7 @@ public:
    */
   explicit ProvideBaseCallback(::Java::Env env, jobject jthis)
     : ::Java::Object(env,
-                     ::Java::ClassCache::get_editor_provide_base_cb(),
+                     ::Java::ClassCache::get_editor_provide_base_cb(env),
                      jthis)
     {}
 
@@ -69,7 +69,7 @@ public:
      */
     explicit ReturnValue(::Java::Env env, jobject jthis)
       : Java::Object(env,
-                     ::Java::ClassCache::get_editor_provide_base_cb_ret(),
+                     ::Java::ClassCache::get_editor_provide_base_cb_ret(env),
                      jthis)
       {}
 
@@ -167,7 +167,7 @@ public:
    */
   explicit ProvidePropsCallback(::Java::Env env, jobject jthis)
     : ::Java::Object(env,
-                     ::Java::ClassCache::get_editor_provide_props_cb(),
+                     ::Java::ClassCache::get_editor_provide_props_cb(env),
                      jthis)
     {}
 
@@ -188,7 +188,7 @@ public:
      */
     explicit ReturnValue(::Java::Env env, jobject jthis)
       : Java::Object(env,
-                     ::Java::ClassCache::get_editor_provide_props_cb_ret(),
+                     ::Java::ClassCache::get_editor_provide_props_cb_ret(env),
                      jthis)
       {}
 
@@ -284,7 +284,7 @@ public:
    */
   explicit GetNodeKindCallback(::Java::Env env, jobject jthis)
     : ::Java::Object(env,
-                     ::Java::ClassCache::get_editor_get_kind_cb(),
+                     ::Java::ClassCache::get_editor_get_kind_cb(env),
                      jthis)
     {}
 

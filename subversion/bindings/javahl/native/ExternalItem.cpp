@@ -82,7 +82,7 @@ make_external_item(::Java::Env env,
 } // anonymous namespace
 
 ExternalItem::ExternalItem(::Java::Env env, jobject jthis)
-  : Object(env, ::Java::ClassCache::get_external_item(), jthis),
+  : Object(env, ::Java::ClassCache::get_external_item(env), jthis),
     m_target_dir(env, get_string_field(env, jthis, impl().m_fid_target_dir)),
     m_url(env, get_string_field(env, jthis, impl().m_fid_url)),
     m_revision(get_revision_field(env, jthis, impl().m_fid_revision)),
@@ -94,7 +94,7 @@ ExternalItem::ExternalItem(::Java::Env env,
                            const char* url,
                            const svn_opt_revision_t* revision,
                            const svn_opt_revision_t* peg_revision)
-  : Object(env, ::Java::ClassCache::get_external_item()),
+  : Object(env, ::Java::ClassCache::get_external_item(env)),
     m_target_dir(env, target_dir),
     m_url(env, url),
     m_revision(*revision),

@@ -135,7 +135,7 @@ ByteChannel::ByteBuffer::ClassImpl::~ClassImpl() {}
 
 jint ByteChannel::read(jobject destination)
 {
-  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl();
+  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl(m_env);
 
   const jint remaining = get_remaining(m_env, destination,
                                        bufimpl.m_mid_get_remaining);
@@ -196,7 +196,7 @@ jint ByteChannel::read(jobject destination)
 
 jint ByteChannel::write(jobject source)
 {
-  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl();
+  const ByteBuffer::ClassImpl& bufimpl = ByteBuffer::impl(m_env);
 
   const jint remaining = get_remaining(m_env, source,
                                        bufimpl.m_mid_get_remaining);
