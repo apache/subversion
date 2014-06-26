@@ -4762,7 +4762,6 @@ def diff_deleted_in_move_against_repos(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', sbox.wc_dir, '-r2')
 
-@XFail()
 def diff_replaced_moved(sbox):
   "diff against a replaced moved node"
 
