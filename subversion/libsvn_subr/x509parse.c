@@ -630,7 +630,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   end = p + len;
-  crt->tbs.len = end - crt->tbs.p;
+  crt->tbs.len = (int) (end - crt->tbs.p);
 
   /*
    * Version      ::=      INTEGER  {      v1(0), v2(1), v3(2)  }
@@ -660,7 +660,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   SVN_ERR(x509_get_name(&p, p + len, &crt->issuer));
 
-  crt->issuer_raw.len = p - crt->issuer_raw.p;
+  crt->issuer_raw.len = (int) (p - crt->issuer_raw.p);
 
   /*
    * Validity ::= SEQUENCE {
@@ -681,7 +681,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   SVN_ERR(x509_get_name(&p, p + len, &crt->subject));
 
-  crt->subject_raw.len = p - crt->subject_raw.p;
+  crt->subject_raw.len = (int) (p - crt->subject_raw.p);
 
   /*
    * SubjectPublicKeyInfo  ::=  SEQUENCE
