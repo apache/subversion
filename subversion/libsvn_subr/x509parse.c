@@ -467,6 +467,38 @@ x509_get_uid(const unsigned char **p,
 }
 
 /*
+ * X.509 v3 extensions (not parsed)
+ */
+static svn_error_t *
+x509_skip_ext(const unsigned char **p,
+             const unsigned char *end)
+{
+  svn_error_t *err;
+  int len;
+
+  if (*p == *end)
+    return SVN_NO_ERROR;
+
+  err = asn1_get_tag(p, end, &len,
+                     ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 3);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+
+      return svn_error_trace(err);
+    }
+
+  /* Skip extensions */
+  *p += len;
+
+  return SVN_NO_ERROR;
+}
+
+/*
  * Store the name in printable form into buf; no more
  * than (end - buf) characters will be written
  */
@@ -685,6 +717,10 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   if (crt->version == 2 || crt->version == 3) {
     SVN_ERR(x509_get_uid(&p, end, &crt->subject_id, 2));
+  }
+
+  if (crt->version == 3) {
+    SVN_ERR(x509_skip_ext(&p, end));
   }
 
   if (p != end) {
