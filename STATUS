@@ -114,7 +114,7 @@ Candidate changes:
      +1: rhuijben
      -0: stefan2 (compiler misses "private/svn_sorts_private.h",
                   before branch)
-     
+
  * r1589460, r1589486
    Fix copying parents of locally deleted nodes between working copies.
    Justification:
@@ -225,15 +225,6 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1550691, r1550772, r1600909
-   Guard against MD5 hash collisions when finding cached credentials.
-   Justification:
-     MD5 collision attacks exist and could be used to trick a client into
-     sending cached credentials to a server other than what they were
-     cached for.
-   Votes:
-     +1: breser, danielsh
-
  * ^/subversion/branches/1.8.x-VS2013-14
    Enable support for generating VS2013 and later ("14"+) project files.
    Justification:
@@ -273,3 +264,11 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1550691, r1550772, r1600909
+   Guard against MD5 hash collisions when finding cached credentials.
+   Justification:
+     MD5 collision attacks exist and could be used to trick a client into
+     sending cached credentials to a server other than what they were
+     cached for.
+   Votes:
+     +1: breser, danielsh, rhuijben
