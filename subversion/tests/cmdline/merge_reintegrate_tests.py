@@ -278,7 +278,8 @@ def basic_reintegrate(sbox):
   # mergeinfo and the A-->A_MOVED path difference.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 9.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 9.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED',

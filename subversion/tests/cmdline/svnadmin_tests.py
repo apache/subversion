@@ -982,7 +982,8 @@ def load_with_parent_dir(sbox):
 
   # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 1.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
   load_dumpstream(sbox, dumpfile, '--parent-dir', '/sample')
@@ -1004,7 +1005,8 @@ def load_with_parent_dir(sbox):
   # This time, don't include a leading slash on the --parent-dir argument.
   # See issue #3547.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 11.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 11.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample-2",
                                      "-m", "Create sample-2 dir")
   load_dumpstream(sbox, dumpfile, '--parent-dir', 'sample-2')
@@ -1077,7 +1079,8 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile = open(dumpfile_location).read()
 
   # Create 'toplevel' dir in sbox.repo_url
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir")
 

@@ -1157,7 +1157,8 @@ def wc_copy_parent_into_child(sbox):
 
   svntest.actions.run_and_verify_svn(None,
                                      ['Adding copy of        .\n',
-                                     '\n', 'Committed revision 2.\n'], [],
+                                      'Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a larger can',
                                      '.', F_B_url)

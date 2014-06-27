@@ -241,7 +241,8 @@ def basic_mkdir_url(sbox):
   Y_Z_url = sbox.repo_url + '/Y/Z'
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg', Y_url, Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
@@ -285,12 +286,14 @@ def basic_mkdir_url_with_parents(sbox):
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
   svntest.actions.run_and_verify_svn("mkdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg',
                                      X_url, U_url)
 
   svntest.actions.run_and_verify_svn("mkdir --parents",
-                                     ["\n", "Committed revision 3.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 3.\n"], [],
                                      'mkdir', '-m', 'log_msg', '--parents',
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
@@ -1263,7 +1266,8 @@ def basic_delete(sbox):
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
 
