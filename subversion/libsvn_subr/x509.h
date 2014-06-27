@@ -32,15 +32,10 @@
  *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef TROPICSSL_X509_H
-#define TROPICSSL_X509_H
+#ifndef SVN_LIBSVN_SUBR_X509_H
+#define SVN_LIBSVN_SUBR_X509_H
 
 #include <apr_time.h>
-
-#define BADCERT_EXPIRED                 1
-#define BADCERT_REVOKED                 2
-#define BADCERT_CN_MISMATCH             4
-#define BADCERT_NOT_TRUSTED             8
 
 /*
  * DER constants
@@ -76,19 +71,12 @@
 #define X520_ORG_UNIT                  11
 #define PKCS9_EMAIL                     1
 
-#define X509_OUTPUT_DER              0x01
-#define X509_OUTPUT_PEM              0x02
-#define PEM_LINE_LENGTH                72
-#define X509_ISSUER                  0x01
-#define X509_SUBJECT                 0x02
-
 #define OID_X520                "\x55\x04"
-#define OID_CN                  "\x55\x04\x03"
-#define OID_PKCS1               "\x2A\x86\x48\x86\xF7\x0D\x01\x01"
-#define OID_PKCS1_RSA           "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01"
-#define OID_PKCS1_RSA_SHA       "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05"
 #define OID_PKCS9               "\x2A\x86\x48\x86\xF7\x0D\x01\x09"
-#define OID_PKCS9_EMAIL         "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * Structures for parsing X.509 certificates
@@ -135,8 +123,8 @@ typedef struct _x509_cert {
 
 } x509_cert;
 
-#define SVN_X509_CERTINFO_KEY_ISSUER      "issuer"
-#define SVN_X509_CERTINFO_KEY_VALID_FROM  "valid-from"
-#define SVN_X509_CERTINFO_KEY_VALID_TO    "valid-to"
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-#endif        /* x509.h */
+#endif        /* SVN_LIBSVN_SUBR_X509_H */
