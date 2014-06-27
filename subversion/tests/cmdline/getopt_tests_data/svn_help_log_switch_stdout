@@ -95,8 +95,6 @@ Valid options:
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
-  --auto-moves             : attempt to interpret matching unique DEL+ADD
-                             pairs as moves
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                              'immediates', or 'infinity')
   --diff                   : produce diff output
