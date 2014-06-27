@@ -161,6 +161,51 @@ svn_io__utf8_to_unicode_longpath(const WCHAR **result,
                                  apr_pool_t *result_pool);
 #endif /* WIN32 */
 
+/** Parse a user defined command to contain dynamically created labels
+ *  and filenames.  This function serves both diff and diff3 parsing
+ *  requirements.
+ *
+ *  When used in a diff context: (responding parse tokens in braces)
+ *
+ *  @a label1 (%svn_label_old) refers to the label of @a tmpfile1
+ *  (%svn_old) which is the pristine copy.
+ *
+ *  @a label2 (%svn_label_new) refers to the label of @a tmpfile2
+ *  (%svn_new) which is the altered copy.
+ *
+ *  When used in a diff3 context:
+ *
+ *  @a label1 refers to the label of @a tmpfile1 which is the 'mine'
+ *  copy.
+ *
+ *  @a label2 refers to the label of @a tmpfile2 which is the 'older'
+ *  copy.
+ *
+ *  @a label3 (%svn_label_base) refers to the label of @a base
+ *  (%svn_base) which is the 'base' copy.
+ *
+ *  In general:
+ *
+ *  @a cmd is a user defined string containing 0 or more parse tokens
+ *  which are expanded by the required labels and filenames.
+ * 
+ *  @a pool is used for temporary allocations.
+ *
+ *  @return A NULL-terminated character array.
+ * 
+ * @since New in 1.9.
+ */
+const char **
+svn_io__create_custom_diff_cmd(const char *label1,
+                               const char *label2,
+                               const char *label3,
+                               const char *from,
+                               const char *to,
+                               const char *base,
+                               const char *cmd,
+                               apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

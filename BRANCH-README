@@ -1,0 +1,63 @@
+This branch implements the 'invoke-diff-cmd' feature and is located at
+https://svn.apache.org/repos/asf/subversion/branches/diff-cmd-feature/
+
+This branch adds a new syntax facility to --diff-cmd and it's config
+counterpart, whilst preserving the old behaviour.
+
+The new syntax allows the use of 4 keywords: 
+
+    %svn_new_label, %svn_old_label, %svn_old %svn_new 
+
+At a minimum, %svn_new and %svn_old are required amongst any arbitrary
+character sequence.
+
+The code looks for the presence of %svn_old and if it does not detect
+it, it translates the --diff-cmd input and --extensions if they have
+been set to match the old --diff-cmds' translation before parsing the
+result with svn_io__create_custom_diff_cmd().
+
+
+Usage:
+======
+
+Examples:
+
+svn diff --diff-cmd=diff %svn_new %svn_old
+svn diff --diff-cmd=diff -L %svn_new_label  %svn_new -L "Old File" %svn_old
+
+
+TODO:
+=====
+
+1) Finalise the current parsing capabilities
+2) Write a fuzzing test for svn_io__create_custom_diff_cmd()
+3) Rewrite the final svn_io__create_custom_diff_cmd() design
+4) Solve the "diff\ script" problem
+5) Solve the empty single back quotes problem
+6) Discuss if adding this to the existing --diff-cmd (as per 2044)
+   is useful and desired.
+
+
+Problems:
+=========
+
+1) The "diff\ script" problem test problem:
+
+   /subversion/tests/cmdline/diff_tests.py 52 
+
+fails, because whilst the output is as expected, the shell fails to
+find the "diff script".
+
+2) The empty single back quotes problem:
+
+Emtpy single quotes are sent to the shell duplicated (twice it seems).
+
+The command: 
+
+./subversion/svn/svn diff --diff-cmd="diff --changed-group-format='%<'\
+ --unchanged-group-format='' %svn_new %svn_old"
+
+Causes the external diff command to display 4 backticks in the
+unchanged-group-format, and where there should be no line at all,
+"''''" (4 backticks) are displayed.
+

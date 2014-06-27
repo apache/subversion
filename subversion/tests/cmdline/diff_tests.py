@@ -3065,9 +3065,11 @@ def diff_wrong_extension_type(sbox):
   svntest.actions.run_and_verify_svn(None, [], err.INVALID_DIFF_OPTION,
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
+#----------------------------------------------------------------------
 # Check the order of the arguments for an external diff tool
+# This tests the old-style command
 def diff_external_diffcmd(sbox):
-  "svn diff --diff-cmd provides the correct arguments"
+  "org. svn diff --diff-cmd provides correct args"
 
   sbox.build(read_only = True)
   os.chdir(sbox.wc_dir)
@@ -3077,7 +3079,7 @@ def diff_external_diffcmd(sbox):
 
   # Create a small diff mock object that prints its arguments to stdout.
   # (This path needs an explicit directory component to avoid searching.)
-  diff_script_path = os.path.join('.', 'diff')
+  diff_script_path = os.path.join('.', 'diff_script')
   # TODO: make the create function return the actual script name, and rename
   # it to something more generic.
   svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
@@ -3102,7 +3104,193 @@ def diff_external_diffcmd(sbox):
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)
 
+#----------------------------------------------------------------------
+# Check the order of the arguments for an external diff tool
+# This tests the old-style command with extensions
+def diff_external_diffcmd_1(sbox):
+  "old svn diff --diff-cmd provides correct ext"
 
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+
+  iota_path = 'iota'
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  # Create a small diff mock object that prints its arguments to stdout.
+  # (This path needs an explicit directory component to avoid searching.)
+  diff_script_path = os.path.join(os.getcwd(), 'diff_script')
+  # TODO: make the create function return the actual script name, and rename
+  # it to something more generic.
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+  if sys.platform == 'win32':
+    diff_script_path = "%s.bat" % diff_script_path
+
+  expected_output = svntest.verify.ExpectedOutput([
+    "Index: iota\n",
+    "===================================================================\n",
+    "-p\n",
+    "-u\n",
+    "-L\n",
+    "iota\t(revision 1)\n",
+    "-L\n",
+    "iota\t(working copy)\n",
+    os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+    os.path.abspath("iota") + "\n"])
+
+  # Check that the output of diff corresponds with the expected arguments,
+  # in the correct order.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff',
+                                     '-x -p -u',
+                                     '--diff-cmd',
+                                     diff_script_path,
+                                     iota_path)
+
+# Check the correct parsing of arguments for an external diff tool
+# this tests the simple new style command
+def diff_external_diffcmd_2(sbox):
+  "new svn diff --diff-cmd provides correct args"
+
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+
+  diff_script_path = os.path.join('.', 'diff_script')
+
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+
+  if sys.platform == 'win32':
+     diff_script_path = "%s.bat" % diff_script_path
+
+  iota_path = 'iota'
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  expected_output = svntest.verify.ExpectedOutput([
+      "Index: iota\n",
+      "===================================================================\n",
+      "-L\n",
+
+      # correct label %svn_label_old -> label 1
+      "iota	(revision 1)\n",   
+
+      "-L\n",
+      # correct label %svn_label_new -> label 2
+      "iota	(working copy)\n",
+
+      # correct file %svn_old -> old
+      os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+
+      # correct file %svn_new -> new
+      os.path.abspath("iota") + "\n",
+      ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff',
+       '--diff-cmd='+diff_script_path+' -L %svn_label_old -L %svn_label_new %svn_old %svn_new ',
+                                     iota_path)
+  
+  
+# Check the correct parsing of arguments for an external diff tool
+# this tests the new style command with n-word labels,
+# +'s on either side of the expanded file name and whether
+# program names with spaces are correctly interpreted.
+def diff_external_diffcmd_3(sbox):
+  "svn diff --diff-cmd labels with ext. syntax"
+
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+
+  #make a windows style script name, with a space in it.
+  diff_script_path = os.path.join('.', "diff_script")
+
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+
+  if sys.platform == 'win32':
+     diff_script_path = "%s.bat" % diff_script_path
+
+  iota_path = 'iota'
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  expected_output = svntest.verify.ExpectedOutput([
+      "Index: iota\n",
+      "===================================================================\n",
+      "-L\n",
+      # correct label %svn_label_old -> label 1
+      '"X"\n',   
+
+      # correct label %svn_label_new -> label 2
+      "-L\n",
+
+      '"A B C D"\n',
+
+      # correct file %svn_old -> old
+      os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+
+      # correct insertion of filename into string "+%svn_new+" -> "+"+new+"+"
+      "+" + os.path.abspath("iota") + "+\n",
+      ])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff',
+                                     '--diff-cmd='+
+                                     diff_script_path+
+   ' -L "X" -L "A B C D" %svn_old +%svn_new+',
+                                     iota_path)
+
+# Check that an escaped space using '\ 'is correctly interpreted.
+# This test is expected to fail currently, see sample output in
+# comment at the end.
+@XFail()  
+def diff_external_diffcmd_4(sbox):
+  "svn diff --diff-cmd w. spaces in diff program name"
+
+  sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
+
+  #make a windows style script name, with a space in it.
+  diff_script_path = os.path.join('.', "diff script")
+
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+  # now rename it like a human would type it
+  diff_script_path = os.path.join('.', "diff\ script")
+  if sys.platform == 'win32':
+     diff_script_path = "%s.bat" % diff_script_path
+
+  iota_path = 'iota'
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  expected_output = svntest.verify.ExpectedOutput([
+      "Index: iota\n",
+      "===================================================================\n",
+      "-L\n",
+      # correct label %svn_label_old -> label 1
+      '"X Y Z"\n',   
+
+      # correct label %svn_label_new -> label 2
+      "-L\n",
+
+      '"A B C D"\n',
+
+      # correct file %svn_old -> old
+      os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+
+      # correct insertion of filename into string "+%svn_new+" -> "+"+new+"+"
+      "+" + os.path.abspath("iota") + "+\n",
+      ])
+
+  # This currently fails, but shows the anticipated output.  This may be a
+  # shell issue, and needs investigating.  See failure message below.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff',
+                                     '--diff-cmd='+
+                                     diff_script_path+
+   ' -L "X Y Z" -L "A B C D" %svn_old +%svn_new+',
+                                     iota_path)
+
+  
 #----------------------------------------------------------------------
 # Diffing an unrelated repository URL against working copy with
 # local modifications (i.e. not committed). This is issue #3295 (diff
@@ -4817,6 +5005,10 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
+              diff_external_diffcmd_1,
+              diff_external_diffcmd_2,
+              diff_external_diffcmd_3,
+              diff_external_diffcmd_4,
               diff_url_against_local_mods,
               diff_preexisting_rev_against_local_add,
               diff_git_format_wc_wc,

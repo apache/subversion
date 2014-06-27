@@ -3008,6 +3008,138 @@ svn_io_run_cmd(const char *path,
   return svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool);
 }
 
+const char **
+svn_io__create_custom_diff_cmd(const char *label1,
+                               const char *label2,
+                               const char *label3,
+                               const char *from,
+                               const char *to,
+                               const char *base,
+                               const char *cmd,
+                               apr_pool_t *pool)
+{
+  /*
+     This function can be tested with:
+     /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd_1
+     /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd_2
+     /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd_3
+     /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd_4
+     /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd_5
+  */
+
+  apr_array_header_t *words;
+  const char ** result;
+  size_t argv, item, i, delimiters = 6, spacer = 0;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+  struct replace_tokens_tab
+  {
+    const char *delimiter;
+    const char *replace;
+  } tokens_tab[] = {  /* Diff terminology */
+    { "%svn_label_old",  label1 },
+    { "%svn_label_new",  label2 },
+    { "%svn_label_base", label3 },
+    { "%svn_old",  from },
+    { "%svn_new",  to   },
+    { "%svn_base", base },
+    { NULL, NULL }
+  };
+
+  if (label3) /* Merge terminology */
+    {
+      tokens_tab[0].delimiter = "%svn_label_mine";
+      tokens_tab[1].delimiter = "%svn_label_yours";
+      tokens_tab[3].delimiter = "%svn_mine";
+      tokens_tab[4].delimiter = "%svn_yours";
+    }
+
+  words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
+
+  result = apr_palloc(pool,
+                      (words->nelts+1) * words->elt_size * sizeof(char *) );
+
+  for (item = 0, argv = 0; item < (words->nelts + spacer); argv++, item++)
+    {
+      svn_stringbuf_t *word;
+
+      word = svn_stringbuf_create_empty(scratch_pool);
+      svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
+
+      /* Ensure program names with spaces are put as one entry into
+         the execv compatible array we are producing. */
+      if ((0 == item) /* only checking the program name */
+          && (word->len > 1)
+          && (word->data[word->len-1] == 92)) /* has a '\' */
+        {
+          svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
+          svn_stringbuf_appendcstr(complete,
+                                   APR_ARRAY_IDX(words, item++, char *));
+
+          svn_stringbuf_appendcstr(complete, " ");
+          svn_stringbuf_appendcstr(complete,
+                                   APR_ARRAY_IDX(words, item++, char *));
+
+          /* this accounts for two words becoming one in this case,
+             otherwise, the last word is not processed if an entry is
+             split with an escaped space. (note the second item++
+             above) */
+          spacer++;
+
+          word->data = complete->data;
+        }
+      /* paste "delimited words that were separated back together */
+      else if ((word->len > 1)
+               && (word->data[0] == '"')
+               && (word->data[word->len-1] != '"') )
+        {
+          svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
+          int done = 0;
+
+          while( (!done) && item < words->nelts)
+            {
+              svn_stringbuf_appendcstr(complete,
+                                       APR_ARRAY_IDX(words, item, char *));
+
+              if ( (complete->data[complete->len-1] == '"')
+                   || (item == words->nelts - 1) )
+                {
+                  word->data = complete->data;
+                  done = 1;
+                }
+              else
+                {
+                  svn_stringbuf_appendcstr(complete, " ");
+                  item++;
+                }
+            }
+        }
+      /* find and substitute keywords */
+      i = 0;
+      if ((item > 0) /* no need to check the program name */
+          && (word->len > 7)) /* %svn_old is the smallest keyword */
+        {
+          while (i < delimiters)
+            {
+              char *found = strstr(word->data, tokens_tab[i].delimiter);
+
+              if (!found)
+                {
+                  i++;
+                  continue;
+                }
+              svn_stringbuf_replace(word, found - word->data,
+                                    strlen(tokens_tab[i].delimiter),
+                                    tokens_tab[i].replace,
+                                    strlen(tokens_tab[i].replace));
+            }
+        }
+      result[argv] = apr_pstrdup(pool,word->data);
+    }
+  result[argv] = NULL;
+  svn_pool_destroy(scratch_pool);
+  return result;
+}
 
 svn_error_t *
 svn_io_run_diff2(const char *dir,
@@ -3021,65 +3153,72 @@ svn_io_run_diff2(const char *dir,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
                  const char *diff_cmd,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
-  const char **args;
-  int i;
   int exitcode;
-  int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  const char ** cmd;
+  char *dc = NULL;
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
+
+  if (0 == strlen(diff_cmd))
+     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
+
+  if (!strstr(diff_cmd, "%svn_old")) /* this is an old style command */
+    {
+      /*
+        This section can be tested with:
+        /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
+      */
+      svn_stringbuf_t *com;
+      com = svn_stringbuf_create_empty(scratch_pool);
+      svn_stringbuf_appendcstr(com, diff_cmd);
+      svn_stringbuf_appendcstr(com, " ");
+
+      if (user_args != NULL)
+        {
+          int j;
+          for (j = 0; j < num_user_args; ++j)
+            {
+              svn_stringbuf_appendcstr(com, user_args[j]);
+              svn_stringbuf_appendcstr(com, " ");
+            }
+        }
+      else /* assume -u if the user didn't give us any args */
+        svn_stringbuf_appendcstr(com, "-u ");
+
+      if (label1 != NULL)
+        svn_stringbuf_appendcstr(com,"-L %svn_label_old ");
+
+      if (label2 != NULL)
+        svn_stringbuf_appendcstr(com,"-L %svn_label_new ");
+
+      svn_stringbuf_appendcstr(com,"%svn_old %svn_new ");
+
+      dc = com->data;
+    }
+  else {
+    dc = apr_palloc(scratch_pool, strlen(diff_cmd) * sizeof(char *) );
+    strcpy(dc, diff_cmd);
+  }
+  if (0 == strlen(dc))
+     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
+
+  cmd = svn_io__create_custom_diff_cmd(label1, label2, NULL,
+                                       svn_dirent_local_style(from, scratch_pool),
+                                       svn_dirent_local_style(to, scratch_pool),
+                                       NULL,
+                                       dc, scratch_pool);
 
   if (pexitcode == NULL)
-    pexitcode = &exitcode;
+     pexitcode = &exitcode;
 
-  if (user_args != NULL)
-    nargs += num_user_args;
-  else
-    nargs += 1; /* -u */
-
-  if (label1 != NULL)
-    nargs += 2; /* the -L and the label itself */
-  if (label2 != NULL)
-    nargs += 2; /* the -L and the label itself */
-
-  args = apr_palloc(subpool, nargs * sizeof(char *));
-
-  i = 0;
-  args[i++] = diff_cmd;
-
-  if (user_args != NULL)
-    {
-      int j;
-      for (j = 0; j < num_user_args; ++j)
-        args[i++] = user_args[j];
-    }
-  else
-    args[i++] = "-u"; /* assume -u if the user didn't give us any args */
-
-  if (label1 != NULL)
-    {
-      args[i++] = "-L";
-      args[i++] = label1;
-    }
-  if (label2 != NULL)
-    {
-      args[i++] = "-L";
-      args[i++] = label2;
-    }
-
-  args[i++] = svn_dirent_local_style(from, subpool);
-  args[i++] = svn_dirent_local_style(to, subpool);
-  args[i++] = NULL;
-
-  SVN_ERR_ASSERT(i == nargs);
-
-  SVN_ERR(svn_io_run_cmd(dir, diff_cmd, args, pexitcode, NULL, TRUE,
-                         NULL, outfile, errfile, subpool));
+  SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
+                         NULL, outfile, errfile, scratch_pool));
 
   /* The man page for (GNU) diff describes the return value as:
 
-       "An exit status of 0 means no differences were found, 1 means
-        some differences were found, and 2 means trouble."
+      "An exit status of 0 means no differences were found, 1 means
+      some differences were found, and 2 means trouble."
 
      A return value of 2 typically occurs when diff cannot read its input
      or write to its output, but in any case we probably ought to return an
@@ -3087,16 +3226,24 @@ svn_io_run_diff2(const char *dir,
      corrupt.
    */
   if (*pexitcode != 0 && *pexitcode != 1)
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                             _("'%s' returned %d"),
-                             svn_dirent_local_style(diff_cmd, pool),
-                             *pexitcode);
+    {
+      int i;
+      const char *failed_command = "";
 
-  svn_pool_destroy(subpool);
-
+      for (i = 0; cmd[i]; ++i)
+          failed_command = apr_pstrcat(result_pool, failed_command,
+                                       cmd[i], " ", (char*) NULL);
+      svn_pool_destroy(scratch_pool);
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               _("'%s' was expanded to '%s' and returned %d"),
+                               diff_cmd,
+                               failed_command,
+                               *pexitcode);
+    }
+  else
+    svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_io_run_diff3_3(int *exitcode,
