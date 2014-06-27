@@ -190,6 +190,9 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
                              (const char *)svn_hash_gets(certinfo,
                                              SVN_X509_CERTINFO_KEY_ISSUER)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
+                             (const char *)svn_hash_gets(certinfo,
+                                             SVN_X509_CERTINFO_KEY_SHA1_DIGEST)));
 #if 0
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"), cert->subject_id.p));
   SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
