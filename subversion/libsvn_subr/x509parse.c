@@ -47,6 +47,7 @@
 #include <apr_pools.h>
 #include "svn_hash.h"
 #include "svn_string.h"
+#include "svn_time.h"
 #include "svn_x509.h"
 
 #include "x509.h"
@@ -341,6 +342,44 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
   return svn_error_trace(x509_get_name(p, end2, cur->next, result_pool));
 }
 
+/* Convert from X.509 UTCTime to apr_time_t.
+ * X.509 UTCTime is defined in RFC 5280 § 4.1.2.5.1 */
+static svn_error_t *
+x509_utc_to_apr_time(apr_time_t *time, const char *date)
+{
+  apr_time_exp_t xt = { 0 };
+  apr_status_t ret;
+  char tz;
+
+  if (sscanf(date, "%2d%2d%2d%2d%2d%2d%c",
+       &xt.tm_year, &xt.tm_mon, &xt.tm_mday,
+       &xt.tm_hour, &xt.tm_min, &xt.tm_sec, &tz) < 6)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+
+  /* check that the timezone is GMT
+   * ASN.1 allows for the timezone to be specified but X.509 says it must
+   * always be GMT.  A little bit of extra paranoia here seems like a good
+   * idea. */
+  if (tz != 'Z')
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+
+  /* UTCTime only provides a 2 digit year.  X.509 specifies that years
+   * greater than or equal to 50 must be interpreted as 19YY and years less
+   * than 50 be interpreted as 20YY.  This format is not used for years
+   * greater than 2049. apr_time_exp_t wants years as the number of years
+   * since 1900, so don't convert to 4 digits here. */
+  xt.tm_year += 100 * (xt.tm_year < 50);
+
+  /* apr_time_exp_t expects months to be zero indexed, 0=Jan, 11=Dec. */
+  xt.tm_mon -= 1;
+
+  ret = apr_time_exp_get(time, &xt);
+  if (ret)
+    return svn_error_wrap_apr(ret, NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /*
  *  Validity ::= SEQUENCE {
  *     notBefore    Time,
@@ -352,7 +391,7 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
  */
 static svn_error_t *
 x509_get_dates(const unsigned char **p,
-               const unsigned char *end, x509_time * from, x509_time * to)
+               const unsigned char *end, apr_time_t * from, apr_time_t * to)
 {
   svn_error_t *err;
   int len;
@@ -374,15 +413,7 @@ x509_get_dates(const unsigned char **p,
   memset(date, 0, sizeof(date));
   memcpy(date, *p, (len < (int)sizeof(date) - 1) ?
          len : (int)sizeof(date) - 1);
-
-  if (sscanf(date, "%2d%2d%2d%2d%2d%2d",
-       &from->year, &from->mon, &from->day,
-       &from->hour, &from->min, &from->sec) < 5)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-
-  from->year += 100 * (from->year < 90);
-  from->year += 1900;
-
+  SVN_ERR(x509_utc_to_apr_time(from, date));
   *p += len;
 
   err = asn1_get_tag(p, end, &len, ASN1_UTC_TIME);
@@ -392,15 +423,7 @@ x509_get_dates(const unsigned char **p,
   memset(date, 0, sizeof(date));
   memcpy(date, *p, (len < (int)sizeof(date) - 1) ?
          len : (int)sizeof(date) - 1);
-
-  if (sscanf(date, "%2d%2d%2d%2d%2d%2d",
-       &to->year, &to->mon, &to->day,
-       &to->hour, &to->min, &to->sec) < 5)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-
-  to->year += 100 * (to->year < 90);
-  to->year += 1900;
-
+  SVN_ERR(x509_utc_to_apr_time(to, date));
   *p += len;
 
   if (*p != end)
@@ -739,24 +762,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, name->data);
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
-                apr_psprintf(result_pool,
-                             "%4d/%02d/%02d %02d:%02d:%02d",
-                             crt->valid_from.year,
-                             crt->valid_from.mon,
-                             crt->valid_from.day,
-                             crt->valid_from.hour,
-                             crt->valid_from.min,
-                             crt->valid_from.sec));
+                svn_time_to_human_cstring(crt->valid_from, result_pool));
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_TO,
-                apr_psprintf(result_pool,
-                             "%4d/%02d/%02d %02d:%02d:%02d",
-                             crt->valid_to.year,
-                             crt->valid_to.mon,
-                             crt->valid_to.day,
-                             crt->valid_to.hour,
-                             crt->valid_to.min,
-                             crt->valid_to.sec));
+                svn_time_to_human_cstring(crt->valid_to, result_pool));
+
   return SVN_NO_ERROR;
 }
 
