@@ -1400,7 +1400,7 @@ read_log_rev_or_packfile(fs_t *fs,
 
   /* open the pack / rev file that is covered by the p2l index */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs->fs, base,
-                                           iterpool, iterpool));
+                                           localpool, iterpool));
   SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs->fs, rev_file,
                                         base, localpool));
 
