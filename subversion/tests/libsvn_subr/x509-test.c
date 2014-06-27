@@ -32,8 +32,8 @@
 #include "../svn_test.h"
 
 struct x509_test {
-  const char *cert_name; /* name for debugging tests */
   const char *base64_cert; /* Base64 encoded DER X.509 cert */
+  const char *subject; /* Subject in the format that the parser returns */
   const char *issuer; /* Issuer in the format that the parser returns */
 
   /* These timesamps are in the format that svn_time_to_cstring() produces.
@@ -47,8 +47,7 @@ struct x509_test {
 
 static struct x509_test cert_tests[] = {
   /* contains extensions and uses a sha256 algorithm */
-  { "svn.apache.org",
-    "MIIEtzCCA5+gAwIBAgIQWGBOrapkezd+BWVsAtmtmTANBgkqhkiG9w0BAQsFADA8"
+  { "MIIEtzCCA5+gAwIBAgIQWGBOrapkezd+BWVsAtmtmTANBgkqhkiG9w0BAQsFADA8"
     "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMVGhhd3RlLCBJbmMuMRYwFAYDVQQDEw1U"
     "aGF3dGUgU1NMIENBMB4XDTE0MDQxMTAwMDAwMFoXDTE2MDQwNzIzNTk1OVowgYsx"
     "CzAJBgNVBAYTAlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEUMBIGA1UEBxQLRm9yZXN0"
@@ -74,6 +73,8 @@ static struct x509_test cert_tests[] = {
     "b9nOKX8DFao3EpQcS7qn63Ibzbq5A6ry8ZNRQSIJK/xlCAWoyUd1uxnqGFnus8wb"
     "9RVZJQe8YvyytBjgbE3QjnfPOxoEJA3twupnPmH+OCTM6V3TZqpRZj/sZ5rtIQ++"
     "hI5FdJWUWVSgnSw=",
+    "C=US, ST=Maryland, L=Forest Hill, O=Apache Software Foundation, "
+    "OU=Infrastructure, CN=*.apache.org",
     "C=US, O=Thawte, Inc., CN=Thawte SSL CA",
     "2014-04-11T00:00:00.000000Z",
     "2016-04-07T23:59:59.000000Z",
@@ -82,8 +83,7 @@ static struct x509_test cert_tests[] = {
    * generalized format, while the start date is still in the UTC
    * format. Note this is actually a CA cert but that really doesn't
    * matter here. */
-  { "timestamp-after-2049",
-    "MIIDtzCCAp+gAwIBAgIJAJKX85dqh3RvMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV"
+  { "MIIDtzCCAp+gAwIBAgIJAJKX85dqh3RvMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV"
     "BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX"
     "aWRnaXRzIFB0eSBMdGQwIBcNMTQwNjI3MTczMTUxWhgPMjExNDA2MDMxNzMxNTFa"
     "MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ"
@@ -104,6 +104,7 @@ static struct x509_test cert_tests[] = {
     "/rgsCJgFsBDPBYR3ju0Ahqg7v6kwg9O2PJzyb4ljsw8oI0sCwHTZW5I5FMq2D9g6"
     "hj80N2fhS9QWoLyeKoMTNB2Do6VaNrLrCJiscZWrsnM1f+XBqV8hMuHX8A==",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-06-27T17:31:51.000000Z",
     "2114-06-03T17:31:51.000000Z",
     "db3a959e145acc2741f9eeecbeabce53cc5b7362" },
@@ -114,7 +115,7 @@ static svn_error_t *
 compare_dates(const char *expected,
               const char *actual,
               const char *type,
-              const char *cert_name,
+              const char *subject,
               apr_pool_t *pool)
 {
   apr_time_t expected_tm;
@@ -122,7 +123,7 @@ compare_dates(const char *expected,
 
   if (!actual)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "No %s for cert '%s'", cert_name);
+                             "No %s for cert '%s'", subject);
 
   /* Jump through some hoops here since the human timestamp is in localtime
    * so we take the expected which will be in ISO-8601 and convert it to 
@@ -133,13 +134,13 @@ compare_dates(const char *expected,
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Problem converting expected %s '%s' to human "
                              "output for cert '%s'", type, expected,
-                             cert_name);
+                             subject);
 
   if (strcmp(expected_human, actual))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "The %s didn't match expected '%s',"
                              " got '%s' for cert '%s'", type,
-                             expected_human, actual, cert_name);
+                             expected_human, actual, subject);
 
   return SVN_NO_ERROR;
 }
@@ -151,38 +152,48 @@ compare_results(struct x509_test *xt,
 {
   const char *v;
 
+  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SUBJECT);
+  if (!v)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "No subject for cert '%s'", xt->subject);
+  if (strcmp(v, xt->subject))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Subject didn't match for cert '%s', "
+                             "expected '%s', got '%s'", xt->subject,
+                             xt->subject, v);
+
   v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_ISSUER);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "No issuer for cert '%s'", xt->cert_name);
+                             "No issuer for cert '%s'", xt->subject);
   if (strcmp(v, xt->issuer))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Issuer didn't match for cert '%s', "
-                             "expected '%s', got '%s'", xt->cert_name,
+                             "expected '%s', got '%s'", xt->subject,
                              xt->issuer, v);
 
   SVN_ERR(compare_dates(xt->valid_from,
                         svn_hash_gets(certinfo,
                                       SVN_X509_CERTINFO_KEY_VALID_FROM),
                         SVN_X509_CERTINFO_KEY_VALID_FROM,
-                        xt->cert_name,
+                        xt->subject,
                         pool));
 
   SVN_ERR(compare_dates(xt->valid_to,
                         svn_hash_gets(certinfo,
                                       SVN_X509_CERTINFO_KEY_VALID_TO),
                         SVN_X509_CERTINFO_KEY_VALID_TO,
-                        xt->cert_name,
+                        xt->subject,
                         pool));
 
   v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "No SHA1 digest for cert '%s'", xt->cert_name);
+                             "No SHA1 digest for cert '%s'", xt->subject);
   if (strcmp(v, xt->sha1_digest))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "SHA1 digest didn't match for cert '%s', "
-                             "expected '%s', got '%s'", xt->cert_name,
+                             "expected '%s', got '%s'", xt->subject,
                              xt->sha1_digest, v);
 
 

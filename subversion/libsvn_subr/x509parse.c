@@ -641,7 +641,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
-  svn_stringbuf_t *name;
+  svn_stringbuf_t *issuer, *subject;
   svn_checksum_t *sha1_digest;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
@@ -788,9 +788,13 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   *certinfo = apr_hash_make(result_pool);
 
-  name = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(name, &crt->issuer, scratch_pool);
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, name->data);
+  subject = svn_stringbuf_create_empty(result_pool);
+  x509parse_dn_gets(subject, &crt->subject, scratch_pool);
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_SUBJECT, subject->data);
+
+  issuer = svn_stringbuf_create_empty(result_pool);
+  x509parse_dn_gets(issuer, &crt->issuer, scratch_pool);
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, issuer->data);
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
                 svn_time_to_human_cstring(crt->valid_from, result_pool));
