@@ -89,12 +89,14 @@ typedef struct svn_fs_fs__revision_file_t
 /* Open the correct revision file for REV.  If the filesystem FS has
  * been packed, *FILE will be set to the packed file; otherwise, set *FILE
  * to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
- * file doesn't exist.  Use POOL for allocations. */
+ * file doesn't exist.  Allocate *FILE in RESULT_POOL and use SCRATCH_POOL
+ * for temporaries. */
 svn_error_t *
 svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* If the footer data in FILE has not been read, yet, do so now.
  * Index locations will only be read upon request as we assume they get
@@ -105,12 +107,13 @@ svn_error_t *
 svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file);
 
 /* Open the proto-rev file of transaction TXN_ID in FS and return it in *FILE.
- * Use POOL for allocations. */
+ * Allocate *FILE in RESULT_POOL use and SCRATCH_POOL for temporaries.. */
 svn_error_t *
 svn_fs_fs__open_proto_rev_file(svn_fs_fs__revision_file_t **file,
                                svn_fs_t *fs,
                                const svn_fs_fs__id_part_t *txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t* result_pool,
+                               apr_pool_t *scratch_pool);
 
 /* Close all files and streams in FILE.
  */

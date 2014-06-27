@@ -365,7 +365,7 @@ load_index(const char *path,
 
       /* Open rev / pack file & trim indexes + footer off it. */
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
-                                               iterpool));
+                                               iterpool, iterpool));
       SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
       SVN_ERR(svn_io_file_trunc(rev_file->file, rev_file->l2p_offset,
                                 iterpool));

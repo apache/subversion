@@ -75,7 +75,8 @@ dump_index(const char *path,
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
 
   /* Revision & index file access object. */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision, pool,
+                                           iterpool));
 
   /* Offset range to cover. */
   SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, rev_file, revision,

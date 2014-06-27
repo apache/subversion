@@ -218,7 +218,7 @@ open_and_seek_revision(svn_fs_fs__revision_file_t **file,
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool, pool));
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL, item,
                                  pool));
 
@@ -240,7 +240,7 @@ open_and_seek_transaction(svn_fs_fs__revision_file_t **file,
 {
   apr_off_t offset;
 
-  SVN_ERR(svn_fs_fs__open_proto_rev_file(file, fs, &rep->txn_id, pool));
+  SVN_ERR(svn_fs_fs__open_proto_rev_file(file, fs, &rep->txn_id, pool, pool));
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, NULL, SVN_INVALID_REVNUM,
                                  &rep->txn_id, rep->item_index, pool));
@@ -567,7 +567,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
         return SVN_NO_ERROR;
 
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                               scratch_pool));
+                                               scratch_pool, scratch_pool));
       SVN_ERR(get_root_changes_offset(&root_offset, NULL,
                                       revision_file->file, fs, rev,
                                       scratch_pool));
@@ -667,7 +667,8 @@ auto_open_shared_file(shared_file_t *file)
 {
   if (file->rfile == NULL)
     SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&file->rfile, file->fs,
-                                             file->revision, file->pool));
+                                             file->revision, file->pool,
+                                             file->pool));
 
   return SVN_NO_ERROR;
 }
@@ -927,7 +928,7 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       svn_fs_fs__revision_file_t *rev_file;
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
-                                               scratch_pool));
+                                               scratch_pool, scratch_pool));
 
       /* This will auto-retry if there was a background pack. */
       SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rep->revision,
@@ -2715,7 +2716,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
       SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                               scratch_pool));
+                                               scratch_pool, scratch_pool));
 
       if (svn_fs_fs__use_log_addressing(fs, rev))
         {
