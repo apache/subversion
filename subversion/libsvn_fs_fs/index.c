@@ -1650,6 +1650,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
           entry.offset = last_entry_end;
           entry.size = APR_ALIGN(entry.offset, page_size) - entry.offset;
           entry.type = 0;
+          entry.fnv1_checksum = 0;
           entry.item.revision = last_revision;
           entry.item.number = 0;
         }
