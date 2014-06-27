@@ -35,6 +35,8 @@
 #ifndef TROPICSSL_X509_H
 #define TROPICSSL_X509_H
 
+#include <apr_time.h>
+
 #define BADCERT_EXPIRED                 1
 #define BADCERT_REVOKED                 2
 #define BADCERT_CN_MISMATCH             4
@@ -102,11 +104,6 @@ typedef struct _x509_name {
   struct _x509_name *next;
 } x509_name;
 
-typedef struct _x509_time {
-  int year, mon, day;
-  int hour, min, sec;
-} x509_time;
-
 typedef struct _x509_cert {
   x509_buf tbs;
 
@@ -120,8 +117,8 @@ typedef struct _x509_cert {
   x509_name issuer;
   x509_name subject;
 
-  x509_time valid_from;
-  x509_time valid_to;
+  apr_time_t valid_from;
+  apr_time_t valid_to;
 
   x509_buf pk_oid;
 
