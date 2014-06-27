@@ -181,6 +181,9 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
                               scratch_pool, scratch_pool)); 
 
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"),
+                             (const char *)svn_hash_gets(certinfo,
+                                             SVN_X509_CERTINFO_KEY_SUBJECT)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
                              (const char *)svn_hash_gets(certinfo,
                                              SVN_X509_CERTINFO_KEY_VALID_FROM)));

@@ -33,6 +33,7 @@
 
 /* Hash keys for certificate information returned by svn_x509_parse_cert().
  * @since New in 1.9 */
+#define SVN_X509_CERTINFO_KEY_SUBJECT     "subject"
 #define SVN_X509_CERTINFO_KEY_ISSUER      "issuer"
 #define SVN_X509_CERTINFO_KEY_VALID_FROM  "valid-from"
 #define SVN_X509_CERTINFO_KEY_VALID_TO    "valid-to"
