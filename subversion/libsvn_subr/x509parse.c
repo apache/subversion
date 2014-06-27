@@ -33,10 +33,11 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- *  The ITU-T X.509 standard defines a certificat format for PKI.
+ *  The ITU-T X.509 standard defines a certificate format for PKI.
  *
- *  http://www.ietf.org/rfc/rfc2459.txt
+ *  http://www.ietf.org/rfc/rfc5280.txt
  *  http://www.ietf.org/rfc/rfc3279.txt
+ *  http://www.ietf.org/rfc/rfc6818.txt
  *
  *  ftp://ftp.rsasecurity.com/pub/pkcs/ascii/pkcs-1v2.asc
  *
