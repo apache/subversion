@@ -42,6 +42,7 @@ struct x509_test {
    * timezone.  So we can't store exactly what the parser will output. */
   const char *valid_from;
   const char *valid_to;
+  const char *sha1_digest;
 };
 
 static struct x509_test cert_tests[] = {
@@ -75,7 +76,8 @@ static struct x509_test cert_tests[] = {
     "hI5FdJWUWVSgnSw=",
     "C=US, O=Thawte, Inc., CN=Thawte SSL CA",
     "2014-04-11T00:00:00.000000Z",
-    "2016-04-07T23:59:59.000000Z" },
+    "2016-04-07T23:59:59.000000Z",
+    "151d8ad1e1bac21466bc2836ba80b5fcf872f37c" },
   /* the expiration is after 2049 so the expiration is in the
    * generalized format, while the start date is still in the UTC
    * format. Note this is actually a CA cert but that really doesn't
@@ -103,7 +105,8 @@ static struct x509_test cert_tests[] = {
     "hj80N2fhS9QWoLyeKoMTNB2Do6VaNrLrCJiscZWrsnM1f+XBqV8hMuHX8A==",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-06-27T17:31:51.000000Z",
-    "2114-06-03T17:31:51.000000Z" },
+    "2114-06-03T17:31:51.000000Z",
+    "db3a959e145acc2741f9eeecbeabce53cc5b7362" },
   { NULL }
 };
 
@@ -171,6 +174,17 @@ compare_results(struct x509_test *xt,
                         SVN_X509_CERTINFO_KEY_VALID_TO,
                         xt->cert_name,
                         pool));
+
+  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST);
+  if (!v)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "No SHA1 digest for cert '%s'", xt->cert_name);
+  if (strcmp(v, xt->sha1_digest))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "SHA1 digest didn't match for cert '%s', "
+                             "expected '%s', got '%s'", xt->cert_name,
+                             xt->sha1_digest, v);
+
 
   return SVN_NO_ERROR;
 }

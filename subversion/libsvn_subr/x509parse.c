@@ -49,6 +49,7 @@
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "svn_checksum.h"
 #include "svn_x509.h"
 
 #include "x509.h"
@@ -641,6 +642,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   const unsigned char *end;
   x509_cert *crt;
   svn_stringbuf_t *name;
+  svn_checksum_t *sha1_digest;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
@@ -795,6 +797,13 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_TO,
                 svn_time_to_human_cstring(crt->valid_to, result_pool));
+
+  /* calculate the SHA1 digest of the certificate, otherwise known as the
+   * fingerprint */
+  SVN_ERR(svn_checksum(&sha1_digest, svn_checksum_sha1, buf, buflen,
+                       scratch_pool));
+  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST,
+                svn_checksum_to_cstring_display(sha1_digest, result_pool));
 
   return SVN_NO_ERROR;
 }
