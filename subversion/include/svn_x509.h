@@ -27,6 +27,10 @@
 #ifndef SVN_X509_H
 #define SVN_X509_H
 
+#include <apr_pools.h>
+
+#include "svn_error.h"
+
 /* Hash keys for certificate information returned by svn_x509_parse_cert().
  * @since New in 1.9 */
 #define SVN_X509_CERTINFO_KEY_ISSUER      "issuer"
