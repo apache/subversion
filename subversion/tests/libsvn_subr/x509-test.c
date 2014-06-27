@@ -39,7 +39,7 @@ struct x509_test {
   /* These timesamps are in the format that svn_time_to_cstring() produces.
    * This is not the same string as the parser returns since it returns
    * the ressult of svn_time_to_human_cstring(), which is in the local
-   * timezone.  So we convert both of these to apr_time_t and compare that. */
+   * timezone.  So we can't store exactly what the parser will output. */
   const char *valid_from;
   const char *valid_to;
 };
@@ -87,7 +87,6 @@ compare_dates(const char *expected,
               apr_pool_t *pool)
 {
   apr_time_t expected_tm;
-  svn_boolean_t matched;
   const char *expected_human;
 
   if (!actual)
@@ -96,7 +95,7 @@ compare_dates(const char *expected,
 
   /* Jump through some hoops here since the human timestamp is in localtime
    * so we take the expected which will be in ISO-8601 and convert it to 
-   * apr_time_t and then convert to a human cstring. */
+   * apr_time_t and then convert to a human cstring for comparison. */
   SVN_ERR(svn_time_from_cstring(&expected_tm, expected, pool));
   expected_human = svn_time_to_human_cstring(expected_tm, pool);
   if (!expected_human)
