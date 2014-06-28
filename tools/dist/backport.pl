@@ -43,11 +43,17 @@ my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less' // 'cat';
 
 # Mode flags.
-#    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
-#    conflicts-bot: YES=1 MAY_COMMIT=0
-#    interactive:   YES=0 MAY_COMMIT=0      (default)
+package Mode {
+  use constant {
+    AutoCommitApproveds => 1, # used by nightly commits (svn-role)
+    Conflicts => 2,           # used by the hourly conflicts-detection buildbot
+    Interactive => 3,
+  };
+};
 my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
+my $MODE = ($YES ? ($MAY_COMMIT ? Mode::AutoCommitApproveds : Mode::Conflicts )
+                 : Mode::Interactive );
 
 # Other knobs.
 my $VERBOSE = 0;
@@ -151,6 +157,11 @@ After running a merge, you have the following options:
 y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
+
+To commit a merge, you have two options: either answer 'y' to the second prompt
+to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
+in the environment before running the script, in which case answering 'y'
+to the first prompt will not only run the merge but also commit it.
 
 There is also a batch mode (normally used only by cron jobs and buildbot tasks,
 rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
@@ -852,6 +863,8 @@ sub handle_entry {
         while (1) { 
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
+              # TODO: if $MAY_COMMIT, save the log message to a file (say,
+              #       backport.logmsg in the wcroot).
               system($SHELL) == 0
                 or warn "Creating an interactive subshell failed ($?): $!"
             }
