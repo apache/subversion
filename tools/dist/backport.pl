@@ -35,7 +35,6 @@ use Tie::File ();
 # Programs we use.
 #
 # TODO: document which are interpreted by sh and which should point to binary.
-my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -66,7 +65,7 @@ die if grep { ($sh[$_] eq 'true') != !!$_ } $DEBUG, $MAY_COMMIT, $VERBOSE, $YES;
 # Username for entering votes.
 my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
 my ($AVAILID) = $ENV{AVAILID} // do {
-  local $_ = `$SVNAUTH list 2>/dev/null`;
+  local $_ = `$SVN auth svn.apache.org:443 2>/dev/null`; # TODO: pass $SVN_A_O_REALM
   ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
 } // do {
   local $/; # slurp mode
