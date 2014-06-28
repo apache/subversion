@@ -73,8 +73,20 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
   `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
   =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
+};
+
+unless (defined $AVAILID) {
+  unless ($MODE == Mode::Conflicts) {
+    warn "Username for commits (of votes/merges) not found; "
+         ."it will be possible to review nominations but not to commit votes "
+         ."or merges.\n";
+    warn "Press the 'any' key to continue...\n";
+    die if $MODE == Mode::AutoCommitApproveds; # unattended mode; can't prompt.
+    ReadMode 'cbreak';
+    ReadKey 0;
+    ReadMode 'restore';
+  }
 }
-// warn "Username for commits (of votes/merges) not found";
 
 ############## End of reading values from the environment ##############
 
@@ -176,6 +188,7 @@ EOF
 }
 
 sub nominate_usage {
+  my $availid = $AVAILID // "(your username)";
   my $basename = basename $0;
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
@@ -188,7 +201,7 @@ Will add:
    Justification:
      \$Some_justification
    Votes:
-     +1: $AVAILID
+     +1: $availid
 to STATUS.  Backport branches are detected automatically.
 
 The STATUS file in the current directory is used (unless argv[0] is "n", in
@@ -200,6 +213,18 @@ EOF
 # TODO: Look for backport branches named after issues.
 # TODO: Do a dry-run merge on added entries.
 # TODO: Do a dry-run merge on interactively-edited entries in backport.pl
+}
+
+# If $AVAILID is undefined, warn about it and return true.
+# Else return false.
+#
+# $_[0] is a string for inclusion in generated error messages.
+sub warned_cannot_commit {
+  my $caller_error_string = shift;
+  return 0 if defined $AVAILID;
+
+  warn "$0: $caller_error_string: unable to determine your username via \$AVAILID or svnauth(1) or ~/.subversion/auth/";
+  return 1;
 }
 
 sub digest_string {
@@ -548,6 +573,11 @@ sub vote {
   my $raw_approved = "";
   my @votesarray;
   return unless %$approved or %$votes;
+
+  # If $AVAILID is undef, we can only process 'edit' pseudovotes; handle_entry() is
+  # supposed to prevent numeric (±1,±0) votes from getting to this point.
+  die "Assertion failed" if not defined $AVAILID
+                            and grep { $_ ne 'edit' } map { $_->[0] } values %$votes;
 
   my $had_empty_line;
 
@@ -913,11 +943,14 @@ sub handle_entry {
         next PROMPT;
       }
       when (/^([+-][01])\s*$/i) {
+        next QUESTION if warned_cannot_commit "Entering a vote failed";
         $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
         last PROMPT;
       }
       when (/^e/i) {
+        prompt "Press the 'any' key to continue...\n"
+            if warned_cannot_commit "Committing this edit later on may fail";
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
@@ -1038,6 +1071,8 @@ sub nominate_main {
   nominate_usage, exit 0 if @ARGV != 2;
   my (@revnums) = (+shift) =~ /(\d+)/g;
   my $justification = shift;
+
+  die "Unable to proceed." if warned_cannot_commit "Nominating failed";
 
   @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
   die "No revision numbers specified" unless @revnums;
