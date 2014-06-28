@@ -70,9 +70,13 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
 } // do {
   local $/; # slurp mode
+  my $fh;
+  my $dir = "$ENV{HOME}/.subversion/auth/svn.simple/";
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
-  `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
-  =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
+  open $fh, '<', "$dir/$filename"
+  and <$fh> =~ /K 8\nusername\nV \d+\n(.*)/
+  ? $1
+  : undef
 };
 
 unless (defined $AVAILID) {
