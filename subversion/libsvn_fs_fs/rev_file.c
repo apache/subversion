@@ -114,6 +114,8 @@ auto_make_writable(const char *path,
          and is idempotent). */
       SVN_ERR(svn_io_set_file_read_write(path, FALSE, scratch_pool));
     }
+
+  return SVN_NO_ERROR;
 }
 
 /* Core implementation of svn_fs_fs__open_pack_or_rev_file working on an
