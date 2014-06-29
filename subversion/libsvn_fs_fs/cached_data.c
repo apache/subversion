@@ -936,27 +936,8 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       /* This may fail if there is a background pack operation (can't auto-
          retry because the item offset lookup has to be redone as well). */
-      err = svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, rep->revision,
-                                        offset, scratch_pool);
-
-      /* Retry if the packing state may have changed, i.e. if we got an
-         error while opening the index for a non-packed rev file. */
-      if (err && !rev_file->is_packed)
-        {
-          SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
-
-          /* Be sure to know the latest pack status of REP. */
-          SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
-          if (svn_fs_fs__is_packed_rev(fs, rep->revision))
-            {
-              /* REP got actually packed. Retry (can happen at most once). */
-              svn_error_clear(err);
-              return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint,
-                                                          scratch_pool));
-            }
-        }
-
-      SVN_ERR(err);
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, rep->revision,
+                                          offset, scratch_pool));
 
       if (   entry == NULL
           || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
