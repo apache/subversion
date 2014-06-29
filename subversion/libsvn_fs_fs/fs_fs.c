@@ -1526,7 +1526,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  fs->path = apr_pstrdup(pool, path);
+  fs->path = apr_pstrdup(fs->pool, path);
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
