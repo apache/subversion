@@ -922,7 +922,6 @@ svn_fs_fs__check_rep(representation_t *rep,
 {
   if (svn_fs_fs__use_log_addressing(fs, rep->revision))
     {
-      svn_error_t *err;
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
 
