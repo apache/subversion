@@ -179,8 +179,7 @@ write_l2p_index(const char **index_name,
   SVN_ERR(svn_io_open_unique_file3(NULL, index_name, NULL,
                                    svn_io_file_del_on_pool_cleanup,
                                    pool, iterpool));
-  SVN_ERR(svn_fs_fs__l2p_proto_index_open(&proto_index, *index_name,
-                                          iterpool));
+  SVN_ERR(svn_fs_fs__l2p_proto_index_open(&proto_index, *index_name, pool));
 
   /*  Write all entries. */
   for (i = 0; i < entries->nelts; ++i)
