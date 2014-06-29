@@ -277,6 +277,17 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
+/* Return TRUE, if REVISION in FS is of a format that supports block-read
+   and the feature has been enabled. */
+static svn_boolean_t
+use_block_read(svn_fs_t *fs,
+               svn_revnum_t revision)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return   svn_fs_fs__use_log_addressing(fs, revision)
+        && ffd->use_block_read;
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -349,7 +360,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                      rev_item->number,
                                      scratch_pool));
 
-      if (svn_fs_fs__use_log_addressing(fs, rev_item->revision))
+      if (use_block_read(fs, rev_item->revision))
         {
           /* block-read will parse the whole block and will also return
              the one noderev that we need right now. */
@@ -838,7 +849,7 @@ create_rep_state_body(rep_state_t **rep_state,
       /* populate the cache if appropriate */
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
-          if (svn_fs_fs__use_log_addressing(fs, rep->revision))
+          if (use_block_read(fs, rep->revision))
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
                                rs->sfile->rfile, result_pool, scratch_pool));
           else
@@ -1464,7 +1475,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
      because the block is unlikely to contain other data. */
   if (   rs->chunk_index == 0
       && SVN_IS_VALID_REVNUM(rs->revision)
-      && svn_fs_fs__use_log_addressing(rs->sfile->fs, rs->revision)
+      && use_block_read(rs->sfile->fs, rs->revision)
       && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
@@ -2698,7 +2709,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
                                                scratch_pool, scratch_pool));
 
-      if (svn_fs_fs__use_log_addressing(fs, rev))
+      if (use_block_read(fs, rev))
         {
           /* 'block-read' will also provide us with the desired data */
           SVN_ERR(block_read((void **)changes, fs,
@@ -2707,11 +2718,19 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
         }
       else
         {
-          /* physical addressing mode code path */
-          SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                          revision_file->file, fs, rev,
-                                          scratch_pool));
+          /* Addressing is very different for old formats
+           * (needs to read the revision trailer). */
+          if (svn_fs_fs__use_log_addressing(fs, rev))
+            SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
+                                           revision_file, rev, NULL,
+                                           SVN_FS_FS__ITEM_INDEX_CHANGES,
+                                           scratch_pool));
+          else
+            SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
+                                            revision_file->file, fs, rev,
+                                            scratch_pool));
 
+          /* Actual reading and parsing are the same, though. */
           SVN_ERR(aligned_seek(fs, revision_file->file, NULL, changes_offset,
                                scratch_pool));
           SVN_ERR(svn_fs_fs__read_changes(changes, revision_file->stream,
@@ -3205,7 +3224,7 @@ block_read(void **result,
 
   /* Block read is an optional feature. If the caller does not want anything
    * specific we may not have to read anything. */
-  if (!result && !ffd->use_block_read)
+  if (!result)
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(scratch_pool);
@@ -3265,8 +3284,7 @@ block_read(void **result,
           /* handle all items that start within this block and are relatively
            * small (i.e. < block size).  Always read the item we need to return.
            */
-          if (is_result || (   ffd->use_block_read
-                            && entry->offset >= block_start
+          if (is_result || (   entry->offset >= block_start
                             && entry->size < ffd->block_size))
             {
               void *item = NULL;
