@@ -28,6 +28,7 @@
 
 #include "../libsvn_fs/fs-loader.h"
 
+#include "private/svn_io_private.h"
 #include "svn_private_config.h"
 
 static void
@@ -54,13 +55,76 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   file->pool = pool;
 }
 
+/* Baton type for set_read_only() */
+typedef struct set_read_only_baton_t
+{
+  /* File to set to read-only. */
+  const char *file_path;
+
+  /* Scratch pool sufficient life time.
+   * Ideally the pool that we registered the cleanup on. */
+  apr_pool_t *pool;
+} set_read_only_baton_t;
+
+/* APR pool cleanup callback taking a set_read_only_baton_t baton and then
+ * (trying to) set the specified file to r/o mode. */
+static apr_status_t
+set_read_only(void *baton)
+{
+  set_read_only_baton_t *ro_baton = baton;
+  apr_status_t status;
+  svn_error_t *err;
+
+  err = svn_io_set_file_read_only(ro_baton->file_path, TRUE, ro_baton->pool);
+  if (err)
+    {
+      status = err->apr_err;
+      svn_error_clear(err);
+    }
+
+  return status;
+}
+
+/* If the file at PATH is read-only, attempt to make it writable.  The
+ * original state will be restored with RESULT_POOL gets cleaned up.
+ * SCRATCH_POOL is for temporary allocations. */
+static svn_error_t *
+auto_make_writable(const char *path,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_read_only;
+  apr_finfo_t finfo;
+
+  SVN_ERR(svn_io_stat(&finfo, path, SVN__APR_FINFO_READONLY, scratch_pool));
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, scratch_pool));
+
+  if (is_read_only)
+    {
+      /* Tell the pool to restore the r/o state upon cleanup
+         (assuming the file will still exist, failing silently otherwise). */
+      set_read_only_baton_t *baton = apr_pcalloc(result_pool,
+                                                  sizeof(*baton));
+      baton->pool = result_pool;
+      baton->file_path = apr_pstrdup(result_pool, path);
+      apr_pool_cleanup_register(result_pool, baton,
+                                set_read_only, apr_pool_cleanup_null);
+
+      /* Finally, allow write access (undoing it has already been scheduled
+         and is idempotent). */
+      SVN_ERR(svn_io_set_file_read_write(path, FALSE, scratch_pool));
+    }
+}
+
 /* Core implementation of svn_fs_fs__open_pack_or_rev_file working on an
- * existing, initialized FILE structure.
+ * existing, initialized FILE structure.  If WRITABLE is TRUE, give write
+ * access to the file - temporarily resetting the r/o state if necessary.
  */
 static svn_error_t *
 open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
+                      svn_boolean_t writable,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -72,11 +136,19 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
     {
       const char *path = svn_fs_fs__path_rev_absolute(fs, rev, scratch_pool);
       apr_file_t *apr_file;
+      apr_int32_t flags = writable
+                        ? APR_READ | APR_WRITE | APR_BUFFERED
+                        : APR_READ | APR_BUFFERED;
 
-      /* open the revision file in buffered r/o mode */
-      err = svn_io_file_open(&apr_file, path,
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                             result_pool);
+      /* We may have to *temporarily* enable write access. */
+      err = writable ? auto_make_writable(path, result_pool, scratch_pool)
+                     : SVN_NO_ERROR; 
+
+      /* open the revision file in buffered r/o or r/w mode */
+      if (!err)
+        err = svn_io_file_open(&apr_file, path, flags, APR_OS_DEFAULT,
+                               result_pool);
+
       if (!err)
         {
           file->file = apr_file;
@@ -132,7 +204,21 @@ svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
   *file = apr_palloc(result_pool, sizeof(**file));
   init_revision_file(*file, fs, rev, result_pool);
 
-  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev,
+  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, FALSE,
+                                               result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file_writable(svn_fs_fs__revision_file_t** file,
+                                          svn_fs_t* fs,
+                                          svn_revnum_t rev,
+                                          apr_pool_t* result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  *file = apr_palloc(result_pool, sizeof(**file));
+  init_revision_file(*file, fs, rev, result_pool);
+
+  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, TRUE,
                                                result_pool, scratch_pool));
 }
 
