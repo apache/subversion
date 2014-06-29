@@ -98,6 +98,20 @@ svn_fs_fs__open_pack_or_rev_file(svn_fs_fs__revision_file_t **file,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
+/* Open the correct revision file for REV with read and write access.
+ * If necessary, temporarily reset the file's read-only state.  If the
+ * filesystem FS has been packed, *FILE will be set to the packed file;
+ * otherwise, set *FILE to the revision file for REV.
+ *
+ * Return SVN_ERR_FS_NO_SUCH_REVISION if the file doesn't exist.
+ * Allocate *FILE in RESULT_POOL and use SCRATCH_POOLfor temporaries. */
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file_writable(svn_fs_fs__revision_file_t **file,
+                                          svn_fs_t *fs,
+                                          svn_revnum_t rev,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
+
 /* If the footer data in FILE has not been read, yet, do so now.
  * Index locations will only be read upon request as we assume they get
  * cached and the FILE is usually used for REP data access only.
