@@ -1291,7 +1291,6 @@ l2p_index_lookup(apr_off_t *offset,
       svn_revnum_t last_revision
         = info_baton.first_revision
           + (key.is_packed ? ffd->max_files_per_dir : 1);
-      apr_pool_t *iterpool = svn_pool_create(pool);
       svn_boolean_t end;
       apr_off_t max_offset
         = APR_ALIGN(info_baton.entry.offset + info_baton.entry.size,
@@ -1306,39 +1305,44 @@ l2p_index_lookup(apr_off_t *offset,
       SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, pool));
       SVN_ERR(l2p_page_get_entry(&page_baton, page, page->offsets, pool));
 
-      /* prefetch pages from following and preceding revisions */
-      pages = apr_array_make(pool, 16, sizeof(l2p_page_table_entry_t));
-      end = FALSE;
-      for (prefetch_revision = revision;
-           prefetch_revision < last_revision && !end;
-           ++prefetch_revision)
+      if (ffd->use_block_read)
         {
-          int excluded_page_no = prefetch_revision == revision
-                               ? info_baton.page_no
-                               : -1;
-          svn_pool_clear(iterpool);
+          apr_pool_t *iterpool = svn_pool_create(pool);
 
-          SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
-                                     info_baton.first_revision,
-                                     prefetch_revision, pages,
-                                     excluded_page_no, min_offset,
-                                     max_offset, iterpool));
+          /* prefetch pages from following and preceding revisions */
+          pages = apr_array_make(pool, 16, sizeof(l2p_page_table_entry_t));
+          end = FALSE;
+          for (prefetch_revision = revision;
+              prefetch_revision < last_revision && !end;
+              ++prefetch_revision)
+            {
+              int excluded_page_no = prefetch_revision == revision
+                                  ? info_baton.page_no
+                                  : -1;
+              svn_pool_clear(iterpool);
+
+              SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
+                                        info_baton.first_revision,
+                                        prefetch_revision, pages,
+                                        excluded_page_no, min_offset,
+                                        max_offset, iterpool));
+            }
+
+          end = FALSE;
+          for (prefetch_revision = revision-1;
+              prefetch_revision >= info_baton.first_revision && !end;
+              --prefetch_revision)
+            {
+              svn_pool_clear(iterpool);
+
+              SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
+                                        info_baton.first_revision,
+                                        prefetch_revision, pages, -1,
+                                        min_offset, max_offset, iterpool));
+            }
+
+          svn_pool_destroy(iterpool);
         }
-
-      end = FALSE;
-      for (prefetch_revision = revision-1;
-           prefetch_revision >= info_baton.first_revision && !end;
-           --prefetch_revision)
-        {
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
-                                     info_baton.first_revision,
-                                     prefetch_revision, pages, -1,
-                                     min_offset, max_offset, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
     }
 
   *offset = page_baton.offset;
@@ -2323,16 +2327,19 @@ p2l_index_lookup(apr_array_header_t *entries,
        */
 
       /* pre-fetch preceding pages */
-      end = FALSE;
-      prefetch_info.offset = original_page_start;
-      while (prefetch_info.offset >= prefetch_info.page_size && !end)
+      if (ffd->use_block_read)
         {
-          svn_pool_clear(iterpool);
+          end = FALSE;
+          prefetch_info.offset = original_page_start;
+          while (prefetch_info.offset >= prefetch_info.page_size && !end)
+            {
+              svn_pool_clear(iterpool);
 
-          prefetch_info.offset -= prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
-                                    &prefetch_info, min_offset,
-                                    iterpool));
+              prefetch_info.offset -= prefetch_info.page_size;
+              SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
+                                        &prefetch_info, min_offset,
+                                        iterpool));
+            }
         }
 
       /* fetch page from disk and put it into the cache */
@@ -2350,20 +2357,23 @@ p2l_index_lookup(apr_array_header_t *entries,
       append_p2l_entries(entries, page_entries, block_start, block_end);
 
       /* pre-fetch following pages */
-      end = FALSE;
-      leaking_bucket = 4;
-      prefetch_info = page_info;
-      prefetch_info.offset = original_page_start;
-      while (   prefetch_info.next_offset < max_offset
-             && prefetch_info.page_no + 1 < prefetch_info.page_count
-             && !end)
+      if (ffd->use_block_read)
         {
-          svn_pool_clear(iterpool);
+          end = FALSE;
+          leaking_bucket = 4;
+          prefetch_info = page_info;
+          prefetch_info.offset = original_page_start;
+          while (   prefetch_info.next_offset < max_offset
+                && prefetch_info.page_no + 1 < prefetch_info.page_count
+                && !end)
+            {
+              svn_pool_clear(iterpool);
 
-          prefetch_info.offset += prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
-                                    &prefetch_info, min_offset,
-                                    iterpool));
+              prefetch_info.offset += prefetch_info.page_size;
+              SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
+                                        &prefetch_info, min_offset,
+                                        iterpool));
+            }
         }
 
       svn_pool_destroy(iterpool);
