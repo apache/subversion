@@ -109,7 +109,6 @@ void RemoteSessionContext::activate(jobject jremoteSession, jobject jprogress)
     return;
 
   env->CallVoidMethod(m_jctx, mid, jprogress);
-  env->DeleteLocalRef(jprogress);
   m_raCallbacks->progress_baton = m_jctx;
 }
 

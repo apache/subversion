@@ -197,7 +197,7 @@ open_and_seek_revision(svn_fs_fs__revision_file_t **file,
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool, pool));
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL, item,
                                  pool));
 
@@ -219,7 +219,7 @@ open_and_seek_transaction(svn_fs_fs__revision_file_t **file,
 {
   apr_off_t offset;
 
-  SVN_ERR(svn_fs_fs__open_proto_rev_file(file, fs, &rep->txn_id, pool));
+  SVN_ERR(svn_fs_fs__open_proto_rev_file(file, fs, &rep->txn_id, pool, pool));
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, NULL, SVN_INVALID_REVNUM,
                                  &rep->txn_id, rep->item_index, pool));
@@ -525,7 +525,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   if (is_cached)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
+                                           scratch_pool, scratch_pool));
   SVN_ERR(get_root_changes_offset(&root_offset, NULL,
                                   revision_file->file, fs, rev, scratch_pool));
 
@@ -622,7 +623,8 @@ auto_open_shared_file(shared_file_t *file)
 {
   if (file->rfile == NULL)
     SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&file->rfile, file->fs,
-                                             file->revision, file->pool));
+                                             file->revision, file->pool,
+                                             file->pool));
 
   return SVN_NO_ERROR;
 }
@@ -793,7 +795,8 @@ create_rep_state_body(rep_state_t **rep_state,
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
           if (ffd->rep_header_cache)
-            SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh, scratch_pool));
+            SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
+                                   scratch_pool));
         }
     }
 
@@ -872,7 +875,6 @@ svn_fs_fs__check_rep(representation_t *rep,
   rep_state_t *rs;
   svn_fs_fs__rep_header_t *rep_header;
 
-  /* ### Should this be using read_rep_line() directly? */
   /* ### Should this be using read_rep_line() directly? */
   SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
                            rep, fs, scratch_pool, scratch_pool));
@@ -2592,13 +2594,14 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
       SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                               scratch_pool));
+                                               scratch_pool, scratch_pool));
 
       /* physical addressing mode code path */
       SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
                                       revision_file->file, fs, rev,
                                       scratch_pool));
 
+      /* Actual reading and parsing are the same, though. */
       SVN_ERR(aligned_seek(fs, revision_file->file, NULL, changes_offset,
                            scratch_pool));
       SVN_ERR(svn_fs_fs__read_changes(changes, revision_file->stream,

@@ -4728,6 +4728,61 @@ def diff_parent_dir(sbox):
   finally:
     os.chdir(was_cwd)
 
+def diff_deleted_in_move_against_repos(sbox):
+  "diff deleted in move against repository"
+
+  sbox.build()
+  sbox.simple_move('A/B', 'BB')
+  sbox.simple_move('BB/E/alpha', 'BB/q')
+  sbox.simple_rm('BB/E/beta')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.repo_url + '/BB/E',
+                                     '--parents', '-m', 'Create dir')
+
+  # OK. Local diff
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir)
+
+  # OK. Walks nodes locally from wc-root, notices ancestry
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r1',
+                                     '--notice-ancestry')
+
+  # OK. Walks nodes locally from BB, notices ancestry
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r2',
+                                     '--notice-ancestry')
+
+  # OK. Walks nodes locally from wc-root
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r1')
+
+  # Assertion. Walks nodes locally from BB.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.wc_dir, '-r2')
+
+def diff_replaced_moved(sbox):
+  "diff against a replaced moved node"
+
+  sbox.build(read_only=True)
+  sbox.simple_move('A', 'AA')
+  sbox.simple_rm('AA/B')
+  sbox.simple_move('AA/D', 'AA/B')
+
+  # Ok
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('.'), '-r1')
+
+  # Ok (rhuijben: Works through a hack assuming some BASE knowledge)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('AA'), '-r1')
+
+  # Error (misses BASE node because the diff editor is driven incorrectly)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.ospath('AA/B'), '-r1')
+
+
 
 ########################################################################
 #Run the tests
@@ -4816,6 +4871,8 @@ test_list = [ None,
               diff_repo_repo_added_file_mime_type,
               diff_switched_file,
               diff_parent_dir,
+              diff_deleted_in_move_against_repos,
+              diff_replaced_moved,
               ]
 
 if __name__ == '__main__':

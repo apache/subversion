@@ -431,7 +431,8 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Create the 'toplevel' directory in repository and then load the same
   # dumpfile into that subtree.
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 10.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 10.\n'],
                                     [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir to load into")
   svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
@@ -727,7 +728,8 @@ def svnrdump_load_partial_incremental_dump(sbox):
 
   # Create the 'A' directory in repository and then load the partial
   # incremental dump into the root of the repository.
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 1.\n'],
                                     [], "mkdir", sbox.repo_url + "/A",
                                      "-m", "Create toplevel dir to load into")
 

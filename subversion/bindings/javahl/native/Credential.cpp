@@ -52,7 +52,7 @@ Credential::Credential(::Java::Env env, jobject kind,
                        const ::Java::String& password,
                        jobject info, jobject failures,
                        const ::Java::String& passphrase)
-  : ::Java::Object(env, ::Java::ClassCache::get_credential())
+  : ::Java::Object(env, ::Java::ClassCache::get_credential(env))
 {
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
                          kind, realm.get(), store.get(),
@@ -76,7 +76,7 @@ Credential::Kind::ClassImpl::~ClassImpl() {}
 
 Credential::Kind::Kind(::Java::Env env,
                        const ::Java::String& value)
-  : ::Java::Object(env, ::Java::ClassCache::get_credential_kind())
+  : ::Java::Object(env, ::Java::ClassCache::get_credential_kind(env))
 {
   set_this(env.CallStaticObjectMethod(
                get_class(), impl().m_static_mid_from_string, value.get()));

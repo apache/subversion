@@ -35,6 +35,7 @@
 
 #include "cached_data.h"
 #include "id.h"
+#include "index.h"
 #include "rep-cache.h"
 #include "revprops.h"
 #include "transaction.h"
@@ -1337,11 +1338,13 @@ svn_fs_fs__rep_copy(representation_t *rep,
 }
 
 
-/* Write out the zeroth revision for filesystem FS. */
+/* Write out the zeroth revision for filesystem FS.
+   Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-write_revision_zero(svn_fs_t *fs)
+write_revision_zero(svn_fs_t *fs,
+                    apr_pool_t *scratch_pool)
 {
-  const char *path_revision_zero = svn_fs_fs__path_rev(fs, 0, fs->pool);
+  const char *path_revision_zero = svn_fs_fs__path_rev(fs, 0, scratch_pool);
   apr_hash_t *proplist;
   svn_string_t date;
 
@@ -1354,16 +1357,18 @@ write_revision_zero(svn_fs_t *fs)
                               "text: 0 0 4 4 "
                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
                               "cpath: /\n"
-                              "\n\n17 107\n", fs->pool));
+                              "\n\n17 107\n", scratch_pool));
 
-  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, scratch_pool));
 
   /* Set a date on revision 0. */
-  date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
+  date.data = svn_time_to_cstring(apr_time_now(), scratch_pool);
   date.len = strlen(date.data);
-  proplist = apr_hash_make(fs->pool);
+  proplist = apr_hash_make(scratch_pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
-  return svn_fs_fs__set_revision_proplist(fs, 0, proplist, fs->pool);
+  SVN_ERR(svn_fs_fs__set_revision_proplist(fs, 0, proplist, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1374,7 +1379,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  fs->path = apr_pstrdup(pool, path);
+  fs->path = apr_pstrdup(fs->pool, path);
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
@@ -1455,7 +1460,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
-  SVN_ERR(write_revision_zero(fs));
+  SVN_ERR(write_revision_zero(fs, pool));
 
   /* Create the fsfs.conf file if supported.  Older server versions would
      simply ignore the file but that might result in a different behavior

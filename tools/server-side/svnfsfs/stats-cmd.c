@@ -290,7 +290,8 @@ open_rev_or_pack_file(apr_file_t **file,
                       apr_pool_t *pool)
 {
   svn_fs_fs__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs->fs, rev, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs->fs, rev,
+                                           pool, pool));
 
   *file = rev_file->file;
   return SVN_NO_ERROR;

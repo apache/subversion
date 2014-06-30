@@ -120,7 +120,6 @@ typedef enum svn_cl__longopt_t {
   opt_with_revprop,
   opt_with_all_revprops,
   opt_with_no_revprops,
-  opt_auto_moves,
   opt_parents,
   opt_accept,
   opt_show_revs,
@@ -298,10 +297,6 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name[=value] format")},
-  {"auto-moves",    opt_auto_moves, 0,
-                    N_("attempt to interpret matching unique DEL+ADD\n"
-                       "                             "
-                       "pairs as moves")},
   {"parents",       opt_parents, 0, N_("make intermediate directories")},
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge\n"
@@ -806,7 +801,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops,
-     opt_with_revprop, opt_auto_moves, opt_depth, opt_diff, opt_diff_cmd,
+     opt_with_revprop, opt_depth, opt_diff, opt_diff_cmd,
      opt_internal_diff, 'x', opt_search, opt_search_and },
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
@@ -2253,9 +2248,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'g':
         opt_state.use_merge_history = TRUE;
-        break;
-      case opt_auto_moves:
-        opt_state.auto_moves = TRUE;
         break;
       case opt_accept:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));

@@ -87,7 +87,8 @@ jobject BaseMap::operator[](const std::string& index) const
 
 BaseMap::somap BaseMap::convert_to_map(Env env, jobject jmap)
 {
-  const ClassImpl* pimpl = dynamic_cast<const ClassImpl*>(ClassCache::get_map());
+  const ClassImpl* pimpl =
+    dynamic_cast<const ClassImpl*>(ClassCache::get_map(env));
 
   if (!env.CallIntMethod(jmap, pimpl->m_mid_size))
     return somap();
@@ -95,10 +96,10 @@ BaseMap::somap BaseMap::convert_to_map(Env env, jobject jmap)
   // Get an iterator over the map's entry set
   const jobject entries = env.CallObjectMethod(jmap, pimpl->m_mid_entry_set);
   const jobject iterator = env.CallObjectMethod(entries,
-                                                Set::impl().m_mid_iterator);
+                                                Set::impl(env).m_mid_iterator);
 
-  const Iterator::ClassImpl& iterimpl = Iterator::impl();
-  const Entry::ClassImpl& entimpl = Entry::impl();
+  const Iterator::ClassImpl& iterimpl = Iterator::impl(env);
+  const Entry::ClassImpl& entimpl = Entry::impl(env);
 
   // Yterate over the map, filling the native map
   somap contents;

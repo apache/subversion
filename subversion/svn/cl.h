@@ -223,7 +223,6 @@ typedef struct svn_cl__opt_state_t
                                     (not converted to UTF-8) */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_boolean_t auto_moves;      /* interpret unique DEL/ADD pairs as moves */
   svn_cl__accept_t accept_which;   /* how to handle conflicts */
   svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
   svn_depth_t set_depth;           /* new sticky ambient depth value */

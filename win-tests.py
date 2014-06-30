@@ -788,8 +788,11 @@ elif test_javahl:
   if not java_exe:
     print('Java not found. Skipping Java tests')
   else:
-    args = (
-            os.path.abspath(java_exe),
+    args = (os.path.abspath(java_exe),)
+    if (objdir == 'Debug'):
+      args = args + ('-Xcheck:jni',)
+
+    args = args + (
             '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
             '-Dtest.srcdir=' + os.path.join(abs_srcdir,
                                             'subversion/bindings/javahl'),

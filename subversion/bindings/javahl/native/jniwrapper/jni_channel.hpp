@@ -154,9 +154,10 @@ private:
     };
 
     static const char* const m_class_name;
-    static const ClassImpl& impl()
+    static const ClassImpl& impl(Env env)
       {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_byte_buffer());
+        return *dynamic_cast<const ClassImpl*>(
+            ClassCache::get_byte_buffer(env));
       }
   };
 };
