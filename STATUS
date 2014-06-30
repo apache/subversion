@@ -189,7 +189,7 @@ Candidate changes:
    Justification:
      Reported as a build problem by some of our usual dist signers.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1596866
    Fix another instance of issue #3014, "svn log | head" should not
