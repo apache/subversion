@@ -262,40 +262,76 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def read_l2p(contents, item):
-  """ For the format 7+ revision file CONTENTS, return the physical offset
-      of ITEM.  This code supports only small, nonpacked revs. """
+class FSFS_Index:
+  """Manages indexes of a rev file in a FSFS format 7 repository.
+  The interface returns P2L information and allows for item offsets
+  and lengths to be modified. """
 
-  # decode numbers
-  numbers = []
-  value = 0
-  shift = 0
-  for c in contents:
-    char = ord(c)
-    value += (char & 127) << shift
-    if char < 128:
-      numbers.append(value)
-      shift = 0
-      value = 0
-    else:
-      shift += 7
+  by_item = { }
+  revision = -1
+  repo_dir = None
 
-  # decode offsets
-  numbers[7] = -1
-  for i in range(8, len(numbers)):
-    if numbers[i] & 1 == 1:
-      numbers[i] = - (numbers[i] + 1) / 2
-    else:
-      numbers[i] = numbers[i] / 2
-    numbers[i] += numbers[i-1]
+  def __init__(self, sbox, revision):
+    self.revision = revision
+    self.repo_dir = sbox.repo_dir
 
-  # we support only small, unpacked rev files
-  if numbers[1] < len(numbers) or numbers[3] != 1 :
-    raise svntest.Failure("More than 1 page in %s" % filename)
-  if numbers[2] != 1:
-    raise svntest.Failure("More than 1 rev in %s" % filename)
+    self._read()
 
-  return numbers[item + 7]
+  def _read(self):
+    """ Read P2L index using svnfsfs. """
+    exit_code, output, errput = svntest.main.run_svnfsfs('dump-index',
+                                                  '-r' + str(self.revision),
+                                                  self.repo_dir)
+    svntest.verify.verify_outputs("Error while dumping index",
+                                  [], errput, [], [])
+    svntest.verify.verify_exit_code(None, exit_code, 0)
+
+    self.by_item.clear()
+    for line in output:
+      values = line.split()
+      if len(values) >= 4 and values[0] != 'Start':
+        item = long(values[4])
+        self.by_item[item] = values
+
+  def _write(self):
+    """ Rewrite indexes using svnfsfs. """
+    by_offset = {}
+    for values in self.by_item.itervalues():
+      by_offset[long(values[0], 16)] = values
+
+    lines = []
+    for (offset, values) in sorted(by_offset.items()):
+      values = by_offset[offset]
+      line = values[0] + ' ' + values[1] + ' ' + values[2] + ' ' + \
+             values[3] + ' ' + values[4] + '\n';
+      lines.append(line)
+
+    exit_code, output, errput = svntest.main.run_command_stdin(
+      svntest.main.svnfsfs_binary, 0, 0, True, lines,
+      'load-index', self.repo_dir)
+
+    svntest.verify.verify_outputs("Error while rewriting index",
+                                  output, errput, [], [])
+    svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  def get_item(self, item):
+    """ Return offset, length and type of ITEM. """
+    values = self.by_item[item]
+
+    offset = long(values[0], 16)
+    len = long(values[1], 16)
+    type = values[2]
+
+    return (offset, len, type)
+
+  def modify_item(self, item, offset, len):
+    """ Modify offset and length of ITEM. """
+    values = self.by_item[item]
+
+    values[0] = format(offset, 'x')
+    values[1] = format(len, 'x')
+
+    self._write()
 
 def repo_format(sbox):
   """ Return the repository format number for SBOX."""
@@ -309,6 +345,8 @@ def repo_format(sbox):
 def set_changed_path_list(sbox, revision, changes):
   """ Replace the changed paths list in the revision file REVISION in SBOX
       with the text CHANGES."""
+
+  idx = None
 
   # read full file
   fp = open(fsfs_file(sbox.repo_dir, 'revs', str(revision)), 'r+b')
@@ -331,8 +369,11 @@ def set_changed_path_list(sbox, revision, changes):
     l2p_offset = long(footer.split(' ')[0])
     p2l_offset = long(footer.split(' ')[1])
 
+    idx = FSFS_Index(sbox, revision)
+    (offset, item_len, item_type) = idx.get_item(1)
+
     # split file contents
-    body_len = read_l2p(contents[l2p_offset:], 1)
+    body_len = offset
     indexes = contents[l2p_offset:length - footer_length - 1]
 
     # construct new footer, include indexes as are
@@ -350,6 +391,9 @@ def set_changed_path_list(sbox, revision, changes):
   fp.write(contents)
   fp.truncate()
   fp.close()
+
+  if repo_format(sbox) >= 7:
+    idx.modify_item(1, offset, len(changes) + 1)
 
 ######################################################################
 # Tests
@@ -2186,6 +2230,8 @@ def verify_invalid_path_changes(sbox):
                                            ".*r18: E160013:.*"])
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
+    if svntest.main.is_fs_log_addressing():
+      exp_out.insert(1, ".*Verifying.*metadata.*")
 
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
                                             "svnadmin: E145001:.*",
@@ -2199,19 +2245,16 @@ def verify_invalid_path_changes(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  if svntest.main.is_fs_log_addressing():
-    exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160058:.*",
-                                              "svnadmin: E165011:.*"], False)
-  else:
-    exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                              ".*Verified revision 1.",
-                                              ".*Error verifying revision 2."])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                              "svnadmin: E165011:.*"], False)
+  exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2."])
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
+                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
+    if svntest.main.is_fs_log_addressing():
+      exp_out.insert(1, ".*Verifying.*metadata.*")
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
