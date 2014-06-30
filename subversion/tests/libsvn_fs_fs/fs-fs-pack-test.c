@@ -28,9 +28,11 @@
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_fs.h"
+#include "private/svn_string_private.h"
 #include "private/svn_string_private.h"
 
 #include "../svn_test_fs.h"
@@ -1150,6 +1152,62 @@ recursive_locking(const svn_test_opts_t *opts,
 #undef REPO_NAME
 
 /* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "metadata_checksumming"
+static svn_error_t *
+metadata_checksumming(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const char *repo_path, *r0_path;
+  apr_hash_t *fs_config = apr_hash_make(pool);
+  svn_stringbuf_t *r0;
+  svn_fs_root_t *root;
+  apr_hash_t *dir;
+
+  /* Skip this test unless we are FSFS f7+ */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't checksum metadata");
+
+  /* Create the file system to fiddle with. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  repo_path = svn_fs_path(fs, pool);
+
+  /* Manipulate the data on disk.
+   * (change id from '0.0.*' to '1.0.*') */
+  r0_path = svn_dirent_join_many(pool, repo_path, "revs", "0", "0",
+                                 SVN_VA_NULL);
+  SVN_ERR(svn_stringbuf_from_file2(&r0, r0_path, pool));
+  r0->data[21] = '1';
+  SVN_ERR(svn_io_remove_file2(r0_path, FALSE, pool));
+  SVN_ERR(svn_io_file_create_binary(r0_path, r0->data, r0->len, pool));
+
+  /* Reading the corrupted data on the normal code path triggers no error.
+   * Use a separate namespace to avoid simply reading data from cache. */
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_path, fs_config, pool, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_ERR(svn_fs_dir_entries(&dir, root, "/", pool));
+
+  /* The block-read code path uses the P2L index information and compares
+   * low-level checksums.  Again, separate cache namespace. */
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "1");
+  SVN_ERR(svn_fs_open2(&fs, repo_path, fs_config, pool, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_TEST_ASSERT_ERROR(svn_fs_dir_entries(&dir, root, "/", pool),
+                        SVN_ERR_CHECKSUM_MISMATCH);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -1188,6 +1246,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_OPTS_PASS(recursive_locking,
                        "prevent recursive locking"),
+    SVN_TEST_OPTS_PASS(metadata_checksumming,
+                       "metadata checksums being checked"),
     SVN_TEST_NULL
   };
 
