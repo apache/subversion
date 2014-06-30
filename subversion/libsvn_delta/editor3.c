@@ -136,7 +136,7 @@ check_cancel(svn_editor3_t *editor)
 
 /*
  * ===================================================================
- * Editor for Commit from WC, with Incremental Path-Based Tree Changes
+ * Editor for Commit, with Incremental Path-Based Tree Changes
  * ===================================================================
  */
 
@@ -290,7 +290,7 @@ svn_editor3_put(svn_editor3_t *editor,
 
 /*
  * ========================================================================
- * Editor for Commit from WC, with Separate Unordered Per-Node Tree Changes
+ * Editor for Commit, with Separate Unordered Per-Node Tree Changes
  * ========================================================================
  */
 

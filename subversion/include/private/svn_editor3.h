@@ -54,21 +54,31 @@ extern "C" {
  * Possible contexts (uses) for an editor
  * ===================================================================
  *
- * (1) Commit directly to repo
+ * (1) Commit
  *
- *   - From single-rev to single-rev
+ *   - From single-rev or mixed-rev;
+ *       need to tell the receiver the "from" revision(s)
+ *   - To single-rev (implied new head revision)
  *   - Diff: with simple context (for simple merge with recent commits)
- *   - Copies: can send O(1) "copy" (recursive + edits)
+ *   - Copies: can send O(1) "copy"
+ *       with O(E) edits inside; E ~ size of edits
  *   - Copies: can copy from within the new rev (?)
  *
- * (2) Commit from WC
+ * Commit is logically the same whether from a WC or "direct". In either
+ * case the client has to have an idea of what it is basing its changes
+ * on, and tell the server so that the server can perform its Out-Of-Date
+ * checks. This base could potentially be mixed-revision. A non-WC commit
+ * is typically unlikely to work from a mixed-rev base, but logically it
+ * is possible. An O(1) copy is more obviously needed for a non-WC commit
+ * such as creating a branch directly in the repository. One could argue
+ * that committing a copy from a WC already involves O(N) space and time
+ * for the copy within the WC, and so requiring an O(1) commit is not
+ * necessarily justifiable; but as commit may be vastly more expensive
+ * than local operations, making it important even in this case. There is
+ * also the WC-to-repo copy operation which involves elements of committing
+ * from a WC and "directly".
  *
- *   - From mixed-rev to single-rev
- *   - Rx needs to be told the "from" revisions
- *   - Diff: with simple context (for simple merge with recent commits)
- *   - Copies: can copy from within the new rev (?)
- *
- * (3) Update/Switch
+ * (2) Update/Switch
  *
  *   - One change per *WC* path rather than per *repo* path
  *   - From mixed-rev to single-rev
@@ -76,7 +86,7 @@ extern "C" {
  *   - Diff: with context (for merging)
  *   - Copies: can expand "copy" (non-recursive)
  *
- * (4) Diff (wc-base/repo:repo) (for merging/patching/displaying)
+ * (3) Diff (wc-base/repo:repo) (for merging/patching/displaying)
  *
  *   - From mixed-rev (for wc-base) to single-rev
  *       (enhancement: mixed-rev "to" state?)
@@ -181,7 +191,9 @@ typedef struct pathrev_t
   const char *relpath;
 } pathrev_t;
 
-/** Node-Branch Identifier -- like the FSFS <node-id>.<copy-id>.
+/** Node-Branch Identifier -- functionally similar to the FSFS
+ * <node-id>.<copy-id>, but the ids used within an editor drive may be
+ * scoped locally to that editor drive rather than in-repository ids.
  * (Presently a null-terminated C string.) */
 typedef char *svn_editor3_nbid_t;
 
@@ -215,7 +227,7 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 
 /*
  * ===================================================================
- * Editor for Commit from WC, with Incremental Path-Based Tree Changes
+ * Editor for Commit, with Incremental Path-Based Tree Changes
  * ===================================================================
  *
  * Versioning model assumed:
@@ -538,7 +550,7 @@ svn_editor3_put(svn_editor3_t *editor,
 
 /*
  * ========================================================================
- * Editor for Commit from WC, with Separate Unordered Per-Node Tree Changes
+ * Editor for Commit, with Separate Unordered Per-Node Tree Changes
  * ========================================================================
  *
  * Versioning model assumed:
