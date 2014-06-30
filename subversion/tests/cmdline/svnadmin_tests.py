@@ -329,7 +329,7 @@ class FSFS_Index:
     values = self.by_item[item]
 
     values[0] = '%x' % offset
-    values[1] = '%s' % len
+    values[1] = '%x' % len
 
     self._write()
 
