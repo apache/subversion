@@ -1002,7 +1002,7 @@ read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   ffd->use_block_read 
-    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, TRUE);
+    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, FALSE);
 
   return SVN_NO_ERROR;
 }
