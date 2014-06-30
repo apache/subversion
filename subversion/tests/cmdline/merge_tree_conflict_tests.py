@@ -1457,7 +1457,6 @@ def merge_replace_setup(sbox):
   # make a branch of A
   # svn cp $URL/A $URL/branch
   expected_stdout = verify.UnorderedOutput([
-    '\n',
     'Committed revision 2.\n',
   ])
 

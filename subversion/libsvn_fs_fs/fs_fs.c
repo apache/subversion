@@ -883,7 +883,8 @@ write_config(svn_fs_t *fs,
 "### setup, each access will hit only one disk (minimizes I/O load) but"     NL
 "### uses all the data provided by the disk in a single access."             NL
 "### For SSD-based storage systems, slightly lower values around 16 kB"      NL
-"### may improve latency while still maximizing throughput."                 NL
+"### may improve latency while still maximizing throughput.  If block-read"  NL
+"### has not been enabled, this will be capped to 4 kBytes."                 NL
 "### Can be changed at any time but must be a power of 2."                   NL
 "### block-size is 64 kBytes by default."                                    NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
@@ -898,6 +899,12 @@ write_config(svn_fs_t *fs,
 static svn_error_t *
 read_global_config(svn_fs_t *fs)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+  /* Ignore the user-specified larger block size if we don't use block-read.
+     Defaulting to 4k gives us the same access granularity in format 7 as in
+     older formats. */
+  ffd->block_size = MIN(0x1000, ffd->block_size);
+
   return SVN_NO_ERROR;
 }
 

@@ -82,11 +82,11 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -q [--quiet]             : print nothing, or only summary information
-  -v [--verbose]           : print extra information
+  -c [--change] ARG        : the change made in revision ARG
+  -q [--quiet]             : do not print the log message
+  -v [--verbose]           : also print all affected paths
   -g [--use-merge-history] : use/display additional information from merge
                              history
-  -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
