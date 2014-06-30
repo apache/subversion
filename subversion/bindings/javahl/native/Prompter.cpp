@@ -51,7 +51,7 @@ Prompter::UniquePtr Prompter::create(jobject jprompter)
   const ::Java::Env jenv;
   try
     {
-      const jclass cls = ::Java::ClassCache::get_authn_cb()->get_class();
+      const jclass cls = ::Java::ClassCache::get_authn_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
         return UniquePtr(NULL);
 
@@ -445,7 +445,8 @@ Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
   const ::Java::Env jenv;
   try
     {
-      const jclass cls = ::Java::ClassCache::get_user_passwd_cb()->get_class();
+      const jclass cls =
+        ::Java::ClassCache::get_user_passwd_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
         return UniquePtr(NULL);
 

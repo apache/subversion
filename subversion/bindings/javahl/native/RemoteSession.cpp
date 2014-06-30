@@ -71,37 +71,31 @@ RemoteSession::open(jint jretryAttempts,
                     jobject jprompter, jobject jdeprecatedPrompter,
                     jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!jprompter != !jdeprecatedPrompter);
-
-  JNIEnv *env = JNIUtil::getEnv();
+  SVN_ERR_ASSERT_NO_RETURN(!jprompter != !jdeprecatedPrompter
+                           || !jprompter && !jdeprecatedPrompter);
 
   SVN::Pool requestPool;
   URL url(jurl, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
   SVN_JNI_ERR(url.error_occurred(), NULL);
-  env->DeleteLocalRef(jurl);
 
   JNIStringHolder uuid(juuid);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(juuid);
 
   Path configDirectory(jconfigDirectory, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
   SVN_JNI_ERR(configDirectory.error_occurred(), NULL);
-  env->DeleteLocalRef(jconfigDirectory);
 
   JNIStringHolder usernameStr(jusername);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(jusername);
 
   JNIStringHolder passwordStr(jpassword);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(jpassword);
 
   Prompter::UniquePtr prompter(jprompter ? Prompter::create(jprompter)
                                : CompatPrompter::create(jdeprecatedPrompter));

@@ -59,7 +59,7 @@ protected:
    * @c std::map.
    */
   explicit BaseMap(Env env, jobject jmap)
-    : Object(env, ClassCache::get_map(), jmap),
+    : Object(env, ClassCache::get_map(env), jmap),
       m_contents(convert_to_map(env, m_jthis))
     {}
 
@@ -117,9 +117,9 @@ private:
     };
 
     static const char* const m_class_name;
-    static const ClassImpl& impl()
+    static const ClassImpl& impl(Env env)
       {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_set());
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_set(env));
       }
   };
 
@@ -143,9 +143,9 @@ private:
     };
 
     static const char* const m_class_name;
-    static const ClassImpl& impl()
+    static const ClassImpl& impl(Env env)
       {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_iterator());
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_iterator(env));
       }
   };
 
@@ -169,9 +169,9 @@ private:
     };
 
     static const char* const m_class_name;
-    static const ClassImpl& impl()
+    static const ClassImpl& impl(Env env)
       {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_map_entry());
+        return *dynamic_cast<const ClassImpl*>(ClassCache::get_map_entry(env));
       }
   };
 };
@@ -277,7 +277,7 @@ protected:
    * Constructs the map wrapper, deriving the class from @a jmap.
    */
   explicit BaseMutableMap(Env env, jobject jmap)
-    : Object(env, ClassCache::get_hash_map(), jmap)
+    : Object(env, ClassCache::get_hash_map(env), jmap)
     {}
 
   /**
@@ -285,7 +285,7 @@ protected:
    * with initial allocation size @a length.
    */
   explicit BaseMutableMap(Env env, jint length)
-    : Object(env, ClassCache::get_hash_map())
+    : Object(env, ClassCache::get_hash_map(env))
     {
       set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
     }

@@ -77,10 +77,6 @@ struct ImplContext
         return;
       if (option.c_str())
         m_option = option.c_str();
-
-      env->DeleteLocalRef(jcategory);
-      env->DeleteLocalRef(jsection);
-      env->DeleteLocalRef(joption);
     }
 
   svn_config_t* m_config;

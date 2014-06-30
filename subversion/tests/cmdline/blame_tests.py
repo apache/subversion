@@ -631,7 +631,8 @@ def blame_output_after_merge(sbox):
   A_url = sbox.repo_url + '/A'
 
   # r2: mv greek tree in trunk.
-  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+                                            "Committed revision 2.\n"], [],
                                      'mv', "--parents", A_url, trunk_A_url,
                                      "-m", "move greek tree to trunk")
 
@@ -655,7 +656,8 @@ def blame_output_after_merge(sbox):
 
   # r4: create branches/br from trunk
   branches_br_url = sbox.repo_url + "/branches/br"
-  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 4.\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+                                            "Committed revision 4.\n"], [],
                                     'cp', '--parents',
                                      trunk_url, branches_br_url,
                                      "-m", "create branch")

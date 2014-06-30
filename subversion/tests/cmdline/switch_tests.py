@@ -352,11 +352,13 @@ def delete_subdir(sbox):
   A2_B_F_url = sbox.repo_url + '/A2/B/F'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 3.\n'], [],
                                      'rm', '-m', 'delete subdir', A2_B_F_url)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -482,7 +484,8 @@ def failed_anchor_is_target(sbox):
   G_url = sbox.repo_url + '/A/D/G'
   G_psi_url = G_url + '/psi'
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg', G_psi_url)
 
   # Modify the file 'H/psi' locally.
@@ -543,7 +546,8 @@ def bad_intermediate_urls(sbox):
   # First, make an extra subdirectory in C to match one in the root, plus
   # another one inside of that.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
                                      url_A_C_A, url_A_C_A_Z)
 
@@ -642,10 +646,10 @@ def obstructed_switch(sbox):
   url_A_B_Esave = url + '/A/B/Esave'
 
   # svn cp -m msgcopy url/A/B/E url/A/B/Esave
-  expected_stdout = verify.UnorderedOutput([
-    '\n',
+  expected_stdout = [
+    'Committing transaction...\n',
     'Committed revision 2.\n',
-  ])
+  ]
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', '-m',
     'msgcopy', url_A_B_E, url_A_B_Esave)
@@ -783,7 +787,8 @@ def refresh_read_only_attribute(sbox):
   url = sbox.repo_url + '/A'
   branch_url = sbox.repo_url + '/A-branch'
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp', '-m', 'svn:needs-lock not set',
                                      url, branch_url)
 
@@ -1106,7 +1111,7 @@ def forced_switch_failures(sbox):
   # Make dir A/D/H/I in repos.
   # svn mkdir -m "Log message" url/A/D/H/I
   expected_stdout = verify.UnorderedOutput([
-    '\n',
+    'Committing transaction...\n',
     'Committed revision 2.\n',
   ])
 
@@ -2039,7 +2044,8 @@ def tolerate_local_mods(sbox):
   A2_url = sbox.repo_url + '/A2'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
   os.mkdir(L_path)

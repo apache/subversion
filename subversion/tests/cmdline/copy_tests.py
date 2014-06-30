@@ -1095,7 +1095,8 @@ def url_copy_parent_into_child(sbox):
 
   # Issue 1367 parent/child URL-to-URL was rejected.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a can of worms',
                                      B_url, F_url)
@@ -1157,7 +1158,8 @@ def wc_copy_parent_into_child(sbox):
 
   svntest.actions.run_and_verify_svn(None,
                                      ['Adding copy of        .\n',
-                                     '\n', 'Committed revision 2.\n'], [],
+                                      'Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a larger can',
                                      '.', F_B_url)

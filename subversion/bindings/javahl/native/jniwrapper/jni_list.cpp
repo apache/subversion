@@ -40,7 +40,8 @@ BaseList::ClassImpl::~ClassImpl() {}
 BaseList::ovector
 BaseList::convert_to_vector(Env env, jobject jlist)
 {
-  const ClassImpl* pimpl = dynamic_cast<const ClassImpl*>(ClassCache::get_list());
+  const ClassImpl* pimpl =
+    dynamic_cast<const ClassImpl*>(ClassCache::get_list(env));
   const jint length = env.CallIntMethod(jlist, pimpl->m_mid_size);
 
   if (!length)

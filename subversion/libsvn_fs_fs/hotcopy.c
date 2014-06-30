@@ -693,63 +693,28 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
    * If necessary, update 'current' after copying all files from a shard. */
   for (; rev <= src_youngest; rev++)
     {
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
+      /* Copying non-packed revisions is racy in case the source repository is
+       * being packed concurrently with this hotcopy operation. The race can
+       * happen with FS formats prior to SVN_FS_FS__MIN_PACK_LOCK_FORMAT that
+       * support packed revisions. With the pack lock, however, the race is
+       * impossible, because hotcopy and pack operations block each other.
+       *
+       * We assume that all revisions coming after 'min-unpacked-rev' really
+       * are unpacked and that's not necessarily true with concurrent packing.
+       * Don't try to be smart in this edge case, because handling it properly
+       * might require copying *everything* from the start. Just abort the
+       * hotcopy with an ENOENT (revision file moved to a pack, so it is no
+       * longer where we expect it to be). */
+
       /* Copy the rev file. */
-      err = hotcopy_copy_shard_file(src_revs_dir, dst_revs_dir,
-                                    rev, max_files_per_dir,
-                                    iterpool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOENT(err->apr_err) &&
-              src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-            {
-              svn_error_clear(err);
-
-              /* The source rev file does not exist. This can happen if the
-               * source repository is being packed concurrently with this
-               * hotcopy operation.
-               *
-               * If the new revision is now packed, and the youngest revision
-               * we're interested in is not inside this pack, try to copy the
-               * pack instead.
-               *
-               * If the youngest revision ended up being packed, don't try
-               * to be smart and work around this. Just abort the hotcopy. */
-              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(src_fs, pool));
-              if (svn_fs_fs__is_packed_rev(src_fs, rev))
-                {
-                  if (svn_fs_fs__is_packed_rev(src_fs, src_youngest))
-                    return svn_error_createf(
-                             SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("The assumed HEAD revision (%lu) of the "
-                               "hotcopy source has been packed while the "
-                               "hotcopy was in progress; please restart "
-                               "the hotcopy operation"),
-                             src_youngest);
-
-                  SVN_ERR(hotcopy_copy_packed_shard(&dst_min_unpacked_rev,
-                                                    src_fs, dst_fs,
-                                                    rev, max_files_per_dir,
-                                                    iterpool));
-                  rev = dst_min_unpacked_rev;
-                  continue;
-                }
-              else
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("Revision %lu disappeared from the "
-                                           "hotcopy source while hotcopy was "
-                                           "in progress"), rev);
-            }
-          else
-            return svn_error_trace(err);
-        }
-
+      SVN_ERR(hotcopy_copy_shard_file(src_revs_dir, dst_revs_dir,
+                                      rev, max_files_per_dir,
+                                      iterpool));
       /* Copy the revprop file. */
       SVN_ERR(hotcopy_copy_shard_file(src_revprops_dir,
                                       dst_revprops_dir,

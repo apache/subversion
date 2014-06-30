@@ -686,7 +686,8 @@ def simple_property_merges(sbox):
   A_url = sbox.repo_url + '/A'
   A2_url = sbox.repo_url + '/A2'
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
                                      A_url, A2_url)
 
@@ -4227,7 +4228,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
 
   copy_of_A_D_wc_rev = cur_rev
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n',
+                                     ['Committing transaction...\n',
                                       'Committed revision ' + str(cur_rev+1) +
                                       '.\n'],
                                      [],
@@ -6460,10 +6461,12 @@ def update_loses_mergeinfo(sbox):
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
@@ -6580,10 +6583,12 @@ def merge_loses_mergeinfo(sbox):
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
@@ -7724,7 +7729,8 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
                                         wc_status, None, wc_dir)
 
   # Move A to A_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv A to A_MOVED',
                                      A_url, A_MOVED_url)
 
@@ -8132,7 +8138,8 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   mu_MOVED_path = sbox.ospath('A/mu_MOVED')
 
   # Copy mu to mu_COPY
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [], 'cp', '-m', 'cp mu to mu_COPY',
                                      mu_url, mu_COPY_url)
 
@@ -8145,7 +8152,8 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                         expected_status, None, wc_dir)
 
   # Move mu to mu_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv mu to mu_MOVED',
                                      mu_url, mu_MOVED_url)
 
@@ -8223,7 +8231,8 @@ def merge_with_auto_rev_range_detection(sbox):
                                         expected_status, None, wc_dir)
 
   # Copy A to A_COPY
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [], 'cp', '-m', 'cp A to A_COPY',
                                      A_url, A_COPY_url)
 
@@ -9143,7 +9152,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Move A to A_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 7.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 7.\n'],
                                      [], 'mv', '-m', 'mv A to A_MOVED',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED')
@@ -9889,7 +9899,8 @@ def dont_add_mergeinfo_from_own_history(sbox):
   # out, leaving the only the mergeinfo created from the merge itself:
   # '/A_COPY:7'.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 8.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 8.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED',
@@ -10543,9 +10554,11 @@ def merge_added_subtree(sbox):
   A_COPY_url = url + "/A_COPY"
   A_path = sbox.ospath('A')
 
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 2.\n"], [],
                                      "cp", "-m", "", A_url, A_COPY_url)
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 3.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 3.\n"], [],
                                      "cp", "-m", "",
                                      A_COPY_url + '/D',
                                      A_COPY_url + '/D2')
@@ -10804,7 +10817,8 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r6.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 6.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 6.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -10956,7 +10970,8 @@ def set_up_renamed_subtree(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r5.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -13557,7 +13572,8 @@ def no_self_referential_filtering_on_added_path(sbox):
 
   # r10: Move A/C to A/C_MOVED.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 10.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 10.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/C',
                                      sbox.repo_url + '/A/C_MOVED',
@@ -13770,7 +13786,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                         wc_status, None, wc_dir)
 
   # r12 - Move A/D/H/nu to A/D/H/nu_moved
-  svntest.actions.run_and_verify_svn(None, ["\n",
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
                                             "Committed revision 12.\n"], [],
                                      'move', sbox.repo_url + '/A/D/H/nu',
                                      sbox.repo_url + '/A/D/H/nu_moved',
@@ -14020,18 +14036,21 @@ def set_up_natural_history_gap(sbox):
 
   # r6: Delete 'A'
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 6.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 6.\n"], [],
     'delete', sbox.repo_url + '/A', '-m', 'Delete A')
 
   # r7: Resurrect 'A' by copying 'A@2' to 'A'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 7.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 7.\n"], [],
     'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
     '-m', 'Resurrect A from A@2')
 
   # r8: Branch the resurrected 'A' to 'A_COPY'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 8.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 8.\n"], [],
     'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
     '-m', 'Copy A to A_COPY')
 
@@ -15093,7 +15112,8 @@ def committed_case_only_move_and_revert(sbox):
 
   # r3: A case-only file rename on the server
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 3.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/mu',
                                      sbox.repo_url + '/A/MU',
@@ -15197,7 +15217,8 @@ def committed_case_only_move_and_revert(sbox):
 
   # r5: A case-only directory rename on the server
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/C',
                                      sbox.repo_url + '/A/c',
@@ -17158,7 +17179,8 @@ def reverse_merge_with_rename(sbox):
 
   # r7 - Rename ^/A to ^/trunk.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 7.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 7.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/trunk',
