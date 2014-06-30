@@ -35,7 +35,6 @@ use Tie::File ();
 # Programs we use.
 #
 # TODO: document which are interpreted by sh and which should point to binary.
-my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -43,11 +42,17 @@ my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less' // 'cat';
 
 # Mode flags.
-#    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
-#    conflicts-bot: YES=1 MAY_COMMIT=0
-#    interactive:   YES=0 MAY_COMMIT=0      (default)
+package Mode {
+  use constant {
+    AutoCommitApproveds => 1, # used by nightly commits (svn-role)
+    Conflicts => 2,           # used by the hourly conflicts-detection buildbot
+    Interactive => 3,
+  };
+};
 my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
+my $MODE = ($YES ? ($MAY_COMMIT ? Mode::AutoCommitApproveds : Mode::Conflicts )
+                 : Mode::Interactive );
 
 # Other knobs.
 my $VERBOSE = 0;
@@ -60,15 +65,31 @@ die if grep { ($sh[$_] eq 'true') != !!$_ } $DEBUG, $MAY_COMMIT, $VERBOSE, $YES;
 # Username for entering votes.
 my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
 my ($AVAILID) = $ENV{AVAILID} // do {
-  local $_ = `$SVNAUTH list 2>/dev/null`;
+  local $_ = `$SVN auth svn.apache.org:443 2>/dev/null`; # TODO: pass $SVN_A_O_REALM
   ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
 } // do {
   local $/; # slurp mode
+  my $fh;
+  my $dir = "$ENV{HOME}/.subversion/auth/svn.simple/";
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
-  `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
-  =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
+  open $fh, '<', "$dir/$filename"
+  and <$fh> =~ /K 8\nusername\nV \d+\n(.*)/
+  ? $1
+  : undef
+};
+
+unless (defined $AVAILID) {
+  unless ($MODE == Mode::Conflicts) {
+    warn "Username for commits (of votes/merges) not found; "
+         ."it will be possible to review nominations but not to commit votes "
+         ."or merges.\n";
+    warn "Press the 'any' key to continue...\n";
+    die if $MODE == Mode::AutoCommitApproveds; # unattended mode; can't prompt.
+    ReadMode 'cbreak';
+    ReadKey 0;
+    ReadMode 'restore';
+  }
 }
-// warn "Username for commits (of votes/merges) not found";
 
 ############## End of reading values from the environment ##############
 
@@ -152,6 +173,11 @@ y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
 
+To commit a merge, you have two options: either answer 'y' to the second prompt
+to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
+in the environment before running the script, in which case answering 'y'
+to the first prompt will not only run the merge but also commit it.
+
 There is also a batch mode (normally used only by cron jobs and buildbot tasks,
 rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
 the environment, this script will iterate the "Approved:" section, and merge
@@ -165,6 +191,7 @@ EOF
 }
 
 sub nominate_usage {
+  my $availid = $AVAILID // "(your username)";
   my $basename = basename $0;
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
@@ -177,7 +204,7 @@ Will add:
    Justification:
      \$Some_justification
    Votes:
-     +1: $AVAILID
+     +1: $availid
 to STATUS.  Backport branches are detected automatically.
 
 The STATUS file in the current directory is used (unless argv[0] is "n", in
@@ -189,6 +216,18 @@ EOF
 # TODO: Look for backport branches named after issues.
 # TODO: Do a dry-run merge on added entries.
 # TODO: Do a dry-run merge on interactively-edited entries in backport.pl
+}
+
+# If $AVAILID is undefined, warn about it and return true.
+# Else return false.
+#
+# $_[0] is a string for inclusion in generated error messages.
+sub warned_cannot_commit {
+  my $caller_error_string = shift;
+  return 0 if defined $AVAILID;
+
+  warn "$0: $caller_error_string: unable to determine your username via \$AVAILID or svnauth(1) or ~/.subversion/auth/";
+  return 1;
 }
 
 sub digest_string {
@@ -538,6 +577,11 @@ sub vote {
   my @votesarray;
   return unless %$approved or %$votes;
 
+  # If $AVAILID is undef, we can only process 'edit' pseudovotes; handle_entry() is
+  # supposed to prevent numeric (±1,±0) votes from getting to this point.
+  die "Assertion failed" if not defined $AVAILID
+                            and grep { $_ ne 'edit' } map { $_->[0] } values %$votes;
+
   my $had_empty_line;
 
   $. = 0;
@@ -852,6 +896,8 @@ sub handle_entry {
         while (1) { 
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
+              # TODO: if $MAY_COMMIT, save the log message to a file (say,
+              #       backport.logmsg in the wcroot).
               system($SHELL) == 0
                 or warn "Creating an interactive subshell failed ($?): $!"
             }
@@ -900,11 +946,14 @@ sub handle_entry {
         next PROMPT;
       }
       when (/^([+-][01])\s*$/i) {
+        next QUESTION if warned_cannot_commit "Entering a vote failed";
         $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
         last PROMPT;
       }
       when (/^e/i) {
+        prompt "Press the 'any' key to continue...\n"
+            if warned_cannot_commit "Committing this edit later on may fail";
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
@@ -1025,6 +1074,8 @@ sub nominate_main {
   nominate_usage, exit 0 if @ARGV != 2;
   my (@revnums) = (+shift) =~ /(\d+)/g;
   my $justification = shift;
+
+  die "Unable to proceed." if warned_cannot_commit "Nominating failed";
 
   @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
   die "No revision numbers specified" unless @revnums;

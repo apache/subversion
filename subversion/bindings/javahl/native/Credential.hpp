@@ -81,7 +81,7 @@ public:
    * The constructor does not verify the class of the wrapped object.
    */
   explicit Credential(::Java::Env env, jobject jthis)
-    : ::Java::Object(env, ::Java::ClassCache::get_credential(), jthis)
+    : ::Java::Object(env, ::Java::ClassCache::get_credential(env), jthis)
     {}
 
   /**

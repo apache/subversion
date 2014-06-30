@@ -1238,7 +1238,8 @@ def another_hudson_problem(sbox):
 
   # Delete directory G from the repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 3.\n'], [],
                                      'rm', '-m', 'log msg',
                                      sbox.repo_url + '/A/D/G')
 
@@ -1340,7 +1341,8 @@ def new_dir_with_spaces(sbox):
 
   # Create a new directory ("spacey dir") directly in repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
                                      sbox.repo_url
                                      + '/A/spacey%20dir')
@@ -1983,7 +1985,7 @@ def update_copy_of_old_rev(sbox):
 
   # Commit, and check that it says it's committing the right thing
   exp_out = ['Adding         ' + dir2 + '\n',
-             '\n',
+             'Committing transaction...\n',
              'Committed revision 3.\n']
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'ci', '-m', '', wc_dir)

@@ -164,7 +164,7 @@ public:
   static void destroy();
 
 #define JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(M)     \
-  static const Object::ClassImpl* get_##M();
+  static const Object::ClassImpl* get_##M(Env env);
 
   JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(object);
   JNIWRAPPER_DECLARE_CACHED_CLASS_ACCESSOR(classtype);

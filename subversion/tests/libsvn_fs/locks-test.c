@@ -857,6 +857,7 @@ expect_unlock_error(const char *path,
 struct lock_many_baton_t {
   apr_hash_t *results;
   apr_pool_t *pool;
+  int count;
 };
 
 /* Implements svn_fs_lock_callback_t. */
@@ -874,6 +875,10 @@ lock_many_cb(void *lock_baton,
   result->lock = lock;
   result->fs_err = svn_error_dup(fs_err);
   svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
+
+  if (b->count)
+    if (!--(b->count))
+      return svn_error_create(SVN_ERR_FS_GENERAL, NULL, "lock_many_cb");
 
   return SVN_NO_ERROR;
 }
@@ -908,6 +913,7 @@ lock_multiple_paths(const svn_test_opts_t *opts,
 
   baton.results = apr_hash_make(pool);
   baton.pool = pool;
+  baton.count = 0;
   lock_paths = apr_hash_make(pool);
   unlock_paths = apr_hash_make(pool);
   target = svn_fs_lock_target_create(NULL, newrev, pool);
@@ -1012,6 +1018,67 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+lock_cb_error(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t newrev;
+  svn_fs_access_t *access;
+  svn_fs_lock_target_t *target;
+  struct lock_many_baton_t baton;
+  apr_hash_t *lock_paths, *unlock_paths;
+  svn_lock_t *lock;
+
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-lock-cb-error", opts, pool));
+  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+
+  baton.results = apr_hash_make(pool);
+  baton.pool = pool;
+  baton.count = 1;
+  lock_paths = apr_hash_make(pool);
+  unlock_paths = apr_hash_make(pool);
+  target = svn_fs_lock_target_create(NULL, newrev, pool);
+
+  svn_hash_sets(lock_paths, "/A/B/E/alpha", target);
+  svn_hash_sets(lock_paths, "/A/B/E/beta", target);
+
+  apr_hash_clear(baton.results);
+  SVN_TEST_ASSERT_ERROR(svn_fs_lock_many(fs, lock_paths, "comment", 0, 0, 0,
+                                         lock_many_cb, &baton,
+                                         pool, pool),
+                        SVN_ERR_FS_GENERAL);
+
+  SVN_TEST_ASSERT(apr_hash_count(baton.results) == 1);
+  SVN_TEST_ASSERT(svn_hash_gets(baton.results, "/A/B/E/alpha")
+                  || svn_hash_gets(baton.results, "/A/B/E/beta"));
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/B/E/alpha", pool));
+  SVN_TEST_ASSERT(lock);
+  svn_hash_sets(unlock_paths, "/A/B/E/alpha", lock->token);
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/B/E/beta", pool));
+  SVN_TEST_ASSERT(lock);
+  svn_hash_sets(unlock_paths, "/A/B/E/beta", lock->token);
+
+  baton.count = 1;
+  apr_hash_clear(baton.results);
+  SVN_TEST_ASSERT_ERROR(svn_fs_unlock_many(fs, unlock_paths, FALSE,
+                                           lock_many_cb, &baton,
+                                           pool, pool),
+                        SVN_ERR_FS_GENERAL);
+
+  SVN_TEST_ASSERT(apr_hash_count(baton.results) == 1);
+  SVN_TEST_ASSERT(svn_hash_gets(baton.results, "/A/B/E/alpha")
+                  || svn_hash_gets(baton.results, "/A/B/E/beta"));
+
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/B/E/alpha", pool));
+  SVN_TEST_ASSERT(!lock);
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/B/E/beta", pool));
+  SVN_TEST_ASSERT(!lock);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -1045,6 +1112,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check out-of-dateness before locking"),
     SVN_TEST_OPTS_PASS(lock_multiple_paths,
                        "lock multiple paths"),
+    SVN_TEST_OPTS_PASS(lock_cb_error,
+                       "lock callback error"),
     SVN_TEST_NULL
   };
 

@@ -161,7 +161,7 @@ AuthnCallback::SSLServerCertFailures::ClassImpl::~ClassImpl() {}
 AuthnCallback::SSLServerCertFailures::SSLServerCertFailures(
     ::Java::Env env, jint failures)
   : ::Java::Object(env,
-                   ::Java::ClassCache::get_authn_ssl_server_cert_failures())
+                   ::Java::ClassCache::get_authn_ssl_server_cert_failures(env))
 {
   set_this(env.NewObject(get_class(), impl().m_mid_ctor, failures));
 }
@@ -194,7 +194,7 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
     const ::Java::String& issuer,
     const ::Java::String& der)
   : ::Java::Object(env,
-                   ::Java::ClassCache::get_authn_ssl_server_cert_info())
+                   ::Java::ClassCache::get_authn_ssl_server_cert_info(env))
 {
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
                          hostname.get(), fingerprint.get(),

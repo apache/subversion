@@ -951,7 +951,9 @@ def status_ignored_dir(sbox):
   new_dir = sbox.ospath('dir.o')
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
+  svntest.actions.run_and_verify_svn("Create dir",
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', new_dir_url, '-m', 'msg')
 
   # Make a dir that is ignored by the default ignore patterns.

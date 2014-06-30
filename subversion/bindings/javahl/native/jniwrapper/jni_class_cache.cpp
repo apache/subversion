@@ -101,11 +101,9 @@ class ClassCacheImpl
 {
 
   friend class ClassCache;
-  const Env m_env;
 
   // We only statically initialize a few of the common class wrappers.
-  explicit ClassCacheImpl(Env env)
-    : m_env(env),
+  explicit ClassCacheImpl(Env env) :
 
 #define JNIWRAPPER_INIT_CACHED_CLASS(M, C)     \
   m_impl_##M(new C::ClassImpl(env, env.FindClass(C::m_class_name)))
@@ -120,10 +118,10 @@ class ClassCacheImpl
   // We can't do this in the constructor above, because the satic
   // initializers will expect that ClassCache::m_impl is already set;
   // that doesn't happen until the constructor returns.
-  void static_init()
+  void static_init(Env env)
     {
-#define JNIWRAPPER_STATIC_CACHED_CLASS(M, C)     \
-      C::static_init(m_env, m_impl_##M->get_class())
+#define JNIWRAPPER_STATIC_CACHED_CLASS(M, C)            \
+      C::static_init(env, m_impl_##M->get_class())
 
       // No-op JNIWRAPPER_STATIC_CACHED_CLASS(object, Object);
       JNIWRAPPER_STATIC_CACHED_CLASS(classtype, Class);
@@ -136,7 +134,7 @@ class ClassCacheImpl
   // therefore do not need atomic access.
 #define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)            \
   std::auto_ptr<Object::ClassImpl> m_impl_##M;          \
-  const Object::ClassImpl* get_##M()                    \
+  const Object::ClassImpl* get_##M(Env)                 \
     {                                                   \
       return m_impl_##M.get();                          \
     }
@@ -150,14 +148,14 @@ class ClassCacheImpl
   // All other class wrappers must be atomically initialized
 #define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)                    \
   ClassImplPtr m_impl_##M;                                      \
-  const Object::ClassImpl* get_##M()                            \
+  const Object::ClassImpl* get_##M(Env env)                     \
     {                                                           \
       Object::ClassImpl* pimpl = m_impl_##M.get();              \
       if (!pimpl)                                               \
         {                                                       \
           std::auto_ptr<Object::ClassImpl> tmp(                 \
               new C::ClassImpl(                                 \
-                  m_env, m_env.FindClass(C::m_class_name)));    \
+                  env, env.FindClass(C::m_class_name)));        \
           pimpl = m_impl_##M.test_and_set(tmp.get());           \
           if (!pimpl)                                           \
             pimpl = tmp.release();                              \
@@ -224,8 +222,9 @@ void ClassCache::create()
 
   try
     {
-      m_impl = new ClassCacheImpl(Env());
-      m_impl->static_init();
+      const Env env;
+      m_impl = new ClassCacheImpl(env);
+      m_impl->static_init(env);
     }
   catch (const SignalExceptionThrown&)
     {}
@@ -270,9 +269,9 @@ void ClassCache::destroy()
 }
 
 #define JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(M)         \
-const Object::ClassImpl* ClassCache::get_##M()          \
+const Object::ClassImpl* ClassCache::get_##M(Env env)   \
 {                                                       \
-  return m_impl->get_##M();                             \
+  return m_impl->get_##M(env);                          \
 }
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(object);
