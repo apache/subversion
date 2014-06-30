@@ -328,8 +328,8 @@ class FSFS_Index:
     """ Modify offset and length of ITEM. """
     values = self.by_item[item]
 
-    values[0] = format(offset, 'x')
-    values[1] = format(len, 'x')
+    values[0] = '%x' % offset
+    values[1] = '%s' % len
 
     self._write()
 
