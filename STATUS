@@ -163,20 +163,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1594223, r1553501, r1553556, r1559197
-   Fix a URI-escaping bug in ra_serf and add a regression test for it.
-   Justification:
-     Committing a deletion of a locked path should work.
-   Notes:
-     As a nice side effect the behavior change of this patch also resolves
-     Issue #3674: Replace + propset of locked file fails over DAV, and avoids
-     some duplicated requests by providing better lock information during
-     commit.
-   Branch:
-     ^/subversion/branches/1.8.x-r1594223
-   Votes:
-     +1: stsp, rhuijben
-
  * r1594794, r1594814, r1594834, r1595061
    Fix the notify_func callbacks in Python bindings.
    Justification:
@@ -263,3 +249,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1594223, r1553501, r1553556, r1559197
+   Fix a URI-escaping bug in ra_serf and add a regression test for it.
+   Justification:
+     Committing a deletion of a locked path should work.
+   Notes:
+     As a nice side effect the behavior change of this patch also resolves
+     Issue #3674: Replace + propset of locked file fails over DAV, and avoids
+     some duplicated requests by providing better lock information during
+     commit.
+   Branch:
+     ^/subversion/branches/1.8.x-r1594223
+   Votes:
+     +1: stsp, rhuijben, ivan
