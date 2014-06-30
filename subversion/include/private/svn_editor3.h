@@ -962,6 +962,10 @@ svn_editor3_get_baton(const svn_editor3_t *editor);
 
 /** Versioned content of a node, excluding tree structure information.
  *
+ * The @a kind field specifies the node kind. The kind of content must
+ * match the kind of node it is being put into, as a node's kind cannot
+ * be changed.
+ *
  * The @a ref field specifies a reference content: the content of an
  * existing committed node, or empty. The other fields are optional
  * overrides for parts of the content.
@@ -971,6 +975,9 @@ svn_editor3_get_baton(const svn_editor3_t *editor);
  */
 struct svn_editor3_node_content_t
 {
+  /* The node kind: dir, file, or symlink */
+  svn_node_kind_t kind;
+
   /* Reference the content in an existing, committed node-rev.
    *
    * If this is (SVN_INVALID_REVNUM, NULL) then the reference content
@@ -1008,18 +1015,16 @@ svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
 /* Create a new node-content object for a directory node.
  *
  * Allocate it in @a result_pool. */
-svn_error_t *
-svn_editor3_node_content_create_dir(svn_editor3_node_content_t **content,
-                                    pathrev_t ref,
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_dir(pathrev_t ref,
                                     apr_hash_t *props,
                                     apr_pool_t *result_pool);
 
 /* Create a new node-content object for a file node.
  *
  * Allocate it in @a result_pool. */
-svn_error_t *
-svn_editor3_node_content_create_file(svn_editor3_node_content_t **content,
-                                     pathrev_t ref,
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_file(pathrev_t ref,
                                      apr_hash_t *props,
                                      const svn_checksum_t *checksum,
                                      svn_stream_t *stream,
@@ -1028,9 +1033,8 @@ svn_editor3_node_content_create_file(svn_editor3_node_content_t **content,
 /* Create a new node-content object for a symlink node.
  *
  * Allocate it in @a result_pool. */
-svn_error_t *
-svn_editor3_node_content_create_symlink(svn_editor3_node_content_t **content,
-                                        pathrev_t ref,
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_symlink(pathrev_t ref,
                                         apr_hash_t *props,
                                         const char *target,
                                         apr_pool_t *result_pool);
