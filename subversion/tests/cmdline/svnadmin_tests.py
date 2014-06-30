@@ -2089,11 +2089,23 @@ def verify_keep_going(sbox):
                                             ".*Error verifying revision 2.",
                                             ".*Error verifying revision 3.",
                                             ".*",
-                                            ".*Summary.*",
-                                            ".*r2: E160004:.*",
-                                            ".*r2: E160004:.*",
-                                            ".*r3: E160004:.*",
-                                            ".*r3: E160004:.*"])
+                                            ".*Summary.*"])
+  if (svntest.main.is_fs_log_addressing()):
+    exp_out.extend([".*r2: E200014:.*",
+                    ".*meta data at offset.*",	
+                    ".*expected.*",
+                    ".*actual.*",
+                    ".*",
+                    ".*r3: E200014:.*",
+                    ".*meta data at offset.*",	
+                    ".*expected.*",
+                    ".*actual.*",
+                    ".*"])
+  else:
+    exp_out.extend([".*r2: E160004:.*",
+                    ".*r2: E160004:.*",
+                    ".*r3: E160004:.*",
+                    ".*r3: E160004:.*"])
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
                                             "svnadmin: E165011:.*"], False)
 
