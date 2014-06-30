@@ -1,0 +1,12 @@
+A branch on which to try out move-tracking designs.
+
+Merge policy:
+
+  Development branch -- periodic catch-up merges from trunk.
+
+  The work on this branch may or may not eventually be wanted on trunk. It
+  is not intended to be kept in a state where it could be merged to trunk.
+
+Work on this branch:
+
+  Initially -- development of an 'editor' interface supporting move tracking.
