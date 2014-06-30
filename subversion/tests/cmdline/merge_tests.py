@@ -686,7 +686,8 @@ def simple_property_merges(sbox):
   A_url = sbox.repo_url + '/A'
   A2_url = sbox.repo_url + '/A2'
   svntest.actions.run_and_verify_svn(None,
-                                     ['Committed revision 5.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
                                      A_url, A2_url)
 
@@ -8137,7 +8138,8 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   mu_MOVED_path = sbox.ospath('A/mu_MOVED')
 
   # Copy mu to mu_COPY
-  svntest.actions.run_and_verify_svn(None, ['Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [], 'cp', '-m', 'cp mu to mu_COPY',
                                      mu_url, mu_COPY_url)
 
@@ -8229,7 +8231,8 @@ def merge_with_auto_rev_range_detection(sbox):
                                         expected_status, None, wc_dir)
 
   # Copy A to A_COPY
-  svntest.actions.run_and_verify_svn(None, ['Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [], 'cp', '-m', 'cp A to A_COPY',
                                      A_url, A_COPY_url)
 
@@ -10551,9 +10554,11 @@ def merge_added_subtree(sbox):
   A_COPY_url = url + "/A_COPY"
   A_path = sbox.ospath('A')
 
-  svntest.actions.run_and_verify_svn("",["Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 2.\n"], [],
                                      "cp", "-m", "", A_url, A_COPY_url)
-  svntest.actions.run_and_verify_svn("",["Committed revision 3.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 3.\n"], [],
                                      "cp", "-m", "",
                                      A_COPY_url + '/D',
                                      A_COPY_url + '/D2')
@@ -10812,7 +10817,8 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r6.
   svntest.actions.run_and_verify_svn(None,
-                                     ['Committed revision 6.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 6.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -10964,7 +10970,8 @@ def set_up_renamed_subtree(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r5.
   svntest.actions.run_and_verify_svn(None,
-                                     ['Committed revision 5.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -14035,13 +14042,15 @@ def set_up_natural_history_gap(sbox):
 
   # r7: Resurrect 'A' by copying 'A@2' to 'A'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, ["Committed revision 7.\n"], [],
+    None, ["Committing transaction...\n",
+           "Committed revision 7.\n"], [],
     'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
     '-m', 'Resurrect A from A@2')
 
   # r8: Branch the resurrected 'A' to 'A_COPY'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, ["Committed revision 8.\n"], [],
+    None, ["Committing transaction...\n",
+           "Committed revision 8.\n"], [],
     'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
     '-m', 'Copy A to A_COPY')
 
