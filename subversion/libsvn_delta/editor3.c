@@ -483,3 +483,51 @@ svn_editor3_abort(svn_editor3_t *editor)
   svn_pool_clear(editor->scratch_pool);
   return svn_error_trace(err);
 }
+
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_dir(pathrev_t ref,
+                                    apr_hash_t *props,
+                                    apr_pool_t *result_pool)
+{
+  svn_editor3_node_content_t *new_content
+    = apr_pcalloc(result_pool, sizeof(new_content));
+
+  new_content->kind = svn_node_dir;
+  new_content->ref = ref;
+  new_content->props = props;
+  return new_content;
+}
+
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_file(pathrev_t ref,
+                                     apr_hash_t *props,
+                                     const svn_checksum_t *checksum,
+                                     svn_stream_t *stream,
+                                     apr_pool_t *result_pool)
+{
+  svn_editor3_node_content_t *new_content
+    = apr_pcalloc(result_pool, sizeof(new_content));
+
+  new_content->kind = svn_node_file;
+  new_content->ref = ref;
+  new_content->props = props;
+  new_content->checksum = checksum;
+  new_content->stream = stream;
+  return new_content;
+}
+
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_symlink(pathrev_t ref,
+                                        apr_hash_t *props,
+                                        const char *target,
+                                        apr_pool_t *result_pool)
+{
+  svn_editor3_node_content_t *new_content
+    = apr_pcalloc(result_pool, sizeof(new_content));
+
+  new_content->kind = svn_node_symlink;
+  new_content->ref = ref;
+  new_content->props = props;
+  new_content->target = target;
+  return new_content;
+}
