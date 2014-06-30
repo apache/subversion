@@ -1178,7 +1178,7 @@ void fill_property_map(jobject map,
     {
       for (int i = 0; i < prop_diffs->nelts; ++i)
         {
-          svn_prop_t* prop = APR_ARRAY_IDX(prop_diffs, i, svn_prop_t*);
+          svn_prop_t* prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
           loop_body(prop->name, prop->value);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NOTHING();
