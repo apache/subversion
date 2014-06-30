@@ -8150,7 +8150,7 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                         expected_status, None, wc_dir)
 
   # Move mu to mu_MOVED
-  svntest.actions.run_and_verify_svn(None, ['Committing transaction...',
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
                                             'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv mu to mu_MOVED',
                                      mu_url, mu_MOVED_url)
