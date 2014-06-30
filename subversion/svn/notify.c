@@ -1061,7 +1061,7 @@ notify_body(struct notify_baton *nb,
         {
           SVN_ERR(svn_cmdline_printf(pool, _("done\n")));
         }
-      SVN_ERR(svn_cmdline_printf(pool, _("Committing transaction...")));
+      SVN_ERR(svn_cmdline_printf(pool, _("Committing transaction...\n")));
       break;
 
     default:

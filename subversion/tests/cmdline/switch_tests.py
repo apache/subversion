@@ -352,8 +352,7 @@ def delete_subdir(sbox):
   A2_B_F_url = sbox.repo_url + '/A2/B/F'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
-                                      'Committed revision 2.\n'], [],
+                                     ['Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
   svntest.actions.run_and_verify_svn(None,
@@ -647,7 +646,6 @@ def obstructed_switch(sbox):
 
   # svn cp -m msgcopy url/A/B/E url/A/B/Esave
   expected_stdout = verify.UnorderedOutput([
-    '\n',
     'Committed revision 2.\n',
   ])
 
@@ -787,7 +785,7 @@ def refresh_read_only_attribute(sbox):
   url = sbox.repo_url + '/A'
   branch_url = sbox.repo_url + '/A-branch'
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committed revision 2.\n'], [],
                                      'cp', '-m', 'svn:needs-lock not set',
                                      url, branch_url)
 
@@ -2043,7 +2041,7 @@ def tolerate_local_mods(sbox):
   A2_url = sbox.repo_url + '/A2'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
   os.mkdir(L_path)
