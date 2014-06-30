@@ -150,8 +150,7 @@ svn_cl__copy(apr_getopt_t *os,
     }
   else
     {
-      /* URL -> URL, meaning that no notification is needed. */
-      ctx->notify_func2 = NULL;
+      /* URL -> URL */
     }
 
   if (! dst_is_url)
