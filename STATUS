@@ -197,7 +197,7 @@ Candidate changes:
    Justification:
      Minor annoyance, already fixed for other cases.
    Votes:
-     +1: stsp
+     +1: stsp, ivan
 
  * r1600311, r1600315, r1600323, r1600393
    Properly delete ancestor directories of externals when removing the
