@@ -258,6 +258,10 @@ class RegexListOutput(ExpectedOutput):
     self.expected.insert(index, line)
     self.expected_res = [re.compile(e) for e in self.expected]
 
+  def extend(self, list):
+    self.expected.extend(list)
+    self.expected_res = [re.compile(e) for e in self.expected]
+
 
 class UnorderedOutput(ExpectedOutput):
   """Matches an unordered list of lines.
