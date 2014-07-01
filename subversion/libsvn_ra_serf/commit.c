@@ -652,9 +652,9 @@ proppatch_walker(void *baton,
   if (wb->filter != filter_all_props)
     {
       if (wb->filter == filter_props_with_old_value && ! have_old_val)
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
       if (wb->filter == filter_props_without_old_value && have_old_val)
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
     }
   if (wb->deleting)
     val = NULL;

@@ -493,11 +493,11 @@ svn_client_revprop_set2(const char *propname,
       const svn_string_t *unset = NULL;
 
       if (original_propval == NULL)
-      	old_value_p = NULL;
+        old_value_p = NULL;
       else if (original_propval->data == NULL)
-      	old_value_p = &unset;
+        old_value_p = &unset;
       else
-      	old_value_p = &original_propval;
+        old_value_p = &original_propval;
 
       /* The actual RA call. */
       SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname,
