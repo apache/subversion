@@ -94,14 +94,9 @@ typedef struct _x509_name {
 } x509_name;
 
 typedef struct _x509_cert {
-  x509_buf tbs;
-
   int version;
   x509_buf serial;
   x509_buf sig_oid1;
-
-  x509_buf issuer_raw;
-  x509_buf subject_raw;
 
   x509_name issuer;
   x509_name subject;
@@ -109,14 +104,8 @@ typedef struct _x509_cert {
   apr_time_t valid_from;
   apr_time_t valid_to;
 
-  x509_buf pk_oid;
-
   x509_buf issuer_id;
   x509_buf subject_id;
-  x509_buf v3_ext;
-
-  int ca_istrue;
-  int max_pathlen;
 
   x509_buf sig_oid2;
   x509_buf sig;
