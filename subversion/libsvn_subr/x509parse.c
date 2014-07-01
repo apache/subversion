@@ -668,14 +668,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   /*
    * TBSCertificate  ::=  SEQUENCE  {
    */
-  crt->tbs.p = p;
-
   err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   end = p + len;
-  crt->tbs.len = (int) (end - crt->tbs.p);
 
   /*
    * Version      ::=      INTEGER  {      v1(0), v2(1), v3(2)  }
@@ -697,15 +694,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   /*
    * issuer                               Name
    */
-  crt->issuer_raw.p = p;
-
   err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   SVN_ERR(x509_get_name(&p, p + len, &crt->issuer, scratch_pool));
-
-  crt->issuer_raw.len = (int) (p - crt->issuer_raw.p);
 
   /*
    * Validity ::= SEQUENCE {
@@ -719,15 +712,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   /*
    * subject                              Name
    */
-  crt->subject_raw.p = p;
-
   err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   SVN_ERR(x509_get_name(&p, p + len, &crt->subject, scratch_pool));
-
-  crt->subject_raw.len = (int) (p - crt->subject_raw.p);
 
   /*
    * SubjectPublicKeyInfo  ::=  SEQUENCE
