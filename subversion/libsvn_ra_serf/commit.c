@@ -2212,6 +2212,10 @@ abort_edit(void *edit_baton,
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
+  /* Don't delete again if somebody aborts twice */
+  ctx->activity_url = NULL;
+  ctx->txn_url = NULL;
+
   return SVN_NO_ERROR;
 }
 
