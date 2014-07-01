@@ -1129,6 +1129,13 @@ struct svn_editor3_node_content_t
 svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
                              apr_pool_t *result_pool); */
 
+/* Create a new node-content object by reference to an existing node.
+ *
+ * Allocate it in @a result_pool. */
+svn_editor3_node_content_t *
+svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
+                                    apr_pool_t *result_pool);
+
 /* Create a new node-content object for a directory node.
  *
  * Allocate it in @a result_pool. */
