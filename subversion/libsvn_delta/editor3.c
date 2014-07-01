@@ -136,14 +136,14 @@ check_cancel(svn_editor3_t *editor)
 
 /*
  * ===================================================================
- * Editor for Commit, with Incremental Path-Based Tree Changes
+ * Editor for Commit (incremental tree changes; path-based addressing)
  * ===================================================================
  */
 
 svn_error_t *
 svn_editor3_mk(svn_editor3_t *editor,
                svn_node_kind_t new_kind,
-               pathrev_t parent_loc,
+               svn_editor3_txn_path_t parent_loc,
                const char *new_name)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -167,8 +167,8 @@ svn_editor3_mk(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_cp(svn_editor3_t *editor,
-               pathrev_t from_loc,
-               pathrev_t parent_loc,
+               svn_editor3_peg_path_t from_loc,
+               svn_editor3_txn_path_t parent_loc,
                const char *new_name)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -192,8 +192,8 @@ svn_editor3_cp(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_mv(svn_editor3_t *editor,
-               pathrev_t from_loc,
-               pathrev_t new_parent_loc,
+               svn_editor3_peg_path_t from_loc,
+               svn_editor3_txn_path_t new_parent_loc,
                const char *new_name)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -217,8 +217,8 @@ svn_editor3_mv(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_res(svn_editor3_t *editor,
-                pathrev_t from_loc,
-                pathrev_t parent_loc,
+                svn_editor3_peg_path_t from_loc,
+                svn_editor3_txn_path_t parent_loc,
                 const char *new_name)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -242,7 +242,7 @@ svn_editor3_res(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
-               pathrev_t loc)
+               svn_editor3_peg_path_t loc)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -265,7 +265,7 @@ svn_editor3_rm(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_put(svn_editor3_t *editor,
-                pathrev_t loc,
+                svn_editor3_txn_path_t loc,
                 const svn_editor3_node_content_t *new_content)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -290,7 +290,7 @@ svn_editor3_put(svn_editor3_t *editor,
 
 /*
  * ========================================================================
- * Editor for Commit, with Separate Unordered Per-Node Tree Changes
+ * Editor for Commit (independent per-node changes; node-id addressing)
  * ========================================================================
  */
 
@@ -485,7 +485,7 @@ svn_editor3_abort(svn_editor3_t *editor)
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_dir(pathrev_t ref,
+svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
                                     apr_hash_t *props,
                                     apr_pool_t *result_pool)
 {
@@ -499,7 +499,7 @@ svn_editor3_node_content_create_dir(pathrev_t ref,
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_file(pathrev_t ref,
+svn_editor3_node_content_create_file(svn_editor3_peg_path_t ref,
                                      apr_hash_t *props,
                                      const svn_checksum_t *checksum,
                                      svn_stream_t *stream,
@@ -517,7 +517,7 @@ svn_editor3_node_content_create_file(pathrev_t ref,
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_symlink(pathrev_t ref,
+svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
                                         apr_hash_t *props,
                                         const char *target,
                                         apr_pool_t *result_pool)

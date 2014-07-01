@@ -108,6 +108,111 @@ extern "C" {
  * for tree changes with style (2) for content changes.
  *
  * ===================================================================
+ * Two different ways of "addressing" a node
+ * ===================================================================
+ *
+ * (1) path [@ old-rev]
+ *
+ * (2) node-id
+ *
+ * Either way, the intent is the same: to be able to specify "where" a
+ * modification or a new node should go in the tree. The difference
+ * between path-based and id-based addressing is not *what* the address
+ * means (they would have to mean the same thing, ultimately, at the
+ * point of use) but *how* and how easily they achieve that meaning.
+ *
+ * Either way, two variations need to be handled:
+ *   * Addressing a node that already existed in the sender's base state
+ *   * Addressing a node that the sender has created
+ *
+ * Addressing by Path
+ * ------------------
+ *
+ * A node-branch that exists at the start of the edit can be addressed
+ * by giving a location (peg-path @ peg-rev) where it was known to exist.
+ *
+ * The receiver can trace (peg-path @ peg-rev) forward to the txn, and
+ * find the path at which that node-branch is currently located in the
+ * txn (or find that it is not present), as well as discovering whether
+ * there was any change to it (including deletion) between peg-rev and
+ * the txn-base, or after txn-base up to the current state of the txn.
+ *
+ * A node-branch created within the txn can be addressed by path only if
+ * the sender knows that path. In order to create the node the sender
+ * would have specified a parent node-branch and a new name. The node can
+ * now be addressed as
+ *
+ *   (parent-peg-path @ peg-rev) / new-name
+ *
+ * which translates in the txn to
+ *
+ *   parent-path-in-txn / new-name
+ *
+ * When the sender creates another node as a child of this one, this second
+ * new node can be addressed as either
+ *
+ *   (parent-peg-path @ peg-rev) / new-name / new-name-2
+ *
+ * or, if the sender knows the path-in-txn that resulted from the first one
+ *
+ *   parent-path-in-txn / new-name / new-name-2
+ *
+ * The difficulty is that, in a commit, the txn is based on a repository
+ * state that the sender does not know. The paths may be different in that
+ * state, due to recently committed moves, if the Out-Of-Date logic permits
+ * that. The "parent-path-in-txn" is not, in general, known to the sender.
+ *
+ * Therefore the sender needs to address nested additions as
+ *
+ *   (peg-path @ peg-rev) / (path-created-in-txn)
+ *
+ * Why can't we use the old Ev1 form (path-in-txn, wc-base-rev)?
+ *
+ *     Basically because, in general (if other commits on the server
+ *     are allowed to move the nodes that this commit is editing),
+ *     then (path-in-txn, wc-base-rev) does not unambiguously identify
+ *     a node-revision or a specific path in revision wc-base-rev. The
+ *     sender cannot know what path in the txn corresponds to a given path
+ *     in wc-base-rev.
+ *
+ * Why not restrict OOD checking to never merge with out-of-date moves?
+ *
+ *     It would seem unnecessarily restrictive to expect that we would
+ *     never want the OOD check to allow merging with a repository-side
+ *     move of a parent of the node we are editing. That would not be in
+ *     the spirit of move tracking, nor would it be symmetrical with the
+ *     client-side expected behaviour of silently merging child edits
+ *     with a parent move.
+ *
+ * A possible alternative design direction:
+ *
+ *   * Provide a way for the client to learn the path-in-txn resulting
+ *     from each edit, to be used in further edits referring to the same
+ *     node-branch.
+ *
+ * Addressing by Node-Id
+ * ---------------------
+ *
+ * For the purposes of addressing nodes within an edit, node-ids need not
+ * be repository-wide unique ids, they only need to be known within the
+ * editor. However, if the sender is to use ids that are not already known
+ * to the receiver, then it must provide a mapping from ids to nodes.
+ *
+ * The sender assigns an id to each node including new nodes. (It is not
+ * appropriate for the editor or its receiver to assign an id to an added
+ * node, because the sender needs to be able to refer to that node as a
+ * parent node for other nodes without creating any ordering dependency.)
+ *
+ * If the sender does not know the repository-wide id for a node, which is
+ * especially likely for a new node, it must assign a temporary id for use
+ * just within the edit. In that case, each new node or new node-branch is
+ * necessarily independent. On the other hand, if the sender is able to
+ * use repository-wide ids, then the possibility arises of the sender
+ * asking to create a new node or a new node-branch that has the same id
+ * as an existing one. The receiver would consider that to be a conflict.
+ *
+ *
+ * ===================================================================
  * WC update/switch
  * ===================================================================
  *
@@ -185,11 +290,20 @@ typedef struct svn_editor3_t svn_editor3_t;
 
 /** A location in the current transaction (when @a rev == -1) or in
  * a revision (when @a rev != -1). */
-typedef struct pathrev_t
+typedef struct svn_editor3_peg_path_t
 {
   svn_revnum_t rev;
   const char *relpath;
-} pathrev_t;
+} svn_editor3_peg_path_t;
+
+/** A reference to a node in a txn. If it refers to a node created in
+ * the txn, @a relpath specifies the one or more components that are
+ * newly created; otherwise @a relpath should be empty. */
+typedef struct svn_editor3_txn_path_t
+{
+  svn_editor3_peg_path_t peg;
+  const char *relpath;
+} svn_editor3_txn_path_t;
 
 /** Node-Branch Identifier -- functionally similar to the FSFS
  * <node-id>.<copy-id>, but the ids used within an editor drive may be
@@ -219,7 +333,7 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 
 /** These functions are called by the tree delta driver to edit the target.
  *
- * @see svn_editor3_t.
+ * @see #svn_editor3_t
  *
  * @defgroup svn_editor3_drive Driving the editor
  * @{
@@ -227,7 +341,7 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 
 /*
  * ===================================================================
- * Editor for Commit, with Incremental Path-Based Tree Changes
+ * Editor for Commit (incremental tree changes; path-based addressing)
  * ===================================================================
  *
  * Versioning model assumed:
@@ -243,11 +357,11 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  * Edit Operations:
  *
- *   - mk  kind               {dir-path | ^/dir-path@rev}[1] new-name[2]
- *   - cp  ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-name[2]
- *   - cp  from-path[4]       {dir-path | ^/dir-path@rev}[1] new-name[2]
- *   - mv  ^/from-path@rev[4] {dir-path | ^/dir-path@rev}[1] new-name[2]
- *   - res ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-name[2]
+ *   - mk  kind               {dir-path | ^/dir-path@rev}[1] new-path[2]
+ *   - cp  ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-path[2]
+ *   - cp  from-path[4]       {dir-path | ^/dir-path@rev}[1] new-path[2]
+ *   - mv  ^/from-path@rev[4] {dir-path | ^/dir-path@rev}[1] new-path[2]
+ *   - res ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-path[2]
  *   - rm                     {path | ^/path@rev}[5]
  *   - put new-content        {path | ^/path@rev}[5]
  *
@@ -322,15 +436,62 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     it cannot change the kind of a node nor convert the content to match
  *     the node kind.
  *
- * Commit Rebase:
+ * Commit Rebase and OOD Checks:
  *
- *   - We assume the rebase will require there be no moves in
- *     intervening commits that overlap path-wise with the edits we are
- *     making. (If it would follow such moves while merging "on the fly",
- *     then it would be harder to design the editor such that the sender
- *     would know what paths-in-txn to refer to.)
+ *   - If the base of a change to a given node is out of date, a merge of
+ *     this node would be required. The merge cannot be done on the server
+ *     as then the committed version may differ from the version sent by
+ *     the client, and there is no mechanism to inform the client of this.
+ *     The granularity with which we can inform the client of a change
+ *     is per node: either the node is updated to a new revision, meaning
+ *     all its attributes reflect the committed changes, or not.
+ *     Therefore the commit must be rejected and the merge done on the
+ *     client side via an "update".
  *
- *     This is quite a stringent restriction. See "Paths" below.
+ *     (As a possible special case, if each side of the merge has identical
+ *     changes, this may be considered a null merge when a "permissive"
+ *     strictness policy is in effect.)
+ *
+ *   - The editor is designed such that the commit rebase MAY allow moves
+ *     in intervening commits that overlap path-wise with the edits we
+ *     are making, and vice-versa. The out-of-date checks MAY work in the
+ *     following way.
+ *
+ *     ### Are these the least restrictive OOD supported by the editor?
+ *
+ *       Operations on incoming commit vs. requirements on recent commits
+ *       -----------------------------------------------------------------
+ *       op    source node             target parent node
+ *       ---   ---------------------   -----------------------------------
+ *
+ *       mk                            parent exists in txn
+ *                                     parents may be moved/altered/new
+ *
+ *       cp   (no restriction)         --- // ---
+ *
+ *       res  ???                      --- // ---
+ *
+ *       mv   unchanged name&parent    --- // ---
+ *           *unchanged own-content
+ *            not created
+ *            not deleted
+ *            (parents may be moved/altered/created/deleted-non-recursively)
+ *            (children may be moved/altered/created/deleted)
+ *
+ *       rm   unchanged name&parent
+ *            unchanged own-content
+ *            not created
+ *            not deleted
+ *            (for recursive delete, the conditions apply recursively)
+ *            (we need not explicitly check for new children on the
+ *            recent-commits side, as they would end up as orphans)
+ *
+ *       put *unchanged name&parent
+ *            unchanged own-content
+ *            not created
+ *            not deleted
+ *
+ *     The conditions marked '*' could be relaxed.
  *
  * Notes on Paths:
  *
@@ -346,87 +507,21 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     the same one) or one it has just created in the txn. We make this
  *     distinction with {path-in-txn | ^/path-in-rev@rev} instead.
  *
- *   - When the target path to "mk" or "cp" or "mv" is specified as
- *     ^/dir-path@rev, the new (root) path to be created in the txn is:
+ *   - When an existing target path is specified as
+ *     (^/peg-path@rev, created-relpath), the path in the txn is:
  *
- *         (^/dir-path@rev traced forward to the txn)/(new-name)
+ *         (^/peg-path@rev traced forward to the txn)/(relpath)
  *
- *     When the target path to "rm" or "put" is specified as ^/path@rev,
- *     the path to be removed or changed in the txn is:
+ *     When a target path to be created is specified as
+ *     (^/peg-path@rev, created-relpath, new-name), the path-in-txn is:
  *
- *         (^/path@rev traced forward to the txn)
+ *         (^/peg-path@rev traced forward to the txn)/(relpath)/(new-name)
  *
- *   - Why use the semantic form "^/path@rev" rather than
- *     (path-in-txn, wc-base-rev)?
- * 
- *     Basically because, in general (if other commits on the server
- *     are allowed to move the nodes that this commit is editing),
- *     then (path-in-txn, wc-base-rev) does not unambiguously identify
- *     a node-revision or a specific path in revision wc-base-rev. The
- *     sender cannot know what path in the txn corresponds to a given path
- *     in wc-base-rev.
- *
- *     The server needs to identify the specific node-revision on which
- *     the client is basing a change, in order to check whether it is
- *     out of date. If the base of the change is out of date, a merge of
- *     this node would be required. The merge cannot be done on the server
- *     as then the committed version may differ from the version sent by
- *     the client, and there is no mechanism to inform the client of this.
- *     Therefore the commit must be rejected and the merge done on the
- *     client side via an "update".
- *
- *     (As a possible special case, if each side of the merge has identical
- *     changes, this may be considered a null merge when a "permissive"
- *     strictness policy is in effect.)
- * 
- *     Given "^/path@rev" the receiver can trace the node-branch forward
- *     from ^/path@rev to the txn, and find the path at which it is
- *     currently located in the txn (or find that it is not present), as
- *     well as discovering whether there was any change to it (including
- *     deletion) between ^/path@rev and the txn-base.
- * 
- *     When the node-branch is traced forward to the txn, due to moves in
- *     the txn the path-in-txn may be different from the initial path.
- *     The client needs to know the path-in-txn in order for future operations.
- *     (This is the case even if the out-of-date check rejects any move
- *     between WC-base and txn-base that affects the node-branch.)
- *
- *     Given (path-in-txn, wc-base-rev), if the OOD check *allows* merging
- *     with repository-side moves, then the sender cannot know what the paths
- *     in the txn-base are, and so cannot know what path-in-txn identifies
- *     any node that existed in an earlier revision.
- *
- *     Given (path-in-txn, wc-base-rev), if the OOD check *forbids* merging
- *     with repository-side moves then the receiver can trace backward
- *     from path-in-txn to path-in-txn-base and then from path-in-txn-base
- *     to path-in-rev, and find:
- *
- *       (a) this node-branch did not exist in "rev" => OOD
- *       (b) path-in-rev != path-in-txn-base => OOD
- *       (c) path-in-rev == path-in-txn-base => OOD iff changed
- *
- *     It would seem unnecessarily restrictive to expect that we would
- *     never want the OOD check to allow merging with a repository-side
- *     move of a parent of the node we are editing.
- *
- *   - When a target path is specified by ^/path@rev, note that the sender
- *     and the receiver both have to map that path forward through moves
- *     to calculate the corresponding path-in-txn.
- *
- *     ### If the server can merge the edits with repository-side moves
- *     on the fly, then the sender will not know what in-txn paths to
- *     refer to subsequently.
- *
- *     ### One way to support this: the sender could use "^/path@rev" to
- *     refer to a pre-existing node, appended with any sub-path created in
- *     the txn:
- *
- *         [^/path/in/rev] @rev [/path/components/created/within/txn]
- *
- *     The "^/path/in/rev@rev" part acts like an unambiguous node-id for
- *     each pre-existing node. The remaining part acts like an identifier
- *     for nodes created in the txn, but is unambiguous only if we take
- *     care not to allow them to be moved around freely.
+ *     The "peg-path @ rev" part acts like an unambiguous identifier for
+ *     each pre-existing node. The remaining part extends the identifier
+ *     for nodes created in the txn. (That part would be ambiguous if we
+ *     allowed created nodes to be moved, replaced, etc.; we don't allow
+ *     that.)
  *
  * Notes on Copying:
  *
@@ -452,21 +547,22 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 /** Make a single new node ("versioned object") with empty content.
  * 
  * Set the node kind to @a new_kind. Create the node in the parent
- * directory node-branch specified by @a parent_loc which may be either in
- * a committed revision or in the current txn. Set the new node's name to
- * @a new_name.
+ * directory node-branch specified by @a parent_loc. Set the new node's
+ * name to @a new_name.
  *
  * The new node is not related by node identity to any other existing node
  * nor to any other node created by another "mk" operation.
  *
- * Preconditions: see above.
- *
  * @node "put" is optional for a node made by "mk".
+ * ### For use as an 'update' editor, maybe 'mk' without 'put' should
+ *     make an 'absent' node.
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_mk(svn_editor3_t *editor,
                svn_node_kind_t new_kind,
-               pathrev_t parent_loc,
+               svn_editor3_txn_path_t parent_loc,
                const char *new_name);
 
 /** Create a copy of a subtree.
@@ -478,8 +574,7 @@ svn_editor3_mk(svn_editor3_t *editor,
  * will refer to the committed revision.
  *
  * Create the root node of the new subtree in the parent directory
- * node-branch specified by @a parent_loc (which may be either in a
- * committed revision or in the current txn) with the name @a new_name.
+ * node-branch specified by @a parent_loc with the name @a new_name.
  *
  * Each node in the target subtree has a "copied from" relationship with
  * the node with the corresponding path in the source subtree.
@@ -489,11 +584,13 @@ svn_editor3_mk(svn_editor3_t *editor,
  * revision is, by default, the FINAL content of the source node as
  * committed, even if the source node is changed after the copy operation.
  * In either case, the default content MAY be changed by a "put".
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_cp(svn_editor3_t *editor,
-               pathrev_t from_loc,
-               pathrev_t parent_loc,
+               svn_editor3_peg_path_t from_loc,
+               svn_editor3_txn_path_t parent_loc,
                const char *new_name);
 
 /** Move a subtree to a new parent directory and/or a new name.
@@ -502,16 +599,17 @@ svn_editor3_cp(svn_editor3_t *editor,
  * specified by @a from_loc. @a from_loc must refer to a committed revision.
  *
  * Create the root node of the new subtree in the parent directory
- * node-branch specified by @a parent_loc (which may be either in a
- * committed revision or in the current txn) with the name @a new_name.
+ * node-branch specified by @a new_parent_loc with the name @a new_name.
  *
  * Each node in the target subtree remains the same node-branch as
  * the node with the corresponding path in the source subtree.
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_mv(svn_editor3_t *editor,
-               pathrev_t from_loc,
-               pathrev_t new_parent_loc,
+               svn_editor3_peg_path_t from_loc,
+               svn_editor3_txn_path_t new_parent_loc,
                const char *new_name);
 
 /** Resurrect a node.
@@ -521,36 +619,42 @@ svn_editor3_mv(svn_editor3_t *editor,
  * @a parent_loc, @a new_name.
  *
  * Set the content to @a new_content.
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_res(svn_editor3_t *editor,
-                pathrev_t from_loc,
-                pathrev_t parent_loc,
+                svn_editor3_peg_path_t from_loc,
+                svn_editor3_txn_path_t parent_loc,
                 const char *new_name);
 
 /** Remove the existing node-branch identified by @a loc and, recursively,
  * all nodes that are currently its children in the txn.
  *
- * It does not delete nodes that used to be children of the specified
+ * @note This does not delete nodes that used to be children of the specified
  * node-branch that have since been moved away.
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
-               pathrev_t loc);
+               svn_editor3_peg_path_t loc);
 
 /** Set the content of the node-branch identified by @a loc.
  *
  * Set the content to @a new_content.
+ *
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_put(svn_editor3_t *editor,
-                pathrev_t loc,
+                svn_editor3_txn_path_t loc,
                 const svn_editor3_node_content_t *new_content);
 
 
 /*
  * ========================================================================
- * Editor for Commit, with Separate Unordered Per-Node Tree Changes
+ * Editor for Commit (independent per-node changes; node-id addressing)
  * ========================================================================
  *
  * Versioning model assumed:
@@ -566,10 +670,11 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Edit Operations:
  *
- *   - add     kind      new-parent-nb[2] new-name new-content  ->  new-nb
- *   - copy    nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
- *   - delete  nb[1]   since-rev
- *   - alter   nb[1,2] since-rev new-parent-nb[2] new-name new-content
+ *   - add       kind      new-parent-nb[2] new-name new-content  ->  new-nb
+ *   - copy-one  nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
+ *   - copy-tree nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
+ *   - delete    nb[1]   since-rev
+ *   - alter     nb[1,2] since-rev new-parent-nb[2] new-name new-content
  *
  * Preconditions:
  *
@@ -579,12 +684,21 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Characteristics of this editor:
  *
- *   - tree changes and content changes are specified per node
- *   - the changes for each node are unordered and mostly independent;
- *     the only dependencies are those needed to ensure the result is a
- *     directory hierarchy
- *   - copies are non-recursive
- *     ### Can we design recursive (cheap) copy?
+ *   - Tree structure is partitioned among the nodes, in such a way that
+ *     each of the most important concepts such as "move", "copy",
+ *     "create" and "delete" is modeled as a single change to a single
+ *     node. The name and the identitiy of its parent directory node are
+ *     considered to be attributes of that node, alongside its content.
+ *
+ *   - Changes are independent and unordered. The change to one node is
+ *     independent of the change to any other node, except for the
+ *     requirement that the final state forms a valid (path-wise) tree
+ *     hierarchy. A valid tree hierarchy is NOT required in any
+ *     intermediate state after each change or after a subset of changes.
+ *
+ *   - Copies can be made in two ways: a copy of a single node can have
+ *     its content changed and its children may be arbitrarily arranged,
+ *     or a "cheap" O(1) copy of a subtree which cannot be edited.
  *
  *
  * Notes on Copying:
@@ -610,7 +724,7 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Set the content to @a new_content.
  *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
@@ -637,9 +751,7 @@ svn_editor3_add(svn_editor3_t *editor,
  * @note This copy is not recursive. Children may be copied separately if
  * required.
  *
- * @see svn_editor3_copy_tree()
- *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see svn_editor3_copy_tree(), #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
@@ -673,9 +785,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  * of the source node. The content of each node copied from this revision
  * is the FINAL content of the source node as committed.
  *
- * @see svn_editor3_copy_one()
- *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see svn_editor3_copy_one(), #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
@@ -695,7 +805,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  *   OR @note The delete is implicitly recursive: each child node that
  *      is not otherwise moved to a new parent will be deleted as well.
  *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
@@ -716,7 +826,7 @@ svn_editor3_delete(svn_editor3_t *editor,
  * A no-op change MUST be accepted but, in the interest of efficiency,
  * SHOULD NOT be sent.
  *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
@@ -730,7 +840,7 @@ svn_editor3_alter(svn_editor3_t *editor,
  *
  * Send word that the edit has been completed successfully.
  *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_complete(svn_editor3_t *editor);
@@ -740,7 +850,7 @@ svn_editor3_complete(svn_editor3_t *editor);
  * Notify that the edit transmission was not successful.
  * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
  *
- * For all restrictions on driving the editor, see #svn_editor3_t.
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_abort(svn_editor3_t *editor);
@@ -766,64 +876,64 @@ svn_editor3_abort(svn_editor3_t *editor);
  * in the comment for the "driving" functions. Each function type links to
  * its corresponding "driver".
  *
- * @see svn_editor3_t, svn_editor3_cb_funcs_t.
+ * @see #svn_editor3_cb_funcs_t, #svn_editor3_t
  *
  * @defgroup svn_editor_callbacks Editor callback definitions
  * @{
  */
 
-/** @see svn_editor3_mk(), svn_editor3_t.
+/** @see svn_editor3_mk(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_mk_t)(
   void *baton,
   svn_node_kind_t new_kind,
-  pathrev_t parent_loc,
+  svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_cp(), svn_editor3_t.
+/** @see svn_editor3_cp(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_cp_t)(
   void *baton,
-  pathrev_t from_loc,
-  pathrev_t parent_loc,
+  svn_editor3_peg_path_t from_loc,
+  svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_mv(), svn_editor3_t.
+/** @see svn_editor3_mv(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_mv_t)(
   void *baton,
-  pathrev_t from_loc,
-  pathrev_t new_parent_loc,
+  svn_editor3_peg_path_t from_loc,
+  svn_editor3_txn_path_t new_parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_res(), svn_editor3_t.
+/** @see svn_editor3_res(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_res_t)(
   void *baton,
-  pathrev_t from_loc,
-  pathrev_t parent_loc,
+  svn_editor3_peg_path_t from_loc,
+  svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_rm(), svn_editor3_t.
+/** @see svn_editor3_rm(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_rm_t)(
   void *baton,
-  pathrev_t loc,
+  svn_editor3_peg_path_t loc,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_put(), svn_editor3_t.
+/** @see svn_editor3_put(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_put_t)(
   void *baton,
-  pathrev_t loc,
+  svn_editor3_txn_path_t loc,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_add(), svn_editor3_t.
+/** @see svn_editor3_add(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
@@ -834,7 +944,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_copy(), svn_editor3_t.
+/** @see svn_editor3_copy_one(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   void *baton,
@@ -846,7 +956,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_copy(), svn_editor3_t.
+/** @see svn_editor3_copy_tree(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   void *baton,
@@ -856,7 +966,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_delete(), svn_editor3_t.
+/** @see svn_editor3_delete(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
@@ -864,7 +974,7 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   svn_editor3_nbid_t nbid,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_alter(), svn_editor3_t.
+/** @see svn_editor3_alter(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
@@ -875,13 +985,13 @@ typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_complete(), svn_editor3_t.
+/** @see svn_editor3_complete(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_complete_t)(
   void *baton,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_abort(), svn_editor3_t.
+/** @see svn_editor3_abort(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_abort_t)(
   void *baton,
@@ -900,7 +1010,7 @@ typedef svn_error_t *(*svn_editor3_cb_abort_t)(
  *
  * If a function pointer is NULL, it will not be called.
  *
- * @see svn_editor3_create(), svn_editor3_t.
+ * @see svn_editor3_create(), #svn_editor3_t
  */
 typedef struct svn_editor3_cb_funcs_t
 {
@@ -929,7 +1039,7 @@ typedef struct svn_editor3_cb_funcs_t
  * @a scratch_pool is used for temporary allocations (if any). Note that
  * this is NOT the same @a scratch_pool that is passed to callback functions.
  *
- * @see svn_editor3_t
+ * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_create(svn_editor3_t **editor,
@@ -944,6 +1054,8 @@ svn_editor3_create(svn_editor3_t **editor,
  *
  * In some cases, the baton is required outside of the callbacks. This
  * function returns the private baton for use.
+ *
+ * @see svn_editor3_create(), #svn_editor3_t
  */
 void *
 svn_editor3_get_baton(const svn_editor3_t *editor);
@@ -962,7 +1074,7 @@ svn_editor3_get_baton(const svn_editor3_t *editor);
 
 /** Versioned content of a node, excluding tree structure information.
  *
- * The @a kind field specifies the node kind. The kind of content must
+ * The @a kind field specifies the kind of content described. It must
  * match the kind of node it is being put into, as a node's kind cannot
  * be changed.
  *
@@ -975,7 +1087,12 @@ svn_editor3_get_baton(const svn_editor3_t *editor);
  */
 struct svn_editor3_node_content_t
 {
-  /* The node kind: dir, file, or symlink */
+  /* The node kind: dir, file, symlink, or unknown.
+   * 
+   * MUST NOT be 'unknown' if the content is of a known kind, including
+   * if a kind-specific field (checksum, stream or target) is non-null.
+   * MAY be 'unknown' when only copying content from a reference node
+   * and/or only changing properties. */
   svn_node_kind_t kind;
 
   /* Reference the content in an existing, committed node-rev.
@@ -986,7 +1103,7 @@ struct svn_editor3_node_content_t
    * ### Reference a whole node-rev instead? (Don't need to reference a
    *     specific rev.)
    */
-  pathrev_t ref;
+  svn_editor3_peg_path_t ref;
 
   /* Properties (for all node kinds).
    * Maps (const char *) name -> (svn_string_t) value. */
@@ -1016,7 +1133,7 @@ svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
  *
  * Allocate it in @a result_pool. */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_dir(pathrev_t ref,
+svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
                                     apr_hash_t *props,
                                     apr_pool_t *result_pool);
 
@@ -1024,7 +1141,7 @@ svn_editor3_node_content_create_dir(pathrev_t ref,
  *
  * Allocate it in @a result_pool. */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_file(pathrev_t ref,
+svn_editor3_node_content_create_file(svn_editor3_peg_path_t ref,
                                      apr_hash_t *props,
                                      const svn_checksum_t *checksum,
                                      svn_stream_t *stream,
@@ -1034,7 +1151,7 @@ svn_editor3_node_content_create_file(pathrev_t ref,
  *
  * Allocate it in @a result_pool. */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_symlink(pathrev_t ref,
+svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
                                         apr_hash_t *props,
                                         const char *target,
                                         apr_pool_t *result_pool);
