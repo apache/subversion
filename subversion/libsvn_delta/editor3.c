@@ -485,6 +485,18 @@ svn_editor3_abort(svn_editor3_t *editor)
 }
 
 svn_editor3_node_content_t *
+svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
+                                    apr_pool_t *result_pool)
+{
+  svn_editor3_node_content_t *new_content
+    = apr_pcalloc(result_pool, sizeof(new_content));
+
+  new_content->kind = svn_node_unknown;
+  new_content->ref = ref;
+  return new_content;
+}
+
+svn_editor3_node_content_t *
 svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
                                     apr_hash_t *props,
                                     apr_pool_t *result_pool)
