@@ -1800,16 +1800,6 @@ svn_repos_node_location_segments(svn_repos_t *repos,
                                  apr_pool_t *pool);
 
 
-/* ### other queries we can do someday --
-
-     * fetch the last revision created by <user>
-         (once usernames become revision properties!)
-     * fetch the last revision where <path> was modified
-
-*/
-
-
-
 /* ---------------------------------------------------------------*/
 
 /* Retrieving log messages. */
