@@ -54,6 +54,11 @@
 
 /*** Code. ***/
 
+/* FSFS format 7's "block-read" feature performs poorly with small caches.
+ * Enable it only if caches above this threshold have been configured.
+ * The current threshold is 64MB. */
+#define BLOCK_READ_CACHE_THRESHOLD (0x40 * 0x100000)
+
 /* A flag to see if we've been cancelled by the client or not. */
 static volatile sig_atomic_t cancelled = FALSE;
 
@@ -113,6 +118,10 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
+  /* Enable the "block-read" feature (where it applies)? */
+  svn_boolean_t use_block_read
+    = svn_cache_config_get()->cache_size > BLOCK_READ_CACHE_THRESHOLD;
+
   /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
@@ -120,7 +129,8 @@ open_repos(svn_repos_t **repos,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
                            svn_uuid_generate(pool));
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                           use_block_read ? "1" : "0");
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));
