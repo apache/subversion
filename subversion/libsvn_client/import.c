@@ -54,19 +54,8 @@
 
 #include "svn_private_config.h"
 
-/* Import context baton.
+/* Import context baton. */
 
-   ### TODO:  Add the following items to this baton:
-      /` import editor/baton. `/
-      const svn_delta_editor_t *editor;
-      void *edit_baton;
-
-      /` Client context baton `/
-      svn_client_ctx_t `ctx;
-
-      /` Paths (keys) excluded from the import (values ignored) `/
-      apr_hash_t *excludes;
-*/
 typedef struct import_ctx_t
 {
   /* Whether any changes were made to the repository */
@@ -591,6 +580,9 @@ import_dir(const svn_delta_editor_t *editor,
 /* Recursively import PATH to a repository using EDITOR and
  * EDIT_BATON.  PATH can be a file or directory.
  *
+ * Sets *UPDATED_REPOSITORY to TRUE when the repository was modified by
+ * a successfull commit, otherwise to FALSE.
+ *
  * DEPTH is the depth at which to import PATH; it behaves as for
  * svn_client_import4().
  *
@@ -640,7 +632,8 @@ import_dir(const svn_delta_editor_t *editor,
  * not necessarily the root.)
  */
 static svn_error_t *
-import(const char *local_abspath,
+import(svn_boolean_t *updated_repository,
+       const char *local_abspath,
        const char *url,
        const apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
@@ -662,11 +655,13 @@ import(const char *local_abspath,
   void *root_baton;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
-  import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
+  import_ctx_t import_ctx = { FALSE };
   const svn_io_dirent2_t *dirent;
 
-  import_ctx->autoprops = autoprops;
-  SVN_ERR(svn_magic__init(&import_ctx->magic_cookie, ctx->config, pool));
+  *updated_repository = FALSE;
+
+  import_ctx.autoprops = autoprops;
+  SVN_ERR(svn_magic__init(&import_ctx.magic_cookie, ctx->config, pool));
 
   /* Get a root dir baton.  We pass the revnum we used for testing our
      assumptions and obtaining inherited properties. */
@@ -701,7 +696,7 @@ import(const char *local_abspath,
                                         pool, &root_baton));
 
           /* Remember that the repository was modified */
-          import_ctx->repos_changed = TRUE;
+          import_ctx.repos_changed = TRUE;
         }
     }
   else if (dirent->kind == svn_node_file)
@@ -732,7 +727,7 @@ import(const char *local_abspath,
 
       if (!ignores_match)
         SVN_ERR(import_file(editor, root_baton, local_abspath, edit_path,
-                            dirent, import_ctx, ctx, pool));
+                            dirent, &import_ctx, ctx, pool));
     }
   else if (dirent->kind == svn_node_dir)
     {
@@ -752,7 +747,7 @@ import(const char *local_abspath,
                               root_baton, depth, excludes, global_ignores,
                               no_ignore, no_autoprops,
                               ignore_unknown_node_types, filter_callback,
-                              filter_baton, import_ctx, ctx, pool));
+                              filter_baton, &import_ctx, ctx, pool));
 
     }
   else if (dirent->kind == svn_node_none
@@ -774,7 +769,7 @@ import(const char *local_abspath,
         }
     }
 
-  if (import_ctx->repos_changed)
+  if (import_ctx.repos_changed)
     {
       if (ctx->notify_func2)
         {
@@ -785,10 +780,12 @@ import(const char *local_abspath,
           ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
 
-      return svn_error_trace(editor->close_edit(edit_baton, pool));
+      SVN_ERR(editor->close_edit(edit_baton, pool));
+
+      *updated_repository = TRUE;
     }
-  else
-    return svn_error_trace(editor->abort_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -827,6 +824,7 @@ svn_client_import5(const char *path,
   svn_revnum_t base_rev;
   apr_array_header_t *inherited_props = NULL;
   apr_hash_t *url_props = NULL;
+  svn_boolean_t updated_repository;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -988,20 +986,23 @@ svn_client_import5(const char *path,
         }
     }
 
-  /* If an error occurred during the commit, abort the edit and return
-     the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(local_abspath, url, new_entries, editor, edit_baton,
-                    depth, base_rev, excludes, autoprops, local_ignores_arr,
-                    global_ignores, no_ignore, no_autoprops,
-                    ignore_unknown_node_types, filter_callback,
-                    filter_baton, ctx, iterpool)))
+  /* If an error occurred during the commit, properly abort the edit.  */
+  err = svn_error_trace(import(&updated_repository,
+                               local_abspath, url, new_entries, editor,
+                               edit_baton, depth, base_rev, excludes,
+                               autoprops, local_ignores_arr, global_ignores,
+                               no_ignore, no_autoprops,
+                               ignore_unknown_node_types, filter_callback,
+                               filter_baton, ctx, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  if (err || !updated_repository)
     {
       return svn_error_compose_create(
                     err,
                     editor->abort_edit(edit_baton, iterpool));
     }
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
