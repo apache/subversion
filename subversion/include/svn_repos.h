@@ -66,20 +66,12 @@ enum svn_node_action
   svn_node_action_replace
 };
 
-/** The different policies for processing the UUID in the dumpfile. */
-enum svn_repos_load_uuid
-{
-  /** only update uuid if the repos has no revisions. */
-  svn_repos_load_uuid_default,
-  /** never update uuid. */
-  svn_repos_load_uuid_ignore,
-  /** always update uuid. */
-  svn_repos_load_uuid_force
-};
-
 
-/** Callback type for checking authorization on paths produced by (at
- * least) svn_repos_dir_delta2().
+/** @defgroup svn_repos_authz_callbacks Repository authorization callbacks
+ * @{
+ */
+
+/** Callback type for checking authorization on a path.
  *
  * Set @a *allowed to TRUE to indicate that some operation is
  * authorized for @a path in @a root, or set it to FALSE to indicate
@@ -167,24 +159,13 @@ typedef svn_error_t *(*svn_repos_authz_callback_t)
    void *baton,
    apr_pool_t *pool);
 
-/**
- * Similar to #svn_file_rev_handler_t, but without the @a
- * result_of_merge parameter.
- *
- * @deprecated Provided for backward compatibility with 1.4 API.
- * @since New in 1.1.
- */
-typedef svn_error_t *(*svn_repos_file_rev_handler_t)
-  (void *baton,
-   const char *path,
-   svn_revnum_t rev,
-   apr_hash_t *rev_props,
-   svn_txdelta_window_handler_t *delta_handler,
-   void **delta_baton,
-   apr_array_header_t *prop_diffs,
-   apr_pool_t *pool);
+/** @} */
 
-
+
+/** @defgroup svn_repos_notifications Repository notifications
+ * @{
+ */
+
 /* Notification system. */
 
 /** The type of action occurring.
@@ -386,7 +367,9 @@ svn_repos_notify_t *
 svn_repos_notify_create(svn_repos_notify_action_t action,
                         apr_pool_t *result_pool);
 
-
+/** @} */
+
+
 /** The repository object. */
 typedef struct svn_repos_t svn_repos_t;
 
@@ -532,6 +515,11 @@ svn_error_t *
 svn_repos_delete(const char *path,
                  apr_pool_t *pool);
 
+
+/** @defgroup svn_repos_capabilities Repository capabilities
+ * @{
+ */
+
 /**
  * Set @a *has to TRUE if @a repos has @a capability (one of the
  * capabilities beginning with @c "SVN_REPOS_CAPABILITY_"), else set
@@ -568,7 +556,6 @@ svn_repos_capabilities(apr_hash_t **capabilities,
                        svn_repos_t *repos,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
-/** @} */
 
 /**
  * The capability of doing the right thing with merge-tracking
@@ -587,6 +574,31 @@ svn_repos_capabilities(apr_hash_t **capabilities,
  *
  * If you add a capability, update svn_repos_capabilities().
  */
+
+/** @} */
+
+
+/**
+ * Store in @a repos the client-reported capabilities @a capabilities,
+ * which must be allocated in memory at least as long-lived as @a repos.
+ *
+ * The elements of @a capabilities are 'const char *', a subset of
+ * the constants beginning with @c SVN_RA_CAPABILITY_.
+ * @a capabilities is not copied, so changing it later will affect
+ * what is remembered by @a repos.
+ *
+ * @note The capabilities are passed along to the start-commit hook;
+ * see that hook's template for details.
+ *
+ * @note As of Subversion 1.5, there are no error conditions defined,
+ * so this always returns SVN_NO_ERROR.  In future releases it may
+ * return error, however, so callers should check.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       const apr_array_header_t *capabilities);
 
 
 /** Return the filesystem associated with repository object @a repos. */
@@ -2046,6 +2058,23 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
                          apr_pool_t *pool);
 
 /**
+ * Similar to #svn_file_rev_handler_t, but without the @a
+ * result_of_merge parameter.
+ *
+ * @deprecated Provided for backward compatibility with 1.4 API.
+ * @since New in 1.1.
+ */
+typedef svn_error_t *(*svn_repos_file_rev_handler_t)
+  (void *baton,
+   const char *path,
+   svn_revnum_t rev,
+   apr_hash_t *rev_props,
+   svn_txdelta_window_handler_t *delta_handler,
+   void **delta_baton,
+   apr_array_header_t *prop_diffs,
+   apr_pool_t *pool);
+
+/**
  * Similar to svn_repos_get_file_revs2(), with @a include_merged_revisions
  * set to FALSE.
  *
@@ -2311,6 +2340,12 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 
 /** @} */
 
+/** @defgroup svn_repos_properties Versioned and Unversioned Properties
+ *
+ * Prop-changing and prop-reading wrappers for libsvn_fs routines.
+ * @{
+ */
+
 /**
  * Like svn_fs_change_rev_prop2(), but validate the name and value of the
  * property and invoke the @a repos's pre- and post-revprop-change hooks
@@ -2343,12 +2378,9 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               const char *name,
                               const svn_string_t *const *old_value_p,
                               const svn_string_t *new_value,
-                              svn_boolean_t
-                              use_pre_revprop_change_hook,
-                              svn_boolean_t
-                              use_post_revprop_change_hook,
-                              svn_repos_authz_func_t
-                              authz_read_func,
+                              svn_boolean_t use_pre_revprop_change_hook,
+                              svn_boolean_t use_post_revprop_change_hook,
+                              svn_repos_authz_func_t authz_read_func,
                               void *authz_read_baton,
                               apr_pool_t *pool);
 
@@ -2367,12 +2399,9 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               const char *author,
                               const char *name,
                               const svn_string_t *new_value,
-                              svn_boolean_t
-                              use_pre_revprop_change_hook,
-                              svn_boolean_t
-                              use_post_revprop_change_hook,
-                              svn_repos_authz_func_t
-                              authz_read_func,
+                              svn_boolean_t use_pre_revprop_change_hook,
+                              svn_boolean_t use_post_revprop_change_hook,
+                              svn_repos_authz_func_t authz_read_func,
                               void *authz_read_baton,
                               apr_pool_t *pool);
 
@@ -2390,8 +2419,7 @@ svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                               const char *author,
                               const char *name,
                               const svn_string_t *new_value,
-                              svn_repos_authz_func_t
-                              authz_read_func,
+                              svn_repos_authz_func_t authz_read_func,
                               void *authz_read_baton,
                               apr_pool_t *pool);
 
@@ -2432,8 +2460,7 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
                            svn_repos_t *repos,
                            svn_revnum_t rev,
                            const char *propname,
-                           svn_repos_authz_func_t
-                           authz_read_func,
+                           svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool);
 
@@ -2458,20 +2485,9 @@ svn_error_t *
 svn_repos_fs_revision_proplist(apr_hash_t **table_p,
                                svn_repos_t *repos,
                                svn_revnum_t rev,
-                               svn_repos_authz_func_t
-                               authz_read_func,
+                               svn_repos_authz_func_t authz_read_func,
                                void *authz_read_baton,
                                apr_pool_t *pool);
-
-
-
-/* ---------------------------------------------------------------*/
-
-/* Prop-changing wrappers for libsvn_fs routines. */
-
-/* NOTE: svn_repos_fs_change_rev_prop() also exists, but is located
-   above with the hook-related functions. */
-
 
 /** Validating wrapper for svn_fs_change_node_prop() (which see for
  * argument descriptions).
@@ -2481,9 +2497,9 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
  * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
  * property.
  *
- * @note Currently, the only properties validated are the "svn:" properties
- * #SVN_PROP_REVISION_LOG and #SVN_PROP_REVISION_DATE. This may change
- * in future releases.
+ * @note Originally, the only properties validated were the "svn:" properties
+ * #SVN_PROP_REVISION_LOG and #SVN_PROP_REVISION_DATE. For the current
+ * validation rules see the private function svn_repos__validate_prop().
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
@@ -2491,6 +2507,36 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               const char *name,
                               const svn_string_t *value,
                               apr_pool_t *pool);
+
+/**
+ * Set @a *inherited_values to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures (the path_or_url members of
+ * which are relative filesystem paths) representing the properties
+ * inherited by @a path in @a root.  If no properties are inherited,
+ * then set @a *inherited_values to an empty array.
+ *
+ * if @a propname is NULL then retrieve all explicit and/or inherited
+ * properties.  Otherwise retrieve only the properties named @a propname.
+ *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of each parent path from which properties are inherited. Silently omit
+ * properties for unreadable parent paths.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 const char *propname,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /** Validating wrapper for svn_fs_change_txn_prop() (which see for
  * argument descriptions).  See svn_repos_fs_change_txn_props() for more
@@ -2512,6 +2558,8 @@ svn_error_t *
 svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
                               const apr_array_header_t *props,
                               apr_pool_t *pool);
+
+/** @} */
 
 
 /* ---------------------------------------------------------------*/
@@ -2629,7 +2677,7 @@ svn_repos_info_format(int *repos_format,
 /* ---------------------------------------------------------------*/
 
 /**
- * @defgroup svn_repos_dump_load Dumping and loading filesystem data
+ * @defgroup svn_repos_dump_load Dumping, loading and verifying filesystem data
  * @{
  *
  * The filesystem 'dump' format contains nothing but the abstract
@@ -2692,6 +2740,17 @@ svn_repos_info_format(int *repos_format,
 /** @since New in 1.5. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
+
+/** The different policies for processing the UUID in the dumpfile. */
+enum svn_repos_load_uuid
+{
+  /** only update uuid if the repos has no revisions. */
+  svn_repos_load_uuid_default,
+  /** never update uuid. */
+  svn_repos_load_uuid_ignore,
+  /** always update uuid. */
+  svn_repos_load_uuid_force
+};
 
 /**
  * Verify the contents of the file system in @a repos.
@@ -3629,61 +3688,6 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 svn_repos_authz_func_t authz_read_func,
                                 void *authz_read_baton,
                                 apr_pool_t *pool);
-
-/**
- * Set @a *inherited_values to a depth-first ordered array of
- * #svn_prop_inherited_item_t * structures (the path_or_url members of
- * which are relative filesystem paths) representing the properties
- * inherited by @a path in @a root.  If no properties are inherited,
- * then set @a *inherited_values to an empty array.
- *
- * if @a propname is NULL then retrieve all explicit and/or inherited
- * properties.  Otherwise retrieve only the properties named @a propname.
- *
- * If optional @a authz_read_func is non-NULL, then use this function
- * (along with optional @a authz_read_baton) to check the readability
- * of each parent path from which properties are inherited. Silently omit
- * properties for unreadable parent paths.
- *
- * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool for
- * temporary allocations.
- *
- * @since New in 1.8.
- */
-svn_error_t *
-svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
-                                 svn_fs_root_t *root,
-                                 const char *path,
-                                 const char *propname,
-                                 svn_repos_authz_func_t authz_read_func,
-                                 void *authz_read_baton,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-
-/** Capabilities **/
-
-/**
- * Store in @a repos the client-reported capabilities @a capabilities,
- * which must be allocated in memory at least as long-lived as @a repos.
- *
- * The elements of @a capabilities are 'const char *', a subset of
- * the constants beginning with @c SVN_RA_CAPABILITY_.
- * @a capabilities is not copied, so changing it later will affect
- * what is remembered by @a repos.
- *
- * @note The capabilities are passed along to the start-commit hook;
- * see that hook's template for details.
- *
- * @note As of Subversion 1.5, there are no error conditions defined,
- * so this always returns SVN_NO_ERROR.  In future releases it may
- * return error, however, so callers should check.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_repos_remember_client_capabilities(svn_repos_t *repos,
-                                       const apr_array_header_t *capabilities);
 
 
 #ifdef __cplusplus
