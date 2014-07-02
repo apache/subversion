@@ -543,3 +543,241 @@ svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
   new_content->target = target;
   return new_content;
 }
+
+
+/*
+ * ===================================================================
+ * A wrapper editor that simply forwards calls through to a wrapped
+ * editor. Intended more as template code than to be useful in itself.
+ * ===================================================================
+ */
+
+typedef struct wrapper_baton_t
+{
+  svn_editor3_t *wrapped_editor;
+} wrapper_baton_t;
+
+static svn_error_t *
+wrap_mk(void *baton,
+        svn_node_kind_t new_kind,
+        svn_editor3_txn_path_t parent_loc,
+        const char *new_name,
+        apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_mk(eb->wrapped_editor,
+                         new_kind, parent_loc, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_cp(void *baton,
+        svn_editor3_peg_path_t from_loc,
+        svn_editor3_txn_path_t parent_loc,
+        const char *new_name,
+        apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_cp(eb->wrapped_editor,
+                         from_loc, parent_loc, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_mv(void *baton,
+        svn_editor3_peg_path_t from_loc,
+        svn_editor3_txn_path_t new_parent_loc,
+        const char *new_name,
+        apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_mv(eb->wrapped_editor,
+                         from_loc, new_parent_loc, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_res(void *baton,
+         svn_editor3_peg_path_t from_loc,
+         svn_editor3_txn_path_t parent_loc,
+         const char *new_name,
+         apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_res(eb->wrapped_editor,
+                          from_loc, parent_loc, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_rm(void *baton,
+        svn_editor3_peg_path_t loc,
+        apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_rm(eb->wrapped_editor,
+                         loc));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_put(void *baton,
+         svn_editor3_txn_path_t loc,
+         const svn_editor3_node_content_t *new_content,
+         apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_put(eb->wrapped_editor,
+                          loc, new_content));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_add(void *baton,
+         svn_editor3_nbid_t local_nbid,
+         svn_node_kind_t new_kind,
+         svn_editor3_nbid_t new_parent_nbid,
+         const char *new_name,
+         const svn_editor3_node_content_t *new_content,
+         apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
+                          local_nbid, new_kind,
+                          new_parent_nbid, new_name, new_content));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_copy_one(void *baton,
+              svn_editor3_nbid_t local_nbid,
+              svn_revnum_t src_revision,
+              svn_editor3_nbid_t src_nbid,
+              svn_editor3_nbid_t new_parent_nbid,
+              const char *new_name,
+              const svn_editor3_node_content_t *new_content,
+              apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
+                               local_nbid, src_revision, src_nbid,
+                               new_parent_nbid, new_name, new_content));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_copy_tree(void *baton,
+               svn_revnum_t src_revision,
+               svn_editor3_nbid_t src_nbid,
+               svn_editor3_nbid_t new_parent_nbid,
+               const char *new_name,
+               apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
+                                src_revision, src_nbid,
+                                new_parent_nbid, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_delete(void *baton,
+            svn_revnum_t since_rev,
+            svn_editor3_nbid_t nbid,
+            apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
+                             since_rev, nbid));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_alter(void *baton,
+           svn_revnum_t since_rev,
+           svn_editor3_nbid_t nbid,
+           svn_editor3_nbid_t new_parent_nbid,
+           const char *new_name,
+           const svn_editor3_node_content_t *new_content,
+           apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
+                            since_rev, nbid,
+                            new_parent_nbid, new_name, new_content));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_complete(void *baton,
+              apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_complete(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_abort(void *baton,
+           apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_abort(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+/** Return an editor in @a *editor_p which will forward all calls to the
+ * @a wrapped_editor. The wrapper editor will not perform cancellation
+ * checking.
+ *
+ * Allocate *editor_p in RESULT_POOL.
+ */
+svn_error_t *
+svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
+                               svn_editor3_t *wrapped_editor,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+svn_error_t *
+svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
+                               svn_editor3_t *wrapped_editor,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  static const svn_editor3_cb_funcs_t wrapper_funcs = {
+    wrap_mk,
+    wrap_cp,
+    wrap_mv,
+    wrap_res,
+    wrap_rm,
+    wrap_put,
+    wrap_add,
+    wrap_copy_one,
+    wrap_copy_tree,
+    wrap_delete,
+    wrap_alter,
+    wrap_complete,
+    wrap_abort
+  };
+  wrapper_baton_t *eb = apr_palloc(result_pool, sizeof(*eb));
+
+  eb->wrapped_editor = wrapped_editor;
+
+  SVN_ERR(svn_editor3_create(editor_p, &wrapper_funcs, eb,
+                             NULL, NULL, /* cancellation */
+                             result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
