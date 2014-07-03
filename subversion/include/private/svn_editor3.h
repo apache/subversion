@@ -375,9 +375,34 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  * Characteristics of this editor:
  *
- *   - tree changes form an ordered list
- *   - content changes are unordered and independent
- *   - all tree changes MAY be sent before all content changes
+ *   - Tree changes are ordered.
+ * 
+ *   - Content changes are unordered and independent.
+ *
+ *     Each node's content is set or altered at most once, and only for
+ *     nodes present in the final state.
+ *
+ *   - There can be more than one move operation per node. Some changes
+ *     require a node to be moved to a temporary location and then moved
+ *     again to its final location. This could be restricted to at most
+ *     two moves per node. Temporary move(s) could be required to use a
+ *     defined temporary name space.
+ * 
+ *     There is not (yet) a defined canonical way to represent an
+ *     arbitrary change.
+ *
+ *   - The sender needs a name space it can use for temporary paths.
+ *
+ *     If the receiver will be applying changes to a state that may not
+ *     exactly match the sender's base state, such as a commit editor,
+ *     it is necessary that the temporary paths will not clash with other
+ *     paths present on the receiving side. It may also be useful for the
+ *     receiver to be aware of the temporary name space so that it can
+ *     optimise temporary moves differently from other moves.
+ *
+ *   - All tree changes MAY be sent before all content changes.
+ *
+ *   - Copying or deleting a subtree is an O(1) cheap operation.
  *
  *   ### In order to expand the scope of this editor to situations like
  *       update/switch, where the receiver doesn't have the repository
@@ -687,7 +712,7 @@ svn_editor3_put(svn_editor3_t *editor,
  *   - Tree structure is partitioned among the nodes, in such a way that
  *     each of the most important concepts such as "move", "copy",
  *     "create" and "delete" is modeled as a single change to a single
- *     node. The name and the identitiy of its parent directory node are
+ *     node. The name and the identity of its parent directory node are
  *     considered to be attributes of that node, alongside its content.
  *
  *   - Changes are independent and unordered. The change to one node is
@@ -699,6 +724,8 @@ svn_editor3_put(svn_editor3_t *editor,
  *   - Copies can be made in two ways: a copy of a single node can have
  *     its content changed and its children may be arbitrarily arranged,
  *     or a "cheap" O(1) copy of a subtree which cannot be edited.
+ *
+ *   - Deleting a subtree is O(1) cheap // or not. ### To be decided.
  *
  *
  * Notes on Copying:
@@ -800,10 +827,16 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  * performed: the server can consider the change "out of date" if a commit
  * since then has changed or deleted this node-branch.
  *
- * ###  @note The delete is not recursive. Child nodes must be explicitly
- *      deleted or moved away.
+ * ###  @note The delete is not recursive. Each child node must be
+ *      explicitly deleted or moved away. (In this case, the rebase does
+ *      not have to check explicitly whether the other side modified a
+ *      child. That will be checked either when we try to delete or move
+ *      the child, or, for a child added on the other side, when we check
+ *      for orphaned nodes in the final state.)
  *   OR @note The delete is implicitly recursive: each child node that
  *      is not otherwise moved to a new parent will be deleted as well.
+ *      (The rebase should check for changes in the whole subtree,
+ *      including checking that the other side has not added any child.)
  *
  * @see #svn_editor3_t
  */
