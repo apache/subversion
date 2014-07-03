@@ -2823,7 +2823,7 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
                                svn_cache__info_t *info,
                                svn_boolean_t include_histogram)
 {
-  apr_size_t i;
+  apr_uint32_t i;
 
   info->data_size += segment->l1.size + segment->l2.size;
   info->used_size += segment->data_used;

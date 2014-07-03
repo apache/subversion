@@ -72,7 +72,7 @@ static apr_status_t
 set_read_only(void *baton)
 {
   set_read_only_baton_t *ro_baton = baton;
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   svn_error_t *err;
 
   err = svn_io_set_file_read_only(ro_baton->file_path, TRUE, ro_baton->pool);
