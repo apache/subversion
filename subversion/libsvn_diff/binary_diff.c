@@ -119,7 +119,7 @@ write_literal(svn_filesize_t uncompressed_size,
     {
       char chunk[GIT_BASE85_CHUNKSIZE];
       const unsigned char *next;
-      int left;
+      apr_size_t left;
 
       rd = sizeof(chunk);
 

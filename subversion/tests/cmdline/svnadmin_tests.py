@@ -2124,6 +2124,8 @@ def verify_invalid_path_changes(sbox):
                                            ".*r18: E160013:.*"])
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
+    if svntest.main.is_fs_log_addressing():
+      exp_out.insert(1, ".*Verifying.*metadata.*")
 
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
                                             "svnadmin: E145001:.*",
@@ -2145,6 +2147,8 @@ def verify_invalid_path_changes(sbox):
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
+    if svntest.main.is_fs_log_addressing():
+      exp_out.insert(1, ".*Verifying.*metadata.*")
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure

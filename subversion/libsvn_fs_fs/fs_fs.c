@@ -1467,8 +1467,6 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
-  SVN_ERR(write_revision_zero(fs, pool));
-
   /* Create the fsfs.conf file if supported.  Older server versions would
      simply ignore the file but that might result in a different behavior
      than with the later releases.  Also, hotcopy would ignore, i.e. not
@@ -1480,6 +1478,9 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
+
+  /* Add revision 0. */
+  SVN_ERR(write_revision_zero(fs, pool));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)

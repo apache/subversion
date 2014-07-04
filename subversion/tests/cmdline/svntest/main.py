@@ -171,6 +171,14 @@ svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
 )
 
+######################################################################
+# The location of svnfsfs binary, relative to the only scripts that
+# import this file right now (they live in ../).
+# Use --tools to overide these defaults.
+svnfsfs_binary = os.path.abspath(
+    '../../../tools/server-side/svnfsfs/svnfsfs' + _exe
+)
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -758,6 +766,11 @@ def run_svnauthz_validate(*varargs):
   """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
   stderr as list of lines (including line terminators)."""
   return run_command(svnauthz_validate_binary, 1, False, *varargs)
+
+def run_svnfsfs(*varargs):
+  """Run svnfsfs with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnfsfs_binary, 1, False, *varargs)
 
 def run_lock_helper(repo, path, user, seconds):
   """Run lock-helper to lock path in repo by username for seconds"""
