@@ -357,21 +357,22 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  * Edit Operations:
  *
- *   - mk  kind               {dir-path | ^/dir-path@rev}[1] new-path[2]
- *   - cp  ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-path[2]
- *   - cp  from-path[4]       {dir-path | ^/dir-path@rev}[1] new-path[2]
- *   - mv  ^/from-path@rev[4] {dir-path | ^/dir-path@rev}[1] new-path[2]
- *   - res ^/from-path@rev[3] {dir-path | ^/dir-path@rev}[1] new-path[2]
- *   - rm                     {path | ^/path@rev}[5]
- *   - put new-content        {path | ^/path@rev}[5]
+ *   - mk   kind                dir-location[1]  new-name[2]
+ *   - cp   ^/from-path@rev[3]  dir-location[1]  new-name[2]
+ *   - cp   from-path[4]        dir-location[1]  new-name[2]
+ *   - mv   location[1]         dir-location[1]  new-name[2]
+ *   - res  ^/from-path@rev[3]  dir-location[1]  new-name[2]
+ *   - rm                       pegged-path[1]
+ *   - put  new-content         pegged-path[1]
+ *
+ *   [*] 'location' means the tuple (^/peg-path @ peg-rev, created-relpath)
  *
  * Preconditions:
  *
- *   [1] target parent dir must exist in txn
- *   [2] target name (in parent dir) must not exist in txn
- *   [3] source must exist in committed revision
- *   [4] source must exist in txn
- *   [5] target must exist in txn
+ *   [1] this node-branch must exist in txn
+ *   [2] a child with this name must not exist in the parent dir in txn
+ *   [3] this node-rev must exist in committed revision
+ *   [4] this path must exist in txn
  *
  * Characteristics of this editor:
  *
@@ -420,7 +421,8 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     node. The default content is empty, and MAY be altered by "put".
  *
  *   - "cp": Create a copy of the subtree found at the specified "from"
- *     location in a committed revision or [if supported] in the current
+ *     location in a committed revision or [#if WITH_COPY_FROM_THIS_REV]
+ *     in the current
  *     txn. Each node in the target subtree is marked as "copied from" the
  *     node with the corresponding path in the source subtree.
  *
@@ -520,33 +522,30 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  * Notes on Paths:
  *
- *   - A bare "path" refers to a "path-in-txn", that is a path in the
- *     current state of the transaction. ^/path@rev refers to a path in a
- *     committed revision which is to be traced to the current transaction.
- *     A path-in-txn can refer to a node that was created with "mk" or
- *     "cp" (including children) and MAY [### or SHOULD NOT?] refer to a
- *     node-branch that already existed before the edit began.
+ *   - Each node in the txn was either pre-existing or was created within
+ *     the txn. A pre-existing node may be moved by the rebase-on-commit
+ *     and/or by operations within the txn, whereas a created node is
+ *     required to remain at the same path where it was created, relative
+ *     to its pathwise-nearest pre-existing node.
  *
- *   - Ev1 declares, by nesting, exactly what parent dir each operation
- *     refers to: a pre-existing one (in which case it checks it's still
- *     the same one) or one it has just created in the txn. We make this
- *     distinction with {path-in-txn | ^/path-in-rev@rev} instead.
+ *     We refer to a node in a txn by means of a pegged path and a created
+ *     relative path:
  *
- *   - When an existing target path is specified as
- *     (^/peg-path@rev, created-relpath), the path in the txn is:
+ *       (^/peg-path @ peg-rev, created-relpath).
  *
- *         (^/peg-path@rev traced forward to the txn)/(relpath)
+ *     The "path @ rev" part identifies the nearest pre-existing node-branch,
+ *     by reference to a path in a committed revision which is to be
+ *     traced forward to the current transaction. The Out-Of-Date
+ *     check notes whether the specified node-branch still exists in
+ *     the txn, and, if applicable, that it hasn't been modified.
  *
- *     When a target path to be created is specified as
- *     (^/peg-path@rev, created-relpath, new-name), the path-in-txn is:
+ *     Each component of the "created-relpath" refers to a node that was
+ *     created within the txn (with "mk" or "cp", but not "res"). It MUST
+ *     NOT refer to a node-branch that already existed before the edit
+ *     began. The "created-relpath" may be empty.
  *
- *         (^/peg-path@rev traced forward to the txn)/(relpath)/(new-name)
- *
- *     The "peg-path @ rev" part acts like an unambiguous identifier for
- *     each pre-existing node. The remaining part extends the identifier
- *     for nodes created in the txn. (That part would be ambiguous if we
- *     allowed created nodes to be moved, replaced, etc.; we don't allow
- *     that.)
+ *   - Ev1 referred to each node in a txn by a nesting of "open" (for a
+ *     pre-existing node) and "add" (for a created node) operations.
  *
  * Notes on Copying:
  *
@@ -554,8 +553,7 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     from "this revision". If we don't then the source is necessarily
  *     a pre-existing node and so can be referenced by ^/path@rev.
  *
- *   - There is no provision for making a non-tracked copy of a subtree,
- *     nor a copy in which some nodes are tracked and others untracked,
+ *   - There is no provision for making a non-tracked copy of a subtree
  *     in a single operation.
  *
  * Notes on Moving:
@@ -591,30 +589,37 @@ svn_editor3_mk(svn_editor3_t *editor,
                const char *new_name);
 
 /** Create a copy of a subtree.
- *
- * The source subtree is found at @a from_loc. If @a from_loc is a
- * location in a committed revision, make a copy from (and referring to)
- * that location. [If supported] If @a from_loc is a location in the
- * current txn, make a copy from the current txn, which when committed
- * will refer to the committed revision.
- *
- * Create the root node of the new subtree in the parent directory
- * node-branch specified by @a parent_loc with the name @a new_name.
+ * 
+ * The source subtree is found at @a from_loc. Create the root node of
+ * the new subtree in the parent directory node-branch specified by
+ * @a parent_loc with the name @a new_name.
  *
  * Each node in the target subtree has a "copied from" relationship with
  * the node with the corresponding path in the source subtree.
  *
- * The content of a node copied from an existing revision is, by default,
- * the content of the source node. The content of a node copied from this
- * revision is, by default, the FINAL content of the source node as
- * committed, even if the source node is changed after the copy operation.
- * In either case, the default content MAY be changed by a "put".
+ * If @a from_loc is a location in a committed revision, the default
+ * content of each node is the content of the corresponding source node.
+ *
+ * #ifdef WITH_COPY_FROM_THIS_REV
+ * If @a from_loc is a location in the current txn, make a copy from that
+ * subtree in the the txn, which when committed will refer to the
+ * committed revision. The tree structure is taken from the current state
+ * of the txn, whereas the default content of each node is the FINAL
+ * content of the corresponding source node as committed, even if a "put"
+ * operation is received for the source node after this copy operation.
+ * #endif
+ *
+ * The content of each node MAY be changed by a "put" operation.
  *
  * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_cp(svn_editor3_t *editor,
+#ifdef WITH_COPY_FROM_THIS_REV
+               svn_editor3_txn_path_t from_loc,
+#else
                svn_editor3_peg_path_t from_loc,
+#endif
                svn_editor3_txn_path_t parent_loc,
                const char *new_name);
 
@@ -643,7 +648,8 @@ svn_editor3_mv(svn_editor3_t *editor,
  * a location in a committed revision. Put the resurrected node at
  * @a parent_loc, @a new_name.
  *
- * Set the content to @a new_content.
+ * The content of the resurrected node is, by default, the content of the
+ * source node at @a from_loc. The content MAY be changed by a "put".
  *
  * @see #svn_editor3_t
  */
