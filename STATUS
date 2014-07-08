@@ -186,6 +186,8 @@ Candidate changes:
    Allocate hash values in hash pool to avoid lifetime issue.
    Justification:
      Avoids use-after-clear (on trunk) detected by valgrind.
+   Notes:
+     Fix is logically correct but not really needed at present.
    Votes:
      +1: philip, rhuijben
 
