@@ -102,7 +102,7 @@ Candidate changes:
    Justification:
      Cross working copy copies should just work.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1589360
    Make property output in 'svn diff' stable
