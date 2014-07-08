@@ -145,7 +145,7 @@ Candidate changes:
    Justification:
      Building and testing should Just Work as far as possible.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1594794, r1594814, r1594834, r1595061
    Fix the notify_func callbacks in Python bindings.
