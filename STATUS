@@ -221,6 +221,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
+ * r1606009
+   Allocate hash values in hash pool to avoid lifetime issue.
+   Justification:
+     Avoids use-after-clear detected by valgrind.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
