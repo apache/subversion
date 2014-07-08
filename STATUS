@@ -154,7 +154,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-rm-external-dir
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1600331, r1600348, 1600368, r1600563, r1600781
    Improve gpg-agent support.
