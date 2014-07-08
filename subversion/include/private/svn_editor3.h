@@ -423,6 +423,12 @@ extern "C" {
  * Other Rebase Policies
  * ---------------------
  *
+ * The two rebase policies above are general-purpose, each conforming to
+ * a simple model of versioned data in which changes to separate nodes
+ * are always considered independent and any changes to the same node are
+ * considered inter-dependent. For special purposes, a finer-grained or a
+ * larger-grained notion of dependence may be useful.
+ *
  * A policy could allow finer-grained merging. For example, an incoming
  * commit making both a property change and a text change, where the
  * repository side has only the same prop-change or the same text-change
@@ -431,10 +437,41 @@ extern "C" {
  * A policy could consider changes at a larger granularity. For example,
  * it could consider that any change to the set of immediate children of
  * a directory conflicts with any other change to its set of immediate
- * children.
+ * children. It could consider that a moved parent directory conflicts
+ * with any changes inside that subtree. (This latter might be appropriate
+ * for Java programming where a rename of a parent directory typically
+ * needs to be reflected inside files in the subtree.)
  *
+ * TODO
+ * ====
+ *
+ *   * Catalogue exactly what rebase policy Subversion 1.9 implements.
  */
 
+/*
+ * ===================================================================
+ * Copy From This Revision
+ * ===================================================================
+ *
+ * ### Is copy-from-this-revision needed?
+ */
+#define SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+
+/*
+ * ===================================================================
+ * Resurrection
+ * ===================================================================
+ *
+ * ### Is resurrection needed in a per-node branching model?
+ *
+ * Perhaps a copy is sufficient. Resurrection is needed in a branching
+ * model where element ids are the key to matching up corresponding nodes
+ * between "big branches"; if all we have is "little branches" then there
+ * may be no need to resurrect a node and keep its old node-branch-id.
+ */
+/*#define SVN_EDITOR3_WITH_RESURRECTION*/
+
+
 /**
  * @defgroup svn_editor The editor interface
  * @{
@@ -515,7 +552,9 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  *   - mk   kind                dir-location[1]  new-name[2]
  *   - cp   ^/from-path@rev[3]  dir-location[1]  new-name[2]
+ * #ifdef WITH_COPY_FROM_THIS_REV
  *   - cp   from-path[4]        dir-location[1]  new-name[2]
+ * #endif
  *   - mv   location[1]         dir-location[1]  new-name[2]
  *   - res  ^/from-path@rev[3]  dir-location[1]  new-name[2]
  *   - rm                       pegged-path[1]
@@ -527,6 +566,8 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  *   [1] this node-branch must exist in txn
  *   [2] a child with this name must not exist in the parent dir in txn
+ *       (as far as sender knows; the rebase will check whether it
+ *        exists and/or can be merged on receiver side)
  *   [3] this node-rev must exist in committed revision
  *   [4] this path must exist in txn
  *
@@ -571,56 +612,6 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *       way ("let the copy operation mean non-recursive copy")? Or is
  *       it totally out of scope? (To support WC update we need other
  *       changes too, not just this.)
- *
- * Description of operations:
- *
- *   - "cp", "mv" and "rm" are recursive; "mk" and "put" are non-recursive.
- *
- *   - "mk": Create a single new node, not related to any other existing
- *     node. The default content is empty, and MAY be altered by "put".
- *
- *   - "cp": Create a copy of the subtree found at the specified "from"
- *     location in a committed revision or [#if WITH_COPY_FROM_THIS_REV]
- *     in the current
- *     txn. Each node in the target subtree is marked as "copied from" the
- *     node with the corresponding path in the source subtree.
- *
- *   - "mv": Move a subtree to a new parent node-branch and/or a new name.
- *     The source must be present in the txn but is specified by reference
- *     to a location in a committed revision.
- *
- *   - "res": Resurrect a previously deleted node-branch. The specified
- *     source is any location at which this node-branch existed, not
- *     necessarily at its youngest revision nor even within its most
- *     recent period of existence. The default content is that of the
- *     source location, and MAY be altered by "put".
- *
- *     The source node-branch MUST NOT exist in the txn. If the source
- *     node-branch exists in the txn-base, resurrection would be
- *     equivalent to reverting a local delete in the txn; the sender
- *     SHOULD NOT do this. [### Why not? Just because it seems like
- *     unnecessary flexibility.]
- *
- *     ### Can we have a recursive resurrect operation? What should it do
- *         if a child node is still alive (moved or already resurrected)?
- *
- *   - "rm": Remove the specified node and, recursively, all nodes that
- *     are currently its children in the txn. It does not delete nodes
- *     that used to be its children that have since been moved away.
- *     "rm" SHOULD NOT be used on a node-branch created by "mk" nor on the
- *     root node-branch created by "cp", but MAY be used on a child of a
- *     copy.
- *
- *   - "put": Set the content of a node to the specified value. (The new
- *     content may be described in terms of a delta against another node's
- *     content.)
- *
- *     "put" MAY be sent for any node that exists in the final state, and
- *     SHOULD NOT be sent for a node that will no longer exist in the final
- *     state. "put" SHOULD NOT be sent more than once for any node-branch.
- *     "put" MUST provide the right kind of content to match the node kind;
- *     it cannot change the kind of a node nor convert the content to match
- *     the node kind.
  *
  * Notes on Paths:
  *
@@ -717,7 +708,7 @@ svn_editor3_mk(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_cp(svn_editor3_t *editor,
-#ifdef WITH_COPY_FROM_THIS_REV
+#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
                svn_editor3_txn_path_t from_loc,
 #else
                svn_editor3_peg_path_t from_loc,
@@ -744,7 +735,8 @@ svn_editor3_mv(svn_editor3_t *editor,
                svn_editor3_txn_path_t new_parent_loc,
                const char *new_name);
 
-/** Resurrect a node.
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
+/** Resurrect a previously deleted node-branch.
  *
  * Resurrect the node-branch that previously existed at @a from_loc,
  * a location in a committed revision. Put the resurrected node at
@@ -753,6 +745,19 @@ svn_editor3_mv(svn_editor3_t *editor,
  * The content of the resurrected node is, by default, the content of the
  * source node at @a from_loc. The content MAY be changed by a "put".
  *
+ * The specified source is any location at which this node-branch existed,
+ * not necessarily at its youngest revision nor even within its most
+ * recent period of existence.
+ *
+ * ### The source node-branch MUST NOT exist in the txn. If the source
+ *     node-branch exists in the txn-base, resurrection would be
+ *     equivalent to reverting a local delete in the txn; the sender
+ *     SHOULD NOT do this. [### Why not? Just because it seems like
+ *     unnecessary flexibility.]
+ *
+ * ### Can we have a recursive resurrect operation? What should it do
+ *     if a child node is still alive (moved or already resurrected)?
+ *
  * @see #svn_editor3_t
  */
 svn_error_t *
@@ -760,12 +765,16 @@ svn_editor3_res(svn_editor3_t *editor,
                 svn_editor3_peg_path_t from_loc,
                 svn_editor3_txn_path_t parent_loc,
                 const char *new_name);
+#endif
 
 /** Remove the existing node-branch identified by @a loc and, recursively,
  * all nodes that are currently its children in the txn.
  *
  * @note This does not delete nodes that used to be children of the specified
  * node-branch that have since been moved away.
+ *
+ * @note This SHOULD NOT be used on a node-branch created by "mk" nor on the
+ * root node-branch created by "cp", but MAY be used on a child of a copy.
  *
  * @see #svn_editor3_t
  */
@@ -775,7 +784,15 @@ svn_editor3_rm(svn_editor3_t *editor,
 
 /** Set the content of the node-branch identified by @a loc.
  *
- * Set the content to @a new_content.
+ * Set the content to @a new_content. (The new content may be described
+ * in terms of a delta against another node's content.)
+ *
+ * @note "put" MAY be sent for any node that exists in the final state.
+ * "put" SHOULD NOT be sent for a node that will not exist in the final
+ * state. "put" SHOULD NOT be sent more than once for any node-branch.
+ * "put" MUST provide the right kind of content to match the node kind; it
+ * cannot change the kind of a node nor convert the content to match the
+ * node kind.
  *
  * @see #svn_editor3_t
  */
@@ -947,6 +964,11 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  *      is not otherwise moved to a new parent will be deleted as well.
  *      (The rebase should check for changes in the whole subtree,
  *      including checking that the other side has not added any child.)
+ *      ### Does this make sense when deleting a mixed-rev tree? Sender
+ *          asks to delete a "complete" tree, as if single-rev; this
+ *          implies to the receiver what set of nodes is involved. How
+ *          would the WC know whether its mixed-rev tree is "complete"?
+ *          Would we need a non-recursive delete as well?
  *
  * @see #svn_editor3_t
  */
@@ -1038,7 +1060,11 @@ typedef svn_error_t *(*svn_editor3_cb_mk_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_cp_t)(
   void *baton,
+#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+  svn_editor3_txn_path_t from_loc,
+#else
   svn_editor3_peg_path_t from_loc,
+#endif
   svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
@@ -1052,6 +1078,7 @@ typedef svn_error_t *(*svn_editor3_cb_mv_t)(
   const char *new_name,
   apr_pool_t *scratch_pool);
 
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
 /** @see svn_editor3_res(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_res_t)(
@@ -1060,6 +1087,7 @@ typedef svn_error_t *(*svn_editor3_cb_res_t)(
   svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
+#endif
 
 /** @see svn_editor3_rm(), #svn_editor3_t
  */
@@ -1160,7 +1188,9 @@ typedef struct svn_editor3_cb_funcs_t
   svn_editor3_cb_mk_t cb_mk;
   svn_editor3_cb_cp_t cb_cp;
   svn_editor3_cb_mv_t cb_mv;
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
   svn_editor3_cb_res_t cb_res;
+#endif
   svn_editor3_cb_rm_t cb_rm;
   svn_editor3_cb_put_t cb_put;
 
