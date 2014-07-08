@@ -161,14 +161,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1596866
-   Fix another instance of issue #3014, "svn log | head" should not
-   print "Write error: Broken pipe"
-   Justification:
-     Minor annoyance, already fixed for other cases.
-   Votes:
-     +1: stsp, ivan
-
  * r1600311, r1600315, r1600323, r1600393
    Properly delete ancestor directories of externals when removing the
    external by changing the svn:externals value.
@@ -256,3 +248,11 @@ Approved changes:
      are using Ruby 1.9.3 that the support is new is useless.
    Votes:
      +1: breser, rhuijben, philip
+
+ * r1596866
+   Fix another instance of issue #3014, "svn log | head" should not
+   print "Write error: Broken pipe"
+   Justification:
+     Minor annoyance, already fixed for other cases.
+   Votes:
+     +1: stsp, ivan, philip
