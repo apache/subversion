@@ -139,21 +139,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1594156
-   Fix a problem with the Unix build that could result in linking to the wrong
-   Subversion libraries at build time or at run time.
-   Justification:
-     Building and testing should Just Work as far as possible.
-   Votes:
-     +1: julianfoad, philip
-
- * r1594794, r1594814, r1594834, r1595061
-   Fix the notify_func callbacks in Python bindings.
-   Justification:
-     Slightly broken implementation made them impossible to use.
-   Votes:
-     +1: breser, philip
-
  * r1595431
    Use a proper intermediate directory when building with VS 2003-2008.
    Justification:
@@ -200,9 +185,9 @@ Candidate changes:
  * r1606009
    Allocate hash values in hash pool to avoid lifetime issue.
    Justification:
-     Avoids use-after-clear detected by valgrind.
+     Avoids use-after-clear (on trunk) detected by valgrind.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -256,3 +241,19 @@ Approved changes:
      Minor annoyance, already fixed for other cases.
    Votes:
      +1: stsp, ivan, philip
+
+ * r1594794, r1594814, r1594834, r1595061
+   Fix the notify_func callbacks in Python bindings.
+   Justification:
+     Slightly broken implementation made them impossible to use.
+   Votes:
+     +1: breser, philip
+     +0: rhuijben
+
+ * r1594156
+   Fix a problem with the Unix build that could result in linking to the wrong
+   Subversion libraries at build time or at run time.
+   Justification:
+     Building and testing should Just Work as far as possible.
+   Votes:
+     +1: julianfoad, philip, rhuijben
