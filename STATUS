@@ -152,7 +152,7 @@ Candidate changes:
    Justification:
      Slightly broken implementation made them impossible to use.
    Votes:
-     +1: breser
+     +1: breser, philip
 
  * r1595431
    Use a proper intermediate directory when building with VS 2003-2008.
