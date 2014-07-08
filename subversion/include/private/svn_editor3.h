@@ -277,6 +277,162 @@ extern "C" {
  * unreasonable for the typical work flows of today, but unreasonably
  * restricting the work flows that should be possible in the future with
  * move tracking in place.
+ *
+ * ===================================================================
+ * Commit Rebase and OOD Checks
+ * ===================================================================
+ *
+ * When the client commits changes, it describes the change for each node
+ * against a base version of that node. (For new nodes being created, the
+ * base is "none".)
+ *
+ * The server must inform the client of the result of the commit, and
+ * there are only two possible outcomes. Either the state of each node
+ * being changed by the commit now matches the committed revision and
+ * the client's base version of each other node remains unchanged, or
+ * the commit fails.
+ *
+ * The rebase on commit is a simple kind of merge. For each node being
+ * changed in the commit, the server must either accept the incoming
+ * version or reject the whole commit. It can only "merge" the incoming
+ * change with recent changes in the repository if the changes are
+ * trivially compatible, such that the committed version can be used as
+ * the result. It cannot perform a merge that creates a result that
+ * differs from the version sent by the client, as there is no mechanism
+ * to inform the client of this.
+ *
+ * If the rebase rejects the commit, the client's base version of a node
+ * is said to be "out of date": there are two competing changes to the
+ * node. After a commit is rejected, the changes can be merged on the
+ * client side via an "update".
+ *
+ * The key to the rebase logic is defining what constitutes a "trivial"
+ * merge. That is a subjective design choice, as it controls how "close"
+ * two independently committed changes may be before the system forces
+ * the user to merge them on the client side. In that way it is the same
+ * as a three-way text merge tool having options to control how close
+ * a change on one side may be to a change on the other side before it
+ * considers them to conflict -- whether one line of unchanged context is
+ * needed between them, or changes to adjacent lines are accepted, or in
+ * some tools changes affecting separate words or characters on the same
+ * line can be merged without considering them to conflict.
+ *
+ * Different rebase-on-commit policies are appropriate for different use
+ * cases, and so it is reasonable to design the system such that the user
+ * can configure what policy to use.
+ *
+ * Here are two specifications of requirements for a rebase-on-commit
+ * merge. Both of them consider each node independently, except for the
+ * need to end up with a valid tree hierarchy. Both of them consider
+ * something to be "changed" only if it is different from what it was
+ * originally, and not merely if it was changed and then changed back
+ * again or if a no-op "change" was committed. This follows the principle
+ * that collapsing intermediate history should make no difference.
+ * Similarly, they MUST interpret a no-op incoming "change" as no
+ * incoming change.
+ *
+ * Rebase Policy: "Changes"
+ * ------------------------
+ *
+ * This policy considers the intent of a change to be a change rather
+ * than to be the creation of the new state. It merges a change with
+ * a no-change, per node. It is more strict than the "State Setting"
+ * policy.
+ *
+ *      Changes on one side vs. requirements on other side of the merge
+ *      -----------------------------------------------------------------
+ *      change     requirements on other side
+ *      ------     ------------------------------------------------------
+ *
+ *      make       node-id does not exist [1]
+ *      new        target parent node-branch exists (may have
+ *      node         been moved/altered/del-and-resurrected)
+ *                 no same-named sibling exists in target parent
+ *
+ *      copy       (source: no restriction)
+ *      (root      target node-branch-id does not exist [1]
+ *      node)      target parent node-branch exists (")
+ *                 no same-named sibling exists in target parent
+ *
+ *      resurrect  node-branch does not exist
+ *      (per       target parent node-branch exists (")
+ *      node)      no same-named sibling exists in target parent
+ *
+ *      move       node-branch exists and is identical to base
+ *      &/or       (children: no restriction)
+ *      alter      target parent node-branch exists (")
+ *                 no same-named sibling exists in target parent
+ *
+ *      del        node-branch exists and is identical to base
+ *      (per       (parent: no restriction)
+ *      node)      no new children on the other side
+ *                   (they would end up as orphans)
+ *
+ * Rebase Policy: "State Setting"
+ * ------------------------------
+ *
+ * This policy considers the intent of a change to be the creation of
+ * the new state. It allows silent de-duplication of identical changes
+ * on both sides, per node. It is less strict than the "Changes" policy.
+ *
+ *      Changes on one side vs. requirements on other side of the merge
+ *      -----------------------------------------------------------------
+ *      change     requirements on other side
+ *      ------     ------------------------------------------------------
+ *
+ *      make       node-id does not exist, or
+ *      new          node-branch exists and is identical [1]
+ *      node       target parent node-branch exists (may have
+ *                   been moved/altered/del-and-resurrected)
+ *                 no same-named sibling exists in target parent
+ *
+ *      copy       (source: no restriction)
+ *      (root      target node-branch-id does not exist, or
+ *      node)        node-branch exists and is identical [1]
+ *                 target parent node-branch exists (")
+ *                 no same-named sibling exists in target parent
+ *
+ *      resurrect  node-branch does not exist, or
+ *      (per         node-branch exists and is identical
+ *      node)      target parent node-branch exists (")
+ *                 no same-named sibling exists in target parent
+ *
+ *      move       node-branch exists, and
+ *      &/or         is identical to base or identical to target
+ *      alter      (children: no restriction)
+ *                 target parent node-branch exists (")
+ *                 no same-named sibling exists in target parent
+ *
+ *      del        node-branch exists and is identical to base, or
+ *      (per         node-branch is deleted
+ *      node)      (parent: no restriction)
+ *                 no new children on the other side
+ *                   (they would end up as orphans)
+ *
+ * Terminology:
+ *      An id. "exists" even if deleted, whereas a node-branch "exists"
+ *      only when it is alive, not deleted. A node-branch is "identical"
+ *      if its content and name and parent-nbid are identical.
+ *
+ * Notes:
+ *      [1] A target node or id that is to be created can be found to
+ *          "exist" on the other side only if the request is of the form
+ *          "create a node with id <X>" rather than "create a node with
+ *          a new id".
+ *
+ * Other Rebase Policies
+ * ---------------------
+ *
+ * A policy could allow finer-grained merging. For example, an incoming
+ * commit making both a property change and a text change, where the
+ * repository side has only the same prop-change or the same text-change
+ * but not both.
+ *
+ * A policy could consider changes at a larger granularity. For example,
+ * it could consider that any change to the set of immediate children of
+ * a directory conflicts with any other change to its set of immediate
+ * children.
+ *
  */
 
 /**
@@ -405,6 +561,9 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  *   - Copying or deleting a subtree is an O(1) cheap operation.
  *
+ *   - The commit rebase MAY (but need not) merge a repository-side move
+ *     with incoming edits inside the moved subtree, and vice-versa.
+ *
  *   ### In order to expand the scope of this editor to situations like
  *       update/switch, where the receiver doesn't have the repository
  *       to refer to, Can we add a full-traversal kind of copy?
@@ -462,63 +621,6 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     "put" MUST provide the right kind of content to match the node kind;
  *     it cannot change the kind of a node nor convert the content to match
  *     the node kind.
- *
- * Commit Rebase and OOD Checks:
- *
- *   - If the base of a change to a given node is out of date, a merge of
- *     this node would be required. The merge cannot be done on the server
- *     as then the committed version may differ from the version sent by
- *     the client, and there is no mechanism to inform the client of this.
- *     The granularity with which we can inform the client of a change
- *     is per node: either the node is updated to a new revision, meaning
- *     all its attributes reflect the committed changes, or not.
- *     Therefore the commit must be rejected and the merge done on the
- *     client side via an "update".
- *
- *     (As a possible special case, if each side of the merge has identical
- *     changes, this may be considered a null merge when a "permissive"
- *     strictness policy is in effect.)
- *
- *   - The editor is designed such that the commit rebase MAY allow moves
- *     in intervening commits that overlap path-wise with the edits we
- *     are making, and vice-versa. The out-of-date checks MAY work in the
- *     following way.
- *
- *     ### Are these the least restrictive OOD supported by the editor?
- *
- *       Operations on incoming commit vs. requirements on recent commits
- *       -----------------------------------------------------------------
- *       op    source node             target parent node
- *       ---   ---------------------   -----------------------------------
- *
- *       mk                            parent exists in txn
- *                                     parents may be moved/altered/new
- *
- *       cp   (no restriction)         --- // ---
- *
- *       res  ???                      --- // ---
- *
- *       mv   unchanged name&parent    --- // ---
- *           *unchanged own-content
- *            not created
- *            not deleted
- *            (parents may be moved/altered/created/deleted-non-recursively)
- *            (children may be moved/altered/created/deleted)
- *
- *       rm   unchanged name&parent
- *            unchanged own-content
- *            not created
- *            not deleted
- *            (for recursive delete, the conditions apply recursively)
- *            (we need not explicitly check for new children on the
- *            recent-commits side, as they would end up as orphans)
- *
- *       put *unchanged name&parent
- *            unchanged own-content
- *            not created
- *            not deleted
- *
- *     The conditions marked '*' could be relaxed.
  *
  * Notes on Paths:
  *
@@ -733,6 +835,8 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  *   - Deleting a subtree is O(1) cheap // or not. ### To be decided.
  *
+ *   - The commit rebase MAY (but need not) merge a repository-side move
+ *     with incoming edits inside the moved subtree, and vice-versa.
  *
  * Notes on Copying:
  *
