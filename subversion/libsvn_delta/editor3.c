@@ -167,7 +167,11 @@ svn_editor3_mk(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_cp(svn_editor3_t *editor,
+#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+               svn_editor3_txn_path_t from_loc,
+#else
                svn_editor3_peg_path_t from_loc,
+#endif
                svn_editor3_txn_path_t parent_loc,
                const char *new_name)
 {
@@ -215,6 +219,7 @@ svn_editor3_mv(svn_editor3_t *editor,
   return svn_error_trace(err);
 }
 
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
 svn_error_t *
 svn_editor3_res(svn_editor3_t *editor,
                 svn_editor3_peg_path_t from_loc,
@@ -239,6 +244,7 @@ svn_editor3_res(svn_editor3_t *editor,
   svn_pool_clear(editor->scratch_pool);
   return svn_error_trace(err);
 }
+#endif
 
 svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
@@ -573,7 +579,11 @@ wrap_mk(void *baton,
 
 static svn_error_t *
 wrap_cp(void *baton,
+#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+        svn_editor3_txn_path_t from_loc,
+#else
         svn_editor3_peg_path_t from_loc,
+#endif
         svn_editor3_txn_path_t parent_loc,
         const char *new_name,
         apr_pool_t *scratch_pool)
@@ -599,6 +609,7 @@ wrap_mv(void *baton,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
 static svn_error_t *
 wrap_res(void *baton,
          svn_editor3_peg_path_t from_loc,
@@ -612,6 +623,7 @@ wrap_res(void *baton,
                           from_loc, parent_loc, new_name));
   return SVN_NO_ERROR;
 }
+#endif
 
 static svn_error_t *
 wrap_rm(void *baton,
@@ -760,7 +772,9 @@ svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
     wrap_mk,
     wrap_cp,
     wrap_mv,
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
     wrap_res,
+#endif
     wrap_rm,
     wrap_put,
     wrap_add,
