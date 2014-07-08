@@ -120,7 +120,7 @@ Candidate changes:
    Justification:
      Resolves a case of creating invalid working copy state.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1590751
    Use empty, rather than NULL, config if default is unreadable.
