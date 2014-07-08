@@ -1001,7 +1001,7 @@ svn_client_import5(const char *path,
     {
       return svn_error_compose_create(
                     err,
-                    editor->abort_edit(edit_baton, iterpool));
+                    editor->abort_edit(edit_baton, scratch_pool));
     }
 
   return SVN_NO_ERROR;
