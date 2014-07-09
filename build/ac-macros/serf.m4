@@ -98,7 +98,7 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
     CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/$serf_major"
     AC_CHECK_HEADERS(serf.h,[
       save_ldflags="$LDFLAGS"
-      LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
+      LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
       AC_CHECK_LIB($serf_major, serf_context_create,[
         AC_TRY_COMPILE([
 #include <stdlib.h>
@@ -121,7 +121,7 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
       SVN_SERF_LIBS="$serf_prefix/lib/lib$serf_major.la"
     else
       SVN_SERF_LIBS="-l$serf_major"
-      LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
+      LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
     fi
   fi
 ])
