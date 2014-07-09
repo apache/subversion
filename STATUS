@@ -220,14 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1596866
-   Fix another instance of issue #3014, "svn log | head" should not
-   print "Write error: Broken pipe"
-   Justification:
-     Minor annoyance, already fixed for other cases.
-   Votes:
-     +1: stsp, ivan, philip
-
  * r1594794, r1594814, r1594834, r1595061
    Fix the notify_func callbacks in Python bindings.
    Justification:
