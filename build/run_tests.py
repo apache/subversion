@@ -189,7 +189,8 @@ class TestHarness:
     self.memcached_server = memcached_server
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
-    self.skip_c_tests = not self.base_url.startswith('file://')
+    self.skip_c_tests = (self.base_url
+                          and not self.base_url.startswith('file://'))
 
   def run(self, list):
     '''Run all test programs given in LIST. Print a summary of results, if
