@@ -189,12 +189,23 @@ class TestHarness:
     self.memcached_server = memcached_server
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
+    self.skip_c_tests = not self.base_url.startswith('file://')
 
   def run(self, list):
     '''Run all test programs given in LIST. Print a summary of results, if
        there is a log file. Return zero iff all test programs passed.'''
     self._open_log('w')
     failed = 0
+
+    # Only run the C tests when testing ra_local
+    if self.skip_c_tests:
+      filtered_list = []
+      for cnt, prog in enumerate(list):
+        progpath, nums = self._split_nums(prog)
+        if not progpath.endswith('.py'):
+          continue
+        filtered_list.append(prog)
+      list = filtered_list
 
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
@@ -578,6 +589,12 @@ class TestHarness:
 
     return failed
 
+  def _split_nums(self, prog):
+    test_nums = None
+    if '#' in prog:
+      prog, test_nums = prog.split('#')
+    return prog, test_nums
+
   def _run_test(self, prog, test_nr, total_tests):
     "Run a single test. Return the test's exit code."
 
@@ -586,10 +603,7 @@ class TestHarness:
     else:
       log = sys.stdout
 
-    test_nums = None
-    if '#' in prog:
-      prog, test_nums = prog.split('#')
-
+    prog, test_nums = self._split_nums(prog)
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
