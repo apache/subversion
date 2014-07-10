@@ -128,7 +128,7 @@ class TestHarness:
                milestone_filter=None, set_log_level=None, ssl_cert=None,
                http_proxy=None, http_proxy_username=None,
                http_proxy_password=None, exclusive_wc_locks=None,
-               memcached_server=None):
+               memcached_server=None, skip_c_tests=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -189,8 +189,7 @@ class TestHarness:
     self.memcached_server = memcached_server
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
-    self.skip_c_tests = (self.base_url
-                          and not self.base_url.startswith('file://'))
+    self.skip_c_tests = (not not skip_c_tests)
 
   def run(self, list):
     '''Run all test programs given in LIST. Print a summary of results, if
@@ -683,6 +682,7 @@ def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
+                            'skip-c-tests', 'skip-C-tests',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel=', 'config-file=',
@@ -698,13 +698,15 @@ def main():
     print(__doc__)
     sys.exit(2)
 
-  base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
-    server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert, http_proxy, http_proxy_username, \
-    http_proxy_password, exclusive_wc_locks, memcached_server = \
-            None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None, None, None, None, None, None
+  base_url, fs_type, verbose, cleanup, skip_c_tests, enable_sasl, \
+    http_library, server_minor_version, fsfs_sharding, fsfs_packing, \
+    parallel, config_file, log_to_stdout, list_tests, mode_filter, \
+    milestone_filter, set_log_level, ssl_cert, http_proxy, \
+    http_proxy_username, http_proxy_password, exclusive_wc_locks, \
+    memcached_server = \
+            None, None, None, None, None, None, None, None, None, None, \
+            None, None, None, None, None, None, None, None, None, None, \
+            None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -722,6 +724,8 @@ def main():
       verbose = 1
     elif opt in ['-c', '--cleanup']:
       cleanup = 1
+    elif opt in ['--skip-c-tests', '--skip-C-tests']:
+      skip_c_tests = 1
     elif opt in ['--enable-sasl']:
       enable_sasl = 1
     elif opt in ['--parallel']:
@@ -770,7 +774,8 @@ def main():
                    http_proxy_username=http_proxy_username,
                    http_proxy_password=http_proxy_password,
                    exclusive_wc_locks=exclusive_wc_locks,
-                   memcached_server=memcached_server)
+                   memcached_server=memcached_server,
+                   skip_c_tests=skip_c_tests)
 
   failed = th.run(args[2:])
   if failed:

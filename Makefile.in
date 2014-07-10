@@ -525,6 +525,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(BASE_URL)" != ""; then                                  \
 	    flags="--url $(BASE_URL) $$flags";                               \
 	  fi;                                                                \
+	  if test "$(SKIP_C_TESTS)" != ""; then                              \
+	    flags="--skip-c-tests $$flags";                                  \
+	  fi;                                                                \
 	  if test "$(FS_TYPE)" != ""; then                                   \
 	    flags="--fs-type $(FS_TYPE) $$flags";                            \
 	  fi;                                                                \
