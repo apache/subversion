@@ -60,13 +60,14 @@
 
 /* TODO
  *
+ * ### For changes inside a copied subtree, the calls to the "open dir"
+ *     and "open file" Ev1 methods may be passing the wrong revision
+ *     number: see comment in apply_change().
+ *
  * ### Have we got our rel-paths in order? Ev1, Ev3 and callbacks may
  *     all expect different paths. 'repos_relpath' or relative to
  *     eb->base_relpath? Leading slash (unimplemented 'send_abs_paths'
  *     feature), etc.
- *
- * ### Prop-fetch callback fails to use the copy-from source for a child
- *     of a copy: see drive_ev1_props().
  *
  * ### May be tidier for OPEN_ROOT_FUNC callback (see open_root_ev3())
  *     not to actually open the root in advance, but instead just to
@@ -102,15 +103,16 @@ typedef struct change_node_t
 
   svn_node_kind_t kind;  /* the NEW kind of this node  */
 
-  /* We need two revisions: one to specify the revision we are altering,
-     and a second to specify the revision to delete/replace. These are
-     mutually exclusive, but they need to be separate to ensure we don't
-     confuse the operation on this node. For example, we may delete a
-     node and replace it we use DELETING for REPLACES_REV, and ignore
-     the value placed into CHANGING when properties were set/changed
-     on the new node. Or we simply change a node (setting CHANGING),
-     and DELETING remains SVN_INVALID_REVNUM, indicating we are not
-     attempting to replace a node.  */
+  /* We may need to specify the revision we are altering or the revision
+     to delete or replace. These are mutually exclusive, but are separate
+     for clarity.
+
+     If ACTION is 'delete', DELETING_REV is the revision to delete and
+     CHANGING_REV is SVN_INVALID_REVNUM as any replacement is either a
+     plain add (no base rev) or a copy (with any changes being based on
+     COPYFROM_REV). If ACTION is 'none' then CHANGING_REV is the base
+     revision of the change and DELETING_REV is SVN_INVALID_REVNUM.
+     If ACTION is 'add', both are SVN_INVALID_REVNUM. */
   svn_revnum_t changing_rev;
   svn_revnum_t deleting_rev;
 
@@ -474,67 +476,132 @@ open_root_ev3(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Return the path of the nearest restructure operation in CHANGES that
+ * encloses (or is equal to) RELPATH. Return NULL if the nearest
+ * restructure operation is not a copy.
+ *
+ * Ignore changes whose restructure action is 'none'.
+ */
+static const char *
+find_enclosing_copy(apr_hash_t *changes,
+                    const char *relpath,
+                    apr_pool_t *result_pool)
+{
+  while (relpath)
+    {
+      const change_node_t *change = svn_hash_gets(changes, relpath);
+
+      if (change)
+        {
+          if (change->copyfrom_path)
+            return relpath;
+          if (change->action != RESTRUCTURE_NONE)
+            return NULL;
+        }
+      relpath = svn_relpath_dirname(relpath, result_pool);
+    }
+
+  return NULL;
+}
+
+/* Set *BASE_PROPS to the 'base' properties, against which any changes
+ * will be described, for the changed path described in CHANGES at
+ * REPOS_RELPATH.
+ *
+ * For a copied path, including a copy child path, fetch from the copy
+ * source path. For a plain add, return an empty set. For a delete,
+ * return NULL.
+ */
+static svn_error_t *
+fetch_base_props(apr_hash_t **base_props,
+                 apr_hash_t *changes,
+                 const char *repos_relpath,
+                 svn_delta_fetch_props_func_t fetch_props_func,
+                 void *fetch_props_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  const change_node_t *change = svn_hash_gets(changes, repos_relpath);
+  const char *source_path = NULL;
+  svn_revnum_t source_rev;
+
+  if (change->action == RESTRUCTURE_DELETE)
+    {
+      *base_props = NULL;
+    }
+
+  else if (change->action == RESTRUCTURE_ADD && ! change->copyfrom_path)
+    {
+      *base_props = apr_hash_make(result_pool);
+    }
+  else if (change->copyfrom_path)
+    {
+      source_path = change->copyfrom_path;
+      source_rev = change->copyfrom_rev;
+    }
+  else /* RESTRUCTURE_NONE */
+    {
+      /* It's an edit, but possibly to a copy child. Discover if it's a
+         copy child, & find the copy-from source. */
+
+      const char *copy_path
+        = find_enclosing_copy(changes, repos_relpath, scratch_pool);
+
+      if (copy_path)
+        {
+          const change_node_t *enclosing_copy = svn_hash_gets(changes, copy_path);
+          const char *remainder = svn_relpath_skip_ancestor(copy_path, repos_relpath);
+
+          source_path = svn_relpath_join(enclosing_copy->copyfrom_path,
+                                         remainder, scratch_pool);
+          source_rev = enclosing_copy->copyfrom_rev;
+        }
+      else
+        {
+          /* It's a plain edit (not a copy child path). */
+          source_path = repos_relpath;
+          source_rev = change->changing_rev;
+        }
+    }
+
+  if (source_path)
+    {
+      SVN_ERR(fetch_props_func(base_props, fetch_props_baton,
+                               source_path, source_rev,
+                               result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Send property changes to Ev1 for the CHANGE at REPOS_RELPATH.
  *
  * Ev1 requires exactly one prop-change call for each prop whose value
  * has changed. Therefore we *have* to fetch the original props from the
- * peg revision and calculate the changes.
- *
- * ### BUG: For a child-of-copy, the 'copyfrom_*' fields are not currently
- *     set, and so we will diff against the wrong source. Either set the
- *     fields whenever recording a change inside a copy, but that would
- *     trigger an unnecessary nested copy; or here go looking for if we're
- *     inside a copy whenever we need to locate the 'source' properties.
+ * repository, provide them as OLD_PROPS, and calculate the changes.
  */
 static svn_error_t *
 drive_ev1_props(const char *repos_relpath,
                 const change_node_t *change,
+                apr_hash_t *old_props,
                 const svn_delta_editor_t *deditor,
                 void *node_baton,
-                svn_delta_fetch_props_func_t fetch_props_func,
-                void *fetch_props_baton,
                 apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *old_props;
   apr_array_header_t *propdiffs;
   int i;
 
-  /* If there are no properties to install, then just exit.  */
+  SVN_ERR_ASSERT(change->action != RESTRUCTURE_DELETE);
+
+  /* If there are no property changes, then just exit. */
   if (change->props == NULL)
     return SVN_NO_ERROR;
-
-  if (change->copyfrom_path)
-    {
-      /* The pristine properties are from the copy/move source.  */
-      SVN_ERR(fetch_props_func(&old_props, fetch_props_baton,
-                               change->copyfrom_path,
-                               change->copyfrom_rev,
-                               scratch_pool, iterpool));
-    }
-  else if (change->action == RESTRUCTURE_ADD)
-    {
-      /* Locally-added nodes have no pristine properties.
-
-         Note: we can use iterpool; this hash only needs to survive to
-         the propdiffs call, and there are no contents to preserve.  */
-      old_props = apr_hash_make(iterpool);
-    }
-  else
-    {
-      /* Fetch the pristine properties for whatever we're editing.  */
-      SVN_ERR(fetch_props_func(&old_props, fetch_props_baton,
-                               repos_relpath, change->changing_rev,
-                               scratch_pool, iterpool));
-    }
 
   SVN_ERR(svn_prop_diffs(&propdiffs, change->props, old_props, scratch_pool));
 
   /* Apply property changes. These should be changes against the empty set
-     for a new node, or changes against the source node for a copied node.
-
-     ### Are they in fact changes against the appropriate base?
-   */
+     for a new node, or changes against the source node for a copied node. */
   for (i = 0; i < propdiffs->nelts; i++)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
@@ -584,12 +651,17 @@ apply_change(void **dir_baton,
                                          scratch_pool);
   const change_node_t *change = svn_hash_gets(eb->changes, relpath);
   void *file_baton = NULL;
+  apr_hash_t *base_props;
 
   /* The callback should only be called for paths in CHANGES.  */
   SVN_ERR_ASSERT(change != NULL);
 
   /* Typically, we are not creating new directory batons.  */
   *dir_baton = NULL;
+
+  SVN_ERR(fetch_base_props(&base_props, eb->changes, relpath,
+                           eb->fetch_props_func, eb->fetch_props_baton,
+                           scratch_pool, scratch_pool));
 
   /* Are we editing the root of the tree?  */
   if (parent_baton == NULL)
@@ -599,10 +671,8 @@ apply_change(void **dir_baton,
 
       /* Only property edits are allowed on the root.  */
       SVN_ERR_ASSERT(change->action == RESTRUCTURE_NONE);
-      SVN_ERR(drive_ev1_props(relpath, change,
-                              eb->deditor, *dir_baton,
-                              eb->fetch_props_func, eb->fetch_props_baton,
-                              scratch_pool));
+      SVN_ERR(drive_ev1_props(relpath, change, base_props,
+                              eb->deditor, *dir_baton, scratch_pool));
 
       /* No further action possible for the root.  */
       return SVN_NO_ERROR;
@@ -677,8 +747,14 @@ apply_change(void **dir_baton,
                                       copyfrom_url, copyfrom_rev,
                                       result_pool, &file_baton));
     }
-  else
+  else /* RESTRUCTURE_NONE */
     {
+      /* ### The code that inserts a "plain edit" change record sets
+         'changing_rev' to the peg rev of the pegged part of the path,
+         even when the full path refers to a child of a copy. Should we
+         instead be using the copy source rev here, in that case? (Like
+         when we fetch the base properties.) */
+
       if (change->kind == svn_node_dir)
         SVN_ERR(eb->deditor->open_directory(ev1_relpath, parent_baton,
                                             change->changing_rev,
@@ -691,15 +767,11 @@ apply_change(void **dir_baton,
 
   /* Apply any properties in CHANGE to the node.  */
   if (change->kind == svn_node_dir)
-    SVN_ERR(drive_ev1_props(relpath, change,
-                            eb->deditor, *dir_baton,
-                            eb->fetch_props_func, eb->fetch_props_baton,
-                            scratch_pool));
+    SVN_ERR(drive_ev1_props(relpath, change, base_props,
+                            eb->deditor, *dir_baton, scratch_pool));
   else
-    SVN_ERR(drive_ev1_props(relpath, change,
-                            eb->deditor, file_baton,
-                            eb->fetch_props_func, eb->fetch_props_baton,
-                            scratch_pool));
+    SVN_ERR(drive_ev1_props(relpath, change, base_props,
+                            eb->deditor, file_baton, scratch_pool));
 
   if (change->text_stream)
     {
@@ -995,7 +1067,13 @@ editor3_put(void *baton,
 
   /* look up the 'change' record; this may be a new or an existing record */
   SVN_ERR(insert_change(&change, eb->changes, txnpath, RESTRUCTURE_NONE));
-  change->changing_rev = loc.peg.rev; /* this is unused for a plain-add node */
+  /* The revision number that this change is based on is the peg rev for
+     a simple change. For a plain add it is unused. For a copy ...
+
+     ### For a copied path, and/or a change inside a copied subtree, should
+     we be using the copy-from rev instead? See comment in apply_change().
+   */
+  change->changing_rev = loc.peg.rev;
   change->props = new_content->props;
   change->text_stream = new_content->stream;
   change->text_checksum = new_content->checksum;
