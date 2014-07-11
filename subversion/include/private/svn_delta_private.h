@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_editor.h"
+#include "svn_editor3.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,6 +101,60 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                              void *fetch_base_baton,
                              struct svn_delta__extra_baton *exb,
                              apr_pool_t *pool);
+
+/* Return an Ev3 editor in *EDITOR_P which will drive the Ev1 delta
+ * editor DEDITOR/DEDIT_BATON.
+ *
+ * This editor buffers all the changes and then drives the Ev1 when the
+ * returned editor's "close" method is called.
+ *
+ * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
+ * relative path within the repository of the root directory of the edit.
+ * (An Ev1 edit must be rooted at a directory, not at a file.)
+ *
+ * OPEN_ROOT_FUNC can be used to enable a more exact round-trip conversion
+ * from an Ev1 drive to Ev3 and back to Ev1. If OPEN_ROOT_FUNC is not
+ * null, set *OPEN_ROOT_FUNC to a callback that the Ev3 driver may call to
+ * provide the "base revision" of the root directory, even if it is not
+ * going to modify that directory. (If it does modify it, then it will
+ * pass in the appropriate base revision at that time.) If OPEN_ROOT_FUNC
+ * is null or the driver does not call the callback, then the Ev1
+ * open_root() method will be called with SVN_INVALID_REVNUM as the base
+ * revision parameter.
+ *
+ * FETCH_KIND_FUNC / FETCH_KIND_BATON: A callback by which the shim may
+ * determine the kind of a path. This is called for a copy source or move
+ * source node, passing the Ev3 relpath and the specific copy-from
+ * revision.
+ *
+ * FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback by which the shim may
+ * determine the existing properties on a path. This is called for a copy
+ * source or move source node or a modified node, but not for a simple
+ * add, passing the Ev3 relpath and the specific revision.
+ *
+ * CANCEL_FUNC / CANCEL_BATON: The usual cancellation callback; folded
+ * into the produced editor. May be NULL/NULL if not wanted.
+ *
+ * Allocate the new editor in RESULT_POOL, which may become large and must
+ * live for the lifetime of the edit. Use SCRATCH_POOL for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_delta__ev3_from_delta_for_commit(
+                        svn_editor3_t **editor_p,
+                        svn_delta__start_edit_func_t *open_root_func,
+                        const svn_delta_editor_t *deditor,
+                        void *dedit_baton,
+                        const char *repos_root,
+                        const char *base_relpath,
+                        svn_delta_fetch_kind_func_t fetch_kind_func,
+                        void *fetch_kind_baton,
+                        svn_delta_fetch_props_func_t fetch_props_func,
+                        void *fetch_props_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** Read the txdelta window header from @a stream and return the total
     length of the unparsed window data in @a *window_len. */
