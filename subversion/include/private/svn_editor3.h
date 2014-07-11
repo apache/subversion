@@ -64,6 +64,19 @@ extern "C" {
 
 /*
  * ===================================================================
+ * Versioning Model Assumed
+ * ===================================================================
+ *
+ *   - per-node, copying-is-branching
+ *   - copying is independent per node: a copy-child is not detectably
+ *     "the same copy" as its parent, it's just copied at the same time
+ *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
+ *   - a node-rev's versioned state consists of:
+ *        its tree linkage (parent node-branch identity, name)
+ *        its content (props, text, link-target)
+ *   - resurrection is supported
+ *
+ * ===================================================================
  * Possible contexts (uses) for an editor
  * ===================================================================
  *
@@ -556,17 +569,6 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  * Editor for Commit (incremental tree changes; path-based addressing)
  * ===================================================================
  *
- * Versioning model assumed:
- *
- *   - per-node, copying-is-branching
- *   - copying is independent per node: a copy-child is not detectably
- *     "the same copy" as its parent, it's just copied at the same time
- *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
- *   - a node-rev's versioned state consists of:
- *        its tree linkage (parent node-branch identity, name)
- *        its content (props, text, link-target)
- *   - resurrection is supported
- *
  * Edit Operations:
  *
  *   - mk   kind                dir-location[1]  new-name[2]
@@ -825,17 +827,6 @@ svn_editor3_put(svn_editor3_t *editor,
  * ========================================================================
  * Editor for Commit (independent per-node changes; node-id addressing)
  * ========================================================================
- *
- * Versioning model assumed:
- *
- *   - per-node, copying-is-branching
- *   - copying is independent per node: a copy-child is not detectably
- *     "the same copy" as its parent, it's just copied at the same time
- *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
- *   - a node-rev's versioned state consists of:
- *        its tree linkage (parent node-branch identity, name)
- *        its content (props, text, link-target)
- *   - resurrection is supported
  *
  * Edit Operations:
  *
@@ -1316,7 +1307,8 @@ struct svn_editor3_node_content_t
   svn_editor3_peg_path_t ref;
 
   /* Properties (for all node kinds).
-   * Maps (const char *) name -> (svn_string_t) value. */
+   * Maps (const char *) name -> (svn_string_t) value.
+   * An empty hash means no properties. (SHOULD NOT be NULL.) */
   apr_hash_t *props;
 
   /* Text checksum (only for a file; otherwise SHOULD be NULL). */
