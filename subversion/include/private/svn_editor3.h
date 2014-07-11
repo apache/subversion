@@ -47,6 +47,19 @@ extern "C" {
  * ### Under construction. Currently, two kinds of editor interface are
  *     declared within the same "svn_editor3_t" framework. This is for
  *     experimentation, and not intended to stay that way.
+ *
+ * TODO:
+ *
+ *   - Consider edits rooted at a sub-path of the repository. At present,
+ *     the editor is designed to be rooted at the repository root.
+ *
+ *   - Unify the "txn path" reference used in the first design and the
+ *     "local node-branch id" used in the second design. They are pretty
+ *     much the same thing: both provide a locally unique id for a node in
+ *     the edit. The "txn path" reference additionally provides a peg rev
+ *     for OOD checking, which is provided separately in the second design.
+ *     Are the two designs explicit and consistent in where a peg rev is
+ *     provided for the OOD check?
  */
 
 /*
@@ -455,7 +468,7 @@ extern "C" {
  *
  * ### Is copy-from-this-revision needed?
  */
-#define SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+/*#define SVN_EDITOR3_WITH_COPY_FROM_THIS_REV*/
 
 /*
  * ===================================================================
@@ -481,17 +494,23 @@ extern "C" {
  */
 typedef struct svn_editor3_t svn_editor3_t;
 
-/** A location in the current transaction (when @a rev == -1) or in
- * a revision (when @a rev != -1). */
+/** A location in a committed revision.
+ *
+ * @a rev shall not be #SVN_INVALID_REVNUM unless the interface using this
+ * type specifically allows it and defines its meaning. */
 typedef struct svn_editor3_peg_path_t
 {
   svn_revnum_t rev;
   const char *relpath;
 } svn_editor3_peg_path_t;
 
-/** A reference to a node in a txn. If it refers to a node created in
- * the txn, @a relpath specifies the one or more components that are
- * newly created; otherwise @a relpath should be empty. */
+/** A reference to a node in a txn.
+ *
+ * @a peg gives a pegged location and @a peg.rev shall not be
+ * #SVN_INVALID_REVNUM. @a relpath shall not be null. If @a relpath is
+ * empty then @a peg identifies the node, otherwise @a relpath specifies
+ * the one or more components that are newly created (includes children
+ * of a copy). */
 typedef struct svn_editor3_txn_path_t
 {
   svn_editor3_peg_path_t peg;
@@ -552,9 +571,9 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *
  *   - mk   kind                dir-location[1]  new-name[2]
  *   - cp   ^/from-path@rev[3]  dir-location[1]  new-name[2]
- * #ifdef WITH_COPY_FROM_THIS_REV
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *   - cp   from-path[4]        dir-location[1]  new-name[2]
- * #endif
+ * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *   - mv   location[1]         dir-location[1]  new-name[2]
  *   - res  ^/from-path@rev[3]  dir-location[1]  new-name[2]
  *   - rm                       pegged-path[1]
@@ -693,14 +712,14 @@ svn_editor3_mk(svn_editor3_t *editor,
  * If @a from_loc is a location in a committed revision, the default
  * content of each node is the content of the corresponding source node.
  *
- * #ifdef WITH_COPY_FROM_THIS_REV
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  * If @a from_loc is a location in the current txn, make a copy from that
  * subtree in the the txn, which when committed will refer to the
  * committed revision. The tree structure is taken from the current state
  * of the txn, whereas the default content of each node is the FINAL
  * content of the corresponding source node as committed, even if a "put"
  * operation is received for the source node after this copy operation.
- * #endif
+ * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
  * The content of each node MAY be changed by a "put" operation.
  *
@@ -780,7 +799,7 @@ svn_editor3_res(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
-               svn_editor3_peg_path_t loc);
+               svn_editor3_txn_path_t loc);
 
 /** Set the content of the node-branch identified by @a loc.
  *
@@ -878,6 +897,10 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Set the content to @a new_content.
  *
+ * @note The @a local_nbid has meaning only within this edit. The server
+ * must create a new node, and MUST NOT match local_nbid with any other
+ * node that may already exist or that may be created by another edit.
+ *
  * @see #svn_editor3_t
  */
 svn_error_t *
@@ -888,22 +911,29 @@ svn_editor3_add(svn_editor3_t *editor,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content);
 
-/** Create a copy of an existing or new node, and optionally change its
- * content.
+/** Create a new node-branch that is copied (branched) from a pre-existing
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
+ * node-branch, with the same or different content.
  *
  * Assign the target node a locally unique node-branch-id, @a local_nbid,
  * with which it can be referenced within this edit.
  *
- * Copy from the source node at @a src_revision, @a src_nbid. If
- * @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
+ * Copy from the source node at @a src_revision, @a src_nbid.
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
+ * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described.
  *   ### See note on copy_tree().
+ * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
  * Set the target node's parent and name to @a new_parent_nbid and
  * @a new_name. Set the target node's content to @a new_content.
  *
  * @note This copy is not recursive. Children may be copied separately if
  * required.
+ *
+ * @note The @a local_nbid has meaning only within this edit. The server
+ * must create a new node, and MUST NOT match local_nbid with any other
+ * node that may already exist or that may be created by another edit.
  *
  * @see svn_editor3_copy_tree(), #svn_editor3_t
  */
@@ -916,16 +946,20 @@ svn_editor3_copy_one(svn_editor3_t *editor,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content);
 
-/** Create a copy of an existing or new subtree. Each node in the source
- * subtree will be copied (branched) to the same relative path within the
- * target subtree. The nodes created by this copy cannot be modified or
- * addressed within this edit.
+/** Create a copy of a pre-existing
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
+ * subtree, with the same content and tree structure.
+ *
+ * Each node in the source subtree will be copied (branched) to the same
+ * relative path within the target subtree. The node-branches created by
+ * this copy cannot be modified or addressed within this edit.
  *
  * Set the target root node's parent and name to @a new_parent_nbid and
  * @a new_name.
  *
- * Copy from the source node at @a src_revision, @a src_nbid. If
- * @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
+ * Copy from the source node at @a src_revision, @a src_nbid.
+ * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
+ * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described. In this case the subtree copied is
  * the FINAL subtree as committed, regardless of the order in which the
  * edit operations are described.
@@ -934,6 +968,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  *       possible that a later edit might be performed on the txn?
  *       And how might we apply this principle to a non-commit editor
  *       such as a WC update?
+ * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
  * The content of each node copied from an existing revision is the content
  * of the source node. The content of each node copied from this revision
@@ -1093,7 +1128,7 @@ typedef svn_error_t *(*svn_editor3_cb_res_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_rm_t)(
   void *baton,
-  svn_editor3_peg_path_t loc,
+  svn_editor3_txn_path_t loc,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_put(), #svn_editor3_t
@@ -1208,6 +1243,8 @@ typedef struct svn_editor3_cb_funcs_t
 /** Allocate an #svn_editor3_t instance from @a result_pool, store
  * @a *editor_funcs, @a editor_baton, @a cancel_func and @a cancel_baton
  * in the new instance and return it in @a *editor.
+ *
+ * @a cancel_func / @a cancel_baton may be NULL / NULL if not wanted.
  *
  * @a scratch_pool is used for temporary allocations (if any). Note that
  * this is NOT the same @a scratch_pool that is passed to callback functions.

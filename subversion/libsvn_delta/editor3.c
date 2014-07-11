@@ -248,7 +248,7 @@ svn_editor3_res(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
-               svn_editor3_peg_path_t loc)
+               svn_editor3_txn_path_t loc)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -627,7 +627,7 @@ wrap_res(void *baton,
 
 static svn_error_t *
 wrap_rm(void *baton,
-        svn_editor3_peg_path_t loc,
+        svn_editor3_txn_path_t loc,
         apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
