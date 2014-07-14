@@ -108,6 +108,18 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
  * This editor buffers all the changes and then drives the Ev1 when the
  * returned editor's "close" method is called.
  *
+ * This editor converts moves into copy-and-delete. It presently makes a
+ * one-way (lossy) conversion.
+ *
+ *   TODO: Option to pass the 'move' information through as some sort of
+ *   metadata so that it can be preserved in an Ev3-Ev1-Ev3 round-trip
+ *   conversion.
+ *     - Use 'entry-props'?
+ *     - Send copy-and-delete with copy-from-rev = -1?
+ *
+ * This editor implements the "incremental changes" variant of the Ev3
+ * commit editor interface.
+ *
  * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
  * relative path within the repository of the root directory of the edit.
  * (An Ev1 edit must be rooted at a directory, not at a file.)
