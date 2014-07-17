@@ -639,6 +639,7 @@ read_lock_cache(svn_membuffer_t *cache)
     if (status)
       return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
   }
+#  endif
 #endif
   return SVN_NO_ERROR;
 }
