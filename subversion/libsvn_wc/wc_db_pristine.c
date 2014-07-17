@@ -717,8 +717,6 @@ remove_file(const char *file_abspath,
   file_abspath = temp_abspath;
 #endif
 
-  SVN_ERR(svn_io_set_file_read_write(file_abspath, ignore_enoent,
-                                     scratch_pool));
   SVN_ERR(svn_io_remove_file2(file_abspath, ignore_enoent, scratch_pool));
 
   return SVN_NO_ERROR;
