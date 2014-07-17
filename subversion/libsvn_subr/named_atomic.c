@@ -197,8 +197,8 @@ struct shared_data_t
  */
 struct mutex_t
 {
-  /* Inter-process sync. is handled by through lock file. */
-  apr_file_t *lock_file;
+  /* Inter-process sync. is handled by through a lock file. */
+  const char *lock_name;
 
   /* Pool to be used with lock / unlock functions */
   apr_pool_t *pool;
@@ -276,10 +276,23 @@ lock(struct mutex_t *mutex)
 {
   svn_error_t *err;
 
-  /* Get lock on the filehandle. */
+  /* Intra-process lock */
   SVN_ERR(svn_mutex__lock(thread_mutex));
-  err = svn_io_lock_open_file(mutex->lock_file, TRUE, FALSE, mutex->pool);
 
+  /* Inter-process lock. */
+  err = svn_io_file_lock2(mutex->lock_name, TRUE, FALSE, mutex->pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files anyway.
+         Create it and try again. */
+      svn_error_clear(err);
+      err = NULL;
+
+      SVN_ERR(svn_io_file_create_empty(mutex->lock_name, mutex->pool));
+      SVN_ERR(svn_io_file_lock2(mutex->lock_name, TRUE, FALSE, mutex->pool));
+    }
+
+  /* Don't leave us in a semi-locked state ... */
   return err
     ? svn_mutex__unlock(thread_mutex, err)
     : err;
@@ -292,36 +305,9 @@ lock(struct mutex_t *mutex)
 static svn_error_t *
 unlock(struct mutex_t *mutex, svn_error_t * outer_err)
 {
-  svn_error_t *unlock_err
-      = svn_io_unlock_open_file(mutex->lock_file, mutex->pool);
-  return svn_mutex__unlock(thread_mutex,
-                           svn_error_compose_create(outer_err,
-                                                    unlock_err));
+  svn_pool_clear(mutex->pool);
+  return svn_mutex__unlock(thread_mutex, outer_err);
 }
-
-#if APR_HAS_MMAP
-/* The last user to close a particular namespace should also remove the
- * lock file.  Failure to do so, however, does not affect further uses
- * of the same namespace.
- */
-static apr_status_t
-delete_lock_file(void *arg)
-{
-  struct mutex_t *mutex = arg;
-  const char *lock_name = NULL;
-
-  /* locks have already been cleaned up. Simply close the file */
-  apr_status_t status = apr_file_close(mutex->lock_file);
-
-  /* Remove the file from disk. This will fail if there ares still other
-   * users of this lock file, i.e. namespace. */
-  apr_file_name_get(&lock_name, mutex->lock_file);
-  if (lock_name)
-    apr_file_remove(lock_name, mutex->pool);
-
-  return status;
-}
-#endif /* APR_HAS_MMAP */
 
 /* Validate the ATOMIC parameter, i.e it's address.  Correct code will
  * never need this but if someone should accidentally to use a NULL or
@@ -411,29 +397,18 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
    */
   svn_atomic_namespace__t *new_ns = apr_pcalloc(result_pool, sizeof(**ns));
 
-  /* construct the names of the system objects that we need
+  /* construct the name of the system objects that we need
    */
   shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, SVN_VA_NULL);
-  lock_name = apr_pstrcat(subpool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
+  lock_name = apr_pstrcat(result_pool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
 
   /* initialize the lock objects
    */
   SVN_ERR(svn_atomic__init_once(&mutex_initialized, init_thread_mutex, NULL,
                                 result_pool));
 
-  new_ns->mutex.pool = result_pool;
-  SVN_ERR(svn_io_file_open(&new_ns->mutex.lock_file, lock_name,
-                           APR_READ | APR_WRITE | APR_CREATE,
-                           APR_OS_DEFAULT,
-                           result_pool));
-
-  /* Make sure the last user of our lock file will actually remove it.
-   * Please note that only the last file handle being closed will actually
-   * remove the underlying file (see docstring for apr_file_remove).
-   */
-  apr_pool_cleanup_register(result_pool, &new_ns->mutex,
-                            delete_lock_file,
-                            apr_pool_cleanup_null);
+  new_ns->mutex.pool = svn_pool_create(result_pool);
+  new_ns->mutex.lock_name = lock_name;
 
   /* Prevent concurrent initialization.
    */
