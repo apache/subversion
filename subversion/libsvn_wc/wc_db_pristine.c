@@ -335,6 +335,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     apr_finfo_t finfo;
     SVN_ERR(svn_stream__install_get_info(&finfo, install_stream, APR_FINFO_SIZE,
                                          scratch_pool));
+    SVN_ERR(svn_io_set_file_read_write(pristine_abspath, TRUE, scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                         TRUE, scratch_pool));
 
@@ -344,6 +345,8 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
     SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+    SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));
   }
 
   return SVN_NO_ERROR;
@@ -714,6 +717,8 @@ remove_file(const char *file_abspath,
   file_abspath = temp_abspath;
 #endif
 
+  SVN_ERR(svn_io_set_file_read_write(file_abspath, ignore_enoent,
+                                     scratch_pool));
   SVN_ERR(svn_io_remove_file2(file_abspath, ignore_enoent, scratch_pool));
 
   return SVN_NO_ERROR;
