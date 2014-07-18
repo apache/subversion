@@ -359,10 +359,6 @@ def set_changed_path_list(sbox, revision, changes):
     body_len = long(header.split(' ')[1])
 
   else:
-    # we will invalidate the l2p index but that's ok for the
-    # kind of tests we run here. The p2l index remains valid
-    # because the offset of the last item does not change
-
     # read & parse revision file footer
     footer_length = ord(contents[length-1]);
     footer = contents[length - footer_length - 1:length-1]

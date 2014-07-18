@@ -652,9 +652,9 @@ proppatch_walker(void *baton,
   if (wb->filter != filter_all_props)
     {
       if (wb->filter == filter_props_with_old_value && ! have_old_val)
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
       if (wb->filter == filter_props_without_old_value && have_old_val)
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
     }
   if (wb->deleting)
     val = NULL;
@@ -2211,6 +2211,10 @@ abort_edit(void *edit_baton,
     {
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
+
+  /* Don't delete again if somebody aborts twice */
+  ctx->activity_url = NULL;
+  ctx->txn_url = NULL;
 
   return SVN_NO_ERROR;
 }

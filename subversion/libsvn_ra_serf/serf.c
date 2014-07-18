@@ -255,12 +255,8 @@ load_config(svn_ra_serf__session_t *session,
                                SERF_LOG_INFO));
 #endif
 
-  if (config)
-    server_group = svn_config_find_group(config,
-                                         session->session_url.hostname,
-                                         SVN_CONFIG_SECTION_GROUPS, pool);
-  else
-    server_group = NULL;
+  server_group = svn_auth_get_parameter(session->wc_callbacks->auth_baton,
+                                        SVN_AUTH_PARAM_SERVER_GROUP);
 
   if (server_group)
     {
@@ -270,9 +266,6 @@ load_config(svn_ra_serf__session_t *session,
                                   session->using_compression));
       svn_config_get(config, &timeout_str, server_group,
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
-
-      svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                             SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
       /* Load the group proxy server settings, overriding global
          settings.  We intentionally ignore 'http-proxy-exceptions'

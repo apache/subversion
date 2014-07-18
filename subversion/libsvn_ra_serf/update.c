@@ -118,11 +118,11 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", /*"?bc-url",*/
+    FALSE, { "name", "?copyfrom-path", "?copyfrom-rev", /*"?bc-url",*/
               NULL }, TRUE },
 
   { ADD_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", /*"?bc-url",*/
+    FALSE, { "name", "?copyfrom-path", "?copyfrom-rev", /*"?bc-url",*/
               NULL }, TRUE },
 
   { OPEN_DIR, S_, "open-file", OPEN_FILE,
@@ -132,12 +132,12 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev",
-             "?sha1-checksum", /*"?bc-url",*/ NULL }, TRUE },
+    FALSE, { "name", "?copyfrom-path", "?copyfrom-rev",
+             "?sha1-checksum", NULL }, TRUE },
 
   { ADD_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev",
-             "?sha1-checksum", /*"?bc-url",*/ NULL }, TRUE },
+    FALSE, { "name", "?copyfrom-path", "?copyfrom-rev",
+             "?sha1-checksum", NULL }, TRUE },
 
   { OPEN_DIR, S_, "delete-entry", DELETE_ENTRY,
     FALSE, { "?rev", "name", NULL }, TRUE },

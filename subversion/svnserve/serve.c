@@ -2939,7 +2939,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *unlock_tokens;
   int i;
   apr_pool_t *subpool;
-  svn_error_t *err = SVN_NO_ERROR, *write_err;
+  svn_error_t *err = SVN_NO_ERROR, *write_err = SVN_NO_ERROR;
   apr_hash_t *targets = apr_hash_make(pool);
   apr_hash_t *authz_results = apr_hash_make(pool);
   apr_hash_index_t *hi;
