@@ -226,10 +226,12 @@ notify_body(struct notify_baton *nb,
     path_local = n->url;
   else
     {
+      /* Skip the path prefix in N, if supplied, or else the path prefix
+         in NB (which was set to the current working directory). */
       if (n->path_prefix)
         path_local = svn_cl__local_style_skip_ancestor(n->path_prefix, n->path,
                                                        pool);
-      else /* skip nb->path_prefix, if it's non-null */
+      else
         path_local = svn_cl__local_style_skip_ancestor(nb->path_prefix, n->path,
                                                        pool);
     }
