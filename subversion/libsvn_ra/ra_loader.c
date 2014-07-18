@@ -264,7 +264,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
   svn_config_t *servers = NULL;
-  const char *server_group;
+  const char *server_group = NULL;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
   svn_error_t *err;
@@ -428,6 +428,10 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
       if (! store_auth_creds)
         svn_auth_set_parameter(callbacks->auth_baton,
                                SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+      if (server_group)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_SERVER_GROUP, server_group);
     }
 
   /* Find the library. */

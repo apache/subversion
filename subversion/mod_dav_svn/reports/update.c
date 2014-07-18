@@ -317,7 +317,6 @@ add_helper(svn_boolean_t is_dir,
 {
   item_baton_t *child;
   update_ctx_t *uc = parent->uc;
-  const char *bc_url = NULL;
 
   child = make_child_baton(parent, path, pool);
   child->added = TRUE;
@@ -341,6 +340,8 @@ add_helper(svn_boolean_t is_dir,
         {
           /* we send baseline-collection urls when we add a directory */
           svn_revnum_t revision;
+          const char *bc_url;
+
           revision = dav_svn__get_safe_cr(child->uc->rev_root, real_path,
                                           pool);
           bc_url = dav_svn__build_uri(child->uc->resource->info->repos,
@@ -360,6 +361,8 @@ add_helper(svn_boolean_t is_dir,
 
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
+
+          bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
         }
       else
         {
@@ -372,9 +375,6 @@ add_helper(svn_boolean_t is_dir,
               apr_psprintf(pool, " sha1-checksum=\"%s\"",
                            svn_checksum_to_cstring(sha1_checksum, pool));
         }
-
-      if (bc_url)
-        bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 
       if (copyfrom_path == NULL)
         {
