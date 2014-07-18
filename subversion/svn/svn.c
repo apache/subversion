@@ -1302,9 +1302,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  'empty', the target path is printed on the same line before each value.\n"
      "\n"
      "  By default, an extra newline is printed after the property value so that\n"
-     "  the output looks pretty.  With a single TARGET and depth 'empty', you can\n"
-     "  use the --strict option to disable this (useful when redirecting a binary\n"
-     "  property value to a file, for example).\n"),
+     "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
+     "  --show-inherited-props, you can use the --strict option to disable this\n"
+     "  (useful when redirecting a binary property value to a file, for example).\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
