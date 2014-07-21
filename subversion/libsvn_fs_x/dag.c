@@ -1120,7 +1120,7 @@ svn_fs_x__dag_serialize(void **data,
 
   /* The deserializer will use its own pool. */
   svn_temp_serializer__set_null(context,
-				(const void * const *)&node->node_pool);
+                                (const void * const *)&node->node_pool);
 
   /* serialize other sub-structures */
   svn_fs_x__id_serialize(context, (const svn_fs_id_t **)&node->id);

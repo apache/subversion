@@ -45,7 +45,7 @@ dump_r0_mergeinfo_notifier(void *baton,
 {
 }
 
-/* Regression test for part the 'dump' part of issue #4476 "Mergeinfo
+/* Regression test for the 'dump' part of issue #4476 "Mergeinfo
    containing r0 makes svnsync and svnadmin dump fail". */
 static svn_error_t *
 test_dump_r0_mergeinfo(const svn_test_opts_t *opts,

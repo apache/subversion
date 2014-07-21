@@ -139,16 +139,16 @@ datasource_to_index(svn_diff_datasource_e datasource)
  * *LENGTH.  The actual bytes read are stored in *LENGTH on return.
  */
 static APR_INLINE svn_error_t *
-read_chunk(apr_file_t *file, const char *path,
+read_chunk(apr_file_t *file,
            char *buffer, apr_off_t length,
-           apr_off_t offset, apr_pool_t *pool)
+           apr_off_t offset, apr_pool_t *scratch_pool)
 {
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   return svn_io_file_read_full2(file, buffer, (apr_size_t) length,
-                                NULL, NULL, pool);
+                                NULL, NULL, scratch_pool);
 }
 
 
@@ -288,7 +288,7 @@ increment_chunk(struct file_info *file, apr_pool_t *pool)
       file->chunk++;
       length = file->chunk == last_chunk ?
         offset_in_chunk(file->size) : CHUNK_SIZE;
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          length, chunk_to_offset(file->chunk),
                          pool));
       file->endp = file->buffer + length;
@@ -315,7 +315,7 @@ decrement_chunk(struct file_info *file, apr_pool_t *pool)
     {
       /* Read previous chunk and reset pointers. */
       file->chunk--;
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          CHUNK_SIZE, chunk_to_offset(file->chunk),
                          pool));
       file->endp = file->buffer + CHUNK_SIZE;
@@ -575,7 +575,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           /* There is at least more than 1 chunk,
              so allocate full chunk size buffer */
           file_for_suffix[i].buffer = apr_palloc(pool, CHUNK_SIZE);
-          SVN_ERR(read_chunk(file_for_suffix[i].file, file_for_suffix[i].path,
+          SVN_ERR(read_chunk(file_for_suffix[i].file,
                              file_for_suffix[i].buffer, length[i],
                              chunk_to_offset(file_for_suffix[i].chunk),
                              pool));
@@ -649,10 +649,9 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; can_read_word && i < file_len; i++)
-        can_read_word = can_read_word
-                        && (  (file_for_suffix[i].curp + 1
-                                 - sizeof(apr_uintptr_t))
-                            > min_curp[i]);
+        can_read_word = ((file_for_suffix[i].curp + 1 - sizeof(apr_uintptr_t))
+                         > min_curp[i]);
+
       while (can_read_word)
         {
           apr_uintptr_t chunk;
@@ -667,8 +666,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
             break;
 
           for (i = 1, is_match = TRUE; is_match && i < file_len; i++)
-            is_match = is_match
-                       && (   chunk
+            is_match = (chunk
                            == *(const apr_uintptr_t *)
                                     (file_for_suffix[i].curp + 1
                                        - sizeof(apr_uintptr_t)));
@@ -805,7 +803,7 @@ datasources_open(void *baton,
       file->size = finfo[i].size;
       length[i] = finfo[i].size > CHUNK_SIZE ? CHUNK_SIZE : finfo[i].size;
       file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length[i]);
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          length[i], 0, file_baton->pool));
       file->endp = file->buffer + length[i];
       file->curp = file->buffer;
@@ -973,7 +971,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
          When changing things here, make sure the whitespace settings are
          applied, or we might not reach the exact suffix boundary as token
          boundary. */
-      SVN_ERR(read_chunk(file->file, file->path,
+      SVN_ERR(read_chunk(file->file,
                          curp, length,
                          chunk_to_offset(file->chunk),
                          file_baton->pool));
@@ -1115,7 +1113,6 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                 COMPARE_CHUNK_SIZE : raw_length[i];
 
               SVN_ERR(read_chunk(file[i]->file,
-                                 file[i]->path,
                                  bufp[i], length[i], offset[i],
                                  file_baton->pool));
               offset[i] += length[i];
