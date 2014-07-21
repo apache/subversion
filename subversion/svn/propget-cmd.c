@@ -431,7 +431,8 @@ svn_cl__propget(apr_getopt_t *os,
          sure we have only a single target, and that we're not being
          asked to recurse on that target. */
       if (opt_state->strict
-          && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)))
+          && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)
+              || (opt_state->show_inherited_props)))
         return svn_error_create
           (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
            _("Strict output of property values only available for single-"

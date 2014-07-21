@@ -159,8 +159,8 @@ compare_and_verify(svn_boolean_t *modified_p,
     }
   else
     {
-	  /* We don't use APR-level buffering because the comparison function
-	   * will do its own buffering. */
+      /* We don't use APR-level buffering because the comparison function
+       * will do its own buffering. */
       apr_file_t *file;
       SVN_ERR(svn_io_file_open(&file, versioned_file_abspath, APR_READ,
                                APR_OS_DEFAULT, scratch_pool));

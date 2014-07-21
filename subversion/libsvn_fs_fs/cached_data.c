@@ -3060,41 +3060,54 @@ block_read_contents(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* For the given FILE in FS and wrapping FILE_STREAM return the stream
- * object in *STREAM that has the lowest performance overhead for reading
- * and parsing the item addressed by ENTRY.  Use POOL for allocations.
+/* For the given REV_FILE in FS, in *STREAM return a stream covering the
+ * item specified by ENTRY.  Also, verify the item's content by low-level
+ * checksum.  Allocate the result in POOL.
  */
 static svn_error_t *
-auto_select_stream(svn_stream_t **stream,
-                   svn_fs_t *fs,
-                   svn_fs_fs__revision_file_t *rev_file,
-                   svn_fs_fs__p2l_entry_t* entry,
-                   apr_pool_t *pool)
+read_item(svn_stream_t **stream,
+          svn_fs_t *fs,
+          svn_fs_fs__revision_file_t *rev_file,
+          svn_fs_fs__p2l_entry_t* entry,
+          apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_uint32_t digest;
+  svn_checksum_t *expected, *actual;
+  apr_uint32_t plain_digest;
 
-  /* Item parser might be crossing block boundaries? */
-  if (((entry->offset + entry->size + SVN__LINE_CHUNK_SIZE) ^ entry->offset)
-      >= ffd->block_size)
-    {
-      /* Parsing items that cross block boundaries will cause the file
-         buffer to be re-read and misaligned.  So, read the whole block
-         into memory - it must fit anyways since the parsed object will
-         be even larger.
-       */
-      svn_stringbuf_t *text = svn_stringbuf_create_ensure(entry->size, pool);
-      text->len = entry->size;
-      text->data[text->len] = 0;
-      SVN_ERR(svn_io_file_read_full2(rev_file->file, text->data, text->len,
-                                     NULL, NULL, pool));
-      *stream = svn_stream_from_stringbuf(text, pool);
-    }
-  else
-    {
-      *stream = rev_file->stream;
-    }
+  /* Read item into string buffer. */
+  svn_stringbuf_t *text = svn_stringbuf_create_ensure(entry->size, pool);
+  text->len = entry->size;
+  text->data[text->len] = 0;
+  SVN_ERR(svn_io_file_read_full2(rev_file->file, text->data, text->len,
+                                 NULL, NULL, pool));
 
-  return SVN_NO_ERROR;
+  /* Return (construct, calculate) stream and checksum. */
+  *stream = svn_stream_from_stringbuf(text, pool);
+  digest = svn__fnv1a_32x4(text->data, text->len);
+
+  /* Checksums will match most of the time. */
+  if (entry->fnv1_checksum == digest)
+    return SVN_NO_ERROR;
+
+  /* Construct proper checksum objects from their digests to allow for
+   * nice error messages. */
+  plain_digest = htonl(entry->fnv1_checksum);
+  expected = svn_checksum__from_digest_fnv1a_32x4(
+                (const unsigned char *)&plain_digest, pool);
+  plain_digest = htonl(digest);
+  actual = svn_checksum__from_digest_fnv1a_32x4(
+                (const unsigned char *)&plain_digest, pool);
+
+  /* Construct the full error message with all the info we have. */
+  return svn_checksum_mismatch_err(expected, actual, pool,
+                 _("Low-level checksum mismatch while reading\n"
+                   "%s bytes of meta data at offset %s "
+                   "for item %s in revision %ld"),
+                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->size),
+                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->offset),
+                 apr_psprintf(pool, "%" APR_UINT64_T_FMT, entry->item.number),
+                 entry->item.revision);
 }
 
 /* If not already cached or if MUST_READ is set, read the changed paths
@@ -3127,16 +3140,13 @@ block_read_changes(apr_array_header_t **changes,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(auto_select_stream(&stream, fs, rev_file, entry,
-                             scratch_pool));
+  SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
 
   /* read changes from revision file */
-
   SVN_ERR(svn_fs_fs__read_changes(changes, stream, result_pool,
                                   scratch_pool));
 
   /* cache for future reference */
-
   if (ffd->changes_cache)
     SVN_ERR(svn_cache__set(ffd->changes_cache, &entry->item.revision,
                            *changes, scratch_pool));
@@ -3178,11 +3188,9 @@ block_read_noderev(node_revision_t **noderev_p,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(auto_select_stream(&stream, fs, rev_file, entry,
-                             scratch_pool));
+  SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
 
   /* read node rev from revision file */
-
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
                                   result_pool, scratch_pool));
 

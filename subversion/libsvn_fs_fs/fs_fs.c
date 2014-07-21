@@ -1483,7 +1483,6 @@ write_revision_zero(svn_fs_t *fs,
       svn_fs_fs__p2l_entry_t *entry;
       svn_fs_fs__revision_file_t *rev_file;
       const char *l2p_proto_index, *p2l_proto_index;
-      fs_fs_data_t *ffd = fs->fsap_data;
 
       /* Write a skeleton r0 with no indexes. */
       SVN_ERR(svn_io_file_create(path_revision_zero,
@@ -1523,13 +1522,6 @@ write_revision_zero(svn_fs_t *fs,
       entry->item.revision = 0;
       entry->item.number = SVN_FS_FS__ITEM_INDEX_CHANGES;
       APR_ARRAY_PUSH(index_entries, svn_fs_fs__p2l_entry_t *) = entry;
-
-      /* If the config file has not been initialized, yet, set some defaults
-         here for r0.  r0 is so small we could do with any non-zero values. */
-      if (ffd->l2p_page_size == 0)
-        ffd->l2p_page_size = 0x2000;
-      if (ffd->p2l_page_size == 0)
-        ffd->p2l_page_size = 0x10000;
 
       /* Now re-open r0, create proto-index files from our entries and
          rewrite the index section of r0. */
@@ -1664,8 +1656,6 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
-  SVN_ERR(write_revision_zero(fs, pool));
-
   /* Create the fsfs.conf file if supported.  Older server versions would
      simply ignore the file but that might result in a different behavior
      than with the later releases.  Also, hotcopy would ignore, i.e. not
@@ -1677,6 +1667,9 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
+
+  /* Add revision 0. */
+  SVN_ERR(write_revision_zero(fs, pool));
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)

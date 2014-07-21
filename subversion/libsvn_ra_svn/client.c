@@ -798,9 +798,10 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
                                 apr_hash_t *config,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sess_pool = svn_pool_create(pool);
+  apr_pool_t *sess_pool = svn_pool_create(result_pool);
   svn_ra_svn__session_baton_t *sess;
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
@@ -812,7 +813,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
-  parse_tunnel(url, &tunnel, pool);
+  parse_tunnel(url, &tunnel, result_pool);
 
   /* Use the default tunnel implementation if we got a tunnel name,
      but either do not have tunnel handler callbacks installed, or
@@ -823,7 +824,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
               && !callbacks->check_tunnel_func(callbacks->tunnel_baton,
                                                tunnel))))
     SVN_ERR(find_tunnel_agent(tunnel, uri.hostinfo, &tunnel_argv, config,
-                              pool));
+                              result_pool));
   else
     tunnel_argv = NULL;
 
@@ -845,54 +846,30 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_open_pool(svn_ra_session_t *session,
+                                     const char **corrected_url,
+                                     const char *url,
+                                     const svn_ra_callbacks2_t *callbacks,
+                                     void *callback_baton,
+                                     apr_hash_t *config,
+                                     apr_pool_t *pool)
+{
+  return ra_svn_open(session, corrected_url, url, callbacks, callback_baton,
+                     config, pool, pool);
+}
+
 static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
                                        svn_ra_session_t *old_session,
                                        const char *new_session_url,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sess_pool = svn_pool_create(result_pool);
   svn_ra_svn__session_baton_t *old_sess = old_session->priv;
-  svn_ra_svn__session_baton_t *new_sess;
-  const char *tunnel, **tunnel_argv;
-  apr_uri_t uri;
-  svn_config_t *cfg, *cfg_client;
-  apr_hash_t *config = old_sess->config;
-  const svn_ra_callbacks2_t *callbacks = old_sess->callbacks;
-  void *callback_baton = old_sess->callbacks_baton;
 
-  SVN_ERR(parse_url(new_session_url, &uri, sess_pool));
-
-  parse_tunnel(new_session_url, &tunnel, result_pool);
-
-  /* Use the default tunnel implementation if we got a tunnel name,
-     but either do not have tunnel handler callbacks installed, or
-     the handlers don't like the tunnel name. */
-  if (tunnel
-      && (!callbacks->open_tunnel_func
-          || (callbacks->check_tunnel_func && callbacks->open_tunnel_func
-              && !callbacks->check_tunnel_func(callbacks->tunnel_baton,
-                                               tunnel))))
-    SVN_ERR(find_tunnel_agent(tunnel, uri.hostinfo, &tunnel_argv,
-                              config,
-                              result_pool));
-  else
-    tunnel_argv = NULL;
-
-  cfg_client = config
-               ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG)
-               : NULL;
-  cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS) : NULL;
-  svn_auth_set_parameter(callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
-  svn_auth_set_parameter(callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
-
-  /* We open the session in a subpool so we can get rid of it if we
-     reparent with a server that doesn't support reparenting. */
-  SVN_ERR(open_session(&new_sess, new_session_url, &uri, tunnel, tunnel_argv,
-                       config, callbacks, callback_baton, sess_pool));
-  new_session->priv = new_sess;
+  SVN_ERR(ra_svn_open(new_session, NULL, new_session_url,
+                      old_sess->callbacks, old_sess->callbacks_baton,
+                      old_sess->config,
+                      result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2885,7 +2862,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
   ra_svn_get_schemes,
-  ra_svn_open,
+  ra_svn_open_pool,
   ra_svn_dup_session,
   ra_svn_reparent,
   ra_svn_get_session_url,

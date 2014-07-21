@@ -1063,6 +1063,13 @@ public class SVNRemoteTests extends SVNTests
                 return this.relpath.equals(that.relpath);
             }
 
+            @Override
+            public int hashCode()
+            {
+                return this.relpath.hashCode();
+            }
+
+            @Override
             public int compareTo(StatInfo that)
             {
                 return this.relpath.compareTo(that.relpath);
