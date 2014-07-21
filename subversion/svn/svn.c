@@ -191,7 +191,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
-  {"password",      opt_auth_password, 1, N_("specify a password ARG")},
+  {"password",      opt_auth_password, 1,
+                    N_("specify a password ARG (caution: on many operating\n"
+                       "                             "
+                       "systems, other users will be able to see this)")},
   {"extensions",    'x', 1,
                     N_("Specify differencing options for external diff or\n"
                        "                             "
