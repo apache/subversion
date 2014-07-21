@@ -201,6 +201,9 @@ Candidate changes:
    Votes:
      +1: stsp
 
+Veto-blocked changes:
+=====================
+
  * r1611379
    Fix revprop caching initialization delays for ra_serf on Windows.
    Justification:
@@ -210,9 +213,8 @@ Candidate changes:
      pattern that we use for FSFS-internal locks.
    Votes:
      +1: stefan2
-   
-Veto-blocked changes:
-=====================
+     -1: brane (See http://markmail.org/message/i7crecxlppidbiw3
+                Shouldn't be too hard to fix.)
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
