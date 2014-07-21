@@ -201,10 +201,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
-Veto-blocked changes:
-=====================
-
- * r1611379
+ * r1611379, r1612405
    Fix revprop caching initialization delays for ra_serf on Windows.
    Justification:
      Without this patch, even small checkouts may take 20 to 40
@@ -212,9 +209,10 @@ Veto-blocked changes:
      initialization guard to the same "never delete the lock file"
      pattern that we use for FSFS-internal locks.
    Votes:
-     +1: stefan2
-     -1: brane (See http://markmail.org/message/i7crecxlppidbiw3
-                Shouldn't be too hard to fix.)
+     +1: stefan2, brane
+
+Veto-blocked changes:
+=====================
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
