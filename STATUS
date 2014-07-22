@@ -208,8 +208,14 @@ Candidate changes:
      seconds longer.  This patch switches the named atomics SHM
      initialization guard to the same "never delete the lock file"
      pattern that we use for FSFS-internal locks.
+   Notes:
+     Branch is needed since SVN_VA_NULL is not available in 1.8.x.
+     Same goes for svn_io_file_create_empty.
+   Branch:
+     ^/subversion/branches/1.8.x-r1611379
    Votes:
-     +1: stefan2, brane
+     +1: stefan2
+     +1: brane (without r1612534 on the integration branch)
 
 Veto-blocked changes:
 =====================
