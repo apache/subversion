@@ -2103,7 +2103,7 @@ svn_io__file_lock_autocreate(const char *lock_file,
 
       /* This file creation is racy.
          We don't care as long as file gets created at all. */
-      err = svn_io_file_create_empty(lock_file, pool);
+      err = svn_io_file_create(lock_file, "", pool);
       if (err && APR_STATUS_IS_EEXIST(err->apr_err))
         {
           svn_error_clear(err);
