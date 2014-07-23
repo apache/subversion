@@ -130,7 +130,10 @@ static struct x509_test cert_tests[] = {
     "rm9TEaOHMy6vNrdpOZKpwXPxYqsQxMLpen9D64t/3P6hsV5FMQTaxSFhszidG44t"
     "xaU4O0BOq4x//THCWguMxzO5RxW/V8wI/rkpvhAH1wljHTusnsAZea4PpstZ7+W7"
     "43GME1DwjYdUK9HhqRNrDkiJLox4Tmegw9A7m4XLt4zu",
-    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, CN=www.example.com",
+    "C=GR, ST=\xce\x91\xcf\x84\xcf\x84\xce\xb9\xce\xba\xce\xae, "
+    "L=\xce\x91\xce\xb8\xce\xae\xce\xbd\xce\xb1, "
+    "O=\xcf\x80\xce\xb1\xcf\x81\xce\xac\xce\xb4\xce\xb5\xce\xb9\xce\xb3"
+    "\xce\xbc\xce\xb1, CN=www.example.com",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-02T18:36:10.000000Z",
     "2015-07-02T18:36:10.000000Z",
@@ -171,7 +174,14 @@ static struct x509_test cert_tests[] = {
     "of78/0NJD27OwjW0ruZAifF5CAR7mhy3NOMARpE2kqZk5695OF+QCahe00Y/9ulz"
     "sCjgjpCUYv87OTbBGC5XGRd/ZopTRqtBVxpEHX/fux5/wqxBawrCuQsVw1Kfw0Ur"
     "30aYWLsOsRwhiQkukjQfcMra1AHLujWaAHuLIDls1ozc8xo=",
-    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, OU=𝟶𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿, CN=www.example.com",
+    "C=GR, ST=\xce\x91\xcf\x84\xcf\x84\xce\xb9\xce\xba\xce\xae, "
+    "L=\xce\x91\xce\xb8\xce\xae\xce\xbd\xce\xb1, "
+    "O=\xcf\x80\xce\xb1\xcf\x81\xce\xac\xce\xb4\xce\xb5\xce\xb9\xce\xb3"
+    "\xce\xbc\xce\xb1, "
+    "OU=\xf0\x9d\x9f\xb6\xf0\x9d\x9f\xb7\xf0\x9d\x9f\xb8\xf0\x9d\x9f\xb9"
+    "\xf0\x9d\x9f\xba\xf0\x9d\x9f\xbb\xf0\x9d\x9f\xbc\xf0\x9d\x9f\xbd"
+    "\xf0\x9d\x9f\xbe\xf0\x9d\x9f\xbf, "
+    "CN=www.example.com",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T22:37:30.000000Z",
     "2015-07-22T22:37:30.000000Z",
@@ -201,7 +211,10 @@ static struct x509_test cert_tests[] = {
     "z8+oOO9CxaEjzRoCawf2+jaajXTSTDXBgIx1t6bJMAS6S6RKPaCketyAmpsOZVBS"
     "VtBVfVIOB2zFqs6iqkXtdiOXWlZ0DBQRX0G1VD5G80RlZXs0yEfufCwLUl/TyOhM"
     "WisUSEOzd4RlbsBj30JQkVG9+jXb2KChPkiMpg0tFi8HU3s=",
-    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, CN=www.example.com",
+    "C=GR, ST=\xce\x91\xcf\x84\xcf\x84\xce\xb9\xce\xba\xce\xae, "
+    "L=\xce\x91\xce\xb8\xce\xae\xce\xbd\xce\xb1, "
+    "O=\xcf\x80\xce\xb1\xcf\x81\xce\xac\xce\xb4\xce\xb5\xce\xb9\xce\xb3"
+    "\xce\xbc\xce\xb1, CN=www.example.com",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T23:02:09.000000Z",
     "2015-07-22T23:02:09.000000Z",
@@ -235,7 +248,8 @@ static struct x509_test cert_tests[] = {
     "Tv/3jVBVIZwCW67SnFQ+vqEzaM4Ns2TBodlVqB1w0enPpow8bNnUwElLQJx3GXnl"
     "z0JTpA6AwIRCF8n+VJgNN218fo2t2vvDDW/cZ+XMXzGNVhAqQ1F8B36esxy3P8+o"
     "Bcwx241dxeGSYFHerqrTJIU=",
-    "C=NO, ST=Møre og Romsdal, L=Ålesund, O=døme, CN=www.example.com",
+    "C=NO, ST=M\xc3\xb8re og Romsdal, L=\xc3\x85lesund, O=d\xc3\xb8me, "
+    "CN=www.example.com",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T23:44:18.000000Z",
     "2015-07-22T23:44:18.000000Z",
