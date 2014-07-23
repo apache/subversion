@@ -349,58 +349,6 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   return SVN_NO_ERROR;
 }
 
-/* If NEW_YOUNGEST is younger than *DST_YOUNGEST, update the 'current' file
- * in DST_FS and set *DST_YOUNGEST to NEW_YOUNGEST.  DST_FS is expected to
- * be in a new format, i.e. storing only the youngest revision number in
- * the 'current' file.  Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-hotcopy_update_current(svn_revnum_t *dst_youngest,
-                       svn_fs_t *dst_fs,
-                       svn_revnum_t new_youngest,
-                       apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-
-  SVN_ERR_ASSERT(dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
-
-  if (*dst_youngest < new_youngest)
-    {
-      SVN_ERR(svn_fs_fs__write_current(dst_fs, new_youngest,
-                                       0, 0, scratch_pool));
-      *dst_youngest = new_youngest;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* If NEW_YOUNGEST is younger than *DST_YOUNGEST, update the 'current' file
- * in DST_FS and set *DST_YOUNGEST to NEW_YOUNGEST.  DST_FS is expected to
- * be in an old format, i.e. storing the youngest revision and the two next-ID
- * parameters.  Those are updated with NEW_YOUNGEST, NEXT_NODE_ID and
- * NEXT_COPY_ID respectively.  Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-hotcopy_update_current_old(svn_revnum_t *dst_youngest,
-                           svn_fs_t *dst_fs,
-                           svn_revnum_t new_youngest,
-                           apr_uint64_t next_node_id,
-                           apr_uint64_t next_copy_id,
-                           apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-
-  SVN_ERR_ASSERT(dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
-
-  if (*dst_youngest < new_youngest)
-    {
-      SVN_ERR(svn_fs_fs__write_current(dst_fs, new_youngest,
-                                       next_node_id, next_copy_id,
-                                       scratch_pool));
-      *dst_youngest = new_youngest;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Remove FILE in SHARD folder.  Use POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_remove_file(const char *shard,
@@ -582,10 +530,10 @@ remove_folder(const char *path,
  * global next-ID counters.  Use POOL for temporary allocations.
  */
 static svn_error_t *
-hotcopy_revisions(svn_revnum_t *dst_youngest,
-                  svn_fs_t *src_fs,
+hotcopy_revisions(svn_fs_t *src_fs,
                   svn_fs_t *dst_fs,
                   svn_revnum_t src_youngest,
+                  svn_revnum_t dst_youngest,
                   svn_boolean_t incremental,
                   const char *src_revs_dir,
                   const char *dst_revs_dir,
@@ -643,6 +591,8 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
+      svn_revnum_t pack_end_rev;
+
       svn_pool_clear(iterpool);
 
       if (cancel_func)
@@ -654,11 +604,16 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
                                         rev, max_files_per_dir,
                                         iterpool));
 
-      /* If necessary, update 'current' to the most recent packed rev,
-       * so readers can see new revisions which arrived in this pack. */
-      SVN_ERR(hotcopy_update_current(dst_youngest, dst_fs,
-                                     rev + max_files_per_dir - 1,
-                                     iterpool));
+      pack_end_rev = rev + max_files_per_dir - 1;
+
+      /* Whenever this pack did not previously exist in the destination,
+       * update 'current' to the most recent packed rev (so readers can see
+       * new revisions which arrived in this pack). */
+      if (pack_end_rev > dst_youngest)
+        {
+          SVN_ERR(svn_fs_fs__write_current(dst_fs, pack_end_rev, 0, 0,
+                                           iterpool));
+        }
 
       /* Remove revision files which are now packed. */
       if (incremental)
@@ -721,9 +676,17 @@ hotcopy_revisions(svn_revnum_t *dst_youngest,
                                       rev, max_files_per_dir, 
                                       iterpool));
 
-      /* After completing a full shard, update 'current'. */
-      if (max_files_per_dir && rev % max_files_per_dir == 0)
-        SVN_ERR(hotcopy_update_current(dst_youngest, dst_fs, rev, iterpool));
+      /* Whenever this revision did not previously exist in the destination,
+       * checkpoint the progress via 'current' (do that once per full shard
+       * in order not to slow things down). */
+      if (rev > dst_youngest)
+        {
+          if (max_files_per_dir && (rev % max_files_per_dir == 0))
+            {
+              SVN_ERR(svn_fs_fs__write_current(dst_fs, rev, 0, 0,
+                                               iterpool));
+            }
+        }
     }
   svn_pool_destroy(iterpool);
 
@@ -925,12 +888,11 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * revision number, but also the next-ID counters). */
   if (src_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
-      SVN_ERR(hotcopy_revisions(&dst_youngest, src_fs, dst_fs, src_youngest,
+      SVN_ERR(hotcopy_revisions(src_fs, dst_fs, src_youngest, dst_youngest,
                                 incremental, src_revs_dir, dst_revs_dir,
                                 src_revprops_dir, dst_revprops_dir,
                                 cancel_func, cancel_baton, pool));
-      SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, src_youngest,
-                                     pool));
+      SVN_ERR(svn_fs_fs__write_current(dst_fs, src_youngest, 0, 0, pool));
     }
   else
     {
@@ -938,9 +900,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                     src_revs_dir, dst_revs_dir,
                                     src_revprops_dir, dst_revprops_dir,
                                     cancel_func, cancel_baton, pool));
-      SVN_ERR(hotcopy_update_current_old(&dst_youngest, dst_fs, src_youngest,
-                                         src_next_node_id, src_next_copy_id,
-                                         pool));
+      SVN_ERR(svn_fs_fs__write_current(dst_fs, src_youngest, src_next_node_id,
+                                       src_next_copy_id, pool));
     }
 
   /* Replace the locks tree.
@@ -973,14 +934,14 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   if (dst_ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     {
       /* Copy the rep cache and then remove entries for revisions
-       * younger than the destination's youngest revision. */
+      /* that did not make it into the destination. */
       src_subdir = svn_dirent_join(src_fs->path, REP_CACHE_DB_NAME, pool);
       dst_subdir = svn_dirent_join(dst_fs->path, REP_CACHE_DB_NAME, pool);
       SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
       if (kind == svn_node_file)
         {
           SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
-          SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, dst_youngest, pool));
+          SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, src_youngest, pool));
         }
     }
 
