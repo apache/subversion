@@ -1465,4 +1465,17 @@ svn_cstring__reverse_match_length(const char *a,
   return max_len;
 }
 
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix)
+{
+  apr_size_t len = strlen(prefix);
 
+  if (strncmp(str, prefix, len) == 0)
+    {
+      return str + len;
+    }
+  else
+    {
+      return NULL;
+    }
+}
