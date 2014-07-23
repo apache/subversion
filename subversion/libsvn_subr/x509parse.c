@@ -50,7 +50,11 @@
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_checksum.h"
+#include "svn_utf.h"
+#include "svn_ctype.h"
 #include "svn_x509.h"
+#include "private/svn_utf_private.h"
+#include "private/svn_string_private.h"
 
 #include "x509.h"
 
@@ -552,6 +556,109 @@ x509_skip_ext(const unsigned char **p,
   return SVN_NO_ERROR;
 }
 
+/* Escape all non-ascii characters similar to
+ * svn_xml_fuzzy_escape() and svn_utf_cstring_from_utf8_fuzzy(). 
+ * All of the encoding formats somewhat overlap with ascii (BMPString 
+ * and UniversalString are actually always wider so you'll end up
+ * with a bunch of escaped nul bytes, and T61 ) */
+static const svn_string_t *
+fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
+{
+  const char *end = src->data + src->len;
+  const char *p = src->data, *q;
+  svn_stringbuf_t *outstr;
+  char escaped_char[6]; /* ? \ u u u \0 */
+
+  for (q = p; q < end; q++)
+    {
+      if (!svn_ctype_isascii(*q))
+        break;
+    }
+
+  if (q == end)
+    return src;
+
+  outstr = svn_stringbuf_create_empty(result_pool);
+  while (1)
+    {
+      q = p;
+
+      /* Traverse till either unsafe character or eos. */
+      while (q < end && svn_ctype_isascii(*q))
+        q++;
+
+      /* copy chunk before marker */
+      svn_stringbuf_appendbytes(outstr, p, q - p);
+
+      if (q == end)
+        break;
+
+      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
+                   (unsigned char) *q);
+      svn_stringbuf_appendcstr(outstr, escaped_char);
+
+      p = q + 1;
+    }
+
+  return svn_stringbuf__morph_into_string(outstr);
+}
+
+/* Make a best effort to convert a X.509 name to a UTF-8 encoded
+ * string and return it.  If we can't properly convert just do a
+ * fuzzy conversion so we have something to display. */
+static const svn_string_t *
+x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
+{
+  const svn_string_t *src_string, *utf8_string;
+  svn_error_t *err;
+  const char *frompage;
+
+  src_string = svn_string_ncreate((const char *)name->val.p,
+                                  name->val.len,
+                                  result_pool);
+  switch (name->val.tag)
+    {
+      case ASN1_UTF8_STRING:
+      if (svn_utf__is_valid(src_string->data, src_string->len))
+        return src_string;
+      else
+        /* not a valid UTF-8 string */
+        return fuzzy_escape(src_string, result_pool);
+      break;
+
+      /* Both BMP and UNIVERSAL should always be in Big Endian.
+       * But rumor has it that there are certs out there with other
+       * endianess and even Byte Order Marks.  If we actually run
+       * into these, it might make sense to remove the BE on these
+       * frompages. */
+
+      case ASN1_BMP_STRING:
+      frompage = "UCS-2BE";
+      break;
+
+      case ASN1_UNIVERSAL_STRING:
+      frompage = "UCS-4BE";
+      break;
+
+      /* TODO: Handle T61String/TeletexString encoding.
+       * This isn't exactly T.61 despite the name.
+       * See: https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt */
+
+      default:
+      return fuzzy_escape(src_string, result_pool);
+    }
+
+  err = svn_utf_string_to_utf8_ex(&utf8_string, src_string, frompage,
+                                  result_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return fuzzy_escape(src_string, result_pool);
+    }
+
+  return utf8_string;
+}
+
 /*
  * Store the name from dn in printable form into buf,
  * using scratch_pool for any temporary allocations.
@@ -560,13 +667,14 @@ static void
 x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
                   apr_pool_t *scratch_pool)
 {
-  int i;
   const x509_name *name;
   const char *temp;
 
   name = dn;
 
   while (name != NULL) {
+    const svn_string_t *utf8_value;
+
     if (name != dn)
       svn_stringbuf_appendcstr(buf, ", ");
 
@@ -615,13 +723,13 @@ x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
     } else
       svn_stringbuf_appendcstr(buf, "\?\?=");
 
-    for (i = 0; i < name->val.len; i++) {
-      unsigned char c = name->val.p[i];
-      if (c < 32 || c == 127 || (c > 128 && c < 160))
-        svn_stringbuf_appendbyte(buf, '?');
-      else
-        svn_stringbuf_appendbyte(buf, (char) c);
-    }
+    utf8_value = x509name_to_utf8_string(name, scratch_pool);
+    if (utf8_value)
+      svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
+    else
+      /* this should never happen */
+      svn_stringbuf_appendfill(buf, '?', 2);
+
     name = name->next;
   }
 }
