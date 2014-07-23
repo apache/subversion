@@ -730,7 +730,7 @@ convert_string(const svn_string_t **dest,
         *dest = svn_string_dup(src, pool);
     }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *
