@@ -586,6 +586,16 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
 svn_error_t *
 svn_cstring_atoui(unsigned int *n, const char *str);
 
+/**
+ * Skip the common prefix @a prefix from the C string @a str, and return
+ * a pointer to the next character after the prefix.
+ * Return @c NULL if @a str does not start with @a prefix.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix);
+
 /** @} */
 
 /** @} */
