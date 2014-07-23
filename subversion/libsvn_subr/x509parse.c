@@ -349,7 +349,7 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
 }
 
 /* Retrieve the date from the X.509 cert data between *P and END in either
- * UTCTime or GeneralizedTime format (as defined in RFC 5280 § 4.1.2.5.1 and
+ * UTCTime or GeneralizedTime format (as defined in RFC 5280 s. 4.1.2.5.1 and
  * 4.1.2.5.2 respectively) and place the result in WHEN using  SCRATCH_POOL
  * for temporary allocations. */
 static svn_error_t *
