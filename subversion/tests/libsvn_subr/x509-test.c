@@ -108,6 +108,141 @@ static struct x509_test cert_tests[] = {
     "2014-06-27T17:31:51.000000Z",
     "2114-06-03T17:31:51.000000Z",
     "db3a959e145acc2741f9eeecbeabce53cc5b7362" },
+  /* The subject (except for country code) is UTF-8 encoded.
+   * created with openssl using utf8-yes and string_mask=utf8only */
+  { "MIIDrTCCApWgAwIBAgIBATANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJBVTET"
+    "MBEGA1UECBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQ"
+    "dHkgTHRkMB4XDTE0MDcwMjE4MzYxMFoXDTE1MDcwMjE4MzYxMFowcjELMAkGA1UE"
+    "BhMCR1IxFTATBgNVBAgMDM6Rz4TPhM65zrrOrjETMBEGA1UEBwwKzpHOuM6uzr3O"
+    "sTEdMBsGA1UECgwUz4DOsc+BzqzOtM61zrnOs868zrExGDAWBgNVBAMMD3d3dy5l"
+    "eGFtcGxlLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMVPuQPz"
+    "INjsiXl+GeiXMzXV1Bfm8vzbQnMLAFY/ZKKK4gpy58xcNrmur//Fd38naTM/DetO"
+    "PEoDa+vQ48CnUWCDT3CKUA3BnrjtR3/EITC7XRcfk5lyk0IZr9RZB1WedQxK1n5E"
+    "Ecz8EBrm9+1442Nmg/y1F8d/2F2CjKB+PgfOP1WWaIQcsjLsftXec+kGjc34kwbS"
+    "9D9H+bRrPVcOzBZOqC+K0K7MMOxKA5mMi4b/Nlep76gTaUyonclRIADanAyaK5WG"
+    "0IkEI/nxufaP3AcPksCbroWLTkPKIe97Yj6mnzNhK9TA9w5RgdBrjNyfrwUaYiYR"
+    "FxVJN0VrHWSsRnECAwEAAaN7MHkwCQYDVR0TBAIwADAsBglghkgBhvhCAQ0EHxYd"
+    "T3BlblNTTCBHZW5lcmF0ZWQgQ2VydGlmaWNhdGUwHQYDVR0OBBYEFNOobRTPfoWP"
+    "EGgXVkHfwrqz7PVzMB8GA1UdIwQYMBaAFIV8JZkZ88X7MTQSsJ6/qF3KboHKMA0G"
+    "CSqGSIb3DQEBBQUAA4IBAQAam6vJUv6kcWWrEAfdnwwRmmJ4X1Jey3Sp48G35MOE"
+    "KkHtwqbtL+QU1VA2X98bEYobqZinM3e3zrlbpgbe1xoJ00MnT9CgQObXr+cum/Ql"
+    "PwWXB5fK3BrNwqRMRGc9w27FevyFeybdKhc47jEKMOANrB/aziNHaq9gBtU/HZdy"
+    "rm9TEaOHMy6vNrdpOZKpwXPxYqsQxMLpen9D64t/3P6hsV5FMQTaxSFhszidG44t"
+    "xaU4O0BOq4x//THCWguMxzO5RxW/V8wI/rkpvhAH1wljHTusnsAZea4PpstZ7+W7"
+    "43GME1DwjYdUK9HhqRNrDkiJLox4Tmegw9A7m4XLt4zu",
+    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2014-07-02T18:36:10.000000Z",
+    "2015-07-02T18:36:10.000000Z",
+    "b3b9789d8a53868f418619565f6b56af0033bdd3" },
+  /* The issuer and subject (except for the country code) is
+   * UnversalString encoded.  Created with a hacked version of openssl
+   * using utf8=yes and string_mask=MASK:256.  In order for that to 
+   * output UniversalString encoded data you need to change the
+   * DIRSTRING_TYPE in crypto/asn1/asn1.h to be defined as
+   * B_ASN1_DIRECTORYSTRING so that UnviersalString is available to be
+   * used in the DirectoryStrings.  OpenSSL by default avoids
+   * this type (for the reasonable reason that it's wasteful and
+   * UTF-8 can encoded everything it can in the most efficient way).
+   * OU uses the mathematical monospace digits 0-9 to test characters
+   * outside of the range of the Basic Multilingual Plane */
+  { "MIIEnzCCA4egAwIBAgIBATANBgkqhkiG9w0BAQUFADCBqzELMAkGA1UEBhMCQVUx"
+    "MTAvBgNVBAgcKAAAAFMAAABvAAAAbQAAAGUAAAAtAAAAUwAAAHQAAABhAAAAdAAA"
+    "AGUxaTBnBgNVBAocYAAAAEkAAABuAAAAdAAAAGUAAAByAAAAbgAAAGUAAAB0AAAA"
+    "IAAAAFcAAABpAAAAZAAAAGcAAABpAAAAdAAAAHMAAAAgAAAAUAAAAHQAAAB5AAAA"
+    "IAAAAEwAAAB0AAAAZDAeFw0xNDA3MjIyMjM3MzBaFw0xNTA3MjIyMjM3MzBaMIH8"
+    "MQswCQYDVQQGEwJHUjEhMB8GA1UECBwYAAADkQAAA8QAAAPEAAADuQAAA7oAAAOu"
+    "MR0wGwYDVQQHHBQAAAORAAADuAAAA64AAAO9AAADsTExMC8GA1UEChwoAAADwAAA"
+    "A7EAAAPBAAADrAAAA7QAAAO1AAADuQAAA7MAAAO8AAADsTExMC8GA1UECxwoAAHX"
+    "9gAB1/cAAdf4AAHX+QAB1/oAAdf7AAHX/AAB1/0AAdf+AAHX/zFFMEMGA1UEAxw8"
+    "AAAAdwAAAHcAAAB3AAAALgAAAGUAAAB4AAAAYQAAAG0AAABwAAAAbAAAAGUAAAAu"
+    "AAAAYwAAAG8AAABtMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuYUb"
+    "aNt22rsR5Qc/2zsenSvrlbvv1CwwRPNxcWTKdLl4lJEUy5YCnQXIq3qTi+eAFetQ"
+    "MwUOZem6kgNdwmGvCz3lrLwOobd1D5mG9agzKLVUVj72csbNNFzHr8z/7oaHvYYs"
+    "eYxW3oRm6vDYtHw5spXrxTzRIAnG6foxXFYAtDDHQpdjsofxqXO67aUmmGvE5ffX"
+    "gD3dvTvjejzcjjVsLQP/HG4MQOqeIyvyyHg1E3dyOrG+3qR6RN1ZveROdvU38Udm"
+    "s0KSGVX2lDLsUTQSKg5L8CLWDHqgGQWjLZQRgRiKZId/f9ubaJdLN6KfAQ3UvYAP"
+    "bKL5/k2GpsPDE21X0QIDAQABo3sweTAJBgNVHRMEAjAAMCwGCWCGSAGG+EIBDQQf"
+    "Fh1PcGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQUccHhM6C7"
+    "nGMpclkG7YLIRuFueYQwHwYDVR0jBBgwFoAUz0X1b2Ok9MVVzxqxX6MgtTwSKmYw"
+    "DQYJKoZIhvcNAQEFBQADggEBAEpqEa08JkPG+XBlLemnoJsnoaRuQnLZvSCoAwIt"
+    "fugTE8686EigTZyYVFQ+GaI+EqVeiMjpAEhS3IMbhx5VIr61S3Nta2BG9OPjr4Xf"
+    "01oUeh4egL93CpIGNwu6M1SrQv2UVAKTwahxNmNuvx6Ojx5P2tne+KJtRUiwM3dE"
+    "of78/0NJD27OwjW0ruZAifF5CAR7mhy3NOMARpE2kqZk5695OF+QCahe00Y/9ulz"
+    "sCjgjpCUYv87OTbBGC5XGRd/ZopTRqtBVxpEHX/fux5/wqxBawrCuQsVw1Kfw0Ur"
+    "30aYWLsOsRwhiQkukjQfcMra1AHLujWaAHuLIDls1ozc8xo=",
+    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, OU=𝟶𝟷𝟸𝟹𝟺𝟻𝟼𝟽𝟾𝟿, CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2014-07-22T22:37:30.000000Z",
+    "2015-07-22T22:37:30.000000Z",
+    "cfa15310189cf89f1dadc9c989db46f287fff7a7"
+  },
+  /* The issuer and subject (except for the country code) is BMPString
+   * encoded.  Created with openssl using utf8-yes and string_mask=MASK:2048.
+   */
+  { "MIID3zCCAsegAwIBAgIBATANBgkqhkiG9w0BAQUFADBnMQswCQYDVQQGEwJBVTEd"
+    "MBsGA1UECB4UAFMAbwBtAGUALQBTAHQAYQB0AGUxOTA3BgNVBAoeMABJAG4AdABl"
+    "AHIAbgBlAHQAIABXAGkAZABnAGkAdABzACAAUAB0AHkAIABMAHQAZDAeFw0xNDA3"
+    "MjIyMzAyMDlaFw0xNTA3MjIyMzAyMDlaMIGBMQswCQYDVQQGEwJHUjEVMBMGA1UE"
+    "CB4MA5EDxAPEA7kDugOuMRMwEQYDVQQHHgoDkQO4A64DvQOxMR0wGwYDVQQKHhQD"
+    "wAOxA8EDrAO0A7UDuQOzA7wDsTEnMCUGA1UEAx4eAHcAdwB3AC4AZQB4AGEAbQBw"
+    "AGwAZQAuAGMAbwBtMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqzof"
+    "mf9YANAl2I5AcUjfAAJhqc2BL6z6k0J9bWyDL7DZf6AJtD5stRjs8cgiSGfJt9Cg"
+    "YQ0Cvnwz9ztNVXLliMmiJ4V0HzG80GI6SBK0PoCVbddUV/PN7REgPNjTwMYlys5w"
+    "Yt/GR8OJJV+eb02rpAfVigDlh7CFjY/uKMs2ThPi+yQb2V6qxLk3ZKIHh5IbKQjt"
+    "zIX/W1t+hiBjojnuOmhAoEefZ583k7amR5GBZO4GS5Qfj+4kjL5xiwB3bjTC8pnV"
+    "Iv4+mN2F6xKW/9IOWZtdySDADaU2ioyuMDzzjp5N5Nt0ZGhrEG2cDC3CatZaV4U7"
+    "9yBbi6kzlo3fCbCOlQIDAQABo3sweTAJBgNVHRMEAjAAMCwGCWCGSAGG+EIBDQQf"
+    "Fh1PcGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQUNvwKR1v/"
+    "R0FQU1WnzqT3brNxaQQwHwYDVR0jBBgwFoAUSM/JbJVWuYFp+awSOEXZcKn1ddQw"
+    "DQYJKoZIhvcNAQEFBQADggEBABna/SiYMBJvbnI+lj7j8ddSFihaFheqtouxOB2d"
+    "tiVz5mcc5KsAFlkrxt7YcYB7SEc+K28nqGb3bfbZ18JayRBY3JS/h4WGu4eL5XkX"
+    "rceWUy60zF7DHs6p8E8HZVF1CdCC/LXr2BAdYTc/y1f37bLKVFF4mMJMP4b8/nSL"
+    "z8+oOO9CxaEjzRoCawf2+jaajXTSTDXBgIx1t6bJMAS6S6RKPaCketyAmpsOZVBS"
+    "VtBVfVIOB2zFqs6iqkXtdiOXWlZ0DBQRX0G1VD5G80RlZXs0yEfufCwLUl/TyOhM"
+    "WisUSEOzd4RlbsBj30JQkVG9+jXb2KChPkiMpg0tFi8HU3s=",
+    "C=GR, ST=Αττική, L=Αθήνα, O=παράδειγμα, CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2014-07-22T23:02:09.000000Z",
+    "2015-07-22T23:02:09.000000Z",
+    "6e2cd969350979d3741b9abb66c71159a94ff971"
+  },
+#if 0 /* turned off for now because I haven't figured out how to deal with
+         a T.61 encoded certs that have something other than just ASCII */
+  /* The issuer and subject (except for the country code) is T61String
+   * (aka TeletexString) encoded.  Created with openssl using utf8=yes
+   * and string_mask=MASK:4.  Note that the example chosen specifically
+   * includes the Norwegian OE (slashed O) to highlight that this is
+   * not ISO-8859-1.  See the following for the horrible details on
+   * this encoding: https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
+   */
+  { "MIIDnTCCAoWgAwIBAgIBATANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJBVTET"
+    "MBEGA1UECBQKU29tZS1TdGF0ZTEhMB8GA1UEChQYSW50ZXJuZXQgV2lkZ2l0cyBQ"
+    "dHkgTHRkMB4XDTE0MDcyMjIzNDQxOFoXDTE1MDcyMjIzNDQxOFowYjELMAkGA1UE"
+    "BhMCTk8xGDAWBgNVBAgUD034cmUgb2cgUm9tc2RhbDEQMA4GA1UEBxQHxWxlc3Vu"
+    "ZDENMAsGA1UEChQEZPhtZTEYMBYGA1UEAxQPd3d3LmV4YW1wbGUuY29tMIIBIjAN"
+    "BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz8uD5f2KRXvB//mKOpCXM3h/MOjK"
+    "xUgC4TIHi3BmnYR0IDElMPJrC263/eU0hKycyegyMjXkwIN5eEx4/Nl///RrzJBQ"
+    "+uXKfEJ4hTJ5x1uUYxhmtq4djZFxfjFH5yobT/LRDkEw9b/+NiRb30P+WrxhrAKW"
+    "7GRsE2pIdPdbM2IB5v/wORB4TK0kLYkmeEPWNJd63SmX4BEC6dRAaMxLIXKn75r5"
+    "GhMHKbUdt2Yy+5s0JlN9hMWqhnavCmGquzl7y/1E1OOUIm0jhL0sJn6wVTc+UO+Q"
+    "7u/w0xf38J8SU7lW6zbcQyYaSIQCMikgpprUSXdQZZUZGmHS7Gis39SiLwIDAQAB"
+    "o3sweTAJBgNVHRMEAjAAMCwGCWCGSAGG+EIBDQQfFh1PcGVuU1NMIEdlbmVyYXRl"
+    "ZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQUQa2QLy+4QUH8hKNdR2LcvDKYImcwHwYD"
+    "VR0jBBgwFoAUpX6YP04yWqNiziUM7h0KgrRHMF4wDQYJKoZIhvcNAQEFBQADggEB"
+    "AElYUTQp5MOQk+ykIV0MHTw9OsEvLc1ZDmChls5WKYAu6KWgBbcjcTlkTpDlydrO"
+    "6JFxvCCg0K13dYOI3K/O9icGRauIrxrJOTtaIMryj7F51C52TOVPzkjL05eZTh+q"
+    "MmP3KI3uYSpXI6D6RI6hOKIRnFiUOQuXW3I8Z7s03KScBc9PSsVrMBLBz/Vpklaf"
+    "Tv/3jVBVIZwCW67SnFQ+vqEzaM4Ns2TBodlVqB1w0enPpow8bNnUwElLQJx3GXnl"
+    "z0JTpA6AwIRCF8n+VJgNN218fo2t2vvDDW/cZ+XMXzGNVhAqQ1F8B36esxy3P8+o"
+    "Bcwx241dxeGSYFHerqrTJIU=",
+    "C=NO, ST=Møre og Romsdal, L=Ålesund, O=døme, CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2014-07-22T23:44:18.000000Z",
+    "2015-07-22T23:44:18.000000Z",
+    "787d1577ae77b79649d8f99cf4ed58a332dc48da"
+  },
+#endif
   { NULL }
 };
 
@@ -152,6 +287,7 @@ compare_results(struct x509_test *xt,
 {
   const char *v;
 
+#if 1
   v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SUBJECT);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -171,7 +307,7 @@ compare_results(struct x509_test *xt,
                              "Issuer didn't match for cert '%s', "
                              "expected '%s', got '%s'", xt->subject,
                              xt->issuer, v);
-
+#endif
   SVN_ERR(compare_dates(xt->valid_from,
                         svn_hash_gets(certinfo,
                                       SVN_X509_CERTINFO_KEY_VALID_FROM),
