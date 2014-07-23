@@ -560,7 +560,8 @@ x509_skip_ext(const unsigned char **p,
  * svn_xml_fuzzy_escape() and svn_utf_cstring_from_utf8_fuzzy(). 
  * All of the encoding formats somewhat overlap with ascii (BMPString 
  * and UniversalString are actually always wider so you'll end up
- * with a bunch of escaped nul bytes, and T61 ) */
+ * with a bunch of escaped nul bytes, but ideally we don't get here
+ * for those). */
 static const svn_string_t *
 fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
 {
@@ -622,7 +623,8 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       if (svn_utf__is_valid(src_string->data, src_string->len))
         return src_string;
       else
-        /* not a valid UTF-8 string */
+        /* not a valid UTF-8 string, who knows what it is,
+         * so run it through the fuzzy_escape code.  */
         return fuzzy_escape(src_string, result_pool);
       break;
 
@@ -640,10 +642,26 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       frompage = "UCS-4BE";
       break;
 
-      /* TODO: Handle T61String/TeletexString encoding.
-       * This isn't exactly T.61 despite the name.
-       * See: https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt */
+      /* Despite what all the IETF, ISO, ITU bits say everything out
+       * on the Internet that I can find treats this as ISO-8859-1.
+       * Even the name is misleading, it's not actually T.61.  All the
+       * gory details can be found in the Character Sets section of:
+       * https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
+       */
+      case ASN1_T61_STRING:
+      frompage = "ISO-8859-1";
+      break;
 
+      /* This leaves two types out there in the wild.  PrintableString,
+       * which is just a subset of ASCII and IA5 which is ASCII (though
+       * 0x24 '$' and 0x23 '#' may be defined with differnet symbols
+       * depending on the location, in practice it seems everyone just
+       * treats it as ASCII).  Since these are just ASCII run through
+       * the fuzzy_escape code to deal with anything that isn't actually
+       * ASCII.  There shouldn't be any other types here but if we find
+       * a cert with some other cert, the best we can do is the
+       * fuzzy_escape().  Note: Technically IA5 isn't valid in this
+       * context, however in the real world it may pop up. */
       default:
       return fuzzy_escape(src_string, result_pool);
     }

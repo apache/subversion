@@ -207,13 +207,12 @@ static struct x509_test cert_tests[] = {
     "2015-07-22T23:02:09.000000Z",
     "6e2cd969350979d3741b9abb66c71159a94ff971"
   },
-#if 0 /* turned off for now because I haven't figured out how to deal with
-         a T.61 encoded certs that have something other than just ASCII */
   /* The issuer and subject (except for the country code) is T61String
    * (aka TeletexString) encoded.  Created with openssl using utf8=yes
    * and string_mask=MASK:4.  Note that the example chosen specifically
    * includes the Norwegian OE (slashed O) to highlight that this is
-   * not ISO-8859-1.  See the following for the horrible details on
+   * being treated as ISO-8859-1 despite what the X.509 says.
+   * See the following for the horrible details on
    * this encoding: https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
    */
   { "MIIDnTCCAoWgAwIBAgIBATANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJBVTET"
@@ -242,7 +241,6 @@ static struct x509_test cert_tests[] = {
     "2015-07-22T23:44:18.000000Z",
     "787d1577ae77b79649d8f99cf4ed58a332dc48da"
   },
-#endif
   { NULL }
 };
 
@@ -287,7 +285,6 @@ compare_results(struct x509_test *xt,
 {
   const char *v;
 
-#if 1
   v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SUBJECT);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -307,7 +304,7 @@ compare_results(struct x509_test *xt,
                              "Issuer didn't match for cert '%s', "
                              "expected '%s', got '%s'", xt->subject,
                              xt->issuer, v);
-#endif
+
   SVN_ERR(compare_dates(xt->valid_from,
                         svn_hash_gets(certinfo,
                                       SVN_X509_CERTINFO_KEY_VALID_FROM),
