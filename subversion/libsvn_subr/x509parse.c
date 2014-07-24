@@ -556,7 +556,7 @@ x509_skip_ext(const unsigned char **p,
   return SVN_NO_ERROR;
 }
 
-/* Escape all non-ascii characters similar to
+/* Escape all non-ascii or control characters similar to
  * svn_xml_fuzzy_escape() and svn_utf_cstring_from_utf8_fuzzy(). 
  * All of the encoding formats somewhat overlap with ascii (BMPString 
  * and UniversalString are actually always wider so you'll end up
@@ -572,7 +572,7 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
 
   for (q = p; q < end; q++)
     {
-      if (!svn_ctype_isascii(*q))
+      if (!svn_ctype_isascii(*q) || svn_ctype_iscntrl(*q))
         break;
     }
 
@@ -585,7 +585,7 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
       q = p;
 
       /* Traverse till either unsafe character or eos. */
-      while (q < end && svn_ctype_isascii(*q))
+      while (q < end && svn_ctype_isascii(*q) && !svn_ctype_iscntrl(*q))
         q++;
 
       /* copy chunk before marker */
@@ -671,15 +671,8 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
                                   result_pool);
   if (err)
     {
-#ifdef WIN32
-      apr_status_t apr_err = err->apr_err;
-      svn_error_clear(err);
-      return svn_string_create(apr_psprintf(result_pool, "Got an error: %d",
-                                            apr_err), result_pool);
-#else
       svn_error_clear(err);
       return fuzzy_escape(src_string, result_pool);
-#endif
     }
 
   return utf8_string;
