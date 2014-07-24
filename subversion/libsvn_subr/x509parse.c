@@ -628,18 +628,19 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
         return fuzzy_escape(src_string, result_pool);
       break;
 
-      /* Both BMP and UNIVERSAL should always be in Big Endian.
+      /* Both BMP and UNIVERSAL should always be in Big Endian (aka
+       * network byte order).  The IANA character set registry says
+       * these character set names should always mean Big Endian.
        * But rumor has it that there are certs out there with other
        * endianess and even Byte Order Marks.  If we actually run
-       * into these, it might make sense to remove the BE on these
-       * frompages. */
+       * into these, we might need to do something about it. */
 
       case ASN1_BMP_STRING:
-      frompage = "UCS-2BE";
+      frompage = "ISO-10646-UCS-2";
       break;
 
       case ASN1_UNIVERSAL_STRING:
-      frompage = "UCS-4BE";
+      frompage = "ISO-10646-UCS-4";
       break;
 
       /* Despite what all the IETF, ISO, ITU bits say everything out
