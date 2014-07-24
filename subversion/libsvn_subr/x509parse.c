@@ -671,8 +671,15 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
                                   result_pool);
   if (err)
     {
+#ifdef WIN32
+      apr_status_t apr_err = err->apr_err;
+      svn_error_clear(err);
+      return svn_string_create(apr_psprintf(result_pool, "Got an error: %d",
+                                            apr_err), result_pool);
+#else
       svn_error_clear(err);
       return fuzzy_escape(src_string, result_pool);
+#endif
     }
 
   return utf8_string;
