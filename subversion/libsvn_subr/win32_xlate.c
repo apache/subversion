@@ -107,6 +107,20 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
       *page_id_p = CP_UTF8;
       return APR_SUCCESS;
     }
+  else if (!strcmp(page_name, "ISO-10646-UCS-2"))
+    {
+      *page_id_p = 1201; /* UTF-16 Big Endian, strictly speaking it isn't
+                            exactly UCS-2 Big Endian but it's a superset
+                            so it works well enough. */
+      return APR_SUCCESS;
+    }
+  else if (!strcmp(page_name, "ISO-10646-UCS-4"))
+    {
+      *page_id_p = 12001; /* UTF-32 Big Endian, again, it isn't strictly
+                             speaking UCS-4 Big Endian, but it's a superset
+                             so it works well enough. */
+      return APR_SUCCESS;
+    }
 
   /* Use codepage identifier nnn if the codepage name is in the form
      of "CPnnn".
