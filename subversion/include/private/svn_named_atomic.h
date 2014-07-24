@@ -77,6 +77,9 @@ svn_named_atomic__is_efficient(void);
  *
  * The access object will be allocated in @a result_pool and atomics gotten
  * from this object will become invalid when the pool is being cleared.
+ *
+ * @note Although we use shared memory here, the management around it will
+ * take up a few kB of memory per call (until @a result_pool gets cleared).
  */
 svn_error_t *
 svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
