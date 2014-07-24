@@ -214,8 +214,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
-     +1: stefan2
-     +1: brane (without r1612534 on the integration branch)
+     +1: stefan2, brane
 
 Veto-blocked changes:
 =====================
