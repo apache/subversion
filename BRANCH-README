@@ -1,0 +1,3 @@
+This branch (^/subversion/branches/authzperf) will be used to build a better
+search engine. Er ... that is, reimplement svn_authz_t & co. so that it
+allows much faster authz resolving and avoids the many full authz file scans.
