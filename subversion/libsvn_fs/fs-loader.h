@@ -118,6 +118,8 @@ typedef struct fs_library_vtable_t
                           const char *dst_path,
                           svn_boolean_t clean,
                           svn_boolean_t incremental,
+                          svn_fs_hotcopy_notify_t notify_func,
+                          void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_mutex__t *common_pool_lock,

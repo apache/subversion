@@ -2647,6 +2647,240 @@ def verify_quickly(sbox):
     raise svntest.Failure
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_pack)
+def fsfs_hotcopy_progress(sbox):
+  "hotcopy progress reporting"
+
+  # Check how 'svnadmin hotcopy' reports progress for non-incremental
+  # and incremental scenarios.  The progress output can be affected by
+  # the --fsfs-packing option, so skip the test if that is the case.
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip
+
+  # Create an empty repository, configure three files per shard.
+  sbox.build(create_wc=False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  if svntest.main.options.server_minor_version >= 9:
+    format = "7\nlayout sharded 3\naddressing logical 0\n"
+  elif svntest.main.options.server_minor_version < 9:
+    format = "6\nlayout sharded 3\n"
+  else:
+    raise svntest.Failure
+
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
+  format_file.write(format)
+  format_file.close()
+
+  inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
+
+  # Nothing really exciting for the empty repository.
+  expected_full = [
+    "* Copied revision 0.\n"
+    ]
+  expected_incremental = [
+    "* Copied revision 0.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-0')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+  # Commit three revisions.  After this step we have a full shard
+  # (r0, r1, r2) and the second shard (r3) with a single revision.
+  for i in range(3):
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                       '-m', svntest.main.make_log_msg(),
+                                       sbox.repo_url + '/dir-%i' % i)
+  expected_full = [
+    "* Copied revision 0.\n",
+    "* Copied revision 1.\n",
+    "* Copied revision 2.\n",
+    "* Copied revision 3.\n",
+    ]
+  expected_incremental = [
+    "* Copied revision 1.\n",
+    "* Copied revision 2.\n",
+    "* Copied revision 3.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-1')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+  # Pack everything (r3 is still unpacked) and hotcopy again.  In this case,
+  # the --incremental output should track the incoming (r0, r1, r2) pack and
+  # should not mention r3, because it is already a part of the destination
+  # and is *not* a part of the incoming pack.
+  svntest.actions.run_and_verify_svnadmin(None, None, [], 'pack',
+                                          sbox.repo_dir)
+  expected_full = [
+    "* Copied revisions from 0 to 2.\n",
+    "* Copied revision 3.\n",
+    ]
+  expected_incremental = [
+    "* Copied revisions from 0 to 2.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-2')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+  # Fill the second shard, pack again, commit several unpacked revisions
+  # on top of it.  Rerun the hotcopy and check the progress output.
+  for i in range(4, 6):
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                       '-m', svntest.main.make_log_msg(),
+                                       sbox.repo_url + '/dir-%i' % i)
+
+  svntest.actions.run_and_verify_svnadmin(None, None, [], 'pack',
+                                          sbox.repo_dir)
+
+  for i in range(6, 8):
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                       '-m', svntest.main.make_log_msg(),
+                                       sbox.repo_url + '/dir-%i' % i)
+  expected_full = [
+    "* Copied revisions from 0 to 2.\n",
+    "* Copied revisions from 3 to 5.\n",
+    "* Copied revision 6.\n",
+    "* Copied revision 7.\n",
+    ]
+  expected_incremental = [
+    "* Copied revisions from 3 to 5.\n",
+    "* Copied revision 6.\n",
+    "* Copied revision 7.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-3')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_progress_with_revprop_changes(sbox):
+  "incremental hotcopy progress with changed revprops"
+
+  # The progress output can be affected by the --fsfs-packing
+  # option, so skip the test if that is the case.
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip
+
+  # Create an empty repository, commit several revisions and hotcopy it.
+  sbox.build(create_wc=False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  for i in range(6):
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                       '-m', svntest.main.make_log_msg(),
+                                       sbox.repo_url + '/dir-%i' % i)
+  expected_output = [
+    "* Copied revision 0.\n",
+    "* Copied revision 1.\n",
+    "* Copied revision 2.\n",
+    "* Copied revision 3.\n",
+    "* Copied revision 4.\n",
+    "* Copied revision 5.\n",
+    "* Copied revision 6.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+
+  # Amend a few log messages in the source, run the --incremental hotcopy.
+  # The progress output should only mention the corresponding revisions.
+  revprop_file = sbox.get_tempname()
+  svntest.main.file_write(revprop_file, "Modified log message.")
+
+  for i in [1, 3, 6]:
+    svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                            'setrevprop',
+                                            sbox.repo_dir, '-r', i,
+                                            'svn:log', revprop_file)
+  expected_output = [
+    "* Copied revision 1.\n",
+    "* Copied revision 3.\n",
+    "* Copied revision 6.\n",
+    ]
+  svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, backup_dir)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_progress_old(sbox):
+  "hotcopy --compatible-version=1.3 progress"
+
+  sbox.build(create_wc=False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+
+  inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
+
+  # Nothing really exciting for the empty repository.
+  expected_full = [
+    "* Copied revision 0.\n"
+    ]
+  expected_incremental = [
+    "* Copied revision 0.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-0')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+  # Commit three revisions, hotcopy and check the progress output.
+  for i in range(3):
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                       '-m', svntest.main.make_log_msg(),
+                                       sbox.repo_url + '/dir-%i' % i)
+
+  expected_full = [
+    "* Copied revision 0.\n",
+    "* Copied revision 1.\n",
+    "* Copied revision 2.\n",
+    "* Copied revision 3.\n",
+    ]
+  expected_incremental = [
+    "* Copied revision 1.\n",
+    "* Copied revision 2.\n",
+    "* Copied revision 3.\n",
+    ]
+
+  backup_dir, backup_url = sbox.add_repo_path('backup-1')
+  svntest.actions.run_and_verify_svnadmin(None, expected_full, [],
+                                          'hotcopy',
+                                          sbox.repo_dir, backup_dir)
+  svntest.actions.run_and_verify_svnadmin(None, expected_incremental, [],
+                                          'hotcopy', '--incremental',
+                                          sbox.repo_dir, inc_backup_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -2695,6 +2929,9 @@ test_list = [ None,
               freeze_freeze,
               verify_metadata_only,
               verify_quickly,
+              fsfs_hotcopy_progress,
+              fsfs_hotcopy_progress_with_revprop_changes,
+              fsfs_hotcopy_progress_old,
              ]
 
 if __name__ == '__main__':

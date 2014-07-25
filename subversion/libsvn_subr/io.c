@@ -2238,6 +2238,35 @@ svn_io_file_lock2(const char *lock_file,
   return svn_io_lock_open_file(lockfile_handle, exclusive, nonblocking, pool);
 }
 
+svn_error_t *
+svn_io__file_lock_autocreate(const char *lock_file,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err
+    = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files anyway.
+         Create it and try again. */
+      svn_error_clear(err);
+
+      /* This file creation is racy.
+         We don't care as long as file gets created at all. */
+      err = svn_io_file_create_empty(lock_file, pool);
+      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+
+      /* Finally, lock the file - if it exists */
+      if (!err)
+        err = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+    }
+
+  return svn_error_trace(err);
+}
+
 
 
 /* Data consistency/coherency operations. */
@@ -5007,8 +5036,25 @@ svn_io_open_unique_file3(apr_file_t **file,
    * case, but only if the umask allows it. */
   if (!using_system_temp_dir)
     {
+      svn_error_t *err;
+
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
+      err = file_perms_set2(tempfile, perms, scratch_pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_INCOMPLETE(err->apr_err) ||
+              APR_STATUS_IS_ENOTIMPL(err->apr_err))
+            svn_error_clear(err);
+          else
+            {
+              const char *message;
+              message = apr_psprintf(scratch_pool,
+                                     _("Can't set permissions on '%s'"),
+                                     svn_dirent_local_style(tempname,
+                                                            scratch_pool));
+              return svn_error_quick_wrap(err, message);
+            }
+        }
     }
 #endif
 
