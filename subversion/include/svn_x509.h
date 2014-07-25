@@ -38,6 +38,7 @@
 #define SVN_X509_CERTINFO_KEY_VALID_FROM  "valid-from"
 #define SVN_X509_CERTINFO_KEY_VALID_TO    "valid-to"
 #define SVN_X509_CERTINFO_KEY_SHA1_DIGEST "sha1-digest"
+#define SVN_X509_CERTINFO_KEY_HOSTNAMES   "hostnames"
 
 #ifdef __cplusplus
 extern "C" {

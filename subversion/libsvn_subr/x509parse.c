@@ -46,6 +46,7 @@
  */
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_time.h"
@@ -528,7 +529,8 @@ x509_get_uid(const unsigned char **p,
  * X.509 v3 extensions (not parsed)
  */
 static svn_error_t *
-x509_skip_ext(const unsigned char **p,
+x509_get_ext(apr_array_header_t *dnsnames,
+             const unsigned char **p,
              const unsigned char *end)
 {
   svn_error_t *err;
@@ -541,6 +543,7 @@ x509_skip_ext(const unsigned char **p,
                      ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 3);
   if (err)
     {
+      /* If there aren't extensions that's ok they aren't required */
       if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
         {
           svn_error_clear(err);
@@ -550,8 +553,105 @@ x509_skip_ext(const unsigned char **p,
       return svn_error_trace(err);
     }
 
-  /* Skip extensions */
-  *p += len;
+  end = *p + len;
+
+  SVN_ERR(asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE));
+
+  if (end != *p + len)
+    {
+      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, NULL, NULL);
+      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    }
+
+  while (*p < end)
+    {
+      int ext_len;
+      const unsigned char *ext_start, *sna_end;
+      err = asn1_get_tag(p, end, &ext_len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err,
+                                NULL);
+      ext_start = *p;
+
+      err = asn1_get_tag(p, end, &len, ASN1_OID);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err,
+                                NULL);
+
+      /* skip all extensions except SubjectAltName */
+      if (len != sizeof(OID_SUBJECT_ALT_NAME) - 1 ||
+          memcmp(*p, OID_SUBJECT_ALT_NAME, sizeof(OID_SUBJECT_ALT_NAME) - 1) != 0)
+        {
+          *p += ext_len - (*p - ext_start);
+          continue;
+        }
+      *p += len;
+
+      err = asn1_get_tag(p, end, &len, ASN1_OCTET_STRING);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err,
+                                NULL);
+
+      /*   SubjectAltName ::= GeneralNames
+
+           GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
+
+           GeneralName ::= CHOICE {
+                otherName                       [0]     OtherName,
+                rfc822Name                      [1]     IA5String,
+                dNSName                         [2]     IA5String,
+                x400Address                     [3]     ORAddress,
+                directoryName                   [4]     Name,
+                ediPartyName                    [5]     EDIPartyName,
+                uniformResourceIdentifier       [6]     IA5String,
+                iPAddress                       [7]     OCTET STRING,
+                registeredID                    [8]     OBJECT IDENTIFIER } */
+      sna_end = *p + len;
+
+      err = asn1_get_tag(p, sna_end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err,
+                                NULL);
+
+      if (sna_end != *p + len)
+        {
+          err = svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, NULL, NULL);
+          return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+        }
+
+      while (*p < sna_end)
+        {
+          err = asn1_get_tag(p, sna_end, &len, ASN1_CONTEXT_SPECIFIC |
+                             ASN1_PRIMITIVE | 2);
+          if (err)
+            {
+              /* not not a dNSName */
+              if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
+                {
+                  svn_error_clear(err);
+                  /* need to skip the tag and then find the length to
+                   * skip to ignore this SNA entry. */
+                  (*p)++;
+                  SVN_ERR(asn1_get_len(p, sna_end, &len));
+                  *p += len;
+                  continue;
+                }
+            }
+          else
+            {
+              /* We found a dNSName entry */
+              x509_buf *dnsname = apr_palloc(dnsnames->pool,
+                                              sizeof(x509_buf));
+              dnsname->tag = ASN1_IA5_STRING; /* implicit based on dNSName */
+              dnsname->len = len;
+              dnsname->p = *p;
+              APR_ARRAY_PUSH(dnsnames, x509_buf *) = dnsname;
+            }
+
+          *p += len;
+        }
+
+    }
 
   return SVN_NO_ERROR;
 }
@@ -753,6 +853,88 @@ x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
   }
 }
 
+static svn_boolean_t
+is_hostname(svn_string_t *str)
+{
+  int i;
+
+  for (i = 0; i < str->len; i++)
+    {
+      char c = str->data[i];
+
+      /* '-' is only legal when not at the start or end of a label */
+      if (c == '-')
+        {
+          if (i + 1 != str->len)
+            if (str->data[i + 1] == '.')
+              return FALSE; /* '-' preceeds a '.' */
+          else
+            return FALSE; /* '-' is at end of string */
+
+          /* determine the previous character. */
+          if (i == 0)
+            return FALSE; /* '-' is at start of string */
+          else
+            if (str->data[i - 1] == '.')
+              return FALSE; /* '-' follows a '.' */
+        }
+      else if (c != '*' && c != '.' && !svn_ctype_isalnum(c))
+        return FALSE; /* some character not allowed */
+    }
+
+  return TRUE;
+}
+
+static void
+x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
+                        apr_pool_t *scratch_pool)
+{
+  if (crt->dnsnames->nelts > 0)
+    {
+      int i;
+
+      /* Subject Alt Names take priority */
+      for (i = 0; i < crt->dnsnames->nelts; i++)
+        {
+          x509_buf *dnsname = APR_ARRAY_IDX(crt->dnsnames, i, x509_buf *);
+          const svn_string_t *temp = svn_string_ncreate((const char *)dnsname->p,
+                                                        dnsname->len,
+                                                        scratch_pool);
+
+          if (i > 0)
+            svn_stringbuf_appendcstr(buf, ", ");
+
+          temp = fuzzy_escape(temp, scratch_pool);
+          svn_stringbuf_appendbytes(buf, temp->data, temp->len);
+        }
+    }
+  else
+    {
+      const x509_name *name = &crt->subject;
+      const svn_string_t *utf8_value = NULL;
+
+      /* no SAN then get the hostname from the CommonName on the cert */
+      while (name != NULL)
+        {
+          if (memcmp(name->oid.p, OID_X520, 2) == 0)
+            {
+              if (name->oid.p[2] == X520_COMMON_NAME)
+                {
+                  utf8_value = x509name_to_utf8_string(name, scratch_pool);
+                  if (is_hostname(utf8_value))
+                    break;
+                  else
+                    utf8_value = NULL;
+                }
+            }
+          name = name->next;
+        }
+
+      if (utf8_value)
+        svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
+    }
+}
+
 /*
  * Parse one certificate.
  */
@@ -768,7 +950,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
-  svn_stringbuf_t *issuer, *subject;
+  svn_stringbuf_t *issuer, *subject, *hostnames;
   svn_checksum_t *sha1_digest;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
@@ -874,7 +1056,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   }
 
   if (crt->version == 3) {
-    SVN_ERR(x509_skip_ext(&p, end));
+    crt->dnsnames = apr_array_make(scratch_pool, 3, sizeof(x509_buf *));
+    SVN_ERR(x509_get_ext(crt->dnsnames, &p, end));
   }
 
   if (p != end) {
@@ -911,6 +1094,11 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   issuer = svn_stringbuf_create_empty(result_pool);
   x509parse_dn_gets(issuer, &crt->issuer, scratch_pool);
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, issuer->data);
+
+  hostnames = svn_stringbuf_create_empty(result_pool);
+  x509parse_get_hostnames(hostnames, crt, scratch_pool);
+  if (!svn_stringbuf_isempty(hostnames))
+    svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES, hostnames->data);
 
   svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
                 svn_time_to_human_cstring(crt->valid_from, result_pool));

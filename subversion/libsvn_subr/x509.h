@@ -73,6 +73,7 @@
 
 #define OID_X520                "\x55\x04"
 #define OID_PKCS9               "\x2A\x86\x48\x86\xF7\x0D\x01\x09"
+#define OID_SUBJECT_ALT_NAME    "\x55\x1D\x11"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,6 +107,7 @@ typedef struct _x509_cert {
 
   x509_buf issuer_id;
   x509_buf subject_id;
+  apr_array_header_t *dnsnames;
 
   x509_buf sig_oid2;
   x509_buf sig;
