@@ -77,14 +77,6 @@ struct authz_validate_baton {
                            enumerator, if any. */
 };
 
-/* Currently this structure is just a wrapper around a svn_config_t.
-   Please update authz_pool if you modify this structure. */
-struct svn_authz_t
-{
-  svn_config_t *cfg;
-};
-
-
 
 /*** Checking access. ***/
 
