@@ -452,6 +452,16 @@ svn_error_t *
 svn_fs_delete_fs(const char *path,
                  apr_pool_t *pool);
 
+/** The type of a hotcopy notification function.  @a start_revision and
+ * @a end_revision indicate the copied revision range.  @a baton is the
+ * corresponding baton for the notification function, and @a pool can be
+ * used for temporary allocations, but will be cleared between invocations.
+ */
+typedef void (*svn_fs_hotcopy_notify_t)(void *baton,
+                                        svn_revnum_t start_revision,
+                                        svn_revnum_t end_revision,
+                                        apr_pool_t *pool);
+
 /**
  * Copy a possibly live Subversion filesystem from @a src_path to
  * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the
@@ -464,10 +474,35 @@ svn_fs_delete_fs(const char *path,
  * incremental hotcopy is not implemented, raise
  * #SVN_ERR_UNSUPPORTED_FEATURE.
  *
+ * For each revision range copied, @a notify_func will be called with
+ * staring and ending revision numbers (both inclusive and not necessarily
+ * different) and with the @a notify_baton.  Currently, this notification
+ * is only supported in the FSFS backend.  @a notify_func may be @c NULL
+ * if this notification is not required.
+ *
  * Use @a scratch_pool for temporary allocations.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_hotcopy3(const char *src_path,
+                const char *dest_path,
+                svn_boolean_t clean,
+                svn_boolean_t incremental,
+                svn_fs_hotcopy_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_hotcopy3(), but with @a notify_func and @a notify_baton
+ * always passed as @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.8.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy2(const char *src_path,
                 const char *dest_path,

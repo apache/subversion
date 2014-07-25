@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
+#include "private/svn_io_private.h"
 
 /* Implementation aspects.
  *
@@ -274,28 +275,10 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
 static svn_error_t *
 lock(struct mutex_t *mutex)
 {
-  svn_error_t *err;
-
-  /* Intra-process lock */
-  SVN_ERR(svn_mutex__lock(thread_mutex));
-
-  /* Inter-process lock. */
-  err = svn_io_file_lock2(mutex->lock_name, TRUE, FALSE, mutex->pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* No lock file?  No big deal; these are just empty files anyway.
-         Create it and try again. */
-      svn_error_clear(err);
-      err = NULL;
-
-      SVN_ERR(svn_io_file_create_empty(mutex->lock_name, mutex->pool));
-      SVN_ERR(svn_io_file_lock2(mutex->lock_name, TRUE, FALSE, mutex->pool));
-    }
-
-  /* Don't leave us in a semi-locked state ... */
-  return err
-    ? svn_mutex__unlock(thread_mutex, err)
-    : err;
+  SVN_MUTEX__WITH_LOCK(thread_mutex,
+                       svn_io__file_lock_autocreate(mutex->lock_name,
+                                                    mutex->pool));
+  return SVN_NO_ERROR;
 }
 
 /* Utility that releases the lock previously acquired via lock().  If the
