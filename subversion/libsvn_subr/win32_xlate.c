@@ -53,6 +53,9 @@ typedef int win32_xlate__dummy;
 
 #include "svn_private_config.h"
 
+#define UTF16BE 1201
+#define UTF32BE 12001
+
 static svn_atomic_t com_initialized = 0;
 
 /* Initializes COM and keeps COM available until process exit.
@@ -109,16 +112,16 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
     }
   else if (!strcmp(page_name, "ISO-10646-UCS-2"))
     {
-      *page_id_p = 1201; /* UTF-16 Big Endian, strictly speaking it isn't
-                            exactly UCS-2 Big Endian but it's a superset
-                            so it works well enough. */
+      *page_id_p = UTF16BE; /* UTF-16 Big Endian, strictly speaking it isn't
+                               exactly UCS-2 Big Endian but it's a superset
+                               so it works well enough. */
       return APR_SUCCESS;
     }
   else if (!strcmp(page_name, "ISO-10646-UCS-4"))
     {
-      *page_id_p = 12001; /* UTF-32 Big Endian, again, it isn't strictly
-                             speaking UCS-4 Big Endian, but it's a superset
-                             so it works well enough. */
+      *page_id_p = UTF32BE; /* UTF-32 Big Endian, again, it isn't strictly
+                               speaking UCS-4 Big Endian, but it's a superset
+                               so it works well enough. */
       return APR_SUCCESS;
     }
 
@@ -204,34 +207,130 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   int retval, wide_size;
 
   if (src_length == 0)
-  {
-    *dest = svn_stringbuf_create_empty(pool);
-    return APR_SUCCESS;
-  }
-
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               NULL, 0);
-  if (retval == 0)
-    return apr_get_os_error();
-
-  wide_size = retval;
-
-  /* Allocate temporary buffer for small strings on stack instead of heap. */
-  if (wide_size <= MAX_PATH)
     {
-      wide_str = alloca(wide_size * sizeof(WCHAR));
+      *dest = svn_stringbuf_create_empty(pool);
+      return APR_SUCCESS;
+    }
+
+  /* Convert from current encoding to UTF-16 Little Endian */
+  if (handle->from_page_id == UTF16BE)
+    {
+      int w, s;
+ 
+      /* Incoming length needs to enough for wide characters */ 
+      if (src_length % 2)
+        return APR_EINVAL;
+   
+      /* Calcuate the size and allocate the memory for the UTF-16 LE */ 
+      wide_size = src_length / 2;
+      if (wide_size <= MAX_PATH)
+        {
+          wide_str = alloca(wide_size * sizeof(WCHAR));
+        } 
+      else
+        {
+          wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+        }
+
+      /* Since we're converting from UTF-16 Big Endian just swap
+       * bytes and copy */
+      for (w = 0; w < wide_size; w++)
+        {
+          s = w * 2; /* position in src_data for start of character's 2 bytes */
+          wide_str[w] = ((src_data[s] & 0xFF) << 8) | (src_data[s + 1] & 0xFF);
+        }
+    }
+  else if (handle->from_page_id == UTF32BE)
+    {
+      int s, c, w = 0, surrogates = 0;
+
+      /* Incoming length needs to be enough for 4 bytes per char */
+      if (src_length % 4)
+        return APR_EINVAL;
+
+      /* Calculate the size and allocate the memory for UTF-16 LE */
+      wide_size = src_length / 4;
+      /* Look for characters that won't fit in 16 bits, add a character for
+       * the surrogate, note that the documentation for WideCharToMultiByte
+       * says that wide_size should be the number of characters, however that's
+       * not entirely true, it was true when it only supported UCS-2, but since
+       * Windows 2000 it supports UTF-16 but the count is the number of WCHARs
+       * which doesn't exactly map to characters since surrogates take up 2
+       * WCHARs for one character. TODO: Should we fail here if this isn't
+       * at least Windows 2000 since it won't know what to do with the
+       * surrogates? */
+      for (s = 0; s < wide_size * 4; s += 4)
+        {
+          if ((src_data[s] & 0xFF) != 0 || (src_data[s + 1] & 0xFF) != 0)
+            surrogates++;
+        }
+      wide_size += surrogates;
+      if (wide_size <= MAX_PATH)
+        {
+          wide_str = alloca(wide_size * sizeof(WCHAR));
+        }
+      else
+        {
+          wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+        }
+
+      /* Since we're converting from UTF-32 Big Endian we have to swap bytes
+       * and deal with converting unicode values that won't fit into 16-bits to
+       * use surrogates, iterate by actual characters */
+      for (c = 0; c < (wide_size - surrogates); c++)
+        {
+          s = c * 4; /* position in src_data for start of character's 4 bytes */
+          if ((src_data[s] & 0xFF) == 0 && (src_data[s + 1] & 0xFF) == 0)
+            {
+              /* easy case it fits in UTF-16 just have to swap byte order */
+              wide_str[w] = (src_data[s + 2] & 0xFF) << 8;
+              wide_str[w++] |= src_data[s + 3] & 0xFF;
+            }
+          else
+            {
+              /* character too wide for going straight to UTF-16 have to use
+               * a surrogate pair, so first we swap characters to get a
+               * Little Endian long */
+              unsigned long ch = ((src_data[s] & 0xFF) << 24);
+              ch |= ((src_data[s + 1] & 0xFF) << 16);
+              ch |= ((src_data[s + 2] & 0xFF) << 8);
+              ch |= (src_data[s + 3] & 0xFF);
+              /* now calculate the surrogates */
+              ch -= 0x10000;
+              wide_str[w++] = (WCHAR) (0xD800 + ((ch & 0xFFC00) >> 10));
+              wide_str[w++] = (WCHAR) (0xDC00 + (ch & 0x3FF));
+            }
+        }
     }
   else
     {
-      wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+      /* Other encodings that hopefully Windows knows how to convert to
+       * UTF-16 Little Endian */ 
+      retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                                   src_length, NULL, 0);
+      if (retval == 0)
+        return apr_get_os_error();
+
+    wide_size = retval;
+
+    /* Allocate temporary buffer for small strings on stack instead of heap. */
+    if (wide_size <= MAX_PATH)
+      {
+        wide_str = alloca(wide_size * sizeof(WCHAR));
+      }
+    else
+      {
+        wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+      }
+
+      retval = MultiByteToWideChar(handle->from_page_id, 0, src_data,
+                                   src_length, wide_str, wide_size);
+
+      if (retval == 0)
+        return apr_get_os_error();
     }
 
-  retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
-                               wide_str, wide_size);
-
-  if (retval == 0)
-    return apr_get_os_error();
-
+  /* Determine how much space we'll require to store the converted string */
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
                                NULL, 0, NULL, NULL);
 
@@ -243,6 +342,7 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   *dest = svn_stringbuf_create_ensure(retval + 1, pool);
   (*dest)->len = retval;
 
+  /* Convert from UTF-16 Little Endian to the desired encoding */
   retval = WideCharToMultiByte(handle->to_page_id, 0, wide_str, wide_size,
                                (*dest)->data, (*dest)->len, NULL, NULL);
   if (retval == 0)
