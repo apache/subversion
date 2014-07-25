@@ -364,6 +364,14 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
 
 /*** Authz Functions ***/
 
+/* An authorization object.
+   Currently this structure is just a wrapper around a svn_config_t. */
+struct svn_authz_t
+{
+  struct svn_config_t *cfg;
+};
+
+
 /* Read authz configuration data from PATH into *AUTHZ_P, allocated
    in POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
 
