@@ -244,7 +244,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_cleanup_revprops,
 
   /** The repository format got bumped. @since New in 1.9. */
-  svn_repos_notify_format_bumped
+  svn_repos_notify_format_bumped,
+
+  /** A revision range was copied. @since New in 1.9. */
+  svn_repos_notify_hotcopy_rev_range
 } svn_repos_notify_action_t;
 
 /** The type of error occurring.
@@ -342,6 +345,16 @@ typedef struct svn_repos_notify_t
       went wrong during verification.
       @since New in 1.9. */
   svn_error_t *err;
+
+  /** For #svn_repos_notify_hotcopy_rev_range, the start of the copied
+      revision range.
+      @since New in 1.9. */
+  svn_revnum_t start_revision;
+
+  /** For #svn_repos_notify_hotcopy_rev_range, the end of the copied
+      revision range (might be the same as @a start_revision).
+      @since New in 1.9. */
+  svn_revnum_t end_revision;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
@@ -626,8 +639,35 @@ svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
  * already present in the destination. If incremental hotcopy is not
  * implemented by the filesystem backend, raise SVN_ERR_UNSUPPORTED_FEATURE.
  *
- * @since New in 1.8.
+ * For each revision range copied, the @a notify_func function will be
+ * called with the @a notify_baton and a notification structure containing
+ * appropriate values in @c start_revision and @c end_revision (both
+ * inclusive). @c start_revision might be equal to @c end_revision in
+ * case the copied range consists of a single revision. Currently, this
+ * notification is only supported for FSFS repositories. @a notify_func
+ * may be @c NULL if this notification is not required.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_hotcopy3(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Like svn_repos_hotcopy3(), but with @a notify_func and @a notify_baton
+ * always passed as @c NULL.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_hotcopy2(const char *src_path,
                    const char *dst_path,
