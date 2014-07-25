@@ -174,6 +174,7 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
 {
   const svn_string_t *der_cert;
   apr_hash_t *certinfo;
+  const char *v;
 
   /* Convert header-less PEM to DER by undoing base64 encoding. */
   der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
@@ -196,6 +197,10 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
                              (const char *)svn_hash_gets(certinfo,
                                              SVN_X509_CERTINFO_KEY_SHA1_DIGEST)));
+  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES);
+  if (v)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, _("Hostnames: %s\n"), v));
+
 #if 0
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"), cert->subject_id.p));
   SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
@@ -257,9 +262,9 @@ list_credential(const char *cred_kind,
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
        SVN_ERR(show_cert(value, iterpool));
+#if 0
       else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Hostname: %s\n"), value->data));
-#if 0
       else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_FROM_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Valid from: %s\n"),
                                    value->data));

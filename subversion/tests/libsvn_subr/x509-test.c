@@ -42,6 +42,7 @@ struct x509_test {
    * timezone.  So we can't store exactly what the parser will output. */
   const char *valid_from;
   const char *valid_to;
+  const char *hostnames;
   const char *sha1_digest;
 };
 
@@ -78,6 +79,7 @@ static struct x509_test cert_tests[] = {
     "C=US, O=Thawte, Inc., CN=Thawte SSL CA",
     "2014-04-11T00:00:00.000000Z",
     "2016-04-07T23:59:59.000000Z",
+    "*.apache.org",
     "151d8ad1e1bac21466bc2836ba80b5fcf872f37c" },
   /* the expiration is after 2049 so the expiration is in the
    * generalized format, while the start date is still in the UTC
@@ -107,6 +109,7 @@ static struct x509_test cert_tests[] = {
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-06-27T17:31:51.000000Z",
     "2114-06-03T17:31:51.000000Z",
+    NULL,
     "db3a959e145acc2741f9eeecbeabce53cc5b7362" },
   /* The subject (except for country code) is UTF-8 encoded.
    * created with openssl using utf8-yes and string_mask=utf8only */
@@ -137,6 +140,7 @@ static struct x509_test cert_tests[] = {
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-02T18:36:10.000000Z",
     "2015-07-02T18:36:10.000000Z",
+    "www.example.com",
     "b3b9789d8a53868f418619565f6b56af0033bdd3" },
   /* The issuer and subject (except for the country code) is
    * UnversalString encoded.  Created with a hacked version of openssl
@@ -185,6 +189,7 @@ static struct x509_test cert_tests[] = {
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T22:37:30.000000Z",
     "2015-07-22T22:37:30.000000Z",
+    "www.example.com",
     "cfa15310189cf89f1dadc9c989db46f287fff7a7"
   },
   /* The issuer and subject (except for the country code) is BMPString
@@ -218,6 +223,7 @@ static struct x509_test cert_tests[] = {
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T23:02:09.000000Z",
     "2015-07-22T23:02:09.000000Z",
+    "www.example.com",
     "6e2cd969350979d3741b9abb66c71159a94ff971"
   },
   /* The issuer and subject (except for the country code) is T61String
@@ -253,7 +259,106 @@ static struct x509_test cert_tests[] = {
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
     "2014-07-22T23:44:18.000000Z",
     "2015-07-22T23:44:18.000000Z",
+    "www.example.com",
     "787d1577ae77b79649d8f99cf4ed58a332dc48da"
+  },
+  /* Certificate with several Subject Alt Name dNSNames.  Note that
+   * the CommonName is not duplicated in the Subject Alt Name to
+   * test that the Common Name is excluded when Subject Alt Name
+   * exists. */
+  { "MIIEMTCCAxmgAwIBAgIBATANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJBVTET"
+    "MBEGA1UECBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQ"
+    "dHkgTHRkMRwwGgYDVQQDExNJbnRlcm5ldCBXaWRnaXRzIENBMB4XDTE0MDcyNTE3"
+    "NDEwNFoXDTE1MDcyNTE3NDEwNFowdDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldh"
+    "c2hpbmd0b24xEzARBgNVBAcTCk5vcnRoIEJlbmQxITAfBgNVBAoTGEludGVybmV0"
+    "IFdpZGdpdHMgUHR5IEx0ZDEYMBYGA1UEAxMPd3d3LmV4YW1wbGUuY29tMIIBIjAN"
+    "BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxlryoK6hMhGI/UlHi7v1m+Z3tCvg"
+    "ZG1twDFNvBACpFVbJtC/v+fiy1eG7ooZ1PsdCINQ1iXLh1igevlw/4w6iTDpeSZg"
+    "OCPYqK6ejnS0bKtSB4TuP8yiQtqwaVz4yPP88lXuQJDRJzgaAR0VAhooLgEpl1z1"
+    "n9wQO15AW5swzpKcEOi4n6Zmf1t7oxOt9awAOhkL1FfFwkpbiK9yQv3TPVo+xzbx"
+    "BJxwx55RY8Dpiu0kuiTYWsd02pocb0uIqd7a5B4y05PhJseqwyX0Mw57HBBnbru1"
+    "lCetP4PkoM2gf7Uoj9e61nmM1mustKTIPvh7tZHWW3UW9JxAFG+6FkKDewIDAQAB"
+    "o4HeMIHbMAkGA1UdEwQCMAAwLAYJYIZIAYb4QgENBB8WHU9wZW5TU0wgR2VuZXJh"
+    "dGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBQ4A9k8VwI0wv7u5rB4+1D9cuHiqTAf"
+    "BgNVHSMEGDAWgBS6O+MdRDDrD715AXdrnuNZ7wDSyjALBgNVHQ8EBAMCBeAwUwYD"
+    "VR0RBEwwSoINKi5leGFtcGxlLmNvbYIRKi5mb28uZXhhbXBsZS5jb22CESouYmFy"
+    "LmV4YW1wbGUuY29tghN6aWctemFnLmV4YW1wbGUuY29tMA0GCSqGSIb3DQEBBQUA"
+    "A4IBAQAf4IrSOL741IUkyFQrDdof39Cp87VdNEo4Bl8fUSuCjqZONxJfiAFx7GcB"
+    "Cd7h7Toe6CYCeQLHSEXQ1S1eWYLIq0ZoP3Q/huJdoH7yskDyC5Faexph0obKM5hj"
+    "+EYGW2W/UYBzEZai+eePBovARDlupiMaTJGvtdU/AcgMhXCoGNK6egesXoiNgfFh"
+    "h+lXUNWUWm2gZlKwRJff8tkR7bIG7MGzyL6Rqav2/tQdbFVXN5AFPdYPFLf0Vo5m"
+    "eGYM87TILfSo7n7Kh0aZovwcuF/vPUWRJl3B1HaPt9k6DhcFyAji0SJyZWyM4v88"
+    "GSq5Dk8dnTdL2otToll+r4IqFLlp",
+    "C=US, ST=Washington, L=North Bend, O=Internet Widgits Pty Ltd, "
+    "CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2014-07-25T17:41:04.000000Z",
+    "2015-07-25T17:41:04.000000Z",
+    "*.example.com, *.foo.example.com, *.bar.example.com, zig-zag.example.com",
+    "9c365d27b7b6cc438576a8e465685ea7a4f61129"
+  },
+  /* This is a CA cert that has a Common Name that doesn't look like
+   * a hostname.  Make sure that the hostnames field remains blank for it. */
+  { "MIIEEjCCAvqgAwIBAgIJAKJarRWbvbCjMA0GCSqGSIb3DQEBBQUAMGMxCzAJBgNV"
+    "BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX"
+    "aWRnaXRzIFB0eSBMdGQxHDAaBgNVBAMTE0ludGVybmV0IFdpZGdpdHMgQ0EwHhcN"
+    "MTQwNzI1MTc0MTAzWhcNMjQwNzIyMTc0MTAzWjBjMQswCQYDVQQGEwJBVTETMBEG"
+    "A1UECBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkg"
+    "THRkMRwwGgYDVQQDExNJbnRlcm5ldCBXaWRnaXRzIENBMIIBIjANBgkqhkiG9w0B"
+    "AQEFAAOCAQ8AMIIBCgKCAQEAv0f0TAiE13WHaFv8j6M9uuniO40+Aj8cuhZtJ1GC"
+    "GI/mW56wq2BJrP6N4+jyxYbZ/13S3ypPu+N087Nc/4xaPtUD/eKqMlU+o8gHM/Lf"
+    "BEs2dUuBsvkNM0KoC04NPNTOYDnfHOrzx8iHhqlDedwmP8FeQn3rNS8k4qDyJpG3"
+    "Ay8ICz5mB07Cy6NISohTxMtatfW5yKmhnhiS92X42QAEgI1pGB7jJl1g3u+KY1Bf"
+    "/10kcramYSYIM1uB7XHQjZI4bhEhQwuIWePMOSCOykdmbemM3ijF9f531Olq+0Nz"
+    "t7lA1b/aW4PGGJsZ6uIIjKMaX4npP+HHUaNGVssgTnTehQIDAQABo4HIMIHFMB0G"
+    "A1UdDgQWBBS6O+MdRDDrD715AXdrnuNZ7wDSyjCBlQYDVR0jBIGNMIGKgBS6O+Md"
+    "RDDrD715AXdrnuNZ7wDSyqFnpGUwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgTClNv"
+    "bWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEcMBoG"
+    "A1UEAxMTSW50ZXJuZXQgV2lkZ2l0cyBDQYIJAKJarRWbvbCjMAwGA1UdEwQFMAMB"
+    "Af8wDQYJKoZIhvcNAQEFBQADggEBAI442H8CpePFvOtdvcosu2N8juJrzACuayDI"
+    "Ze32EtHFN611azduqkWBgMJ3Fv74o0A7u5Gl8A7RZnfBTMX7cvpfHvWefau0xqgm"
+    "Mn8CcTUGel0qudCCMe+kPppmkgNaZFvawSqcAA/u2yni2yx8BakYYDZzyfmEf9dm"
+    "hZi5SmxFFba5UhNKOye0GKctT13s/7EgfFNyVhZA7hWU26Xm88QnGnN/qxJdpq+e"
+    "+Glctn9tyke4b1VZ2Yr+R4OktrId44ZQcRD44+88v5ThP8DQsvkXcjREMFAIPkvG"
+    "CEDOIem4l9KFfnsHn8/4KvoBRkmCkGaSwOwUdUG+jIjBpY/82kM=",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2014-07-25T17:41:03.000000Z",
+    "2024-07-22T17:41:03.000000Z",
+    NULL,
+    "b9decce236aa1da07b2bf088160bffe1469b9a4a"
+  },
+  /* Cert with a IP SAN entry.  Make sure we properly skip them. */
+  { "MIIENjCCAx6gAwIBAgIBATANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJBVTET"
+    "MBEGA1UECBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQ"
+    "dHkgTHRkMRwwGgYDVQQDExNJbnRlcm5ldCBXaWRnaXRzIENBMB4XDTE0MDcyNTE4"
+    "NDMyOFoXDTE1MDcyNTE4NDMyOFowczELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldh"
+    "c2hpbmd0b24xEzARBgNVBAcTCk5vcnRoIEJlbmQxITAfBgNVBAoTGEludGVybmV0"
+    "IFdpZGdpdHMgUHR5IEx0ZDEXMBUGA1UEAxMOaXAuZXhhbXBsZS5jb20wggEiMA0G"
+    "CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDXKkSxg89tu5/n+lIC8ajj1T9vsO5B"
+    "nRH5Sne7UPc6pGMTNFi1MOVjdDWkmuCUzoI+HKLDc69/4V5RU12N1QNgsgcOzCSo"
+    "qgxa+dQk2s1shz1zhyaHkpdeMZU3/p9D4v+nRGAdYifwl/VOTwjWWucNzHDBwvb6"
+    "+Wm4pXE94Y5p8fY/lZi7VgtxdoPdSHGkIAps8psZGPjqKpLEjnLMp1n0v9cZhBF6"
+    "OoMUZpQuwcjT8vMQppgIWhZFLiH2jn7FTYWZyB0Dh9nMd097NQA87VtVfNc+g0oY"
+    "qLe3YldJgvVfyeSLhnyv68fBfGcTj310pNrGeE/m4tyxupiUT8BitfxPAgMBAAGj"
+    "geQwgeEwCQYDVR0TBAIwADAsBglghkgBhvhCAQ0EHxYdT3BlblNTTCBHZW5lcmF0"
+    "ZWQgQ2VydGlmaWNhdGUwHQYDVR0OBBYEFI09JZlhKV44Z+I5d58V/ZDqQ7yZMB8G"
+    "A1UdIwQYMBaAFDjQVnIU9pQI1nM8jjmxYiicMTdGMAsGA1UdDwQEAwIF4DBZBgNV"
+    "HREEUjBQgg0qLmV4YW1wbGUuY29tghEqLmZvby5leGFtcGxlLmNvbYcEfwAAAYIR"
+    "Ki5iYXIuZXhhbXBsZS5jb22CE3ppZy16YWcuZXhhbXBsZS5jb20wDQYJKoZIhvcN"
+    "AQEFBQADggEBAEK+XIGwavf+5Ht44ifHrGog0CDr4ESg7wFjzk+BJwYDtIPp9b8A"
+    "EG8qbfmOS+2trG3zc74baf2rmrfn0YGZ/GV826NMTaf7YU1/tJQTo+RX9g3aHg6f"
+    "pUBfIyAV8ELq84sgwd1PIgleVgIiDrz+a0UZ05Z5S+GbR2pwNH6+fO0O5E9clt2a"
+    "Cute1UMBqAMGKiFaP8HD6SUFTdTKZNxHtQzYmmuvoC1nzVatMFdkTuQgSQ/uNlzg"
+    "+yUFoufMZhs3gPx9PfXGOQ7f3nKE+WCK4KNGv+OILYsk4zUjMznfAwBRs9PyITN2"
+    "BKe64WsF6ZxTq3zLVGy5I8LpbtlvSmAaBp4=",
+    "C=US, ST=Washington, L=North Bend, O=Internet Widgits Pty Ltd, "
+    "CN=ip.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2014-07-25T18:43:28.000000Z",
+    "2015-07-25T18:43:28.000000Z",
+    "*.example.com, *.foo.example.com, *.bar.example.com, zig-zag.example.com",
+    "3525fb617c232fdc738d736c1cbd5d97b19b51e4"
   },
   { NULL }
 };
@@ -332,6 +437,17 @@ compare_results(struct x509_test *xt,
                         SVN_X509_CERTINFO_KEY_VALID_TO,
                         xt->subject,
                         pool));
+
+  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES);
+  if (!v != !xt->hostnames || (v && strcmp(v, xt->hostnames)))
+    {
+      /* both should have a value or neither should have a value and
+       * if they have a value they should match. */
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Hostnames didn't match for cert '%s', "
+                               "expected '%s', got '%s'", xt->subject,
+                               xt->hostnames, v);
+    }
 
   v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST);
   if (!v)
