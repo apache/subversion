@@ -39,13 +39,6 @@
 
 #include "repos.h"
 
-/* Currently this structure is just a wrapper around a svn_config_t.
- */
-struct svn_authz_t
-{
-  svn_config_t *cfg;
-};
-
 /* The wrapper object structure that we store in the object pool.  It
  * combines the authz with the underlying config structures and their
  * identifying keys.
