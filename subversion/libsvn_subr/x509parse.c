@@ -760,7 +760,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * treats it as ASCII).  Since these are just ASCII run through
        * the fuzzy_escape code to deal with anything that isn't actually
        * ASCII.  There shouldn't be any other types here but if we find
-       * a cert with some other cert, the best we can do is the
+       * a cert with some other encoding, the best we can do is the
        * fuzzy_escape().  Note: Technically IA5 isn't valid in this
        * context, however in the real world it may pop up. */
       default:
