@@ -159,6 +159,22 @@ svn_utf__normalize(const char **result,
 svn_boolean_t
 svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
 
+/* Encode an UCS-4 string to UTF-8, placing the result into BUFFER.
+ * While utf8proc does have a similar function, it does more checking
+ * and processing than we want here; this function does not attempt
+ * any normalizations but just encodes the individual code points.
+ *
+ * Return the length of the result (excluding the NUL terminator) in
+ * *result_length.
+ *
+ * A returned error indicates that a codepoint is invalid.
+ */
+svn_error_t *
+svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
+                            const apr_int32_t *ucs4str,
+                            apr_size_t length,
+                            apr_size_t *result_length);
+
 /* Pattern matching similar to the the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
  * strings. Furthermore, ESCAPE, if provided, must be a character from
@@ -190,6 +206,38 @@ svn_utf__glob(svn_boolean_t *match,
 /* Return the version of the wrapped utf8proc library. */
 const char *
 svn_utf__utf8proc_version(void);
+
+/* Convert an UTF-16 (or UCS-2) string to UTF-8, returning the pointer
+ * in RESULT. If BIG_ENDIAN is set, then UTF16STR is big-endian;
+ * otherwise, it's little-endian.
+ *
+ * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
+ * intermediate allocation.
+ *
+ * This function combines UTF-16 surrogate pairs into single code
+ * points, but will leave single lead or trail surrogates unchanged.
+ */
+svn_error_t *
+svn_utf__utf16_to_utf8(const char **result,
+                       const apr_uint16_t *utf16str,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/* Convert an UTF-32 string to UTF-8, returning the pointer in
+ * RESULT. If BIG_ENDIAN is set, then UTF32STR is big-endian;
+ * otherwise, it's little-endian.
+ *
+ * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
+ * intermediate allocation.
+ */
+svn_error_t *
+svn_utf__utf32_to_utf8(const char **result,
+                       const apr_int32_t *utf32str,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
