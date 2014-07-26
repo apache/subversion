@@ -276,11 +276,11 @@ list_credential(const char *cred_kind,
       else if (strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Fingerprint: %s\n"),
                                    value->data));
+#endif
       else if (strcmp(key, SVN_CONFIG_AUTHN_FAILURES_KEY) == 0)
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
         SVN_ERR(svn_cmdline_printf(iterpool, "%s: %s\n", key, value->data));
-#endif
     }
   svn_pool_destroy(iterpool);
 
