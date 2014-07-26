@@ -764,7 +764,8 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * about it. */
 
     case ASN1_BMP_STRING:
-      SVN_ERR_ASSERT_NO_RETURN(0 == src_string->len % sizeof(apr_uint16_t));
+      if (0 == src_string->len % sizeof(apr_uint16_t)
+          return fuzzy_escape(src_string, result_pool);
       err = svn_utf__utf16_to_utf8(&utf8_string,
                                    (const void*)(src_string->data),
                                    src_string->len / sizeof(apr_uint16_t),
@@ -772,7 +773,8 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       break;
 
     case ASN1_UNIVERSAL_STRING:
-      SVN_ERR_ASSERT_NO_RETURN(0 == src_string->len % sizeof(apr_int32_t));
+      if (0 == src_string->len % sizeof(apr_int32_t)
+          return fuzzy_escape(src_string, result_pool);
       err = svn_utf__utf32_to_utf8(&utf8_string,
                                    (const void*)(src_string->data),
                                    src_string->len / sizeof(apr_int32_t),
