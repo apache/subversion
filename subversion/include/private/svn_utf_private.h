@@ -163,6 +163,7 @@ svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
  * While utf8proc does have a similar function, it does more checking
  * and processing than we want here; this function does not attempt
  * any normalizations but just encodes the individual code points.
+ * The encoded string will always be NUL-terminated.
  *
  * Return the length of the result (excluding the NUL terminator) in
  * *result_length.
@@ -211,6 +212,10 @@ svn_utf__utf8proc_version(void);
  * in RESULT. If BIG_ENDIAN is set, then UTF16STR is big-endian;
  * otherwise, it's little-endian.
  *
+ * If UTF16LEN is SVN_UTF__UNKNOWN_LENGTH, then UTF16STR must be
+ * terminated with a zero; otherwise, it is the number of 16-bit codes
+ * to convert, and the source string may contain NUL values.
+ *
  * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
  * intermediate allocation.
  *
@@ -218,8 +223,9 @@ svn_utf__utf8proc_version(void);
  * points, but will leave single lead or trail surrogates unchanged.
  */
 svn_error_t *
-svn_utf__utf16_to_utf8(const char **result,
+svn_utf__utf16_to_utf8(const svn_string_t **result,
                        const apr_uint16_t *utf16str,
+                       apr_size_t utf16len,
                        svn_boolean_t big_endian,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
@@ -228,12 +234,17 @@ svn_utf__utf16_to_utf8(const char **result,
  * RESULT. If BIG_ENDIAN is set, then UTF32STR is big-endian;
  * otherwise, it's little-endian.
  *
+ * If UTF32LEN is SVN_UTF__UNKNOWN_LENGTH, then UTF32STR must be
+ * terminated with a zero; otherwise, it is the number of 32-bit codes
+ * to convert, and the source string may contain NUL values.
+ *
  * Allocate RESULT in RESULT_POOL and use SCRATCH_POOL for
  * intermediate allocation.
  */
 svn_error_t *
-svn_utf__utf32_to_utf8(const char **result,
+svn_utf__utf32_to_utf8(const svn_string_t **result,
                        const apr_int32_t *utf32str,
+                       apr_size_t utf32len,
                        svn_boolean_t big_endian,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);

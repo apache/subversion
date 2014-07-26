@@ -791,19 +791,33 @@ test_utf_conversions(apr_pool_t *pool)
   };
 
   const struct cvt_test_t *tc;
-  const char *result;
+  const svn_string_t *result;
   int i;
 
   for (i = 1, tc = tests; tc->source; ++tc, ++i)
     {
       if (tc->sixteenbit)
         SVN_ERR(svn_utf__utf16_to_utf8(&result, (const void*)tc->source,
+                                       SVN_UTF__UNKNOWN_LENGTH,
                                        tc->bigendian, pool, pool));
       else
         SVN_ERR(svn_utf__utf32_to_utf8(&result, (const void*)tc->source,
+                                       SVN_UTF__UNKNOWN_LENGTH,
                                        tc->bigendian, pool, pool));
-      SVN_ERR_ASSERT(0 == strcmp(result, tc->result));
+      SVN_ERR_ASSERT(0 == strcmp(result->data, tc->result));
     }
+
+  /* Test counted strings with NUL characters */
+  SVN_ERR(svn_utf__utf16_to_utf8(
+              &result, (void*)("x\0" "\0\0" "y\0" "*\0"), 3,
+              FALSE, pool, pool));
+  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
+
+  SVN_ERR(svn_utf__utf32_to_utf8(
+              &result,
+              (void*)("\0\0\0x" "\0\0\0\0" "\0\0\0y" "\0\0\0*"), 3,
+              TRUE, pool, pool));
+  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
 
   return SVN_NO_ERROR;
 }
