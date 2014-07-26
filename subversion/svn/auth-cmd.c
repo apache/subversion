@@ -152,9 +152,6 @@ match_credential(svn_boolean_t *match,
                 continue; /* don't match secrets */
               else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
                 continue; /* don't match base64 data */
-              else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0 ||
-                       strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
-                *match = match_pattern(pattern, value->data, TRUE, iterpool);
               else
                 *match = match_pattern(pattern, value->data, FALSE, iterpool);
 
