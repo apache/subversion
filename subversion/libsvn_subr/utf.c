@@ -703,17 +703,17 @@ svn_utf_stringbuf_to_utf8(svn_stringbuf_t **dest,
                                       pool));
 }
 
-/* Common implementation for svn_utf_string_to_utf8,
-   svn_utf_string_to_utf8_ex.  Convert SRC to DEST using NODE->handle as
-   the translator and allocating from POOL. */
-static svn_error_t *
-convert_string(const svn_string_t **dest,
-               const svn_string_t *src,
-               xlate_handle_node_t *node,
-               apr_pool_t *pool)
+
+svn_error_t *
+svn_utf_string_to_utf8(const svn_string_t **dest,
+                       const svn_string_t *src,
+                       apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stringbuf_t *destbuf;
+  xlate_handle_node_t *node;
+  svn_error_t *err;
+
+  SVN_ERR(get_ntou_xlate_handle_node(&node, pool));
 
   if (node->handle)
     {
@@ -730,20 +730,6 @@ convert_string(const svn_string_t **dest,
         *dest = svn_string_dup(src, pool);
     }
 
-  return err;
-}
-
-svn_error_t *
-svn_utf_string_to_utf8(const svn_string_t **dest,
-                       const svn_string_t *src,
-                       apr_pool_t *pool)
-{
-  xlate_handle_node_t *node;
-  svn_error_t *err;
-
-  SVN_ERR(get_ntou_xlate_handle_node(&node, pool));
-
-  err = convert_string(dest, src, node, pool);
   return svn_error_compose_create(err,
                                   put_xlate_handle_node
                                      (node,
@@ -751,28 +737,6 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
                                       pool));
 }
 
-svn_error_t *
-svn_utf_string_to_utf8_ex(const svn_string_t **dest,
-                          const svn_string_t *src,
-                          const char *frompage,
-                          apr_pool_t *pool)
-{
-  xlate_handle_node_t *node;
-  svn_error_t *err;
-  const char *convset_key = get_xlate_key(SVN_APR_UTF8_CHARSET, frompage,
-                                          pool);
-
-  SVN_ERR(get_xlate_handle_node(&node, SVN_APR_UTF8_CHARSET, frompage,
-                                convset_key, pool));
-  err = convert_string(dest, src, node, pool);
-  SVN_ERR(svn_error_compose_create(err,
-                                   put_xlate_handle_node
-                                      (node,
-                                       SVN_UTF_NTOU_XLATE_HANDLE,
-                                       pool)));
-
-  return check_utf8((*dest)->data, (*dest)->len, pool);
-}
 
 /* Common implementation for svn_utf_cstring_to_utf8,
    svn_utf_cstring_to_utf8_ex, svn_utf_cstring_from_utf8 and
