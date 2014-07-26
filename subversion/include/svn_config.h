@@ -731,31 +731,6 @@ svn_config_ensure(const char *config_dir,
  */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
 
-/** A hash-key for a hostname, such as hostnames in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_HOSTNAME_KEY           "hostname"
-
-/** A hash-key for a fingerprint, such as fingerprints in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_FINGERPRINT_KEY        "fingerprint"
-
-/** A hash-key for a valid-from date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_FROM_KEY         "valid_from"
-
-/** A hash-key for a valid-to date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_UNTIL_KEY        "valid_until"
-
-/** A hash-key for an issuer distinguished name, such as issuer names
- * in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_ISSUER_DN_KEY        "issuer_dn"
 
 /** @} */
 
