@@ -94,18 +94,6 @@ svn_utf_string_to_utf8(const svn_string_t **dest,
                        apr_pool_t *pool);
 
 
-/** Set @a *dest to a utf8 encoded string from @a frompage encoded
- * string @a src; allocate @a *dest in @a pool.
- *
- * @since New in 1.9.
- */
-svn_error_t *
-svn_utf_string_to_utf8_ex(const svn_string_t **dest,
-                          const svn_string_t *src,
-                          const char *frompage,
-                          apr_pool_t *pool);
-
-
 /** Set @a *dest to a utf8-encoded C string from native C string @a src;
  * allocate @a *dest in @a pool.
  */
