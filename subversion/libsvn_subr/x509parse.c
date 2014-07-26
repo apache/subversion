@@ -706,6 +706,48 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
   return svn_stringbuf__morph_into_string(outstr);
 }
 
+/* Escape only NUL characters from a string that is presumed to
+ * be UTF-8 encoded. */
+static const svn_string_t *
+nul_escape(const svn_string_t *src, apr_pool_t *result_pool)
+{
+  const char *end = src->data + src->len;
+  const char *p = src->data, *q;
+  svn_stringbuf_t *outstr;
+
+  for (q = p; q < end; q++)
+    {
+      if (*q == '\0')
+        break;
+    }
+
+  if (q == end)
+    return src;
+
+  outstr = svn_stringbuf_create_empty(result_pool);
+  while (1)
+    {
+      q = p;
+
+      /* Traverse till either unsafe character or eos. */
+      while (q < end && *q != '\0')
+        q++;
+
+      /* copy chunk before marker */
+      svn_stringbuf_appendbytes(outstr, p, q - p);
+
+      if (q == end)
+        break;
+
+      svn_stringbuf_appendcstr(outstr, "?\\000");
+
+      p = q + 1;
+    }
+
+  return svn_stringbuf__morph_into_string(outstr);
+}
+
+
 /* Convert an ISO-8859-1 (Latin-1) string to UTF-8.
    ISO-8859-1 is a strict subset of Unicode. */
 static svn_error_t *
@@ -750,7 +792,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
     {
     case ASN1_UTF8_STRING:
       if (svn_utf__is_valid(src_string->data, src_string->len))
-        return src_string;
+        return nul_escape(src_string, result_pool);
       else
         /* not a valid UTF-8 string, who knows what it is,
          * so run it through the fuzzy_escape code.  */
@@ -811,7 +853,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       return fuzzy_escape(src_string, result_pool);
     }
 
-  return utf8_string;
+  return nul_escape(utf8_string, result_pool);
 }
 
 /*
