@@ -758,11 +758,10 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       break;
 
       /* Both BMP and UNIVERSAL should always be in Big Endian (aka
-       * network byte order).  The IANA character set registry says
-       * these character set names should always mean Big Endian.
-       * But rumor has it that there are certs out there with other
-       * endianess and even Byte Order Marks.  If we actually run
-       * into these, we might need to do something about it. */
+       * network byte order).  But rumor has it that there are certs
+       * out there with other endianess and even Byte Order Marks.
+       * If we actually run into these, we might need to do something
+       * about it. */
 
     case ASN1_BMP_STRING:
       SVN_ERR_ASSERT_NO_RETURN(0 == src_string->len % sizeof(apr_uint16_t));
