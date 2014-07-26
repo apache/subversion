@@ -495,7 +495,7 @@ svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
                                     apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(new_content));
+    = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_unknown;
   new_content->ref = ref;
@@ -508,7 +508,7 @@ svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
                                     apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(new_content));
+    = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_dir;
   new_content->ref = ref;
@@ -524,7 +524,7 @@ svn_editor3_node_content_create_file(svn_editor3_peg_path_t ref,
                                      apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(new_content));
+    = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_file;
   new_content->ref = ref;
@@ -541,7 +541,7 @@ svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
                                         apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(new_content));
+    = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_symlink;
   new_content->ref = ref;
