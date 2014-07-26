@@ -73,29 +73,29 @@ asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
 
   if ((**p & 0x80) == 0)
     *len = *(*p)++;
-  else {
-    switch (**p & 0x7F) {
-    case 1:
-      if ((end - *p) < 2)
-        return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
+  else
+    switch (**p & 0x7F)
+      {
+      case 1:
+        if ((end - *p) < 2)
+          return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
-      *len = (*p)[1];
-      (*p) += 2;
-      break;
+        *len = (*p)[1];
+        (*p) += 2;
+        break;
 
-    case 2:
-      if ((end - *p) < 3)
-        return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
+      case 2:
+        if ((end - *p) < 3)
+          return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
-      *len = ((*p)[1] << 8) | (*p)[2];
-      (*p) += 3;
-      break;
+        *len = ((*p)[1] << 8) | (*p)[2];
+        (*p) += 3;
+        break;
 
-    default:
-      return svn_error_create(SVN_ERR_ASN1_INVALID_LENGTH, NULL, NULL);
-      break;
-    }
-  }
+      default:
+        return svn_error_create(SVN_ERR_ASN1_INVALID_LENGTH, NULL, NULL);
+        break;
+      }
 
   if (*len > (int)(end - *p))
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
@@ -213,7 +213,7 @@ x509_get_serial(const unsigned char **p,
 /*
  *  AlgorithmIdentifier   ::=  SEQUENCE  {
  *     algorithm         OBJECT IDENTIFIER,
- *     parameters         ANY DEFINED BY algorithm OPTIONAL  }
+ *     parameters        ANY DEFINED BY algorithm OPTIONAL  }
  */
 static svn_error_t *
 x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
@@ -380,36 +380,36 @@ x509_get_date(apr_time_t *when,
   date = apr_pstrndup(scratch_pool, (const char *) *p, len);
   switch (tag)
     {
-      case ASN1_UTC_TIME:
-        if (sscanf(date, "%2d%2d%2d%2d%2d%2d%c",
-                   &xt.tm_year, &xt.tm_mon, &xt.tm_mday,
-                   &xt.tm_hour, &xt.tm_min, &xt.tm_sec, &tz) < 6)
-          return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-
-        /* UTCTime only provides a 2 digit year.  X.509 specifies that years
-         * greater than or equal to 50 must be interpreted as 19YY and years
-         * less than 50 be interpreted as 20YY.  This format is not used for
-         * years greater than 2049. apr_time_exp_t wants years as the number
-         * of years since 1900, so don't convert to 4 digits here. */
-        xt.tm_year += 100 * (xt.tm_year < 50);
-        break;
-
-      case ASN1_GENERALIZED_TIME:
-        if (sscanf(date, "%4d%2d%2d%2d%2d%2d%c",
-                   &xt.tm_year, &xt.tm_mon, &xt.tm_mday,
-                   &xt.tm_hour, &xt.tm_min, &xt.tm_sec, &tz) < 6)
-          return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-
-        /* GeneralizedTime has the full 4 digit year.  But apr_time_exp_t
-         * wants years as the number of years since 1900. */
-        xt.tm_year -= 1900;
-        break;
-
-      default:
-        /* shouldn't ever get here because we should error out above in the
-         * asn1_get_tag() bits but doesn't hurt to be extra paranoid. */
+    case ASN1_UTC_TIME:
+      if (sscanf(date, "%2d%2d%2d%2d%2d%2d%c",
+                 &xt.tm_year, &xt.tm_mon, &xt.tm_mday,
+                 &xt.tm_hour, &xt.tm_min, &xt.tm_sec, &tz) < 6)
         return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-        break;
+
+      /* UTCTime only provides a 2 digit year.  X.509 specifies that years
+       * greater than or equal to 50 must be interpreted as 19YY and years
+       * less than 50 be interpreted as 20YY.  This format is not used for
+       * years greater than 2049. apr_time_exp_t wants years as the number
+       * of years since 1900, so don't convert to 4 digits here. */
+      xt.tm_year += 100 * (xt.tm_year < 50);
+      break;
+
+    case ASN1_GENERALIZED_TIME:
+      if (sscanf(date, "%4d%2d%2d%2d%2d%2d%c",
+                 &xt.tm_year, &xt.tm_mon, &xt.tm_mday,
+                 &xt.tm_hour, &xt.tm_min, &xt.tm_sec, &tz) < 6)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+
+      /* GeneralizedTime has the full 4 digit year.  But apr_time_exp_t
+       * wants years as the number of years since 1900. */
+      xt.tm_year -= 1900;
+      break;
+
+    default:
+      /* shouldn't ever get here because we should error out above in the
+       * asn1_get_tag() bits but doesn't hurt to be extra paranoid. */
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+      break;
     }
 
   /* check that the timezone is GMT
@@ -507,7 +507,7 @@ x509_get_uid(const unsigned char **p,
   uid->tag = **p;
 
   err = asn1_get_tag(p, end, &uid->len,
-        ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n);
+                     ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n);
   if (err)
     {
       if (err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
@@ -597,7 +597,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
            GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
 
            GeneralName ::= CHOICE {
-                otherName                       [0]     OtherName,
+                other Name                      [0]     OtherName,
                 rfc822Name                      [1]     IA5String,
                 dNSName                         [2]     IA5String,
                 x400Address                     [3]     ORAddress,
@@ -641,7 +641,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
             {
               /* We found a dNSName entry */
               x509_buf *dnsname = apr_palloc(dnsnames->pool,
-                                              sizeof(x509_buf));
+                                             sizeof(x509_buf));
               dnsname->tag = ASN1_IA5_STRING; /* implicit based on dNSName */
               dnsname->len = len;
               dnsname->p = *p;
@@ -657,8 +657,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
 }
 
 /* Escape all non-ascii or control characters similar to
- * svn_xml_fuzzy_escape() and svn_utf_cstring_from_utf8_fuzzy(). 
- * All of the encoding formats somewhat overlap with ascii (BMPString 
+ * svn_xml_fuzzy_escape() and svn_utf_cstring_from_utf8_fuzzy().
+ * All of the encoding formats somewhat overlap with ascii (BMPString
  * and UniversalString are actually always wider so you'll end up
  * with a bunch of escaped nul bytes, but ideally we don't get here
  * for those). */
@@ -719,7 +719,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
                                   result_pool);
   switch (name->val.tag)
     {
-      case ASN1_UTF8_STRING:
+    case ASN1_UTF8_STRING:
       if (svn_utf__is_valid(src_string->data, src_string->len))
         return src_string;
       else
@@ -735,11 +735,11 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * endianess and even Byte Order Marks.  If we actually run
        * into these, we might need to do something about it. */
 
-      case ASN1_BMP_STRING:
+    case ASN1_BMP_STRING:
       frompage = "ISO-10646-UCS-2";
       break;
 
-      case ASN1_UNIVERSAL_STRING:
+    case ASN1_UNIVERSAL_STRING:
       frompage = "ISO-10646-UCS-4";
       break;
 
@@ -749,7 +749,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * gory details can be found in the Character Sets section of:
        * https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
        */
-      case ASN1_T61_STRING:
+    case ASN1_T61_STRING:
       frompage = "ISO-8859-1";
       break;
 
@@ -763,7 +763,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * a cert with some other encoding, the best we can do is the
        * fuzzy_escape().  Note: Technically IA5 isn't valid in this
        * context, however in the real world it may pop up. */
-      default:
+    default:
       return fuzzy_escape(src_string, result_pool);
     }
 
@@ -998,9 +998,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   crt->version++;
 
-  if (crt->version > 3) {
+  if (crt->version > 3)
     return svn_error_create(SVN_ERR_X509_CERT_UNKNOWN_VERSION, NULL, NULL);
-  }
 
   /*
    * issuer                               Name
@@ -1049,23 +1048,23 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    *      extensions              [3]      EXPLICIT Extensions OPTIONAL
    *                                               -- If present, version shall be v3
    */
-  if (crt->version == 2 || crt->version == 3) {
+  if (crt->version == 2 || crt->version == 3)
     SVN_ERR(x509_get_uid(&p, end, &crt->issuer_id, 1));
-  }
 
-  if (crt->version == 2 || crt->version == 3) {
+  if (crt->version == 2 || crt->version == 3)
     SVN_ERR(x509_get_uid(&p, end, &crt->subject_id, 2));
-  }
 
-  if (crt->version == 3) {
-    crt->dnsnames = apr_array_make(scratch_pool, 3, sizeof(x509_buf *));
-    SVN_ERR(x509_get_ext(crt->dnsnames, &p, end));
-  }
+  if (crt->version == 3)
+    {
+      crt->dnsnames = apr_array_make(scratch_pool, 3, sizeof(x509_buf *));
+      SVN_ERR(x509_get_ext(crt->dnsnames, &p, end));
+    }
 
-  if (p != end) {
-    err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
-  }
+  if (p != end)
+    {
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
+    }
 
   end = (const unsigned char*) buf + buflen;
 
@@ -1075,9 +1074,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
    */
   SVN_ERR(x509_get_alg(&p, end, &crt->sig_oid2));
 
-  if (memcmp(crt->sig_oid1.p, crt->sig_oid2.p, 9) != 0) {
+  if (memcmp(crt->sig_oid1.p, crt->sig_oid2.p, 9) != 0)
     return svn_error_create(SVN_ERR_X509_CERT_SIG_MISMATCH, NULL, NULL);
-  }
 
   SVN_ERR(x509_get_sig(&p, end, &crt->sig));
 
