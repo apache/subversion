@@ -854,7 +854,7 @@ x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
 }
 
 static svn_boolean_t
-is_hostname(svn_string_t *str)
+is_hostname(const svn_string_t *str)
 {
   int i;
 
@@ -866,8 +866,10 @@ is_hostname(svn_string_t *str)
       if (c == '-')
         {
           if (i + 1 != str->len)
-            if (str->data[i + 1] == '.')
-              return FALSE; /* '-' preceeds a '.' */
+            {
+              if (str->data[i + 1] == '.')
+                return FALSE; /* '-' preceeds a '.' */
+            }
           else
             return FALSE; /* '-' is at end of string */
 
