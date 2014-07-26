@@ -704,15 +704,42 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
   return svn_stringbuf__morph_into_string(outstr);
 }
 
+/* Convert an ISO-8859-1 (Latin-1) string to UTF-8.
+   ISO-8859-1 is a strict subset of Unicode. */
+static svn_error_t *
+latin1_to_utf8(const svn_string_t **result, const svn_string_t *src,
+               apr_pool_t *result_pool)
+{
+  apr_int32_t *ucs4buf;
+  svn_membuf_t resultbuf;
+  apr_size_t length;
+  apr_size_t index;
+  svn_string_t *res;
+
+  ucs4buf = apr_palloc(result_pool, src->len * sizeof(*ucs4buf));
+  for (index = 0; index < src->len; ++index)
+    ucs4buf[index] = (unsigned char)(src->data[index]);
+
+  svn_membuf__create(&resultbuf, 2 * src->len, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, ucs4buf, src->len, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
 /* Make a best effort to convert a X.509 name to a UTF-8 encoded
  * string and return it.  If we can't properly convert just do a
  * fuzzy conversion so we have something to display. */
 static const svn_string_t *
 x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 {
-  const svn_string_t *src_string, *utf8_string;
+  const svn_string_t *src_string;
+  const svn_string_t *utf8_string;
   svn_error_t *err;
-  const char *frompage;
 
   src_string = svn_string_ncreate((const char *)name->val.p,
                                   name->val.len,
@@ -736,11 +763,19 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * into these, we might need to do something about it. */
 
     case ASN1_BMP_STRING:
-      frompage = "ISO-10646-UCS-2";
+      SVN_ERR_ASSERT_NO_RETURN(0 == src_string->len % sizeof(apr_uint16_t));
+      err = svn_utf__utf16_to_utf8(&utf8_string,
+                                   (const void*)(src_string->data),
+                                   src_string->len / sizeof(apr_uint16_t),
+                                   TRUE, result_pool, result_pool);
       break;
 
     case ASN1_UNIVERSAL_STRING:
-      frompage = "ISO-10646-UCS-4";
+      SVN_ERR_ASSERT_NO_RETURN(0 == src_string->len % sizeof(apr_int32_t));
+      err = svn_utf__utf32_to_utf8(&utf8_string,
+                                   (const void*)(src_string->data),
+                                   src_string->len / sizeof(apr_int32_t),
+                                   TRUE, result_pool, result_pool);
       break;
 
       /* Despite what all the IETF, ISO, ITU bits say everything out
@@ -750,7 +785,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
        * https://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
        */
     case ASN1_T61_STRING:
-      frompage = "ISO-8859-1";
+      err = latin1_to_utf8(&utf8_string, src_string, result_pool);
       break;
 
       /* This leaves two types out there in the wild.  PrintableString,
@@ -767,8 +802,6 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
       return fuzzy_escape(src_string, result_pool);
     }
 
-  err = svn_utf_string_to_utf8_ex(&utf8_string, src_string, frompage,
-                                  result_pool);
   if (err)
     {
       svn_error_clear(err);
