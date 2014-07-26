@@ -66,7 +66,8 @@
  * ASN.1 DER decoding routines
  */
 static svn_error_t *
-asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
+asn1_get_len(const unsigned char **p, const unsigned char *end,
+             apr_size_t *len)
 {
   if ((end - *p) < 1)
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
@@ -97,7 +98,7 @@ asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
         break;
       }
 
-  if (*len > (int)(end - *p))
+  if (*len > (end - *p))
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
 
   return SVN_NO_ERROR;
@@ -105,7 +106,7 @@ asn1_get_len(const unsigned char **p, const unsigned char *end, int *len)
 
 static svn_error_t *
 asn1_get_tag(const unsigned char **p,
-             const unsigned char *end, int *len, int tag)
+             const unsigned char *end, apr_size_t *len, int tag)
 {
   if ((end - *p) < 1)
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
@@ -121,7 +122,7 @@ asn1_get_tag(const unsigned char **p,
 static svn_error_t *
 asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 {
-  int len;
+  apr_size_t len;
 
   SVN_ERR(asn1_get_tag(p, end, &len, ASN1_INTEGER));
 
@@ -145,7 +146,7 @@ static svn_error_t *
 x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
 
   err = asn1_get_tag(p, end, &len,
                      ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 0);
@@ -219,7 +220,7 @@ static svn_error_t *
 x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
 
   err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
@@ -271,7 +272,7 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
               x509_name * cur, apr_pool_t *result_pool)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
   const unsigned char *end2;
   x509_buf *oid;
   x509_buf *val;
@@ -361,7 +362,8 @@ x509_get_date(apr_time_t *when,
 {
   svn_error_t *err;
   apr_status_t ret;
-  int len, tag;
+  int tag;
+  apr_size_t len;
   char *date;
   apr_time_exp_t xt = { 0 };
   char tz;
@@ -448,7 +450,7 @@ x509_get_dates(apr_time_t *from,
                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
 
   err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
@@ -473,7 +475,7 @@ static svn_error_t *
 x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
 
   sig->tag = **p;
 
@@ -534,7 +536,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
              const unsigned char *end)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
 
   if (*p == end)
     return SVN_NO_ERROR;
@@ -565,7 +567,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
 
   while (*p < end)
     {
-      int ext_len;
+      apr_size_t ext_len;
       const unsigned char *ext_start, *sna_end;
       err = asn1_get_tag(p, end, &ext_len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
       if (err)
@@ -976,12 +978,12 @@ x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
 svn_error_t *
 svn_x509_parse_cert(apr_hash_t **certinfo,
                     const char *buf,
-                    int buflen,
+                    apr_size_t buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  int len;
+  apr_size_t len;
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
@@ -1003,7 +1005,7 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
 
-  if (len != (int)(end - p))
+  if (len != (end - p))
     {
       err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
       return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);

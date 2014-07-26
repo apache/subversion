@@ -51,7 +51,7 @@ extern "C" {
 svn_error_t *
 svn_x509_parse_cert(apr_hash_t **certinfo,
                     const char *buf,
-                    int buflen,
+                    apr_size_t buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 

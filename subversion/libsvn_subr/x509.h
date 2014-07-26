@@ -84,7 +84,7 @@ extern "C" {
  */
 typedef struct _x509_buf {
   int tag;
-  int len;
+  apr_size_t len;
   const unsigned char *p;
 } x509_buf;
 
