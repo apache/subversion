@@ -169,8 +169,8 @@ x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
 
   if (*p != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_VERSION, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_VERSION, err, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -187,15 +187,15 @@ x509_get_serial(const unsigned char **p,
 
   if ((end - *p) < 1)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, err, NULL);
     }
 
   if (**p != (ASN1_CONTEXT_SPECIFIC | ASN1_PRIMITIVE | 2) &&
       **p != ASN1_INTEGER)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_SERIAL, err, NULL);
     }
 
   serial->tag = *(*p)++;
@@ -247,8 +247,8 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 
   if (*p != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -289,8 +289,8 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
 
   if (*p + len != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
     }
 
   oid = &cur->oid;
@@ -305,16 +305,16 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
 
   if ((end - *p) < 1)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
     }
 
   if (**p != ASN1_BMP_STRING && **p != ASN1_UTF8_STRING &&
       **p != ASN1_T61_STRING && **p != ASN1_PRINTABLE_STRING &&
       **p != ASN1_IA5_STRING && **p != ASN1_UNIVERSAL_STRING)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
     }
 
   val = &cur->val;
@@ -331,8 +331,8 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
 
   if (*p != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
     }
 
   /*
@@ -462,8 +462,8 @@ x509_get_dates(apr_time_t *from,
 
   if (*p != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, err, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -559,8 +559,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
 
   if (end != *p + len)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err, NULL);
     }
 
   while (*p < end)
@@ -615,8 +615,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
 
       if (sna_end != *p + len)
         {
-          err = svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, NULL, NULL);
-          return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+          err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+          return svn_error_create(SVN_ERR_X509_CERT_INVALID_EXTENSIONS, err, NULL);
         }
 
       while (*p < sna_end)
@@ -970,8 +970,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   if (len != (int)(end - p))
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
     }
 
   /*
@@ -1061,8 +1061,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   }
 
   if (p != end) {
-    err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
-    return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+    err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
   }
 
   end = (const unsigned char*) buf + buflen;
@@ -1081,8 +1081,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
 
   if (p != end)
     {
-      err = svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
-      return svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, err, NULL);
+      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
+      return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
     }
 
   *certinfo = apr_hash_make(result_pool);
