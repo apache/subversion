@@ -201,12 +201,6 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   if (v)
     SVN_ERR(svn_cmdline_printf(scratch_pool, _("Hostnames: %s\n"), v));
 
-#if 0
-  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"), cert->subject_id.p));
-  SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
-  SVN_ERR(svn_cmdline_printf(iterpool, _("Fingerprint: %s\n"),
-                             value->data));
-#endif
   return SVN_NO_ERROR;
 }
 
@@ -231,7 +225,7 @@ list_credential(const char *cred_kind,
       svn_sort__item_t item;
       const char *key;
       svn_string_t *value;
-      
+
       svn_pool_clear(iterpool);
       item = APR_ARRAY_IDX(cred_items, i, svn_sort__item_t);
       key = item.key;
@@ -262,21 +256,6 @@ list_credential(const char *cred_kind,
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
        SVN_ERR(show_cert(value, iterpool));
-#if 0
-      else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Hostname: %s\n"), value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_FROM_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Valid from: %s\n"),
-                                   value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Valid until: %s\n"),
-                                   value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_ISSUER_DN_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Fingerprint: %s\n"),
-                                   value->data));
-#endif
       else if (strcmp(key, SVN_CONFIG_AUTHN_FAILURES_KEY) == 0)
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
