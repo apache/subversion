@@ -466,10 +466,11 @@ public class SVNUtil
      *             otherwise, only those credentials that have a username,
      *             and where the username matches the pattern, will be
      *             returned.
-     * @param hostnamePattern A glob pattern for the hostname (CN) of
-     *             a server certificate; if <code>null</code>, all credntials
-     *             will be considered; otherwise, only those credentials
-     *             that have a server certificate with a hostname that
+     * @param subjectPattern A glob pattern for the subject and
+     *             hostnames of a server certificate; if
+     *             <code>null</code>, all credntials will be
+     *             considered; otherwise, only those credentials that
+     *             have a server certificate with a hostname that
      *             matches the pattern will be returned.
      * @param textPattern A glob pattern that must match any textual
      *             information in a credential, for example, a realm,
@@ -482,12 +483,12 @@ public class SVNUtil
                           Credential.Kind kind,
                           String realmPattern,
                           String usernamePattern,
-                          String hostnamePattern,
+                          String subjectPattern,
                           String textPattern)
         throws ClientException, SubversionException
     {
         return configLib.searchCredentials(configDir, kind, realmPattern,
-                                           usernamePattern, hostnamePattern,
+                                           usernamePattern, subjectPattern,
                                            textPattern);
     }
 
