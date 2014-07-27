@@ -28,32 +28,91 @@
 #define SVN_X509_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
+#include <apr_time.h>
 
 #include "svn_error.h"
-
-/* Hash keys for certificate information returned by svn_x509_parse_cert().
- * @since New in 1.9 */
-#define SVN_X509_CERTINFO_KEY_SUBJECT     "subject"
-#define SVN_X509_CERTINFO_KEY_ISSUER      "issuer"
-#define SVN_X509_CERTINFO_KEY_VALID_FROM  "valid-from"
-#define SVN_X509_CERTINFO_KEY_VALID_TO    "valid-to"
-#define SVN_X509_CERTINFO_KEY_SHA1_DIGEST "sha1-digest"
-#define SVN_X509_CERTINFO_KEY_HOSTNAMES   "hostnames"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Parse x509 @a der certificate data from @a buf with length @a buflen
- * and return certificate information in @a *cert, allocated in
- * @a result_pool. The certinfo hash contains values of type
- * 'const char *' keyed by SVN_X509_CERTINFO_KEY_* macros. */
+/**
+ * Representation of parsed certificate info.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_x509_certinfo_t svn_x509_certinfo_t;
+
+/**
+ * Parse x509 @a der certificate data from @a buf with length @a
+ * buflen and return certificate information in @a *certinfo,
+ * allocated in @a result_pool.
+ *
+ * @since New in 1.9.
+ */
 svn_error_t *
-svn_x509_parse_cert(apr_hash_t **certinfo,
+svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
                     const char *buf,
                     apr_size_t buflen,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
+
+/**
+ * Returns a deep copy of @a certinfo, allocated in @a result_pool.
+ * May use @a scratch_pool for temporary allocations.
+ * @since New in 1.9.
+ */
+svn_x509_certinfo_t *
+svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Returns the subject name from @a certinfo.
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the cerficiate issuer name from @a certinfo.
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_certinfo_get_issuer(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the start of the certificate validity period from @a certinfo.
+ *
+ * @since New in 1.9.
+ */
+apr_time_t
+svn_x509_certinfo_get_valid_from(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the end of the certificate validity period from @a certinfo.
+ *
+ * @since New in 1.9.
+ */
+const apr_time_t
+svn_x509_certinfo_get_valid_to(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the digest (fingerprint) from @a certinfo
+ * @since New in 1.9.
+ */
+const svn_checksum_t *
+svn_x509_certinfo_get_digest(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns an array of (const char*) host names from @a certinfo.
+ *
+ * @since New in 1.9.
+ */
+const apr_array_header_t *
+svn_x509_certinfo_get_hostnames(const svn_x509_certinfo_t *certinfo);
 
 #ifdef __cplusplus
 }

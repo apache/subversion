@@ -43,6 +43,7 @@
 #include "svn_sorts.h"
 #include "svn_base64.h"
 #include "svn_x509.h"
+#include "svn_time.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_token.h"
@@ -170,33 +171,47 @@ static svn_error_t *
 show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
 {
   const svn_string_t *der_cert;
-  apr_hash_t *certinfo;
-  const char *v;
+  svn_x509_certinfo_t *certinfo;
+  const apr_array_header_t *hostnames;
 
   /* Convert header-less PEM to DER by undoing base64 encoding. */
   der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
 
   SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
-                              scratch_pool, scratch_pool)); 
+                              scratch_pool, scratch_pool));
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"),
-                             (const char *)svn_hash_gets(certinfo,
-                                             SVN_X509_CERTINFO_KEY_SUBJECT)));
+                             svn_x509_certinfo_get_subject(certinfo)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
-                             (const char *)svn_hash_gets(certinfo,
-                                             SVN_X509_CERTINFO_KEY_VALID_FROM)));
+                             svn_time_to_human_cstring(
+                                 svn_x509_certinfo_get_valid_from(certinfo),
+                                 scratch_pool)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid until: %s\n"),
-                             (const char *)svn_hash_gets(certinfo,
-                                             SVN_X509_CERTINFO_KEY_VALID_TO)));
+                             svn_time_to_human_cstring(
+                                 svn_x509_certinfo_get_valid_to(certinfo),
+                                 scratch_pool)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
-                             (const char *)svn_hash_gets(certinfo,
-                                             SVN_X509_CERTINFO_KEY_ISSUER)));
+                             svn_x509_certinfo_get_issuer(certinfo)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
-                             (const char *)svn_hash_gets(certinfo,
-                                             SVN_X509_CERTINFO_KEY_SHA1_DIGEST)));
-  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES);
-  if (v)
-    SVN_ERR(svn_cmdline_printf(scratch_pool, _("Hostnames: %s\n"), v));
+                             svn_checksum_to_cstring_display(
+                                 svn_x509_certinfo_get_digest(certinfo),
+                                 scratch_pool)));
+
+  hostnames = svn_x509_certinfo_get_hostnames(certinfo);
+  if (hostnames && !apr_is_empty_array(hostnames))
+    {
+      int i;
+      svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
+      for (i = 0; i < hostnames->nelts; ++i)
+        {
+          const char *hostname = APR_ARRAY_IDX(hostnames, i, const char*);
+          if (i > 0)
+            svn_stringbuf_appendbytes(buf, ", ", 2);
+          svn_stringbuf_appendbytes(buf, hostname, strlen(hostname));
+        }
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Hostnames: %s\n"),
+                                 buf->data));
+    }
 
   return SVN_NO_ERROR;
 }

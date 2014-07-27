@@ -24,7 +24,6 @@
 #include <string.h>
 #include "svn_x509.h"
 #include "svn_base64.h"
-#include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -365,46 +364,80 @@ static struct x509_test cert_tests[] = {
 
 static svn_error_t *
 compare_dates(const char *expected,
-              const char *actual,
+              apr_time_t actual,
               const char *type,
               const char *subject,
               apr_pool_t *pool)
 {
   apr_time_t expected_tm;
-  const char *expected_human;
 
   if (!actual)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No %s for cert '%s'", subject);
 
-  /* Jump through some hoops here since the human timestamp is in localtime
-   * so we take the expected which will be in ISO-8601 and convert it to 
-   * apr_time_t and then convert to a human cstring for comparison. */
   SVN_ERR(svn_time_from_cstring(&expected_tm, expected, pool));
-  expected_human = svn_time_to_human_cstring(expected_tm, pool);
-  if (!expected_human)
+  if (!expected_tm)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Problem converting expected %s '%s' to human "
+                             "Problem converting expected %s '%s' to text "
                              "output for cert '%s'", type, expected,
                              subject);
 
-  if (strcmp(expected_human, actual))
+  if (expected_tm != actual)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "The %s didn't match expected '%s',"
-                             " got '%s' for cert '%s'", type,
-                             expected_human, actual, subject);
+                             " got '%s' for cert '%s'",
+                             type, expected,
+                             svn_time_to_cstring(actual, pool),
+                             subject);
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
+compare_hostnames(const char *expected,
+                  const apr_array_header_t *actual,
+                  const char *subject,
+                  apr_pool_t *pool)
+{
+
+  int i;
+  svn_stringbuf_t *buf;
+
+  if (!actual)
+    {
+      if (expected)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "The hostnames didn't match expected '%s',"
+                                 " got NULL for cert '%s'",
+                                 expected, subject);
+      return SVN_NO_ERROR;
+    }
+
+  buf = svn_stringbuf_create_empty(pool);
+  for (i = 0; i < actual->nelts; ++i)
+    {
+      const char *hostname = APR_ARRAY_IDX(actual, i, const char*);
+      if (i > 0)
+        svn_stringbuf_appendbytes(buf, ", ", 2);
+      svn_stringbuf_appendbytes(buf, hostname, strlen(hostname));
+    }
+
+  if (strcmp(expected, buf->data))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "The hostnames didn't match expected '%s',"
+                             " got '%s' for cert '%s'",
+                             expected, buf->data, subject);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 compare_results(struct x509_test *xt,
-                apr_hash_t *certinfo,
+                svn_x509_certinfo_t *certinfo,
                 apr_pool_t *pool)
 {
   const char *v;
 
-  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SUBJECT);
+  v = svn_x509_certinfo_get_subject(certinfo);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No subject for cert '%s'", xt->subject);
@@ -414,7 +447,7 @@ compare_results(struct x509_test *xt,
                              "expected '%s', got '%s'", xt->subject,
                              xt->subject, v);
 
-  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_ISSUER);
+  v = svn_x509_certinfo_get_issuer(certinfo);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No issuer for cert '%s'", xt->subject);
@@ -425,31 +458,24 @@ compare_results(struct x509_test *xt,
                              xt->issuer, v);
 
   SVN_ERR(compare_dates(xt->valid_from,
-                        svn_hash_gets(certinfo,
-                                      SVN_X509_CERTINFO_KEY_VALID_FROM),
-                        SVN_X509_CERTINFO_KEY_VALID_FROM,
+                        svn_x509_certinfo_get_valid_from(certinfo),
+                        "valid-from",
                         xt->subject,
                         pool));
 
   SVN_ERR(compare_dates(xt->valid_to,
-                        svn_hash_gets(certinfo,
-                                      SVN_X509_CERTINFO_KEY_VALID_TO),
-                        SVN_X509_CERTINFO_KEY_VALID_TO,
+                        svn_x509_certinfo_get_valid_to(certinfo),
+                        "valid-to",
                         xt->subject,
                         pool));
 
-  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES);
-  if (!v != !xt->hostnames || (v && strcmp(v, xt->hostnames)))
-    {
-      /* both should have a value or neither should have a value and
-       * if they have a value they should match. */
-      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                               "Hostnames didn't match for cert '%s', "
-                               "expected '%s', got '%s'", xt->subject,
-                               xt->hostnames, v);
-    }
+  SVN_ERR(compare_hostnames(xt->hostnames,
+                            svn_x509_certinfo_get_hostnames(certinfo),
+                            xt->subject,
+                            pool));
 
-  v = svn_hash_gets(certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST);
+  v = svn_checksum_to_cstring_display(
+      svn_x509_certinfo_get_digest(certinfo), pool);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No SHA1 digest for cert '%s'", xt->subject);
@@ -458,7 +484,6 @@ compare_results(struct x509_test *xt,
                              "SHA1 digest didn't match for cert '%s', "
                              "expected '%s', got '%s'", xt->subject,
                              xt->sha1_digest, v);
-
 
   return SVN_NO_ERROR;
 }
@@ -472,7 +497,7 @@ test_x509_parse_cert(apr_pool_t *pool)
   for (xt = cert_tests; xt->base64_cert; xt++)
     {
       const svn_string_t *der_cert;
-      apr_hash_t *certinfo;
+      svn_x509_certinfo_t *certinfo;
 
       svn_pool_clear(iterpool);
 
