@@ -36,9 +36,229 @@
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
 #include "repos.h"
 
 
+/*** Utilities. ***/
+
+/* We are using hashes to represent sets.  This glorified macro adds the
+ * string KEY to SET. */
+static void
+set_add_string(apr_hash_t *set,
+               const char *key)
+{
+  apr_hash_set(set, key, strlen(key), "");
+}
+
+
+/*** Users, aliases and groups. ***/
+
+/* Callback baton used with add_alias(). */
+typedef struct add_alias_baton_t
+{
+  /* Store the alias names here (including the '&' prefix). */
+  apr_hash_t *aliases;
+
+  /* The user we are lookup up. */
+  const char *user;
+} add_alias_baton_t;
+
+/* Implements svn_config_enumerator2_t processing all entries in the
+ * [aliases] section. Collect all the aliases for the user specified
+ * in VOID_BATON. */
+static svn_boolean_t
+add_alias(const char *name,
+          const char *value,
+          void *void_baton,
+          apr_pool_t *scrath_pool)
+{
+  add_alias_baton_t *baton = void_baton;
+
+  /* Is this an alias for the current user? */
+  if (strcmp(baton->user, value) == 0)
+    {
+      /* Add it to our results.  However, decorate it such that it will
+         match directly against all occurrences of that alias. */
+      apr_pool_t *result_pool = apr_hash_pool_get(baton->aliases);
+      const char *decorated_name = apr_pstrcat(result_pool, "&", name,
+                                               SVN_VA_NULL);
+      set_add_string(baton->aliases, decorated_name);
+    }
+
+  /* Keep going. */
+  return TRUE;
+}
+
+/* Wrapper around svn_config_enumerate2.  Return a hash set containing the
+ * USER and all its aliases as defined in CONFIG. */
+static apr_hash_t *
+get_aliases(svn_config_t *config,
+            const char *user,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *result = svn_hash__make(result_pool);
+
+  add_alias_baton_t baton;
+  baton.aliases = result;
+  baton.user = user;
+
+  set_add_string(result, user);
+  svn_config_enumerate2(config, "aliases", add_alias, &baton, scratch_pool);
+
+  return result;
+}
+
+/* Callback baton to be used with add_group(). */
+typedef struct add_group_baton_t
+{
+  /* Output: Maps C string name (user, decorated alias, decorated group) to
+   *         an array of C string decorated group names that the key name is
+   *         a direct member of.  I.e. reversal of the group declaration. */
+  apr_hash_t *memberships;
+
+  /* Name and aliases of the current user. */
+  apr_hash_t *aliases;
+} add_group_baton_t;
+
+/* Implements svn_config_enumerator2_t processing all entries in the
+ * [groups] section. Collect all groups that contain other groups or
+ * directly one of the aliases provided in VOID_BATON. */
+static svn_boolean_t
+add_group(const char *name,
+          const char *value,
+          void *void_baton,
+          apr_pool_t *scrath_pool)
+{
+  int i;
+  apr_array_header_t *list;
+  add_group_baton_t *baton = void_baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(baton->memberships);
+
+  /* Decorated group NAME (i.e. '@' added).  Lazily initialized since many
+   * groups may not be relevant. */
+  const char *decorated_name = NULL;
+
+  /* Store the reversed membership  All group members. */
+  list = svn_cstring_split(value, ",", TRUE, scrath_pool);
+  for (i = 0; i < list->nelts; i++)
+    {
+      /* We are only interested in other groups as well as the user(s) given
+         through all their aliases. */
+      const char *member = APR_ARRAY_IDX(list, i, const char *);
+      if (member[0] == '@' || svn_hash_gets(baton->aliases, member))
+        {
+          /* Ensure there is a map entry for MEMBER. */
+          apr_array_header_t *groups = svn_hash_gets(baton->memberships,
+                                                     member);
+          if (groups == NULL)
+            {
+              groups = apr_array_make(result_pool, 4, sizeof(const char *));
+              member = apr_pstrdup(result_pool, member);
+              svn_hash_sets(baton->memberships, member, groups);
+            }
+
+          /* Lazily initialize DECORATED_NAME. */
+          if (decorated_name == NULL)
+            decorated_name = apr_pstrcat(result_pool, "@", name, SVN_VA_NULL);
+
+          /* Finally, add the group to the list of memberships. */
+          APR_ARRAY_PUSH(groups, const char *) = decorated_name;
+        }
+    }
+
+  /* Keep going. */
+  return TRUE;
+}
+
+/* Wrapper around svn_config_enumerate2.  Find all groups that ALIASES are
+ * members of and all groups that other groups are member of. */
+static apr_hash_t *
+get_group_memberships(svn_config_t *config,
+                      apr_hash_t *aliases,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *result = svn_hash__make(result_pool);
+
+  add_group_baton_t baton;
+  baton.aliases = aliases;
+  baton.memberships = result;
+  svn_config_enumerate2(config, SVN_CONFIG_SECTION_GROUPS, add_group,
+                        &baton, scratch_pool);
+
+  return result;
+}
+
+/* Return a hash set of all name keys (plain user name, decorated aliases
+ * and decorated group names) that refer to USER in the authz CONFIG.
+ * This include indirect group memberships. */
+static apr_hash_t *
+get_memberships(svn_config_t *config,
+                const char *user,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *to_follow;
+  apr_hash_index_t *hi;
+  apr_hash_t *result, *memberships;
+  int i, k;
+
+  /* special case: anonymous user */
+  if (user == NULL)
+    {
+      result = svn_hash__make(result_pool);
+      set_add_string(result, "*");
+      set_add_string(result, "$anonymous");
+
+      return result;
+    }
+
+  /* The USER and all its aliases. */
+  result = get_aliases(config, user, result_pool, scratch_pool);
+
+  /* For each potentially relevant decorated user / group / alias name,
+   * find the immediate group memberships. */
+  memberships = get_group_memberships(config, result, scratch_pool,
+                                      scratch_pool);
+
+  /* Now, flatten everything and construct the full result.
+   * We start at the user / decorated alias names. */
+  to_follow = apr_array_make(scratch_pool, 16, sizeof(const char *));
+  for (hi = apr_hash_first(scratch_pool, result); hi; hi = apr_hash_next(hi))
+    APR_ARRAY_PUSH(to_follow, const char *) = svn__apr_hash_index_key(hi);
+
+  /* Iteratively add group memberships. */
+  for (i = 0; i < to_follow->nelts; ++i)
+    {
+      /* Is NAME member of any groups? */
+      const char *name = APR_ARRAY_IDX(to_follow, i, const char *);
+      apr_array_header_t *next = svn_hash_gets(memberships, name);
+      if (next)
+        {
+          /* Add all groups to the result, if not included already
+           * (multiple subgroups may belong to the same super group). */
+          for (k = 0; k < next->nelts; ++k)
+            {
+              const char *group = APR_ARRAY_IDX(next, k, const char *);
+              if (!svn_hash_gets(result, group))
+                {
+                  /* New group. Add to result and look for parents later. */
+                  set_add_string(result, group);
+                  APR_ARRAY_PUSH(to_follow, const char *) = group;
+                }
+            }
+        }
+    }
+
+  /* standard memberships */
+  set_add_string(result, "*");
+  set_add_string(result, "$authenticated");
+
+  return result;
+}
+
 /*** Structures. ***/
 
 /* Information for the config enumerators called during authz
@@ -47,8 +267,9 @@ struct authz_lookup_baton {
   /* The authz configuration. */
   svn_config_t *config;
 
-  /* The user to authorize. */
-  const char *user;
+  /* The user name, their aliases and names of all groups that the user is
+     a member of. */
+  apr_hash_t *memberships;
 
   /* Explicitly granted rights. */
   svn_repos_authz_access_t allow;
@@ -123,74 +344,6 @@ authz_access_is_determined(svn_repos_authz_access_t allow,
     return FALSE;
 }
 
-/* Return TRUE is USER equals ALIAS. The alias definitions are in the
-   "aliases" sections of CFG. Use POOL for temporary allocations during
-   the lookup. */
-static svn_boolean_t
-authz_alias_is_user(svn_config_t *cfg,
-                    const char *alias,
-                    const char *user,
-                    apr_pool_t *pool)
-{
-  const char *value;
-
-  svn_config_get(cfg, &value, "aliases", alias, NULL);
-  if (!value)
-    return FALSE;
-
-  if (strcmp(value, user) == 0)
-    return TRUE;
-
-  return FALSE;
-}
-
-
-/* Return TRUE if USER is in GROUP.  The group definitions are in the
-   "groups" section of CFG.  Use POOL for temporary allocations during
-   the lookup. */
-static svn_boolean_t
-authz_group_contains_user(svn_config_t *cfg,
-                          const char *group,
-                          const char *user,
-                          apr_pool_t *pool)
-{
-  const char *value;
-  apr_array_header_t *list;
-  int i;
-
-  svn_config_get(cfg, &value, "groups", group, NULL);
-
-  list = svn_cstring_split(value, ",", TRUE, pool);
-
-  for (i = 0; i < list->nelts; i++)
-    {
-      const char *group_user = APR_ARRAY_IDX(list, i, char *);
-
-      /* If the 'user' is a subgroup, recurse into it. */
-      if (*group_user == '@')
-        {
-          if (authz_group_contains_user(cfg, &group_user[1],
-                                        user, pool))
-            return TRUE;
-        }
-
-      /* If the 'user' is an alias, verify it. */
-      else if (*group_user == '&')
-        {
-          if (authz_alias_is_user(cfg, &group_user[1],
-                                  user, pool))
-            return TRUE;
-        }
-
-      /* If the user matches, stop. */
-      else if (strcmp(user, group_user) == 0)
-        return TRUE;
-    }
-
-  return FALSE;
-}
-
-
 /* Determines whether an authz rule applies to the current
  * user, given the name part of the rule's name-value pair
  * in RULE_MATCH_STRING and the authz_lookup_baton object
@@ -201,47 +354,11 @@ authz_line_applies_to_user(const char *rule_match_string,
                            struct authz_lookup_baton *b,
                            apr_pool_t *pool)
 {
-  /* If the rule has an inversion, recurse and invert the result. */
   if (rule_match_string[0] == '~')
-    return !authz_line_applies_to_user(&rule_match_string[1], b, pool);
+    return svn_hash_gets(b->memberships, rule_match_string + 1) == NULL;
 
-  /* Check for special tokens. */
-  if (strcmp(rule_match_string, "$anonymous") == 0)
-    return (b->user == NULL);
-  if (strcmp(rule_match_string, "$authenticated") == 0)
-    return (b->user != NULL);
-
-  /* Check for a wildcard rule. */
-  if (strcmp(rule_match_string, "*") == 0)
-    return TRUE;
-
-  /* If we get here, then the rule is:
-   *  - Not an inversion rule.
-   *  - Not an authz token rule.
-   *  - Not a wildcard rule.
-   *
-   * All that's left over is regular user or group specifications.
-   */
-
-  /* If the session is anonymous, then a user/group
-   * rule definitely won't match.
-   */
-  if (b->user == NULL)
-    return FALSE;
-
-  /* Process the rule depending on whether it is
-   * a user, alias or group rule.
-   */
-  if (rule_match_string[0] == '@')
-    return authz_group_contains_user(
-      b->config, &rule_match_string[1], b->user, pool);
-  else if (rule_match_string[0] == '&')
-    return authz_alias_is_user(
-      b->config, &rule_match_string[1], b->user, pool);
-  else
-    return (strcmp(b->user, rule_match_string) == 0);
+  return svn_hash_gets(b->memberships, rule_match_string) != NULL;
 }
-
 
 /* Callback to parse one line of an authz file and update the
  * authz_baton accordingly.
@@ -341,7 +458,7 @@ authz_get_path_access(svn_config_t *cfg, const char *repos_name,
   struct authz_lookup_baton baton = { 0 };
 
   baton.config = cfg;
-  baton.user = user;
+  baton.memberships = get_memberships(cfg, user, pool, pool);
 
   /* Try to locate a repository-specific block first. */
   qualified_path = apr_pstrcat(pool, repos_name, ":", path, SVN_VA_NULL);
@@ -383,7 +500,7 @@ authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
   struct authz_lookup_baton baton = { 0 };
 
   baton.config = cfg;
-  baton.user = user;
+  baton.memberships = get_memberships(cfg, user, pool, pool);
   baton.required_access = required_access;
   baton.repos_path = path;
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
@@ -441,7 +558,7 @@ authz_get_any_access(svn_config_t *cfg, const char *repos_name,
   struct authz_lookup_baton baton = { 0 };
 
   baton.config = cfg;
-  baton.user = user;
+  baton.memberships = get_memberships(cfg, user, pool, pool);
   baton.required_access = required_access;
   baton.access = FALSE; /* Deny access by default. */
   baton.repos_path = "/";
