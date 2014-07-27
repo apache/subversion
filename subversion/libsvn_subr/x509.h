@@ -114,6 +114,20 @@ typedef struct _x509_cert {
 
 } x509_cert;
 
+
+/*
+ * Certificate info, returned from the parser
+ */
+struct svn_x509_certinfo_t
+{
+  const char *subject;
+  const char *issuer;
+  apr_time_t valid_from;
+  apr_time_t valid_to;
+  svn_checksum_t *digest;
+  apr_array_header_t *hostnames;
+};
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

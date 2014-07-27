@@ -966,12 +966,15 @@ is_hostname(const svn_string_t *str)
 }
 
 static void
-x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
-                        apr_pool_t *scratch_pool)
+x509parse_get_hostnames(apr_array_header_t **names, x509_cert *crt,
+                        apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   if (crt->dnsnames->nelts > 0)
     {
       int i;
+
+      *names = apr_array_make(result_pool, crt->dnsnames->nelts,
+                             sizeof(const char*));
 
       /* Subject Alt Names take priority */
       for (i = 0; i < crt->dnsnames->nelts; i++)
@@ -981,11 +984,8 @@ x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
                                                         dnsname->len,
                                                         scratch_pool);
 
-          if (i > 0)
-            svn_stringbuf_appendcstr(buf, ", ");
-
-          temp = fuzzy_escape(temp, scratch_pool);
-          svn_stringbuf_appendbytes(buf, temp->data, temp->len);
+          temp = fuzzy_escape(temp, result_pool);
+          APR_ARRAY_PUSH(*names, const char*) = temp->data;
         }
     }
   else
@@ -1011,7 +1011,10 @@ x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
         }
 
       if (utf8_value)
-        svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
+        {
+          *names = apr_array_make(result_pool, 1, sizeof(const char*));
+          APR_ARRAY_PUSH(*names, const char*) = utf8_value->data;
+        }
     }
 }
 
@@ -1019,7 +1022,7 @@ x509parse_get_hostnames(svn_stringbuf_t *buf, x509_cert *crt,
  * Parse one certificate.
  */
 svn_error_t *
-svn_x509_parse_cert(apr_hash_t **certinfo,
+svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
                     const char *buf,
                     apr_size_t buflen,
                     apr_pool_t *result_pool,
@@ -1030,8 +1033,8 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
-  svn_stringbuf_t *issuer, *subject, *hostnames;
-  svn_checksum_t *sha1_digest;
+  svn_x509_certinfo_t *ci;
+  svn_stringbuf_t *namebuf;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
@@ -1163,34 +1166,31 @@ svn_x509_parse_cert(apr_hash_t **certinfo,
       return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
     }
 
-  *certinfo = apr_hash_make(result_pool);
+  ci = apr_pcalloc(result_pool, sizeof(*ci));
 
-  subject = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(subject, &crt->subject, scratch_pool);
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_SUBJECT, subject->data);
+  /* Get the subject name */
+  namebuf = svn_stringbuf_create_empty(result_pool);
+  x509parse_dn_gets(namebuf, &crt->subject, scratch_pool);
+  ci->subject = namebuf->data;
 
-  issuer = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(issuer, &crt->issuer, scratch_pool);
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_ISSUER, issuer->data);
+  /* Get the issuer name */
+  namebuf = svn_stringbuf_create_empty(result_pool);
+  x509parse_dn_gets(namebuf, &crt->issuer, scratch_pool);
+  ci->issuer = namebuf->data;
 
-  hostnames = svn_stringbuf_create_empty(result_pool);
-  x509parse_get_hostnames(hostnames, crt, scratch_pool);
-  if (!svn_stringbuf_isempty(hostnames))
-    svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_HOSTNAMES, hostnames->data);
+  /* Copy the validity range */
+  ci->valid_from = crt->valid_from;
+  ci->valid_to = crt->valid_to;
 
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_FROM,
-                svn_time_to_human_cstring(crt->valid_from, result_pool));
+  /* Calculate the SHA1 digest of the certificate, otherwise known as
+    the fingerprint */
+  SVN_ERR(svn_checksum(&ci->digest, svn_checksum_sha1, buf, buflen,
+                       result_pool));
 
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_VALID_TO,
-                svn_time_to_human_cstring(crt->valid_to, result_pool));
+  /* Construct the array of host names */
+  x509parse_get_hostnames(&ci->hostnames, crt, result_pool, scratch_pool);
 
-  /* calculate the SHA1 digest of the certificate, otherwise known as the
-   * fingerprint */
-  SVN_ERR(svn_checksum(&sha1_digest, svn_checksum_sha1, buf, buflen,
-                       scratch_pool));
-  svn_hash_sets(*certinfo, SVN_X509_CERTINFO_KEY_SHA1_DIGEST,
-                svn_checksum_to_cstring_display(sha1_digest, result_pool));
-
+  *certinfo = ci;
   return SVN_NO_ERROR;
 }
 
