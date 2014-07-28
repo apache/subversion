@@ -667,6 +667,9 @@ lookup(node_t *root,
    * all paths of the current sub-tree. */
   svn_repos_authz_access_t min_rights = root->min_rights;
 
+  /* Same for maximum rights. */
+  svn_repos_authz_access_t max_rights = root->max_rights;
+
   /* Normalize start and end of PATH.  Most paths will be fully normalized,
    * so keep the overhead as low as possible. */
   if (path_len && path[path_len-1] == '/')
@@ -690,6 +693,18 @@ lookup(node_t *root,
       svn_stringbuf_t *segment = scratch_pad;
       path = next_segment(segment, path);
 
+      /* Shortcut 1: We could nowhere find enough rights in this sub-tree. */
+      if ((max_rights & required) != required)
+        return FALSE;
+
+      /* Shortcut 2: We will fine enough rights everywhere in this sub-tree. */
+      if ((min_rights & required) == required)
+        return TRUE;
+
+      /* Shortcut 3: The rights are the same everywhere in this sub-tree . */
+      if ((min_rights & required) == (max_rights & required))
+        return (min_rights & required) == required;
+
       /* Reached the bottom of the tree? */
       if (current->sub_nodes)
         {
@@ -705,12 +720,14 @@ lookup(node_t *root,
                 access = next->access;
 
               min_rights = next->min_rights;
+              max_rights = next->max_rights;
             }
           else
             {
               /* There are no more subtrees.  The access rights are fully
                * dictated by the parent. */
               min_rights = access->rights;
+              max_rights = access->rights;
             }
 
           current = next;
