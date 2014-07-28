@@ -1038,11 +1038,51 @@ static svn_boolean_t authz_validate_section(const char *name,
 
 /*** The authz data structure. ***/
 
+/* An entry in svn_authz_t's PREFILTERED cache.  All members must be
+ * allocated in the POOL and the latter has to be cleared / destroyed
+ * before overwriting the entries' contents.
+ */
+typedef struct filtered_rules_t
+{
+  /* User name for which we filtered the rules.
+   * User NULL for the anonymous user. */
+  const char *user;
+
+  /* Repository name for which we filtered the rules.
+   * May be empty but never NULL for used entries. */
+  const char *repository;
+
+  /* Root of the filtered path rule tree.  NULL for unused entries. */
+  node_t *root;
+
+  /* Pool from which all data within this struct got allocated.
+   * Can be destroyed or cleaned up with no further side-effects. */
+  apr_pool_t *pool;
+} filtered_rules_t;
+
+/* Number of (user, respoitory) combinations per authz for which we can
+ * cache the corresponding filtered path rule trees.
+ *
+ * Since authz instance are per connection and there is usually only one
+ * repository per connection, 2 (user + anonymous) would be sufficient in
+ * most cases.  Having 4 adds plenty of headroom and we expect high locality
+ * in any case.
+ */
+#define FILTER_CACHE_SIZE 4
+
 struct svn_authz_t
 {
   /* The configuration containing the raw users, groups, aliases and rule
    * sets data. */
   svn_config_t *cfg;
+
+  /* LRU cache of the filtered path rule trees for the latest (user, repo)
+   * combinations.  Empty / unused entries have NULL for ROOT. */
+  filtered_rules_t prefiltered[FILTER_CACHE_SIZE];
+
+  /* All members of this struct must be allocated from this pool or a pool
+   * with longer guaranteed lifetime. */
+  apr_pool_t *pool;
 };
 
 
@@ -1175,6 +1215,65 @@ authz_copy_groups(svn_config_t *config, svn_config_t *groups_cfg,
   return SVN_NO_ERROR;
 }
 
+/* Look through AUTHZ's cache for a path rule tree already filtered for
+ * this USER, REPOS_NAME combination.  If that does not exist, yet, create
+ * one and return this one instead.
+ */
+static node_t *
+get_filtered_tree(svn_authz_t *authz,
+                  const char *repos_name,
+                  const char *user,
+                  apr_pool_t *scratch_pool)
+{
+  apr_pool_t *pool;
+  apr_size_t i;
+
+  /* Search our cache for a suitable previously filtered tree. */
+  for (i = 0; i < FILTER_CACHE_SIZE && authz->prefiltered[i].root; ++i)
+    {
+      /* Does the user match? */
+      if (user == NULL)
+        {
+          if (authz->prefiltered[i].user != NULL)
+            continue;
+        }
+      else
+        {
+          if (   authz->prefiltered[i].user == NULL
+              || strcmp(user, authz->prefiltered[i].user))
+            continue;
+        }
+
+      /* Does the repository match as well? */
+      if (strcmp(repos_name, authz->prefiltered[i].repository))
+        continue;
+
+      /* LRU: Move up to first entry. */
+      if (i > 0)
+        {
+          filtered_rules_t temp = authz->prefiltered[i];
+          memmove(&authz->prefiltered[1], &authz->prefiltered[0],
+                  i * sizeof(temp));
+          authz->prefiltered[0] = temp;
+        }
+
+      return authz->prefiltered[0].root;
+    }
+
+  /* Cache full? Drop last (i.e. oldest) entry. */
+  if (i == FILTER_CACHE_SIZE)
+    svn_pool_destroy(authz->prefiltered[--i].pool);
+
+  /* Write a new entry. */
+  pool = svn_pool_create(authz->pool);
+  authz->prefiltered[i].pool = pool;
+  authz->prefiltered[i].repository = apr_pstrdup(pool, repos_name);
+  authz->prefiltered[i].user = user ? apr_pstrdup(pool, user) : NULL;
+  authz->prefiltered[i].root = create_user_authz(authz->cfg, repos_name,
+                                                 user, pool, scratch_pool);
+
+  return authz->prefiltered[i].root;
+}
 
 
 /*** Private API functions. ***/
@@ -1237,6 +1336,7 @@ svn_repos__create_authz(svn_authz_t **authz_p,
 {
   svn_authz_t *result = apr_pcalloc(result_pool, sizeof(*result));
 
+  result->pool = result_pool;
   result->cfg = config;
 
   *authz_p = result;
@@ -1330,7 +1430,6 @@ svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
 svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              const char *path, const char *user,
@@ -1338,12 +1437,9 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool)
 {
-  node_t *root;
-
-  if (!repos_name)
-    repos_name = "";
-
-  root = create_user_authz(authz->cfg, repos_name, user, pool, pool);
+  /* Pick or create the suitable pre-filtered path rule tree. */
+  node_t *root = get_filtered_tree(authz, repos_name ? repos_name : "",
+                                   user, pool);
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
