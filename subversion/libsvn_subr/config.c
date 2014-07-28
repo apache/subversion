@@ -52,9 +52,6 @@ struct cfg_section_t
 
   /* Table of cfg_option_t's. */
   apr_hash_t *options;
-
-  /* Section added immediately after this one. NULL for the last section. */
-  cfg_section_t *next;
 };
 
 
@@ -91,8 +88,6 @@ svn_config_create2(svn_config_t **cfgp,
   svn_config_t *cfg = apr_palloc(result_pool, sizeof(*cfg));
 
   cfg->sections = apr_hash_make(result_pool);
-  cfg->first_section = NULL;
-  cfg->last_section = NULL;
   cfg->pool = result_pool;
   cfg->x_pool = svn_pool_create(result_pool);
   cfg->x_values = FALSE;
@@ -338,10 +333,17 @@ for_each_option(svn_config_t *cfg, void *baton, apr_pool_t *pool,
                                        cfg_section_t *section,
                                        cfg_option_t *option))
 {
-  cfg_section_t *sec;
-  for (sec = cfg->first_section; sec != NULL; sec = sec->next)
+  apr_hash_index_t *sec_ndx;
+  for (sec_ndx = apr_hash_first(pool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next(sec_ndx))
     {
+      void *sec_ptr;
+      cfg_section_t *sec;
       apr_hash_index_t *opt_ndx;
+
+      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
 
       for (opt_ndx = apr_hash_first(pool, sec->options);
            opt_ndx != NULL;
@@ -638,14 +640,6 @@ svn_config_addsection(svn_config_t *cfg,
   else
     hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
   s->options = apr_hash_make(cfg->pool);
-
-  s->next = NULL;
-  if (cfg->last_section)
-    cfg->last_section->next = s;
-  else
-    cfg->first_section = s;
-  cfg->last_section = s;
-
   svn_hash_sets(cfg->sections, hash_key, s);
 
   return s;
@@ -933,15 +927,25 @@ svn_config_enumerate_sections(svn_config_t *cfg,
                               svn_config_section_enumerator_t callback,
                               void *baton)
 {
+  apr_hash_index_t *sec_ndx;
   int count = 0;
-  cfg_section_t *sec;
-  for (sec = cfg->first_section; sec != NULL; sec = sec->next)
+  apr_pool_t *subpool = svn_pool_create(cfg->x_pool);
+
+  for (sec_ndx = apr_hash_first(subpool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next(sec_ndx))
     {
+      void *sec_ptr;
+      cfg_section_t *sec;
+
+      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
       ++count;
       if (!callback(sec->name, baton))
         break;
     }
 
+  svn_pool_destroy(subpool);
   return count;
 }
 
@@ -951,13 +955,20 @@ svn_config_enumerate_sections2(svn_config_t *cfg,
                                svn_config_section_enumerator2_t callback,
                                void *baton, apr_pool_t *pool)
 {
-  cfg_section_t *sec;
+  apr_hash_index_t *sec_ndx;
   apr_pool_t *iteration_pool;
   int count = 0;
 
   iteration_pool = svn_pool_create(pool);
-  for (sec = cfg->first_section; sec != NULL; sec = sec->next)
+  for (sec_ndx = apr_hash_first(pool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next(sec_ndx))
     {
+      void *sec_ptr;
+      cfg_section_t *sec;
+
+      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
       ++count;
       svn_pool_clear(iteration_pool);
       if (!callback(sec->name, baton, iteration_pool))
