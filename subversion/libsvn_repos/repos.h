@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 
 #include "svn_fs.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -384,12 +385,12 @@ svn_repos__authz_read(svn_authz_t **authz_p,
 
 /* Walk the authz configuration CONFIG looking for any errors. */
 svn_error_t *
-svn_repos__authz_config_validate(struct svn_config_t *config,
+svn_repos__authz_config_validate(svn_config_t *config,
                                  apr_pool_t *pool);
 
 svn_error_t *
 svn_repos__create_authz(svn_authz_t **authz_p,
-                        struct svn_config_t *config,
+                        svn_config_t *config,
                         apr_pool_t *result_pool);
 
 
