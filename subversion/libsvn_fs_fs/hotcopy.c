@@ -987,7 +987,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   if (dst_ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     {
       /* Copy the rep cache and then remove entries for revisions
-      /* that did not make it into the destination. */
+       * that did not make it into the destination. */
       src_subdir = svn_dirent_join(src_fs->path, REP_CACHE_DB_NAME, pool);
       dst_subdir = svn_dirent_join(dst_fs->path, REP_CACHE_DB_NAME, pool);
       SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
