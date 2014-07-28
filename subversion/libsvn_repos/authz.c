@@ -23,6 +23,7 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -259,6 +260,406 @@ get_memberships(svn_config_t *config,
   return result;
 }
 
+
+/*** Constructing the prefix tree. ***/
+
+/* This structure describes the access rights given to a specific user by
+ * a path rule (actually the rule set specified for a path).  I.e. there is
+ * one instance of this per path rule.
+ * Later commits will add more fields.
+ */
+typedef struct access_t
+{
+  svn_repos_authz_access_t rights;
+} access_t;
+
+/* The pattern tree.  All relevant path rules are being folded into this
+ * prefix tree, with a single, whole segment stored at each node.  The whole
+ * tree applies to a single user only.
+ */
+typedef struct node_t
+{
+  /* The segment as specified in the path rule.  During the lookup tree walk,
+   * this will compared to the respective segment of the path to check. */
+  svn_string_t segment;
+
+  /* Access granted to the current user.  If this is NULL, there has been
+   * no specific path rule for this PATH but only for some sub-path(s).
+   * Never NULL at the root node. */
+  access_t *access;
+
+  /* Map of sub-segment(const char *) to respective node (node_t) for all
+   * sub-segments that have rules on themselves or their respective subtrees.
+   * NULL, if there are no rules for sub-paths relevant to the user. */
+  apr_hash_t *sub_nodes;
+} node_t;
+
+/* Callback baton to be used with process_rule(). */
+typedef struct process_rule_baton_t
+{
+  /* The user name, their aliases and names of all groups that the user is
+     a member of. */
+  apr_hash_t *memberships;
+
+  /* TRUE, if we found at least one rule that applies the user. */
+  svn_boolean_t found;
+
+  /* Aggregated rights granted to the user. */
+  svn_repos_authz_access_t access;
+} process_rule_baton_t;
+
+/* Implements svn_config_enumerator2_t processing all entries (rules) in a
+ * rule set (path rule).  Aggregate all access rights in VOID_BATON.
+ * Note that, within a rule set, are always accumulated, never subtracted. */
+static svn_boolean_t
+process_rule(const char *name,
+             const char *value,
+             void *void_baton,
+             apr_pool_t *scrath_pool)
+{
+  process_rule_baton_t *baton = void_baton;
+  svn_boolean_t inverted = FALSE;
+
+  /* Is this an inverted rule? */
+  if (name[0] == '~')
+    {
+      inverted = TRUE;
+      ++name;
+    }
+
+  /* Inversion simply means inverted membership / relevance check. */
+  if (inverted == !svn_hash_gets(baton->memberships, name))
+    {
+      /* The rule applies. Accumulate the rights that the user is given. */
+      baton->found = TRUE;
+      baton->access |= (strchr(value, 'r') ? svn_authz_read : svn_authz_none)
+                    | (strchr(value, 'w') ? svn_authz_write : svn_authz_none);
+    }
+
+  return TRUE;
+}
+
+/* Return whether the path rule SECTION in authz CONFIG applies to any of
+ * the user's MEMBERSHIPS.  If it does, return the specified access rights
+ * in *ACCESS.
+ */
+static svn_boolean_t
+has_matching_rule(svn_repos_authz_access_t *access,
+                  svn_config_t *config,
+                  const char *section,
+                  apr_hash_t *memberships,
+                  apr_pool_t *scratch_pool)
+{
+  /* Fully initialize the baton. */
+  process_rule_baton_t baton;
+  baton.memberships = memberships;
+  baton.found = FALSE;
+  baton.access = svn_authz_none;
+
+  /* Scan the whole rule set in SECTION and collect the access rights. */
+  svn_config_enumerate2(config, section, process_rule, &baton, scratch_pool);
+
+  /* Return the results. */
+  if (baton.found)
+    *access = baton.access;
+
+  return baton.found;
+}
+
+/* Constructor utility: Create a new tree node for SEGMENT.
+ */
+static node_t *
+create_node(const char *segment,
+            apr_pool_t *result_pool)
+{
+  apr_size_t len = strlen(segment);
+
+  node_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->segment.data = apr_pstrmemdup(result_pool, segment, len);
+  result->segment.len = len;
+
+  return result;
+}
+
+/* Constructor utility:  Below NODE, recursively insert sub-nodes for the
+ * path given as *SEGMENTS.  The end of the path is indicated by a NULL
+ * SEGMENT.  If matching nodes already exist, use those instead of creating
+ * new ones.  Set the leave node's access rights spec to ACCESS.
+ */
+static void
+insert_path(node_t *node,
+            const char **segments,
+            access_t *access,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  const char *segment = *segments;
+  node_t *sub_node;
+
+  /* End of path? */
+  if (segment == NULL)
+    {
+      /* Set access rights.  Since we call this function once per authz
+       * config file section, there cannot be multiple paths having the
+       * same leave node.  Hence, access gets never overwritten.
+       */
+      assert(node->access == NULL);
+      node->access = access;
+      return;
+    }
+
+  /* There will be sub-nodes.  Ensure the container is there as well. */
+  if (!node->sub_nodes)
+    node->sub_nodes = svn_hash__make(result_pool);
+
+  /* Auto-insert a sub-node for the current segment. */
+  sub_node = svn_hash_gets(node->sub_nodes, segment);
+  if (!sub_node)
+    {
+      sub_node = create_node(segment, result_pool);
+      apr_hash_set(node->sub_nodes, sub_node->segment.data,
+                   sub_node->segment.len, sub_node);
+    }
+
+  /* Continue at the sub-node with the next segment. */
+  insert_path(sub_node, segments + 1, access, result_pool, scratch_pool);
+}
+
+/* Callback baton to be used with  process_path_rule().
+ */
+typedef struct process_path_rule_baton_t
+{
+  /* The authz config structure from which we extract the user and repo-
+   * relevant information. */
+  svn_config_t *config;
+
+  /* Ignore path rules that don't apply to this repository. */
+  svn_string_t repository;
+
+  /* The user name, their aliases and names of all groups that the user is
+     a member of. */
+  apr_hash_t *memberships;
+
+  /* Root node of the result tree. Never NULL. */
+  node_t *root;
+
+  /* Allocate all nodes and their data from this pool. */
+  apr_pool_t *pool;
+} process_path_rule_baton_t;
+
+/* Implements svn_config_section_enumerator2_t taking a
+ * process_path_rule_baton_t in *VOID_BATON and inserting rules into the
+ * result tree, if they are relevant to the given user and repository.
+ */
+static svn_boolean_t
+process_path_rule(const char *name,
+                  void *void_baton,
+                  apr_pool_t *scratch_pool)
+{
+  process_path_rule_baton_t *baton = void_baton;
+  const char *colon_pos;
+  const char *path;
+  access_t *access;
+  svn_repos_authz_access_t rights;
+  apr_array_header_t *segments;
+
+  /* Is this section is relevant to the selected repository? */
+  colon_pos = strchr(name, ':');
+  if (colon_pos)
+      if (   (colon_pos - name != baton->repository.len)
+          || memcmp(name, baton->repository.data, baton->repository.len))
+        return TRUE;
+
+  /* Ignore sections that are not path rules */
+  path = colon_pos ? colon_pos + 1 : name;
+  if (path[0] != '/')
+    return TRUE;
+
+  /* Skip sections that don't say anything about the current user. */
+  if (!has_matching_rule(&rights, baton->config, name,
+                         baton->memberships, scratch_pool))
+    return TRUE;
+
+  /* Process the path */
+  segments = svn_cstring_split(path, "/", FALSE, scratch_pool);
+  APR_ARRAY_PUSH(segments, const char *) = NULL;
+
+  /* Access rights to assign. */
+  access = apr_pcalloc(baton->pool, sizeof(*access));
+  access->rights = rights;
+
+  /* Insert the path rule into the filtered tree. */
+  insert_path(baton->root, (void *)segments->elts, access, baton->pool,
+              scratch_pool);
+
+  return TRUE;
+}
+
+/* From the authz CONFIG, extract the parts relevant to USER and REPOSITORY.
+ * Return the filtered rule tree.
+ */
+static node_t *
+create_user_authz(svn_config_t *config,
+                  const char *repository,
+                  const char *user,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  /* Use a separate sub-pool to keep memory usage tight. */
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
+  /* Initialize the simple BATON members. */
+  process_path_rule_baton_t baton;
+  baton.config = config;
+  baton.repository.data = repository;
+  baton.repository.len = strlen(repository);
+  baton.pool = result_pool;
+
+  /* Determine the user's aliases, group memberships etc. */
+  baton.memberships = get_memberships(config, user, scratch_pool, subpool);
+  svn_pool_clear(subpool);
+
+  /* Filtering and tree construction. */
+  baton.root = create_node("", result_pool);
+  svn_config_enumerate_sections2(config, process_path_rule, &baton, subpool);
+
+  /* If there is no relevant rule at the root node, the "no access" default
+   * applies. */
+  if (!baton.root->access)
+    {
+      baton.root->access = apr_pcalloc(result_pool, sizeof(access_t));
+      baton.root->access->rights = svn_authz_none;
+    }
+
+  /* Done. */
+  svn_pool_destroy(subpool);
+  return baton.root;
+}
+
+
+/*** Lookup. ***/
+
+/* Extract the next segment from PATH and copy it into SEGMENT, whose current
+ * contents get overwritten.  Empty paths ("") are supported and leading '/'
+ * segment separators will be interpreted as an empty segment ("").  Non-
+ * normalizes parts, i.e. sequences of '/', will be treated as a single '/'.
+ *
+ * Return the start of the next segment within PATH, skipping the '/'
+ * separator(s).  Return NULL, if there are no further segments.
+ *
+ * The caller (only called by lookup(), ATM) must ensure that SEGMENT has
+ * enough room to store all of PATH.
+ */
+static const char *
+next_segment(svn_stringbuf_t *segment,
+             const char *path)
+{
+  apr_size_t len;
+  char c;
+
+  /* Read and scan PATH for NUL and '/' -- whichever comes first. */
+  for (len = 0, c = *path; c; c = path[++len])
+    if (c == '/')
+      {
+        /* End of segment. */
+        segment->data[len] = 0;
+        segment->len = len;
+
+        /* If PATH is not normalized, this is where we skip whole sequences
+         * of separators. */
+        while (path[++len] == '/')
+          ;
+
+        /* Continue behind the last separator in the sequence.  We will
+         * treat trailing '/' as indicating an empty trailing segment.
+         * Therefore, we never have to return NULL here. */
+        return path + len;
+      }
+    else
+      {
+        /* Copy segment contents directly into the result buffer.
+         * On many architectures, this is almost or entirely for free. */
+        segment->data[len] = c;
+      }
+
+  /* No separator found, so all of PATH has been the last segment. */
+  segment->data[len] = 0;
+  segment->len = len;
+
+  /* Tell the caller that this has been the last segment. */
+  return NULL;
+}
+
+/* Starting at the respective user's authz ROOT node, follow PATH and return
+ * TRUE, iff the REQUIRED access has been granted to that user for this PATH.
+ * REQUIRED must not contain svn_authz_recursive.  PATH does not need to be
+ * normalized, may be empty but must not be NULL.
+ */
+static svn_boolean_t
+lookup(node_t *root,
+       const char *path,
+       svn_repos_authz_access_t required,
+       apr_pool_t *scratch_pool)
+{
+  /* Create a scratch pad large enough to hold any of PATH's segments. */
+  apr_size_t path_len = strlen(path);
+  svn_stringbuf_t *scratch_pad = svn_stringbuf_create_ensure(path_len,
+                                                             scratch_pool);
+
+  /* Our current position in the path rule tree. */
+  node_t *current = root;
+
+  /* Last access rights description that we encountered along the path.
+   * By construction, there is always a rule at the root node.  Thus,
+   * ACCESS can never be NULL. */
+  access_t *access = root->access;
+
+  /* Normalize start and end of PATH.  Most paths will be fully normalized,
+   * so keep the overhead as low as possible. */
+  if (path_len && path[path_len-1] == '/')
+    {
+      do
+      {
+        --path_len;
+      }
+      while (path_len && path[path_len-1] == '/');
+      path = apr_pstrmemdup(scratch_pool, path, path_len);
+    }
+
+  while (path[0] == '/')
+    ++path;     /* Don't update PATH_LEN as we won't need it anymore. */
+
+  /* Actually walk the path rule tree following PATH until we run out of
+   * either tree or PATH. */
+  while (current && path)
+    {
+      /* Extract the next segment. */
+      svn_stringbuf_t *segment = scratch_pad;
+      path = next_segment(segment, path);
+
+      /* Reached the bottom of the tree? */
+      if (current->sub_nodes)
+        {
+          /* Maybe. Attempt to walk one level down. */
+          current = apr_hash_get(current->sub_nodes, segment->data,
+                                 segment->len);
+
+          /* If there are path rules for _exactly_ this SEGMENT, then these
+           * will be the new authoritative ones for PATH. */
+          if (current && current->access)
+            access = current->access;
+        }
+      else
+        {
+          /* Yes, done. */
+          current = NULL;
+        }
+    }
+
+  /* Return whether the access rights on PATH fully include REQUIRED. */
+  return (access->rights & required) == required;
+}
+
 /*** Structures. ***/
 
 /* Information for the config enumerators called during authz
@@ -435,51 +836,6 @@ authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
 
   /* As long as access isn't conclusively denied, carry on. */
   return b->access;
-}
-
-
-/* Validate access to the given user for the given path.  This
- * function checks rules for exactly the given path, and first tries
- * to access a section specific to the given repository before falling
- * back to pan-repository rules.
- *
- * Update *access_granted to inform the caller of the outcome of the
- * lookup.  Return a boolean indicating whether the access rights were
- * successfully determined.
- */
-static svn_boolean_t
-authz_get_path_access(svn_config_t *cfg, const char *repos_name,
-                      const char *path, const char *user,
-                      svn_repos_authz_access_t required_access,
-                      svn_boolean_t *access_granted,
-                      apr_pool_t *pool)
-{
-  const char *qualified_path;
-  struct authz_lookup_baton baton = { 0 };
-
-  baton.config = cfg;
-  baton.memberships = get_memberships(cfg, user, pool, pool);
-
-  /* Try to locate a repository-specific block first. */
-  qualified_path = apr_pstrcat(pool, repos_name, ":", path, SVN_VA_NULL);
-  svn_config_enumerate2(cfg, qualified_path,
-                        authz_parse_line, &baton, pool);
-
-  *access_granted = authz_access_is_granted(baton.allow, baton.deny,
-                                            required_access);
-
-  /* If the first test has determined access, stop now. */
-  if (authz_access_is_determined(baton.allow, baton.deny,
-                                 required_access))
-    return TRUE;
-
-  /* No repository specific rule, try pan-repository rules. */
-  svn_config_enumerate2(cfg, path, authz_parse_line, &baton, pool);
-
-  *access_granted = authz_access_is_granted(baton.allow, baton.deny,
-                                            required_access);
-  return authz_access_is_determined(baton.allow, baton.deny,
-                                    required_access);
 }
 
 
@@ -1133,7 +1489,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool)
 {
-  const char *current_path;
+  node_t *root;
 
   if (!repos_name)
     repos_name = "";
@@ -1149,35 +1505,21 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   /* Sanity check. */
   SVN_ERR_ASSERT(path[0] == '/');
 
-  /* Determine the granted access for the requested path. */
-  path = svn_fspath__canonicalize(path, pool);
-  current_path = path;
-
-  while (!authz_get_path_access(authz->cfg, repos_name,
-                                current_path, user,
-                                required_access,
-                                access_granted,
-                                pool))
-    {
-      /* Stop if the loop hits the repository root with no
-         results. */
-      if (current_path[0] == '/' && current_path[1] == '\0')
-        {
-          /* Deny access by default. */
-          *access_granted = FALSE;
-          return SVN_NO_ERROR;
-        }
-
-      /* Work back to the parent path. */
-      current_path = svn_fspath__dirname(current_path, pool);
-    }
+  /* Determine the granted access for the requested path.
+   * PATH does not need to be normalized for lockup(). */
+  root = create_user_authz(authz->cfg, repos_name, user, pool, pool);
+  *access_granted = lookup(root, path + 1,
+                           required_access & ~svn_authz_recursive, pool);
 
   /* If the caller requested recursive access, we need to walk through
      the entire authz config to see whether any child paths are denied
      to the requested user. */
   if (*access_granted && (required_access & svn_authz_recursive))
-    *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
-                                            user, required_access, pool);
+    {
+      path = svn_fspath__canonicalize(path, pool);
+      *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
+                                              user, required_access, pool);
+    }
 
   return SVN_NO_ERROR;
 }
