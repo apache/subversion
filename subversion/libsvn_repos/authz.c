@@ -288,6 +288,14 @@ typedef struct node_t
    * Never NULL at the root node. */
   access_t *access;
 
+  /* Minimal access rights that the user has on this or any other node in 
+   * the sub-tree. */
+  svn_repos_authz_access_t min_rights;
+
+  /* Maximal access rights that the user has on this or any other node in 
+   * the sub-tree. */
+  svn_repos_authz_access_t max_rights;
+
   /* Map of sub-segment(const char *) to respective node (node_t) for all
    * sub-segments that have rules on themselves or their respective subtrees.
    * NULL, if there are no rules for sub-paths relevant to the user. */
@@ -495,6 +503,41 @@ process_path_rule(const char *name,
   return TRUE;
 }
 
+/* Recursively update / finalize tree node properties for NODE immediately
+ * below PARENT.  The access rights inherited from the parent path are
+ * given in INHERITED_ACCESS.  None of the pointers may be NULL.
+ * The tree root node may be used as its own parent.
+ */
+static void
+finalize_tree(node_t *parent,
+              access_t *inherited_access,
+              node_t *node,
+              apr_pool_t *scratch_pool)
+{
+  /* Access rights at NODE. */
+  access_t *access = node->access ? node->access : inherited_access;
+
+  /* So far, min and max rights at NODE are the immediate access rights. */
+  node->min_rights = access->rights;
+  node->max_rights = access->rights;
+
+  /* Combine that information with sub-tree data. */
+  if (node->sub_nodes)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(scratch_pool, node->sub_nodes);
+           hi;
+           hi = apr_hash_next(hi))
+        finalize_tree(node, access, svn__apr_hash_index_val(hi),
+                      scratch_pool);
+    }
+
+  /* Add our min / max info to the parent's info.
+   * Idempotent for parent == node (happens at root). */
+  parent->max_rights |= node->max_rights;
+  parent->min_rights &= node->min_rights;
+}
+
 /* From the authz CONFIG, extract the parts relevant to USER and REPOSITORY.
  * Return the filtered rule tree.
  */
@@ -530,6 +573,10 @@ create_user_authz(svn_config_t *config,
       baton.root->access = apr_pcalloc(result_pool, sizeof(access_t));
       baton.root->access->rights = svn_authz_none;
     }
+
+  /* Calculate recursive rights etc. */
+  svn_pool_clear(subpool);
+  finalize_tree(baton.root, baton.root->access, baton.root, subpool);
 
   /* Done. */
   svn_pool_destroy(subpool);
@@ -592,13 +639,15 @@ next_segment(svn_stringbuf_t *segment,
 
 /* Starting at the respective user's authz ROOT node, follow PATH and return
  * TRUE, iff the REQUIRED access has been granted to that user for this PATH.
- * REQUIRED must not contain svn_authz_recursive.  PATH does not need to be
- * normalized, may be empty but must not be NULL.
+ * REQUIRED must not contain svn_authz_recursive.  If RECURSIVE is set, all
+ * paths in the sub-tree at and below PATH must have REQUIRED access.
+ * PATH does not need to be normalized, may be empty but must not be NULL.
  */
 static svn_boolean_t
 lookup(node_t *root,
        const char *path,
        svn_repos_authz_access_t required,
+       svn_boolean_t recursive,
        apr_pool_t *scratch_pool)
 {
   /* Create a scratch pad large enough to hold any of PATH's segments. */
@@ -613,6 +662,10 @@ lookup(node_t *root,
    * By construction, there is always a rule at the root node.  Thus,
    * ACCESS can never be NULL. */
   access_t *access = root->access;
+
+  /* Similar to ACCESS, these are the minimal rights that the user has in
+   * all paths of the current sub-tree. */
+  svn_repos_authz_access_t min_rights = root->min_rights;
 
   /* Normalize start and end of PATH.  Most paths will be fully normalized,
    * so keep the overhead as low as possible. */
@@ -641,13 +694,26 @@ lookup(node_t *root,
       if (current->sub_nodes)
         {
           /* Maybe. Attempt to walk one level down. */
-          current = apr_hash_get(current->sub_nodes, segment->data,
-                                 segment->len);
+          node_t *next = apr_hash_get(current->sub_nodes, segment->data,
+                                      segment->len);
 
           /* If there are path rules for _exactly_ this SEGMENT, then these
            * will be the new authoritative ones for PATH. */
-          if (current && current->access)
-            access = current->access;
+          if (next)
+            {
+              if (next->access)
+                access = next->access;
+
+              min_rights = next->min_rights;
+            }
+          else
+            {
+              /* There are no more subtrees.  The access rights are fully
+               * dictated by the parent. */
+              min_rights = access->rights;
+            }
+
+          current = next;
         }
       else
         {
@@ -656,40 +722,18 @@ lookup(node_t *root,
         }
     }
 
+  /* If we check recursively, none of the (potential) sub-paths must have
+   * less than the REQUIRED access rights.  "Potential" because we don't
+   * verify that the respective paths actually exist in the repository.
+   */
+  if (recursive)
+    return (min_rights & required) == required;
+
   /* Return whether the access rights on PATH fully include REQUIRED. */
   return (access->rights & required) == required;
 }
 
 /*** Structures. ***/
-
-/* Information for the config enumerators called during authz
-   lookup. */
-struct authz_lookup_baton {
-  /* The authz configuration. */
-  svn_config_t *config;
-
-  /* The user name, their aliases and names of all groups that the user is
-     a member of. */
-  apr_hash_t *memberships;
-
-  /* Explicitly granted rights. */
-  svn_repos_authz_access_t allow;
-  /* Explicitly denied rights. */
-  svn_repos_authz_access_t deny;
-
-  /* The rights required by the caller of the lookup. */
-  svn_repos_authz_access_t required_access;
-
-  /* The following are used exclusively in recursive lookups. */
-
-  /* The path in the repository (an fspath) to authorize. */
-  const char *repos_path;
-  /* repos_path prefixed by the repository name and a colon. */
-  const char *qualified_repos_path;
-
-  /* Whether, at the end of a recursive lookup, access is granted. */
-  svn_boolean_t access;
-};
 
 /* Information for the config enumeration functions called during the
    validation process. */
@@ -698,245 +742,6 @@ struct authz_validate_baton {
   svn_error_t *err;     /* The error being thrown out of the
                            enumerator, if any. */
 };
-
-
-/*** Checking access. ***/
-
-/* Determine whether the REQUIRED access is granted given what authz
- * to ALLOW or DENY.  Return TRUE if the REQUIRED access is
- * granted.
- *
- * Access is granted either when no required access is explicitly
- * denied (implicit grant), or when the required access is explicitly
- * granted, overriding any denials.
- */
-static svn_boolean_t
-authz_access_is_granted(svn_repos_authz_access_t allow,
-                        svn_repos_authz_access_t deny,
-                        svn_repos_authz_access_t required)
-{
-  svn_repos_authz_access_t stripped_req =
-    required & (svn_authz_read | svn_authz_write);
-
-  if ((deny & required) == svn_authz_none)
-    return TRUE;
-  else if ((allow & required) == stripped_req)
-    return TRUE;
-  else
-    return FALSE;
-}
-
-
-/* Decide whether the REQUIRED access has been conclusively
- * determined.  Return TRUE if the given ALLOW/DENY authz are
- * conclusive regarding the REQUIRED authz.
- *
- * Conclusive determination occurs when any of the REQUIRED authz are
- * granted or denied by ALLOW/DENY.
- */
-static svn_boolean_t
-authz_access_is_determined(svn_repos_authz_access_t allow,
-                           svn_repos_authz_access_t deny,
-                           svn_repos_authz_access_t required)
-{
-  if ((deny & required) || (allow & required))
-    return TRUE;
-  else
-    return FALSE;
-}
-
-/* Determines whether an authz rule applies to the current
- * user, given the name part of the rule's name-value pair
- * in RULE_MATCH_STRING and the authz_lookup_baton object
- * B with the username in question.
- */
-static svn_boolean_t
-authz_line_applies_to_user(const char *rule_match_string,
-                           struct authz_lookup_baton *b,
-                           apr_pool_t *pool)
-{
-  if (rule_match_string[0] == '~')
-    return svn_hash_gets(b->memberships, rule_match_string + 1) == NULL;
-
-  return svn_hash_gets(b->memberships, rule_match_string) != NULL;
-}
-
-/* Callback to parse one line of an authz file and update the
- * authz_baton accordingly.
- */
-static svn_boolean_t
-authz_parse_line(const char *name, const char *value,
-                 void *baton, apr_pool_t *pool)
-{
-  struct authz_lookup_baton *b = baton;
-
-  /* Stop if the rule doesn't apply to this user. */
-  if (!authz_line_applies_to_user(name, b, pool))
-    return TRUE;
-
-  /* Set the access grants for the rule. */
-  if (strchr(value, 'r'))
-    b->allow |= svn_authz_read;
-  else
-    b->deny |= svn_authz_read;
-
-  if (strchr(value, 'w'))
-    b->allow |= svn_authz_write;
-  else
-    b->deny |= svn_authz_write;
-
-  return TRUE;
-}
-
-
-/* Return TRUE iff the access rules in SECTION_NAME apply to PATH_SPEC
- * (which is a repository name, colon, and repository fspath, such as
- * "myrepos:/trunk/foo").
- */
-static svn_boolean_t
-is_applicable_section(const char *path_spec,
-                      const char *section_name)
-{
-  apr_size_t path_spec_len = strlen(path_spec);
-
-  return ((strncmp(path_spec, section_name, path_spec_len) == 0)
-          && (path_spec[path_spec_len - 1] == '/'
-              || section_name[path_spec_len] == '/'
-              || section_name[path_spec_len] == '\0'));
-}
-
-
-/* Callback to parse a section and update the authz_baton if the
- * section denies access to the subtree the baton describes.
- */
-static svn_boolean_t
-authz_parse_section(const char *section_name, void *baton, apr_pool_t *pool)
-{
-  struct authz_lookup_baton *b = baton;
-  svn_boolean_t conclusive;
-
-  /* Does the section apply to us? */
-  if (!is_applicable_section(b->qualified_repos_path, section_name)
-      && !is_applicable_section(b->repos_path, section_name))
-    return TRUE;
-
-  /* Work out what this section grants. */
-  b->allow = b->deny = 0;
-  svn_config_enumerate2(b->config, section_name,
-                        authz_parse_line, b, pool);
-
-  /* Has the section explicitly determined an access? */
-  conclusive = authz_access_is_determined(b->allow, b->deny,
-                                          b->required_access);
-
-  /* Is access granted OR inconclusive? */
-  b->access = authz_access_is_granted(b->allow, b->deny,
-                                      b->required_access)
-    || !conclusive;
-
-  /* As long as access isn't conclusively denied, carry on. */
-  return b->access;
-}
-
-
-/* Validate access to the given user for the subtree starting at the
- * given path.  This function walks the whole authz file in search of
- * rules applying to paths in the requested subtree which deny the
- * requested access.
- *
- * As soon as one is found, or else when the whole ACL file has been
- * searched, return the updated authorization status.
- */
-static svn_boolean_t
-authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
-                      const char *path, const char *user,
-                      svn_repos_authz_access_t required_access,
-                      apr_pool_t *pool)
-{
-  struct authz_lookup_baton baton = { 0 };
-
-  baton.config = cfg;
-  baton.memberships = get_memberships(cfg, user, pool, pool);
-  baton.required_access = required_access;
-  baton.repos_path = path;
-  baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
-                                           ":", path, SVN_VA_NULL);
-  /* Default to access granted if no rules say otherwise. */
-  baton.access = TRUE;
-
-  svn_config_enumerate_sections2(cfg, authz_parse_section,
-                                 &baton, pool);
-
-  return baton.access;
-}
-
-
-/* Callback to parse sections of the configuration file, looking for
-   any kind of granted access.  Implements the
-   svn_config_section_enumerator2_t interface. */
-static svn_boolean_t
-authz_get_any_access_parser_cb(const char *section_name, void *baton,
-                               apr_pool_t *pool)
-{
-  struct authz_lookup_baton *b = baton;
-
-  /* Does the section apply to the query? */
-  if (section_name[0] == '/'
-      || strncmp(section_name, b->qualified_repos_path,
-                 strlen(b->qualified_repos_path)) == 0)
-    {
-      b->allow = b->deny = svn_authz_none;
-
-      svn_config_enumerate2(b->config, section_name,
-                            authz_parse_line, baton, pool);
-      b->access = authz_access_is_granted(b->allow, b->deny,
-                                          b->required_access);
-
-      /* Continue as long as we don't find a determined, granted access. */
-      return !(b->access
-               && authz_access_is_determined(b->allow, b->deny,
-                                             b->required_access));
-    }
-
-  return TRUE;
-}
-
-
-/* Walk through the authz CFG to check if USER has the REQUIRED_ACCESS
- * to any path within the REPOSITORY.  Return TRUE if so.  Use POOL
- * for temporary allocations. */
-static svn_boolean_t
-authz_get_any_access(svn_config_t *cfg, const char *repos_name,
-                     const char *user,
-                     svn_repos_authz_access_t required_access,
-                     apr_pool_t *pool)
-{
-  struct authz_lookup_baton baton = { 0 };
-
-  baton.config = cfg;
-  baton.memberships = get_memberships(cfg, user, pool, pool);
-  baton.required_access = required_access;
-  baton.access = FALSE; /* Deny access by default. */
-  baton.repos_path = "/";
-  baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
-                                           ":/", SVN_VA_NULL);
-
-  /* We could have used svn_config_enumerate2 for "repos_name:/".
-   * However, this requires access for root explicitly (which the user
-   * may not always have). So we end up enumerating the sections in
-   * the authz CFG and stop on the first match with some access for
-   * this user. */
-  svn_config_enumerate_sections2(cfg, authz_get_any_access_parser_cb,
-                                 &baton, pool);
-
-  /* If walking the configuration was inconclusive, deny access. */
-  if (!authz_access_is_determined(baton.allow,
-                                  baton.deny, baton.required_access))
-    return FALSE;
-
-  return baton.access;
-}
-
 
 
 /*** Validating the authz file. ***/
@@ -1494,11 +1299,13 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   if (!repos_name)
     repos_name = "";
 
+  root = create_user_authz(authz->cfg, repos_name, user, pool, pool);
+
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
     {
-      *access_granted = authz_get_any_access(authz->cfg, repos_name,
-                                             user, required_access, pool);
+      svn_repos_authz_access_t required = required_access & ~svn_authz_recursive;
+      *access_granted = (root->max_rights & required) == required;
       return SVN_NO_ERROR;
     }
 
@@ -1507,19 +1314,9 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 
   /* Determine the granted access for the requested path.
    * PATH does not need to be normalized for lockup(). */
-  root = create_user_authz(authz->cfg, repos_name, user, pool, pool);
   *access_granted = lookup(root, path + 1,
-                           required_access & ~svn_authz_recursive, pool);
-
-  /* If the caller requested recursive access, we need to walk through
-     the entire authz config to see whether any child paths are denied
-     to the requested user. */
-  if (*access_granted && (required_access & svn_authz_recursive))
-    {
-      path = svn_fspath__canonicalize(path, pool);
-      *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
-                                              user, required_access, pool);
-    }
+                           required_access & ~svn_authz_recursive,
+                           required_access & svn_authz_recursive, pool);
 
   return SVN_NO_ERROR;
 }
