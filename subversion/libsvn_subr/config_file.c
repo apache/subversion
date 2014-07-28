@@ -25,6 +25,8 @@
 
 #include <apr_lib.h>
 #include <apr_env.h>
+#include <apr_tables.h>
+
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
@@ -37,8 +39,9 @@
 #include "svn_user.h"
 #include "svn_ctype.h"
 
-#include "svn_private_config.h"
+#include "private/svn_config_private.h"
 #include "private/svn_subr_private.h"
+#include "svn_private_config.h"
 
 #ifdef __HAIKU__
 #  include <FindDirectory.h>
@@ -52,8 +55,9 @@
 /* File parsing context */
 typedef struct parse_context_t
 {
-  /* This config struct */
-  svn_config_t *cfg;
+  /* The configuration constructor. */
+  svn_config__constructor_t *constructor;
+  void *constructor_baton;
 
   /* The stream struct */
   svn_stream_t *stream;
@@ -63,6 +67,9 @@ typedef struct parse_context_t
 
   /* Emulate an ungetc */
   int ungotten_char;
+
+  /* We're currently parsing a section */
+  svn_boolean_t in_section;
 
   /* Temporary strings */
   svn_stringbuf_t *section;
@@ -76,6 +83,113 @@ typedef struct parse_context_t
   size_t buffer_size; /* parser_buffer contains this many bytes */
 } parse_context_t;
 
+
+/* Config representation constructor */
+struct svn_config__constructor_t
+{
+  /* Constructor properties; see docs for svn_config__constructor_create. */
+  svn_boolean_t expand_values;
+  svn_boolean_t ci_section_names;
+  svn_boolean_t ci_option_names;
+
+  /* Constructor callbacks; see docs for svn_config__constructor_create. */
+  svn_config__open_section_fn open_section;
+  svn_config__close_section_fn close_section;
+  svn_config__add_value_fn add_value;
+
+  /* The following members are used only when value expansion is enabled. */
+  apr_hash_t *defaults;        /* Contents of the "DEFAULT" section */
+  apr_hash_t *options;         /* Options that are currently being parsed */
+  apr_array_header_t *order;   /* The order of the keys in OPTIONS */
+};
+
+svn_config__constructor_t *
+svn_config__constructor_create(
+    svn_boolean_t expand_parsed_values,
+    svn_boolean_t section_names_case_sensitive,
+    svn_boolean_t option_names_case_sensitive,
+    svn_config__open_section_fn open_section_callback,
+    svn_config__close_section_fn close_section_callback,
+    svn_config__add_value_fn add_value_callback,
+    apr_pool_t *result_pool)
+{
+  svn_config__constructor_t *ctor = apr_palloc(result_pool, sizeof(*ctor));
+  ctor->expand_values = expand_parsed_values;
+  ctor->ci_section_names = section_names_case_sensitive;
+  ctor->ci_option_names = option_names_case_sensitive;
+  ctor->open_section = open_section_callback;
+  ctor->close_section = close_section_callback;
+  ctor->add_value = add_value_callback;
+
+  if (expand_parsed_values)
+    {
+      ctor->defaults = svn_hash__make(result_pool);
+      ctor->options = svn_hash__make(result_pool);
+      ctor->order = apr_array_make(result_pool, 0, sizeof(const char*));
+    }
+  else
+    {
+      ctor->defaults = NULL;
+      ctor->options = NULL;
+      ctor->order = NULL;
+    }
+  return ctor;
+}
+
+/* Called after we've parsed a section name and before we start
+   parsing any options within that section. */
+static svn_error_t *
+open_section(parse_context_t *ctx)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  if (ctx->constructor->open_section)
+    err = ctx->constructor->open_section(
+        ctx->constructor_baton, ctx->section->data);
+  if (!err)
+    ctx->in_section = TRUE;
+  return err;
+}
+
+/* Called after we've parsed all options within a section and before
+   we start parsing the next section. */
+static svn_error_t *
+close_section(parse_context_t *ctx)
+{
+  if (ctx->constructor->expand_values
+      && ctx->constructor->add_value)
+    {
+      /* TODO: Implement logic for value expansion. */
+      *(volatile long*)0 = 0xdeadbeef;
+    }
+
+  ctx->in_section = FALSE;
+  if (ctx->constructor->close_section)
+    return ctx->constructor->close_section(
+        ctx->constructor_baton, ctx->section->data);
+  return SVN_NO_ERROR;
+}
+
+/* Called every tyme we've parsed a complete (option, value) pair. */
+static svn_error_t *
+add_value(parse_context_t *ctx)
+{
+  if (!ctx->constructor->add_value)
+    return SVN_NO_ERROR;
+
+  if (ctx->constructor->expand_values)
+    {
+      /* TODO: Implement logic for value expansion. */
+      *(volatile long*)0 = 0xdeadbeef;
+    }
+  else
+    {
+      return ctx->constructor->add_value(
+          ctx->constructor_baton, ctx->section->data,
+          ctx->option->data, ctx->value->data);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Emulate getc() because streams don't support it.
@@ -241,6 +355,7 @@ static svn_error_t *
 parse_value(int *pch, parse_context_t *ctx)
 {
   svn_boolean_t end_of_val = FALSE;
+  svn_error_t *err;
   int ch;
 
   /* Read the first line of the value */
@@ -264,8 +379,17 @@ parse_value(int *pch, parse_context_t *ctx)
         {
           /* At end of file. The value is complete, there can't be
              any continuation lines. */
-          svn_config_set(ctx->cfg, ctx->section->data,
-                         ctx->option->data, ctx->value->data);
+          err = add_value(ctx);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
+                {
+                  svn_error_clear(err);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_trace(err);
+            }
           break;
         }
       else
@@ -522,6 +646,7 @@ svn_config__shallow_replace_section(svn_config_t *target,
 }
 
 
+
 svn_error_t *
 svn_config__parse_file(svn_config_t *cfg, const char *file,
                        svn_boolean_t must_exist, apr_pool_t *result_pool)
@@ -545,7 +670,12 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
     SVN_ERR(err);
 
   stream = svn_stream_from_aprfile2(apr_file, FALSE, scratch_pool);
-  err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
+  err = svn_config__parse_stream(stream,
+                                 svn_config__constructor_create(
+                                     FALSE, FALSE, FALSE, NULL, NULL,
+                                     svn_config__default_add_value_fn,
+                                     scratch_pool),
+                                 cfg, scratch_pool);
 
   if (err != SVN_NO_ERROR)
     {
@@ -562,18 +692,31 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 }
 
 svn_error_t *
-svn_config__parse_stream(svn_config_t *cfg, svn_stream_t *stream,
-                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+svn_config__default_add_value_fn(void *baton, const char *section,
+                                 const char *option, const char *value)
+{
+  svn_config_set((svn_config_t *)baton, section, option, value);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_config__parse_stream(svn_stream_t *stream,
+                         svn_config__constructor_t *constructor,
+                         void *constructor_baton,
+                         apr_pool_t *scratch_pool)
 {
   parse_context_t *ctx;
+  svn_error_t *err;
   int ch, count;
 
   ctx = apr_palloc(scratch_pool, sizeof(*ctx));
 
-  ctx->cfg = cfg;
+  ctx->constructor = constructor;
+  ctx->constructor_baton = constructor_baton;
   ctx->stream = stream;
   ctx->line = 1;
   ctx->ungotten_char = EOF;
+  ctx->in_section = FALSE;
   ctx->section = svn_stringbuf_create_empty(scratch_pool);
   ctx->option = svn_stringbuf_create_empty(scratch_pool);
   ctx->value = svn_stringbuf_create_empty(scratch_pool);
@@ -589,13 +732,40 @@ svn_config__parse_stream(svn_config_t *cfg, svn_stream_t *stream,
       switch (ch)
         {
         case '[':               /* Start of section header */
-          if (count == 0)
-            SVN_ERR(parse_section_name(&ch, ctx, scratch_pool));
-          else
+          if (count != 0)
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      _("line %d: Section header"
                                        " must start in the first column"),
                                      ctx->line);
+
+          /* Close the previous section before starting a new one. */
+          if (ctx->in_section)
+            {
+              err = close_section(ctx);
+              if (err)
+                {
+                  if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
+                    {
+                      svn_error_clear(err);
+                      return SVN_NO_ERROR;
+                    }
+                  else
+                    return svn_error_trace(err);
+                }
+            }
+
+          SVN_ERR(parse_section_name(&ch, ctx, scratch_pool));
+          err = open_section(ctx);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
+                {
+                  svn_error_clear(err);
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_trace(err);
+            }
           break;
 
         case '#':               /* Comment */
@@ -634,6 +804,18 @@ svn_config__parse_stream(svn_config_t *cfg, svn_stream_t *stream,
     }
   while (ch != EOF);
 
+  /* Emit the last close-section call to wrap up. */
+  if (ctx->in_section)
+    {
+      err = close_section(ctx);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_CEASE_INVOCATION)
+            return svn_error_trace(err);
+          else
+            svn_error_clear(err);
+        }
+    }
   return SVN_NO_ERROR;
 }
 
