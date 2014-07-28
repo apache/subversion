@@ -266,12 +266,26 @@ get_memberships(svn_config_t *config,
 /* This structure describes the access rights given to a specific user by
  * a path rule (actually the rule set specified for a path).  I.e. there is
  * one instance of this per path rule.
- * Later commits will add more fields.
  */
 typedef struct access_t
 {
+  /* Sequence number of the path rule that this struct was derived from.
+   * If multiple rules apply to the same path (only possible with wildcard
+   * matching), the one with the highest SEQUENCE_ID wins, i.e. the latest
+   * one defined in the authz file.
+   *
+   * A value of 0 denotes the default rule at the repository root denying
+   * access to everybody.  User-defined path rules start with ID 1.
+   */
+  apr_int64_t sequence_number;
+
+  /* Access rights of the respective user as defined by the rule set. */
   svn_repos_authz_access_t rights;
 } access_t;
+
+/* Use this to indicate that no sequence ID has been assigned.
+ * It will automatically be inferior to (less than) any other sequence ID. */
+#define NO_SEQUENCE_NUMBER (-1)
 
 /* The pattern tree.  All relevant path rules are being folded into this
  * prefix tree, with a single, whole segment stored at each node.  The whole
@@ -448,6 +462,9 @@ typedef struct process_path_rule_baton_t
      a member of. */
   apr_hash_t *memberships;
 
+  /* Next sequence number.  Basically a counter. */
+  apr_int64_t sequence_number;
+
   /* Root node of the result tree. Never NULL. */
   node_t *root;
 
@@ -494,6 +511,7 @@ process_path_rule(const char *name,
 
   /* Access rights to assign. */
   access = apr_pcalloc(baton->pool, sizeof(*access));
+  access->sequence_number = baton->sequence_number++;
   access->rights = rights;
 
   /* Insert the path rule into the filtered tree. */
@@ -557,6 +575,7 @@ create_user_authz(svn_config_t *config,
   baton.repository.data = repository;
   baton.repository.len = strlen(repository);
   baton.pool = result_pool;
+  baton.sequence_number = 1;
 
   /* Determine the user's aliases, group memberships etc. */
   baton.memberships = get_memberships(config, user, scratch_pool, subpool);
@@ -567,10 +586,11 @@ create_user_authz(svn_config_t *config,
   svn_config_enumerate_sections2(config, process_path_rule, &baton, subpool);
 
   /* If there is no relevant rule at the root node, the "no access" default
-   * applies. */
+   * applies. Give it a SEQUENCE_ID that will never overrule others. */
   if (!baton.root->access)
     {
       baton.root->access = apr_pcalloc(result_pool, sizeof(access_t));
+      baton.root->access->sequence_number = 0;
       baton.root->access->rights = svn_authz_none;
     }
 

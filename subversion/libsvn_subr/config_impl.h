@@ -46,6 +46,12 @@ struct svn_config_t
   /* Table of cfg_section_t's. */
   apr_hash_t *sections;
 
+  /* First section added to this configuration.  NULL if SECTIONS is empty. */
+  struct cfg_section_t *first_section;
+
+  /* Last section added to this configuration.  NULL if SECTIONS is empty. */
+  struct cfg_section_t *last_section;
+
   /* Pool for hash tables, table entries and unexpanded values.
      Also, parent pool for temporary pools. */
   apr_pool_t *pool;
