@@ -60,7 +60,7 @@ typedef struct add_alias_baton_t
   /* Store the alias names here (including the '&' prefix). */
   apr_hash_t *aliases;
 
-  /* The user we are lookup up. */
+  /* The user we are currently looking up. */
   const char *user;
 } add_alias_baton_t;
 
