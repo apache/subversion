@@ -58,7 +58,7 @@ typedef struct authz_object_t
   svn_config_t *groups_cfg;
 
   /* Case-sensitive config. */
-  svn_authz_t *authz;
+  svn_config_t *authz;
 } authz_object_t;
 
 /* Root data structure simply adding the config_pool to the basic object pool.
@@ -148,7 +148,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
   authz_object_t *authz_ref
     = apr_pcalloc(authz_ref_pool, sizeof(*authz_ref));
   svn_boolean_t have_all_keys;
-  
+
   /* read the configurations */
   SVN_ERR(svn_repos__config_pool_get(&authz_ref->authz_cfg,
                                      &authz_ref->authz_key,
@@ -156,7 +156,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                                      path, must_exist, TRUE,
                                      preferred_repos, authz_ref_pool));
   have_all_keys = authz_ref->authz_key != NULL;
-  
+
   if (groups_path)
     {
       SVN_ERR(svn_repos__config_pool_get(&authz_ref->groups_cfg,
@@ -172,28 +172,32 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
   if (!have_all_keys)
     return svn_error_trace(svn_repos_authz_read2(authz_p, path, groups_path,
                                                  must_exist, pool));
-    
+
   /* all keys are known and lookup is unambigious. */
   authz_ref->key = construct_key(authz_ref->authz_key,
                                  authz_ref->groups_key,
                                  authz_ref_pool);
 
-  SVN_ERR(svn_object_pool__lookup((void **)authz_p, authz_pool->object_pool,
+  SVN_ERR(svn_object_pool__lookup((void **)&authz_ref->authz,
+                                  authz_pool->object_pool,
                                   authz_ref->key, NULL, pool));
-  if (*authz_p)
+  if (authz_ref->authz)
     {
+      SVN_ERR(svn_repos__create_authz(authz_p, authz_ref->authz, pool));
       svn_pool_destroy(authz_ref_pool);
+
       return SVN_NO_ERROR;
     }
 
-  authz_ref->authz = apr_palloc(authz_ref_pool, sizeof(*authz_ref->authz));
-  authz_ref->authz->cfg = authz_ref->authz_cfg;
+  /* Initialize with config struct containing the path rules.  Groups may
+   * or may not get added / replaced later on. */
+  authz_ref->authz = authz_ref->authz_cfg;
 
   if (groups_path)
     {
       /* Easy out: we prohibit local groups in the authz file when global
          groups are being used. */
-      if (svn_config_has_section(authz_ref->authz->cfg,
+      if (svn_config_has_section(authz_ref->authz,
                                  SVN_CONFIG_SECTION_GROUPS))
         return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                  "Error reading authz file '%s' with "
@@ -204,15 +208,17 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
 
       /* We simply need to add the [Groups] section to the authz config.
        */
-      svn_config__shallow_replace_section(authz_ref->authz->cfg,
+      svn_config__shallow_replace_section(authz_ref->authz,
                                           authz_ref->groups_cfg,
                                           SVN_CONFIG_SECTION_GROUPS);
     }
 
   /* Make sure there are no errors in the configuration. */
-  SVN_ERR(svn_repos__authz_validate(authz_ref->authz, authz_ref_pool));
+  SVN_ERR(svn_repos__authz_config_validate(authz_ref->authz, authz_ref_pool));
+  SVN_ERR(svn_repos__create_authz(authz_p, authz_ref->authz, pool));
 
-  SVN_ERR(svn_object_pool__insert((void **)authz_p, authz_pool->object_pool,
+  SVN_ERR(svn_object_pool__insert((void **)&authz_ref->authz,
+                                  authz_pool->object_pool,
                                   authz_ref->key, authz_ref, NULL,
                                   authz_ref_pool, pool));
 
