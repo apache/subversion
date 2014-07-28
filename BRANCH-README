@@ -4,7 +4,6 @@ allows much faster authz resolving and avoids the many full authz file scans.
 
 TODO:
 
-* implement precedence rules
 * add support for full-segment wildcards ("/*/")
 * add support for variable length full-segment wildcards ("/**/")
 * add support for prefix segment patterns ("/foo*/")
@@ -18,3 +17,4 @@ DONE:
 * pre-calculate rule sets for the given user
 * implement recursive tree checks
 * implement evaluation shortcuts
+* implement precedence rules
