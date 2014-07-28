@@ -4,8 +4,6 @@ allows much faster authz resolving and avoids the many full authz file scans.
 
 TODO:
 
-* construct a prefix tree from the path rules
-* pre-calculate rule sets for the given user
 * implement recursive tree checks
 * implement evaluation shortcuts
 * implement precedence rules
@@ -18,3 +16,5 @@ TODO:
 DONE:
 
 * O(1) check that a rule applies to a given user
+* construct a prefix tree from the path rules
+* pre-calculate rule sets for the given user
