@@ -36,9 +36,11 @@
 #include "svn_pools.h"
 #include "config_impl.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_config_private.h"
+
+#include "svn_private_config.h"
 
 
 
@@ -153,7 +155,12 @@ svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
                            result_pool);
 
   if (err == SVN_NO_ERROR)
-    err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
+    err = svn_config__parse_stream(stream,
+                                   svn_config__constructor_create(
+                                       FALSE, FALSE, FALSE, NULL, NULL,
+                                       svn_config__default_add_value_fn,
+                                       scratch_pool),
+                                   cfg, result_pool, scratch_pool);
 
   if (err == SVN_NO_ERROR)
     *cfgp = cfg;

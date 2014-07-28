@@ -4,12 +4,14 @@ allows much faster authz resolving and avoids the many full authz file scans.
 
 TODO:
 
+* implement an authz-specific constructor for the config parser
 * implement precedence rules
 * add support for full-segment wildcards ("/*/")
 * add support for variable length full-segment wildcards ("/**/")
 * add support for prefix segment patterns ("/foo*/")
 * add support for suffix segment patterns ("/*foo/")
 * add support for arbitrary patterns ("/foo*bar*baz/" etc.)
+* implement value-expansion mode in the config parser
 
 DONE:
 
@@ -18,3 +20,4 @@ DONE:
 * pre-calculate rule sets for the given user
 * implement recursive tree checks
 * implement evaluation shortcuts
+* parametrize in-memory representation constructor in the config parser
