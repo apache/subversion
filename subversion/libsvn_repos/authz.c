@@ -287,6 +287,16 @@ typedef struct access_t
  * It will automatically be inferior to (less than) any other sequence ID. */
 #define NO_SEQUENCE_NUMBER (-1)
 
+/* Substructure of node_t.  It contains all sub-node that use patterns
+ * in the next segment level. We keep it separate to save a bit of memory
+ * and to be able to check for pattern presence in a single operation.
+ */
+typedef struct node_pattern_t
+{
+  /* If not NULL, this represents the "*" follow-segment. */
+  struct node_t *any;
+} node_pattern_t;
+
 /* The pattern tree.  All relevant path rules are being folded into this
  * prefix tree, with a single, whole segment stored at each node.  The whole
  * tree applies to a single user only.
@@ -314,6 +324,9 @@ typedef struct node_t
    * sub-segments that have rules on themselves or their respective subtrees.
    * NULL, if there are no rules for sub-paths relevant to the user. */
   apr_hash_t *sub_nodes;
+
+  /* If not NULL, this contains the pattern-based segment sub-nodes. */
+  node_pattern_t *pattern_sub_nodes;
 } node_t;
 
 /* Callback baton to be used with process_rule(). */
@@ -388,6 +401,15 @@ has_matching_rule(svn_repos_authz_access_t *access,
   return baton.found;
 }
 
+/* Return TRUE, iff PATH has been marked as supporting wildcards and is
+ * actually using wildcards.
+ */
+static svn_boolean_t
+has_wildcards(const char *path)
+{
+  return path[0] == '*' && strchr(path + 1, '*');
+}
+
 /* Constructor utility: Create a new tree node for SEGMENT.
  */
 static node_t *
@@ -403,14 +425,44 @@ create_node(const char *segment,
   return result;
 }
 
+/* Constructor utility: Auto-create a node in *NODE, make it apply to
+ * SEGMENT and return it.
+ */
+static node_t *
+ensure_node(node_t **node,
+            const char *segment,
+            apr_pool_t *result_pool)
+{
+  if (!*node)
+    *node = create_node(segment, result_pool);
+
+  return *node;
+}
+
+/* Constructor utility: Auto-create the PATTERN_SUB_NODES sub-structure in
+ * *NODE and return it.
+ */
+static node_pattern_t *
+ensure_pattern_sub_nodes(node_t *node,
+                         apr_pool_t *result_pool)
+{
+  if (node->pattern_sub_nodes == NULL)
+    node->pattern_sub_nodes = apr_pcalloc(result_pool,
+                                          sizeof(*node->pattern_sub_nodes));
+
+  return node->pattern_sub_nodes;
+}
+
 /* Constructor utility:  Below NODE, recursively insert sub-nodes for the
  * path given as *SEGMENTS.  The end of the path is indicated by a NULL
- * SEGMENT.  If matching nodes already exist, use those instead of creating
- * new ones.  Set the leave node's access rights spec to ACCESS.
+ * SEGMENT.  If ALLOW_WILDCARDS is FALSE, treat all characters literally.
+ * If matching nodes already exist, use those instead of creating new ones.
+ * Set the leave node's access rights spec to ACCESS.
  */
 static void
 insert_path(node_t *node,
             const char **segments,
+            svn_boolean_t allow_wildcards,
             access_t *access,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
@@ -430,21 +482,38 @@ insert_path(node_t *node,
       return;
     }
 
-  /* There will be sub-nodes.  Ensure the container is there as well. */
-  if (!node->sub_nodes)
-    node->sub_nodes = svn_hash__make(result_pool);
-
-  /* Auto-insert a sub-node for the current segment. */
-  sub_node = svn_hash_gets(node->sub_nodes, segment);
-  if (!sub_node)
+  /* Any wildcards? */
+  if (allow_wildcards && strchr(segment, '*'))
     {
-      sub_node = create_node(segment, result_pool);
-      apr_hash_set(node->sub_nodes, sub_node->segment.data,
-                   sub_node->segment.len, sub_node);
+      ensure_pattern_sub_nodes(node, result_pool);
+
+      /* A full wildcard segment? */
+      if (strcmp(segment, "*") == 0)
+        sub_node = ensure_node(&node->pattern_sub_nodes->any, segment,
+                               result_pool);
+
+      /* More cases to be added here later.
+       * There will be no error condition to be checked for. */
+    }
+  else
+    {
+      /* There will be sub-nodes.  Ensure the container is there as well. */
+      if (!node->sub_nodes)
+        node->sub_nodes = svn_hash__make(result_pool);
+
+      /* Auto-insert a sub-node for the current segment. */
+      sub_node = svn_hash_gets(node->sub_nodes, segment);
+      if (!sub_node)
+        {
+          sub_node = create_node(segment, result_pool);
+          apr_hash_set(node->sub_nodes, sub_node->segment.data,
+                       sub_node->segment.len, sub_node);
+        }
     }
 
   /* Continue at the sub-node with the next segment. */
-  insert_path(sub_node, segments + 1, access, result_pool, scratch_pool);
+  insert_path(sub_node, segments + 1, allow_wildcards, access,
+              result_pool, scratch_pool);
 }
 
 /* Callback baton to be used with  process_path_rule().
@@ -487,6 +556,7 @@ process_path_rule(const char *name,
   access_t *access;
   svn_repos_authz_access_t rights;
   apr_array_header_t *segments;
+  svn_boolean_t wildcards;
 
   /* Is this section is relevant to the selected repository? */
   colon_pos = strchr(name, ':');
@@ -497,6 +567,9 @@ process_path_rule(const char *name,
 
   /* Ignore sections that are not path rules */
   path = colon_pos ? colon_pos + 1 : name;
+  wildcards = has_wildcards(path);
+  if (path[0] == '*')
+    ++path;
   if (path[0] != '/')
     return TRUE;
 
@@ -515,8 +588,8 @@ process_path_rule(const char *name,
   access->rights = rights;
 
   /* Insert the path rule into the filtered tree. */
-  insert_path(baton->root, (void *)segments->elts, access, baton->pool,
-              scratch_pool);
+  insert_path(baton->root, (void *)segments->elts, wildcards, access,
+              baton->pool, scratch_pool);
 
   return TRUE;
 }
@@ -547,6 +620,14 @@ finalize_tree(node_t *parent,
            hi;
            hi = apr_hash_next(hi))
         finalize_tree(node, access, svn__apr_hash_index_val(hi),
+                      scratch_pool);
+    }
+
+  /* Do the same thing for all other sub-nodes as well. */
+  if (node->pattern_sub_nodes)
+    {
+      if (node->pattern_sub_nodes->any)
+        finalize_tree(node, access, node->pattern_sub_nodes->any,
                       scratch_pool);
     }
 
@@ -825,6 +906,12 @@ lookup(lookup_state_t *state,
           if (node->sub_nodes)
             add_next_node(state, apr_hash_get(node->sub_nodes, segment->data,
                                               segment->len));
+
+          /* Process alternative, wildcard-based sub-nodes. */
+          if (node->pattern_sub_nodes)
+            {
+              add_next_node(state, node->pattern_sub_nodes->any);
+            }
         }
 
       /* The list of nodes for SEGMENT is now complete.
@@ -1119,6 +1206,9 @@ static svn_boolean_t authz_validate_section(const char *name,
         fspath++;
       else
         fspath = name;
+      if (fspath[0] == '*')
+        ++fspath;
+
       if (! svn_fspath__is_canonical(fspath))
         {
           b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
