@@ -102,6 +102,10 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                              struct svn_delta__extra_baton *exb,
                              apr_pool_t *pool);
 
+/* An object for communicating out-of-band details between an Ev1-to-Ev3
+ * shim and an Ev3-to-Ev1 shim. */
+typedef struct svn_delta__shim_connector_t svn_delta__shim_connector_t;
+
 /* Return an Ev3 editor in *EDITOR_P which will drive the Ev1 delta
  * editor DEDITOR/DEDIT_BATON.
  *
@@ -120,19 +124,14 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
  * This editor implements the "incremental changes" variant of the Ev3
  * commit editor interface.
  *
+ * SHIM_CONNECTOR can be used to enable a more exact round-trip conversion
+ * from an Ev1 drive to Ev3 and back to Ev1. The caller should pass the
+ * returned *SHIM_CONNECTOR value to svn_delta__delta_from_ev3_for_commit().
+ * SHIM_CONNECTOR may be null if not wanted.
+ *
  * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
  * relative path within the repository of the root directory of the edit.
  * (An Ev1 edit must be rooted at a directory, not at a file.)
- *
- * OPEN_ROOT_FUNC can be used to enable a more exact round-trip conversion
- * from an Ev1 drive to Ev3 and back to Ev1. If OPEN_ROOT_FUNC is not
- * null, set *OPEN_ROOT_FUNC to a callback that the Ev3 driver may call to
- * provide the "base revision" of the root directory, even if it is not
- * going to modify that directory. (If it does modify it, then it will
- * pass in the appropriate base revision at that time.) If OPEN_ROOT_FUNC
- * is null or the driver does not call the callback, then the Ev1
- * open_root() method will be called with SVN_INVALID_REVNUM as the base
- * revision parameter.
  *
  * FETCH_KIND_FUNC / FETCH_KIND_BATON: A callback by which the shim may
  * determine the kind of a path. This is called for a copy source or move
@@ -154,7 +153,7 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
 svn_error_t *
 svn_delta__ev3_from_delta_for_commit(
                         svn_editor3_t **editor_p,
-                        svn_delta__start_edit_func_t *open_root_func,
+                        svn_delta__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
                         const char *repos_root,
@@ -165,6 +164,65 @@ svn_delta__ev3_from_delta_for_commit(
                         void *fetch_props_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Return a delta editor in DEDITOR/DEDITOR_BATON which will drive EDITOR.
+ *
+ * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
+ * relative path within the repository of the root directory of the edit.
+ * (An Ev1 edit must be rooted at a directory, not at a file.)
+ *
+ * FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback / baton pair which
+ * will be used by the shim handlers if they need to determine the
+ * existing properties on a  path.
+ *
+ * FETCH_BASE_FUNC / FETCH_BASE_BATON: A callback / baton pair which will
+ * be used by the shims handlers if they need to determine the base
+ * text of a path.  It should only be invoked for files.
+ *
+ * SHIM_CONNECTOR can be used to enable a more exact round-trip conversion
+ * from an Ev1 drive to Ev3 and back to Ev1. It must live for the lifetime
+ * of the edit. It may be null if not wanted.
+ *
+ * Allocate the new editor in RESULT_POOL, which may become large and must
+ * live for the lifetime of the edit. Use SCRATCH_POOL for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_delta__delta_from_ev3_for_commit(
+                        const svn_delta_editor_t **deditor,
+                        void **dedit_baton,
+                        svn_editor3_t *editor,
+                        const char *repos_root,
+                        const char *base_relpath,
+                        svn_delta_fetch_props_func_t fetch_props_func,
+                        void *fetch_props_baton,
+                        svn_delta_fetch_base_func_t fetch_base_func,
+                        void *fetch_base_baton,
+                        const svn_delta__shim_connector_t *shim_connector,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Return in NEW_DEDITOR/NEW_DETIT_BATON a delta editor that wraps
+ * OLD_DEDITOR/OLD_DEDIT_BATON, inserting a pair of shims that convert
+ * Ev1 to Ev3 and back to Ev1.
+ *
+ * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
+ * relative path within the repository of the root directory of the edit.
+ *
+ * SHIM_CB provides callbacks that the shims may use to fetch details of
+ * the base state when needed.
+ */
+svn_error_t *
+svn_editor3__insert_shims(
+                        const svn_delta_editor_t **new_deditor,
+                        void **new_dedit_baton,
+                        const svn_delta_editor_t *old_deditor,
+                        void *old_dedit_baton,
+                        const char *repos_root,
+                        const char *base_relpath,
+                        const svn_delta_shim_callbacks_t *shim_cb,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
