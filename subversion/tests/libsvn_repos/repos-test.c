@@ -3179,6 +3179,25 @@ test_delete_repos(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Prepare a commit for the filename_with_control_chars() tests */
+static svn_error_t *
+fwcc_prepare(const svn_delta_editor_t **editor_p,
+             void **edit_baton_p,
+             void **root_baton,
+             svn_repos_t *repos,
+             apr_pool_t *scratch_pool)
+{
+  /* Checks for control characters are implemented in the commit editor,
+   * not in the FS API. */
+  SVN_ERR(svn_repos_get_commit_editor4(editor_p, edit_baton_p, repos,
+                                       NULL, "file://test", "/",
+                                       "plato", "test commit",
+                                       dummy_commit_cb, NULL, NULL, NULL,
+                                       scratch_pool));
+  SVN_ERR((*editor_p)->open_root(*edit_baton_p, 1, scratch_pool, root_baton));
+  return SVN_NO_ERROR;
+}
+
 /* Related to issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_with_control_chars(const svn_test_opts_t *opts,
@@ -3218,17 +3237,6 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Checks for control characters are implemented in the commit editor,
-   * not in the FS API. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
-  SVN_ERR(svn_repos_get_commit_editor4(&editor, &edit_baton, repos,
-                                       txn, "file://test", "/",
-                                       "plato", "test commit",
-                                       dummy_commit_cb, NULL, NULL, NULL,
-                                       pool));
-
-  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
-
   /* Attempt to copy /foo to a bad path P. This should fail. */
   i = 0;
   do
@@ -3237,8 +3245,13 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_directory(p, root_baton, "/foo", 1, subpool,
                                   &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
 
@@ -3250,8 +3263,13 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_file(p, root_baton, NULL, SVN_INVALID_REVNUM,
                              subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
 
@@ -3264,12 +3282,15 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_directory(p, root_baton, NULL, SVN_INVALID_REVNUM,
                                   subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
-
-  SVN_ERR(editor->abort_edit(edit_baton, subpool));
 
   return SVN_NO_ERROR;
 }
