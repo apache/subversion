@@ -607,8 +607,8 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
  *     two moves per node. Temporary move(s) could be required to use a
  *     defined temporary name space.
  * 
- *     There is not (yet) a defined canonical way to represent an
- *     arbitrary change.
+ *     There is not (yet) a defined canonical sequence of editor operations
+ *     to represent an arbitrary change.
  *
  *   - The sender needs a name space it can use for temporary paths.
  *
@@ -794,8 +794,10 @@ svn_editor3_res(svn_editor3_t *editor,
  * @note This does not delete nodes that used to be children of the specified
  * node-branch that have since been moved away.
  *
- * @note This SHOULD NOT be used on a node-branch created by "mk" nor on the
- * root node-branch created by "cp", but MAY be used on a child of a copy.
+ * @note Each node-branch to be removed, that is each node-branch currently
+ * at or below @a loc, MAY be a child of a copy but otherwise SHOULD NOT
+ * have been created or modified in this edit. Other node-branches MAY have
+ * previously existed under @a loc and been deleted or moved away.
  *
  * @see #svn_editor3_t
  */
