@@ -295,6 +295,13 @@ typedef struct node_pattern_t
 {
   /* If not NULL, this represents the "*" follow-segment. */
   struct node_t *any;
+
+  /* If not NULL, this represents the "**" follow-segment. */
+  struct node_t *any_var;
+
+  /* This node itself is a "**" segment and must therefore itself be added
+   * to the matching node list for the next level. */
+  svn_boolean_t repeat;
 } node_pattern_t;
 
 /* The pattern tree.  All relevant path rules are being folded into this
@@ -492,6 +499,14 @@ insert_path(node_t *node,
         sub_node = ensure_node(&node->pattern_sub_nodes->any, segment,
                                result_pool);
 
+      /* One or more full wildcard segments? */
+      else if (strcmp(segment, "**") == 0)
+        {
+          sub_node = ensure_node(&node->pattern_sub_nodes->any_var, segment,
+                                result_pool);
+          ensure_pattern_sub_nodes(sub_node, result_pool)->repeat = TRUE;
+        }
+
       /* More cases to be added here later.
        * There will be no error condition to be checked for. */
     }
@@ -628,6 +643,9 @@ finalize_tree(node_t *parent,
     {
       if (node->pattern_sub_nodes->any)
         finalize_tree(node, access, node->pattern_sub_nodes->any,
+                      scratch_pool);
+      if (node->pattern_sub_nodes->any_var)
+        finalize_tree(node, access, node->pattern_sub_nodes->any_var,
                       scratch_pool);
     }
 
@@ -911,6 +929,12 @@ lookup(lookup_state_t *state,
           if (node->pattern_sub_nodes)
             {
               add_next_node(state, node->pattern_sub_nodes->any);
+              add_next_node(state, node->pattern_sub_nodes->any_var);
+
+              /* If the current node represents a "**" pattern, it matches
+               * to all levels. So, add it to the list for the NEXT level. */
+              if (node->pattern_sub_nodes->repeat)
+                add_next_node(state, node);
             }
         }
 

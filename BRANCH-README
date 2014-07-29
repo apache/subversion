@@ -9,7 +9,6 @@ TODO:
 
 * implement an authz-specific constructor for the config parser
 * implement precedence rules
-* add support for variable length full-segment wildcards ("/**/")
 * add support for prefix segment patterns ("/foo*/")
 * add support for suffix segment patterns ("/*foo/")
 * add support for arbitrary patterns ("/foo*bar*baz/" etc.)
@@ -24,3 +23,4 @@ DONE:
 * implement evaluation shortcuts
 * parametrize in-memory representation constructor in the config parser
 * add support for full-segment wildcards ("/*/")
+* add support for variable length full-segment wildcards ("/**/")
