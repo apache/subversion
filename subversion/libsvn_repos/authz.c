@@ -606,6 +606,98 @@ create_user_authz(svn_config_t *config,
 
 /*** Lookup. ***/
 
+/* Reusable lookup state object. It is easy to pass to functions and
+ * recycling it between lookups saves significant setup costs. */
+typedef struct lookup_state_t
+{
+  /* Access rights for path so far (maybe inherited from parent). */
+  access_t access;
+
+  /* The minimum acccess rights within the current sub-tree. */
+  svn_repos_authz_access_t min_rights;
+
+  /* The maximum acccess rights within the current sub-tree. */
+  svn_repos_authz_access_t max_rights;
+
+  /* Nodes applying to the path followed so far. */
+  apr_array_header_t *current;
+
+  /* Temporary array containing the nodes applying to the next path
+   * segment (used to build up the next contents of CURRENT). */
+  apr_array_header_t *next;
+
+  /* Scratch pad for path operations. */
+  svn_stringbuf_t *scratch_pad;
+} lookup_state_t;
+
+/* Constructor for lookup_state_t. */
+static lookup_state_t *
+create_lookup_state(apr_pool_t *result_pool)
+{
+  lookup_state_t *state = apr_pcalloc(result_pool, sizeof(*state));
+ 
+  state->next = apr_array_make(result_pool, 4, sizeof(node_t *));
+  state->current = apr_array_make(result_pool, 4, sizeof(node_t *));
+
+  /* Virtually all path segments should fit into this buffer.  If they
+   * don't, the buffer gets automatically reallocated.
+   *
+   * Using a smaller initial size would be fine as well but does not
+   * buy us much for the increased risk of being expanded anyway - at
+   * some extra cost. */
+  state->scratch_pad = svn_stringbuf_create_ensure(200, result_pool);
+
+  return state;
+}
+
+/* Clear the current contents of STATE and re-initialize it for ROOT. */
+static void
+init_lockup_state(lookup_state_t *state,
+                  node_t *root)
+{ 
+  state->access = *root->access;
+  state->min_rights = root->min_rights;
+  state->max_rights = root->max_rights;
+
+  apr_array_clear(state->next);
+  apr_array_clear(state->current);
+  APR_ARRAY_PUSH(state->current, node_t *) = root;
+
+  state->scratch_pad->len = 0;
+}
+
+/* Add NODE to the list of NEXT nodes in STATE.  NODE may be NULL in which
+ * case this is a no-op.  Also update and aggregate the access rights data
+ * for the next path segment.
+ */
+static void
+add_next_node(lookup_state_t *state,
+              node_t *node)
+{
+  /* Allowing NULL nodes simplifies the caller. */
+  if (node)
+    {
+      /* The rule with the highest sequence number is the one that applies.
+       * Not all nodes that we are following have rules that apply directly
+       * to this path but only some deep sub-node. */
+      if (   node->access
+          && node->access->sequence_number > state->access.sequence_number)
+        {
+          state->access = *node->access;
+        }
+
+      /* The rule tree node can be seen as an overlay of all the nodes that
+       * we are following.  Any of them _may_ match eventually, so the min/
+       * max possible access rights are a combination of all these sub-trees.
+       */
+      state->min_rights &= node->min_rights;
+      state->max_rights |= node->max_rights;
+
+      /* NODE is now enlisted as a (potential) match for the next segment. */
+      APR_ARRAY_PUSH(state->next, node_t *) = node;
+    }
+}
+
 /* Extract the next segment from PATH and copy it into SEGMENT, whose current
  * contents get overwritten.  Empty paths ("") are supported and leading '/'
  * segment separators will be interpreted as an empty segment ("").  Non-
@@ -657,14 +749,15 @@ next_segment(svn_stringbuf_t *segment,
   return NULL;
 }
 
-/* Starting at the respective user's authz ROOT node, follow PATH and return
- * TRUE, iff the REQUIRED access has been granted to that user for this PATH.
- * REQUIRED must not contain svn_authz_recursive.  If RECURSIVE is set, all
- * paths in the sub-tree at and below PATH must have REQUIRED access.
- * PATH does not need to be normalized, may be empty but must not be NULL.
+/* Starting at the respective user's authz root node provided with STATE,
+ * follow PATH and return TRUE, iff the REQUIRED access has been granted to
+ * that user for this PATH.  REQUIRED must not contain svn_authz_recursive.
+ * If RECURSIVE is set, all paths in the sub-tree at and below PATH must
+ * have REQUIRED access.  PATH does not need to be normalized, may be empty
+ * but must not be NULL.
  */
 static svn_boolean_t
-lookup(node_t *root,
+lookup(lookup_state_t *state,
        const char *path,
        svn_repos_authz_access_t required,
        svn_boolean_t recursive,
@@ -672,23 +765,7 @@ lookup(node_t *root,
 {
   /* Create a scratch pad large enough to hold any of PATH's segments. */
   apr_size_t path_len = strlen(path);
-  svn_stringbuf_t *scratch_pad = svn_stringbuf_create_ensure(path_len,
-                                                             scratch_pool);
-
-  /* Our current position in the path rule tree. */
-  node_t *current = root;
-
-  /* Last access rights description that we encountered along the path.
-   * By construction, there is always a rule at the root node.  Thus,
-   * ACCESS can never be NULL. */
-  access_t *access = root->access;
-
-  /* Similar to ACCESS, these are the minimal rights that the user has in
-   * all paths of the current sub-tree. */
-  svn_repos_authz_access_t min_rights = root->min_rights;
-
-  /* Same for maximum rights. */
-  svn_repos_authz_access_t max_rights = root->max_rights;
+  svn_stringbuf_ensure(state->scratch_pad, path_len);
 
   /* Normalize start and end of PATH.  Most paths will be fully normalized,
    * so keep the overhead as low as possible. */
@@ -707,55 +784,63 @@ lookup(node_t *root,
 
   /* Actually walk the path rule tree following PATH until we run out of
    * either tree or PATH. */
-  while (current && path)
+  while (state->current->nelts && path)
     {
-      /* Extract the next segment. */
-      svn_stringbuf_t *segment = scratch_pad;
-      path = next_segment(segment, path);
+      apr_array_header_t *temp;
+      int i;
+      access_t parent_access = state->access;
+      svn_stringbuf_t *segment = state->scratch_pad;
 
       /* Shortcut 1: We could nowhere find enough rights in this sub-tree. */
-      if ((max_rights & required) != required)
+      if ((state->max_rights & required) != required)
         return FALSE;
 
       /* Shortcut 2: We will fine enough rights everywhere in this sub-tree. */
-      if ((min_rights & required) == required)
+      if ((state->min_rights & required) == required)
         return TRUE;
 
       /* Shortcut 3: The rights are the same everywhere in this sub-tree . */
-      if ((min_rights & required) == (max_rights & required))
-        return (min_rights & required) == required;
+      if ((state->min_rights & required) == (state->max_rights & required))
+        return (state->min_rights & required) == required;
 
-      /* Reached the bottom of the tree? */
-      if (current->sub_nodes)
+      /* Extract the next segment. */
+      path = next_segment(segment, path);
+
+      /* Initial state for this segment. */
+      apr_array_clear(state->next);
+      state->access.sequence_number = NO_SEQUENCE_NUMBER;
+      state->access.rights = svn_authz_none;
+
+      /* These init values ensure that the first node's value will be used
+       * when combined with them.  If there is no first node,
+       * state->access.sequence_number remains unchanged and we will use
+       * the parent's (i.e. inherited) access rights. */
+      state->min_rights = svn_authz_read | svn_authz_write;
+      state->max_rights = svn_authz_none;
+
+      /* Scan follow all alternative routes to the next level. */
+      for (i = 0; i < state->current->nelts; ++i)
         {
-          /* Maybe. Attempt to walk one level down. */
-          node_t *next = apr_hash_get(current->sub_nodes, segment->data,
-                                      segment->len);
-
-          /* If there are path rules for _exactly_ this SEGMENT, then these
-           * will be the new authoritative ones for PATH. */
-          if (next)
-            {
-              if (next->access)
-                access = next->access;
-
-              min_rights = next->min_rights;
-              max_rights = next->max_rights;
-            }
-          else
-            {
-              /* There are no more subtrees.  The access rights are fully
-               * dictated by the parent. */
-              min_rights = access->rights;
-              max_rights = access->rights;
-            }
-
-          current = next;
+          node_t *node = APR_ARRAY_IDX(state->current, i, node_t *);
+          if (node->sub_nodes)
+            add_next_node(state, apr_hash_get(node->sub_nodes, segment->data,
+                                              segment->len));
         }
-      else
+
+      /* The list of nodes for SEGMENT is now complete.
+       * Make it the current and put the old one into the recycler. */
+      temp = state->current;
+      state->current = state->next;
+      state->next = temp;
+
+      /* If no rule applied to this SEGMENT directly, the parent rights
+       * will apply to at least the SEGMENT node itself and possibly
+       * other parts deeper in it's subtree. */
+      if (state->access.sequence_number == NO_SEQUENCE_NUMBER)
         {
-          /* Yes, done. */
-          current = NULL;
+          state->access = parent_access;
+          state->min_rights &= parent_access.rights;
+          state->max_rights |= parent_access.rights;
         }
     }
 
@@ -764,10 +849,10 @@ lookup(node_t *root,
    * verify that the respective paths actually exist in the repository.
    */
   if (recursive)
-    return (min_rights & required) == required;
+    return (state->min_rights & required) == required;
 
   /* Return whether the access rights on PATH fully include REQUIRED. */
-  return (access->rights & required) == required;
+  return (state->access.rights & required) == required;
 }
 
 
@@ -1100,6 +1185,9 @@ struct svn_authz_t
    * combinations.  Empty / unused entries have NULL for ROOT. */
   filtered_rules_t prefiltered[FILTER_CACHE_SIZE];
 
+  /* Reusable lookup state instance. */
+  lookup_state_t *lookup_state;
+
   /* All members of this struct must be allocated from this pool or a pool
    * with longer guaranteed lifetime. */
   apr_pool_t *pool;
@@ -1358,6 +1446,7 @@ svn_repos__create_authz(svn_authz_t **authz_p,
 
   result->pool = result_pool;
   result->cfg = config;
+  result->lookup_state = create_lookup_state(result_pool);
 
   *authz_p = result;
   return SVN_NO_ERROR;
@@ -1474,7 +1563,8 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 
   /* Determine the granted access for the requested path.
    * PATH does not need to be normalized for lockup(). */
-  *access_granted = lookup(root, path + 1,
+  init_lockup_state(authz->lookup_state, root);
+  *access_granted = lookup(authz->lookup_state, path + 1,
                            required_access & ~svn_authz_recursive,
                            required_access & svn_authz_recursive, pool);
 
