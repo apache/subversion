@@ -382,7 +382,8 @@ x_pack(svn_fs_t *fs,
    DST_FS at DEST_PATH. If INCREMENTAL is TRUE, make an effort not to
    re-copy data which already exists in DST_FS.
    The CLEAN_LOGS argument is ignored and included for Subversion
-   1.0.x compatibility.  Perform all temporary allocations in POOL. */
+   1.0.x compatibility.  The NOTIFY_FUNC and NOTIFY_BATON arguments
+   are also currently ignored.  Perform all temporary allocations in POOL. */
 static svn_error_t *
 x_hotcopy(svn_fs_t *src_fs,
           svn_fs_t *dst_fs,
@@ -390,6 +391,8 @@ x_hotcopy(svn_fs_t *src_fs,
           const char *dst_path,
           svn_boolean_t clean_logs,
           svn_boolean_t incremental,
+          svn_fs_hotcopy_notify_t notify_func,
+          void *notify_baton,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           svn_mutex__t *common_pool_lock,
