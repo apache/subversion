@@ -551,17 +551,72 @@ svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
 }
 
 
+#ifdef SVN_DEBUG
+
 /*
  * ===================================================================
- * A wrapper editor that simply forwards calls through to a wrapped
- * editor. Intended more as template code than to be useful in itself.
+ * A wrapper editor that forwards calls through to a wrapped editor
+ * while printing a diagnostic trace of the calls.
  * ===================================================================
  */
 
 typedef struct wrapper_baton_t
 {
   svn_editor3_t *wrapped_editor;
+
+  /* debug printing stream */
+  svn_stream_t *debug_stream;
+  /* debug printing prefix*/
+  const char *prefix;
+
 } wrapper_baton_t;
+
+/* Print the variable arguments, formatted with FMT like with 'printf',
+ * to the stream EB->debug_stream, prefixed with EB->prefix. */
+static void
+dbg(wrapper_baton_t *eb,
+    apr_pool_t *scratch_pool,
+    const char *fmt,
+    ...)
+{
+  const char *message;
+  va_list ap;
+
+  va_start(ap, fmt);
+  message = apr_pvsprintf(scratch_pool, fmt, ap);
+  va_end(ap);
+
+  if (eb->prefix)
+    svn_error_clear(svn_stream_puts(eb->debug_stream, eb->prefix));
+  svn_error_clear(svn_stream_puts(eb->debug_stream, message));
+  svn_error_clear(svn_stream_puts(eb->debug_stream, "\n"));
+}
+
+/* Return a human-readable string representation of LOC. */
+static const char *
+peg_path_str(svn_editor3_peg_path_t loc,
+             apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "%s@%ld",
+                      loc.relpath, loc.rev);
+}
+
+/* Return a human-readable string representation of LOC. */
+static const char *
+txn_path_str(svn_editor3_txn_path_t loc,
+             apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "%s//%s",
+                      peg_path_str(loc.peg, result_pool), loc.relpath);
+}
+
+/* Return a human-readable string representation of NBID. */
+static const char *
+nbid_str(svn_editor3_nbid_t nbid,
+         apr_pool_t *result_pool)
+{
+  return nbid;
+}
 
 static svn_error_t *
 wrap_mk(void *baton,
@@ -572,6 +627,9 @@ wrap_mk(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "mk(k=%s, p=%s, n=%s)",
+      svn_node_kind_to_word(new_kind),
+      txn_path_str(parent_loc, scratch_pool), new_name);
   SVN_ERR(svn_editor3_mk(eb->wrapped_editor,
                          new_kind, parent_loc, new_name));
   return SVN_NO_ERROR;
@@ -590,6 +648,9 @@ wrap_cp(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "cp(f=%s, p=%s, n=%s)",
+      peg_path_str(from_loc, scratch_pool),
+      txn_path_str(parent_loc, scratch_pool), new_name);
   SVN_ERR(svn_editor3_cp(eb->wrapped_editor,
                          from_loc, parent_loc, new_name));
   return SVN_NO_ERROR;
@@ -604,6 +665,9 @@ wrap_mv(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "mv(f=%s, p=%s, n=%s)",
+      peg_path_str(from_loc, scratch_pool),
+      txn_path_str(new_parent_loc, scratch_pool), new_name);
   SVN_ERR(svn_editor3_mv(eb->wrapped_editor,
                          from_loc, new_parent_loc, new_name));
   return SVN_NO_ERROR;
@@ -619,6 +683,9 @@ wrap_res(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "res(f=%s, p=%s, n=%s)",
+      peg_path_str(from_loc, scratch_pool),
+      txn_path_str(parent_loc, scratch_pool), new_name);
   SVN_ERR(svn_editor3_res(eb->wrapped_editor,
                           from_loc, parent_loc, new_name));
   return SVN_NO_ERROR;
@@ -632,6 +699,8 @@ wrap_rm(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "rm(%s)",
+      txn_path_str(loc, scratch_pool));
   SVN_ERR(svn_editor3_rm(eb->wrapped_editor,
                          loc));
   return SVN_NO_ERROR;
@@ -645,6 +714,8 @@ wrap_put(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "put(%s)",
+      txn_path_str(loc, scratch_pool));
   SVN_ERR(svn_editor3_put(eb->wrapped_editor,
                           loc, new_content));
   return SVN_NO_ERROR;
@@ -661,6 +732,9 @@ wrap_add(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "%s : add(k=%s, p=%s, n=%s, c=...)",
+      nbid_str(local_nbid, scratch_pool), svn_node_kind_to_word(new_kind),
+      nbid_str(new_parent_nbid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_add(eb->wrapped_editor,
                           local_nbid, new_kind,
                           new_parent_nbid, new_name, new_content));
@@ -679,6 +753,9 @@ wrap_copy_one(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "%s : copy_one(f=%s, p=%s, n=%s, c=...)",
+      nbid_str(local_nbid, scratch_pool), nbid_str(src_nbid, scratch_pool),
+      nbid_str(new_parent_nbid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
                                local_nbid, src_revision, src_nbid,
                                new_parent_nbid, new_name, new_content));
@@ -695,6 +772,9 @@ wrap_copy_tree(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "... : copy_tree(f=%s, p=%s, n=%s)",
+      nbid_str(src_nbid, scratch_pool),
+      nbid_str(new_parent_nbid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
                                 src_revision, src_nbid,
                                 new_parent_nbid, new_name));
@@ -709,6 +789,8 @@ wrap_delete(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "%s : delete()",
+      nbid_str(nbid, scratch_pool));
   SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
                              since_rev, nbid));
   return SVN_NO_ERROR;
@@ -725,6 +807,9 @@ wrap_alter(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "%s : alter(p=%s, n=%s, c=...)",
+      nbid_str(nbid, scratch_pool), nbid_str(nbid, scratch_pool),
+      nbid_str(new_parent_nbid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
                             since_rev, nbid,
                             new_parent_nbid, new_name, new_content));
@@ -737,6 +822,7 @@ wrap_complete(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "complete()");
   SVN_ERR(svn_editor3_complete(eb->wrapped_editor));
   return SVN_NO_ERROR;
 }
@@ -747,27 +833,17 @@ wrap_abort(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
+  dbg(eb, scratch_pool, "abort()");
   SVN_ERR(svn_editor3_abort(eb->wrapped_editor));
   return SVN_NO_ERROR;
 }
 
-/** Return an editor in @a *editor_p which will forward all calls to the
- * @a wrapped_editor. The wrapper editor will not perform cancellation
- * checking.
- *
- * Allocate *editor_p in RESULT_POOL.
- */
 svn_error_t *
-svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
-                               svn_editor3_t *wrapped_editor,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-svn_error_t *
-svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
-                               svn_editor3_t *wrapped_editor,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
+                              svn_editor3_t *wrapped_editor,
+                              apr_pool_t *result_pool)
 {
+  apr_pool_t *scratch_pool = result_pool;
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     wrap_mk,
     wrap_cp,
@@ -789,9 +865,22 @@ svn_editor3_forwarding_wrapper(svn_editor3_t **editor_p,
 
   eb->wrapped_editor = wrapped_editor;
 
+  /* set up for diagnostic printing */
+  {
+    apr_file_t *errfp;
+    apr_status_t apr_err = apr_file_open_stdout(&errfp, result_pool);
+
+    if (apr_err)
+      return svn_error_wrap_apr(apr_err, "Failed to open debug output stream");
+
+    eb->debug_stream = svn_stream_from_aprfile2(errfp, TRUE, result_pool);
+    eb->prefix = apr_pstrdup(result_pool, "DBG: ");
+  }
+
   SVN_ERR(svn_editor3_create(editor_p, &wrapper_funcs, eb,
                              NULL, NULL, /* cancellation */
                              result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
+#endif
