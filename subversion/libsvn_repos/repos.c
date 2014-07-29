@@ -2119,22 +2119,54 @@ lock_db_logs_file(svn_repos_t *repos,
 }
 
 
+/* Baton used with fs_hotcopy_notify(), specifying the svn_repos layer
+ * notification parameters.
+ */
+struct fs_hotcopy_notify_baton_t
+{
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Implements svn_fs_hotcopy_notify_t as forwarding to a
+ * svn_repos_notify_func_t passed in a fs_hotcopy_notify_baton_t* BATON.
+ */
+static void
+fs_hotcopy_notify(void *baton,
+                  svn_revnum_t start_revision,
+                  svn_revnum_t end_revision,
+                  apr_pool_t *pool)
+{
+  struct fs_hotcopy_notify_baton_t *fs_baton = baton;
+  svn_repos_notify_t *notify;
+
+  notify = svn_repos_notify_create(svn_repos_notify_hotcopy_rev_range, pool);
+  notify->start_revision = start_revision;
+  notify->end_revision = end_revision;
+
+  fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
+}
+
 /* Make a copy of a repository with hot backup of fs. */
 svn_error_t *
-svn_repos_hotcopy2(const char *src_path,
+svn_repos_hotcopy3(const char *src_path,
                    const char *dst_path,
                    svn_boolean_t clean_logs,
                    svn_boolean_t incremental,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  svn_repos_t *src_repos;
-  svn_repos_t *dst_repos;
+  svn_fs_hotcopy_notify_t fs_notify_func;
+  struct fs_hotcopy_notify_baton_t fs_notify_baton;
   struct hotcopy_ctx_t hotcopy_context;
-  svn_error_t *err;
   const char *src_abspath;
   const char *dst_abspath;
+  svn_repos_t *src_repos;
+  svn_repos_t *dst_repos;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
@@ -2200,14 +2232,33 @@ svn_repos_hotcopy2(const char *src_path,
      No one should be accessing it at the moment */
   SVN_ERR(lock_repos(dst_repos, TRUE, FALSE, pool));
 
-  SVN_ERR(svn_fs_hotcopy2(src_repos->db_path, dst_repos->db_path,
+  fs_notify_func = notify_func ? fs_hotcopy_notify : NULL;
+  fs_notify_baton.notify_func = notify_func;
+  fs_notify_baton.notify_baton = notify_baton;
+
+  SVN_ERR(svn_fs_hotcopy3(src_repos->db_path, dst_repos->db_path,
                           clean_logs, incremental,
+                          fs_notify_func, &fs_notify_baton,
                           cancel_func, cancel_baton, pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
   return svn_io_write_version_file
           (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
            dst_repos->format, pool);
+}
+
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy3(src_path, dst_path, clean_logs,
+                                            incremental, NULL, NULL,
+                                            cancel_func, cancel_baton, pool));
 }
 
 svn_error_t *
