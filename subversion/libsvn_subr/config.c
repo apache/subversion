@@ -160,7 +160,7 @@ svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
                                        FALSE, FALSE, FALSE, NULL, NULL,
                                        svn_config__default_add_value_fn,
                                        scratch_pool),
-                                   cfg, result_pool, scratch_pool);
+                                   cfg, scratch_pool);
 
   if (err == SVN_NO_ERROR)
     *cfgp = cfg;
