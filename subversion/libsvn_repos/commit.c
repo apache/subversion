@@ -46,7 +46,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
-#include "private/svn_editor.h"
+#include "private/svn_delta_private.h"
 
 
 
@@ -848,9 +848,11 @@ fetch_props_func(apr_hash_t **props,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
-                               svn_fs_txn_base_revision(eb->txn),
-                               scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = svn_fs_txn_base_revision(eb->txn);
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
   err = svn_fs_node_proplist(props, fs_root, path, result_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
@@ -914,7 +916,7 @@ fetch_base_func(const char **filename,
   else if (err)
     return svn_error_trace(err);
   SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
+                                 svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
 
@@ -1002,9 +1004,10 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_baton = eb;
 
-  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   eb->repos_url, eb->base_path,
-                                   shim_callbacks, pool, pool));
+  SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                    eb->repos_url,
+                                    svn_relpath_canonicalize(eb->base_path, pool),
+                                    shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
