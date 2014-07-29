@@ -1369,6 +1369,22 @@ svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
 
 /** @} */
 
+
+#ifdef SVN_DEBUG
+/** Return an editor in @a *editor_p which will forward all calls to the
+ * @a wrapped_editor while printing a diagnostic trace of the calls to
+ * standard output, prefixed with 'DBG:'.
+ *
+ * The wrapper editor will not perform cancellation checking.
+ *
+ * Allocate *editor_p in RESULT_POOL.
+ */
+svn_error_t *
+svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
+                              svn_editor3_t *wrapped_editor,
+                              apr_pool_t *result_pool);
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
