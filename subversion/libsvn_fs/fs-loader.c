@@ -614,9 +614,12 @@ svn_fs_delete_fs(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_hotcopy2(const char *src_path, const char *dst_path,
+svn_fs_hotcopy3(const char *src_path, const char *dst_path,
                 svn_boolean_t clean, svn_boolean_t incremental,
-                svn_cancel_func_t cancel_func, void *cancel_baton,
+                svn_fs_hotcopy_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
@@ -669,9 +672,22 @@ svn_fs_hotcopy2(const char *src_path, const char *dst_path,
     }
 
   SVN_ERR(vtable->hotcopy(src_fs, dst_fs, src_path, dst_path, clean,
-                          incremental, cancel_func, cancel_baton,
-                          common_pool_lock, scratch_pool, common_pool));
+                          incremental, notify_func, notify_baton,
+                          cancel_func, cancel_baton, common_pool_lock,
+                          scratch_pool, common_pool));
   return svn_error_trace(write_fs_type(dst_path, src_fs_type, scratch_pool));
+}
+
+svn_error_t *
+svn_fs_hotcopy2(const char *src_path, const char *dest_path,
+                svn_boolean_t clean, svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func, void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_fs_hotcopy3(src_path, dest_path, clean,
+                                         incremental, NULL, NULL,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
 }
 
 svn_error_t *
@@ -789,8 +805,9 @@ svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
                         svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean_logs,
-                                         FALSE, NULL, NULL, pool));
+  return svn_error_trace(svn_fs_hotcopy3(src_path, dest_path, clean_logs,
+                                         FALSE, NULL, NULL, NULL, NULL,
+                                         pool));
 }
 
 svn_error_t *

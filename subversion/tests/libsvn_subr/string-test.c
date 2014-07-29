@@ -825,6 +825,27 @@ test_string_matching(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_string_skip_prefix(apr_pool_t *pool)
+{
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "12345"),
+                         "");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "123"),
+                         "45");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", ""),
+                         "12345");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "23"),
+                         NULL);
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("1", "12"),
+                         NULL);
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("", ""),
+                         "");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("", "12"),
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -899,6 +920,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test string similarity scores"),
     SVN_TEST_PASS2(test_string_matching,
                    "test string matching"),
+    SVN_TEST_PASS2(test_string_skip_prefix,
+                   "test svn_cstring_skip_prefix()"),
     SVN_TEST_NULL
   };
 
