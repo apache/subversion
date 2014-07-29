@@ -2238,6 +2238,35 @@ svn_io_file_lock2(const char *lock_file,
   return svn_io_lock_open_file(lockfile_handle, exclusive, nonblocking, pool);
 }
 
+svn_error_t *
+svn_io__file_lock_autocreate(const char *lock_file,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err
+    = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files anyway.
+         Create it and try again. */
+      svn_error_clear(err);
+
+      /* This file creation is racy.
+         We don't care as long as file gets created at all. */
+      err = svn_io_file_create_empty(lock_file, pool);
+      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+
+      /* Finally, lock the file - if it exists */
+      if (!err)
+        err = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+    }
+
+  return svn_error_trace(err);
+}
+
 
 
 /* Data consistency/coherency operations. */

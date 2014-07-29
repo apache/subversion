@@ -34,8 +34,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_string_private.h"
-
-#include "../libsvn_subr/config_impl.h"
+#include "private/svn_subr_private.h"
 
 #include "repos.h"
 
