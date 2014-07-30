@@ -2418,8 +2418,7 @@ read_dir_entries(apr_array_header_t *entries,
     {
       apr_hash_index_t *hi;
       for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
-        APR_ARRAY_PUSH(entries, svn_fs_dirent_t *)
-          = svn__apr_hash_index_val(hi);
+        APR_ARRAY_PUSH(entries, svn_fs_dirent_t *) = apr_hash_this_val(hi);
     }
 
   if (!sorted(entries))

@@ -112,8 +112,8 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
 
       SVN_ERR_ASSERT(strcmp(key, entry->name) == 0);
 
@@ -214,7 +214,7 @@ directory_dump_old(struct directory_walk_baton *bt,
                                    scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
       const char *local_abspath;
 
       if (entry->deleted || entry->absent || entry->kind != svn_node_dir)

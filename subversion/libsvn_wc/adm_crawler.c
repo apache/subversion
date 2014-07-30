@@ -293,11 +293,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      const char *child = svn__apr_hash_index_key(hi);
+      const char *child = apr_hash_this_key(hi);
       const char *this_report_relpath;
       const char *this_abspath;
       svn_boolean_t this_switched = FALSE;
-      struct svn_wc__db_base_info_t *ths = svn__apr_hash_index_val(hi);
+      struct svn_wc__db_base_info_t *ths = apr_hash_this_val(hi);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));

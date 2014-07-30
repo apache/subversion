@@ -208,7 +208,7 @@ svn_config_walk_auth_data(const char *config_dir,
       itempool = svn_pool_create(iterpool);
       for (hi = apr_hash_first(iterpool, nodes); hi; hi = apr_hash_next(hi))
         {
-          svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+          svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
           svn_stream_t *stream;
           apr_hash_t *creds_hash;
           const svn_string_t *realm;
@@ -222,7 +222,7 @@ svn_config_walk_auth_data(const char *config_dir,
 
           svn_pool_clear(itempool);
 
-          item_path = svn_dirent_join(dir_path, svn__apr_hash_index_key(hi),
+          item_path = svn_dirent_join(dir_path, apr_hash_this_key(hi),
                                       itempool);
 
           err = svn_stream_open_readonly(&stream, item_path,

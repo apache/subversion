@@ -1615,7 +1615,7 @@ base_dir_optimal_order(apr_array_header_t **ordered_p,
   apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
                                               sizeof(svn_fs_dirent_t *));
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = svn__apr_hash_index_val(hi);
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = apr_hash_this_val(hi);
 
   *ordered_p = result;
   return SVN_NO_ERROR;
