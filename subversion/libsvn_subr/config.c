@@ -140,6 +140,14 @@ svn_config_read3(svn_config_t **cfgp, const char *file,
 }
 
 svn_error_t *
+svn_config__default_add_value_fn(void *baton, const char *section,
+                                 const char *option, const char *value)
+{
+  svn_config_set((svn_config_t *)baton, section, option, value);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
                  svn_boolean_t section_names_case_sensitive,
                  svn_boolean_t option_names_case_sensitive,
@@ -157,7 +165,7 @@ svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
   if (err == SVN_NO_ERROR)
     err = svn_config__parse_stream(stream,
                                    svn_config__constructor_create(
-                                       FALSE, FALSE, FALSE, NULL, NULL,
+                                       NULL, NULL,
                                        svn_config__default_add_value_fn,
                                        scratch_pool),
                                    cfg, scratch_pool);
