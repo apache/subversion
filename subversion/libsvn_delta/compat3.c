@@ -883,6 +883,11 @@ ev3_open_root(void *edit_baton,
  * ### BASE_REVISION is ... the base revision of the node that is
  *     currently at RELPATH ... ? But in the case of a copied node,
  *     it gets put into (change->changing_rev) rather than copyfrom_rev.
+ * ### Or should it be:
+ *   BASE_REVISION is the base revision, or the copyfrom rev for a copy, or
+ *   SVN_INVALID_REVNUM for a plain added node.
+ *
+ * ### RELPATH is ... relative to what?
  */
 static svn_error_t *
 apply_propedit(struct ev3_edit_baton *eb,
