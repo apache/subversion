@@ -498,6 +498,22 @@ duplicate_child_changes(apr_hash_t *changes,
  * out-of-band cues. In fact, the code structure is likely to be
  * unsuitable for processing moves.
  *
+ * The design assumes that each Ev1 path maps to a different Ev3 node-branch.
+ *
+ * It works like this:
+ *
+ *                +------+--------+
+ *                | path | change |
+ *      Ev1  -->  +------+--------+  -->  Ev3
+ *                | ...  | ...    |
+ *                | ...  | ...    |
+ *
+ *   1. Ev1 changes are accumulated in a per-path table, EB->changes.
+ *      Changes are de-duplicated so there is only one change per path.
+ *
+ *   2. On Ev1 close-edit, walk through the table in a depth-first order,
+ *      sending the equivalent Ev3 action for each change.
+ *
  * ### This was designed (in its Ev2 form) for both commit and update
  *     editors, but Ev3 is currently only designed as a commit editor.
  *     Therefore 'update' functionality probably doesn't work, including:
@@ -1465,9 +1481,21 @@ svn_delta__delta_from_ev3_for_commit(
  *
  * Moves are converted to copy-and-delete, with the copy being from
  * the source peg rev. (### Should it request copy-from revision "-1"?)
- */
-
-/* TODO
+ *
+ * It works like this:
+ *
+ *                +------+--------+
+ *                | path | change |
+ *      Ev3  -->  +------+--------+  -->  Ev1
+ *                | ...  | ...    |
+ *                | ...  | ...    |
+ *
+ *   1. Ev3 changes are accumulated in a per-path table, EB->changes.
+ *
+ *   2. On Ev3 close-edit, walk through the table in a depth-first order,
+ *      sending the equivalent Ev1 action for each change.
+ *
+ * TODO
  *
  * ### For changes inside a copied subtree, the calls to the "open dir"
  *     and "open file" Ev1 methods may be passing the wrong revision
