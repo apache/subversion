@@ -29,7 +29,7 @@
 #include "svn_pools.h"
 #include "svn_subst.h"
 
-#include "svn_client_mtcc.h"
+#include "private/svn_client_mtcc.h"
 
 
 #include "svn_private_config.h"
@@ -40,22 +40,22 @@
 
 #define SVN_PATH_IS_EMPTY(s) ((s)[0] == '\0')
 
-/* The kind of operation to perform in an svn_client_mtcc_op_t */
-typedef enum svn_client_mtcc_kind_t
+/* The kind of operation to perform in an mtcc_op_t */
+typedef enum mtcc_kind_t
 {
   OP_OPEN_DIR,
   OP_OPEN_FILE,
   OP_ADD_DIR,
   OP_ADD_FILE,
   OP_DELETE,
-} svn_client_mtcc_kind_t;
+} mtcc_kind_t;
 
-typedef struct svn_client_mtcc_op_t
+typedef struct mtcc_op_t
 {
   const char *name;                 /* basename of operation */
-  svn_client_mtcc_kind_t kind;      /* editor operation */
+  mtcc_kind_t kind;                 /* editor operation */
 
-  apr_array_header_t *children;     /* List of svn_client_mtcc_op_t * */
+  apr_array_header_t *children;     /* List of mtcc_op_t * */
 
   const char *src_relpath;              /* For ADD_DIR, ADD_FILE */
   svn_revnum_t src_rev;                 /* For ADD_DIR, ADD_FILE */
@@ -68,7 +68,7 @@ typedef struct svn_client_mtcc_op_t
                                            List of svn_prop_t */
 
   svn_boolean_t performed_stat;         /* Verified kind with repository */
-} svn_client_mtcc_op_t;
+} mtcc_op_t;
 
 /* Check if the mtcc doesn't contain any modifications yet */
 #define MTCC_UNMODIFIED(mtcc)                                               \
@@ -79,7 +79,7 @@ typedef struct svn_client_mtcc_op_t
      && (mtcc->root_op->children == NULL                                    \
                             || !mtcc->root_op->children->nelts))
 
-struct svn_client_mtcc_t
+struct svn_client__mtcc_t
 {
   apr_pool_t *pool;
   svn_revnum_t head_revision;
@@ -88,16 +88,16 @@ struct svn_client_mtcc_t
   svn_ra_session_t *ra_session;
   svn_client_ctx_t *ctx;
 
-  svn_client_mtcc_op_t *root_op;
+  mtcc_op_t *root_op;
 };
 
-static svn_client_mtcc_op_t *
+static mtcc_op_t *
 mtcc_op_create(const char *name,
                svn_boolean_t add,
                svn_boolean_t directory,
                apr_pool_t *result_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
 
   op = apr_pcalloc(result_pool, sizeof(*op));
   op->name = name ? apr_pstrdup(result_pool, name) : "";
@@ -108,8 +108,7 @@ mtcc_op_create(const char *name,
     op->kind = directory ? OP_OPEN_DIR : OP_OPEN_FILE;
 
   if (directory)
-    op->children = apr_array_make(result_pool, 4,
-                                  sizeof(svn_client_mtcc_op_t *));
+    op->children = apr_array_make(result_pool, 4, sizeof(mtcc_op_t *));
 
   op->src_rev = SVN_INVALID_REVNUM;
 
@@ -117,10 +116,10 @@ mtcc_op_create(const char *name,
 }
 
 static svn_error_t *
-mtcc_op_find(svn_client_mtcc_op_t **op,
+mtcc_op_find(mtcc_op_t **op,
              svn_boolean_t *created,
              const char *relpath,
-             svn_client_mtcc_op_t *base_op,
+             mtcc_op_t *base_op,
              svn_boolean_t find_existing,
              svn_boolean_t find_deletes,
              svn_boolean_t create_file,
@@ -171,9 +170,9 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
 
   for (i = base_op->children->nelts-1; i >= 0 ; i--)
     {
-      svn_client_mtcc_op_t *cop;
+      mtcc_op_t *cop;
 
-      cop = APR_ARRAY_IDX(base_op->children, i, svn_client_mtcc_op_t *);
+      cop = APR_ARRAY_IDX(base_op->children, i, mtcc_op_t *);
 
       if (! strcmp(cop->name, name)
           && (find_deletes || cop->kind != OP_DELETE))
@@ -192,11 +191,11 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
     }
 
   {
-    svn_client_mtcc_op_t *cop;
+    mtcc_op_t *cop;
 
     cop = mtcc_op_create(name, FALSE, child || !create_file, result_pool);
 
-    APR_ARRAY_PUSH(base_op->children, svn_client_mtcc_op_t *) = cop;
+    APR_ARRAY_PUSH(base_op->children, mtcc_op_t *) = cop;
 
     if (!child)
       {
@@ -218,7 +217,7 @@ static svn_error_t *
 get_origin(svn_boolean_t *done,
            const char **origin_relpath,
            svn_revnum_t *rev,
-           svn_client_mtcc_op_t *op,
+           mtcc_op_t *op,
            const char *relpath,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -251,9 +250,9 @@ get_origin(svn_boolean_t *done,
 
       for (i = op->children->nelts-1; i >= 0; i--)
         {
-           svn_client_mtcc_op_t *cop;
+           mtcc_op_t *cop;
 
-           cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
+           cop = APR_ARRAY_IDX(op->children, i, mtcc_op_t *);
 
            if (! strcmp(cop->name, name))
             {
@@ -297,7 +296,7 @@ mtcc_get_origin(const char **origin_relpath,
                 svn_revnum_t *rev,
                 const char *relpath,
                 svn_boolean_t ignore_enoent,
-                svn_client_mtcc_t *mtcc,
+                svn_client__mtcc_t *mtcc,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -325,12 +324,12 @@ mtcc_get_origin(const char **origin_relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
-                       const char *anchor_url,
-                       svn_revnum_t base_revision,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
+                        const char *anchor_url,
+                        svn_revnum_t base_revision,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   apr_pool_t *mtcc_pool;
 
@@ -362,7 +361,7 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
 }
 
 static svn_error_t *
-update_copy_src(svn_client_mtcc_op_t *op,
+update_copy_src(mtcc_op_t *op,
                 const char *add_relpath,
                 apr_pool_t *result_pool)
 {
@@ -377,9 +376,9 @@ update_copy_src(svn_client_mtcc_op_t *op,
 
   for (i = 0; i < op->children->nelts; i++)
     {
-      svn_client_mtcc_op_t *cop;
+      mtcc_op_t *cop;
 
-      cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
+      cop = APR_ARRAY_IDX(op->children, i, mtcc_op_t *);
 
       SVN_ERR(update_copy_src(cop, add_relpath, result_pool));
     }
@@ -389,7 +388,7 @@ update_copy_src(svn_client_mtcc_op_t *op,
 
 static svn_error_t *
 mtcc_reparent(const char *new_anchor_url,
-              svn_client_mtcc_t *mtcc,
+              svn_client__mtcc_t *mtcc,
               apr_pool_t *scratch_pool)
 {
   const char *session_url;
@@ -419,15 +418,14 @@ mtcc_reparent(const char *new_anchor_url,
   /* Create directory open operations for new ancestors */
   while (*up)
     {
-      svn_client_mtcc_op_t *root_op;
+      mtcc_op_t *root_op;
 
       mtcc->root_op->name = svn_relpath_basename(up, mtcc->pool);
       up = svn_relpath_dirname(up, scratch_pool);
 
       root_op = mtcc_op_create(NULL, FALSE, TRUE, mtcc->pool);
 
-      APR_ARRAY_PUSH(root_op->children,
-                     svn_client_mtcc_op_t *) = mtcc->root_op;
+      APR_ARRAY_PUSH(root_op->children, mtcc_op_t *) = mtcc->root_op;
 
       mtcc->root_op = root_op;
     }
@@ -438,7 +436,7 @@ mtcc_reparent(const char *new_anchor_url,
 /* Check if it is safe to create a new node at NEW_RELPATH. Return a proper
    error if it is not */
 static svn_error_t *
-mtcc_verify_create(svn_client_mtcc_t *mtcc,
+mtcc_verify_create(svn_client__mtcc_t *mtcc,
                    const char *new_relpath,
                    apr_pool_t *scratch_pool)
 {
@@ -446,7 +444,7 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
 
   if (*new_relpath || !MTCC_UNMODIFIED(mtcc))
     {
-      svn_client_mtcc_op_t *op;
+      mtcc_op_t *op;
 
       SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, FALSE,
                            FALSE, mtcc->pool, scratch_pool));
@@ -465,8 +463,8 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
 
   /* mod_dav_svn allows overwriting existing directories. Let's hide that
      for users of this api */
-  SVN_ERR(svn_client_mtcc_check_path(&kind, new_relpath, FALSE,
-                                     mtcc, scratch_pool));
+  SVN_ERR(svn_client__mtcc_check_path(&kind, new_relpath, FALSE,
+                                      mtcc, scratch_pool));
 
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
@@ -478,13 +476,13 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
 
 
 svn_error_t *
-svn_client_mtcc_add_add_file(const char *relpath,
-                             svn_stream_t *src_stream,
-                             const svn_checksum_t *src_checksum,
-                             svn_client_mtcc_t *mtcc,
-                             apr_pool_t *scratch_pool)
+svn_client__mtcc_add_add_file(const char *relpath,
+                              svn_stream_t *src_stream,
+                              const svn_checksum_t *src_checksum,
+                              svn_client__mtcc_t *mtcc,
+                              apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   svn_boolean_t created;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath) && src_stream);
 
@@ -517,13 +515,13 @@ svn_client_mtcc_add_add_file(const char *relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_add_copy(const char *src_relpath,
-                         svn_revnum_t revision,
-                         const char *dst_relpath,
-                         svn_client_mtcc_t *mtcc,
-                         apr_pool_t *scratch_pool)
+svn_client__mtcc_add_copy(const char *src_relpath,
+                          svn_revnum_t revision,
+                          const char *dst_relpath,
+                          svn_client__mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   svn_boolean_t created;
   svn_node_kind_t kind;
 
@@ -569,18 +567,18 @@ svn_client_mtcc_add_copy(const char *src_relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_add_delete(const char *relpath,
-                          svn_client_mtcc_t *mtcc,
-                          apr_pool_t *scratch_pool)
+svn_client__mtcc_add_delete(const char *relpath,
+                            svn_client__mtcc_t *mtcc,
+                            apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   svn_boolean_t created;
   svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
-  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
-                                     mtcc, scratch_pool));
+  SVN_ERR(svn_client__mtcc_check_path(&kind, relpath, FALSE,
+                                      mtcc, scratch_pool));
 
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
@@ -614,11 +612,11 @@ svn_client_mtcc_add_delete(const char *relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_add_mkdir(const char *relpath,
-                          svn_client_mtcc_t *mtcc,
-                          apr_pool_t *scratch_pool)
+svn_client__mtcc_add_mkdir(const char *relpath,
+                           svn_client__mtcc_t *mtcc,
+                           apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   svn_boolean_t created;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
@@ -648,10 +646,10 @@ svn_client_mtcc_add_mkdir(const char *relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_add_move(const char *src_relpath,
-                         const char *dst_relpath,
-                         svn_client_mtcc_t *mtcc,
-                         apr_pool_t *scratch_pool)
+svn_client__mtcc_add_move(const char *src_relpath,
+                          const char *dst_relpath,
+                          svn_client__mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool)
 {
   const char *origin_relpath;
   svn_revnum_t origin_rev;
@@ -660,9 +658,9 @@ svn_client_mtcc_add_move(const char *src_relpath,
                           src_relpath, FALSE, mtcc,
                           scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_client_mtcc_add_copy(src_relpath, mtcc->base_revision,
-                                   dst_relpath, mtcc, scratch_pool));
-  SVN_ERR(svn_client_mtcc_add_delete(src_relpath, mtcc, scratch_pool));
+  SVN_ERR(svn_client__mtcc_add_copy(src_relpath, mtcc->base_revision,
+                                    dst_relpath, mtcc, scratch_pool));
+  SVN_ERR(svn_client__mtcc_add_delete(src_relpath, mtcc, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -670,7 +668,7 @@ svn_client_mtcc_add_move(const char *src_relpath,
 /* Baton for mtcc_prop_getter */
 struct mtcc_prop_get_baton
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   const char *relpath;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
@@ -688,7 +686,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
   svn_revnum_t origin_rev;
   apr_hash_t *props = NULL;
 
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
 
   if (mime_type)
     *mime_type = NULL;
@@ -765,14 +763,14 @@ mtcc_prop_getter(const svn_string_t **mime_type,
 }
 
 svn_error_t *
-svn_client_mtcc_add_propset(const char *relpath,
-                            const char *propname,
-                            const svn_string_t *propval,
-                            svn_boolean_t skip_checks,
-                            svn_client_mtcc_t *mtcc,
-                            apr_pool_t *scratch_pool)
+svn_client__mtcc_add_propset(const char *relpath,
+                             const char *propname,
+                             const svn_string_t *propval,
+                             svn_boolean_t skip_checks,
+                             svn_client__mtcc_t *mtcc,
+                             apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
   if (! svn_prop_name_is_valid(propname))
@@ -805,8 +803,8 @@ svn_client_mtcc_add_propset(const char *relpath,
     {
       struct mtcc_prop_get_baton mpbg;
       svn_node_kind_t kind;
-      SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE, mtcc,
-                                         scratch_pool));
+      SVN_ERR(svn_client__mtcc_check_path(&kind, relpath, FALSE, mtcc,
+                                          scratch_pool));
 
       mpbg.mtcc = mtcc;
       mpbg.relpath = relpath;
@@ -826,8 +824,8 @@ svn_client_mtcc_add_propset(const char *relpath,
       /* Probing the node for an unmodified root will fix the node type to
          a file if necessary */
 
-      SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
-                                         mtcc, scratch_pool));
+      SVN_ERR(svn_client__mtcc_check_path(&kind, relpath, FALSE,
+                                          mtcc, scratch_pool));
 
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -849,8 +847,8 @@ svn_client_mtcc_add_propset(const char *relpath,
           /* ### TODO: Check if this node is within a newly copied directory,
                        and update origin values accordingly */
 
-          SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
-                                             mtcc, scratch_pool));
+          SVN_ERR(svn_client__mtcc_check_path(&kind, relpath, FALSE,
+                                              mtcc, scratch_pool));
 
           if (kind == svn_node_none)
             return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -884,21 +882,21 @@ svn_client_mtcc_add_propset(const char *relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_add_update_file(const char *relpath,
-                                svn_stream_t *src_stream,
-                                const svn_checksum_t *src_checksum,
-                                svn_stream_t *base_stream,
-                                const svn_checksum_t *base_checksum,
-                                svn_client_mtcc_t *mtcc,
-                                apr_pool_t *scratch_pool)
+svn_client__mtcc_add_update_file(const char *relpath,
+                                 svn_stream_t *src_stream,
+                                 const svn_checksum_t *src_checksum,
+                                 svn_stream_t *base_stream,
+                                 const svn_checksum_t *base_checksum,
+                                 svn_client__mtcc_t *mtcc,
+                                 apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
   svn_boolean_t created;
   svn_node_kind_t kind;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath) && src_stream);
 
-  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
-                                     mtcc, scratch_pool));
+  SVN_ERR(svn_client__mtcc_check_path(&kind, relpath, FALSE,
+                                      mtcc, scratch_pool));
 
   if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
@@ -929,15 +927,15 @@ svn_client_mtcc_add_update_file(const char *relpath,
 }
 
 svn_error_t *
-svn_client_mtcc_check_path(svn_node_kind_t *kind,
-                           const char *relpath,
-                           svn_boolean_t check_repository,
-                           svn_client_mtcc_t *mtcc,
-                           apr_pool_t *scratch_pool)
+svn_client__mtcc_check_path(svn_node_kind_t *kind,
+                            const char *relpath,
+                            svn_boolean_t check_repository,
+                            svn_client__mtcc_t *mtcc,
+                            apr_pool_t *scratch_pool)
 {
   const char *origin_relpath;
   svn_revnum_t origin_rev;
-  svn_client_mtcc_op_t *op;
+  mtcc_op_t *op;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
@@ -1018,7 +1016,7 @@ svn_client_mtcc_check_path(svn_node_kind_t *kind,
 
 static svn_error_t *
 commit_properties(const svn_delta_editor_t *editor,
-                  const svn_client_mtcc_op_t *op,
+                  const mtcc_op_t *op,
                   void *node_baton,
                   apr_pool_t *scratch_pool)
 {
@@ -1050,7 +1048,7 @@ commit_properties(const svn_delta_editor_t *editor,
 /* Handles updating a file to a delta editor and then closes it */
 static svn_error_t *
 commit_file(const svn_delta_editor_t *editor,
-            svn_client_mtcc_op_t *op,
+            mtcc_op_t *op,
             void *file_baton,
             const char *session_url,
             const char *relpath,
@@ -1127,7 +1125,7 @@ commit_file(const svn_delta_editor_t *editor,
 /* Handles updating a directory to a delta editor and then closes it */
 static svn_error_t *
 commit_directory(const svn_delta_editor_t *editor,
-                 svn_client_mtcc_op_t *op,
+                 mtcc_op_t *op,
                  const char *relpath,
                  svn_revnum_t base_rev,
                  void *dir_baton,
@@ -1144,11 +1142,11 @@ commit_directory(const svn_delta_editor_t *editor,
 
       for (i = 0; i < op->children->nelts; i++)
         {
-          svn_client_mtcc_op_t *cop;
+          mtcc_op_t *cop;
           const char * child_relpath;
           void *child_baton;
 
-          cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
+          cop = APR_ARRAY_IDX(op->children, i, mtcc_op_t *);
 
           svn_pool_clear(iterpool);
 
@@ -1219,7 +1217,7 @@ commit_directory(const svn_delta_editor_t *editor,
 /* Helper function to recursively create svn_client_commit_item3_t items
    to provide to the log message callback */
 static svn_error_t *
-add_commit_items(svn_client_mtcc_op_t *op,
+add_commit_items(mtcc_op_t *op,
                  const char *session_url,
                  const char *url,
                  apr_array_header_t *commit_items,
@@ -1278,10 +1276,10 @@ add_commit_items(svn_client_mtcc_op_t *op,
 
       for (i = 0; i < op->children->nelts; i++)
         {
-          svn_client_mtcc_op_t *cop;
+          mtcc_op_t *cop;
           const char * child_url;
 
-          cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
+          cop = APR_ARRAY_IDX(op->children, i, mtcc_op_t *);
 
           svn_pool_clear(iterpool);
 
@@ -1298,11 +1296,11 @@ add_commit_items(svn_client_mtcc_op_t *op,
 }
 
 svn_error_t *
-svn_client_mtcc_commit(apr_hash_t *revprop_table,
-                       svn_commit_callback2_t commit_callback,
-                       void *commit_baton,
-                       svn_client_mtcc_t *mtcc,
-                       apr_pool_t *scratch_pool)
+svn_client__mtcc_commit(apr_hash_t *revprop_table,
+                        svn_commit_callback2_t commit_callback,
+                        void *commit_baton,
+                        svn_client__mtcc_t *mtcc,
+                        apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
