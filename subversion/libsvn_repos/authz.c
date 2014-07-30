@@ -325,6 +325,10 @@ typedef struct node_pattern_t
    * segment suffix. */
   apr_array_header_t *suffixes;
 
+  /* If not NULL, the segments of all nodes_t* in this array contain
+   * wildcards and don't fit into any of the above categories. */
+  apr_array_header_t *complex;
+
   /* This node itself is a "**" segment and must therefore itself be added
    * to the matching node list for the next level. */
   svn_boolean_t repeat;
@@ -617,8 +621,10 @@ insert_path(node_t *node,
                                           reversed, result_pool);
         }
 
-      /* More cases to be added here later.
-       * There will be no error condition to be checked for. */
+      /* General pattern */
+      else
+        sub_node = ensure_node_in_array(&node->pattern_sub_nodes->complex,
+                                        segment, result_pool);
     }
   else
     {
@@ -639,6 +645,43 @@ insert_path(node_t *node,
   /* Continue at the sub-node with the next segment. */
   insert_path(sub_node, segments + 1, allow_wildcards, access,
               result_pool, scratch_pool);
+}
+
+/* Normalize the wildcard pattern PATH in accordance to
+ * https://wiki.apache.org/subversion/AuthzImprovements
+ * and return the result.
+ */
+const char *
+normalize_wildcards(const char *path,
+                    apr_pool_t *result_pool)
+{
+  const char *pos;
+  svn_stringbuf_t *buffer = svn_stringbuf_create(path, result_pool);
+
+  /* Reduce sequences variable-length segment matches to single segment
+   * matches with the other segment patterns reduced to "*". */
+  while (svn_stringbuf_replace_all(buffer, "/**/**/", "/*/**/"))
+    ;
+
+  /* Our tree traversal is more efficient if we put variable segment count
+   * wildcards last. */
+  while (svn_stringbuf_replace_all(buffer, "/**/*/", "/**/*/"))
+    ;
+
+  /* Reduce trailing "**" a single "*". */
+  while (   buffer->len > 1
+      && buffer->data[buffer->len-1] == '*'
+      && buffer->data[buffer->len-2] == '*')
+    svn_stringbuf_remove(buffer, buffer->len-1, 1);
+
+  /* Reduce "**" _inside_ a segment to a single "*". */
+  for (pos = strstr(buffer->data, "**"); pos; pos = strstr(pos, "**"))
+    if ((pos > buffer->data && pos[-1] != '/') || (pos[2] != '/'))
+      svn_stringbuf_remove(buffer, pos - buffer->data, 1);
+    else
+      ++pos;
+
+  return buffer->data;
 }
 
 /* Callback baton to be used with  process_path_rule().
@@ -704,6 +747,9 @@ process_path_rule(const char *name,
     return TRUE;
 
   /* Process the path */
+  if (wildcards && strstr(path, "**"))
+    path = normalize_wildcards(path, scratch_pool);
+
   segments = svn_cstring_split(path, "/", FALSE, scratch_pool);
   APR_ARRAY_PUSH(segments, const char *) = NULL;
 
@@ -786,6 +832,8 @@ finalize_tree(node_t *parent,
       finalize_subnode_array(node, access, node->pattern_sub_nodes->prefixes,
                              scratch_pool);
       finalize_subnode_array(node, access, node->pattern_sub_nodes->suffixes,
+                             scratch_pool);
+      finalize_subnode_array(node, access, node->pattern_sub_nodes->complex,
                              scratch_pool);
     }
 
@@ -985,6 +1033,120 @@ add_prefix_matches(lookup_state_t *state,
     }
 }
 
+/* Utility factored out from match_pattern.
+ *
+ * Compare S with PATTERN up to the first wildcard in PATTERN.  The first
+ * char must be a match already.  If PATTERN does not contain a wildcard,
+ * compare the full strings.
+ *
+ * If no mismatch was found, return the number of matching characters and
+ * 0 otherwise.
+ */
+static apr_size_t
+match_to_next_wildcard(const char *s,
+                       const char *pattern)
+{
+  apr_size_t len;
+
+  assert(pattern[0] == s[0]);
+  for (len = 1; pattern[len] && pattern[len] != '*'; ++len)
+    if (pattern[len] != s[len])
+      return 0;
+
+  if (!pattern[len])
+    return s[len] == 0 ? len : 0;
+
+  return len;
+}
+
+/* Return TRUE if string S matches wildcard PATTERN.  The latter must not be
+ * empty and must be normalized, i.e. not contain "**".
+ */
+static svn_boolean_t
+match_pattern(const char *s,
+              const char *pattern)
+{
+  /* Matching a wildcard pattern is trival:
+   * PATTERN can be considered a list of literal strings separated by '*'.
+   * We simply have to find all sub-strings in that order, i.e. we can do
+   * so greedily.  Be careful to match prefix and suffix correctly.
+   */
+  char pattern_char, s_char;
+
+  /* The prefix part of PATTERN needs special treatment as we can't just
+   * match any substring of S. */
+  if (pattern[0] != '*')
+    {
+      apr_size_t match_len;
+
+      /* match_to_next_wildcard() assumes a that the first char matches. */
+      if (pattern[0] != s[0])
+        return FALSE;
+
+      /* Match up to but not beyond the next wildcard. */
+      match_len = match_to_next_wildcard(s, pattern);
+      if (match_len == 0)
+        return FALSE;
+
+      /* Continue at next wildcard or end-of-string. */
+      pattern += match_len;
+      s += match_len;
+    }
+
+  /* Process all of PATTERN and match it against S char by char. */
+  while ((pattern_char = *pattern))
+    {
+      apr_size_t match_len = 0;
+
+      /* If PATTERN ended on a wildcard, S can be nothing but a match. */
+      pattern_char = *++pattern;
+      if (pattern_char == 0)
+        return TRUE;
+
+      /* Due to normalization, PATTERN_CHAR cannot be '*' because "**" is
+       * prohibited.  Find the next position in S that matches until the
+       * next wildcard in PATTERN or its end. */
+      for (s_char = *s; s_char; s_char = *++s)
+        if (pattern_char == s_char)
+          {
+            /* First char matches, what about the rest?  If there is no
+             * wildcard left in PATTERN (i.e. the suffix part), we only get
+             * a non-zero result if S and PATTERN match completely. */
+            match_len = match_to_next_wildcard(s, pattern);
+
+            /* Found a match?  If so, greedily take it. */
+            if (match_len)
+              break;
+          }
+
+      /* No match found -> mismatch and done. */
+      if (!match_len)
+        return FALSE;
+
+      /* Continue at next wildcard or end-of-string. */
+      pattern += match_len;
+      s += match_len;
+    }
+
+  /* The pattern ended and S must either be fully matched now or is not a
+   * match at all. */
+  return *s == 0;
+}
+
+static void
+add_complex_matches(lookup_state_t *state,
+                    const svn_stringbuf_t *segment,
+                    apr_array_header_t *patterns)
+{
+  int i;
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      node_t *node = APR_ARRAY_IDX(patterns, i, node_t *);
+      if (match_pattern(segment->data, node->segment.data))
+        add_next_node(state, node);
+    }
+}
+
 /* Extract the next segment from PATH and copy it into SEGMENT, whose current
  * contents get overwritten.  Empty paths ("") are supported and leading '/'
  * segment separators will be interpreted as an empty segment ("").  Non-
@@ -1128,6 +1290,10 @@ lookup(lookup_state_t *state,
               if (node->pattern_sub_nodes->prefixes)
                 add_prefix_matches(state, segment,
                                    node->pattern_sub_nodes->prefixes);
+
+              if (node->pattern_sub_nodes->complex)
+                add_complex_matches(state, segment,
+                                    node->pattern_sub_nodes->complex);
 
               /* Find all suffux pattern matches.
                * This must be the last check as it destroys SEGMENT. */

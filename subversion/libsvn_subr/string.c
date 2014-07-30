@@ -710,6 +710,71 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
 }
 
 
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement)
+{
+  apr_size_t replacements = 0;
+
+  apr_size_t current = 0;
+  apr_size_t original_length = str->len;
+
+  apr_size_t to_copy;
+  apr_size_t to_find_len;
+  apr_size_t replacement_len;
+  apr_size_t new_length;
+
+  /* Early exit. */
+  const char *pos = strstr(str->data, to_find);
+  if (pos == NULL)
+    return 0;
+
+  to_find_len = strlen(to_find);
+  replacement_len = strlen(replacement);
+
+  /* We will store the new contents behind the NUL terminator of the current
+   * data and track the total length in STR->LEN to make the reallocation
+   * code preserve both bits.  However, we need to keep the NUL between them
+   * to make strstr stop at that boundary. */
+  ++str->len;
+
+  /* Find all occurrences of TO_FIND, copy the bits in between to the target,
+   * separated by REPLACEMENT. */
+  for ( ; pos; pos = strstr(str->data + current, to_find), ++replacements)
+    {
+      apr_size_t to_copy = pos - str->data - current;
+      svn_stringbuf_ensure(str, str->len + to_copy + replacement_len);
+
+      if (to_copy)
+        memcpy(str->data + str->len, str->data + current, to_copy);
+      current += to_copy + to_find_len;
+
+      str->len += to_copy;
+      memcpy(str->data + str->len, replacement, replacement_len);
+      str->len += replacement_len;
+    }
+
+  /* Copy remainder. */
+  to_copy = original_length - current;
+  if (to_copy)
+    {
+      svn_stringbuf_ensure(str, str->len + to_copy);
+      memcpy(str->data + str->len, str->data + current, to_copy);
+      str->len += to_copy;
+    }
+
+  /* Move new contents to the start of the buffer and terminate it. */
+  new_length = str->len - original_length - 1;
+  memmove(str->data, str->data + original_length + 1, new_length);
+  str->len = new_length;
+  str->data[new_length] = 0;
+
+  /* Done. */
+  return replacements;
+}
+
+
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool)
 {
