@@ -90,7 +90,7 @@ props_changed_hash(apr_hash_t *props,
 
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
+      const char *name = apr_hash_this_key(hi);
 
       if (svn_property_kind2(name) == svn_prop_regular_kind)
         {

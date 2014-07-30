@@ -513,7 +513,7 @@ lock_test(const svn_test_opts_t *opts,
 
   /* Unlock without force and wrong lock tokens */
   for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "wrong-token");
+    svn_hash_sets(unlock_targets, apr_hash_this_key(hi), "wrong-token");
   apr_hash_clear(baton.results);
   SVN_ERR(svn_ra_unlock(session, unlock_targets, FALSE, lock_cb, &baton, pool));
 
@@ -525,7 +525,7 @@ lock_test(const svn_test_opts_t *opts,
 
   /* Force unlock */
   for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "");
+    svn_hash_sets(unlock_targets, apr_hash_this_key(hi), "");
   apr_hash_clear(baton.results);
   SVN_ERR(svn_ra_unlock(session, unlock_targets, TRUE, lock_cb, &baton, pool));
 
@@ -548,8 +548,8 @@ lock_test(const svn_test_opts_t *opts,
 
   for (hi = apr_hash_first(pool, baton.results); hi; hi = apr_hash_next(hi))
     {
-      result = svn__apr_hash_index_val(hi);
-      svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi),
+      result = apr_hash_this_val(hi);
+      svn_hash_sets(unlock_targets, apr_hash_this_key(hi),
                     result->lock ? result->lock->token : "non-existent-token");
     }
   apr_hash_clear(baton.results);

@@ -1154,7 +1154,7 @@ resolve_to_defaults(apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
+      svn_wc_entry_t *this_entry = apr_hash_this_val(hi);
 
       if (this_entry == default_entry)
         /* THIS_DIR already has all the information it can possibly

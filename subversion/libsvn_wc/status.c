@@ -947,7 +947,7 @@ is_external_path(apr_hash_t *externals,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *external_abspath = svn__apr_hash_index_key(hi);
+      const char *external_abspath = apr_hash_this_key(hi);
 
       if (svn_dirent_is_child(local_abspath, external_abspath, NULL))
         return TRUE;
@@ -1937,8 +1937,8 @@ handle_statii(struct edit_baton *eb,
   /* Loop over all the statii still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      svn_wc_status3_t *status = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      svn_wc_status3_t *status = apr_hash_this_val(hi);
 
       /* Clear the subpool. */
       svn_pool_clear(iterpool);

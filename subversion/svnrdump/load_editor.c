@@ -557,8 +557,8 @@ new_revision_record(void **revision_baton,
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const char *hname = svn__apr_hash_index_key(hi);
-      const char *hval = svn__apr_hash_index_val(hi);
+      const char *hname = apr_hash_this_key(hi);
+      const char *hval = apr_hash_this_val(hi);
 
       if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
         rb->rev = atoi(hval);
@@ -669,8 +669,8 @@ new_node_record(void **node_baton,
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const char *hname = svn__apr_hash_index_key(hi);
-      const char *hval = svn__apr_hash_index_val(hi);
+      const char *hname = apr_hash_this_key(hi);
+      const char *hval = apr_hash_this_val(hi);
 
       /* Parse the different kinds of headers we can encounter and
          stuff them into the node_baton for writing later */
@@ -1009,7 +1009,7 @@ remove_node_props(void *baton)
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
+      const char *name = apr_hash_this_key(hi);
       svn_prop_kind_t kind = svn_property_kind2(name);
 
       if (kind == svn_prop_regular_kind)

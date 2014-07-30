@@ -535,7 +535,7 @@ svn_hash_keys(apr_array_header_t **array,
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
-      APR_ARRAY_PUSH(*array, const char *) = svn__apr_hash_index_key(hi);
+      APR_ARRAY_PUSH(*array, const char *) = apr_hash_this_key(hi);
     }
 
   return SVN_NO_ERROR;

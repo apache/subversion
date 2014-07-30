@@ -317,8 +317,8 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
         for (hi = apr_hash_first(scratch_pool, changes);
              hi; hi = apr_hash_next(hi))
           {
-            const char *this_relpath = svn__apr_hash_index_key(hi);
-            change_node_t *this_change = svn__apr_hash_index_val(hi);
+            const char *this_relpath = apr_hash_this_key(hi);
+            change_node_t *this_change = apr_hash_this_val(hi);
             const char *r = svn_relpath_skip_ancestor(relpath, this_relpath);
 
             if (r && r[0])
@@ -415,7 +415,7 @@ insert_change_ev1_rules(change_node_t **change_p, apr_hash_t *changes,
         for (hi = apr_hash_first(scratch_pool, changes);
              hi; hi = apr_hash_next(hi))
           {
-            const char *this_relpath = svn__apr_hash_index_key(hi);
+            const char *this_relpath = apr_hash_this_key(hi);
             const char *r = svn_relpath_skip_ancestor(relpath, this_relpath);
 
             if (r && r[0])
@@ -467,8 +467,8 @@ duplicate_child_changes(apr_hash_t *changes,
   for (hi = apr_hash_first(scratch_pool, changes);
        hi; hi = apr_hash_next(hi))
     {
-      const char *this_path = svn__apr_hash_index_key(hi);
-      change_node_t *this_change = svn__apr_hash_index_val(hi);
+      const char *this_path = apr_hash_this_key(hi);
+      change_node_t *this_change = apr_hash_this_val(hi);
       const char *r = svn_relpath_skip_ancestor(from_path, this_path);
 
       /* ... at a child path strictly below FROM_PATH ... */
@@ -1514,8 +1514,8 @@ find_move(apr_hash_t *moves,
   for (hi = apr_hash_first(scratch_pool, moves);
        hi; hi = apr_hash_next(hi))
     {
-      const char *this_from_relpath = svn__apr_hash_index_key(hi);
-      const char *this_to_relpath = svn__apr_hash_index_val(hi);
+      const char *this_from_relpath = apr_hash_this_key(hi);
+      const char *this_to_relpath = apr_hash_this_val(hi);
       const char *r
         = svn_relpath_skip_ancestor(this_from_relpath, initial_relpath);
 
@@ -1587,7 +1587,7 @@ get_unsorted_paths(apr_hash_t *changes,
      the Ev1 drive.  */
   for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
-      const char *this_path = svn__apr_hash_index_key(hi);
+      const char *this_path = apr_hash_this_key(hi);
 
       APR_ARRAY_PUSH(paths, const char *)
         = svn_relpath_skip_ancestor(base_relpath, this_path);

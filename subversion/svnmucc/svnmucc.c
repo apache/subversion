@@ -43,7 +43,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
-#include "svn_client_mtcc.h"
+#include "private/svn_client_mtcc.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -136,16 +136,16 @@ execute(const apr_array_header_t *actions,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_client_mtcc_create(&mtcc, anchor,
-                                 SVN_IS_VALID_REVNUM(base_revision)
-                                    ? base_revision
-                                    : SVN_INVALID_REVNUM,
-                                 ctx, pool, iterpool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, anchor,
+                                  SVN_IS_VALID_REVNUM(base_revision)
+                                     ? base_revision
+                                     : SVN_INVALID_REVNUM,
+                                  ctx, pool, iterpool));
 
   for (i = 0; i < actions->nelts; ++i)
     {
@@ -160,29 +160,29 @@ execute(const apr_array_header_t *actions,
         case ACTION_MV:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
-          SVN_ERR(svn_client_mtcc_add_move(path1, path2, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_move(path1, path2, mtcc, iterpool));
           break;
         case ACTION_CP:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
-          SVN_ERR(svn_client_mtcc_add_copy(path1, action->rev, path2,
-                                           mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_copy(path1, action->rev, path2,
+                                            mtcc, iterpool));
           break;
         case ACTION_RM:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_delete(path1, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_delete(path1, mtcc, iterpool));
           break;
         case ACTION_MKDIR:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_mkdir(path1, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_mkdir(path1, mtcc, iterpool));
           break;
         case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_check_path(&kind, path1, TRUE, mtcc, pool));
+          SVN_ERR(svn_client__mtcc_check_path(&kind, path1, TRUE, mtcc, pool));
 
           if (kind == svn_node_dir)
             {
-              SVN_ERR(svn_client_mtcc_add_delete(path1, mtcc, pool));
+              SVN_ERR(svn_client__mtcc_add_delete(path1, mtcc, pool));
               kind = svn_node_none;
             }
 
@@ -197,20 +197,20 @@ execute(const apr_array_header_t *actions,
 
 
             if (kind == svn_node_file)
-              SVN_ERR(svn_client_mtcc_add_update_file(path1, src, NULL,
-                                                      NULL, NULL,
-                                                      mtcc, iterpool));
+              SVN_ERR(svn_client__mtcc_add_update_file(path1, src, NULL,
+                                                       NULL, NULL,
+                                                       mtcc, iterpool));
             else if (kind == svn_node_none)
-              SVN_ERR(svn_client_mtcc_add_add_file(path1, src, NULL,
-                                                   mtcc, iterpool));
+              SVN_ERR(svn_client__mtcc_add_add_file(path1, src, NULL,
+                                                    mtcc, iterpool));
           }
           break;
         case ACTION_PROPSET:
         case ACTION_PROPDEL:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_propset(path1, action->prop_name,
-                                              action->prop_value, FALSE,
-                                              mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_propset(path1, action->prop_name,
+                                               action->prop_value, FALSE,
+                                               mtcc, iterpool));
           break;
         case ACTION_PROPSETF:
         default:
@@ -218,8 +218,8 @@ execute(const apr_array_header_t *actions,
         }
     }
 
-  err = svn_client_mtcc_commit(revprops, commit_callback, NULL,
-                               mtcc, iterpool);
+  err = svn_client__mtcc_commit(revprops, commit_callback, NULL,
+                                mtcc, iterpool);
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);;

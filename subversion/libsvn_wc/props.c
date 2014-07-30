@@ -2055,8 +2055,8 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
   for (hi = apr_hash_first(scratch_pool, (apr_hash_t *)props); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_string_t *value = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_string_t *value = apr_hash_this_val(hi);
 
       if (strcmp(name, SVN_PROP_MIME_TYPE) == 0)
         continue;

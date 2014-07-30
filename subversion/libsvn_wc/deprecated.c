@@ -127,7 +127,7 @@ gather_traversal_info(svn_wc_context_t *wc_ctx,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *node_abspath = svn__apr_hash_index_key(hi);
+      const char *node_abspath = apr_hash_this_key(hi);
       const char *relpath;
 
       relpath = svn_dirent_join(path,
@@ -137,11 +137,11 @@ gather_traversal_info(svn_wc_context_t *wc_ctx,
 
       if (gather_as_old)
         svn_hash_sets(traversal_info->externals_old, relpath,
-                      svn__apr_hash_index_val(hi));
+                      apr_hash_this_val(hi));
 
       if (gather_as_new)
         svn_hash_sets(traversal_info->externals_new, relpath,
-                      svn__apr_hash_index_val(hi));
+                      apr_hash_this_val(hi));
 
       svn_hash_sets(traversal_info->depths, relpath,
                     svn_hash_gets(ambient_depths, node_abspath));
