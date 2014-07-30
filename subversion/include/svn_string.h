@@ -388,6 +388,16 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       const char *bytes,
                       apr_size_t new_count);
 
+/** Replace all occurrences of @a to_find in @a str with @a replacement.
+ * Return the number of replacements made.
+ *
+ * @since New in 1.10.
+ */
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement);
+
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool);
