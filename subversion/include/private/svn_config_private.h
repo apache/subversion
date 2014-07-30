@@ -77,33 +77,16 @@ typedef svn_error_t *(*svn_config__add_value_fn)(
 /*
  * Create a new constuctor allocated from RESULT_POOL.
  * Any of the callback functions may be NULL.
- * SECTION_NAMES_CASE_SENSITIVE and OPTION_NAMES_CASE_SENSITIVE
- * are ignored unless EXPAND_PARSED_VALUES is true, in which
- * case the parser behaviour changes as follows:
- *   - the "DEFAULT" section is never reported to the constructor;
- *   - values reported to ADD_VALUE_CALLBACK are always fully expanded;
- *   - if a section is re-opened, the value expansion for this section
- *     does *not* consider the previous contents of the section but
- *     only the current set of values, along with whatever is set in
- *     the "DEFAULT" section;
- *   - changes to the "DEFAULT" section that appear after a section
- *     has been parsed do not affect value expansion for that section.
+ * The constructor implementation is responsible for implementing any
+ * case-insensitivity, value expansion, or other features on top of
+ * the basic parser.
  */
 svn_config__constructor_t *
 svn_config__constructor_create(
-    svn_boolean_t expand_parsed_values,
-    svn_boolean_t section_names_case_sensitive,
-    svn_boolean_t option_names_case_sensitive,
     svn_config__open_section_fn open_section_callback,
     svn_config__close_section_fn close_section_callback,
     svn_config__add_value_fn add_value_callback,
     apr_pool_t *result_pool);
-
-
-/* The default add-value callback, used by the default config parser. */
-svn_error_t *svn_config__default_add_value_fn(
-    void *baton, const char *section,
-    const char *option, const char *value);
 
 /*
  * Parse the configuration from STREAM, using CONSTRUCTOR to build the

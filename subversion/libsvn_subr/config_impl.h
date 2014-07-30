@@ -76,6 +76,12 @@ struct svn_config_t
   svn_boolean_t read_only;
 };
 
+/* The default add-value constructor callback, used by the default
+   config parser that populates an svn_config_t. */
+svn_error_t *svn_config__default_add_value_fn(
+    void *baton, const char *section,
+    const char *option, const char *value);
+
 /* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file(svn_config_t *cfg,
                                     const char *file,
