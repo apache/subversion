@@ -40,6 +40,7 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
 {
   svn_x509_certinfo_t *result = apr_palloc(result_pool, sizeof(*result));
   result->subject = apr_pstrdup(result_pool, certinfo->subject);
+  result->subject_cn = apr_pstrdup(result_pool, certinfo->subject_cn);
   result->issuer = apr_pstrdup(result_pool, certinfo->issuer);
   result->valid_from = certinfo->valid_from;
   result->valid_to = certinfo->valid_to;
@@ -66,6 +67,12 @@ const char *
 svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo)
 {
   return certinfo->subject;
+}
+
+const char *
+svn_x509_certinfo_get_subject_cn(const svn_x509_certinfo_t *certinfo)
+{
+  return certinfo->subject_cn;
 }
 
 const char *

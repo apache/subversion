@@ -121,6 +121,7 @@ typedef struct _x509_cert {
 struct svn_x509_certinfo_t
 {
   const char *subject;
+  const char *subject_cn;
   const char *issuer;
   apr_time_t valid_from;
   apr_time_t valid_to;
