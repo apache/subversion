@@ -38,7 +38,7 @@
 
 
 /* Verify EXPR is true; raise an error if not. */
-#define VERIFY(expr) SVN_ERR_ASSERT(expr);
+#define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
 
 /*
