@@ -744,10 +744,8 @@ public class UtilTests extends SVNTests
                                      SVNUtil.Credential.Kind.sslServer,
                                      "https://svn.apache.org:443");
         assertNotNull(cred);
-        assertEquals(cred.getServerCertInfo().getSubject(),
-                     "C=US, ST=Maryland, L=Forest Hill, " +
-                     "O=Apache Software Foundation, OU=Infrastructure, " +
-                     "CN=*.apache.org");
+        assertEquals(cred.getServerCertInfo().getSubjectCommonName(),
+                     "*.apache.org");
 
         /* one SSL client passphrase credential */
         cred = SVNUtil.getCredential(configDir,
