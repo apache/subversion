@@ -53,6 +53,22 @@ set_add_string(apr_hash_t *set,
   apr_hash_set(set, key, strlen(key), "");
 }
 
+/* In situ reversal of the first LEN chars in S.
+ * S must be at least LEN  characters long.
+ */
+static void
+reverse_string(char *s,
+               apr_size_t len)
+{
+  char *lhs, *rhs;
+  for (lhs = s, rhs = s + len - 1; lhs < rhs; ++lhs, --rhs)
+    {
+      char c = *lhs;
+      *lhs = *rhs;
+      *rhs = c;
+    }
+}
+
 
 /*** Users, aliases and groups. ***/
 
@@ -304,6 +320,11 @@ typedef struct node_pattern_t
    * part of "prefix*" patterns.  Sorted by segment prefix. */
   apr_array_header_t *prefixes;
 
+  /* If not NULL, the segments of all nodes_t* in this array are the
+   * reversed suffix part of "*suffix" patterns.  Sorted by reversed
+   * segment suffix. */
+  apr_array_header_t *suffixes;
+
   /* This node itself is a "**" segment and must therefore itself be added
    * to the matching node list for the next level. */
   svn_boolean_t repeat;
@@ -433,6 +454,14 @@ is_prefix_segment(const char *segment)
 {
   const char *wildcard_pos = strchr(segment, '*');
   return wildcard_pos && wildcard_pos[1] == 0;
+}
+
+/* Return TRUE, if SEGMENT is a suffix pattern, i.e. contains exactly one
+ * '*' and that is at the beginning of the string. */
+static svn_boolean_t
+is_suffix_segment(const char *segment)
+{
+  return segment[0] == '*' && !strchr(segment + 1, '*');
 }
 
 /* Constructor utility: Create a new tree node for SEGMENT.
@@ -577,6 +606,15 @@ insert_path(node_t *node,
           segment = apr_pstrmemdup(scratch_pool, segment, strlen(segment)-1);
           sub_node = ensure_node_in_array(&node->pattern_sub_nodes->prefixes,
                                           segment, result_pool);
+        }
+
+      /* A single wildcard at the start of segments? */
+      else if (is_suffix_segment(segment))
+        {
+          char *reversed = apr_pstrdup(scratch_pool, segment + 1);
+          reverse_string(reversed, strlen(reversed));
+          sub_node = ensure_node_in_array(&node->pattern_sub_nodes->suffixes,
+                                          reversed, result_pool);
         }
 
       /* More cases to be added here later.
@@ -746,6 +784,8 @@ finalize_tree(node_t *parent,
                       scratch_pool);
 
       finalize_subnode_array(node, access, node->pattern_sub_nodes->prefixes,
+                             scratch_pool);
+      finalize_subnode_array(node, access, node->pattern_sub_nodes->suffixes,
                              scratch_pool);
     }
 
@@ -1088,6 +1128,16 @@ lookup(lookup_state_t *state,
               if (node->pattern_sub_nodes->prefixes)
                 add_prefix_matches(state, segment,
                                    node->pattern_sub_nodes->prefixes);
+
+              /* Find all suffux pattern matches.
+               * This must be the last check as it destroys SEGMENT. */
+              if (node->pattern_sub_nodes->suffixes)
+                {
+                  /* Suffixes behave like reversed prefixes. */
+                  reverse_string(segment->data, segment->len);
+                  add_prefix_matches(state, segment,
+                                     node->pattern_sub_nodes->suffixes);
+                }
             }
         }
 
