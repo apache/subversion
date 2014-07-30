@@ -488,12 +488,12 @@ extern "C" {
  * Resurrection
  * ===================================================================
  *
- * ### Is resurrection needed in a per-node branching model?
+ * Resurrection is needed in a branching model where element ids are the
+ * key to matching up corresponding nodes between "big branches".
  *
- * Perhaps a copy is sufficient. Resurrection is needed in a branching
- * model where element ids are the key to matching up corresponding nodes
- * between "big branches"; if all we have is "little branches" then there
- * may be no need to resurrect a node and keep its old node-branch-id.
+ * Resurrection is not needed in a per-node branching model. A copy is
+ * sufficient to restore a previously deleted node, as there is no need
+ * to keep its old node-branch-id.
  */
 /*#define SVN_EDITOR3_WITH_RESURRECTION*/
 
@@ -711,19 +711,27 @@ svn_editor3_mk(svn_editor3_t *editor,
  * Each node in the target subtree has a "copied from" relationship with
  * the node with the corresponding path in the source subtree.
  *
- * If @a from_loc is a location in a committed revision, the default
- * content of each node is the content of the corresponding source node.
- *
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
- * If @a from_loc is a location in the current txn, make a copy from that
- * subtree in the the txn, which when committed will refer to the
- * committed revision. The tree structure is taken from the current state
- * of the txn, whereas the default content of each node is the FINAL
- * content of the corresponding source node as committed, even if a "put"
- * operation is received for the source node after this copy operation.
+ * If @a from_loc has a non-empty "created relpath", then it refers to the
+ * current state in the txn.
+ *   ### Or use some other indication, such as (from_loc.rev == -1)?
+ * Make a copy of the current state of that subtree in the txn. When
+ * committed, the copy will have a "copied from" reference to the
+ * committed revision.
+ *
+ * Modifying the source subtree later within this edit will not affect
+ * the target's tree structure and content, but will modify the copy
+ * relationships of the target subtree accordingly. Moving a source
+ * node (directly or as a child) will update the corresponding target's
+ * "copied from" reference to follow it.
+ *   ### Except if we move a source node into the target subtree, ...?
+ * Deleting a source node will
+ * remove the corresponding target node's "copied from" reference.
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
- * The content of each node MAY be changed by a "put" operation.
+ * The content of each node in the target subtree is by default the
+ * content of the node at the corresponding path within the source
+ * subtree, and MAY be changed by a "put" operation.
  *
  * @see #svn_editor3_t
  */
@@ -739,14 +747,19 @@ svn_editor3_cp(svn_editor3_t *editor,
 
 /** Move a subtree to a new parent directory and/or a new name.
  *
- * The root node of the source subtree in the current txn is the node-branch
- * specified by @a from_loc. @a from_loc must refer to a committed revision.
+ * The root node of the source subtree is specified by @a from_loc
+ * which refers to a committed revision. This node must exist in the
+ * current txn, but may have been moved and/or modified. (This method
+ * cannot be used to move a node that has been created within the edit.)
  *
- * Create the root node of the new subtree in the parent directory
- * node-branch specified by @a new_parent_loc with the name @a new_name.
+ * Move the root node of the subtree to the parent directory node-branch
+ * specified by @a new_parent_loc and change its name to @a new_name.
  *
  * Each node in the target subtree remains the same node-branch as
  * the node with the corresponding path in the source subtree.
+ *
+ * Any modifications that have already been made within the subtree are
+ * preserved.
  *
  * @see #svn_editor3_t
  */
@@ -1006,7 +1019,8 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_editor3_nbid_t nbid);
 
 /** Alter the tree position and/or contents of the node-branch identified
- * by @a nbid, or resurrect it if it previously existed.
+ * by @a nbid.
+ * <SVN_EDITOR3_WITH_RESURRECTION> ### or resurrect it? </>
  *
  * @a since_rev specifies the base revision on which this edit was
  * performed: the server can consider the change "out of date" if a commit
