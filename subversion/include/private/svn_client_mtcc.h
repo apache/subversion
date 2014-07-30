@@ -49,11 +49,11 @@ extern "C" {
 /** This is a structure which stores a list of repository commands
  * that can be played to a repository as a single operation
  *
- * Use svn_client_mtcc_create() to create instances
+ * Use svn_client__mtcc_create() to create instances
  *
  * @since New in 1.9.
  */
-typedef struct svn_client_mtcc_t svn_client_mtcc_t;
+typedef struct svn_client__mtcc_t svn_client__mtcc_t;
 
 /** Creates a new multicommand context for an operation on @a anchor_url and
  * its descendants.
@@ -64,12 +64,12 @@ typedef struct svn_client_mtcc_t svn_client_mtcc_t;
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
-                       const char *anchor_url,
-                       svn_revnum_t base_revision,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool);
+svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
+                        const char *anchor_url,
+                        svn_revnum_t base_revision,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /** Adds a file add operation of @a relpath to @a mtcc. If @a src_checksum
  * is not null it will be provided to the repository to verify if the file
@@ -83,11 +83,11 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_add_file(const char *relpath,
-                             svn_stream_t *src_stream,
-                             const svn_checksum_t *src_checksum,
-                             svn_client_mtcc_t *mtcc,
-                             apr_pool_t *scratch_pool);
+svn_client__mtcc_add_add_file(const char *relpath,
+                              svn_stream_t *src_stream,
+                              const svn_checksum_t *src_checksum,
+                              svn_client__mtcc_t *mtcc,
+                              apr_pool_t *scratch_pool);
 
 /** Adds a copy operation of the node @a src_relpath at revision @a revision
  * to @a dst_relpath to @a mtcc.
@@ -97,11 +97,11 @@ svn_client_mtcc_add_add_file(const char *relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_copy(const char *src_relpath,
-                         svn_revnum_t revision,
-                         const char *dst_relpath,
-                         svn_client_mtcc_t *mtcc,
-                         apr_pool_t *scratch_pool);
+svn_client__mtcc_add_copy(const char *src_relpath,
+                          svn_revnum_t revision,
+                          const char *dst_relpath,
+                          svn_client__mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool);
 
 /** Adds a delete of @a relpath to @a mtcc.
  *
@@ -110,9 +110,9 @@ svn_client_mtcc_add_copy(const char *src_relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_delete(const char *relpath,
-                          svn_client_mtcc_t *mtcc,
-                          apr_pool_t *scratch_pool);
+svn_client__mtcc_add_delete(const char *relpath,
+                            svn_client__mtcc_t *mtcc,
+                            apr_pool_t *scratch_pool);
 
 /** Adds an mkdir operation of @a relpath to @a mtcc.
  *
@@ -121,9 +121,9 @@ svn_client_mtcc_add_delete(const char *relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_mkdir(const char *relpath,
-                          svn_client_mtcc_t *mtcc,
-                          apr_pool_t *scratch_pool);
+svn_client__mtcc_add_mkdir(const char *relpath,
+                           svn_client__mtcc_t *mtcc,
+                           apr_pool_t *scratch_pool);
 
 
 /** Adds a move operation of the node @a src_relpath to @a dst_relpath to
@@ -134,10 +134,10 @@ svn_client_mtcc_add_mkdir(const char *relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_move(const char *src_relpath,
-                         const char *dst_relpath,
-                         svn_client_mtcc_t *mtcc,
-                         apr_pool_t *scratch_pool);
+svn_client__mtcc_add_move(const char *src_relpath,
+                          const char *dst_relpath,
+                          svn_client__mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool);
 
 /** Adds a propset operation for the property @a propname to @a propval
  * (which can be NULL for a delete) on @a relpath to @a mtcc.
@@ -150,12 +150,12 @@ svn_client_mtcc_add_move(const char *src_relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_propset(const char *relpath,
-                            const char *propname,
-                            const svn_string_t *propval,
-                            svn_boolean_t skip_checks,
-                            svn_client_mtcc_t *mtcc,
-                            apr_pool_t *scratch_pool);
+svn_client__mtcc_add_propset(const char *relpath,
+                             const char *propname,
+                             const svn_string_t *propval,
+                             svn_boolean_t skip_checks,
+                             svn_client__mtcc_t *mtcc,
+                             apr_pool_t *scratch_pool);
 
 
 /** Adds an update file operation for @a relpath to @a mtcc.
@@ -178,13 +178,13 @@ svn_client_mtcc_add_propset(const char *relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_add_update_file(const char *relpath,
-                                svn_stream_t *src_stream,
-                                const svn_checksum_t *src_checksum,
-                                svn_stream_t *base_stream,
-                                const svn_checksum_t *base_checksum,
-                                svn_client_mtcc_t *mtcc,
-                                apr_pool_t *scratch_pool);
+svn_client__mtcc_add_update_file(const char *relpath,
+                                 svn_stream_t *src_stream,
+                                 const svn_checksum_t *src_checksum,
+                                 svn_stream_t *base_stream,
+                                 const svn_checksum_t *base_checksum,
+                                 svn_client__mtcc_t *mtcc,
+                                 apr_pool_t *scratch_pool);
 
 /** Obtains the kind of node at @a relpath in the current state of @a mtcc.
  * This value might be from the cache (in case of modifications, copies)
@@ -198,11 +198,11 @@ svn_client_mtcc_add_update_file(const char *relpath,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_check_path(svn_node_kind_t *kind,
-                           const char *relpath,
-                           svn_boolean_t check_repository,
-                           svn_client_mtcc_t *mtcc,
-                           apr_pool_t *scratch_pool);
+svn_client__mtcc_check_path(svn_node_kind_t *kind,
+                            const char *relpath,
+                            svn_boolean_t check_repository,
+                            svn_client__mtcc_t *mtcc,
+                            apr_pool_t *scratch_pool);
 
 /** Commits all operations stored in @a mtcc as a new revision and destroys
  * @a mtcc.
@@ -210,11 +210,11 @@ svn_client_mtcc_check_path(svn_node_kind_t *kind,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_mtcc_commit(apr_hash_t *revprop_table,
-                       svn_commit_callback2_t commit_callback,
-                       void *commit_baton,
-                       svn_client_mtcc_t *mtcc,
-                       apr_pool_t *scratch_pool);
+svn_client__mtcc_commit(apr_hash_t *revprop_table,
+                        svn_commit_callback2_t commit_callback,
+                        void *commit_baton,
+                        svn_client__mtcc_t *mtcc,
+                        apr_pool_t *scratch_pool);
 
 
 /** @} end group: Multi Command Context related functions */

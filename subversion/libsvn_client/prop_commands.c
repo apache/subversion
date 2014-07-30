@@ -654,8 +654,8 @@ remote_propget(apr_hash_t *props,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *this_name = svn__apr_hash_index_key(hi);
-          svn_dirent_t *this_ent = svn__apr_hash_index_val(hi);
+          const char *this_name = apr_hash_this_key(hi);
+          svn_dirent_t *this_ent = apr_hash_this_val(hi);
           const char *new_target_relative;
           svn_depth_t depth_below_here = depth;
 
@@ -708,7 +708,7 @@ recursive_propget_receiver(void *baton,
     {
       apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
       svn_hash_sets(b->props, apr_pstrdup(b->pool, local_abspath),
-                    svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
+                    svn_string_dup(apr_hash_this_val(hi), b->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1132,8 +1132,8 @@ remote_proplist(const char *target_prefix,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+          const char *name = apr_hash_this_key(hi);
+          apr_ssize_t klen = apr_hash_this_key_len(hi);
           svn_prop_kind_t prop_kind;
 
           prop_kind = svn_property_kind2(name);
@@ -1158,8 +1158,8 @@ remote_proplist(const char *target_prefix,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *this_name = svn__apr_hash_index_key(hi);
-          svn_dirent_t *this_ent = svn__apr_hash_index_val(hi);
+          const char *this_name = apr_hash_this_key(hi);
+          svn_dirent_t *this_ent = apr_hash_this_val(hi);
           const char *new_target_relative;
 
           if (cancel_func)

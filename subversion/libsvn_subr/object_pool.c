@@ -121,7 +121,7 @@ remove_unused_objects(svn_object_pool__t *object_pool)
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      object_ref_t *object_ref = svn__apr_hash_index_val(hi);
+      object_ref_t *object_ref = apr_hash_this_val(hi);
 
       /* note that we won't hand out new references while access
          to the hash is serialized */

@@ -523,8 +523,8 @@ CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
         hi = apr_hash_next(hi), ++i)
     {
-      const char *key = (const char *) svn__apr_hash_index_key(hi);
-      const svn_lock_t *lock = (const svn_lock_t *) svn__apr_hash_index_val(hi);
+      const char *key = (const char *) apr_hash_this_key(hi);
+      const svn_lock_t *lock = (const svn_lock_t *) apr_hash_this_val(hi);
 
       jstring jpath = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())

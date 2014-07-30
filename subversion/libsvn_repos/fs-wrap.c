@@ -74,7 +74,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
+      const char *key = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
@@ -94,8 +94,8 @@ svn_repos_fs_commit_txn(const char **conflict_p,
       iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
         {
-          const char *key = svn__apr_hash_index_key(hi);
-          svn_string_t *val = svn__apr_hash_index_val(hi);
+          const char *key = apr_hash_this_key(hi);
+          svn_string_t *val = apr_hash_this_val(hi);
 
           svn_pool_clear(iterpool);
 
@@ -581,7 +581,7 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
     {
       const char *new_token;
       svn_fs_lock_target_t *target;
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
@@ -596,7 +596,7 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
           continue;
         }
 
-      target = svn__apr_hash_index_val(hi);
+      target = apr_hash_this_val(hi);
       if (*new_token)
         svn_fs_lock_target_set_token(target, new_token);
       svn_hash_sets(pre_targets, path, target);
@@ -738,8 +738,8 @@ svn_repos_fs_unlock_many(svn_repos_t *repos,
      svn_fs_unlock_many() from happening for that path. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 

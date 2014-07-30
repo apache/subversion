@@ -220,7 +220,7 @@ recover_find_max_ids(svn_fs_t *fs,
       const svn_fs_fs__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
-      const svn_string_t *path = svn__apr_hash_index_val(hi);
+      const svn_string_t *path = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 

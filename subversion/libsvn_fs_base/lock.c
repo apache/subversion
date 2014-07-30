@@ -247,8 +247,8 @@ svn_fs_base__lock(svn_fs_t *fs,
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
       struct lock_args args;
-      const char *path = svn__apr_hash_index_key(hi);
-      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
       svn_lock_t *lock;
       svn_error_t *err;
 
@@ -362,8 +362,8 @@ svn_fs_base__unlock(svn_fs_t *fs,
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
       struct unlock_args args;
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
       svn_error_t *err;
 
       args.path = svn_fs__canonicalize_abspath(path, result_pool);

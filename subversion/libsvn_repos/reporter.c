@@ -603,8 +603,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* So source, i.e. all new.  Transmit all target props. */
       for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
         {
-          const char *key = svn__apr_hash_index_key(hi);
-          svn_string_t *val = svn__apr_hash_index_val(hi);
+          const char *key = apr_hash_this_key(hi);
+          svn_string_t *val = apr_hash_this_val(hi);
 
           SVN_ERR(change_fn(b, object, key, val, pool));
         }
@@ -1246,7 +1246,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry = svn__apr_hash_index_val(hi);
+              const svn_fs_dirent_t *s_entry = apr_hash_this_val(hi);
 
               svn_pool_clear(iterpool);
 

@@ -548,23 +548,23 @@ svn_test__validate_changes(svn_fs_root_t *root,
   {
     int i;
     for (i=0, hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
-      SVN_DBG(("expected[%d] = '%s'\n", i++, svn__apr_hash_index_key(hi)));
+      SVN_DBG(("expected[%d] = '%s'\n", i++, apr_hash_this_key(hi)));
     for (i=0, hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
-      SVN_DBG(("actual[%d] = '%s'\n", i++, svn__apr_hash_index_key(hi)));
+      SVN_DBG(("actual[%d] = '%s'\n", i++, apr_hash_this_key(hi)));
   }
 #endif
 
   for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
-    if (NULL == svn_hash_gets(actual, svn__apr_hash_index_key(hi)))
+    if (NULL == svn_hash_gets(actual, apr_hash_this_key(hi)))
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Path '%s' missing from actual changed-paths",
-                               (const char *)svn__apr_hash_index_key(hi));
+                               (const char *)apr_hash_this_key(hi));
 
   for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
-    if (NULL == svn_hash_gets(expected, svn__apr_hash_index_key(hi)))
+    if (NULL == svn_hash_gets(expected, apr_hash_this_key(hi)))
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Path '%s' missing from expected changed-paths",
-                               (const char *)svn__apr_hash_index_key(hi));
+                               (const char *)apr_hash_this_key(hi));
 
   return SVN_NO_ERROR;
 }

@@ -1987,8 +1987,8 @@ test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *dir = svn__apr_hash_index_key(hi);
-      svn_io_dirent2_t *de = svn__apr_hash_index_val(hi);
+      const char *dir = apr_hash_this_key(hi);
+      svn_io_dirent2_t *de = apr_hash_this_val(hi);
 
       if (de->kind == svn_node_dir &&
           strcmp(dir, current_dir_on_C))
