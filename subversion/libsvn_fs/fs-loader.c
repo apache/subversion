@@ -1636,7 +1636,7 @@ svn_fs_lock_many(svn_fs_t *fs,
   /* Enforce that the token be an XML-safe URI. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
 
       err = SVN_NO_ERROR;
       if (target->token)
@@ -1670,12 +1670,12 @@ svn_fs_lock_many(svn_fs_t *fs,
       if (err)
         {
           if (!cb_err && lock_callback)
-            cb_err = lock_callback(lock_baton, svn__apr_hash_index_key(hi),
+            cb_err = lock_callback(lock_baton, apr_hash_this_key(hi),
                                    NULL, err, scratch_pool);
           svn_error_clear(err);
         }
       else
-        svn_hash_sets(ok_targets, svn__apr_hash_index_key(hi), target);
+        svn_hash_sets(ok_targets, apr_hash_this_key(hi), target);
     }
 
   if (!apr_hash_count(ok_targets))

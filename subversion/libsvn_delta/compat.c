@@ -295,7 +295,7 @@ get_children(struct ev2_edit_baton *eb,
 
   for (hi = apr_hash_first(pool, eb->changes); hi; hi = apr_hash_next(hi))
     {
-      const char *repos_relpath = svn__apr_hash_index_key(hi);
+      const char *repos_relpath = apr_hash_this_key(hi);
       const char *child;
 
       /* Find potential children. */

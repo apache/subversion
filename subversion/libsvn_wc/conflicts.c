@@ -477,8 +477,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_skel__prepend_str(apr_pstrdup(result_pool,
-                                        svn__apr_hash_index_key(hi)),
+      svn_skel__prepend_str(apr_pstrdup(result_pool, apr_hash_this_key(hi)),
                             conflict_names,
                             result_pool);
     }
@@ -1211,7 +1210,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
              hi;
              hi = apr_hash_next(hi))
           {
-            const char *propname = svn__apr_hash_index_key(hi);
+            const char *propname = apr_hash_this_key(hi);
 
             SVN_ERR(prop_conflict_skel_add(
                             prop_data, propname,
@@ -1994,7 +1993,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *propname = svn__apr_hash_index_key(hi);
+          const char *propname = apr_hash_this_key(hi);
           svn_boolean_t conflict_remains = TRUE;
 
           svn_pool_clear(iterpool);
@@ -2163,7 +2162,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
+      const char *propname = apr_hash_this_key(hi);
       svn_string_t *old_value;
       svn_string_t *my_value;
       svn_string_t *their_value;
@@ -2667,7 +2666,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *propname = svn__apr_hash_index_key(hi);
+          const char *propname = apr_hash_this_key(hi);
           svn_string_t *new_value = NULL;
 
           new_value = svn_hash_gets(resolve_from, propname);
@@ -3170,7 +3169,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
           hi && !err;
           hi = apr_hash_next(hi))
         {
-          tc_abspath = svn__apr_hash_index_key(hi);
+          tc_abspath = apr_hash_this_key(hi);
           svn_pool_clear(iterpool);
 
           svn_hash_sets(cswb.resolve_later, tc_abspath, NULL);

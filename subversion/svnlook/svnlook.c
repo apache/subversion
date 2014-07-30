@@ -1769,8 +1769,7 @@ do_pget(svnlook_ctxt_t *c,
               else
                 {
                   svn_string_t *propval =
-                    svn__apr_hash_index_val(apr_hash_first(pool,
-                                                           elt->prop_hash));
+                    apr_hash_this_val(apr_hash_first(pool, elt->prop_hash));
 
                   SVN_ERR(svn_stream_printf(
                     stdout_stream, pool, "%s - ",
@@ -1953,8 +1952,8 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const char *pname = apr_hash_this_key(hi);
+      svn_string_t *propval = apr_hash_this_val(hi);
 
       SVN_ERR(check_cancel(NULL));
 

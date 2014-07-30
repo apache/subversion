@@ -689,7 +689,7 @@ svn_client_blame5(const char *target,
           /* Should only be one value */
           SVN_ERR_ASSERT(apr_hash_count(props) == 1);
 
-          value = svn__apr_hash_index_val(hi);
+          value = apr_hash_this_val(hi);
           if (value && svn_mime_type_is_binary(value->data))
             return svn_error_createf
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,

@@ -156,8 +156,8 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                hi;
                hi = apr_hash_next(hi))
             {
-              const char *propname = svn__apr_hash_index_key(hi);
-              svn_string_t *propval = svn__apr_hash_index_val(hi);
+              const char *propname = apr_hash_this_key(hi);
+              svn_string_t *propval = apr_hash_this_val(hi);
               const char *xml_safe;
 
               serr = dav_svn__brigade_printf(

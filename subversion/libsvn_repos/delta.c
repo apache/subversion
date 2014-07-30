@@ -875,9 +875,9 @@ delta_dirs(struct context *c,
      from the target tree. */
   for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key = svn__apr_hash_index_key(hi);
-      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-      const svn_fs_dirent_t *t_entry = svn__apr_hash_index_val(hi);
+      const void *key = apr_hash_this_key(hi);
+      apr_ssize_t klen = apr_hash_this_key_len(hi);
+      const svn_fs_dirent_t *t_entry = apr_hash_this_val(hi);
       const svn_fs_dirent_t *s_entry;
       const char *t_fullpath;
       const char *e_fullpath;
@@ -961,7 +961,7 @@ delta_dirs(struct context *c,
     {
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
-          const svn_fs_dirent_t *s_entry = svn__apr_hash_index_val(hi);
+          const svn_fs_dirent_t *s_entry = apr_hash_this_val(hi);
           const char *e_fullpath;
           svn_node_kind_t src_kind;
 
