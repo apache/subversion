@@ -261,58 +261,6 @@ public class SVNUtil
             return passphrase;
         }
 
-        // ### TODO: There are currently no proper APIs in Subversion
-        //           for adding credentials. These factory methods are
-        //           placeholders.
-        //
-        ///**
-        // * Creates an "svn.username" credential.
-        // * @param realm The realm string.
-        // * @param username The username for <code>realm</code>.
-        // */
-        //public static Credential
-        //    createUsername(String realm, String username)
-        //{
-        //    return new Credential(Kind.username, realm, null,
-        //                          username, null, null, null, null);
-        //}
-        //
-        ///**
-        // * Creates an "svn.simple" credential.
-        // * @param realm The realm string.
-        // * @param username The username for <code>realm</code>.
-        // * @param password The password for <code>username</code>.
-        // */
-        //public static Credential
-        //    createSimple(String realm, String username, String password)
-        //{
-        //    return new Credential(Kind.simple, realm, null,
-        //                          username, password, null, null, null);
-        //}
-        //
-        ///** Creates an "svn.ssl.server" credential. */
-        //public static Credential
-        //    createSSLServerCertTrust(String realm,
-        //                             AuthnCallback.SSLServerCertInfo info,
-        //                             AuthnCallback.SSLServerCertFailures failures)
-        //{
-        //    return new Credential(Kind.sslServer, realm, null,
-        //                          null, null, info, failures, null);
-        //}
-        //
-        ///**
-        // * Creates an "svn.ssl.client-passphrase" credential.
-        // * @param realm The realm string.
-        // * @param passphrase The passphrase for for the client certificate
-        // *        used for <code>realm</code>.
-        // */
-        //public static Credential
-        //    createSSLClientCertPassphrase(String realm, String passphrase)
-        //{
-        //    return new Credential(Kind.simple, realm, null,
-        //                          null, null, null, null, passphrase);
-        //}
-
         private Credential(Kind kind, String realm, String store,
                            String username, String password,
                            AuthnCallback.SSLServerCertInfo info,
@@ -414,38 +362,6 @@ public class SVNUtil
         return configLib.removeCredential(configDir, kind, realm);
     }
 
-    // ### TODO: There are currently no proper APIs in Subversion for
-    //           adding credentials. This method is a placeholder.
-    //
-    ///**
-    // * Store a new credential, or replace an existing credential.
-    // * <p>
-    // * <b>Note:</b> If the native credentials store is disabled, this
-    // *              method will always return <code>null</code>.
-    // *
-    // * @param configDir The path to the configuration directory; if
-    // *        <code>null</code>, the default (system-specific) user
-    // *        configuration path will be used.
-    // * @param credential The credential to store.
-    // * @param replace If <code>true</code>, any existing matching
-    // *        credential will be replaced.
-    // *
-    // * @return the stored credential. If <code>replace</code> was
-    // * <code>false</code>, and a credential with the same kind and
-    // * for the same realm exists, it will be returned. If the given
-    // * credential was successfully added, the same object reference
-    // * will be returned (the calling code can compare reference values
-    // * to determine this). Will return <code>null</code> if the
-    // * credential could not be stored for any reason.
-    // */
-    //public static Credential addCredential(String configDir,
-    //                                       Credential credential,
-    //                                       boolean replace)
-    //    throws ClientException, SubversionException
-    //{
-    //    return configLib.addCredential(configDir, credential, replace);
-    //}
-
     /**
      * Find stored credentials that match the given search criteria.
      * <p>
@@ -466,8 +382,8 @@ public class SVNUtil
      *             otherwise, only those credentials that have a username,
      *             and where the username matches the pattern, will be
      *             returned.
-     * @param subjectPattern A glob pattern for the subject and
-     *             hostnames of a server certificate; if
+     * @param subjectPattern A glob pattern for the subject Common
+     *             Name and hostnames of a server certificate; if
      *             <code>null</code>, all credntials will be
      *             considered; otherwise, only those credentials that
      *             have a server certificate with a hostname that

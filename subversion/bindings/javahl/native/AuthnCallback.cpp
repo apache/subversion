@@ -185,7 +185,9 @@ AuthnCallback::SSLServerCertInfo::ClassImpl::ClassImpl(
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_ctor(env.GetMethodID(cls, "<init>",
                                "(Ljava/lang/String;"
-                               "Ljava/lang/String;JJ[B"
+                               "Ljava/lang/String;"
+                               "Ljava/lang/String;"
+                               "JJ[B"
                                "Ljava/util/List;"
                                "Ljava/lang/String;)V"))
 {}
@@ -209,6 +211,7 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
                                             pool.getPool(), pool.getPool()));
 
   const ::Java::String subject(env, svn_x509_certinfo_get_subject(certinfo));
+  const ::Java::String cn(env, svn_x509_certinfo_get_subject_cn(certinfo));
   const ::Java::String issuer(env, svn_x509_certinfo_get_subject(certinfo));
   const ::Java::String cert(env, ascii_cert);
   const jlong valid_from =
@@ -247,11 +250,9 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
     }
 
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
-                         subject.get(), issuer.get(),
-                         valid_from, valid_to,
-                         fingerprint.get(),
-                         jhostnames,
-                         cert.get()));
+                         subject.get(), cn.get(), issuer.get(),
+                         valid_from, valid_to, fingerprint.get(),
+                         jhostnames, cert.get()));
 }
 
 

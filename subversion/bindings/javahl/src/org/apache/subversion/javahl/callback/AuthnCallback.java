@@ -245,7 +245,7 @@ public interface AuthnCallback
         private static final long serialVersionUID = 1L;
 
         /**
-         * @return The subject of the certificate.
+         * @return The subject DN of the certificate.
          */
         public String getSubject()
         {
@@ -253,7 +253,15 @@ public interface AuthnCallback
         }
 
         /**
-         * @return The certificate issuer.
+         * @return The subject CN of the certificate.
+         */
+        public String getSubjectCommonName()
+        {
+            return subjectCN;
+        }
+
+        /**
+         * @return The certificate issuer DN.
          */
         public String getIssuer()
         {
@@ -301,13 +309,14 @@ public interface AuthnCallback
         }
 
         /* This private constructor is used by the native implementation. */
-        private SSLServerCertInfo(String subject, String issuer,
-                                  long validFrom, long validTo,
+        private SSLServerCertInfo(String subject, String subjectCN,
+                                  String issuer, long validFrom, long validTo,
                                   byte[] fingerprint,
                                   List<String> hostnames,
                                   String asciiCert)
         {
             this.subject = subject;
+            this.subjectCN = subjectCN;
             this.issuer = issuer;
             this.validFrom = new Date(validFrom);
             this.validTo = new Date(validTo);
@@ -317,6 +326,7 @@ public interface AuthnCallback
         }
 
         private String subject;
+        private String subjectCN;
         private String issuer;
         private Date validFrom;
         private Date validTo;
