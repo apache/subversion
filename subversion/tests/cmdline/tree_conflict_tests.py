@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os, traceback
+import sys, re, os, stat, traceback
 
 # Our testing module
 import svntest
@@ -1212,7 +1212,10 @@ def actual_only_node_behaviour(sbox):
                      "checkout", A_copy_url, foo_path)
   ### for now, ignore the fact that checkout succeeds and remove the nested
   ### working copy so we can test more commands
-  shutil.rmtree(foo_path)
+  def onerror(function, path, execinfo):
+    os.chmod(path, stat.S_IREAD | stat.S_IWRITE)
+    os.remove(path)
+  shutil.rmtree(foo_path, onerror=onerror)
 
   # cleanup
   expected_stdout = None

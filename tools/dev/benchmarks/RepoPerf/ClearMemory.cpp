@@ -1,4 +1,5 @@
-/*
+/* ClearMemory.cpp --- A simple Window memory cleaning tool
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,36 +20,36 @@
  * ====================================================================
  */
 
-
-#ifndef SVN_DEBUG_EDITOR_H
-#define SVN_DEBUG_EDITOR_H
+#include "targetver.h"
 
-#include "svn_delta.h"
+#include <Windows.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+#include <stdio.h>
+#include <tchar.h>
 
-/* Return a debug editor that wraps @a wrapped_editor.
- *
- * The debug editor simply prints an indication of what callbacks are being
- * called to @c stdout, and is only intended for use in debugging subversion
- * editors.
- *
- * @a prefix, if non-null, is printed between "DBG: " and each indication.
- *
- * Note: Our test suite generally ignores stdout lines starting with "DBG:".
- */
-svn_error_t *
-svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            const svn_delta_editor_t *wrapped_editor,
-                            void *wrapped_baton,
-                            const char *prefix,
-                            apr_pool_t *pool);
+int _tmain(int argc, _TCHAR* argv[])
+{
+  // Get the current memory usage stats
+  MEMORYSTATUSEX statex;
+  statex.dwLength = sizeof (statex);
+  GlobalMemoryStatusEx(&statex);
 
-#ifdef __cplusplus
+  // (Clean) cache memory will be listed under "available".
+  // So, allocate all available RAM, touch it and release it again.
+  unsigned char *memory = new unsigned char[statex.ullAvailPhys];
+  if (memory)
+    {
+      // Make every page dirty.
+      for (DWORDLONG i = 0; i < statex.ullAvailPhys; i += 4096)
+        memory[i]++;
+
+      // Give everything back to the OS.
+      // The in-RAM file read cache is empty now. There may still be bits in
+      // the swap file as well as dirty write buffers.  But we don't care
+      // much about these here ...
+      delete memory;
+    }
+
+  return 0;
 }
-#endif /* __cplusplus */
 
-#endif /* SVN_DEBUG_EDITOR_H */

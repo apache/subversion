@@ -205,8 +205,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *url = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *url = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
       const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
       if (relpath)
@@ -353,8 +353,8 @@ determine_lock_targets(apr_array_header_t **lock_targets,
        hi = apr_hash_next(hi))
     {
       const char *common;
-      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
-      apr_array_header_t *wc_targets = svn__apr_hash_index_val(hi);
+      const char *wcroot_abspath = apr_hash_this_key(hi);
+      apr_array_header_t *wc_targets = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -680,7 +680,7 @@ svn_client_commit6(const apr_array_header_t *targets,
     apr_hash_index_t *hi = apr_hash_first(iterpool,
                                           committables->by_repository);
 
-    commit_items = svn__apr_hash_index_val(hi);
+    commit_items = apr_hash_this_val(hi);
   }
 
   /* If our array of targets contains only locks (and no actual file

@@ -245,8 +245,8 @@ svn_wc__db_close(svn_wc__db_t *db)
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
 
       if (wcroot->sdb)
         svn_hash_sets(roots, wcroot->abspath, wcroot);
@@ -362,7 +362,7 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -916,10 +916,10 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
 
       if (wcroot == root_wcroot)
-        svn_hash_sets(db->dir_data, svn__apr_hash_index_key(hi), NULL);
+        svn_hash_sets(db->dir_data, apr_hash_this_key(hi), NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);

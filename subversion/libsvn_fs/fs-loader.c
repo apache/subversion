@@ -614,9 +614,12 @@ svn_fs_delete_fs(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_hotcopy2(const char *src_path, const char *dst_path,
+svn_fs_hotcopy3(const char *src_path, const char *dst_path,
                 svn_boolean_t clean, svn_boolean_t incremental,
-                svn_cancel_func_t cancel_func, void *cancel_baton,
+                svn_fs_hotcopy_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
@@ -669,9 +672,22 @@ svn_fs_hotcopy2(const char *src_path, const char *dst_path,
     }
 
   SVN_ERR(vtable->hotcopy(src_fs, dst_fs, src_path, dst_path, clean,
-                          incremental, cancel_func, cancel_baton,
-                          common_pool_lock, scratch_pool, common_pool));
+                          incremental, notify_func, notify_baton,
+                          cancel_func, cancel_baton, common_pool_lock,
+                          scratch_pool, common_pool));
   return svn_error_trace(write_fs_type(dst_path, src_fs_type, scratch_pool));
+}
+
+svn_error_t *
+svn_fs_hotcopy2(const char *src_path, const char *dest_path,
+                svn_boolean_t clean, svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func, void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_fs_hotcopy3(src_path, dest_path, clean,
+                                         incremental, NULL, NULL,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
 }
 
 svn_error_t *
@@ -789,8 +805,9 @@ svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
                         svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean_logs,
-                                         FALSE, NULL, NULL, pool));
+  return svn_error_trace(svn_fs_hotcopy3(src_path, dest_path, clean_logs,
+                                         FALSE, NULL, NULL, NULL, NULL,
+                                         pool));
 }
 
 svn_error_t *
@@ -1619,7 +1636,7 @@ svn_fs_lock_many(svn_fs_t *fs,
   /* Enforce that the token be an XML-safe URI. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
 
       err = SVN_NO_ERROR;
       if (target->token)
@@ -1653,12 +1670,12 @@ svn_fs_lock_many(svn_fs_t *fs,
       if (err)
         {
           if (!cb_err && lock_callback)
-            cb_err = lock_callback(lock_baton, svn__apr_hash_index_key(hi),
+            cb_err = lock_callback(lock_baton, apr_hash_this_key(hi),
                                    NULL, err, scratch_pool);
           svn_error_clear(err);
         }
       else
-        svn_hash_sets(ok_targets, svn__apr_hash_index_key(hi), target);
+        svn_hash_sets(ok_targets, apr_hash_this_key(hi), target);
     }
 
   if (!apr_hash_count(ok_targets))

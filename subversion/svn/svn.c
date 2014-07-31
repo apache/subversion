@@ -191,7 +191,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
-  {"password",      opt_auth_password, 1, N_("specify a password ARG")},
+  {"password",      opt_auth_password, 1,
+                    N_("specify a password ARG (caution: on many operating\n"
+                       "                             "
+                       "systems, other users will be able to see this)")},
   {"extensions",    'x', 1,
                     N_("Specify differencing options for external diff or\n"
                        "                             "
@@ -1302,9 +1305,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  'empty', the target path is printed on the same line before each value.\n"
      "\n"
      "  By default, an extra newline is printed after the property value so that\n"
-     "  the output looks pretty.  With a single TARGET and depth 'empty', you can\n"
-     "  use the --strict option to disable this (useful when redirecting a binary\n"
-     "  property value to a file, for example).\n"),
+     "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
+     "  --show-inherited-props, you can use the --strict option to disable this\n"
+     "  (useful when redirecting a binary property value to a file, for example).\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
@@ -2529,7 +2532,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       for (hi = apr_hash_first(pool, opt_state.revprop_table);
            hi; hi = apr_hash_next(hi))
         {
-          SVN_ERR(svn_cl__check_svn_prop_name(svn__apr_hash_index_key(hi),
+          SVN_ERR(svn_cl__check_svn_prop_name(apr_hash_this_key(hi),
                                               TRUE, svn_cl__prop_use_use,
                                               pool));
         }

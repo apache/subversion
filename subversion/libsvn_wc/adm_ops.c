@@ -417,7 +417,7 @@ have_recursive_parent(apr_hash_t *queue,
 
   for (hi = apr_hash_first(scratch_pool, queue); hi; hi = apr_hash_next(hi))
     {
-      const committed_queue_item_t *qi = svn__apr_hash_index_val(hi);
+      const committed_queue_item_t *qi = apr_hash_this_val(hi);
 
       if (qi == item)
         continue;
@@ -509,7 +509,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+      const char *wcroot_abspath = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 

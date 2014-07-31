@@ -2872,7 +2872,7 @@ verify_locks(svn_fs_t *fs,
   for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
     {
       APR_ARRAY_PUSH(changed_paths_sorted, const char *) =
-        svn__apr_hash_index_key(hi);
+        apr_hash_this_key(hi);
     }
   svn_sort__array(changed_paths_sorted, svn_sort_compare_paths);
 
@@ -3269,8 +3269,8 @@ svn_fs_fs__list_transactions(apr_array_header_t **names_p,
   /* Loop through all the entries and return anything that ends with '.txn'. */
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      const char *name = apr_hash_this_key(hi);
+      apr_ssize_t klen = apr_hash_this_key_len(hi);
       const char *id;
 
       /* The name must end with ".txn" to be considered a transaction. */

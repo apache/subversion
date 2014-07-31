@@ -539,7 +539,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   for (hi = apr_hash_first(scratch_pool, fe_baton.tree_conflicts); hi;
        hi = apr_hash_next(hi))
     {
-      const char *this_abspath = svn__apr_hash_index_key(hi);
+      const char *this_abspath = apr_hash_this_key(hi);
       const svn_wc_conflict_description3_t *tree_conflict;
       svn_wc__info2_t *info;
       const apr_array_header_t *conflicts;

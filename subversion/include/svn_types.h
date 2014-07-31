@@ -32,6 +32,7 @@
 #include <limits.h> /* for ULONG_MAX */
 
 #include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
+#include <apr_version.h>
 #include <apr_errno.h>   /* for apr_status_t */
 #include <apr_pools.h>   /* for apr_pool_t */
 #include <apr_hash.h>    /* for apr_hash_t */
@@ -245,21 +246,26 @@ typedef struct svn_version_t svn_version_t;
  * These functions enable the caller to dereference an APR hash table index
  * without type casts or temporary variables.
  *
- * ### These are private, and may go away when APR implements them natively.
+ * These functions are provided by APR itself from version 1.5.
+ * Definitions are provided here for when using older versions of APR.
  * @{
  */
 
+#if !APR_VERSION_AT_LEAST(1, 5, 0)
+
 /** Return the key of the hash table entry indexed by @a hi. */
 const void *
-svn__apr_hash_index_key(const apr_hash_index_t *hi);
+apr_hash_this_key(apr_hash_index_t *hi);
 
 /** Return the key length of the hash table entry indexed by @a hi. */
 apr_ssize_t
-svn__apr_hash_index_klen(const apr_hash_index_t *hi);
+apr_hash_this_key_len(apr_hash_index_t *hi);
 
 /** Return the value of the hash table entry indexed by @a hi. */
 void *
-svn__apr_hash_index_val(const apr_hash_index_t *hi);
+apr_hash_this_val(apr_hash_index_t *hi);
+
+#endif
 
 /** @} */
 

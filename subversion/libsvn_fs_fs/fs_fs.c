@@ -43,6 +43,7 @@
 #include "util.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_io_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -114,20 +115,7 @@ static svn_error_t *
 get_lock_on_filesystem(const char *lock_filename,
                        apr_pool_t *pool)
 {
-  svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
-
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* No lock file?  No big deal; these are just empty files
-         anyway.  Create it and try again. */
-      svn_error_clear(err);
-      err = NULL;
-
-      SVN_ERR(svn_io_file_create_empty(lock_filename, pool));
-      SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
-    }
-
-  return svn_error_trace(err);
+  return svn_error_trace(svn_io__file_lock_autocreate(lock_filename, pool));
 }
 
 /* Reset the HAS_WRITE_LOCK member in the FFD given as BATON_VOID.

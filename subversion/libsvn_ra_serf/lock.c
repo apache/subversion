@@ -455,8 +455,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx = apr_pcalloc(scratch_pool, sizeof(*lock_ctx));
 
       lock_ctx->pool = lock_pool;
-      lock_ctx->path = svn__apr_hash_index_key(hi);
-      lock_ctx->revision = *((svn_revnum_t*)svn__apr_hash_index_val(hi));
+      lock_ctx->path = apr_hash_this_key(hi);
+      lock_ctx->revision = *((svn_revnum_t*)apr_hash_this_val(hi));
       lock_ctx->lock = svn_lock_create(lock_pool);
       lock_ctx->lock->path = lock_ctx->path;
       lock_ctx->lock->comment = comment;
@@ -564,8 +564,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
           svn_pool_clear(iterpool);
 
-          path = svn__apr_hash_index_key(hi);
-          token = svn__apr_hash_index_val(hi);
+          path = apr_hash_this_key(hi);
+          token = apr_hash_this_val(hi);
 
           if (token && token[0])
             continue;
@@ -625,8 +625,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       lock_ctx->pool = lock_pool;
 
-      lock_ctx->path = svn__apr_hash_index_key(hi);
-      token = svn__apr_hash_index_val(hi);
+      lock_ctx->path = apr_hash_this_key(hi);
+      token = apr_hash_this_val(hi);
 
       lock_ctx->force = force;
       lock_ctx->token = apr_pstrcat(lock_pool, "<", token, ">", SVN_VA_NULL);

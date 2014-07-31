@@ -399,7 +399,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Make a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
     "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
-   {svnadmin__clean_logs, svnadmin__incremental} },
+   {svnadmin__clean_logs, svnadmin__incremental, 'q'} },
 
   {"info", subcommand_info, {0}, N_
    ("usage: svnadmin info REPOS_PATH\n\n"
@@ -861,7 +861,8 @@ struct repos_notify_handler_baton {
 };
 
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
-   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
+   response stream for svn_repos_dump_fs2(), svn_repos_verify_fs(),
+   svn_repos_hotcopy3() and others. */
 static void
 repos_notify_handler(void *baton,
                      const svn_repos_notify_t *notify,
@@ -1077,6 +1078,21 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                             _("Bumped repository format to %ld\n"),
                             notify->revision));
+      return;
+
+    case svn_repos_notify_hotcopy_rev_range:
+      if (notify->start_revision == notify->end_revision)
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                            _("* Copied revision %ld.\n"),
+                                            notify->start_revision));
+        }
+      else
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                               _("* Copied revisions from %ld to %ld.\n"),
+                               notify->start_revision, notify->end_revision));
+        }
 
     default:
       return;
@@ -1861,6 +1877,7 @@ svn_error_t *
 subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
+  struct repos_notify_handler_baton notify_baton = { 0 };
   apr_array_header_t *targets;
   const char *new_repos_path;
 
@@ -1869,9 +1886,14 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   new_repos_path = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(target_arg_to_dirent(&new_repos_path, new_repos_path, pool));
 
-  return svn_repos_hotcopy2(opt_state->repository_path, new_repos_path,
+  /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
+  if (! opt_state->quiet)
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
+
+  return svn_repos_hotcopy3(opt_state->repository_path, new_repos_path,
                             opt_state->clean_logs, opt_state->incremental,
-                            check_cancel, NULL, pool);
+                            !opt_state->quiet ? repos_notify_handler : NULL,
+                            &notify_baton, check_cancel, NULL, pool);
 }
 
 svn_error_t *
@@ -2085,8 +2107,8 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
       const char *cr_date, *exp_date = "";
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_lock_t *lock = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_lock_t *lock = apr_hash_this_val(hi);
       int comment_lines = 0;
 
       svn_pool_clear(iterpool);

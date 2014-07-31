@@ -89,7 +89,7 @@ print_properties_xml(const char *pname,
           const char *name_local;
           svn_prop_inherited_item_t *iprop =
            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
-          svn_string_t *propval = svn__apr_hash_index_val(
+          svn_string_t *propval = apr_hash_this_val(
             apr_hash_first(pool, iprop->prop_hash));
 
           sb = NULL;
@@ -278,7 +278,7 @@ print_properties(svn_stream_t *out,
         {
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
-          svn_string_t *propval = svn__apr_hash_index_val(apr_hash_first(pool,
+          svn_string_t *propval = apr_hash_this_val(apr_hash_first(pool,
                                                           iprop->prop_hash));
           SVN_ERR(print_single_prop(propval, target_abspath_or_url,
                                     iprop->path_or_url,
@@ -431,7 +431,8 @@ svn_cl__propget(apr_getopt_t *os,
          sure we have only a single target, and that we're not being
          asked to recurse on that target. */
       if (opt_state->strict
-          && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)))
+          && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)
+              || (opt_state->show_inherited_props)))
         return svn_error_create
           (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
            _("Strict output of property values only available for single-"
