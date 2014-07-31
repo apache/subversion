@@ -203,7 +203,7 @@ ssl_server_cert(void *baton, int failures,
   apr_array_header_t *san;
   void *creds;
   svn_boolean_t found_matching_hostname = FALSE;
-  svn_boolean_t found_san_entry;
+  svn_boolean_t found_san_entry = FALSE;
 
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
