@@ -246,7 +246,7 @@ ssl_server_cert(void *baton, int failures,
         {
           char *s = APR_ARRAY_IDX(san, i, char*);
           if (APR_SUCCESS == apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND)
+                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND))
             {
               found_matching_hostname = TRUE;
               cert_info.hostname = s;
