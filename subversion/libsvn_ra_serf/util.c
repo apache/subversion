@@ -203,6 +203,7 @@ ssl_server_cert(void *baton, int failures,
   apr_array_header_t *san;
   void *creds;
   int found_matching_hostname = 0;
+  svn_boolean_t found_san_entry;
 
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
@@ -239,6 +240,7 @@ ssl_server_cert(void *baton, int failures,
   /* Try to find matching server name via subjectAltName first... */
   if (san) {
       int i;
+      found_san_entry = san->nelts > 0;
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
           if (apr_fnmatch(s, conn->hostname,
@@ -251,15 +253,21 @@ ssl_server_cert(void *baton, int failures,
       }
   }
 
-  /* Match server certificate CN with the hostname of the server */
-  if (!found_matching_hostname && cert_info.hostname)
+  /* Match server certificate CN with the hostname of the server iff
+   * we didn't find any subjectAltName fields and try to match them.
+   * Per RFC 2818 they are authoritative if present and CommonName
+   * should be ignored. */
+  if (!found_matching_hostname && !found_san_entry && cert_info.hostname)
     {
       if (apr_fnmatch(cert_info.hostname, conn->hostname,
-                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
+                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
         {
-          svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
+          found_matching_hostname = 1;
         }
     }
+
+  if (!found_matching_hostname)
+    svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
 
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
