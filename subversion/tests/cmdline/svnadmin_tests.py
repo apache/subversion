@@ -2562,7 +2562,7 @@ def fsfs_hotcopy_progress(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
   if svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 3\naddressing logical 0\n"
+    format = "7\nlayout sharded 3\n"
   elif svntest.main.options.server_minor_version < 9:
     format = "6\nlayout sharded 3\n"
   else:
