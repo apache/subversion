@@ -202,7 +202,7 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *issuer, *subject, *serf_cert;
   apr_array_header_t *san;
   void *creds;
-  int found_matching_hostname = 0;
+  svn_boolean_t found_matching_hostname = FALSE;
   svn_boolean_t found_san_entry;
 
   /* Implicitly approve any non-server certs. */
@@ -238,20 +238,22 @@ ssl_server_cert(void *baton, int failures,
                   | conn->server_cert_failures);
 
   /* Try to find matching server name via subjectAltName first... */
-  if (san) {
+  if (san)
+    {
       int i;
       found_san_entry = san->nelts > 0;
-      for (i = 0; i < san->nelts; i++) {
+      for (i = 0; i < san->nelts; i++)
+        {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+          if (APR_SUCCESS == apr_fnmatch(s, conn->hostname,
+                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND)
             {
-              found_matching_hostname = 1;
+              found_matching_hostname = TRUE;
               cert_info.hostname = s;
               break;
             }
-      }
-  }
+        }
+    }
 
   /* Match server certificate CN with the hostname of the server iff
    * we didn't find any subjectAltName fields and try to match them.
@@ -262,7 +264,7 @@ ssl_server_cert(void *baton, int failures,
       if (apr_fnmatch(cert_info.hostname, conn->hostname,
                       APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
         {
-          found_matching_hostname = 1;
+          found_matching_hostname = TRUE;
         }
     }
 
