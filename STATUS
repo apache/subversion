@@ -150,6 +150,21 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1565531, r1566503, r1568349
+   Ignore the CommonName in SSL certs when there are Subject Alt Names.
+   Justification:
+     Comply with RFC 2818.
+   Notes:
+     Branch is required due to differences since 1.8.x added the ability
+     to check intermediate certs via ssl trust providers to allow the the Windows'
+     system trust store to be checked. r1568361 which is nominated for the similar
+     1.8.x is not included in this backport since it doesn't make sense with the
+     code structure in 1.7.x.
+   Branch:
+     ^/subversion/branches/1.7.x-san-cert
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
