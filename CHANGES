@@ -1115,6 +1115,23 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.18
+(11 Aug 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.18
+ User-visible changes:
+  - Client-side bugfixes:
+    * guard against md5 hash collisions when finding cached credentials
+        (r1550691, r1550772, r1600909)
+    * ra_serf: properly match wildcards in SSL certs. (r1615211, 1615219)
+    * ra_serf: ignore the CommonName in SSL certs where there are Subject Alt
+        Names (r1565531, r1566503, r1568349)
+
+ Developer-visible changes:
+  - General:
+    * fix ocassional failure in checkout_tests.py test 12. (r1496127)
+    * disable building ZLib's assembly optimizations on Windows.
+
+
 Version 1.7.17
 (07 May 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.17
