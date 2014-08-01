@@ -412,10 +412,10 @@ sub download_dependencies {
   unless(-x "$BINDIR\\awk.exe") { # skip the copy if it exists
     copy_or_die($AWK_FILE, "$BINDIR\\awk.exe");
   }
-#  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
-#  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
-#    copy_or_die($PROJREF_FILE, $BINDIR);
-#  }
+  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
+  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
+    copy_or_die($PROJREF_FILE, $BINDIR);
+  }
   download_file($BDB_URL, "$SRCDIR\\db.zip", \$BDB_FILE);
   download_file($ZLIB_URL, "$SRCDIR\\zlib.zip", \$ZLIB_FILE);
   download_file($OPENSSL_URL, "$SRCDIR\\openssl.tar.gz", \$OPENSSL_FILE);
@@ -843,7 +843,7 @@ sub build_dependencies {
   build_zlib();
   build_pcre();
   build_openssl();
-#  build_serf();
+  build_serf();
   build_httpd();
 }
 
