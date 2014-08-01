@@ -7,6 +7,57 @@ Merge policy:
   The work on this branch may or may not eventually be wanted on trunk. It
   is not intended to be kept in a state where it could be merged to trunk.
 
+
 Work on this branch:
 
-  Initially -- development of an 'editor' interface supporting move tracking.
+  * Develop a 'commit editor' interface supporting moves.
+
+    See subversion/include/private/svn_editor3.h
+
+    STATUS
+
+    This looks like it's panning out OK.
+
+    Two versions are declared (in the same struct): 'incremental' and
+    'independent per-node changes'. Need eventually to choose one and
+    lose the other. It's not a question of one's right and one's wrong;
+    both are correct. I think the 'independent per-node changes' one is
+    ultimately better and easier to use, while the 'incremental' one is
+    easier to start using when we're starting from an Ev1 code base.
+
+    Ev1->Ev3->Ev1 shims are written, using the 'incremental' API. Tests
+    pass with double-shim conversions at RA layer and repos layer. (One
+    svnlook test fails due to svnlook reporting a no-op change as a
+    change.)
+
+    Not tested with moves -- unit tests need to be written. (I complained
+    that Ev2 was not tested with moves, but the difference is I can
+    understand the way Ev3 is designed to handle moves.)
+
+
+  * Adapt the editor as necessary to use as an 'update editor'.
+
+    The 'update editor' has some significantly different requirements,
+    at least the way it's implemented today with WC paths being
+    communicated rather than repository paths/nodes. Need to work out
+    how best to achieve this.
+    My preference is to lean towards using a 'tree editor' working on
+    repos nodes, and let the client side convert these to WC paths, but
+    we'll have to see if that's practical.
+
+    STATUS
+
+    Not started.
+
+
+  * 'update', 'diff', 'merge', ...
+
+    STATUS
+
+    Needs design.
+
+
+Notes:
+
+  Naming: 'Ev3'/'svn_editor3_t' is a temporary name. It should end up
+  replacing Ev2 and so should be called 'Ev2'/'svn_editor_t' then.
