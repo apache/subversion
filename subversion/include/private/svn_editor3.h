@@ -52,14 +52,6 @@ extern "C" {
  *
  *   - Consider edits rooted at a sub-path of the repository. At present,
  *     the editor is designed to be rooted at the repository root.
- *
- *   - Unify the "txn path" reference used in the first design and the
- *     "local node-branch id" used in the second design. They are pretty
- *     much the same thing: both provide a locally unique id for a node in
- *     the edit. The "txn path" reference additionally provides a peg rev
- *     for OOD checking, which is provided separately in the second design.
- *     Are the two designs explicit and consistent in where a peg rev is
- *     provided for the OOD check?
  */
 
 /*
@@ -137,19 +129,42 @@ extern "C" {
  * Two different ways of "addressing" a node
  * ===================================================================
  *
- * (1) path [@ old-rev]
+ * Two classes of "node" need to be addressed within an edit:
+ *
+ *   - a node that already existed in the sender's base state
+ *   - a node that the sender is creating
+ *
+ * Two basic forms of address are being considered:
+ *
+ * (1) path [@ old-rev] + created-relpath
  *
  * (2) node-id
  *
- * Either way, the intent is the same: to be able to specify "where" a
- * modification or a new node should go in the tree. The difference
- * between path-based and id-based addressing is not *what* the address
- * means (they would have to mean the same thing, ultimately, at the
- * point of use) but *how* and how easily they achieve that meaning.
+ * (We are talking just about what the editor API needs to know, not
+ * about how the sender or receiver implementation connects the editor
+ * API to a real WC or repository.)
  *
- * Either way, two variations need to be handled:
- *   * Addressing a node that already existed in the sender's base state
- *   * Addressing a node that the sender has created
+ * Form (1), called "txn path" in the first design, and form (2), the
+ * "local node-branch id" used in the second design, both provide a
+ * locally unique id for each node-branch referenced in the edit.
+ *
+ * Where they differ is that form (1) *also* happens to provide a specific
+ * revision number. This can be used, in the case of a pre-existing node,
+ * as the base revision for OOD checking when modifying or deleting a
+ * node. The "node-branch-id" form used in the second design doesn't
+ * implicitly include a base revision. The base revision is communicated
+ * separately when required.
+ *
+ * To make this clearer, we can define the "local-node-branch-id" to be
+ * exactly a "txn path". We do this in the second design. We do not use
+ * the revision number component as an implicit "base revision"; instead
+ * we pass the base revision separately when required.
+ *
+ * ### Are the two designs explicit and consistent in where a peg rev is
+ *     provided for the OOD check? (When creating a new node, the OOD
+ *     check may or may not be interested in a base revision at which
+ *     the node did not exist.)
+ *
  *
  * Addressing by Path
  * ------------------
@@ -157,7 +172,8 @@ extern "C" {
  * A node-branch that exists at the start of the edit can be addressed
  * by giving a location (peg-path @ peg-rev) where it was known to exist.
  *
- * The receiver can trace (peg-path @ peg-rev) forward to the txn, and
+ * The server commit logic can look up (peg-path @ peg-rev) and trace
+ * that node-branch forward to the txn, and
  * find the path at which that node-branch is currently located in the
  * txn (or find that it is not present), as well as discovering whether
  * there was any change to it (including deletion) between peg-rev and
@@ -168,7 +184,7 @@ extern "C" {
  * would have specified a parent node-branch and a new name. The node can
  * now be addressed as
  *
- *   (parent-peg-path @ peg-rev) / new-name
+ *   (parent peg path @ rev) / new-name
  *
  * which translates in the txn to
  *
@@ -210,11 +226,13 @@ extern "C" {
  *     client-side expected behaviour of silently merging child edits
  *     with a parent move.
  *
- * A possible alternative design direction:
- *
- *   * Provide a way for the client to learn the path-in-txn resulting
- *     from each edit, to be used in further edits referring to the same
- *     node-branch.
+ * Why not provide a way for the client to learn the path-in-txn resulting
+ * from each operation in the edit, to be used in further operations that
+ * refer to the same node-branch?
+ * 
+ *     That's basically equivalent to specifying the address in a
+ *     satisfactory manner in the first place. And it's only possible
+ *     with a sequential editing model.
  *
  * Addressing by Node-Id
  * ---------------------
@@ -533,8 +551,12 @@ typedef struct svn_editor3_txn_path_t
 /** Node-Branch Identifier -- functionally similar to the FSFS
  * <node-id>.<copy-id>, but the ids used within an editor drive may be
  * scoped locally to that editor drive rather than in-repository ids.
- * (Presently a null-terminated C string.) */
-typedef char *svn_editor3_nbid_t;
+ *
+ * We do not use the revision number component as an implied base
+ * revision for out-of-date checking. A base revision should be
+ * communicated separately when required.
+ */
+typedef svn_editor3_txn_path_t svn_editor3_nbid_t;
 
 /** Versioned content of a node, excluding tree structure information.
  *
