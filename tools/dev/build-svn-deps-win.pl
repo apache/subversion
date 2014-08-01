@@ -85,10 +85,10 @@ our $APU_VER = '1.5.2'; # apr-util version
 our $API_VER = '1.2.1'; # arp-iconv version
 our $ZLIB_VER = '1.2.8';
 our $OPENSSL_VER = '1.0.1e';
-our $PCRE_VER = '8.32';
+our $PCRE_VER = '8.35';
 our $BDB_VER = '5.3.21';
 our $SQLITE_VER = '3071602';
-our $SERF_VER = '1.2.1';
+our $SERF_VER = '1.3.6';
 our $NEON_VER = '0.29.6';
 
 # Sources for files to download
@@ -177,7 +177,7 @@ sub set_defaults {
   set_default(\$PCRE_URL, "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VER.zip");
   set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");
   set_default(\$SQLITE_URL, "http://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
-  set_default(\$SERF_URL, "http://serf.googlecode.com/files/serf-$SERF_VER.zip");
+  set_default(\$SERF_URL, "http://serf.googlecode.com/svn/src_releases/serf-$SERF_VER.zip");
   set_default(\$NEON_URL, "http://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
   set_default(\$INSTDIR, $TOPDIR);
   set_default(\$BLDDIR, "$TOPDIR\\build");
@@ -310,7 +310,10 @@ sub check_vs_ver {
   my ($major_version) = $help_output =~ /Version (\d+)\./s;
 
   if (defined($major_version)) {
-    if ($major_version eq '11') {
+    if ($major_version eq '12') {
+      $VS_VER = '2013';
+      return;
+    } elsif ($major_version eq '11') {
       $VS_VER = '2012';
       return;
     } elsif ($major_version eq '10') {
@@ -409,10 +412,10 @@ sub download_dependencies {
   unless(-x "$BINDIR\\awk.exe") { # skip the copy if it exists
     copy_or_die($AWK_FILE, "$BINDIR\\awk.exe");
   }
-  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
-  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
-    copy_or_die($PROJREF_FILE, $BINDIR);
-  }
+#  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
+#  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
+#    copy_or_die($PROJREF_FILE, $BINDIR);
+#  }
   download_file($BDB_URL, "$SRCDIR\\db.zip", \$BDB_FILE);
   download_file($ZLIB_URL, "$SRCDIR\\zlib.zip", \$ZLIB_FILE);
   download_file($OPENSSL_URL, "$SRCDIR\\openssl.tar.gz", \$OPENSSL_FILE);
@@ -501,9 +504,10 @@ sub build_pcre {
   my $pcre_generator = 'NMake Makefiles';
   # Have to use RelWithDebInfo since httpd looks for the pdb files
   my $pcre_build_type = '-DCMAKE_BUILD_TYPE:STRING=' . ($DEBUG ? 'Debug' : 'RelWithDebInfo');
+  my $pcre_options = '-DPCRE_NO_RECURSE:BOOL=ON';
   my $pcre_shared_libs = '-DBUILD_SHARED_LIBS:BOOL=ON';
   my $pcre_install_prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$INSTDIR";
-  my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" .); 
+  my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" "$pcre_options" .); 
   system_or_die("Failure generating pcre Makefiles", $cmake_cmd);
   system_or_die("Failure building pcre", qq("$NMAKE"));
   system_or_die("Failure testing pcre", qq("$NMAKE" test));
@@ -708,6 +712,7 @@ sub httpd_fix_debug {
 sub build_httpd {
   chdir_or_die($HTTPD);
 
+  my $vs_2013 = $VS_VER eq '2013';
   my $vs_2012 = $VS_VER eq '2012';
   my $vs_2010 = $VS_VER eq '2010';
 
@@ -734,7 +739,7 @@ sub build_httpd {
          }
        }, 'modules', 'support');
 
-  if ($vs_2012) {
+  if ($vs_2012 or $vs_2013) {
     # Turn off pre-compiled headers for apr-iconv to avoid:
     # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
     disable_pch('srclib\apr-iconv\build\modules.mk.win');
@@ -838,7 +843,7 @@ sub build_dependencies {
   build_zlib();
   build_pcre();
   build_openssl();
-  build_serf();
+#  build_serf();
   build_httpd();
 }
 
