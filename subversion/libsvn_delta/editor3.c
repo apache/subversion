@@ -615,7 +615,7 @@ static const char *
 nbid_str(svn_editor3_nbid_t nbid,
          apr_pool_t *result_pool)
 {
-  return nbid;
+  return txn_path_str(nbid, result_pool);
 }
 
 static svn_error_t *
