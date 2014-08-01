@@ -78,15 +78,6 @@ Candidate changes:
      +1: stefan2
      -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
- * r1547454, r1561703
-   In FSFS, omit config file when creating pre-1.5 format repositories.
-   Justification:
-     Old SVN versions won't preserve this file in hotcopy.  Later versions
-     might also behave inconsistently in the presence of this file if their
-     feature availability check is incomplete.
-   Votes:
-     +1: stefan2, breser
-
  * r1561426
    In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
    Branch: ^/subversion/branches/1.8.x-r1561426
@@ -252,3 +243,12 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: stefan2, brane, breser
+
+ * r1547454, r1561703
+   In FSFS, omit config file when creating pre-1.5 format repositories.
+   Justification:
+     Old SVN versions won't preserve this file in hotcopy.  Later versions
+     might also behave inconsistently in the presence of this file if their
+     feature availability check is incomplete.
+   Votes:
+     +1: stefan2, breser, ivan
