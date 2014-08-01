@@ -28,7 +28,6 @@
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
-#include <apr_fnmatch.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -40,6 +39,7 @@
 #include "svn_xml.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
+#include "private/svn_cert.h"
 
 #include "ra_serf.h"
 
@@ -204,6 +204,8 @@ ssl_server_cert(void *baton, int failures,
   void *creds;
   svn_boolean_t found_matching_hostname = FALSE;
   svn_boolean_t found_san_entry = FALSE;
+  svn_string_t *actual_hostname =
+      svn_string_create(conn->hostname, scratch_pool);
 
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
@@ -245,8 +247,9 @@ ssl_server_cert(void *baton, int failures,
       for (i = 0; i < san->nelts; i++)
         {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (APR_SUCCESS == apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND))
+          svn_string_t *cert_hostname = svn_string_create(s, scratch_pool);
+
+          if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
             {
               found_matching_hostname = TRUE;
               cert_info.hostname = s;
@@ -261,8 +264,10 @@ ssl_server_cert(void *baton, int failures,
    * should be ignored. */
   if (!found_matching_hostname && !found_san_entry && cert_info.hostname)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->hostname,
-                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+      svn_string_t *cert_hostname = svn_string_create(cert_info.hostname,
+                                                      scratch_pool);
+
+      if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
         {
           found_matching_hostname = TRUE;
         }
