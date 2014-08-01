@@ -189,15 +189,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1547454, r1561703
-   In FSFS, omit config file when creating pre-1.5 format repositories.
-   Justification:
-     Old SVN versions won't preserve this file in hotcopy.  Later versions
-     might also behave inconsistently in the presence of this file if their
-     feature availability check is incomplete.
-   Votes:
-     +1: stefan2, breser, ivan
-
  * r1565531, r1566503, r1568349, r1568361
    Ignore the CommonName in SSL certs when there are Subject Alt Names.
    Justification:

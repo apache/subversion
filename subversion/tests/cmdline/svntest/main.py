@@ -922,7 +922,8 @@ def create_repos(path, minor_version = None):
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
-    if options.config_file is not None:
+    if options.config_file is not None and \
+       (not minor_version or minor_version >= 6):
       shutil.copy(options.config_file, get_fsfs_conf_file_path(path))
 
     # format file
