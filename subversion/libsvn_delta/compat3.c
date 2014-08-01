@@ -40,6 +40,7 @@
 /* Verify EXPR is true; raise an error if not. */
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
+#define SVN_DBG(x)
 
 /*
  * ========================================================================
@@ -124,9 +125,9 @@ svn_editor3__insert_shims(
   svn_delta__shim_connector_t *shim_connector;
 
 #ifdef SVN_DEBUG
-  SVN_ERR(svn_delta__get_debug_editor(&old_deditor, &old_dedit_baton,
+  /*SVN_ERR(svn_delta__get_debug_editor(&old_deditor, &old_dedit_baton,
                                       old_deditor, old_dedit_baton,
-                                      "[OUT] ", result_pool));
+                                      "[OUT] ", result_pool));*/
 #endif
   SVN_ERR(svn_delta__ev3_from_delta_for_commit(
                         &editor3,
@@ -138,7 +139,7 @@ svn_editor3__insert_shims(
                         NULL, NULL /*cancel*/,
                         result_pool, scratch_pool));
 #ifdef SVN_DEBUG
-  SVN_ERR(svn_editor3__get_debug_editor(&editor3, editor3, result_pool));
+  /*SVN_ERR(svn_editor3__get_debug_editor(&editor3, editor3, result_pool));*/
 #endif
   SVN_ERR(svn_delta__delta_from_ev3_for_commit(
                         new_deditor, new_dedit_baton,
@@ -149,9 +150,9 @@ svn_editor3__insert_shims(
                         shim_connector,
                         result_pool, scratch_pool));
 #ifdef SVN_DEBUG
-  SVN_ERR(svn_delta__get_debug_editor(new_deditor, new_dedit_baton,
+  /*SVN_ERR(svn_delta__get_debug_editor(new_deditor, new_dedit_baton,
                                       *new_deditor, *new_dedit_baton,
-                                      "[IN]  ", result_pool));
+                                      "[IN]  ", result_pool));*/
 #endif
   return SVN_NO_ERROR;
 }
@@ -191,9 +192,19 @@ typedef struct change_node_t
      else is SVN_INVALID_REVNUM. (If ACTION is 'add' and COPYFROM_PATH
      is non-null, then COPYFROM_REV serves the equivalent purpose for the
      copied node.) */
+  /* ### Can also be SVN_INVALID_REVNUM for a pre-existing file/dir,
+         meaning the base is the youngest revision. This is probably not
+         a good idea -- it is at least confusing -- and we should instead
+         resolve to a real revnum when Ev1 passes in SVN_INVALID_REVNUM
+         in such cases. */
   svn_revnum_t changing_rev;
   /* If ACTION is 'delete' or if ACTION is 'add' and it is a replacement,
      DELETING is TRUE and DELETING_REV is the revision to delete. */
+  /* ### Can also be SVN_INVALID_REVNUM for a pre-existing file/dir,
+         meaning the base is the youngest revision. This is probably not
+         a good idea -- it is at least confusing -- and we should instead
+         resolve to a real revnum when Ev1 passes in SVN_INVALID_REVNUM
+         in such cases. */
   svn_boolean_t deleting;
   svn_revnum_t deleting_rev;
 
@@ -355,6 +366,8 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
 /* Insert a new change for RELPATH, or return an existing one.
  *
  * Verify Ev1 ordering.
+ *
+ * RELPATH is relative to the repository root.
  */
 static svn_error_t *
 insert_change_ev1_rules(change_node_t **change_p, apr_hash_t *changes,
@@ -558,14 +571,17 @@ struct ev3_edit_baton
 
   apr_hash_t *changes;  /* REPOS_RELPATH -> struct change_node  */
 
-  /* (const char *) relpaths in path visiting order. */
+  /* (const char *) paths relative to repository root, in path visiting
+     order. */
   apr_array_header_t *path_order;
 #ifdef SHIM_WITH_ACTIONS_DURING_ABORT
+  /* Number of paths in PATH_ORDER processed so far. */
   int paths_processed;
 #endif
 
-  /* For calculating relpaths from Ev1 copyfrom urls. */
+  /* Repository root URL. */
   const char *repos_root;
+  /* Base directory of the edit, relative to the repository root. */
   const char *base_relpath;
 
   const svn_delta__shim_connector_t *shim_connector;
@@ -584,10 +600,17 @@ struct ev3_edit_baton
 struct ev3_dir_baton
 {
   struct ev3_edit_baton *eb;
+
+  /* Path of this directory relative to repository root. */
   const char *path;
+  /* The base revision if this is a pre-existing directory;
+     SVN_INVALID_REVNUM if added/copied.
+     ### Can also be SVN_INVALID_REVNUM for a pre-existing dir,
+         meaning the base is the youngest revision. */
   svn_revnum_t base_revision;
 
-  /* The copyfrom is set for each dir inside a copy, not just the copy root. */
+  /* Copy-from path (relative to repository root) and revision. This is
+     set for each dir inside a copy, not just the copy root. */
   const char *copyfrom_relpath;
   svn_revnum_t copyfrom_rev;
 };
@@ -595,9 +618,22 @@ struct ev3_dir_baton
 struct ev3_file_baton
 {
   struct ev3_edit_baton *eb;
+
+  /* Path of this file relative to repository root. */
   const char *path;
+  /* The base revision if this is a pre-existing file;
+     SVN_INVALID_REVNUM if added/copied.
+     ### Can also be SVN_INVALID_REVNUM for a pre-existing file,
+         meaning the base is the youngest revision. */
   svn_revnum_t base_revision;
-  const char *delta_base;
+
+  /* Copy-from path (relative to repository root) and revision. This is
+     set for each file inside a copy, not just the copy root. */
+  const char *copyfrom_relpath;
+  svn_revnum_t copyfrom_rev;
+
+  /* Path to a file containing the base text. */
+  const char *delta_base_abspath;
 };
 
 /* Return the 'txn_path' that addresses the node that is currently at
@@ -719,11 +755,6 @@ process_actions(struct ev3_edit_baton *eb,
         }
     }
 
-#if 0
-  /* ### There *should* be work for this node. But it seems that isn't true
-     in some cases. Future investigation...  */
-  VERIFY(change->props || change->contents_changed);
-#endif
   if (change->props || change->contents_changed)
     {
       svn_editor3_node_content_t *new_content;
@@ -880,20 +911,20 @@ ev3_open_root(void *edit_baton,
  * edit to those base properties or to the set of properties resulting
  * from the previous edit.
  *
- * ### BASE_REVISION is ... the base revision of the node that is
- *     currently at RELPATH ... ? But in the case of a copied node,
- *     it gets put into (change->changing_rev) rather than copyfrom_rev.
- * ### Or should it be:
- *   BASE_REVISION is the base revision, or the copyfrom rev for a copy, or
- *   SVN_INVALID_REVNUM for a plain added node.
+ * BASE_REVISION is the base revision of the node that is currently at
+ * RELPATH, or SVN_INVALID_REVNUM for an added/copied node. COPYFROM_PATH
+ * and COPYFROM_REV are the base location for a copied node, including a
+ * child of a copy.
  *
- * ### RELPATH is ... relative to what?
+ * RELPATH is relative to the repository root.
  */
 static svn_error_t *
 apply_propedit(struct ev3_edit_baton *eb,
                const char *relpath,
                svn_node_kind_t kind,
                svn_revnum_t base_revision,
+               const char *copyfrom_path,
+               svn_revnum_t copyfrom_rev,
                const char *name,
                const svn_string_t *value,
                apr_pool_t *scratch_pool)
@@ -907,7 +938,9 @@ apply_propedit(struct ev3_edit_baton *eb,
   APR_ARRAY_PUSH(eb->path_order, const char *)
     = apr_pstrdup(eb->edit_pool, relpath);
 
-  /* We're now changing the node. Record the revision.  */
+  /* We're changing the node, so record the base revision in case this is
+     the first change. (But we don't need to fill in the copy-from, as a
+     change entry would already have been recorded for a copy-root.) */
   VERIFY(!SVN_IS_VALID_REVNUM(change->changing_rev)
          || change->changing_rev == base_revision);
   change->changing_rev = base_revision;
@@ -918,20 +951,26 @@ apply_propedit(struct ev3_edit_baton *eb,
       /* If this is a copied/moved node, then the original properties come
          from there. If the node has been added, it starts with empty props.
          Otherwise, we get the properties from BASE.  */
-
-      if (change->copyfrom_path)
-        SVN_ERR(eb->fetch_props_func(&change->props,
-                                     eb->fetch_props_baton,
-                                     change->copyfrom_path,
-                                     change->copyfrom_rev,
-                                     eb->edit_pool, scratch_pool));
+      if (copyfrom_path)
+        {
+          SVN_ERR(eb->fetch_props_func(&change->props,
+                                       eb->fetch_props_baton,
+                                       copyfrom_path, copyfrom_rev,
+                                       eb->edit_pool, scratch_pool));
+        }
       else if (change->action == RESTRUCTURE_ADD)
-        change->props = apr_hash_make(eb->edit_pool);
+        {
+          change->props = apr_hash_make(eb->edit_pool);
+        }
       else
-        SVN_ERR(eb->fetch_props_func(&change->props,
-                                     eb->fetch_props_baton,
-                                     relpath, base_revision,
-                                     eb->edit_pool, scratch_pool));
+        {
+          if (! SVN_IS_VALID_REVNUM(base_revision))
+            SVN_DBG(("apply_propedit: base_revision == -1"));
+          SVN_ERR(eb->fetch_props_func(&change->props,
+                                       eb->fetch_props_baton,
+                                       relpath, base_revision,
+                                       eb->edit_pool, scratch_pool));
+        }
     }
 
   if (value == NULL)
@@ -967,11 +1006,15 @@ ev3_delete_entry(const char *path,
     base_revision = revision;
   else
     base_revision = pb->base_revision;
+  /* ### Shouldn't base_revision be SVN_INVALID_REVNUM instead, if the
+         node to delete was created (added/copied) in this edit? */
 
   /* ### Should these checks be in insert_change()? */
   VERIFY(!change->deleting || change->deleting_rev == base_revision);
   change->deleting = TRUE;
   change->deleting_rev = base_revision;
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    SVN_DBG(("ev3_delete_entry: deleting_rev = base_revision == -1"));
 
   return SVN_NO_ERROR;
 }
@@ -1000,7 +1043,7 @@ ev3_add_directory(const char *path,
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, relpath);
-  cb->base_revision = pb->base_revision;
+  cb->base_revision = SVN_INVALID_REVNUM;
   *child_baton = cb;
 
   if (!copyfrom_path)
@@ -1044,6 +1087,8 @@ ev3_open_directory(const char *path,
   db->eb = pb->eb;
   db->path = apr_pstrdup(result_pool, relpath);
   db->base_revision = base_revision;
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    SVN_DBG(("ev3_open_directory: base_revision == -1"));
 
   if (pb->copyfrom_relpath)
     {
@@ -1068,7 +1113,8 @@ ev3_change_dir_prop(void *dir_baton,
 {
   struct ev3_dir_baton *db = dir_baton;
 
-  SVN_ERR(apply_propedit(db->eb, db->path, svn_node_dir, db->base_revision,
+  SVN_ERR(apply_propedit(db->eb, db->path, svn_node_dir,
+                         db->base_revision, db->copyfrom_relpath, db->copyfrom_rev,
                          name, value, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1106,7 +1152,7 @@ ev3_add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, relpath);
-  fb->base_revision = pb->base_revision;
+  fb->base_revision = SVN_INVALID_REVNUM;
   *file_baton = fb;
 
   /* Fetch the base text as a file FB->delta_base, if it's a copy */
@@ -1116,16 +1162,26 @@ ev3_add_file(const char *path,
                                                    fb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
 
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
                                       fb->eb->fetch_base_baton,
                                       change->copyfrom_path,
                                       change->copyfrom_rev,
                                       result_pool, scratch_pool));
+      fb->copyfrom_relpath = change->copyfrom_path;
+      fb->copyfrom_rev = change->copyfrom_rev;
     }
   else
     {
       /* It's a plain add -- we don't have a base. */
-      fb->delta_base = NULL;
+      fb->delta_base_abspath = NULL;
+
+      if (pb->copyfrom_relpath)
+        {
+          const char *name = svn_relpath_basename(relpath, scratch_pool);
+          fb->copyfrom_relpath = svn_relpath_join(pb->copyfrom_relpath, name,
+                                                  result_pool);
+          fb->copyfrom_rev = pb->copyfrom_rev;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1147,6 +1203,8 @@ ev3_open_file(const char *path,
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, relpath);
   fb->base_revision = base_revision;
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    SVN_DBG(("ev3_open_file: base_revision == -1"));
 
   if (pb->copyfrom_relpath)
     {
@@ -1155,14 +1213,16 @@ ev3_open_file(const char *path,
       const char *copyfrom_relpath = svn_relpath_join(pb->copyfrom_relpath,
                                                       name, scratch_pool);
 
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+      fb->copyfrom_relpath = copyfrom_relpath;
+      fb->copyfrom_rev = pb->copyfrom_rev;
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
                                       fb->eb->fetch_base_baton,
                                       copyfrom_relpath, pb->copyfrom_rev,
                                       result_pool, scratch_pool));
     }
   else
     {
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
                                       fb->eb->fetch_base_baton,
                                       relpath, base_revision,
                                       result_pool, scratch_pool));
@@ -1188,6 +1248,17 @@ ev3_window_handler(svn_txdelta_window_t *window, void *baton)
   struct ev3_handler_baton *hb = baton;
   svn_error_t *err;
 
+  /*
+  if (! window)
+    SVN_DBG(("ev3 window handler(%s): END",
+             hb->fb->path));
+  else if (window->new_data)
+    SVN_DBG(("ev3 window handler(%s): with new data [%d]'%s'",
+             hb->fb->path, (int)window->new_data->len, window->new_data->data));
+  else
+    SVN_DBG(("ev3 window handler(%s): with no new data",
+             hb->fb->path));
+  */
   err = hb->apply_handler(window, hb->apply_baton);
   if (window != NULL && !err)
     return SVN_NO_ERROR;
@@ -1206,8 +1277,10 @@ ev3_open_delta_base(svn_stream_t **stream, void *file_baton,
 {
   struct ev3_file_baton *fb = file_baton;
 
-  return svn_stream_open_readonly(stream, fb->delta_base,
-                                  result_pool, scratch_pool);
+  SVN_ERR(svn_stream_open_readonly(stream, fb->delta_base_abspath,
+                                  result_pool, scratch_pool));
+  SVN_DBG(("lazy-opened delta-base file '%s'", fb->delta_base_abspath));
+  return SVN_NO_ERROR;
 }
 
 /* Lazy-open handler for opening a stream for the delta result. */
@@ -1216,9 +1289,12 @@ ev3_open_delta_target(svn_stream_t **stream, void *baton,
                       apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char **delta_target = baton;
-  return svn_stream_open_unique(stream, delta_target, NULL,
-                                svn_io_file_del_on_pool_cleanup,
-                                result_pool, scratch_pool);
+
+  SVN_ERR(svn_stream_open_unique(stream, delta_target, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+  SVN_DBG(("lazy-opened '%s' for fulltext write", *delta_target));
+  return SVN_NO_ERROR;
 }
 
 /* An svn_delta_editor_t method. */
@@ -1252,11 +1328,19 @@ ev3_apply_textdelta(void *file_baton,
          || change->changing_rev == fb->base_revision);
   change->changing_rev = fb->base_revision;
 
-  if (! fb->delta_base)
-    hb->source = svn_stream_empty(handler_pool);
+  if (! fb->delta_base_abspath)
+    {
+      /*SVN_DBG(("apply_textdelta(%s): preparing read from delta-base <empty stream>",
+               fb->path));*/
+      hb->source = svn_stream_empty(handler_pool);
+    }
   else
-    hb->source = svn_stream_lazyopen_create(ev3_open_delta_base, fb,
-                                            FALSE, handler_pool);
+    {
+      /*SVN_DBG(("apply_textdelta(%s): preparing lazy-open read of delta-base file '%s'",
+               fb->path, fb->delta_base));*/
+      hb->source = svn_stream_lazyopen_create(ev3_open_delta_base, fb,
+                                              FALSE, handler_pool);
+    }
 
   target = svn_stream_lazyopen_create(ev3_open_delta_target,
                                       &change->contents_abspath,
@@ -1298,7 +1382,8 @@ ev3_change_file_prop(void *file_baton,
     }
 #endif
 
-  SVN_ERR(apply_propedit(fb->eb, fb->path, svn_node_file, fb->base_revision,
+  SVN_ERR(apply_propedit(fb->eb, fb->path, svn_node_file,
+                         fb->base_revision, fb->copyfrom_relpath, fb->copyfrom_rev,
                          name, value, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1323,13 +1408,16 @@ ev3_close_file(void *file_baton,
      The only exception is for a new, empty file, where we leave
      CONTENTS_CHANGED false for now (and CONTENTS_ABSPATH null), and
      generate an empty stream for it later. */
+  SVN_DBG(("close_file(%s): action=%d, contents_changed=%d, contents_abspath='%s'",
+           fb->path, change->action, change->contents_changed, change->contents_abspath));
   if (! change->contents_changed
       && (change->action == RESTRUCTURE_NONE || change->copyfrom_path))
     {
       change->contents_changed = TRUE;
-      change->contents_abspath = apr_pstrdup(fb->eb->edit_pool, fb->delta_base);
-      SVN_DBG(("close_file: unchanged => use base file '%s'",
-               change->contents_abspath));
+      change->contents_abspath = apr_pstrdup(fb->eb->edit_pool,
+                                             fb->delta_base_abspath);
+      SVN_DBG(("close_file(%s): unchanged => use base file '%s'",
+               fb->path, change->contents_abspath));
     }
 
   return SVN_NO_ERROR;

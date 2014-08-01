@@ -53,6 +53,7 @@
 #include "deprecated.h"
 
 #include "private/svn_ra_private.h"
+#include "private/svn_delta_private.h"
 #include "svn_private_config.h"
 
 
@@ -754,6 +755,97 @@ remap_commit_callback(svn_commit_callback2_t *callback,
 }
 
 
+/* Ev3 shims */
+struct fb_baton {
+  /* A session parented at the repository root */
+  svn_ra_session_t *session;
+  const char *repos_root_url;
+  const char *session_path;
+};
+
+/* Fetch kind and/or props and/or text */
+static svn_error_t *
+fetch(svn_node_kind_t *kind_p,
+      apr_hash_t **props_p,
+      const char **filename_p,
+      void *baton,
+      const char *repos_relpath,
+      svn_revnum_t base_revision,
+      apr_pool_t *result_pool,
+      apr_pool_t *scratch_pool)
+{
+  struct fb_baton *fbb = baton;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_ra_check_path(fbb->session, repos_relpath, base_revision,
+                            &kind, scratch_pool));
+  if (kind_p)
+    *kind_p = kind;
+  if (kind == svn_node_file && (props_p || filename_p))
+    {
+      svn_stream_t *file_stream = NULL;
+      const char *tmp_filename;
+
+      if (filename_p)
+        {
+          SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                         svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+        }
+      SVN_ERR(svn_ra_get_file(fbb->session, repos_relpath, base_revision,
+                              file_stream, NULL, props_p, result_pool));
+      if (filename_p)
+        {
+          SVN_ERR(svn_stream_close(file_stream));
+          *filename_p = apr_pstrdup(result_pool, tmp_filename);
+        }
+    }
+  else if (props_p)
+    {
+      SVN_ERR(svn_ra_get_dir(fbb->session, repos_relpath, base_revision,
+                             NULL /*dirents*/, NULL, props_p, result_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind(svn_node_kind_t *kind,
+           void *baton,
+           const char *repos_relpath,
+           svn_revnum_t base_revision,
+           apr_pool_t *scratch_pool)
+{
+  return fetch(kind, NULL, NULL,
+               baton, repos_relpath, base_revision,
+               scratch_pool, scratch_pool);
+}
+
+static svn_error_t *
+fetch_props(apr_hash_t **props,
+            void *baton,
+            const char *repos_relpath,
+            svn_revnum_t base_revision,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  return fetch(NULL, props, NULL,
+               baton, repos_relpath, base_revision,
+               result_pool, scratch_pool);
+}
+
+static svn_error_t *
+fetch_base(const char **filename,
+           void *baton,
+           const char *repos_relpath,
+           svn_revnum_t base_revision,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
+{
+  return fetch(NULL, NULL, filename,
+               baton, repos_relpath, base_revision,
+               result_pool, scratch_pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -768,10 +860,34 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                         session, commit_callback, commit_baton,
                         pool);
 
-  return session->vtable->get_commit_editor(session, editor, edit_baton,
-                                            revprop_table,
-                                            commit_callback, commit_baton,
-                                            lock_tokens, keep_locks, pool);
+  SVN_ERR(session->vtable->get_commit_editor(session, editor, edit_baton,
+                                             revprop_table,
+                                             commit_callback, commit_baton,
+                                             lock_tokens, keep_locks, pool));
+
+  /* Insert Ev3 shims */
+  {
+    const char *repos_root_url, *session_url, *base_relpath;
+    svn_delta_shim_callbacks_t *shim_callbacks
+      = svn_delta_shim_callbacks_default(pool);
+    struct fb_baton *fbb = apr_palloc(pool, sizeof(*fbb));
+
+    SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
+    SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+    base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, pool);
+    shim_callbacks->fetch_props_func = fetch_props;
+    shim_callbacks->fetch_kind_func = fetch_kind;
+    shim_callbacks->fetch_base_func = fetch_base;
+    shim_callbacks->fetch_baton = fbb;
+    SVN_ERR(svn_ra_dup_session(&fbb->session, session, repos_root_url, pool, pool));
+    fbb->session_path = base_relpath;
+    fbb->repos_root_url = repos_root_url;
+    SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                      repos_root_url, base_relpath,
+                                      shim_callbacks, pool, pool));
+  }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
