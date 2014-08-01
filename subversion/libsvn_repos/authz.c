@@ -651,7 +651,7 @@ insert_path(node_t *node,
  * https://wiki.apache.org/subversion/AuthzImprovements
  * and return the result.
  */
-const char *
+static const char *
 normalize_wildcards(const char *path,
                     apr_pool_t *result_pool)
 {
