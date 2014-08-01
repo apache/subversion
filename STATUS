@@ -189,16 +189,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1600311, r1600315, r1600323, r1600393
-   Properly delete ancestor directories of externals when removing the
-   external by changing the svn:externals value.
-   Justification:
-     Regression against 1.7.x
-   Branch:
-     ^/subversion/branches/1.8.x-rm-external-dir
-   Votes:
-     +1: rhuijben, philip, breser
-
  * ^/subversion/branches/1.8.x-VS2013-14
    Enable support for generating VS2013 and later ("14"+) project files.
    Justification:
