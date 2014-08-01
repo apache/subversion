@@ -189,13 +189,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1589460, r1589486
-   Fix copying parents of locally deleted nodes between working copies.
-   Justification:
-     Resolves a case of creating invalid working copy state.
-   Votes:
-     +1: rhuijben, philip, breser
-
  * r1595431
    Use a proper intermediate directory when building with VS 2003-2008.
    Justification:
