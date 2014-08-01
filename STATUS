@@ -143,13 +143,6 @@ Candidate changes:
    Votes:
      +1: stsp, breser
 
- * r1565531, r1566503, r1568349, r1568361
-   Ignore the CommonName in SSL certs when there are Subject Alt Names.
-   Justification:
-     Comply with RFC 2818.
-   Votes:
-     +1: breser, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -252,3 +245,10 @@ Approved changes:
      feature availability check is incomplete.
    Votes:
      +1: stefan2, breser, ivan
+
+ * r1565531, r1566503, r1568349, r1568361
+   Ignore the CommonName in SSL certs when there are Subject Alt Names.
+   Justification:
+     Comply with RFC 2818.
+   Votes:
+     +1: breser, stefan2, ivan
