@@ -183,6 +183,8 @@ Veto-blocked changes:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: stefan2, brane, breser
+     -1: ivan (Race condition and undefined behavior. See:
+               http://svn.haxx.se/dev/archive-2014-08/0007.shtml)
 
 Approved changes:
 =================
