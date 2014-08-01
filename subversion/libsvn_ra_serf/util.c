@@ -28,7 +28,6 @@
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
-#include <apr_fnmatch.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -45,6 +44,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_auth_private.h"
+#include "private/svn_cert.h"
 
 #include "ra_serf.h"
 
@@ -233,6 +233,8 @@ ssl_server_cert(void *baton, int failures,
       apr_array_header_t *san;
       svn_boolean_t found_san_entry = FALSE;
       svn_boolean_t found_matching_hostname = FALSE;
+      svn_string_t *actual_hostname =
+          svn_string_create(conn->session->session_url.hostname, scratch_pool);
 
       serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
@@ -245,10 +247,9 @@ ssl_server_cert(void *baton, int failures,
           for (i = 0; i < san->nelts; i++)
             {
               const char *s = APR_ARRAY_IDX(san, i, const char*);
-              if (APR_SUCCESS == apr_fnmatch(s,
-                                            conn->session->session_url.hostname,
-                                            APR_FNM_PERIOD |
-                                            APR_FNM_CASE_BLIND))
+              svn_string_t *cert_hostname = svn_string_create(s, scratch_pool);
+
+              if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
                 {
                   found_matching_hostname = TRUE;
                   break;
@@ -269,11 +270,15 @@ ssl_server_cert(void *baton, int failures,
           if (subject)
             hostname = svn_hash_gets(subject, "CN");
 
-          if (hostname
-              && apr_fnmatch(hostname, conn->session->session_url.hostname,
-                             APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+          if (hostname)
             {
-              found_matching_hostname = TRUE;
+              svn_string_t *cert_hostname = svn_string_create(hostname,
+                                                              scratch_pool);
+
+              if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
+                {
+                  found_matching_hostname = TRUE;
+                }
             }
         }
 
