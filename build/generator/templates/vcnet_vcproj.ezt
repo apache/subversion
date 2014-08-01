@@ -32,7 +32,7 @@
 			Name="[configs.name]|[platforms]"
 			OutputDirectory="..\..\..\[configs.name]\[target.output_dir]"
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\..\[configs.name]\[target.intermediate_dir]"
+			IntermediateDirectory="..\..\..\[configs.name]\[target.intermediate_dir]\[target.proj_name]"
 			ConfigurationType="[target_type]"[is configs.name "Release"]
 			WholeProgramOptimization="FALSE"[end]>
 			<Tool
