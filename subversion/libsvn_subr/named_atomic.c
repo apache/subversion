@@ -266,7 +266,7 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
   /* let the mutex live as long as the APR */
   apr_pool_t *global_pool = svn_pool_create(NULL);
 
-  return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, FALSE, global_pool);
+  return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, TRUE, global_pool);
 }
 #endif /* APR_HAS_MMAP */
 
