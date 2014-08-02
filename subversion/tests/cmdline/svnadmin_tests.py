@@ -267,11 +267,8 @@ class FSFS_Index:
   The interface returns P2L information and allows for item offsets
   and lengths to be modified. """
 
-  by_item = { }
-  revision = -1
-  repo_dir = None
-
   def __init__(self, sbox, revision):
+    self.by_item = { }
     self.revision = revision
     self.repo_dir = sbox.repo_dir
 
