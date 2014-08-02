@@ -184,6 +184,17 @@ svn_mutex__unlock(svn_mutex__t *mutex,
              different but equivalent IDs for the same thread). */
           void *lock_owner = apr_atomic_casptr(&mutex->owner, NULL, NULL);
 
+          /* Check for double unlock. */
+          if (lock_owner == NULL)
+            {
+              /* There seems to be no guarantee that NULL is _not_ a valid
+                 thread ID.  Double check to be sure. */
+              if (!apr_os_thread_equal((apr_os_thread_t)lock_owner,
+                                       apr_os_thread_current()))
+                return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
+                                  _("Tried to release a non-locked mutex"));
+            }
+
           /* Now, set it to NULL. */
           apr_atomic_casptr(&mutex->owner, NULL,  lock_owner);
         }
@@ -195,7 +206,9 @@ svn_mutex__unlock(svn_mutex__t *mutex,
 #else
       /* Update lock counter. */
       if (mutex->checked)
-        --mutex->count;
+        if (--mutex->count)
+          return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
+                                  _("Tried to release a non-locked mutex"));
 #endif
     }
 
