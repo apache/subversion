@@ -162,8 +162,11 @@ test_pipeline_loop(svn_named_atomic__t *atomic_in,
       do
         {
           SVN_ERR(svn_named_atomic__write(&value, 0, atomic_in));
-          SVN_ERR(check_watchdog(watchdog, &done));
-          if (done) return SVN_NO_ERROR;
+          if (!value)
+            {
+              SVN_ERR(check_watchdog(watchdog, &done));
+              if (done) return SVN_NO_ERROR;
+            }
         }
       while (value == 0);
 
@@ -178,8 +181,11 @@ test_pipeline_loop(svn_named_atomic__t *atomic_in,
                                             value,
                                             0,
                                             atomic_out));
-          SVN_ERR(check_watchdog(watchdog, &done));
-          if (done) return SVN_NO_ERROR;
+          if (old_value)
+            {
+              SVN_ERR(check_watchdog(watchdog, &done));
+              if (done) return SVN_NO_ERROR;
+            }
         }
       while (old_value != 0);
 
