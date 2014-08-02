@@ -48,7 +48,8 @@ typedef struct watchdog_t
   apr_time_t deadline;
   svn_named_atomic__t *atomic_counter;
   int iterations;
-  int call_count; /* don't call apr_time_now() too often '*/
+  int call_count;             /* don't call apr_time_now() too often '*/
+  svn_boolean_t throttle;     /* TRUE -> we are using file locks for sync */
 } watchdog_t;
 
 /* init the WATCHDOG data structure for checking ATOMIC_COUNTER to reach
@@ -65,6 +66,7 @@ init_watchdog(watchdog_t *watchdog,
   watchdog->atomic_counter = atomic_counter;
   watchdog->iterations = iterations;
   watchdog->call_count = 0;
+  watchdog->throttle = !svn_named_atomic__is_efficient();
 }
 
 /* test for watchdog conditions */
@@ -83,6 +85,12 @@ check_watchdog(watchdog_t *watchdog, svn_boolean_t *done)
       *done = TRUE;
       return SVN_NO_ERROR;
     }
+
+  /* If we are using file locks for synchronization, our polling loops will
+   * simply hammering them instead of giving the system time to actually
+   * do something.  So, slow down to get faster ... */
+  if (watchdog->throttle)
+    apr_sleep(1000);
 
   /* Check the system time and indicate when deadline has passed */
   if (++watchdog->call_count > 100)
