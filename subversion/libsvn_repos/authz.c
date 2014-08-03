@@ -278,7 +278,7 @@ get_memberships(svn_config_t *config,
 }
 
 
-/*** Constructing the prefix tree. ***/
+/*** Access rights. ***/
 
 /* This structure describes the access rights given to a specific user by
  * a path rule (actually the rule set specified for a path).  I.e. there is
@@ -303,6 +303,57 @@ typedef struct access_t
 /* Use this to indicate that no sequence ID has been assigned.
  * It will automatically be inferior to (less than) any other sequence ID. */
 #define NO_SEQUENCE_NUMBER (-1)
+
+/* Convenience structure combining the node-local access rights with the
+ * min and max rights granted within the sub-tree. */
+typedef struct limited_rights_t
+{
+  /* Access granted to the current user.  If the SEQUENCE_NUMBER member is
+   * NO_SEQUENCE_NUMBER, there has been no specific path rule for this PATH
+   * but only for some sub-path(s).  There is always a rule at the root node.
+   */
+  access_t access;
+
+  /* Minimal access rights that the user has on this or any other node in 
+   * the sub-tree. */
+  svn_repos_authz_access_t min_rights;
+
+  /* Maximal access rights that the user has on this or any other node in 
+   * the sub-tree. */
+  svn_repos_authz_access_t max_rights;
+
+} limited_rights_t;
+
+/* Return TRUE, if RIGHTS has local rights defined in the ACCESS member. */
+static svn_boolean_t
+has_local_rule(const limited_rights_t *rights)
+{
+  return rights->access.sequence_number != NO_SEQUENCE_NUMBER;
+}
+
+/* Aggregate the ACCESS spec of TARGET and RIGHTS into TARGET.  I.e. if both
+ * are specified, pick one in accordance to the precedence rules. */
+static void
+combine_access(limited_rights_t *target,
+               const limited_rights_t *rights)
+{
+  /* This implies the check for NO_SEQUENCE_NUMBER, i.e no rights being
+   * specified. */
+  if (target->access.sequence_number < rights->access.sequence_number)
+    target->access = rights->access;
+}
+
+/* Aggregate the min / max access rights of TARGET and RIGHTS into TARGET. */
+static void
+combine_right_limits(limited_rights_t *target,
+                     const limited_rights_t *rights)
+{
+  target->max_rights |= rights->max_rights;
+  target->min_rights &= rights->min_rights;
+}
+
+
+/*** Constructing the prefix tree. ***/
 
 /* Substructure of node_t.  It contains all sub-node that use patterns
  * in the next segment level. We keep it separate to save a bit of memory
@@ -348,18 +399,9 @@ typedef struct node_t
    * this will compared to the respective segment of the path to check. */
   svn_string_t segment;
 
-  /* Access granted to the current user.  If this is NULL, there has been
-   * no specific path rule for this PATH but only for some sub-path(s).
-   * Never NULL at the root node. */
-  access_t *access;
-
-  /* Minimal access rights that the user has on this or any other node in 
-   * the sub-tree. */
-  svn_repos_authz_access_t min_rights;
-
-  /* Maximal access rights that the user has on this or any other node in 
-   * the sub-tree. */
-  svn_repos_authz_access_t max_rights;
+  /* Immediate access rights granted by rules on this node and the min /
+   * max rights on any path in this sub-tree. */
+  limited_rights_t rights;
 
   /* Map of sub-segment(const char *) to respective node (node_t) for all
    * sub-segments that have rules on themselves or their respective subtrees.
@@ -479,6 +521,7 @@ create_node(const char *segment,
   node_t *result = apr_pcalloc(result_pool, sizeof(*result));
   result->segment.data = apr_pstrmemdup(result_pool, segment, len);
   result->segment.len = len;
+  result->rights.access.sequence_number = NO_SEQUENCE_NUMBER;
 
   return result;
 }
@@ -581,8 +624,8 @@ insert_path(node_t *node,
        * config file section, there cannot be multiple paths having the
        * same leave node.  Hence, access gets never overwritten.
        */
-      assert(node->access == NULL);
-      node->access = access;
+      assert(!has_local_rule(&node->rights));
+      node->rights.access = *access;
       return;
     }
 
@@ -802,11 +845,13 @@ finalize_tree(node_t *parent,
               apr_pool_t *scratch_pool)
 {
   /* Access rights at NODE. */
-  access_t *access = node->access ? node->access : inherited_access;
+  access_t *access = has_local_rule(&node->rights)
+                   ? &node->rights.access
+                   : inherited_access;
 
   /* So far, min and max rights at NODE are the immediate access rights. */
-  node->min_rights = access->rights;
-  node->max_rights = access->rights;
+  node->rights.min_rights = access->rights;
+  node->rights.max_rights = access->rights;
 
   /* Combine that information with sub-tree data. */
   if (node->sub_nodes)
@@ -839,8 +884,7 @@ finalize_tree(node_t *parent,
 
   /* Add our min / max info to the parent's info.
    * Idempotent for parent == node (happens at root). */
-  parent->max_rights |= node->max_rights;
-  parent->min_rights &= node->min_rights;
+  combine_right_limits(&parent->rights, &node->rights);
 }
 
 /* From the authz CONFIG, extract the parts relevant to USER and REPOSITORY.
@@ -874,16 +918,15 @@ create_user_authz(svn_config_t *config,
 
   /* If there is no relevant rule at the root node, the "no access" default
    * applies. Give it a SEQUENCE_ID that will never overrule others. */
-  if (!baton.root->access)
+  if (!has_local_rule(&baton.root->rights))
     {
-      baton.root->access = apr_pcalloc(result_pool, sizeof(access_t));
-      baton.root->access->sequence_number = 0;
-      baton.root->access->rights = svn_authz_none;
+      baton.root->rights.access.sequence_number = 0;
+      baton.root->rights.access.rights = svn_authz_none;
     }
 
   /* Calculate recursive rights etc. */
   svn_pool_clear(subpool);
-  finalize_tree(baton.root, baton.root->access, baton.root, subpool);
+  finalize_tree(baton.root, &baton.root->rights.access, baton.root, subpool);
 
   /* Done. */
   svn_pool_destroy(subpool);
@@ -897,14 +940,9 @@ create_user_authz(svn_config_t *config,
  * recycling it between lookups saves significant setup costs. */
 typedef struct lookup_state_t
 {
-  /* Access rights for path so far (maybe inherited from parent). */
-  access_t access;
-
-  /* The minimum acccess rights within the current sub-tree. */
-  svn_repos_authz_access_t min_rights;
-
-  /* The maximum acccess rights within the current sub-tree. */
-  svn_repos_authz_access_t max_rights;
+  /* Rights immediately applying to this node and limits to the rights to
+   * any sub-path. */
+  limited_rights_t rights;
 
   /* Nodes applying to the path followed so far. */
   apr_array_header_t *current;
@@ -942,9 +980,7 @@ static void
 init_lockup_state(lookup_state_t *state,
                   node_t *root)
 { 
-  state->access = *root->access;
-  state->min_rights = root->min_rights;
-  state->max_rights = root->max_rights;
+  state->rights = root->rights;
 
   apr_array_clear(state->next);
   apr_array_clear(state->current);
@@ -967,18 +1003,13 @@ add_next_node(lookup_state_t *state,
       /* The rule with the highest sequence number is the one that applies.
        * Not all nodes that we are following have rules that apply directly
        * to this path but only some deep sub-node. */
-      if (   node->access
-          && node->access->sequence_number > state->access.sequence_number)
-        {
-          state->access = *node->access;
-        }
+      combine_access(&state->rights, &node->rights);
 
       /* The rule tree node can be seen as an overlay of all the nodes that
        * we are following.  Any of them _may_ match eventually, so the min/
        * max possible access rights are a combination of all these sub-trees.
        */
-      state->min_rights &= node->min_rights;
-      state->max_rights |= node->max_rights;
+      combine_right_limits(&state->rights, &node->rights);
 
       /* NODE is now enlisted as a (potential) match for the next segment. */
       APR_ARRAY_PUSH(state->next, node_t *) = node;
@@ -1237,35 +1268,36 @@ lookup(lookup_state_t *state,
     {
       apr_array_header_t *temp;
       int i;
-      access_t parent_access = state->access;
+      access_t parent_access = state->rights.access;
       svn_stringbuf_t *segment = state->scratch_pad;
 
       /* Shortcut 1: We could nowhere find enough rights in this sub-tree. */
-      if ((state->max_rights & required) != required)
+      if ((state->rights.max_rights & required) != required)
         return FALSE;
 
       /* Shortcut 2: We will fine enough rights everywhere in this sub-tree. */
-      if ((state->min_rights & required) == required)
+      if ((state->rights.min_rights & required) == required)
         return TRUE;
 
       /* Shortcut 3: The rights are the same everywhere in this sub-tree . */
-      if ((state->min_rights & required) == (state->max_rights & required))
-        return (state->min_rights & required) == required;
+      if (   (state->rights.min_rights & required)
+          == (state->rights.max_rights & required))
+        return (state->rights.min_rights & required) == required;
 
       /* Extract the next segment. */
       path = next_segment(segment, path);
 
       /* Initial state for this segment. */
       apr_array_clear(state->next);
-      state->access.sequence_number = NO_SEQUENCE_NUMBER;
-      state->access.rights = svn_authz_none;
+      state->rights.access.sequence_number = NO_SEQUENCE_NUMBER;
+      state->rights.access.rights = svn_authz_none;
 
       /* These init values ensure that the first node's value will be used
        * when combined with them.  If there is no first node,
        * state->access.sequence_number remains unchanged and we will use
        * the parent's (i.e. inherited) access rights. */
-      state->min_rights = svn_authz_read | svn_authz_write;
-      state->max_rights = svn_authz_none;
+      state->rights.min_rights = svn_authz_read | svn_authz_write;
+      state->rights.max_rights = svn_authz_none;
 
       /* Scan follow all alternative routes to the next level. */
       for (i = 0; i < state->current->nelts; ++i)
@@ -1307,20 +1339,24 @@ lookup(lookup_state_t *state,
             }
         }
 
-      /* The list of nodes for SEGMENT is now complete.
-       * Make it the current and put the old one into the recycler. */
-      temp = state->current;
-      state->current = state->next;
-      state->next = temp;
-
       /* If no rule applied to this SEGMENT directly, the parent rights
        * will apply to at least the SEGMENT node itself and possibly
        * other parts deeper in it's subtree. */
-      if (state->access.sequence_number == NO_SEQUENCE_NUMBER)
+      if (!has_local_rule(&state->rights))
         {
-          state->access = parent_access;
-          state->min_rights &= parent_access.rights;
-          state->max_rights |= parent_access.rights;
+          state->rights.access = parent_access;
+          state->rights.min_rights &= parent_access.rights;
+          state->rights.max_rights |= parent_access.rights;
+        }
+
+      /* The list of nodes for SEGMENT is now complete.  If we need to
+       * continue, make it the current and put the old one into the recycler.
+       */
+      if (path)
+        {
+          temp = state->current;
+          state->current = state->next;
+          state->next = temp;
         }
     }
 
@@ -1329,10 +1365,10 @@ lookup(lookup_state_t *state,
    * verify that the respective paths actually exist in the repository.
    */
   if (recursive)
-    return (state->min_rights & required) == required;
+    return (state->rights.min_rights & required) == required;
 
   /* Return whether the access rights on PATH fully include REQUIRED. */
-  return (state->access.rights & required) == required;
+  return (state->rights.access.rights & required) == required;
 }
 
 
@@ -2043,7 +2079,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   if (!path)
     {
       svn_repos_authz_access_t required = required_access & ~svn_authz_recursive;
-      *access_granted = (rules->root->max_rights & required) == required;
+      *access_granted = (rules->root->rights.max_rights & required) == required;
       return SVN_NO_ERROR;
     }
 
