@@ -443,7 +443,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      absolute path. Passing such a malformed path to the authz
      routines throws them into an infinite loop and makes them miss
      ACLs. */
-  if (path)
+  if (path && *path != '/')
     path = svn_fspath__canonicalize(path, pool);
 
   /* If we have a username, and we've not yet used it + any username
