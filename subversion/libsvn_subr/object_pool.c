@@ -390,7 +390,6 @@ svn_object_pool__insert(void **object,
                         apr_pool_t *wrapper_pool,
                         apr_pool_t *result_pool)
 {
-  *object = NULL;
   SVN_MUTEX__WITH_LOCK(object_pool->mutex,
                        insert(object, object_pool, key, wrapper, baton,
                               wrapper_pool, result_pool));
