@@ -1275,14 +1275,9 @@ lookup(lookup_state_t *state,
       if ((state->rights.max_rights & required) != required)
         return FALSE;
 
-      /* Shortcut 2: We will fine enough rights everywhere in this sub-tree. */
+      /* Shortcut 2: We will find enough rights everywhere in this sub-tree. */
       if ((state->rights.min_rights & required) == required)
         return TRUE;
-
-      /* Shortcut 3: The rights are the same everywhere in this sub-tree . */
-      if (   (state->rights.min_rights & required)
-          == (state->rights.max_rights & required))
-        return (state->rights.min_rights & required) == required;
 
       /* Extract the next segment. */
       path = next_segment(segment, path);
