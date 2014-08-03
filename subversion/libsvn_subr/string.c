@@ -480,9 +480,7 @@ svn_stringbuf_set(svn_stringbuf_t *str, const char *value)
 void
 svn_stringbuf_setempty(svn_stringbuf_t *str)
 {
-  if (str->len > 0)
-    str->data[0] = '\0';
-
+  str->data[0] = '\0';
   str->len = 0;
 }
 
