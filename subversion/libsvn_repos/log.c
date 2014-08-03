@@ -152,6 +152,166 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 }
 
 
+/* Core filter logic of detect_changed().  Convert FS API-level path change
+ * CHANGE of PATH in FS at ROOT to higher level API *ITEM_P.
+ *
+ * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
+ * AUTHZ_READ_BATON and FS) to check whether PATH and what parts of CHANGE
+ * (copyfrom_path) is readable.  Update *FOUND_READABLE and
+ * *FOUND_UNREADABLE accordingly.
+ *
+ * NOTE:  Much of this loop is going to look quite similar to
+ *        svn_repos_check_revision_access(), but we have to do more things
+ *        here, so we'll live with the duplication.
+ */
+static svn_error_t *
+check_changed_path(svn_log_changed_path2_t **item_p,
+                   svn_boolean_t *found_readable,
+                   svn_boolean_t *found_unreadable,
+                   svn_fs_root_t *root,
+                   svn_fs_t *fs,
+                   const char *path,
+                   svn_fs_path_change2_t *change,
+                   svn_repos_authz_func_t authz_read_func,
+                   void *authz_read_baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  char action;
+  svn_log_changed_path2_t *item;
+
+  /* Skip path if unreadable. */
+  if (authz_read_func)
+    {
+      svn_boolean_t readable;
+      SVN_ERR(authz_read_func(&readable,
+                              root, path,
+                              authz_read_baton, scratch_pool));
+      if (! readable)
+        {
+          *found_unreadable = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* At least one changed-path was readable. */
+  *found_readable = TRUE;
+
+  switch (change->change_kind)
+    {
+    case svn_fs_path_change_reset:
+      return SVN_NO_ERROR;
+
+    case svn_fs_path_change_add:
+      action = 'A';
+      break;
+
+    case svn_fs_path_change_replace:
+      action = 'R';
+      break;
+
+    case svn_fs_path_change_delete:
+      action = 'D';
+      break;
+
+    case svn_fs_path_change_modify:
+    default:
+      action = 'M';
+      break;
+    }
+
+  item = svn_log_changed_path2_create(result_pool);
+  item->action = action;
+  item->node_kind = change->node_kind;
+  item->copyfrom_rev = SVN_INVALID_REVNUM;
+  item->text_modified = change->text_mod ? svn_tristate_true
+                                          : svn_tristate_false;
+  item->props_modified = change->prop_mod ? svn_tristate_true
+                                          : svn_tristate_false;
+
+  /* Pre-1.6 revision files don't store the change path kind, so fetch
+      it manually. */
+  if (item->node_kind == svn_node_unknown)
+    {
+      svn_fs_root_t *check_root = root;
+      const char *check_path = path;
+
+      /* Deleted items don't exist so check earlier revision.  We
+          know the parent must exist and could be a copy */
+      if (change->change_kind == svn_fs_path_change_delete)
+        {
+          svn_fs_history_t *history;
+          svn_revnum_t prev_rev;
+          const char *parent_path, *name;
+
+          svn_fspath__split(&parent_path, &name, path, scratch_pool);
+
+          SVN_ERR(svn_fs_node_history2(&history, root, parent_path,
+                                       scratch_pool, scratch_pool));
+
+          /* Two calls because the first call returns the original
+              revision as the deleted child means it is 'interesting' */
+          SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, scratch_pool,
+                                       scratch_pool));
+          SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, scratch_pool,
+                                       scratch_pool));
+
+          SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
+                                          scratch_pool));
+          SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev,
+                                       scratch_pool));
+          check_path = svn_fspath__join(parent_path, name, scratch_pool);
+        }
+
+      SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
+                                scratch_pool));
+    }
+
+
+  if ((action == 'A') || (action == 'R'))
+    {
+      const char *copyfrom_path = change->copyfrom_path;
+      svn_revnum_t copyfrom_rev = change->copyfrom_rev;
+
+      /* the following is a potentially expensive operation since on FSFS
+          we will follow the DAG from ROOT to PATH and that requires
+          actually reading the directories along the way. */
+      if (!change->copyfrom_known)
+        {
+          SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                     root, path, scratch_pool));
+          copyfrom_path = apr_pstrdup(result_pool, copyfrom_path);
+        }
+
+      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+        {
+          svn_boolean_t readable = TRUE;
+
+          if (authz_read_func)
+            {
+              svn_fs_root_t *copyfrom_root;
+
+              SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
+                                            copyfrom_rev, scratch_pool));
+              SVN_ERR(authz_read_func(&readable,
+                                      copyfrom_root, copyfrom_path,
+                                      authz_read_baton, scratch_pool));
+              if (! readable)
+                *found_unreadable = TRUE;
+            }
+
+          if (readable)
+            {
+              item->copyfrom_path = copyfrom_path;
+              item->copyfrom_rev = copyfrom_rev;
+            }
+        }
+    }
+
+  *item_p = item;
+  return SVN_NO_ERROR;
+}
+
 /* Store as keys in CHANGED the paths of all node in ROOT that show a
  * significant change.  "Significant" means that the text or
  * properties of the node were changed, or that the node was added or
@@ -218,147 +378,54 @@ detect_changed(apr_hash_t **changed,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+
+  /* Authz can be much faster when paths are being checked in tree order. */
+  if (authz_read_func && apr_hash_count(changes) > 1)
     {
-      /* NOTE:  Much of this loop is going to look quite similar to
-         svn_repos_check_revision_access(), but we have to do more things
-         here, so we'll live with the duplication. */
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
-      char action;
-      svn_log_changed_path2_t *item;
+      apr_array_header_t *sorted;
+      int i;
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
-      svn_pool_clear(iterpool);
-
-      /* Skip path if unreadable. */
-      if (authz_read_func)
+      sorted = svn_sort__hash(changes, svn_sort_compare_items_lexically,
+                              scratch_pool);
+      for (i = 0; i < sorted->nelts; i++)
         {
-          svn_boolean_t readable;
-          SVN_ERR(authz_read_func(&readable,
-                                  root, path,
-                                  authz_read_baton, iterpool));
-          if (! readable)
-            {
-              found_unreadable = TRUE;
-              continue;
-            }
+          svn_sort__item_t item = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
+          const char *path = item.key;
+          svn_fs_path_change2_t *change = item.value;
+
+          svn_log_changed_path2_t *changed_item = NULL;
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(check_changed_path(&changed_item, &found_readable,
+                                     &found_unreadable, root, fs, path,
+                                     change, authz_read_func,
+                                     authz_read_baton, pool, iterpool));
+
+          if (changed_item)
+            svn_hash_sets(*changed, path, changed_item);
         }
 
-      /* At least one changed-path was readable. */
-      found_readable = TRUE;
-
-      switch (change->change_kind)
+      svn_pool_destroy(scratch_pool);
+    }
+  else
+    {
+      for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
         {
-        case svn_fs_path_change_reset:
-          continue;
+          const char *path = svn__apr_hash_index_key(hi);
+          apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
+          svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
+          svn_log_changed_path2_t *changed_item;
 
-        case svn_fs_path_change_add:
-          action = 'A';
-          break;
+          svn_pool_clear(iterpool);
+          SVN_ERR(check_changed_path(&changed_item, &found_readable,
+                                     &found_unreadable, root, fs, path,
+                                     change, authz_read_func,
+                                     authz_read_baton, pool, iterpool));
 
-        case svn_fs_path_change_replace:
-          action = 'R';
-          break;
-
-        case svn_fs_path_change_delete:
-          action = 'D';
-          break;
-
-        case svn_fs_path_change_modify:
-        default:
-          action = 'M';
-          break;
+          apr_hash_set(*changed, path, path_len, changed_item);
         }
-
-      item = svn_log_changed_path2_create(pool);
-      item->action = action;
-      item->node_kind = change->node_kind;
-      item->copyfrom_rev = SVN_INVALID_REVNUM;
-      item->text_modified = change->text_mod ? svn_tristate_true
-                                             : svn_tristate_false;
-      item->props_modified = change->prop_mod ? svn_tristate_true
-                                              : svn_tristate_false;
-
-      /* Pre-1.6 revision files don't store the change path kind, so fetch
-         it manually. */
-      if (item->node_kind == svn_node_unknown)
-        {
-          svn_fs_root_t *check_root = root;
-          const char *check_path = path;
-
-          /* Deleted items don't exist so check earlier revision.  We
-             know the parent must exist and could be a copy */
-          if (change->change_kind == svn_fs_path_change_delete)
-            {
-              svn_fs_history_t *history;
-              svn_revnum_t prev_rev;
-              const char *parent_path, *name;
-
-              svn_fspath__split(&parent_path, &name, path, iterpool);
-
-              SVN_ERR(svn_fs_node_history2(&history, root, parent_path,
-                                           iterpool, iterpool));
-
-              /* Two calls because the first call returns the original
-                 revision as the deleted child means it is 'interesting' */
-              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
-                                           iterpool));
-              SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
-                                           iterpool));
-
-              SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
-                                              iterpool));
-              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, iterpool));
-              check_path = svn_fspath__join(parent_path, name, iterpool);
-            }
-
-          SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
-                                    iterpool));
-        }
-
-
-      if ((action == 'A') || (action == 'R'))
-        {
-          const char *copyfrom_path = change->copyfrom_path;
-          svn_revnum_t copyfrom_rev = change->copyfrom_rev;
-
-          /* the following is a potentially expensive operation since on FSFS
-             we will follow the DAG from ROOT to PATH and that requires
-             actually reading the directories along the way. */
-          if (!change->copyfrom_known)
-            {
-              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                        root, path, iterpool));
-              copyfrom_path = apr_pstrdup(pool, copyfrom_path);
-            }
-
-          if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
-            {
-              svn_boolean_t readable = TRUE;
-
-              if (authz_read_func)
-                {
-                  svn_fs_root_t *copyfrom_root;
-
-                  SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                               copyfrom_rev, iterpool));
-                  SVN_ERR(authz_read_func(&readable,
-                                          copyfrom_root, copyfrom_path,
-                                          authz_read_baton, iterpool));
-                  if (! readable)
-                    found_unreadable = TRUE;
-                }
-
-              if (readable)
-                {
-                  item->copyfrom_path = copyfrom_path;
-                  item->copyfrom_rev = copyfrom_rev;
-                }
-            }
-        }
-
-      apr_hash_set(*changed, path, path_len, item);
     }
 
   svn_pool_destroy(iterpool);
