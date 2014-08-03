@@ -953,6 +953,14 @@ typedef struct lookup_state_t
 
   /* Scratch pad for path operations. */
   svn_stringbuf_t *scratch_pad;
+
+  /* After each lookup iteration, CURRENT and PARENT_RIGHTS will
+   * apply to this path. */
+  svn_stringbuf_t *parent_path;
+
+  /* Rights that apply at PARENT_PATH, if PARENT_PATH is not empty. */
+  limited_rights_t parent_rights;
+
 } lookup_state_t;
 
 /* Constructor for lookup_state_t. */
@@ -972,21 +980,49 @@ create_lookup_state(apr_pool_t *result_pool)
    * some extra cost. */
   state->scratch_pad = svn_stringbuf_create_ensure(200, result_pool);
 
+  /* Most paths should fit into this buffer.  The same rationale as
+   * above applies. */
+  state->parent_path = svn_stringbuf_create_ensure(200, result_pool);
+
   return state;
 }
 
-/* Clear the current contents of STATE and re-initialize it for ROOT. */
-static void
+/* Clear the current contents of STATE and re-initialize it for ROOT.
+ * Check whether we can reuse a previous parent path lookup to shorten
+ * the current PATH walk.  Return the full or remaining portion of
+ * PATH, respectively.  PATH must not be NULL. */
+static const char *
 init_lockup_state(lookup_state_t *state,
-                  node_t *root)
-{ 
+                  node_t *root,
+                  const char *path)
+{
+  apr_size_t len = strlen(path);
+  if (   (len > state->parent_path->len)
+      && state->parent_path->len
+      && (path[state->parent_path->len] == '/')
+      && !memcmp(path, state->parent_path->data, state->parent_path->len))
+    {
+      /* The PARENT_PATH of the previous lookup is actually a parent path
+       * of PATH.  The CURRENT node list already matches the parent path
+       * and we only have to set the correct rights info. */
+      state->rights = state->parent_rights;
+
+      /* Tell the caller where to proceed. */
+      return path + state->parent_path->len;
+    }
+
+  /* Start lookup at ROOT for the full PATH. */
   state->rights = root->rights;
+  state->parent_rights = root->rights;
 
   apr_array_clear(state->next);
   apr_array_clear(state->current);
   APR_ARRAY_PUSH(state->current, node_t *) = root;
 
-  state->scratch_pad->len = 0;
+  svn_stringbuf_setempty(state->parent_path);
+  svn_stringbuf_setempty(state->scratch_pad);
+
+  return path;
 }
 
 /* Add NODE to the list of NEXT nodes in STATE.  NODE may be NULL in which
@@ -1268,7 +1304,6 @@ lookup(lookup_state_t *state,
     {
       apr_array_header_t *temp;
       int i;
-      access_t parent_access = state->rights.access;
       svn_stringbuf_t *segment = state->scratch_pad;
 
       /* Shortcut 1: We could nowhere find enough rights in this sub-tree. */
@@ -1293,6 +1328,16 @@ lookup(lookup_state_t *state,
        * the parent's (i.e. inherited) access rights. */
       state->rights.min_rights = svn_authz_read | svn_authz_write;
       state->rights.max_rights = svn_authz_none;
+
+      /* Update the PARENT_PATH member in STATE to match the nodes in
+       * CURRENT at the end of this iteration, i.e. if and when NEXT
+       * has become CURRENT. */
+      if (path)
+        {
+          svn_stringbuf_appendbyte(state->parent_path, '/');
+          svn_stringbuf_appendbytes(state->parent_path, segment->data,
+                                    segment->len);
+        }
 
       /* Scan follow all alternative routes to the next level. */
       for (i = 0; i < state->current->nelts; ++i)
@@ -1339,19 +1384,25 @@ lookup(lookup_state_t *state,
        * other parts deeper in it's subtree. */
       if (!has_local_rule(&state->rights))
         {
-          state->rights.access = parent_access;
-          state->rights.min_rights &= parent_access.rights;
-          state->rights.max_rights |= parent_access.rights;
+          state->rights.access = state->parent_rights.access;
+          state->rights.min_rights &= state->parent_rights.access.rights;
+          state->rights.max_rights |= state->parent_rights.access.rights;
         }
 
       /* The list of nodes for SEGMENT is now complete.  If we need to
        * continue, make it the current and put the old one into the recycler.
+       *
+       * If this is the end of the path, keep the parent path and rights in
+       * STATE as are such that sibbling lookups will benefit from it.
        */
       if (path)
         {
           temp = state->current;
           state->current = state->next;
           state->next = temp;
+
+		  /* In STATE, PARENT_PATH, PARENT_RIGHTS and CURRENT are now in sync. */
+          state->parent_rights = state->rights;
         }
     }
 
@@ -1839,11 +1890,18 @@ authz_copy_groups(svn_config_t *config, svn_config_t *groups_cfg,
 
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
- * one and return the fully initialized filtered_rules_t.
+ * one and return the fully initialized filtered_rules_t to start lookup
+ * at *PATH.
+ *
+ * If *PATH is not NULL, *PATH may be reduced to the sub-path that has 
+ * still to be walked leveraging exisiting parent info from previous runs.
+ * If *PATH is NULL, keep the lockup_state member as is - assuming the
+ * caller will not use it but only the root node data.
  */
 static filtered_rules_t *
 get_filtered_tree(svn_authz_t *authz,
                   const char *repos_name,
+                  const char **path,
                   const char *user,
                   apr_pool_t *scratch_pool)
 {
@@ -1879,8 +1937,10 @@ get_filtered_tree(svn_authz_t *authz,
           authz->prefiltered[0] = temp;
         }
 
-      init_lockup_state(authz->prefiltered[0].lookup_state,
-                        authz->prefiltered[0].root);
+      if (*path)
+        *path = init_lockup_state(authz->prefiltered[0].lookup_state,
+                                  authz->prefiltered[0].root,
+                                  *path);
 
       return &authz->prefiltered[0];
     }
@@ -1897,8 +1957,9 @@ get_filtered_tree(svn_authz_t *authz,
   authz->prefiltered[i].root = create_user_authz(authz->cfg, repos_name,
                                                  user, pool, scratch_pool);
   authz->prefiltered[i].lookup_state = create_lookup_state(pool);
-  init_lockup_state(authz->prefiltered[i].lookup_state,
-                    authz->prefiltered[i].root);
+  if (*path)
+    init_lockup_state(authz->prefiltered[i].lookup_state,
+                      authz->prefiltered[i].root, *path);
 
   return &authz->prefiltered[i];
 }
@@ -2068,7 +2129,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   /* Pick or create the suitable pre-filtered path rule tree. */
   filtered_rules_t *rules = get_filtered_tree(authz,
                                               repos_name ? repos_name : "",
-                                              user, pool);
+                                              &path, user, pool);
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
