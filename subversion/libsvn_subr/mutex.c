@@ -206,9 +206,13 @@ svn_mutex__unlock(svn_mutex__t *mutex,
 #else
       /* Update lock counter. */
       if (mutex->checked)
-        if (--mutex->count)
-          return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
-                                  _("Tried to release a non-locked mutex"));
+        {
+          if (mutex->count <= 0)
+            return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
+                                    _("Tried to release a non-locked mutex"));
+
+          --mutex->count;
+        }
 #endif
     }
 
