@@ -801,13 +801,18 @@ svn_stringbuf_first_non_whitespace(const svn_stringbuf_t *str)
 void
 svn_stringbuf_strip_whitespace(svn_stringbuf_t *str)
 {
-  /* Find first non-whitespace character */
-  apr_size_t offset = svn_stringbuf_first_non_whitespace(str);
+  /* Skip (hide) whitespace at the beginning of the string. */
+  if (svn_ctype_isspace(str->data[0]))
+    {
+      /* Find first non-whitespace character */
+      apr_size_t offset = string_first_non_whitespace(str->data + 1,
+                                                      str->len - 1);
 
-  /* Go ahead!  Waste some RAM, we've got pools! :)  */
-  str->data += offset;
-  str->len -= offset;
-  str->blocksize -= offset;
+      /* Go ahead!  Waste some RAM, we've got pools! :)  */
+      str->data += offset;
+      str->len -= offset;
+      str->blocksize -= offset;
+    }
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
   while ((str->len > 0) && svn_ctype_isspace(str->data[str->len - 1]))
