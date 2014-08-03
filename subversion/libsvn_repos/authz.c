@@ -1643,6 +1643,9 @@ typedef struct filtered_rules_t
   /* Root of the filtered path rule tree.  NULL for unused entries. */
   node_t *root;
 
+  /* Reusable lookup state instance. */
+  lookup_state_t *lookup_state;
+
   /* Pool from which all data within this struct got allocated.
    * Can be destroyed or cleaned up with no further side-effects. */
   apr_pool_t *pool;
@@ -1667,9 +1670,6 @@ struct svn_authz_t
   /* LRU cache of the filtered path rule trees for the latest (user, repo)
    * combinations.  Empty / unused entries have NULL for ROOT. */
   filtered_rules_t prefiltered[FILTER_CACHE_SIZE];
-
-  /* Reusable lookup state instance. */
-  lookup_state_t *lookup_state;
 
   /* All members of this struct must be allocated from this pool or a pool
    * with longer guaranteed lifetime. */
@@ -1808,9 +1808,9 @@ authz_copy_groups(svn_config_t *config, svn_config_t *groups_cfg,
 
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
- * one and return this one instead.
+ * one and return the fully initialized filtered_rules_t.
  */
-static node_t *
+static filtered_rules_t *
 get_filtered_tree(svn_authz_t *authz,
                   const char *repos_name,
                   const char *user,
@@ -1848,7 +1848,10 @@ get_filtered_tree(svn_authz_t *authz,
           authz->prefiltered[0] = temp;
         }
 
-      return authz->prefiltered[0].root;
+      init_lockup_state(authz->prefiltered[0].lookup_state,
+                        authz->prefiltered[0].root);
+
+      return &authz->prefiltered[0];
     }
 
   /* Cache full? Drop last (i.e. oldest) entry. */
@@ -1862,8 +1865,11 @@ get_filtered_tree(svn_authz_t *authz,
   authz->prefiltered[i].user = user ? apr_pstrdup(pool, user) : NULL;
   authz->prefiltered[i].root = create_user_authz(authz->cfg, repos_name,
                                                  user, pool, scratch_pool);
+  authz->prefiltered[i].lookup_state = create_lookup_state(pool);
+  init_lockup_state(authz->prefiltered[i].lookup_state,
+                    authz->prefiltered[i].root);
 
-  return authz->prefiltered[i].root;
+  return &authz->prefiltered[i];
 }
 
 
@@ -1929,7 +1935,6 @@ svn_repos__create_authz(svn_authz_t **authz_p,
 
   result->pool = result_pool;
   result->cfg = config;
-  result->lookup_state = create_lookup_state(result_pool);
 
   *authz_p = result;
   return SVN_NO_ERROR;
@@ -2030,14 +2035,15 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              apr_pool_t *pool)
 {
   /* Pick or create the suitable pre-filtered path rule tree. */
-  node_t *root = get_filtered_tree(authz, repos_name ? repos_name : "",
-                                   user, pool);
+  filtered_rules_t *rules = get_filtered_tree(authz,
+                                              repos_name ? repos_name : "",
+                                              user, pool);
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
     {
       svn_repos_authz_access_t required = required_access & ~svn_authz_recursive;
-      *access_granted = (root->max_rights & required) == required;
+      *access_granted = (rules->root->max_rights & required) == required;
       return SVN_NO_ERROR;
     }
 
@@ -2046,8 +2052,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 
   /* Determine the granted access for the requested path.
    * PATH does not need to be normalized for lockup(). */
-  init_lockup_state(authz->lookup_state, root);
-  *access_granted = lookup(authz->lookup_state, path + 1,
+  *access_granted = lookup(rules->lookup_state, path,
                            required_access & ~svn_authz_recursive,
                            required_access & svn_authz_recursive, pool);
 
