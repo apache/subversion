@@ -89,7 +89,7 @@ svn_config_create2(svn_config_t **cfgp,
 {
   svn_config_t *cfg = apr_palloc(result_pool, sizeof(*cfg));
 
-  cfg->sections = apr_hash_make(result_pool);
+  cfg->sections = svn_hash__make(result_pool);
   cfg->pool = result_pool;
   cfg->x_pool = svn_pool_create(result_pool);
   cfg->x_values = FALSE;
@@ -309,7 +309,7 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       apr_pool_t *pool)
 {
   svn_config_t *cfg;
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
 
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));
@@ -327,7 +327,7 @@ svn_config__get_default_config(apr_hash_t **cfg_hash,
                                apr_pool_t *pool)
 {
   svn_config_t *empty_cfg;
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
 
   SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
   svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
@@ -654,7 +654,8 @@ svn_config_addsection(svn_config_t *cfg,
     hash_key = s->name;
   else
     hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
-  s->options = apr_hash_make(cfg->pool);
+  s->options = svn_hash__make(cfg->pool);
+
   svn_hash_sets(cfg->sections, hash_key, s);
 
   return s;
@@ -1202,7 +1203,7 @@ svn_config_copy_config(apr_hash_t **cfg_hash,
 {
   apr_hash_index_t *cidx;
 
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
   for (cidx = apr_hash_first(pool, src_hash);
        cidx != NULL;
        cidx = apr_hash_next(cidx))
