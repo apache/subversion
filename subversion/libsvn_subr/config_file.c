@@ -75,6 +75,7 @@ typedef struct parse_context_t
   svn_stringbuf_t *section;
   svn_stringbuf_t *option;
   svn_stringbuf_t *value;
+  svn_stringbuf_t *line_read;
 
   /* Parser buffer for getc() to avoid call overhead into several libraries
      for every character */
@@ -264,6 +265,57 @@ parser_ungetc(parse_context_t *ctx, int c)
   return SVN_NO_ERROR;
 }
 
+/* Read from CTX to the end of the line (or file) and write the data
+   into LINE.  Previous contents of *LINE will be overwritten.
+   Returns the char that ended the line in *C; the char is either
+   EOF or newline. */
+static svn_error_t *
+parser_get_line(parse_context_t *ctx, svn_stringbuf_t *line, int *c)
+{
+  int ch;
+  svn_stringbuf_setempty(line);
+
+  /* Loop until EOF of newline. There is one extra iteration per
+   * parser buffer refill.  The initial parser_getc() also ensures
+   * that the unget buffer is emptied. */
+  SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != '\n' && ch != EOF)
+    {
+      const char *start, *newline;
+
+      /* Save the char we just read. */
+      svn_stringbuf_appendbyte(line, ch);
+
+      /* Scan the parser buffer for NL. */
+      start = ctx->parser_buffer + ctx->buffer_pos;
+      newline = memchr(start, '\n', ctx->buffer_size - ctx->buffer_pos);
+      if (newline)
+        {
+          /* NL found before the end of the of the buffer. */
+          svn_stringbuf_appendbytes(line, start, newline - start);
+          ch = '\n';
+          ctx->buffer_pos = newline - ctx->parser_buffer + 1;
+          break;
+        }
+      else
+        {
+          /* Hit the end of the buffer.  This may be either due to
+           * buffer size or EOF.  In any case, all (remaining) current
+           * buffer data is part of the line to read. */
+          const char *end = ctx->parser_buffer + ctx->buffer_size;
+          ctx->buffer_pos = ctx->buffer_size;
+
+          svn_stringbuf_appendbytes(line, start, end - start);
+        }
+
+      /* refill buffer, check for EOF */
+      SVN_ERR(parser_getc_plain(ctx, &ch));
+    }
+
+  *c = ch;
+  return SVN_NO_ERROR;
+}
+
 /* Eat chars from STREAM until encounter non-whitespace, newline, or EOF.
    Set *PCOUNT to the number of characters eaten, not counting the
    last one, and return the last char read (the one that caused the
@@ -346,24 +398,16 @@ skip_bom(parse_context_t *ctx)
   return SVN_NO_ERROR;
 }
 
-/* Parse a single option value */
+/* Parse continuation lines of single option value if they exist.  Append
+ * their contents, including *PCH, to CTX->VALUE.  Return the first char
+ * of the next line or EOF in *PCH. */
 static svn_error_t *
-parse_value(int *pch, parse_context_t *ctx)
+parse_value_continuation_lines(int *pch, parse_context_t *ctx)
 {
   svn_boolean_t end_of_val = FALSE;
   svn_boolean_t stop;
-  int ch;
+  int ch = *pch;
 
-  /* Read the first line of the value */
-  svn_stringbuf_setempty(ctx->value);
-  SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n')
-    /* last ch seen was ':' or '=' in parse_option. */
-    {
-      const char char_from_int = (char)ch;
-      svn_stringbuf_appendbyte(ctx->value, char_from_int);
-      SVN_ERR(parser_getc(ctx, &ch));
-    }
   /* Leading and trailing whitespace is ignored. */
   svn_stringbuf_strip_whitespace(ctx->value);
 
@@ -413,16 +457,14 @@ parse_value(int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
-                  svn_stringbuf_appendbyte(ctx->value, ' ');
+                  SVN_ERR(parser_get_line(ctx, ctx->line_read, &ch));
 
-                  while (ch != EOF && ch != '\n')
-                    {
-                      const char char_from_int = (char)ch;
-                      svn_stringbuf_appendbyte(ctx->value, char_from_int);
-                      SVN_ERR(parser_getc(ctx, &ch));
-                    }
                   /* Trailing whitespace is ignored. */
-                  svn_stringbuf_strip_whitespace(ctx->value);
+                  svn_stringbuf_strip_whitespace(ctx->line_read);
+
+                  svn_stringbuf_appendbyte(ctx->value, ' ');
+                  svn_stringbuf_appendbytes(ctx->value, ctx->line_read->data,
+                                            ctx->line_read->len);
                 }
             }
         }
@@ -439,17 +481,33 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
+  char *equals, *separator;
 
-  svn_stringbuf_setempty(ctx->option);
-  ch = *pch;   /* Yes, the first char is relevant. */
-  while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
+  /* Read the first line. */
+  parser_ungetc(ctx, *pch); /* Yes, the first char is relevant. */
+  SVN_ERR(parser_get_line(ctx, ctx->line_read, &ch));
+
+  /* Extract the option name from it. */
+  equals = strchr(ctx->line_read->data, '=');
+  if (equals)
     {
-      const char char_from_int = (char)ch;
-      svn_stringbuf_appendbyte(ctx->option, char_from_int);
-      SVN_ERR(parser_getc(ctx, &ch));
+      /* Efficiently look for a colon separator prior to the equals sign.
+       * Since there is no strnchr, we limit the search by temporarily
+       * limiting the string. */
+      char *colon;
+      *equals = 0;
+      colon = strchr(ctx->line_read->data, ':');
+      *equals = '=';
+
+      separator = colon ? colon : equals;
+    }
+  else
+    {
+      /* No '=' separator so far.  Look for colon. */
+      separator = strchr(ctx->line_read->data, ':');
     }
 
-  if (ch != ':' && ch != '=')
+  if (!separator)
     {
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
@@ -459,8 +517,22 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *scratch_pool)
   else
     {
       /* Whitespace around the name separator is ignored. */
-      svn_stringbuf_strip_whitespace(ctx->option);
-      err = parse_value(&ch, ctx);
+      const char *end = separator;
+      while (svn_ctype_isspace(*--end))
+        ;
+      while (svn_ctype_isspace(*++separator))
+        ;
+
+      /* Extract the option.  It can't contain whitespace chars. */
+      svn_stringbuf_setempty(ctx->option);
+      svn_stringbuf_appendbytes(ctx->option, ctx->line_read->data,
+                                end + 1 - ctx->line_read->data);
+
+      /* Extract the first line of the value. */
+      end = ctx->line_read->data + ctx->line_read->len;
+      svn_stringbuf_setempty(ctx->value);
+      svn_stringbuf_appendbytes(ctx->value, separator, end - separator);
+      err = parse_value_continuation_lines(&ch, ctx);
     }
 
   *pch = ch;
@@ -482,17 +554,12 @@ parse_section_name(int *pch, parse_context_t *ctx,
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
+  char *terminal;
 
-  svn_stringbuf_setempty(ctx->section);
-  SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != ']' && ch != '\n')
-    {
-      const char char_from_int = (char)ch;
-      svn_stringbuf_appendbyte(ctx->section, char_from_int);
-      SVN_ERR(parser_getc(ctx, &ch));
-    }
+  SVN_ERR(parser_get_line(ctx, ctx->section, &ch));
+  terminal = strchr(ctx->section->data, ']');
 
-  if (ch != ']')
+  if (!terminal)
     {
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
@@ -502,9 +569,8 @@ parse_section_name(int *pch, parse_context_t *ctx,
   else
     {
       /* Everything from the ']' to the end of the line is ignored. */
-      SVN_ERR(skip_to_eoln(ctx, &ch));
-      if (ch != EOF)
-        ++ctx->line;
+      *terminal = 0;
+      ctx->section->len = terminal - ctx->section->data;
     }
 
   *pch = ch;
@@ -700,6 +766,7 @@ svn_config__parse_stream(svn_stream_t *stream,
   ctx->section = svn_stringbuf_create_empty(scratch_pool);
   ctx->option = svn_stringbuf_create_empty(scratch_pool);
   ctx->value = svn_stringbuf_create_empty(scratch_pool);
+  ctx->line_read = svn_stringbuf_create_empty(scratch_pool);
   ctx->buffer_pos = 0;
   ctx->buffer_size = 0;
 
