@@ -1743,8 +1743,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          svn_fs_dirent_t *fsent = svn__apr_hash_index_val(hi);
+          const char *name = apr_hash_this_key(hi);
+          svn_fs_dirent_t *fsent = apr_hash_this_val(hi);
           const char *file_path;
 
           /* The fields in the entry tuple.  */
@@ -2100,8 +2100,8 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      svn_mergeinfo_t value = apr_hash_this_val(hi);
       svn_string_t *mergeinfo_string;
 
       svn_pool_clear(iterpool);
@@ -2160,8 +2160,8 @@ static svn_error_t *log_receiver(void *baton,
       for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
                                                         h = apr_hash_next(h))
         {
-          const char *path = svn__apr_hash_index_key(h);
-          svn_log_changed_path2_t *change = svn__apr_hash_index_val(h);
+          const char *path = apr_hash_this_key(h);
+          svn_log_changed_path2_t *change = apr_hash_this_val(h);
 
           SVN_ERR(svn_ra_svn__write_data_log_changed_path(
                       conn, pool,
@@ -2446,8 +2446,8 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           for (iter = apr_hash_first(pool, fs_locations); iter;
               iter = apr_hash_next(iter))
             {
-              const svn_revnum_t *iter_key = svn__apr_hash_index_key(iter);
-              const char *iter_value = svn__apr_hash_index_val(iter);
+              const svn_revnum_t *iter_key = apr_hash_this_key(iter);
+              const char *iter_value = apr_hash_this_val(iter);
 
               SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "rc",
                                               *iter_key, iter_value));
@@ -2743,7 +2743,7 @@ clear_lock_result_hash(apr_hash_t *results,
 
   for (hi = apr_hash_first(scratch_pool, results); hi; hi = apr_hash_next(hi))
     {
-      struct lock_result_t *result = svn__apr_hash_index_val(hi);
+      struct lock_result_t *result = apr_hash_this_val(hi);
       svn_error_clear(result->err);
     }
 }
@@ -2812,7 +2812,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *full_path = svn__apr_hash_index_key(hi);
+      const char *full_path = apr_hash_this_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -2990,7 +2990,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *full_path = svn__apr_hash_index_key(hi);
+      const char *full_path = apr_hash_this_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -3145,7 +3145,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      svn_lock_t *l = svn__apr_hash_index_val(hi);
+      svn_lock_t *l = apr_hash_this_val(hi);
 
       SVN_ERR(write_lock(conn, pool, l));
     }

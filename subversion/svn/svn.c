@@ -2532,7 +2532,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       for (hi = apr_hash_first(pool, opt_state.revprop_table);
            hi; hi = apr_hash_next(hi))
         {
-          SVN_ERR(svn_cl__check_svn_prop_name(svn__apr_hash_index_key(hi),
+          SVN_ERR(svn_cl__check_svn_prop_name(apr_hash_this_key(hi),
                                               TRUE, svn_cl__prop_use_use,
                                               pool));
         }

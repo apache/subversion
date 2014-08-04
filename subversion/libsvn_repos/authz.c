@@ -245,7 +245,7 @@ get_memberships(svn_config_t *config,
    * We start at the user / decorated alias names. */
   to_follow = apr_array_make(scratch_pool, 16, sizeof(const char *));
   for (hi = apr_hash_first(scratch_pool, result); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(to_follow, const char *) = svn__apr_hash_index_key(hi);
+    APR_ARRAY_PUSH(to_follow, const char *) = apr_hash_this_key(hi);
 
   /* Iteratively add group memberships. */
   for (i = 0; i < to_follow->nelts; ++i)
@@ -860,8 +860,7 @@ finalize_tree(node_t *parent,
       for (hi = apr_hash_first(scratch_pool, node->sub_nodes);
            hi;
            hi = apr_hash_next(hi))
-        finalize_tree(node, access, svn__apr_hash_index_val(hi),
-                      scratch_pool);
+        finalize_tree(node, access, apr_hash_this_val(hi), scratch_pool);
     }
 
   /* Do the same thing for all other sub-nodes as well. */

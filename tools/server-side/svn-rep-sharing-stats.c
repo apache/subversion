@@ -282,8 +282,8 @@ process_one_revision(svn_fs_t *fs,
 
       node_revision_t *node_rev;
 
-      path = svn__apr_hash_index_key(hi);
-      change = svn__apr_hash_index_val(hi);
+      path = apr_hash_this_key(hi);
+      change = apr_hash_this_val(hi);
       if (! quiet)
         SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                                     "processing r%ld:%s\n", revnum, path));
@@ -341,7 +341,7 @@ pretty_print(const char *name,
 
       SVN_ERR(cancel_func(NULL));
 
-      value = svn__apr_hash_index_val(hi);
+      value = apr_hash_this_val(hi);
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
                                  svn_checksum_to_cstring_display(

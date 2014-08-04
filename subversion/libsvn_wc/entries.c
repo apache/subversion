@@ -346,7 +346,7 @@ write_tree_conflicts(const char **conflict_data,
     {
       svn_skel_t *c_skel;
 
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
+      SVN_ERR(svn_wc__serialize_conflict(&c_skel, apr_hash_this_val(hi),
                                          pool, pool));
       svn_skel__prepend(c_skel, skel);
     }
@@ -1342,7 +1342,7 @@ prune_deleted(apr_hash_t **entries_pruned,
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden,
-                                      svn__apr_hash_index_val(hi)));
+                                      apr_hash_this_val(hi)));
       if (hidden)
         break;
     }
@@ -1360,8 +1360,8 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key = svn__apr_hash_index_key(hi);
-      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const void *key = apr_hash_this_key(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
@@ -2357,9 +2357,9 @@ write_actual_only_entries(apr_hash_t *tree_conflicts,
 
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
       actual_node->wc_id = wc_id;
-      actual_node->local_relpath = svn__apr_hash_index_key(hi);
+      actual_node->local_relpath = apr_hash_this_key(hi);
       actual_node->parent_relpath = parent_relpath;
-      actual_node->tree_conflict_data = svn__apr_hash_index_val(hi);
+      actual_node->tree_conflict_data = apr_hash_this_val(hi);
 
       SVN_ERR(insert_actual_node(sdb, db, wri_abspath, actual_node,
                                  scratch_pool));
@@ -2417,8 +2417,8 @@ svn_wc__write_upgraded_entries(void **dir_baton,
   for (hi = apr_hash_first(scratch_pool, entries); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_wc_entry_t *this_entry = apr_hash_this_val(hi);
       const char *child_abspath, *child_relpath;
       svn_wc__text_base_info_t *text_base_info
         = svn_hash_gets(text_bases_info, name);
@@ -2572,8 +2572,8 @@ walker_helper(const char *dirpath,
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_wc_entry_t *current_entry = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_wc_entry_t *current_entry = apr_hash_this_val(hi);
       const char *entrypath;
       const char *entry_abspath;
       svn_boolean_t hidden;

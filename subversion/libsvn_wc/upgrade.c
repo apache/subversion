@@ -193,7 +193,7 @@ read_many_wcprops(apr_hash_t **all_wcprops,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
+      const char *name = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
@@ -293,15 +293,15 @@ get_versioned_subdirs(apr_array_header_t **children,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
       const char *child_abspath;
       svn_boolean_t hidden;
 
       /* skip "this dir"  */
       if (*name == '\0')
         {
-          this_dir = svn__apr_hash_index_val(hi);
+          this_dir = apr_hash_this_val(hi);
           continue;
         }
       else if (entry->kind != svn_node_dir)
@@ -612,13 +612,13 @@ ensure_repos_info(svn_wc_entry_t *entry,
       for (hi = apr_hash_first(scratch_pool, repos_cache);
            hi; hi = apr_hash_next(hi))
         {
-          if (svn_uri__is_ancestor(svn__apr_hash_index_key(hi), entry->url))
+          if (svn_uri__is_ancestor(apr_hash_this_key(hi), entry->url))
             {
               if (!entry->repos)
-                entry->repos = svn__apr_hash_index_key(hi);
+                entry->repos = apr_hash_this_key(hi);
 
               if (!entry->uuid)
-                entry->uuid = svn__apr_hash_index_val(hi);
+                entry->uuid = apr_hash_this_val(hi);
 
               return SVN_NO_ERROR;
             }
@@ -727,8 +727,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const svn_wc_conflict_description3_t *conflict =
-          svn__apr_hash_index_val(hi);
+      const svn_wc_conflict_description3_t *conflict = apr_hash_this_val(hi);
       const char *conflict_relpath;
       const char *conflict_data;
       svn_sqlite__stmt_t *stmt;
@@ -1017,7 +1016,7 @@ migrate_text_bases(apr_hash_t **text_bases_info,
   for (hi = apr_hash_first(scratch_pool, dirents); hi;
        hi = apr_hash_next(hi))
     {
-      const char *text_base_basename = svn__apr_hash_index_key(hi);
+      const char *text_base_basename = apr_hash_this_key(hi);
       svn_checksum_t *md5_checksum;
       svn_checksum_t *sha1_checksum;
 

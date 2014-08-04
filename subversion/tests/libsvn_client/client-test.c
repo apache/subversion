@@ -31,7 +31,7 @@
 #include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
-#include "svn_client_mtcc.h"
+#include "private/svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
 #include "private/svn_wc_private.h"
@@ -776,7 +776,7 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 {
   const char *repos_url;
   svn_client_ctx_t *ctx;
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   apr_array_header_t *results;
   svn_opt_revision_t peg_rev;
   svn_opt_revision_t head_rev;
@@ -789,9 +789,9 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_copy("A", 1, "AA", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_copy("A", 1, "AA", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_commit(NULL, NULL, NULL, mtcc, pool));
 
   SVN_ERR(svn_client_suggest_merge_sources(
                     &results,
@@ -912,7 +912,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   const char *local_path;
   apr_file_t *local_file;
   svn_client_ctx_t *ctx;
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_opt_revision_t rev;
   svn_revnum_t result_rev;
   svn_string_t *contents = svn_string_create("modified\n", pool);
@@ -931,23 +931,23 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   /* Make some modifications in the repository, creating revision 2. */
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
   SVN_ERR(svn_stream_seek(contentstream, start));
-  SVN_ERR(svn_client_mtcc_add_add_file("A/epsilon", contentstream, NULL,
-                                       mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_add_file("A/epsilon", contentstream, NULL,
+                                        mtcc, pool));
   SVN_ERR(svn_stream_seek(contentstream, start));
-  SVN_ERR(svn_client_mtcc_add_update_file("A/mu",
-                                          contentstream, NULL, NULL, NULL,
-                                          mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_update_file("A/mu",
+                                           contentstream, NULL, NULL, NULL,
+                                           mtcc, pool));
   SVN_ERR(svn_stream_seek(contentstream, start));
-  SVN_ERR(svn_client_mtcc_add_add_file("A/D/epsilon", contentstream, NULL,
-                                       mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_add_file("A/D/epsilon", contentstream, NULL,
+                                        mtcc, pool));
   SVN_ERR(svn_stream_seek(contentstream, start));
-  SVN_ERR(svn_client_mtcc_add_update_file("A/B/lambda",
-                                          contentstream, NULL, NULL, NULL,
-                                          mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_delete("A/C", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_update_file("A/B/lambda",
+                                           contentstream, NULL, NULL, NULL,
+                                           mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("A/C", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_commit(NULL, NULL, NULL, mtcc, pool));
 
   /* Check out a sparse root @r1 of the repository */
   wc_path = svn_test_data_path("test-remote-only-status-wc", pool);

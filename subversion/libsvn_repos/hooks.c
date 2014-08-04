@@ -184,8 +184,8 @@ env_from_env_hash(apr_hash_t *env_hash,
   for (hi = apr_hash_first(scratch_pool, env_hash); hi; hi = apr_hash_next(hi))
     {
       *envp = apr_psprintf(result_pool, "%s=%s",
-                           (const char *)svn__apr_hash_index_key(hi),
-                           (const char *)svn__apr_hash_index_val(hi));
+                           (const char *)apr_hash_this_key(hi),
+                           (const char *)apr_hash_this_val(hi));
       envp++;
     }
   *envp = NULL;
@@ -519,8 +519,8 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
   for (hi = apr_hash_first(pool, lock_tokens); hi;
        hi = apr_hash_next(hi))
     {
-      const char *token = svn__apr_hash_index_key(hi);
-      const char *path = svn__apr_hash_index_val(hi);
+      const char *token = apr_hash_this_key(hi);
+      const char *path = apr_hash_this_val(hi);
 
       svn_stringbuf_appendstr(lock_str,
         svn_stringbuf_createf(pool, "%s|%s\n",

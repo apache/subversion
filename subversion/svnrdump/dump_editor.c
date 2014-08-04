@@ -794,7 +794,7 @@ close_directory(void *dir_baton,
   for (hi = apr_hash_first(pool, db->deleted_entries); hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
 
       SVN_ERR(dump_node(db->eb, path, NULL, NULL, svn_node_action_delete,
                         FALSE, NULL, SVN_INVALID_REVNUM, pool));
