@@ -41,7 +41,7 @@ extern "C" {
  *   Authz and global group file parsing
  */
 
-/* Number of (user, respoitory) combinations per authz for which we can
+/* Number of (user, repository) combinations per authz for which we can
  * cache the corresponding filtered path rule trees.
  *
  * Since authz instance are per connection and there is usually only one
@@ -94,7 +94,7 @@ typedef struct svn_authz_tng_t
   authz_user_rules_t *user_rules[AUTHZ_FILTERED_CACHE_SIZE];
 
   /* The pool from which all the parsed authz data is allocated.
-     This is hte RESULT_POOL passed to svn_authz__tng_parse.
+     This is the RESULT_POOL passed to svn_authz__tng_parse.
 
      It's a good idea to dedicate a pool for the authz structure, so
      that the whole authz representation can be deallocated by
@@ -112,7 +112,7 @@ typedef struct authz_acl_t
      matches. */
   apr_int64_t sequence_number;
 
-  /* The reposttory name from the rule. This will be empty string if a
+  /* The repository name from the rule. This will be empty string if a
      the rule did not name a repository. */
   const char *repos;
 
@@ -122,11 +122,11 @@ typedef struct authz_acl_t
   /* TRUE if RULE contains wildcards. */
   svn_boolean_t glob;
 
-  /* Access rigts for anonymous users */
+  /* Access rights for anonymous users */
   svn_boolean_t has_anon_access;
   svn_repos_authz_access_t anon_access;
 
-  /* Access rigts for authenticated users */
+  /* Access rights for authenticated users */
   svn_boolean_t has_authn_access;
   svn_repos_authz_access_t authn_access;
 
