@@ -1,6 +1,6 @@
 [/]
-$anonymous = r
-$authenticated = rw
+~$anonymous = rw
+~$authenticated = r
 
 [:glob:/]
 &x = r
@@ -11,9 +11,9 @@ luser = w
 @y = w
 
 [:glob:bloop:/]
+~@x = w
 luser = rw
 ~luser =
-~&x = w
 
 [aliases]
 x = luser
