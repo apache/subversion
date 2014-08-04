@@ -741,7 +741,7 @@ svn_stringbuf_replace_all(svn_stringbuf_t *str,
    * separated by REPLACEMENT. */
   for ( ; pos; pos = strstr(str->data + current, to_find), ++replacements)
     {
-      apr_size_t to_copy = pos - str->data - current;
+      to_copy = pos - str->data - current;
       svn_stringbuf_ensure(str, str->len + to_copy + replacement_len);
 
       if (to_copy)

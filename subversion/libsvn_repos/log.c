@@ -385,7 +385,6 @@ detect_changed(apr_hash_t **changed,
       apr_array_header_t *sorted;
       int i;
       apr_pool_t *scratch_pool = svn_pool_create(pool);
-      apr_pool_t *iterpool = svn_pool_create(pool);
 
       sorted = svn_sort__hash(changes, svn_sort_compare_items_lexically,
                               scratch_pool);
