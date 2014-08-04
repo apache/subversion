@@ -240,7 +240,7 @@ keep_only_regular_props(apr_hash_t *props,
 
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
+      const char *propname = apr_hash_this_key(hi);
 
       if (svn_property_kind2(propname) != svn_prop_regular_kind)
         svn_hash_sets(props, propname, NULL);

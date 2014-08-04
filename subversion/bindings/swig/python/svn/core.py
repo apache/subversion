@@ -316,7 +316,6 @@ def run_app(func, *args, **kw):
 # 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
 # 'apr_time_ansi_put'
 # 'run_app'
-# 'svn__apr_hash_index_key' 'svn__apr_hash_index_klen' 'svn__apr_hash_index_val'
 # 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
 # 'svn_tristate__from_word' 'svn_tristate__to_word'
 __all__ = filter(lambda s: (s.startswith('svn_')

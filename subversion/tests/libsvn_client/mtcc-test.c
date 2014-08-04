@@ -24,7 +24,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_client.h"
-#include "svn_client_mtcc.h"
+#include "private/svn_client_mtcc.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -57,7 +57,7 @@ cstr_stream(const char *data, apr_pool_t *result_pool)
 }
 
 static svn_error_t *
-verify_mtcc_commit(svn_client_mtcc_t *mtcc,
+verify_mtcc_commit(svn_client__mtcc_t *mtcc,
                    svn_revnum_t expected_rev,
                    apr_pool_t *pool)
 {
@@ -65,7 +65,7 @@ verify_mtcc_commit(svn_client_mtcc_t *mtcc,
   vcb.commit_info = NULL;
   vcb.result_pool = pool;
 
-  SVN_ERR(svn_client_mtcc_commit(NULL, verify_commit_callback, &vcb, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_commit(NULL, verify_commit_callback, &vcb, mtcc, pool));
 
   SVN_TEST_ASSERT(vcb.commit_info != NULL);
   SVN_TEST_ASSERT(vcb.commit_info->revision == expected_rev);
@@ -79,7 +79,7 @@ static svn_error_t *
 make_greek_tree(const char *repos_url,
                 apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   apr_pool_t *subpool;
   int i;
@@ -87,13 +87,13 @@ make_greek_tree(const char *repos_url,
   subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
 
   for (i = 0; svn_test__greek_tree_nodes[i].path; i++)
     {
       if (svn_test__greek_tree_nodes[i].contents)
         {
-          SVN_ERR(svn_client_mtcc_add_add_file(
+          SVN_ERR(svn_client__mtcc_add_add_file(
                                 svn_test__greek_tree_nodes[i].path,
                                 cstr_stream(
                                         svn_test__greek_tree_nodes[i].contents,
@@ -103,7 +103,7 @@ make_greek_tree(const char *repos_url,
         }
       else
         {
-          SVN_ERR(svn_client_mtcc_add_mkdir(
+          SVN_ERR(svn_client__mtcc_add_mkdir(
                                 svn_test__greek_tree_nodes[i].path,
                                 mtcc, subpool));
         }
@@ -119,7 +119,7 @@ static svn_error_t *
 test_mkdir(const svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -131,14 +131,14 @@ test_mkdir(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 0, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_mkdir("branches", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("trunk", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("branches/1.x", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("tags", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.0", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.1", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("branches", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("trunk", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("branches/1.x", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("tags", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("tags/1.0", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("tags/1.1", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 1, pool));
 
@@ -149,7 +149,7 @@ static svn_error_t *
 test_mkgreek(const svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -163,9 +163,9 @@ test_mkgreek(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
@@ -176,7 +176,7 @@ static svn_error_t *
 test_swap(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -190,11 +190,11 @@ test_swap(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_move("A/B", "B", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_move("A/D", "A/B", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_copy("A/B", 1, "A/D", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_move("A/B", "B", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_move("A/D", "A/B", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_copy("A/B", 1, "A/D", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
@@ -205,7 +205,7 @@ static svn_error_t *
 test_propset(const svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -219,55 +219,55 @@ test_propset(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_propset("iota", "key",
-                                      svn_string_create("val", pool), FALSE,
-                                      mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("A", "A-key",
-                                      svn_string_create("val-A", pool), FALSE,
-                                      mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("A/B", "B-key",
-                                      svn_string_create("val-B", pool), FALSE,
-                                      mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("iota", "key",
+                                       svn_string_create("val", pool), FALSE,
+                                       mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("A", "A-key",
+                                       svn_string_create("val-A", pool), FALSE,
+                                       mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/B", "B-key",
+                                       svn_string_create("val-B", pool), FALSE,
+                                       mtcc, pool));
 
   /* The repository ignores propdeletes of properties that aren't there,
      so this just works */
-  SVN_ERR(svn_client_mtcc_add_propset("A/D", "D-key", NULL, FALSE,
-                                      mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/D", "D-key", NULL, FALSE,
+                                       mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 2, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 2, ctx, pool, pool));
   SVN_TEST_ASSERT_ERROR(
-      svn_client_mtcc_add_propset("A", SVN_PROP_MIME_TYPE,
-                                  svn_string_create("text/plain", pool),
-                                  FALSE, mtcc, pool),
+      svn_client__mtcc_add_propset("A", SVN_PROP_MIME_TYPE,
+                                   svn_string_create("text/plain", pool),
+                                   FALSE, mtcc, pool),
       SVN_ERR_ILLEGAL_TARGET);
 
   SVN_TEST_ASSERT_ERROR(
-      svn_client_mtcc_add_propset("iota", SVN_PROP_IGNORE,
-                                  svn_string_create("iota", pool),
-                                  FALSE, mtcc, pool),
+      svn_client__mtcc_add_propset("iota", SVN_PROP_IGNORE,
+                                   svn_string_create("iota", pool),
+                                   FALSE, mtcc, pool),
       SVN_ERR_ILLEGAL_TARGET);
 
-  SVN_ERR(svn_client_mtcc_add_propset("iota", SVN_PROP_EOL_STYLE,
-                                      svn_string_create("LF", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("iota", SVN_PROP_EOL_STYLE,
+                                       svn_string_create("LF", pool),
+                                       FALSE, mtcc, pool));
 
-  SVN_ERR(svn_client_mtcc_add_add_file("ok", cstr_stream("line\nline\n", pool),
-                                       NULL, mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_add_file("bad", cstr_stream("line\nno\r\n", pool),
-                                       NULL, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_add_file("ok", cstr_stream("line\nline\n", pool),
+                                        NULL, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_add_file("bad", cstr_stream("line\nno\r\n", pool),
+                                        NULL, mtcc, pool));
 
-  SVN_ERR(svn_client_mtcc_add_propset("ok", SVN_PROP_EOL_STYLE,
-                                      svn_string_create("LF", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("ok", SVN_PROP_EOL_STYLE,
+                                       svn_string_create("LF", pool),
+                                       FALSE, mtcc, pool));
 
   SVN_TEST_ASSERT_ERROR(
-          svn_client_mtcc_add_propset("bad", SVN_PROP_EOL_STYLE,
-                                      svn_string_create("LF", pool),
-                                      FALSE, mtcc, pool),
+          svn_client__mtcc_add_propset("bad", SVN_PROP_EOL_STYLE,
+                                       svn_string_create("LF", pool),
+                                       FALSE, mtcc, pool),
           SVN_ERR_ILLEGAL_TARGET);
 
   SVN_ERR(verify_mtcc_commit(mtcc, 3, pool));
@@ -279,7 +279,7 @@ static svn_error_t *
 test_update_files(const svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -293,33 +293,33 @@ test_update_files(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   /* Update iota with knowledge of the old data */
-  SVN_ERR(svn_client_mtcc_add_update_file(svn_test__greek_tree_nodes[0].path,
-                                          cstr_stream("new-iota", pool),
-                                          NULL,
-                                          cstr_stream(
-                                            svn_test__greek_tree_nodes[0]
-                                                        .contents,
-                                            pool),
-                                          NULL,
-                                          mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_update_file(svn_test__greek_tree_nodes[0].path,
+                                           cstr_stream("new-iota", pool),
+                                           NULL,
+                                           cstr_stream(
+                                             svn_test__greek_tree_nodes[0]
+                                                         .contents,
+                                             pool),
+                                           NULL,
+                                           mtcc, pool));
 
-  SVN_ERR(svn_client_mtcc_add_update_file("A/mu",
-                                          cstr_stream("new-MU", pool),
-                                          NULL,
-                                          NULL, NULL,
-                                          mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_update_file("A/mu",
+                                           cstr_stream("new-MU", pool),
+                                           NULL,
+                                           NULL, NULL,
+                                           mtcc, pool));
 
   /* Set a property on the same node */
-  SVN_ERR(svn_client_mtcc_add_propset("A/mu", "mu-key",
-                                      svn_string_create("mu-A", pool), FALSE,
-                                      mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/mu", "mu-key",
+                                       svn_string_create("mu-A", pool), FALSE,
+                                       mtcc, pool));
   /* And some other node */
-  SVN_ERR(svn_client_mtcc_add_propset("A/B", "B-key",
-                                      svn_string_create("val-B", pool), FALSE,
-                                      mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/B", "B-key",
+                                       svn_string_create("val-B", pool), FALSE,
+                                       mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
   return SVN_NO_ERROR;
@@ -329,7 +329,7 @@ static svn_error_t *
 test_overwrite(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -343,17 +343,17 @@ test_overwrite(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_copy("A", 1, "AA", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_copy("A", 1, "AA", mtcc, pool));
 
-  SVN_TEST_ASSERT_ERROR(svn_client_mtcc_add_mkdir("AA/B", mtcc, pool),
+  SVN_TEST_ASSERT_ERROR(svn_client__mtcc_add_mkdir("AA/B", mtcc, pool),
                         SVN_ERR_FS_ALREADY_EXISTS);
 
-  SVN_TEST_ASSERT_ERROR(svn_client_mtcc_add_mkdir("AA/D/H/chi", mtcc, pool),
+  SVN_TEST_ASSERT_ERROR(svn_client__mtcc_add_mkdir("AA/D/H/chi", mtcc, pool),
                         SVN_ERR_FS_ALREADY_EXISTS);
 
-  SVN_ERR(svn_client_mtcc_add_mkdir("AA/BB", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("AA/BB", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
   return SVN_NO_ERROR;
@@ -363,7 +363,7 @@ static svn_error_t *
 test_anchoring(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -379,70 +379,70 @@ test_anchoring(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
 
   /* Update a file as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "iota",
-                                                             pool),
-                                 1, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_update_file("",
-                                          cstr_stream("new-iota", pool),
-                                          NULL, NULL, NULL,
-                                          mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("", "key",
-                                      svn_string_create("value", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "iota",
+                                                              pool),
+                                  1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_update_file("",
+                                           cstr_stream("new-iota", pool),
+                                           NULL, NULL, NULL,
+                                           mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("", "key",
+                                       svn_string_create("value", pool),
+                                       FALSE, mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
   /* Add a directory as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "BB",
-                                                             pool),
-                                 2, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "BB",
+                                                              pool),
+                                  2, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("", mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 3, pool));
 
   /* Add a file as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "new",
-                                                             pool),
-                                 3, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_add_file("", cstr_stream("new", pool), NULL,
-                                       mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "new",
+                                                              pool),
+                                  3, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_add_file("", cstr_stream("new", pool), NULL,
+                                        mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 4, pool));
 
   /* Delete as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "new",
-                                                             pool),
-                                 4, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_delete("", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "new",
+                                                              pool),
+                                  4, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("", mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 5, pool));
 
   /* Propset file as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "A/mu",
-                                                             pool),
-                                 5, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("", "key",
-                                      svn_string_create("val", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "A/mu",
+                                                              pool),
+                                  5, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("", "key",
+                                       svn_string_create("val", pool),
+                                       FALSE, mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 6, pool));
 
   /* Propset dir as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc,
-                                 svn_path_url_add_component2(repos_url, "A",
-                                                             pool),
-                                 6, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("", "key",
-                                      svn_string_create("val", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(repos_url, "A",
+                                                              pool),
+                                  6, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("", "key",
+                                       svn_string_create("val", pool),
+                                       FALSE, mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 7, pool));
 
   /* Propset reposroot as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 7, ctx, pool, pool));
-  SVN_ERR(svn_client_mtcc_add_propset("", "key",
-                                      svn_string_create("val", pool),
-                                      FALSE, mtcc, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 7, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_propset("", "key",
+                                       svn_string_create("val", pool),
+                                       FALSE, mtcc, pool));
   SVN_ERR(verify_mtcc_commit(mtcc, 8, pool));
 
   return SVN_NO_ERROR;
@@ -452,7 +452,7 @@ static svn_error_t *
 test_replace_tree(const svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -468,16 +468,16 @@ test_replace_tree(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
 
   /* Update a file as root operation */
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_add_delete("A", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_delete("iota", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("A", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("A/B", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("A/B/C", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("M", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("M/N", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("M/N/O", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("A", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("iota", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/B", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/B/C", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("M", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("M/N", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("M/N/O", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 

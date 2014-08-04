@@ -269,8 +269,8 @@ svn_client_relocate2(const char *wcroot_dir,
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      const char *this_abspath = svn__apr_hash_index_key(hi);
-      const char *value = svn__apr_hash_index_val(hi);
+      const char *this_abspath = apr_hash_this_key(hi);
+      const char *value = apr_hash_this_val(hi);
       apr_array_header_t *ext_desc;
 
       svn_pool_clear(iterpool);

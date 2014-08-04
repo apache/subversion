@@ -210,8 +210,8 @@ write_digest_file(apr_hash_t *children,
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
           svn_stringbuf_appendbytes(children_list,
-                                    svn__apr_hash_index_key(hi),
-                                    svn__apr_hash_index_klen(hi));
+                                    apr_hash_this_key(hi),
+                                    apr_hash_this_key_len(hi));
           svn_stringbuf_appendbyte(children_list, '\n');
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
@@ -609,7 +609,7 @@ walk_digest_files(const char *fs_path,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
     {
-      const char *digest = svn__apr_hash_index_key(hi);
+      const char *digest = apr_hash_this_key(hi);
       svn_pool_clear(subpool);
       SVN_ERR(walk_digest_files
               (fs_path, digest_path_from_digest(fs_path, digest, subpool),
@@ -1223,8 +1223,8 @@ svn_fs_fs__lock(svn_fs_t *fs,
      one, choosing one with a token if possible. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
       const svn_fs_lock_target_t *other;
 
       path = svn_fspath__canonicalize(path, result_pool);
@@ -1313,8 +1313,8 @@ svn_fs_fs__unlock(svn_fs_t *fs,
 
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
       const char *other;
 
       path = svn_fspath__canonicalize(path, result_pool);

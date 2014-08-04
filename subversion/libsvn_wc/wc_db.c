@@ -1339,7 +1339,7 @@ flush_entries(svn_wc__db_wcroot_t *wcroot,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *item_abspath = svn__apr_hash_index_key(hi);
+          const char *item_abspath = apr_hash_this_key(hi);
 
           if ((depth == svn_depth_files || depth == svn_depth_immediates) &&
               is_immediate_child_path(local_abspath, item_abspath))
@@ -10235,7 +10235,7 @@ filter_unwanted_props(apr_hash_t *prop_hash,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *ipropname = svn__apr_hash_index_key(hi);
+      const char *ipropname = apr_hash_this_key(hi);
 
       if (strcmp(ipropname, propname) != 0)
         svn_hash_sets(prop_hash, ipropname, NULL);
@@ -10559,7 +10559,7 @@ get_children_with_cached_iprops(apr_hash_t **iprop_paths,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *child_abspath = svn__apr_hash_index_key(hi);
+          const char *child_abspath = apr_hash_this_key(hi);
           const char *child_relpath;
           svn_node_kind_t child_kind;
 
@@ -11092,8 +11092,8 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
-      const char *src_relpath = svn__apr_hash_index_key(hi);
-      const char *to_relpath = svn__apr_hash_index_val(hi);
+      const char *src_relpath = apr_hash_this_key(hi);
+      const char *to_relpath = apr_hash_this_val(hi);
       const char *new_repos_relpath;
       int to_op_depth = relpath_depth(to_relpath);
       int affected;
@@ -11673,14 +11673,14 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                  scratch_pool, iterpool));
   for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
-      const char *child_basename = svn__apr_hash_index_key(hi);
+      const char *child_basename = apr_hash_this_key(hi);
       const struct svn_wc__db_base_info_t *child_info;
       const char *child_local_relpath;
       const char *child_repos_relpath = NULL;
 
       svn_pool_clear(iterpool);
 
-      child_info = svn__apr_hash_index_val(hi);
+      child_info = apr_hash_this_val(hi);
 
       if (child_info->update_root && child_info->kind == svn_node_file)
         continue; /* Skip file externals */
@@ -12779,8 +12779,8 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      apr_hash_t *props = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      apr_hash_t *props = apr_hash_this_val(hi);
       const char *local_relpath;
 
       svn_pool_clear(iterpool);
@@ -13151,8 +13151,8 @@ wq_record(svn_wc__db_wcroot_t *wcroot,
   for (hi = apr_hash_first(scratch_pool, record_map); hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      const svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       const char *local_relpath = svn_dirent_skip_ancestor(wcroot->abspath,
                                                            local_abspath);
 
@@ -13365,7 +13365,7 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      const svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
 
       /* This is highly redundant, 'cause the same WCROOT will appear many
          times in dir_data. */

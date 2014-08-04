@@ -367,8 +367,8 @@ copy_versioned_dir(svn_wc__db_t *db,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      child_name = svn__apr_hash_index_key(hi);
-      info = svn__apr_hash_index_val(hi);
+      child_name = apr_hash_this_key(hi);
+      info = apr_hash_this_val(hi);
       child_src_abspath = svn_dirent_join(src_abspath, child_name, iterpool);
       child_dst_abspath = svn_dirent_join(dst_abspath, child_name, iterpool);
 
@@ -468,7 +468,7 @@ copy_versioned_dir(svn_wc__db_t *db,
       for (hi = apr_hash_first(scratch_pool, disk_children); hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
+          const char *name = apr_hash_this_key(hi);
           const char *unver_src_abspath, *unver_dst_abspath;
           svn_skel_t *work_item;
 
@@ -950,8 +950,8 @@ remove_all_conflict_markers(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      struct svn_wc__db_info_t *info = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      struct svn_wc__db_info_t *info = apr_hash_this_val(hi);
 
       if (info->conflicted)
         {

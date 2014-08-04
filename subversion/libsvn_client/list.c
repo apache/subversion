@@ -426,8 +426,8 @@ list_externals(apr_hash_t *externals,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *externals_parent_url = svn__apr_hash_index_key(hi);
-      svn_string_t *externals_desc = svn__apr_hash_index_val(hi);
+      const char *externals_parent_url = apr_hash_this_key(hi);
+      svn_string_t *externals_desc = apr_hash_this_val(hi);
       apr_array_header_t *external_items;
 
       svn_pool_clear(iterpool);

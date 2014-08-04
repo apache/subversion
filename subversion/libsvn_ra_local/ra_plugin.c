@@ -416,8 +416,8 @@ deltify_etc(const svn_commit_info_t *commit_info,
       for (hi = apr_hash_first(subpool, deb->lock_tokens); hi;
            hi = apr_hash_next(hi))
         {
-          const void *relpath = svn__apr_hash_index_key(hi);
-          const char *token = svn__apr_hash_index_val(hi);
+          const void *relpath = apr_hash_this_key(hi);
+          const char *token = apr_hash_this_val(hi);
           const char *fspath;
 
           fspath = svn_fspath__join(deb->fspath_base, relpath, subpool);
@@ -475,8 +475,8 @@ apply_lock_tokens(svn_fs_t *fs,
           for (hi = apr_hash_first(scratch_pool, lock_tokens); hi;
                hi = apr_hash_next(hi))
             {
-              const void *relpath = svn__apr_hash_index_key(hi);
-              const char *token = svn__apr_hash_index_val(hi);
+              const void *relpath = apr_hash_this_key(hi);
+              const char *token = apr_hash_this_val(hi);
               const char *fspath;
 
               /* The path needs to live as long as ACCESS_CTX.  */
@@ -1424,9 +1424,8 @@ svn_ra_local__lock(svn_ra_session_t *session,
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       const char *abs_path = svn_fspath__join(sess->fs_path->data,
-                                              svn__apr_hash_index_key(hi),
-                                              pool);
-      svn_revnum_t current_rev = *(svn_revnum_t *)svn__apr_hash_index_val(hi);
+                                              apr_hash_this_key(hi), pool);
+      svn_revnum_t current_rev = *(svn_revnum_t *)apr_hash_this_val(hi);
       svn_fs_lock_target_t *target = svn_fs_lock_target_create(NULL,
                                                                current_rev,
                                                                pool);
@@ -1475,9 +1474,8 @@ svn_ra_local__unlock(svn_ra_session_t *session,
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const char *abs_path = svn_fspath__join(sess->fs_path->data,
-                                              svn__apr_hash_index_key(hi),
-                                              pool);
-      const char *token = svn__apr_hash_index_val(hi);
+                                              apr_hash_this_key(hi), pool);
+      const char *token = apr_hash_this_val(hi);
 
       svn_hash_sets(targets, abs_path, token);
     }

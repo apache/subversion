@@ -147,14 +147,14 @@ match_search_pattern(const char *search_pattern,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path = svn__apr_hash_index_key(hi);
+          const char *path = apr_hash_this_key(hi);
           svn_log_changed_path2_t *log_item;
 
           if (apr_fnmatch(pattern, path, flags) == APR_SUCCESS)
             return TRUE;
 
           /* Match copy-from paths, too. */
-          log_item = svn__apr_hash_index_val(hi);
+          log_item = apr_hash_this_val(hi);
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev)
               && apr_fnmatch(pattern,
@@ -821,8 +821,8 @@ svn_cl__log(apr_getopt_t *os,
                hi != NULL;
                hi = apr_hash_next(hi))
             {
-              const char *property = svn__apr_hash_index_key(hi);
-              svn_string_t *value = svn__apr_hash_index_val(hi);
+              const char *property = apr_hash_this_key(hi);
+              svn_string_t *value = apr_hash_this_val(hi);
 
               if (value && value->data[0] != '\0')
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
