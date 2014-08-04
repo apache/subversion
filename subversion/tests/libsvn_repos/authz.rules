@@ -11,9 +11,9 @@ luser = w
 @y = w
 
 [:glob:bloop:/]
+~luser =
 ~@x = w
 luser = rw
-~luser =
 
 [aliases]
 x = luser
