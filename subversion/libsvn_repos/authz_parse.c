@@ -705,16 +705,18 @@ merge_alias_ace(void *baton,
 
 
 /* Comparison function for sorting an array of ACEs.
-   Sorts group rules first and inverted rules last. */
+   Groups ACEs by name, putting inverted entries last.
+   This lets us use a binary search for the user name. */
 static int
 compare_aces(const void *left, const void *right)
 {
   const authz_ace_t *const a = left;
   const authz_ace_t *const b = right;
 
-  if (!a->inverted != !b->inverted)
+  const int cmp = strcmp(a->name, b->name);
+  if (cmp == 0 && !a->inverted != !b->inverted)
     return (a->inverted ? 1 : -1);
-  return strcmp(a->name, b->name);
+  return cmp;
 }
 
 
