@@ -7,9 +7,13 @@ https://wiki.apache.org/subversion/AuthzImprovements
 
 TODO:
 
-* implement an authz-specific constructor for the config parser
 * implement precedence rules
-* implement value-expansion mode in the config parser
+* calculate global access rules in svn_authz_tng_t
+* rewrite the filtered rules generator to use svn_authz_tng_t
+* rename svn_authz_tng_t to svn_authz_t
+* implement wildcard escaping in glob rules
+* expose the svn_string_t buffers in the config parser constructor
+  and use the known sizes when calling intern_string in authz_parse.c
 
 DONE:
 
@@ -24,3 +28,4 @@ DONE:
 * add support for prefix segment patterns ("/foo*/")
 * add support for suffix segment patterns ("/*foo/")
 * add support for arbitrary patterns ("/foo*bar*baz/" etc.)
+* implement an authz-specific constructor for the config parser
