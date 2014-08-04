@@ -30,8 +30,9 @@
 #include "svn_repos.h"
 
 #include "private/svn_fspath.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_config_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -703,6 +704,20 @@ merge_alias_ace(void *baton,
 }
 
 
+/* Comparison function for sorting an array of ACEs.
+   Sorts group rules first and inverted rules last. */
+static int
+compare_aces(const void *left, const void *right)
+{
+  const authz_ace_t *const a = left;
+  const authz_ace_t *const b = right;
+
+  if (!a->inverted != !b->inverted)
+    return (a->inverted ? 1 : -1);
+  return strcmp(a->name, b->name);
+}
+
+
 /* Hash iterator, inserts an ACE into the ACLs array. */
 static svn_error_t *
 array_insert_ace(void *baton,
@@ -745,11 +760,12 @@ expand_acl_callback(void *baton,
   SVN_ERR(svn_iter_apr_hash(NULL, pacl->aces,
                             array_insert_ace, pacl->acl.user_access,
                             scratch_pool));
+  svn_sort__array(pacl->acl.user_access, compare_aces);
+
+  /* TODO: Calculate global access rules. */
 
   /* And finally store the completed ACL into authz. */
   APR_ARRAY_PUSH(cb->authz->acls, authz_acl_t) = pacl->acl;
-
-  /* TODO: Calculate global access rules. */
 
   return SVN_NO_ERROR;
 }
