@@ -404,7 +404,6 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
 
             /* Parsed certificate data. */
             const char* subject = NULL;
-            const char* subject_cn = NULL;
             const char* issuer = NULL;
             const char* fingerprint = NULL;
             const apr_array_header_t* hostnames = NULL;
@@ -426,7 +425,6 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                 else
                   {
                     subject = svn_x509_certinfo_get_subject(certinfo);
-                    subject_cn = svn_x509_certinfo_get_subject_cn(certinfo);
                     issuer = svn_x509_certinfo_get_issuer(certinfo);
                     fingerprint = svn_checksum_to_cstring_display(
                         svn_x509_certinfo_get_digest(certinfo),
@@ -446,7 +444,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
             if (!match && m_subject_pattern)
               {
                 match = (match
-                         || (subject_cn
+                         || (subject
                              && !apr_fnmatch(m_subject_pattern, subject, 0)));
                 if (!match && hostnames)
                   match = (match || match_array(m_subject_pattern, hostnames));
