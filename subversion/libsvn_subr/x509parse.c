@@ -859,11 +859,10 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 /*
  * Store the name from dn in printable form into buf,
  * using scratch_pool for any temporary allocations.
- * If CN is not NULL, return any common name in CN
  */
 static void
-x509parse_dn_gets(svn_stringbuf_t *buf, svn_stringbuf_t *cn,
-                  const x509_name * dn, apr_pool_t *scratch_pool)
+x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
+                  apr_pool_t *scratch_pool)
 {
   const x509_name *name;
   const char *temp;
@@ -872,7 +871,6 @@ x509parse_dn_gets(svn_stringbuf_t *buf, svn_stringbuf_t *cn,
 
   while (name != NULL) {
     const svn_string_t *utf8_value;
-    svn_boolean_t return_cn = FALSE;
 
     if (name != dn)
       svn_stringbuf_appendcstr(buf, ", ");
@@ -881,8 +879,6 @@ x509parse_dn_gets(svn_stringbuf_t *buf, svn_stringbuf_t *cn,
       switch (name->oid.p[2]) {
       case X520_COMMON_NAME:
         svn_stringbuf_appendcstr(buf, "CN=");
-        if (cn)
-          return_cn = TRUE;
         break;
 
       case X520_COUNTRY:
@@ -926,11 +922,7 @@ x509parse_dn_gets(svn_stringbuf_t *buf, svn_stringbuf_t *cn,
 
     utf8_value = x509name_to_utf8_string(name, scratch_pool);
     if (utf8_value)
-      {
-        svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
-        if (return_cn)
-          svn_stringbuf_appendbytes(cn, utf8_value->data, utf8_value->len);
-      }
+      svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
     else
       /* this should never happen */
       svn_stringbuf_appendfill(buf, '?', 2);
@@ -1043,7 +1035,6 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
   x509_cert *crt;
   svn_x509_certinfo_t *ci;
   svn_stringbuf_t *namebuf;
-  svn_stringbuf_t *cnbuf;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
@@ -1179,14 +1170,12 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
 
   /* Get the subject name */
   namebuf = svn_stringbuf_create_empty(result_pool);
-  cnbuf = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(namebuf, cnbuf, &crt->subject, scratch_pool);
+  x509parse_dn_gets(namebuf, &crt->subject, scratch_pool);
   ci->subject = namebuf->data;
-  ci->subject_cn = (svn_stringbuf_isempty(cnbuf) ? NULL : cnbuf->data);
 
   /* Get the issuer name */
   namebuf = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(namebuf, NULL, &crt->issuer, scratch_pool);
+  x509parse_dn_gets(namebuf, &crt->issuer, scratch_pool);
   ci->issuer = namebuf->data;
 
   /* Copy the validity range */
