@@ -29,3 +29,4 @@ DONE:
 * add support for suffix segment patterns ("/*foo/")
 * add support for arbitrary patterns ("/foo*bar*baz/" etc.)
 * implement an authz-specific constructor for the config parser
+* implement access chek for (user, repository) against an ACL

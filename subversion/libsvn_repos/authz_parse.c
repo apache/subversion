@@ -330,7 +330,7 @@ rules_open_section(void *baton, const char *section)
      path first to make the parser more robust. */
   endp = strchr(rule, ':');
   if (!endp)
-    acl.acl.repos = "";
+    acl.acl.repos = AUTHZ_ANY_REPOSITORY;
   else
     {
       /* The rule contains a repository name. */
@@ -545,6 +545,7 @@ rules_add_value(void *baton, const char *section,
               ace->name = (aliased
                            ? apr_pstrdup(cb->parser_pool, name)
                            : intern_string(cb, name, -1));
+              ace->members = NULL;
               ace->inverted = inverted;
               ace->access = access;
 
@@ -704,21 +705,12 @@ merge_alias_ace(void *baton,
 }
 
 
-/* Comparison function for sorting an array of ACEs.
-   Groups ACEs by name, putting inverted entries last.
-   This lets us use a binary search for the user name. */
-static int
-compare_aces(const void *left, const void *right)
+/* Hash iteration baton for array_insert_ace. */
+typedef struct insert_ace_baton_t
 {
-  const authz_ace_t *const a = left;
-  const authz_ace_t *const b = right;
-
-  const int cmp = strcmp(a->name, b->name);
-  if (cmp == 0 && !a->inverted != !b->inverted)
-    return (a->inverted ? 1 : -1);
-  return cmp;
-}
-
+  apr_array_header_t *ace_array;
+  ctor_baton_t *cb;
+} insert_ace_baton_t;
 
 /* Hash iterator, inserts an ACE into the ACLs array. */
 static svn_error_t *
@@ -728,9 +720,22 @@ array_insert_ace(void *baton,
                  void *value,
                  apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *ace_array = baton;
+  insert_ace_baton_t *iab = baton;
   authz_ace_t *ace = value;
-  APR_ARRAY_PUSH(ace_array, authz_ace_t) = *ace;
+
+  /* Add group membership info to the ACE. */
+  if (*ace->name == '@')
+    {
+      SVN_ERR_ASSERT(ace->members == NULL);
+      ace->members = svn_hash_gets(iab->cb->authz->groups, ace->name);
+      if (!ace->members)
+        return svn_error_createf(
+            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+            _("Access entry refers to undefined group '%s'"),
+            ace->name);
+    }
+
+  APR_ARRAY_PUSH(iab->ace_array, authz_ace_t) = *ace;
   return SVN_NO_ERROR;
 }
 
@@ -759,10 +764,13 @@ expand_acl_callback(void *baton,
   pacl->acl.user_access =
     apr_array_make(cb->authz->pool, apr_hash_count(pacl->aces),
                    sizeof(authz_ace_t));
-  SVN_ERR(svn_iter_apr_hash(NULL, pacl->aces,
-                            array_insert_ace, pacl->acl.user_access,
-                            scratch_pool));
-  svn_sort__array(pacl->acl.user_access, compare_aces);
+  {
+    insert_ace_baton_t iab;
+    iab.ace_array = pacl->acl.user_access;
+    iab.cb = cb;
+    SVN_ERR(svn_iter_apr_hash(NULL, pacl->aces,
+                              array_insert_ace, &iab, scratch_pool));
+  }
 
   /* TODO: Calculate global access rules. */
 

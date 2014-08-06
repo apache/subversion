@@ -88,6 +88,10 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
   svn_authz_tng_t *authz;
   int i;
 
+  const char *check_user = "wunga";
+  const char *check_repo = "bloop";
+
+
   SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
   rules_path = svn_dirent_join(srcdir, "authz.rules", pool);
   groups_path = svn_dirent_join(srcdir, "authz.groups", pool);
@@ -102,17 +106,25 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
   groups = svn_stream_from_aprfile2(groups_file, FALSE, pool);
   SVN_ERR(svn_authz__tng_parse(&authz, rules, groups, pool, pool));
 
+  printf("Access check for ('%s', '%s')\n\n", check_user, check_repo);
+
   printf("[rules]\n");
   for (i = 0; i < authz->acls->nelts; ++i)
     {
       authz_acl_t *acl = &APR_ARRAY_IDX(authz->acls, i, authz_acl_t);
       const svn_repos_authz_access_t all_access =
         (acl->anon_access & acl->authn_access);
+      svn_repos_authz_access_t access;
+      svn_boolean_t has_access =
+        svn_authz__acl_get_access(&access, acl, check_user, check_repo);
       int j;
 
-      printf("   Sequence:   %ld\n"
+      printf("%s%s%s   Sequence:   %ld\n"
              "   Repository: [%s]\n"
              "   Rule:  %s[/%s]\n",
+             (has_access ? "Match = " : ""),
+             (has_access ? access_string(access) : ""),
+             (has_access ? "\n" : ""),
              (long)acl->sequence_number,
              acl->repos,
              (acl->glob ? "glob:" : "     "),
