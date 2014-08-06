@@ -632,8 +632,8 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
   for (hi = apr_hash_first(pool, *mergeinfo); hi; hi = apr_hash_next(hi))
     {
       int i;
-      const char *merge_source_path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *merge_source_path = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -862,8 +862,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                hi; hi = apr_hash_next(hi))
             {
               int j;
-              const char *source_path = svn__apr_hash_index_key(hi);
-              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+              const char *source_path = apr_hash_this_key(hi);
+              svn_rangelist_t *rangelist = apr_hash_this_val(hi);
               const char *merge_source_url;
               svn_rangelist_t *adjusted_rangelist =
                 apr_array_make(iterpool, 0, sizeof(svn_merge_range_t *));
@@ -1529,14 +1529,14 @@ handle_pending_notifications(merge_cmd_baton_t *merge_b,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *del_abspath = svn__apr_hash_index_key(hi);
+          const char *del_abspath = apr_hash_this_key(hi);
           svn_wc_notify_t *notify;
 
           notify = svn_wc_create_notify(del_abspath,
                                         svn_wc_notify_update_delete,
                                         scratch_pool);
           notify->kind = svn_node_kind_from_word(
-                                    svn__apr_hash_index_val(hi));
+                                    apr_hash_this_val(hi));
 
           (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
                                         notify, scratch_pool);
@@ -5145,8 +5145,8 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
      the WC with its on-disk mergeinfo. */
   for (hi = apr_hash_first(scratch_pool, merges); hi; hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *ranges = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      svn_rangelist_t *ranges = apr_hash_this_val(hi);
       svn_rangelist_t *rangelist;
       svn_error_t *err;
       const char *local_abspath_rel_to_target;
@@ -5297,7 +5297,7 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
   for (hi = apr_hash_first(scratch_pool, merge_b->skipped_abspaths); hi;
        hi = apr_hash_next(hi))
     {
-      const char *skipped_abspath = svn__apr_hash_index_key(hi);
+      const char *skipped_abspath = apr_hash_this_key(hi);
       svn_wc_notify_state_t obstruction_state;
 
       svn_pool_clear(iterpool);
@@ -6159,7 +6159,7 @@ pre_merge_status_cb(void *baton,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *missing_root_path = svn__apr_hash_index_key(hi);
+          const char *missing_root_path = apr_hash_this_key(hi);
 
           if (svn_dirent_is_ancestor(missing_root_path,
                                      local_abspath))
@@ -6217,8 +6217,8 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *wc_path = svn__apr_hash_index_key(hi);
-      svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
+      const char *wc_path = apr_hash_this_key(hi);
+      svn_string_t *mergeinfo_string = apr_hash_this_val(hi);
       svn_mergeinfo_t mergeinfo;
       svn_error_t *err;
 
@@ -6331,8 +6331,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *wc_path = svn__apr_hash_index_key(hi);
-          svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi);
+          const char *wc_path = apr_hash_this_key(hi);
+          svn_mergeinfo_t mergeinfo = apr_hash_this_val(hi);
           svn_client__merge_path_t *mergeinfo_child =
             svn_client__merge_path_create(wc_path, result_pool);
 
@@ -6400,7 +6400,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           svn_pool_clear(iterpool);
           svn_stringbuf_appendcstr(missing_subtree_err_buf,
                                    svn_dirent_local_style(
-                                     svn__apr_hash_index_key(hi), iterpool));
+                                     apr_hash_this_key(hi), iterpool));
           svn_stringbuf_appendcstr(missing_subtree_err_buf, "\n");
         }
 
@@ -6416,7 +6416,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-           const char *wc_path = svn__apr_hash_index_key(hi);
+           const char *wc_path = apr_hash_this_key(hi);
            svn_client__merge_path_t *child = get_child_with_mergeinfo(
              children_with_mergeinfo, wc_path);
 
@@ -6444,8 +6444,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi = apr_hash_next(hi))
         {
            svn_boolean_t new_shallow_child = FALSE;
-           const char *wc_path = svn__apr_hash_index_key(hi);
-           svn_depth_t *child_depth = svn__apr_hash_index_val(hi);
+           const char *wc_path = apr_hash_this_key(hi);
+           svn_depth_t *child_depth = apr_hash_this_val(hi);
            svn_client__merge_path_t *shallow_child = get_child_with_mergeinfo(
              children_with_mergeinfo, wc_path);
 
@@ -6499,7 +6499,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-           const char *wc_path = svn__apr_hash_index_key(hi);
+           const char *wc_path = apr_hash_this_key(hi);
            svn_client__merge_path_t *child = get_child_with_mergeinfo(
              children_with_mergeinfo, wc_path);
 
@@ -7755,7 +7755,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *abspath_with_new_mergeinfo = svn__apr_hash_index_key(hi);
+      const char *abspath_with_new_mergeinfo = apr_hash_this_key(hi);
       svn_mergeinfo_t path_inherited_mergeinfo;
       svn_mergeinfo_t path_explicit_mergeinfo;
       svn_client__merge_path_t *new_child;
@@ -7858,7 +7858,7 @@ path_is_subtree(const char *local_abspath,
       for (hi = apr_hash_first(pool, subtrees);
            hi; hi = apr_hash_next(hi))
         {
-          const char *path_touched_by_merge = svn__apr_hash_index_key(hi);
+          const char *path_touched_by_merge = apr_hash_this_key(hi);
           if (svn_dirent_is_ancestor(local_abspath, path_touched_by_merge))
             return TRUE;
         }
@@ -7973,8 +7973,8 @@ log_find_operative_subtree_revs(void *baton,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_log_changed_path2_t *change = apr_hash_this_val(hi);
 
         {
           const char *child;
@@ -8659,7 +8659,7 @@ record_mergeinfo_for_added_subtrees(
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, added_abspaths); hi; hi = apr_hash_next(hi))
     {
-      const char *added_abspath = svn__apr_hash_index_key(hi);
+      const char *added_abspath = apr_hash_this_key(hi);
       const char *dir_abspath;
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t added_path_mergeinfo;
@@ -8868,7 +8868,7 @@ log_noop_revs(void *baton,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *fspath = svn__apr_hash_index_key(hi);
+      const char *fspath = apr_hash_this_key(hi);
       const char *rel_path;
       const char *cwmi_abspath;
       svn_rangelist_t *paths_explicit_rangelist = NULL;
@@ -10695,7 +10695,7 @@ log_find_operative_revs(void *baton,
        hi = apr_hash_next(hi))
     {
       const char *subtree_missing_this_rev;
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
       const char *rel_path;
       const char *source_rel_path;
       svn_boolean_t in_catalog;
@@ -10823,7 +10823,7 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
            hi_catalog;
            hi_catalog = apr_hash_next(hi_catalog))
         {
-          svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi_catalog);
+          svn_mergeinfo_t mergeinfo = apr_hash_this_val(hi_catalog);
 
           SVN_ERR(svn_rangelist__merge_many(potentially_unmerged_ranges,
                                             mergeinfo,
@@ -11029,8 +11029,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *target_path = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t target_history_as_mergeinfo = svn__apr_hash_index_val(hi);
+      const char *target_path = apr_hash_this_key(hi);
+      svn_mergeinfo_t target_history_as_mergeinfo = apr_hash_this_val(hi);
       const char *path_rel_to_session
         = svn_relpath_skip_ancestor(target_repos_rel_path, target_path);
       const char *source_path;
@@ -11114,11 +11114,11 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *source_path = svn__apr_hash_index_key(hi);
+      const char *source_path = apr_hash_this_key(hi);
       const char *path_rel_to_session =
         svn_relpath_skip_ancestor(source_repos_rel_path, source_path);
       const char *source_url;
-      svn_mergeinfo_t source_mergeinfo = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t source_mergeinfo = apr_hash_this_val(hi);
       svn_mergeinfo_t filtered_mergeinfo;
       svn_client__pathrev_t *target_pathrev;
       svn_mergeinfo_t target_history_as_mergeinfo;
@@ -11267,7 +11267,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
       svn_client__pathrev_t *target_child;
       const char *repos_relpath;
       svn_mergeinfo_t target_history_as_mergeinfo;
@@ -11914,8 +11914,8 @@ location_on_branch_at_rev(const branch_history_t *branch_history,
   for (hi = apr_hash_first(scratch_pool, branch_history->history); hi;
        hi = apr_hash_next(hi))
     {
-      const char *fspath = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *fspath = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
       int i;
 
       for (i = 0; i < rangelist->nelts; i++)

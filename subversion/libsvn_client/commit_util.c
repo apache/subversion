@@ -1257,13 +1257,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   /* Make sure that every path in danglers is part of the commit. */
   for (hi = apr_hash_first(scratch_pool, danglers); hi; hi = apr_hash_next(hi))
     {
-      const char *dangling_parent = svn__apr_hash_index_key(hi);
+      const char *dangling_parent = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
       if (! look_up_committable(*committables, dangling_parent, iterpool))
         {
-          const char *dangling_child = svn__apr_hash_index_val(hi);
+          const char *dangling_child = apr_hash_this_val(hi);
 
           if (ctx->notify_func2 != NULL)
             {
@@ -1887,7 +1887,7 @@ svn_client__do_commit(const char *base_url,
        hi;
        hi = apr_hash_next(hi))
     {
-      struct file_mod_t *mod = svn__apr_hash_index_val(hi);
+      struct file_mod_t *mod = apr_hash_this_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;

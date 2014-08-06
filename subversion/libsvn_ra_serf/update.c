@@ -849,7 +849,7 @@ maybe_close_dir(dir_baton_t *dir)
            hi = apr_hash_next(hi))
         {
           SVN_ERR(ctx->editor->change_file_prop(dir->dir_baton,
-                                                svn__apr_hash_index_key(hi),
+                                                apr_hash_this_key(hi),
                                                 NULL /* value */,
                                                 scratch_pool));
         }
@@ -1013,7 +1013,7 @@ close_file(file_baton_t *file,
            hi = apr_hash_next(hi))
         {
           SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
-                                                svn__apr_hash_index_key(hi),
+                                                apr_hash_this_key(hi),
                                                 NULL /* value */,
                                                 scratch_pool));
         }

@@ -184,8 +184,8 @@ add_subdir(svn_fs_root_t *source_root,
 
   for (phi = apr_hash_first(pool, props); phi; phi = apr_hash_next(phi))
     {
-      const char *key = svn__apr_hash_index_key(phi);
-      svn_string_t *val = svn__apr_hash_index_val(phi);
+      const char *key = apr_hash_this_key(phi);
+      svn_string_t *val = apr_hash_this_val(phi);
 
       svn_pool_clear(subpool);
       SVN_ERR(editor->change_dir_prop(*dir_baton, key, val, subpool));
@@ -200,7 +200,7 @@ add_subdir(svn_fs_root_t *source_root,
     {
       svn_fs_path_change2_t *change;
       svn_boolean_t readable = TRUE;
-      svn_fs_dirent_t *dent = svn__apr_hash_index_val(hi);
+      svn_fs_dirent_t *dent = apr_hash_this_val(hi);
       const char *copyfrom_path = NULL;
       svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
       const char *new_edit_path;
@@ -303,8 +303,8 @@ add_subdir(svn_fs_root_t *source_root,
 
           for (phi = apr_hash_first(pool, props); phi; phi = apr_hash_next(phi))
             {
-              const char *key = svn__apr_hash_index_key(phi);
-              svn_string_t *val = svn__apr_hash_index_val(phi);
+              const char *key = apr_hash_this_key(phi);
+              svn_string_t *val = apr_hash_this_val(phi);
 
               SVN_ERR(editor->change_file_prop(file_baton, key, val, subpool));
             }
@@ -877,9 +877,9 @@ svn_repos_replay2(svn_fs_root_t *root,
   changed_paths = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, fs_changes); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t keylen = svn__apr_hash_index_klen(hi);
-      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t keylen = apr_hash_this_key_len(hi);
+      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       svn_boolean_t allowed = TRUE;
 
       if (authz_read_func)
@@ -1052,7 +1052,7 @@ add_subdir_ev2(svn_fs_root_t *source_root,
     {
       svn_fs_path_change2_t *change;
       svn_boolean_t readable = TRUE;
-      svn_fs_dirent_t *dent = svn__apr_hash_index_val(hi);
+      svn_fs_dirent_t *dent = apr_hash_this_val(hi);
       const char *copyfrom_path = NULL;
       svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
       const char *child_relpath;
@@ -1503,9 +1503,9 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   for (hi = apr_hash_first(scratch_pool, fs_changes); hi;
         hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t keylen = svn__apr_hash_index_klen(hi);
-      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t keylen = apr_hash_this_key_len(hi);
+      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       svn_boolean_t allowed = TRUE;
 
       if (authz_read_func)

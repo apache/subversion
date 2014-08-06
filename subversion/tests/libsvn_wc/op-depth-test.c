@@ -441,7 +441,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
   for (hi = apr_hash_first(b->pool, found_hash); hi; hi = apr_hash_next(hi))
     {
       svn_skel_t *conflict;
-      conflict_info_t *info = svn__apr_hash_index_val(hi);
+      conflict_info_t *info = apr_hash_this_val(hi);
       const char *local_abspath;
 
       svn_pool_clear(iterpool);
@@ -2050,7 +2050,7 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
   if (apr_hash_count(path_hash))
     {
       const char *local_relpath
-        = svn__apr_hash_index_key(apr_hash_first(b->pool, path_hash));
+        = apr_hash_this_key(apr_hash_first(b->pool, path_hash));
       return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__reset(stmt),
                                "actual '%s' expected", local_relpath);
     }
@@ -2651,7 +2651,7 @@ check_hash_keys(apr_hash_t *hash,
   for (hi = apr_hash_first(scratch_pool, hash); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
+      const char *name = apr_hash_this_key(hi);
       err = svn_error_compose_create(
               err, svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      _("Found, not expected: '%s'"), name));

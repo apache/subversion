@@ -1971,8 +1971,8 @@ svn_client_propget3(apr_hash_t **props,
       for (hi = apr_hash_first(pool, temp_props); hi;
             hi = apr_hash_next(hi))
         {
-          const char *abspath = svn__apr_hash_index_key(hi);
-          svn_string_t *value = svn__apr_hash_index_val(hi);
+          const char *abspath = apr_hash_this_key(hi);
+          svn_string_t *value = apr_hash_this_val(hi);
           const char *relpath = svn_dirent_join(path_or_url,
                                      svn_dirent_skip_ancestor(target, abspath),
                                      pool);
@@ -2032,9 +2032,9 @@ string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
-      const char *key = apr_pstrdup(pool, svn__apr_hash_index_key(hi));
-      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-      svn_string_t *val = svn_string_dup(svn__apr_hash_index_val(hi), pool);
+      const char *key = apr_pstrdup(pool, apr_hash_this_key(hi));
+      apr_ssize_t klen = apr_hash_this_key_len(hi);
+      svn_string_t *val = svn_string_dup(apr_hash_this_val(hi), pool);
 
       apr_hash_set(new_hash, key, klen, val);
     }

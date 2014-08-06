@@ -959,8 +959,8 @@ svn_client__handle_externals(apr_hash_t *externals_new,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const char *desc_text = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      const char *desc_text = apr_hash_this_val(hi);
       svn_depth_t ambient_depth = svn_depth_infinity;
 
       svn_pool_clear(iterpool);
@@ -970,7 +970,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
           const char *ambient_depth_w;
 
           ambient_depth_w = apr_hash_get(ambient_depths, local_abspath,
-                                         svn__apr_hash_index_klen(hi));
+                                         apr_hash_this_key_len(hi));
 
           if (ambient_depth_w == NULL)
             {
@@ -997,8 +997,8 @@ svn_client__handle_externals(apr_hash_t *externals_new,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *item_abspath = svn__apr_hash_index_key(hi);
-      const char *defining_abspath = svn__apr_hash_index_val(hi);
+      const char *item_abspath = apr_hash_this_key(hi);
+      const char *defining_abspath = apr_hash_this_val(hi);
       const char *parent_abspath;
 
       svn_pool_clear(iterpool);
@@ -1072,8 +1072,8 @@ svn_client__export_externals(apr_hash_t *externals,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const char *desc_text = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      const char *desc_text = apr_hash_this_val(hi);
       const char *local_relpath;
       const char *dir_url;
       apr_array_header_t *items;

@@ -209,8 +209,8 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *merge_source = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
       const char *path;
 
       merge_source = svn_relpath_canonicalize(merge_source, pool);
@@ -269,8 +269,8 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *merge_source = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
       struct parse_baton *pb = rb->pb;
       int i;
 
@@ -831,7 +831,7 @@ remove_node_props(void *baton)
 
   for (hi = apr_hash_first(nb->pool, proplist); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
+      const char *key = apr_hash_this_key(hi);
 
       SVN_ERR(change_node_prop(rb->txn_root, nb->path, key, NULL,
                                rb->pb->validate_props, nb->pool));

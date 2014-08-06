@@ -940,9 +940,9 @@ svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(scratch_pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t path_len = apr_hash_this_key_len(hi);
+      svn_rangelist_t *ranges1 = apr_hash_this_val(hi);
       svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);

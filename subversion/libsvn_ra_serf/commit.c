@@ -1057,7 +1057,7 @@ setup_if_header_recursive(svn_boolean_t *added,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *relpath = svn__apr_hash_index_key(hi);
+      const char *relpath = apr_hash_this_key(hi);
       apr_uri_t uri;
 
       if (!svn_relpath_skip_ancestor(rq_relpath, relpath))
@@ -1087,7 +1087,7 @@ setup_if_header_recursive(svn_boolean_t *added,
       svn_stringbuf_appendbyte(sb, '<');
       svn_stringbuf_appendcstr(sb, apr_uri_unparse(iterpool, &uri, 0));
       svn_stringbuf_appendcstr(sb, "> (<");
-      svn_stringbuf_appendcstr(sb, svn__apr_hash_index_val(hi));
+      svn_stringbuf_appendcstr(sb, apr_hash_this_val(hi));
       svn_stringbuf_appendcstr(sb, ">)");
     }
 
@@ -1465,8 +1465,8 @@ open_root(void *edit_baton,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          svn_string_t *value = svn__apr_hash_index_val(hi);
+          const char *name = apr_hash_this_key(hi);
+          svn_string_t *value = apr_hash_this_val(hi);
           const char *ns;
 
           if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)

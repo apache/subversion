@@ -1001,7 +1001,7 @@ init_patch_target(patch_target_t **patch_target,
          hi;
          hi = apr_hash_next(hi))
       {
-        svn_prop_patch_t *prop_patch = svn__apr_hash_index_val(hi);
+        svn_prop_patch_t *prop_patch = apr_hash_this_val(hi);
         if (! has_prop_changes)
           has_prop_changes = prop_patch->hunks->nelts > 0;
         else
@@ -1205,8 +1205,8 @@ init_patch_target(patch_target_t **patch_target,
                hi;
                hi = apr_hash_next(hi))
             {
-              const char *prop_name = svn__apr_hash_index_key(hi);
-              svn_prop_patch_t *prop_patch = svn__apr_hash_index_val(hi);
+              const char *prop_name = apr_hash_this_key(hi);
+              svn_prop_patch_t *prop_patch = apr_hash_this_val(hi);
               prop_patch_target_t *prop_target;
 
               SVN_ERR(init_prop_target(&prop_target,
@@ -2106,7 +2106,7 @@ send_patch_notification(const patch_target_t *target,
         {
           prop_patch_target_t *prop_target;
 
-          prop_target = svn__apr_hash_index_val(hash_index);
+          prop_target = apr_hash_this_val(hash_index);
 
           for (i = 0; i < prop_target->content->hunks->nelts; i++)
             {
@@ -2264,8 +2264,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       const char *prop_name;
       prop_patch_target_t *prop_target;
 
-      prop_name = svn__apr_hash_index_key(hash_index);
-      prop_patch = svn__apr_hash_index_val(hash_index);
+      prop_name = apr_hash_this_key(hash_index);
+      prop_patch = apr_hash_this_val(hash_index);
 
       if (! strcmp(prop_name, SVN_PROP_SPECIAL))
         target->is_special = TRUE;
@@ -2311,7 +2311,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     {
       prop_patch_target_t *prop_target;
 
-      prop_target = svn__apr_hash_index_val(hash_index);
+      prop_target = apr_hash_this_val(hash_index);
 
       for (i = 0; i < prop_target->content->hunks->nelts; i++)
         {
@@ -2750,7 +2750,7 @@ install_patched_prop_targets(patch_target_t *target,
        hi;
        hi = apr_hash_next(hi))
     {
-      prop_patch_target_t *prop_target = svn__apr_hash_index_val(hi);
+      prop_patch_target_t *prop_target = apr_hash_this_val(hi);
       const svn_string_t *prop_val;
       svn_error_t *err;
 
