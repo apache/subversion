@@ -54,9 +54,6 @@ extern "C" {
 #error Please update your version of serf to at least 1.2.1.
 #endif
 
-/** Use this to silence compiler warnings about unused parameters. */
-#define UNUSED_CTX(x) ((void)(x))
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
