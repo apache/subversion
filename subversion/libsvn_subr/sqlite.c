@@ -933,6 +933,9 @@ close_apr(void *data)
           if (db->prepared_stmts[i]->needs_reset)
             {
 #ifdef SVN_DEBUG
+              const char *stmt_text = db->statement_strings[i];
+              (void)stmt_text; /* Supress unused warning */
+
               SVN_ERR_MALFUNCTION_NO_RETURN();
 #else
               err = svn_error_compose_create(
