@@ -81,7 +81,7 @@ SQLITE_VER	= 3080500
 LIBMAGIC_VER	= 5.19
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.3
+PYTHON_VER	= 2.7.8
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.18.3.1
 
@@ -99,7 +99,7 @@ PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
 
-SHA256_${PYTHON_DIST} = d4c20f2b5faf95999fd5fecb3f7d32071b0820516224a6d2b72932ab47a1cb8e
+SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
@@ -1131,8 +1131,8 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 	# Make setup.py use our own dependencies instead of system ones
 	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
 		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
-		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|#\1|" \
-		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|#\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|pass #\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|pass #\1|" \
 		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
 		< $(PYTHON_SRCDIR)/setup.py \
 		> $(PYTHON_SRCDIR)/setup.py.patched
