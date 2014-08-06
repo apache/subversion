@@ -110,7 +110,7 @@ typedef struct authz_acl_t
      rules were defined in the authz file. The authz lookup code
      selects the highest-numbered ACL from amongst a set of equivalent
      matches. */
-  apr_int64_t sequence_number;
+  int sequence_number;
 
   /* The repository name from the rule. This will be empty string if a
      the rule did not name a repository. */
