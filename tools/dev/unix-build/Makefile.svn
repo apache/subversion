@@ -100,6 +100,32 @@ PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
 
+SHA256_${PYTHON_DIST} = d4c20f2b5faf95999fd5fecb3f7d32071b0820516224a6d2b72932ab47a1cb8e
+SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
+SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
+SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
+SHA256_${LIBMAGIC_DIST} = 3feb97141b387b64da30aee485852925312c0e74219380a5ed451f14a90c83ca
+SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065eeb07245d
+SHA256_${HTTPD_DIST} = 205973ded6ca55c056ce9c84d73ab708f7829f330193bd39b651463b8d4f8147
+SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
+SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
+SHA256_${NEON_DIST} = 9c640b728d6dc80ef1e48f83181166ab6bc95309cece5537e01ffdd01b96eb43
+SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
+SHA256_${SQLITE_DIST} = e0e995e23a324a5d6ae95d8a836240382a4d7475d09707fc469c8cafcbd48d65
+
+define do_check_sha256
+if [ -x /bin/sha256 ]; then \
+	(cd $(DISTDIR) && \
+		echo "SHA256 (${1}) = ${SHA256_${1}}" | /bin/sha256 -C /dev/stdin "${1}"); \
+elif [ -x /usr/bin/sha256sum ]; then \
+	(cd $(DISTDIR) && \
+		echo "${SHA256_${1}} ${1}" | /usr/bin/sha256sum --quiet --check); \
+else \
+	echo "Error: No tool found to verify checksum"; \
+	false; \
+fi
+endef
+
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
@@ -269,6 +295,7 @@ $(DISTDIR)/$(BDB_DIST):
 
 # retrieve bdb
 $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
+	$(call do_check_sha256,$(BDB_DIST))
 	[ -d $(BDB_OBJDIR) ] || mkdir -p $(BDB_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BDB_DIST)
 	touch $@
@@ -375,6 +402,7 @@ $(DISTDIR)/$(APR_ICONV_DIST):
 
 # retrieve apr-iconv
 $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
+	$(call do_check_sha256,$(APR_ICONV_DIST))
 	[ -d $(APR_ICONV_OBJDIR) ] || mkdir -p $(APR_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(APR_ICONV_DIST)
 	touch $@
@@ -455,6 +483,7 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
 		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
+	$(call do_check_sha256,$(GNU_ICONV_DIST))
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
@@ -599,6 +628,7 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	$(HTTPD_OBJDIR)/chil-engine.diff
+	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
 	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
@@ -679,6 +709,7 @@ $(DISTDIR)/$(NEON_DIST):
 # retrieve neon
 NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
+	$(call do_check_sha256,$(NEON_DIST))
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
 	# fix build with OpenSSL lacking SSLv2 support:
@@ -847,6 +878,7 @@ $(DISTDIR)/$(SQLITE_DIST):
 
 # retrieve sqlite
 $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
+	$(call do_check_sha256,$(SQLITE_DIST))
 	[ -d $(SQLITE_OBJDIR) ] || mkdir -p $(SQLITE_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
@@ -897,6 +929,7 @@ $(DISTDIR)/$(CYRUS_SASL_DIST):
 
 # retrieve cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+	$(call do_check_sha256,$(CYRUS_SASL_DIST))
 	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
 	# fixes build on Debian:
@@ -972,6 +1005,7 @@ $(DISTDIR)/$(LIBMAGIC_DIST):
 
 # retrieve libmagic
 $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
+	$(call do_check_sha256,$(LIBMAGIC_DIST))
 	[ -d $(LIBMAGIC_OBJDIR) ] || mkdir -p $(LIBMAGIC_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBMAGIC_DIST)
 	touch $@
@@ -1017,6 +1051,7 @@ $(DISTDIR)/$(RUBY_DIST):
 # retrieve ruby
 #
 $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
@@ -1067,6 +1102,7 @@ $(DISTDIR)/$(BZ2_DIST):
 
 # retrieve bz2
 $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
+	$(call do_check_sha256,$(BZ2_DIST))
 	[ -d $(BZ2_OBJDIR) ] || mkdir -p $(BZ2_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BZ2_DIST)
 	touch $@
@@ -1104,6 +1140,7 @@ $(DISTDIR)/$(PYTHON_DIST):
 # retrieve python
 #
 $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
 	# Make setup.py use our own dependencies instead of system ones
@@ -1164,6 +1201,8 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 # fetch distfile for junit
 $(DISTDIR)/$(JUNIT_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(JUNIT_URL)
+	$(call do_check_sha256,$(JUNIT_DIST))
+
 
 #######################################################################
 # gettext
@@ -1186,6 +1225,7 @@ $(DISTDIR)/$(GETTEXT_DIST):
 
 # retrieve gettext
 $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
+	$(call do_check_sha256,$(GETTEXT_DIST))
 	[ -d $(GETTEXT_OBJDIR) ] || mkdir -p $(GETTEXT_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GETTEXT_DIST)
 	touch $@
