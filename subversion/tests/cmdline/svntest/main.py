@@ -1011,7 +1011,7 @@ def create_repos(path, minor_version = None):
     # post-commit
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
-    if options.fsfs_packing:
+    if options.fsfs_packing and minor_version >=6:
       # some tests chdir.
       abs_path = os.path.abspath(path)
       create_python_hook_script(get_post_commit_hook_path(abs_path),
