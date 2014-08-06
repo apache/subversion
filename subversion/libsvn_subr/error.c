@@ -85,34 +85,15 @@ svn_error__locate(const char *file, long line)
 
 /* Cleanup function for errors.  svn_error_clear () removes this so
    errors that are properly handled *don't* hit this code. */
-#if defined(SVN_DEBUG)
-/* GCC >= 4.6 has support for diagnostic pragmas that let us
- * turn off warnings.  clang also supports the same pragmas */
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) \
-     || defined(__clang__))
-  #define IGNORING_UNUSED_WARNING
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wunused-variable"
-#endif /* supports diagnostic pragmas */
 static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
-#ifndef IGNORING_UNUSED_WARNING
-  /* Fake a use for the variable to avoid compiler warnings if we can't turn
-   * them off via pragmas. */
-  err = err;
-#endif /* IGNORING_UNUSED_WARNING */
+  SVN_UNUSED(err);
 
   if (!getenv("SVN_DBG_NO_ABORT_ON_ERROR_LEAK"))
     abort();
   return APR_SUCCESS;
 }
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) \
-     || defined(__clang__))
-  #undef IGNORING_UNUSED_WARNING
-  #pragma GCC diagnostic pop
-#endif /* supports diagnostic pragmas */
-#endif
 
 
 static svn_error_t *
