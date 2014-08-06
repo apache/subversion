@@ -1521,7 +1521,6 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
@@ -1554,11 +1553,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
-  # Recreate path for single-db
-  if not os.path.exists(G_path):
-    os.mkdir(G_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'add', G_path)
+                                     'mkdir', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', rho_path)
@@ -2031,6 +2028,27 @@ def dav_lock_refresh(sbox):
   if r.status != httplib.OK:
     raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def delete_locked_file_with_percent(sbox):
+  "lock and delete a file called 'a %( ) .txt'"
+
+  sbox.build()
+
+  locked_filename = 'a %( ) .txt'
+  locked_path = sbox.ospath(locked_filename)
+  svntest.main.file_write(locked_path, "content\n")
+  sbox.simple_add(locked_filename)
+  sbox.simple_commit()
+  
+  sbox.simple_lock(locked_filename)
+  sbox.simple_rm(locked_filename)
+
+  # XFAIL: With a 1.8.x client, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '/svn-test-work/repositories/lock_tests-52/!svn/txr/2-2/a%20%25(%20)%20.txt'
+  # and the following error in the httpd error log:
+  #  Invalid percent encoded URI in tagged If-header [400, #104]
+  sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -2087,6 +2105,7 @@ test_list = [ None,
               dav_lock_timeout,
               non_root_locks,
               dav_lock_refresh,
+              delete_locked_file_with_percent,
             ]
 
 if __name__ == '__main__':

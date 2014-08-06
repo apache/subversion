@@ -3227,6 +3227,38 @@ def update_dir_external_shallow(sbox):
                                         sbox.ospath('A/B/E'))
 
 
+def update_deletes_file_external(sbox):
+  "update deletes a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:externals', '../D/gamma gamma', 'A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     '-m', 'create branch',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/A_copy')
+
+  # Update the working copy
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Remove the branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     '-m', 'remove branch',
+                                     sbox.repo_url + '/A_copy')
+
+  # As of r1448345, this update fails:
+  # E000002: Can't remove directory '.../A_copy/C': No such file or directory
+  sbox.simple_update()
+  
+
 ########################################################################
 # Run the tests
 
@@ -3279,6 +3311,7 @@ test_list = [ None,
               move_with_file_externals,
               pinned_externals,
               update_dir_external_shallow,
+              update_deletes_file_external
              ]
 
 if __name__ == '__main__':
