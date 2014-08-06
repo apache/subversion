@@ -934,7 +934,7 @@ close_apr(void *data)
             {
 #ifdef SVN_DEBUG
               const char *stmt_text = db->statement_strings[i];
-              (void)stmt_text; /* Supress unused warning */
+              SVN_UNUSED(stmt_text);
 
               SVN_ERR_MALFUNCTION_NO_RETURN();
 #else
