@@ -119,13 +119,13 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
         svn_authz__acl_get_access(&access, acl, check_user, check_repo);
       int j;
 
-      printf("%s%s%s   Sequence:   %ld\n"
+      printf("%s%s%s   Sequence:   %d\n"
              "   Repository: [%s]\n"
              "   Rule:  %s[/%s]\n",
              (has_access ? "Match = " : ""),
              (has_access ? access_string(access) : ""),
              (has_access ? "\n" : ""),
-             (long)acl->sequence_number,
+             acl->sequence_number,
              acl->repos,
              (acl->glob ? "glob:" : "     "),
              acl->rule);
