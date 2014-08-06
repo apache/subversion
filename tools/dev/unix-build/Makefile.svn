@@ -190,7 +190,7 @@ LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PR
 # Main targets.
 #######################################################################
 
-.PHONY: all reset clean nuke
+.PHONY: all reset clean nuke fetch
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
@@ -232,6 +232,8 @@ nuke:
 			*)      echo "You said $$ANSWER."; \
 				;; \
 		esac
+
+fetch: $(DISTFILES)
 
 #######################################################################
 # directories
