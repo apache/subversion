@@ -28,7 +28,6 @@
 #include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
-#define UNUSED(x) ((void)(x))
 
 #define UTF8PROC_INLINE
 /* Somehow utf8proc thinks it is nice to use strlen as an argument name,
@@ -41,10 +40,10 @@
 const char *svn_utf__utf8proc_version(void)
 {
   /* Unused static function warning removal hack. */
-  UNUSED(utf8proc_NFD);
-  UNUSED(utf8proc_NFC);
-  UNUSED(utf8proc_NFKD);
-  UNUSED(utf8proc_NFKC);
+  SVN_UNUSED(utf8proc_NFD);
+  SVN_UNUSED(utf8proc_NFC);
+  SVN_UNUSED(utf8proc_NFKD);
+  SVN_UNUSED(utf8proc_NFKC);
 
   return utf8proc_version();
 }

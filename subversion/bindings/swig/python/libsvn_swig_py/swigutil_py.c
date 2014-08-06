@@ -445,7 +445,7 @@ static PyObject *make_ob_pool(void *pool)
   apr_pool_t *new_pool = svn_pool_create(application_pool);
   PyObject *new_py_pool = svn_swig_py_new_pointer_obj(new_pool,
     svn_swig_TypeQuery("apr_pool_t *"), application_py_pool, NULL);
-  (void) pool; /* Silence compiler warnings about unused parameter. */
+  SVN_UNUSED(pool);
   return new_py_pool;
 }
 static PyObject *make_ob_fs_root(svn_fs_root_t *ptr, PyObject *py_pool)
