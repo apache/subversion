@@ -163,13 +163,6 @@ struct svn_null_pointer_constant_stdarg_sentinel_t;
 #define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
 /* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
-
-/** Macro used to specify that a variable is intentionally left unused.
- *  Supresses compiler warnings about the variable being unused.
- *
- * @since New in 1.9.
- */
-#define SVN_UNUSED(v) ( (void)(v) )
 
 
 /** Subversion error object.
