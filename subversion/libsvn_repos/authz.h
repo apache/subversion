@@ -143,6 +143,12 @@ typedef struct authz_ace_t
   /* The name of the alias, user or group that this ACE applies to. */
   const char *name;
 
+  /* The set of group members, when NAME is the name of a group.
+     We store this reference in the ACE to save a hash lookup when
+     resolving access for group ACEs.
+   */
+  apr_hash_t *members;
+
   /* True if this is an inverse-match rule. */
   svn_boolean_t inverted;
 
@@ -171,7 +177,22 @@ svn_authz__tng_parse(svn_authz_tng_t **authz,
  */
 
 /* The "anonymous" user for authz queries. */
-#define AUTHZ_ANONYMOUS_USER ((const char*)0)
+#define AUTHZ_ANONYMOUS_USER ((const char*)"")
+
+/* Rules with this repository name apply to all repositories. */
+#define AUTHZ_ANY_REPOSITORY ((const char*)"")
+
+
+/* Check if the ACL applies to the (USER, REPOS) pair.  If it does,
+ * and ACCESS is not NULL, set *ACCESS to the actual access rights for
+ * the user in this repository.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_boolean_t
+svn_authz__acl_get_access(svn_repos_authz_access_t *access,
+                          const authz_acl_t *acl,
+                          const char *user, const char *repos);
 
 
 
