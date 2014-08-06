@@ -1489,8 +1489,11 @@ svn_wc__wq_run(svn_wc__db_t *db,
   {
     static int count = 0;
     const char *count_env_var = getenv("SVN_DEBUG_WORK_QUEUE");
+    int count_env_val;
 
-    if (count_env_var && ++count == atoi(count_env_var))
+    SVN_ERR(svn_cstring_atoi(&count_env_val, count_env_var));
+
+    if (count_env_var && ++count == count_env_val)
       return svn_error_create(SVN_ERR_CANCELLED, NULL, "fake cancel");
   }
 #endif
