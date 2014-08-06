@@ -1253,8 +1253,8 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
           for (hi = apr_hash_first(iterpool, old_pr->merged_mergeinfo); hi;
                hi = apr_hash_next(hi))
             {
-              const char *path = svn__apr_hash_index_key(hi);
-              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+              const char *path = apr_hash_this_key(hi);
+              svn_rangelist_t *rangelist = apr_hash_this_val(hi);
               apr_pool_t *iterpool3;
               int j;
 

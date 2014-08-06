@@ -2615,7 +2615,7 @@ close_directory(void *dir_baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          const char *propname = svn__apr_hash_index_key(hi);
+          const char *propname = apr_hash_this_key(hi);
           svn_prop_t *prop = apr_array_push(regular_prop_changes);
 
           /* Record a deletion for PROPNAME.  */
@@ -2720,11 +2720,11 @@ close_directory(void *dir_baton,
 
             svn_pool_clear(iterpool);
 
-            child_name = svn__apr_hash_index_key(hi);
+            child_name = apr_hash_this_key(hi);
             child_abspath = svn_dirent_join(db->local_abspath, child_name,
                                             iterpool);
 
-            dirent = svn__apr_hash_index_val(hi);
+            dirent = apr_hash_this_val(hi);
             child_kind = (dirent->kind == svn_node_dir)
                                         ? svn_node_dir
                                         : svn_node_file;
@@ -2787,10 +2787,9 @@ close_directory(void *dir_baton,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *child = svn__apr_hash_index_key(hi);
+          const char *child = apr_hash_this_key(hi);
           const char *child_abspath, *child_relpath;
-          svn_node_kind_t kind = svn_node_kind_from_word(
-                                      svn__apr_hash_index_val(hi));
+          svn_node_kind_t kind = svn_node_kind_from_word(apr_hash_this_val(hi));
 
           svn_pool_clear(iterpool);
 

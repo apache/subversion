@@ -327,7 +327,7 @@ organize_lock_targets(apr_array_header_t **lock_paths,
            hi = apr_hash_next(hi))
         {
           const char *lock_abspath;
-          apr_array_header_t *paths = svn__apr_hash_index_val(hi);
+          apr_array_header_t *paths = apr_hash_this_val(hi);
 
           /* Use parent dir of a single file target */
           if (paths->nelts == 1)
@@ -354,7 +354,7 @@ organize_lock_targets(apr_array_header_t **lock_paths,
            hi;
            hi = apr_hash_next(hi))
         {
-          apr_array_header_t *wc_targets = svn__apr_hash_index_val(hi);
+          apr_array_header_t *wc_targets = apr_hash_this_val(hi);
 
           for (i = 0; i < wc_targets->nelts; i++)
             {
@@ -411,8 +411,8 @@ organize_lock_targets(apr_array_header_t **lock_paths,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *local_abspath = svn__apr_hash_index_key(hi);
-          struct wc_lock_item_t *wli = svn__apr_hash_index_val(hi);
+          const char *local_abspath = apr_hash_this_key(hi);
+          struct wc_lock_item_t *wli = apr_hash_this_val(hi);
           const char *rel_url;
 
           svn_pool_clear(iterpool);
@@ -484,7 +484,7 @@ fetch_tokens(svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);

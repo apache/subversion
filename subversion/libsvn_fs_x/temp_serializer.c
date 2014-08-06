@@ -588,8 +588,8 @@ svn_fs_x__serialize_properties(void **data,
   /* populate it with the hash entries */
   for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
     {
-      properties.keys[i] = svn__apr_hash_index_key(hi);
-      properties.values[i] = svn__apr_hash_index_val(hi);
+      properties.keys[i] = apr_hash_this_key(hi);
+      properties.values[i] = apr_hash_this_val(hi);
     }
 
   /* serialize it */
@@ -1266,7 +1266,7 @@ svn_fs_x__serialize_mergeinfo(void **data,
   i = 0;
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      svn_rangelist_t *ranges = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *ranges = apr_hash_this_val(hi);
       for (k = 0; k < ranges->nelts; ++k, ++i)
         merges.ranges[i] = *APR_ARRAY_IDX(ranges, k, svn_merge_range_t*);
     }

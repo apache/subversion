@@ -89,7 +89,7 @@ print_properties_xml(const char *pname,
           const char *name_local;
           svn_prop_inherited_item_t *iprop =
            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
-          svn_string_t *propval = svn__apr_hash_index_val(
+          svn_string_t *propval = apr_hash_this_val(
             apr_hash_first(pool, iprop->prop_hash));
 
           sb = NULL;
@@ -278,7 +278,7 @@ print_properties(svn_stream_t *out,
         {
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
-          svn_string_t *propval = svn__apr_hash_index_val(apr_hash_first(pool,
+          svn_string_t *propval = apr_hash_this_val(apr_hash_first(pool,
                                                           iprop->prop_hash));
           SVN_ERR(print_single_prop(propval, target_abspath_or_url,
                                     iprop->path_or_url,

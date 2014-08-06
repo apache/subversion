@@ -155,11 +155,22 @@ fs_freeze_body(void *baton,
 }
 
 static svn_error_t *
+fs_freeze_body2(void *baton,
+                apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t *b = baton;
+  SVN_ERR(svn_fs_fs__with_write_lock(b->fs, fs_freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 fs_freeze(svn_fs_t *fs,
           svn_fs_freeze_func_t freeze_func,
           void *freeze_baton,
           apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   struct fs_freeze_baton_t b;
 
   b.fs = fs;
@@ -167,7 +178,11 @@ fs_freeze(svn_fs_t *fs,
   b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
+
+  if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
+    SVN_ERR(svn_fs_fs__with_pack_lock(fs, fs_freeze_body2, &b, pool));
+  else
+    SVN_ERR(fs_freeze_body2(&b, pool));
 
   return SVN_NO_ERROR;
 }
