@@ -50,6 +50,15 @@ typedef struct svn_x509_certinfo_t svn_x509_certinfo_t;
  * buflen and return certificate information in @a *certinfo,
  * allocated in @a result_pool.
  *
+ * @note This function has been written with the intent of display data in a
+ *       certificate for a user to see.  As a result, it does not do much
+ *       validation on the data it parses from the certificate.  It does not
+ *       for instance verify that the certificate is signed by the issuer.  It
+ *       does not verify a trust chain.  It does not error on critical
+ *       extensions it does not know how to parse.  So while it can be used as
+ *       part of a certificate validation scheme, it can't be used alone for
+ *       that purpose.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
