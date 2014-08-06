@@ -87,14 +87,14 @@ public class ConfigLib
                           SVNUtil.Credential.Kind kind,
                           String realmPattern,
                           String usernamePattern,
-                          String subjectPattern,
+                          String hostnamePattern,
                           String textPattern)
         throws ClientException, SubversionException
     {
         return nativeSearchCredentials(
             configDir,
             (kind != null ? kind.toString() : null),
-            realmPattern, usernamePattern, subjectPattern, textPattern);
+            realmPattern, usernamePattern, hostnamePattern, textPattern);
     }
 
     private native SVNUtil.Credential

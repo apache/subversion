@@ -315,7 +315,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
     JNIEnv* jenv, jobject jthis,
     jstring jconfig_dir, jstring jcred_kind,
     jstring jrealm_pattern, jstring jusername_pattern,
-    jstring jsubject_pattern, jstring jtext_pattern)
+    jstring jhostname_pattern, jstring jtext_pattern)
 {
   SVN_JAVAHL_JNI_TRY(ConfigLib, iterateCredentials)
     {
@@ -327,7 +327,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
       const Java::String cred_kind(env, jcred_kind);
       const Java::String realm_pattern(env, jrealm_pattern);
       const Java::String username_pattern(env, jusername_pattern);
-      const Java::String subject_pattern(env, jsubject_pattern);
+      const Java::String hostname_pattern(env, jhostname_pattern);
       const Java::String text_pattern(env, jtext_pattern);
 
       // Using a "global" request pool since we don't keep a context
@@ -339,7 +339,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
         const char* const m_cred_kind;
         const char* const m_realm_pattern;
         const char* const m_username_pattern;
-        const char* const m_subject_pattern;
+        const char* const m_hostname_pattern;
         const char* const m_text_pattern;
 
         const ::Java::Env m_env;
@@ -363,12 +363,12 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                           const char* ctor_cred_kind,
                           const char* ctor_realm_pattern,
                           const char* ctor_username_pattern,
-                          const char* ctor_subject_pattern,
+                          const char* ctor_hostname_pattern,
                           const char* ctor_text_pattern)
           : m_cred_kind(ctor_cred_kind),
             m_realm_pattern(ctor_realm_pattern),
             m_username_pattern(ctor_username_pattern),
-            m_subject_pattern(ctor_subject_pattern),
+            m_hostname_pattern(ctor_hostname_pattern),
             m_text_pattern(ctor_text_pattern),
             m_env(ctor_env),
             m_credentials(ctor_env)
@@ -441,14 +441,10 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                        || (username
                            && !apr_fnmatch(m_username_pattern, username, 0)));
 
-            if (!match && m_subject_pattern)
-              {
-                match = (match
-                         || (subject
-                             && !apr_fnmatch(m_subject_pattern, subject, 0)));
-                if (!match && hostnames)
-                  match = (match || match_array(m_subject_pattern, hostnames));
-              }
+            if (!match && m_hostname_pattern)
+              match = (match
+                       || (hostnames
+                           &&  match_array(m_hostname_pattern, hostnames)));
 
             if (!match && m_text_pattern)
               match = (match
@@ -480,7 +476,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
            cred_kind.strdup(pool.getPool()),
            realm_pattern.strdup(pool.getPool()),
            username_pattern.strdup(pool.getPool()),
-           subject_pattern.strdup(pool.getPool()),
+           hostname_pattern.strdup(pool.getPool()),
            text_pattern.strdup(pool.getPool()));
 
       SVN_JAVAHL_CHECK(env,
