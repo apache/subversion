@@ -1083,8 +1083,10 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       /* ### Why '..._display()'?  expected_md5_checksum should never be all-
        * zero, but if it is, we would want to pass NULL not an all-zero
        * digest to apply_textdelta(), wouldn't we? */
-      base_digest_hex = svn_checksum_to_cstring_display(expected_md5_checksum,
-                                                        scratch_pool);
+      base_digest_hex =
+          svn_checksum_to_cstring_display2(expected_md5_checksum,
+                                           SVN_CHECKSUM_CSTRING_LOWER,
+                                           scratch_pool);
 
     SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
                                     &handler, &wh_baton));

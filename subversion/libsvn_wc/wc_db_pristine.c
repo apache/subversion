@@ -127,8 +127,9 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                              _("The pristine text with checksum '%s' was "
                                "not found"),
-                             svn_checksum_to_cstring_display(sha1_checksum,
-                                                             scratch_pool));
+                             svn_checksum_to_cstring_display2(sha1_checksum,
+                                                              SVN_CHECKSUM_CSTRING_LOWER,
+                                                              scratch_pool));
 
   SVN_ERR(get_pristine_fname(pristine_abspath, wcroot->abspath,
                              sha1_checksum,
@@ -192,8 +193,9 @@ pristine_read_txn(svn_stream_t **contents,
     {
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("Pristine text '%s' not present"),
-                               svn_checksum_to_cstring_display(
-                                 sha1_checksum, scratch_pool));
+                               svn_checksum_to_cstring_display2(
+                                 sha1_checksum, SVN_CHECKSUM_CSTRING_LOWER,
+                                 scratch_pool));
     }
 
   /* Open the file as a readable stream.  It will remain readable even when
@@ -318,7 +320,9 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
             return svn_error_createf(
               SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
               _("New pristine text '%s' has different size: %ld versus %ld"),
-              svn_checksum_to_cstring_display(sha1_checksum, scratch_pool),
+              svn_checksum_to_cstring_display2(sha1_checksum,
+                                               SVN_CHECKSUM_CSTRING_LOWER,
+                                               scratch_pool),
               (long int)finfo1.size, (long int)finfo2.size);
           }
       }
@@ -466,8 +470,9 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
                              _("The pristine text with checksum '%s' was "
                                "not found"),
-                             svn_checksum_to_cstring_display(sha1_checksum,
-                                                             scratch_pool));
+                             svn_checksum_to_cstring_display2(sha1_checksum,
+                                                              SVN_CHECKSUM_CSTRING_LOWER,
+                                                              scratch_pool));
 
   SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
@@ -505,8 +510,9 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
                              _("The pristine text with MD5 checksum '%s' was "
                                "not found"),
-                             svn_checksum_to_cstring_display(md5_checksum,
-                                                             scratch_pool));
+                             svn_checksum_to_cstring_display2(md5_checksum,
+                                                              SVN_CHECKSUM_CSTRING_LOWER,
+                                                              scratch_pool));
 
   SVN_ERR(svn_sqlite__column_checksum(sha1_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*sha1_checksum)->kind == svn_checksum_sha1);

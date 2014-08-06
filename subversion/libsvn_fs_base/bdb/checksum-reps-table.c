@@ -129,7 +129,9 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
   svn_fs_base__track_dbt(&value, pool);
   if (db_err != DB_NOTFOUND)
     {
-      const char *sum_str = svn_checksum_to_cstring_display(checksum, pool);
+      const char *sum_str = svn_checksum_to_cstring_display2(checksum,
+                                                             SVN_CHECKSUM_CSTRING_LOWER,
+                                                             pool);
       return svn_error_createf
         (SVN_ERR_FS_ALREADY_EXISTS, NULL,
          _("Representation key for checksum '%s' exists in filesystem '%s'."),
