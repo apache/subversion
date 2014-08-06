@@ -73,7 +73,7 @@ APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.5.3
 HTTPD_VER	= 2.2.27
-NEON_VER	= 0.29.6
+NEON_VER	= 0.30.0
 SERF_VER	= 1.3.6
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
@@ -109,7 +109,7 @@ SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065
 SHA256_${HTTPD_DIST} = 205973ded6ca55c056ce9c84d73ab708f7829f330193bd39b651463b8d4f8147
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
-SHA256_${NEON_DIST} = 9c640b728d6dc80ef1e48f83181166ab6bc95309cece5537e01ffdd01b96eb43
+SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d1650787990c2
 SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
 SHA256_${SQLITE_DIST} = e0e995e23a324a5d6ae95d8a836240382a4d7475d09707fc469c8cafcbd48d65
 
@@ -707,20 +707,10 @@ $(DISTDIR)/$(NEON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
-NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	$(call do_check_sha256,$(NEON_DIST))
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
-	# fix build with OpenSSL lacking SSLv2 support:
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1872 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_session.c | patch -p0
 	touch $@
 
 # OpenBSD does not have krb5-config in PATH, but the neon port has
