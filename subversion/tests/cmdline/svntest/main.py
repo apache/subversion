@@ -1508,6 +1508,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--exclusive-wc-locks')
     if options.memcached_server:
       args.append('--memcached-server=' + options.memcached_server)
+    if options.fsfs_sharding:
+      args.append('--fsfs-sharding=' + str(options.fsfs_sharding))
+    if options.fsfs_packing:
+      args.append('--fsfs-packing')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
