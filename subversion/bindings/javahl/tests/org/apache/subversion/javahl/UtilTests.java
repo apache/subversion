@@ -794,7 +794,7 @@ public class UtilTests extends SVNTests
 
         /* search with match on subvject */
         creds = SVNUtil.searchCredentials(configDir, null,
-                                          null, null, "*apache*", null);
+                                          null, null, "\\*.apache.org", null);
         assertNotNull(creds);
         assertEquals(creds.size(), 1);
 
