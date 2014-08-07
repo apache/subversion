@@ -1343,8 +1343,8 @@ write_reps_containers(pack_context_t *context,
       SVN_ERR(svn_stream_read_full(stream, contents->data, &contents->len));
       SVN_ERR(svn_stream_close(stream));
 
-      list_index = svn_fs_x__reps_add(container,
-                                svn_stringbuf__morph_into_string(contents));
+      SVN_ERR(svn_fs_x__reps_add(&list_index, container,
+                                 svn_stringbuf__morph_into_string(contents)));
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
       block_left -= entry->size;
 
