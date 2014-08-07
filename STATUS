@@ -188,12 +188,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1616131
-   Make sure all members of the repos layer notify struct are valid by no
-   longer re-using a single instance.
-   Justification:
-     This resolves segfaults in bindings like javahil that use all members
-     of the struct, instead of only those needed for output (as svnadmin).
-   Votes:
-     +1: rhuijben, stsp, brane
