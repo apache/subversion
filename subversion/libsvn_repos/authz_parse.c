@@ -388,6 +388,177 @@ rules_open_section(void *baton, const char *section)
 }
 
 
+/* Parses an alias declaration. The definition (username) of the
+   alias will always be interned. */
+static svn_error_t *
+add_alias_definition(ctor_baton_t *cb,
+                     const char *option, const char *value)
+{
+  const char *alias;
+
+  if (strchr("@$&*~", *option))
+    return svn_error_createf(
+        SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+        _("Alias name '%s' may not begin with '%c'"),
+        option, *option);
+
+  /* Decorate the name to make lookups consistent. */
+  alias = apr_pstrcat(cb->parser_pool, "&", option, SVN_VA_NULL);
+
+  if (svn_hash_gets(cb->parsed_aliases, alias))
+    return svn_error_createf(
+        SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+        _("Can't override definition of alias '%s'"),
+        alias);
+
+  svn_hash_sets(cb->parsed_aliases, alias,
+                intern_string(cb, value, -1));
+  return SVN_NO_ERROR;
+}
+
+/* Parses an access entry. Groups and users in access entry names will
+   always be interned, aliases will never be. */
+static svn_error_t *
+add_access_entry(ctor_baton_t *cb, const char *section,
+                 const char *option, const char *value)
+{
+  parsed_acl_t *const acl = cb->current_acl;
+  const char *name = option;
+  const svn_boolean_t inverted = (*name == '~');
+  svn_boolean_t anonymous = FALSE;
+  svn_boolean_t authenticated = FALSE;
+  svn_repos_authz_access_t access = svn_authz_none;
+  authz_ace_t *ace;
+  int i;
+
+  SVN_ERR_ASSERT(acl != NULL);
+
+  if (inverted)
+    ++name;
+
+  /* Determine the access entry type. */
+  switch (*name)
+    {
+    case '~':
+      return svn_error_createf(
+          SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+          _("Access entry '%s' has more than one inversion;"
+            " double negatives are not permitted"),
+          option);
+      break;
+
+    case '*':
+      if (name[1] != '\0')
+        return svn_error_createf(
+            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+            _("Access entry '%s' is not valid;"
+              " it must be a single '*'"),
+            option);
+
+      if (inverted)
+        return svn_error_createf(
+            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+            _("Access entry '~*' will never match"));
+
+      anonymous = TRUE;
+      authenticated = TRUE;
+      break;
+
+    case '$':
+      if (0 == strcmp(name, anon_access_token))
+        {
+          if (inverted)
+            authenticated = TRUE;
+          else
+            anonymous = TRUE;
+        }
+      else if (0 == strcmp(name, authn_access_token))
+        {
+          if (inverted)
+            anonymous = TRUE;
+          else
+            authenticated = TRUE;
+        }
+      else
+        return svn_error_createf(
+            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+            _("Access entry token '%s' is not valid;"
+              " should be '%s' or '%s'"),
+            option, anon_access_token, authn_access_token);
+      break;
+
+    default:
+      /* A username, group name or alias. */;
+    }
+
+  /* Parse the access rights. */
+  for (i = 0; value[i]; ++i)
+    switch (value[i])
+      {
+      case 'r':
+        access |= svn_authz_read;
+        break;
+
+      case 'w':
+        /* FIXME: Idiocy. Write access should imply read access. */
+        access |= svn_authz_write;
+        break;
+
+      default:
+        if (!svn_ctype_isspace(value[i]))
+          return svn_error_createf(
+              SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+              _("The access mode '%c' in access entry '%s'"
+                "of rule [%s] is not valid"),
+              value[i], option, section);
+      }
+
+  /* Update the parsed ACL with this access entry. */
+  if (anonymous || authenticated)
+    {
+      if (anonymous)
+        {
+          acl->acl.has_anon_access = TRUE;
+          acl->acl.anon_access |= access;
+        }
+      if (authenticated)
+        {
+          acl->acl.has_authn_access = TRUE;
+          acl->acl.authn_access |= access;
+        }
+    }
+  else
+    {
+      /* The inversion tag must be part of the key in the hash
+         table, otherwise we can't tell regular and inverted
+         entries appart. */
+      const char *key = (inverted ? name - 1 : name);
+      const svn_boolean_t aliased = (*name == '&');
+      apr_hash_t *aces = (aliased ? acl->alias_aces : acl->aces);
+
+      ace = svn_hash_gets(aces, key);
+      if (ace)
+        ace->access |= access;
+      else
+        {
+          ace = apr_palloc(cb->parser_pool, sizeof(*ace));
+          ace->name = (aliased
+                       ? apr_pstrdup(cb->parser_pool, name)
+                       : intern_string(cb, name, -1));
+          ace->members = NULL;
+          ace->inverted = inverted;
+          ace->access = access;
+
+          key = (inverted
+                 ? apr_pstrdup(cb->parser_pool, key)
+                 : ace->name);
+          svn_hash_sets(aces, key, ace);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Constructor callback: Parse a rule, alias or group delcaration. */
 static svn_error_t *
 rules_add_value(void *baton, const char *section,
@@ -399,164 +570,9 @@ rules_add_value(void *baton, const char *section,
     return groups_add_value(baton, section, option, value);
 
   if (cb->in_aliases)
-    {
-      const char *alias;
+    return add_alias_definition(cb, option, value);
 
-      if (strchr("@$&*~", *option))
-        return svn_error_createf(
-            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-            _("Alias name '%s' may not begin with '%c'"),
-            option, *option);
-
-      /* Decorate the name to make lookups consistent. */
-      alias = apr_pstrcat(cb->parser_pool, "&", option, SVN_VA_NULL);
-
-      if (svn_hash_gets(cb->parsed_aliases, alias))
-        return svn_error_createf(
-            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-            _("Can't override definition of alias '%s'"),
-            alias);
-
-      svn_hash_sets(cb->parsed_aliases, alias,
-                    intern_string(cb, value, -1));
-    }
-  else
-    {
-      parsed_acl_t *const acl = cb->current_acl;
-      const char *name = option;
-      const svn_boolean_t inverted = (*name == '~');
-      svn_boolean_t anonymous = FALSE;
-      svn_boolean_t authenticated = FALSE;
-      svn_repos_authz_access_t access = svn_authz_none;
-      authz_ace_t *ace;
-      int i;
-
-      SVN_ERR_ASSERT(acl != NULL);
-
-      if (inverted)
-        ++name;
-
-      /* Determine the access entry type. */
-      switch (*name)
-        {
-        case '~':
-          return svn_error_createf(
-              SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-              _("Access entry '%s' has more than one inversion;"
-                " double negatives are not permitted"),
-              option);
-          break;
-
-        case '*':
-          if (name[1] != '\0')
-            return svn_error_createf(
-                SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                _("Access entry '%s' is not valid;"
-                  " it must be a single '*'"),
-                option);
-
-          if (inverted)
-            return svn_error_createf(
-                SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                _("Access entry '~*' will never match"));
-
-          anonymous = TRUE;
-          authenticated = TRUE;
-          break;
-
-        case '$':
-          if (0 == strcmp(name, anon_access_token))
-            {
-              if (inverted)
-                authenticated = TRUE;
-              else
-                anonymous = TRUE;
-            }
-          else if (0 == strcmp(name, authn_access_token))
-            {
-              if (inverted)
-                anonymous = TRUE;
-              else
-                authenticated = TRUE;
-            }
-          else
-            return svn_error_createf(
-                SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                _("Access entry token '%s' is not valid;"
-                  " should be '%s' or '%s'"),
-                option, anon_access_token, authn_access_token);
-          break;
-
-        default:
-          /* A username, group name or alias. */;
-        }
-
-      /* Parse the access rights. */
-      for (i = 0; value[i]; ++i)
-        switch (value[i])
-          {
-          case 'r':
-            access |= svn_authz_read;
-            break;
-
-          case 'w':
-            /* FIXME: Idiocy. Write access should imply read access. */
-            access |= svn_authz_write;
-            break;
-
-          default:
-            if (!svn_ctype_isspace(value[i]))
-              return svn_error_createf(
-                  SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                  _("The access mode '%c' in access entry '%s'"
-                    "of rule [%s] is not valid"),
-                  value[i], option, section);
-          }
-
-      /* Update the parsed ACL with this access entry. */
-      if (anonymous || authenticated)
-        {
-          if (anonymous)
-            {
-              acl->acl.has_anon_access = TRUE;
-              acl->acl.anon_access |= access;
-            }
-          if (authenticated)
-            {
-              acl->acl.has_authn_access = TRUE;
-              acl->acl.authn_access |= access;
-            }
-        }
-      else
-        {
-          /* The inversion tag must be part of the key in the hash
-             table, otherwise we can't tell regular and inverted
-             entries appart. */
-          const char *key = (inverted ? name - 1 : name);
-          const svn_boolean_t aliased = (*name == '&');
-          apr_hash_t *aces = (aliased ? acl->alias_aces : acl->aces);
-
-          ace = svn_hash_gets(aces, key);
-          if (ace)
-            ace->access |= access;
-          else
-            {
-              ace = apr_palloc(cb->parser_pool, sizeof(*ace));
-              ace->name = (aliased
-                           ? apr_pstrdup(cb->parser_pool, name)
-                           : intern_string(cb, name, -1));
-              ace->members = NULL;
-              ace->inverted = inverted;
-              ace->access = access;
-
-              key = (inverted
-                     ? apr_pstrdup(cb->parser_pool, key)
-                     : ace->name);
-              svn_hash_sets(aces, key, ace);
-            }
-        }
-    }
-  return SVN_NO_ERROR;
+  return add_access_entry(cb, section, option, value);
 }
 
 
