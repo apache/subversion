@@ -35,6 +35,7 @@
 #ifndef SVN_LIBSVN_SUBR_X509_H
 #define SVN_LIBSVN_SUBR_X509_H
 
+#include <stddef.h>
 #include <apr_time.h>
 
 /*
@@ -84,7 +85,7 @@ extern "C" {
  */
 typedef struct _x509_buf {
   int tag;
-  apr_size_t len;
+  ptrdiff_t len;
   const unsigned char *p;
 } x509_buf;
 

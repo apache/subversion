@@ -67,7 +67,7 @@
  */
 static svn_error_t *
 asn1_get_len(const unsigned char **p, const unsigned char *end,
-             apr_size_t *len)
+             ptrdiff_t *len)
 {
   if ((end - *p) < 1)
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
@@ -106,7 +106,7 @@ asn1_get_len(const unsigned char **p, const unsigned char *end,
 
 static svn_error_t *
 asn1_get_tag(const unsigned char **p,
-             const unsigned char *end, apr_size_t *len, int tag)
+             const unsigned char *end, ptrdiff_t *len, int tag)
 {
   if ((end - *p) < 1)
     return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
@@ -122,7 +122,7 @@ asn1_get_tag(const unsigned char **p,
 static svn_error_t *
 asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 {
-  apr_size_t len;
+  ptrdiff_t len;
 
   SVN_ERR(asn1_get_tag(p, end, &len, ASN1_INTEGER));
 
@@ -146,7 +146,7 @@ static svn_error_t *
 x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
 
   err = asn1_get_tag(p, end, &len,
                      ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 0);
@@ -220,7 +220,7 @@ static svn_error_t *
 x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
 
   err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
@@ -272,7 +272,7 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
               x509_name * cur, apr_pool_t *result_pool)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
   const unsigned char *end2;
   x509_buf *oid;
   x509_buf *val;
@@ -363,7 +363,7 @@ x509_get_date(apr_time_t *when,
   svn_error_t *err;
   apr_status_t ret;
   int tag;
-  apr_size_t len;
+  ptrdiff_t len;
   char *date;
   apr_time_exp_t xt = { 0 };
   char tz;
@@ -450,7 +450,7 @@ x509_get_dates(apr_time_t *from,
                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
 
   err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
@@ -475,7 +475,7 @@ static svn_error_t *
 x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
 
   sig->tag = **p;
 
@@ -536,7 +536,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
              const unsigned char *end)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
 
   if (*p == end)
     return SVN_NO_ERROR;
@@ -567,7 +567,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
 
   while (*p < end)
     {
-      apr_size_t ext_len;
+      ptrdiff_t ext_len;
       const unsigned char *ext_start, *sna_end;
       err = asn1_get_tag(p, end, &ext_len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
       if (err)
@@ -1029,7 +1029,7 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
                     apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  apr_size_t len;
+  ptrdiff_t len;
   const unsigned char *p;
   const unsigned char *end;
   x509_cert *crt;
