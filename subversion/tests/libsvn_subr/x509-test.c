@@ -373,7 +373,7 @@ compare_dates(const char *expected,
 
   if (!actual)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "No %s for cert '%s'", subject);
+                             "No %s for cert '%s'", type, subject);
 
   SVN_ERR(svn_time_from_cstring(&expected_tm, expected, pool));
   if (!expected_tm)
