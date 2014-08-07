@@ -743,15 +743,17 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_OPTION_P2L_PAGE_SIZE,
                                    0x400));
 
+      /* convert kBytes to bytes */
       ffd->block_size *= 0x400;
       ffd->p2l_page_size *= 0x400;
+      /* L2P pages are in entries - not in (k)Bytes */
     }
   else
     {
       /* should be irrelevant but we initialize them anyway */
-      ffd->block_size = 0x1000;
-      ffd->l2p_page_size = 0x2000;
-      ffd->p2l_page_size = 0x100000;
+      ffd->block_size = 0x1000; /* Matches default APR file buffer size. */
+      ffd->l2p_page_size = 0x2000;    /* Matches above default. */
+      ffd->p2l_page_size = 0x100000;  /* Matches above default in bytes. */
     }
 
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -943,7 +945,7 @@ write_config(svn_fs_t *fs,
 "### may improve latency while still maximizing throughput.  If block-read"  NL
 "### has not been enabled, this will be capped to 4 kBytes."                 NL
 "### Can be changed at any time but must be a power of 2."                   NL
-"### block-size is 64 kBytes by default."                                    NL
+"### block-size is given in kBytes and with a default of 64 kBytes."         NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 "###"                                                                        NL
 "### The log-to-phys index maps data item numbers to offsets within the"     NL
@@ -976,7 +978,7 @@ write_config(svn_fs_t *fs,
 "### smaller changes."                                                       NL
 "### For source code repositories, this should be about 16x the block-size." NL
 "### Must be a power of 2."                                                  NL
-"### p2l-page-size is 1024 kBytes by default."                               NL
+"### p2l-page-size is given in kBytes and with a default of 1024 kBytes."    NL
 "# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
 ;
 #undef NL
