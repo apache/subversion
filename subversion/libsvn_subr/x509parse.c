@@ -757,12 +757,12 @@ latin1_to_utf8(const svn_string_t **result, const svn_string_t *src,
   apr_int32_t *ucs4buf;
   svn_membuf_t resultbuf;
   apr_size_t length;
-  apr_size_t index;
+  apr_size_t i;
   svn_string_t *res;
 
   ucs4buf = apr_palloc(result_pool, src->len * sizeof(*ucs4buf));
-  for (index = 0; index < src->len; ++index)
-    ucs4buf[index] = (unsigned char)(src->data[index]);
+  for (i = 0; i < src->len; ++i)
+    ucs4buf[i] = (unsigned char)(src->data[i]);
 
   svn_membuf__create(&resultbuf, 2 * src->len, result_pool);
   SVN_ERR(svn_utf__encode_ucs4_string(
