@@ -471,7 +471,7 @@ add_new_text(svn_fs_x__reps_builder_t *builder,
       else if (builder->hash.offsets[idx] >= instruction.offset)
         continue;
 
-      builder->hash.offsets[idx] = offset;
+      builder->hash.offsets[idx] = (apr_uint32_t)offset;
       builder->hash.prefixes[idx] = builder->text->data[offset];
     }
 }
@@ -545,8 +545,9 @@ svn_fs_x__reps_add(apr_size_t *rep_idx,
 
           /* add instruction for matching section */
 
-          instruction.offset = offset - prefix_match;
-          instruction.count = prefix_match + postfix_match + MATCH_BLOCKSIZE;
+          instruction.offset = (apr_int32_t)(offset - prefix_match);
+          instruction.count = (apr_uint32_t)(prefix_match + postfix_match +
+                                             MATCH_BLOCKSIZE);
           APR_ARRAY_PUSH(builder->instructions, instruction_t) = instruction;
 
           processed = current + MATCH_BLOCKSIZE + postfix_match;
@@ -618,7 +619,7 @@ get_text(svn_fs_x__rep_extractor_t *extractor,
         /* a section that we need to fill from some external base rep. */
         missing_t missing;
         missing.base = 0;
-        missing.start = extractor->result->len;
+        missing.start = (apr_uint32_t)extractor->result->len;
         missing.count = instruction->count;
         missing.offset = instruction->offset;
         svn_stringbuf_appendfill(extractor->result, 0, instruction->count);
@@ -836,7 +837,7 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
   for (i = 0; i < reps->rep_count; ++i)
     first_instructions[i]
       = (apr_uint32_t)svn_packed__get_uint(reps_stream);
-  first_instructions[reps->rep_count] = reps->instruction_count;
+  first_instructions[reps->rep_count] = (apr_uint32_t)reps->instruction_count;
 
   /* other elements */
   reps->base_text_len = (apr_size_t)svn_packed__get_uint(misc_stream);
