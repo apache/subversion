@@ -934,7 +934,7 @@ x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
 static svn_boolean_t
 is_hostname(const svn_string_t *str)
 {
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < str->len; i++)
     {
