@@ -295,13 +295,14 @@ typedef struct fs_fs_data_t
      and is not complete, yet. */
   svn_revnum_t min_log_addressing_rev;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
-  /* Rev / pack file granularity covered by phys-to-log index pages */
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   apr_int64_t p2l_page_size;
 
   /* If set, parse and cache *all* data of each block that we read
