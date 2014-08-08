@@ -275,10 +275,14 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
 static svn_error_t *
 lock(struct mutex_t *mutex)
 {
-  SVN_MUTEX__WITH_LOCK(thread_mutex,
-                       svn_io__file_lock_autocreate(mutex->lock_name,
-                                                    mutex->pool));
-  return SVN_NO_ERROR;
+  svn_error_t *err;
+  SVN_ERR(svn_mutex__lock(thread_mutex));
+
+  err = svn_io__file_lock_autocreate(mutex->lock_name, mutex->pool);
+  if (err)
+    err = svn_mutex__unlock(thread_mutex, err);
+
+  return svn_error_trace(err);
 }
 
 /* Utility that releases the lock previously acquired via lock().  If the
