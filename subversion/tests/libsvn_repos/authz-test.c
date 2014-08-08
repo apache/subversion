@@ -73,6 +73,39 @@ access_string(svn_repos_authz_access_t access)
     }
 }
 
+static svn_error_t *
+print_repos_rights(void *baton,
+                   const void *key, apr_ssize_t klen,
+                   void *val,
+                   apr_pool_t *pool)
+{
+  const char *repos = key;
+  authz_rights_t *rights = val;
+  printf("      %s = all:%s  some:%s\n", repos,
+         access_string(rights->min_access),
+         access_string(rights->max_access));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+print_user_rights(void *baton, const void *key, apr_ssize_t klen,
+                  void *val,
+                  apr_pool_t *pool)
+{
+  authz_global_rights_t *gr = val;
+
+  printf("   %s\n", gr->user);
+  printf("      [all] = all:%s  some:%s\n",
+         access_string(gr->all_repos_rights.min_access),
+         access_string(gr->all_repos_rights.max_access));
+  printf("      [any] = all:%s  some:%s\n",
+         access_string(gr->any_repos_rights.min_access),
+         access_string(gr->any_repos_rights.max_access));
+  SVN_ERR(svn_iter_apr_hash(NULL, gr->per_repos_rights,
+                            print_repos_rights, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 test_authz_parse_tng(const svn_test_opts_t *opts,
@@ -157,6 +190,15 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
   printf("[groups]\n");
   SVN_ERR(svn_iter_apr_hash(NULL, authz->groups,
                             print_group, NULL, pool));
+  printf("\n\n");
+
+  printf("[users]\n");
+  if (authz->has_anon_rights)
+    print_user_rights(NULL, NULL, 0, &authz->anon_rights, pool);
+  if (authz->has_authn_rights)
+    print_user_rights(NULL, NULL, 0, &authz->authn_rights, pool);
+  SVN_ERR(svn_iter_apr_hash(NULL, authz->user_rights,
+                            print_user_rights, NULL, pool));
   printf("\n\n");
 
   return SVN_NO_ERROR;
