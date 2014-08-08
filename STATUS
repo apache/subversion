@@ -148,6 +148,8 @@ Candidate changes:
    Votes:
      +1: stefan2
      +1 (without r1615354): brane, breser
+     -1 (without r1615354): ivan (Race condition and undefined behavior.
+               See: http://svn.haxx.se/dev/archive-2014-08/0007.shtml)
 
  * r1612225
    Ignore ENOTIMPL and EINCOMPLETE errors when tweaking temporary file
