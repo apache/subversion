@@ -1016,12 +1016,12 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 }
 
 
-/* Insert the given UCS-4 VALUE into BUF at the given INDEX. */
+/* Insert the given UCS-4 VALUE into BUF at the given OFFSET. */
 static void
-membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t index, apr_int32_t value)
+membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t offset, apr_int32_t value)
 {
-  svn_membuf__resize(buf, (index + 1) * sizeof(value));
-  ((apr_int32_t*)buf->data)[index] = value;
+  svn_membuf__resize(buf, (offset + 1) * sizeof(value));
+  ((apr_int32_t*)buf->data)[offset] = value;
 }
 
 /* TODO: Use compiler intrinsics for byte swaps. */
@@ -1047,7 +1047,7 @@ svn_utf__utf16_to_utf8(const svn_string_t **result,
 
   apr_uint16_t lead_surrogate;
   apr_size_t length;
-  apr_size_t index;
+  apr_size_t offset;
   svn_membuf_t ucs4buf;
   svn_membuf_t resultbuf;
   svn_string_t *res;
@@ -1062,11 +1062,11 @@ svn_utf__utf16_to_utf8(const svn_string_t **result,
 
   svn_membuf__create(&ucs4buf, utf16len * sizeof(apr_int32_t), scratch_pool);
 
-  for (lead_surrogate = 0, length = 0, index = 0;
-       index < utf16len; ++index)
+  for (lead_surrogate = 0, length = 0, offset = 0;
+       offset < utf16len; ++offset)
     {
       const apr_uint16_t code =
-        (swap_order ? SWAP_SHORT(utf16str[index]) : utf16str[index]);
+        (swap_order ? SWAP_SHORT(utf16str[offset]) : utf16str[offset]);
 
       if (lead_surrogate)
         {
@@ -1089,7 +1089,7 @@ svn_utf__utf16_to_utf8(const svn_string_t **result,
             }
         }
 
-      if ((index + 1) < utf16len && IS_UTF16_LEAD_SURROGATE(code))
+      if ((offset + 1) < utf16len && IS_UTF16_LEAD_SURROGATE(code))
         {
           /* Store a lead surrogate that is followed by at least one
              code for the next iteration. */
@@ -1142,16 +1142,16 @@ svn_utf__utf32_to_utf8(const svn_string_t **result,
 
   if (swap_order)
     {
-      apr_size_t index;
+      apr_size_t offset;
       svn_membuf_t ucs4buf;
 
       svn_membuf__create(&ucs4buf, utf32len * sizeof(apr_int32_t),
                          scratch_pool);
 
-      for (index = 0; index < utf32len; ++index)
+      for (offset = 0; offset < utf32len; ++offset)
         {
-          const apr_int32_t code = SWAP_LONG(utf32str[index]);
-          membuf_insert_ucs4(&ucs4buf, index, code);
+          const apr_int32_t code = SWAP_LONG(utf32str[offset]);
+          membuf_insert_ucs4(&ucs4buf, offset, code);
         }
       utf32str = ucs4buf.data;
     }
