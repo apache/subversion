@@ -109,7 +109,7 @@ typedef struct ctor_baton_t
   /* Temporary alias mappings. */
   apr_hash_t *parsed_aliases;
 
-  /* temporary parsed-acl definitions. */
+  /* Temporary parsed-acl definitions. */
   apr_array_header_t *parsed_acls;
 
   /* The temporary ACL we're currently constructing. */
@@ -140,6 +140,29 @@ static const char anon_access_token[] = "$anonymous";
 static const char authn_access_token[] = "$authenticated";
 
 
+/* Initialize a rights structure.
+   The minimum rights start with all available access and are later
+   bitwise-and'ed with actual access rights. The maximum rights begin
+   empty and are later bitwise-and'ed with actual rights. */
+static void init_rights(authz_rights_t *rights)
+{
+  rights->min_access = svn_authz_read | svn_authz_write;
+  rights->max_access = svn_authz_none;
+ }
+
+/* Initialize a global rights structure.
+   The USER string must be interned or statically initialized. */
+static void
+init_global_rights(authz_global_rights_t *gr, const char *user,
+                   apr_pool_t *result_pool)
+{
+  gr->user = user;
+  init_rights(&gr->all_repos_rights);
+  init_rights(&gr->any_repos_rights);
+  gr->per_repos_rights = apr_hash_make(result_pool);
+}
+
+
 /* Initialize a constuctor baton. */
 static ctor_baton_t *
 create_ctor_baton(apr_pool_t *result_pool,
@@ -149,6 +172,9 @@ create_ctor_baton(apr_pool_t *result_pool,
   ctor_baton_t *const cb = apr_pcalloc(parser_pool, sizeof(*cb));
 
   svn_authz_tng_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
+  init_global_rights(&authz->anon_rights, anon_access_token, result_pool);
+  init_global_rights(&authz->authn_rights, authn_access_token, result_pool);
+  authz->user_rights = svn_hash__make(result_pool);
   authz->pool = result_pool;
 
   cb->authz = authz;
@@ -168,6 +194,21 @@ create_ctor_baton(apr_pool_t *result_pool,
   cb->parser_pool = parser_pool;
 
   return cb;
+}
+
+
+/* Create and store per-user global rights.
+   The USER string must be interned or statically initialized. */
+static void
+prepare_global_rights(ctor_baton_t *cb, const char *user)
+{
+  authz_global_rights_t *gr = svn_hash_gets(cb->authz->user_rights, user);
+  if (!gr)
+    {
+      gr = apr_palloc(cb->authz->pool, sizeof(*gr));
+      init_global_rights(gr, user, cb->authz->pool);
+      svn_hash_sets(cb->authz->user_rights, gr->user, gr);
+    }
 }
 
 
@@ -395,6 +436,7 @@ add_alias_definition(ctor_baton_t *cb,
                      const char *option, const char *value)
 {
   const char *alias;
+  const char *user;
 
   if (strchr("@$&*~", *option))
     return svn_error_createf(
@@ -411,8 +453,11 @@ add_alias_definition(ctor_baton_t *cb,
         _("Can't override definition of alias '%s'"),
         alias);
 
-  svn_hash_sets(cb->parsed_aliases, alias,
-                intern_string(cb, value, -1));
+  user = intern_string(cb, value, -1);
+  svn_hash_sets(cb->parsed_aliases, alias, user);
+
+  /* Prepare the global rights struct for this user. */
+  prepare_global_rights(cb, user);
   return SVN_NO_ERROR;
 }
 
@@ -553,6 +598,10 @@ add_access_entry(ctor_baton_t *cb, const char *section,
                  ? apr_pstrdup(cb->parser_pool, key)
                  : ace->name);
           svn_hash_sets(aces, key, ace);
+
+          /* Prepare the global rights struct for this user. */
+          if (!aliased && *ace->name != '@')
+            prepare_global_rights(cb, ace->name);
         }
     }
 
@@ -645,7 +694,11 @@ expand_group_callback(void *baton,
       else if (*member != '@')
         {
           /* Add the member to the group. */
-          add_to_group(cb, group, intern_string(cb, member, -1));
+          const char *user = intern_string(cb, member, -1);
+          add_to_group(cb, group, user);
+
+          /* Prepare the global rights struct for this user. */
+          prepare_global_rights(cb, user);
         }
       else
         {
@@ -756,6 +809,63 @@ array_insert_ace(void *baton,
 }
 
 
+/* Update accumulated RIGHTS from ACCESS. */
+static void
+update_rights(authz_rights_t *rights,
+              svn_repos_authz_access_t access)
+{
+  rights->min_access &= access;
+  rights->max_access |= access;
+}
+
+
+/* Update a global RIGHTS based on REPOS and ACCESS. */
+static void
+update_global_rights(authz_global_rights_t *gr,
+                     const char *repos,
+                     svn_repos_authz_access_t access)
+{
+  update_rights(&gr->all_repos_rights, access);
+  if (0 == strcmp(repos, AUTHZ_ANY_REPOSITORY))
+    update_rights(&gr->any_repos_rights, access);
+  else
+    {
+      authz_rights_t *rights = svn_hash_gets(gr->per_repos_rights, repos);
+      if (rights)
+        update_rights(rights, access);
+      else
+        {
+          rights = apr_palloc(apr_hash_pool_get(gr->per_repos_rights),
+                              sizeof(*rights));
+          init_rights(rights);
+          update_rights(rights, access);
+          svn_hash_sets(gr->per_repos_rights, repos, rights);
+        }
+    }
+}
+
+
+/* Hash iterator to update global per-user rights from an ACL. */
+static svn_error_t *
+update_user_rights(void *baton,
+                   const void *key,
+                   apr_ssize_t klen,
+                   void *value,
+                   apr_pool_t *scratch_pool)
+{
+  const authz_acl_t *const acl = baton;
+  const char *const user = key;
+  authz_global_rights_t *const gr = value;
+  svn_repos_authz_access_t access;
+  svn_boolean_t has_access =
+    svn_authz__acl_get_access(&access, acl, user, acl->repos);
+
+  if (has_access)
+    update_global_rights(gr, acl->repos, access);
+  return SVN_NO_ERROR;
+}
+
+
 /* List iterator, expands/merges a parsed ACL into its final form and
    appends it to the authz info's ACL array. */
 static svn_error_t *
@@ -765,6 +875,7 @@ expand_acl_callback(void *baton,
 {
   ctor_baton_t *const cb = baton;
   parsed_acl_t *const pacl = item;
+  authz_acl_t *const acl = &pacl->acl;
 
   /* Expand and merge the aliased ACEs. */
   if (apr_hash_count(pacl->alias_aces))
@@ -777,22 +888,35 @@ expand_acl_callback(void *baton,
     }
 
   /* Make an array from the merged hashes. */
-  pacl->acl.user_access =
+  acl->user_access =
     apr_array_make(cb->authz->pool, apr_hash_count(pacl->aces),
                    sizeof(authz_ace_t));
   {
     insert_ace_baton_t iab;
-    iab.ace_array = pacl->acl.user_access;
+    iab.ace_array = acl->user_access;
     iab.cb = cb;
     SVN_ERR(svn_iter_apr_hash(NULL, pacl->aces,
                               array_insert_ace, &iab, scratch_pool));
   }
 
-  /* TODO: Calculate global access rules. */
+  /* Store the completed ACL into authz. */
+  APR_ARRAY_PUSH(cb->authz->acls, authz_acl_t) = *acl;
 
-  /* And finally store the completed ACL into authz. */
-  APR_ARRAY_PUSH(cb->authz->acls, authz_acl_t) = pacl->acl;
-
+  /* Update global access rights for this ACL. */
+  if (acl->has_anon_access)
+    {
+      cb->authz->has_anon_rights = TRUE;
+      update_global_rights(&cb->authz->anon_rights,
+                           acl->repos, acl->anon_access);
+    }
+  if (acl->has_authn_access)
+    {
+      cb->authz->has_authn_rights = TRUE;
+      update_global_rights(&cb->authz->authn_rights,
+                           acl->repos, acl->authn_access);
+    }
+  SVN_ERR(svn_iter_apr_hash(NULL, cb->authz->user_rights,
+                            update_user_rights, acl, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -842,7 +966,6 @@ svn_authz__tng_parse(svn_authz_tng_t **authz,
 
   cb->authz->acls = apr_array_make(cb->authz->pool, cb->parsed_acls->nelts,
                                    sizeof(authz_acl_t));
-  cb->authz->global_rights = svn_hash__make(cb->authz->pool);
   SVN_ERR(svn_iter_apr_array(NULL, cb->parsed_acls,
                              expand_acl_callback, cb, cb->parser_pool));
 

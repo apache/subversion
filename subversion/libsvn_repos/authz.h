@@ -60,12 +60,9 @@ extern "C" {
 typedef struct authz_user_rules_t authz_user_rules_t;
 
 
-/* Accumulated global rights for (user, repository). */
-typedef struct authz_global_rights_t
+/* Accumulated rights for (user, repository). */
+typedef struct authz_rights_t
 {
-  /* Interned key of this instance in svn_authz_tng_t::global_rights. */
-  const char *key;
-
   /* The lowest level of access that the user has to every
      path in the repository. */
   svn_repos_authz_access_t min_access;
@@ -73,6 +70,26 @@ typedef struct authz_global_rights_t
   /* The highest level of access that the user has to
      any path in the repository. */
   svn_repos_authz_access_t max_access;
+} authz_rights_t;
+
+
+/* Accumulated global rights for a specific user. */
+typedef struct authz_global_rights_t
+{
+  /* The user name. */
+  const char *user;
+
+  /* Accumulated rights for this user across all repositories. */
+  authz_rights_t all_repos_rights;
+
+  /* Accumulated rights for this user from rules that are not
+     repository-specific. We use this to avoid a hash lookup for the
+     "any" repository rights. */
+  authz_rights_t any_repos_rights;
+
+  /* Accumulated rights for specific repositories.
+     The key is repository name, the value is an authz_rights_t*. */
+  apr_hash_t *per_repos_rights;
 } authz_global_rights_t;
 
 
@@ -82,9 +99,18 @@ typedef struct svn_authz_tng_t
   /* All ACLs from the authz file, in the order of definition. */
   apr_array_header_t *acls;
 
+  /* Globally accumulated rights for anonymous access. */
+  svn_boolean_t has_anon_rights;
+  authz_global_rights_t anon_rights;
+
+  /* Globally accumulated rights for authenticated users. */
+  svn_boolean_t has_authn_rights;
+  authz_global_rights_t authn_rights;
+
   /* Globally accumulated rights, for all concrete users mentioned
-     in the authz file, indexed by (user, repository). */
-  apr_hash_t *global_rights;
+     in the authz file. The key is the user name, the value is
+     an authz_global_rights_t*. */
+  apr_hash_t *user_rights;
 
   /* Fully recursively expanded group definitions, indexed by group name. */
   apr_hash_t *groups;
