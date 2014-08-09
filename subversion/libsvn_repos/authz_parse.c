@@ -234,26 +234,26 @@ intern_string(ctor_baton_t *cb, const char *str, apr_size_t len)
 
 /* Helper for rules_open_section and groups_open_section. */
 static svn_error_t *
-check_open_section(ctor_baton_t *cb, const char *section)
+check_open_section(ctor_baton_t *cb, svn_stringbuf_t *section)
 {
   SVN_ERR_ASSERT(!cb->current_acl && !cb->section);
-  if (svn_hash_gets(cb->sections, section))
+  if (apr_hash_get(cb->sections, section->data, section->len))
     {
       if (cb->parsing_groups)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Section appears more than once"
               " in the global groups file: [%s]"),
-            section);
+            section->data);
       else
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Section appears more than once"
               " in the authz file: [%s]"),
-            section);
+            section->data);
     }
 
-  cb->section = apr_pstrdup(cb->parser_pool, section);
+  cb->section = apr_pstrmemdup(cb->parser_pool, section->data, section->len);
   svn_hash_sets(cb->sections,  cb->section, "");
   return SVN_NO_ERROR;
 }
@@ -261,14 +261,14 @@ check_open_section(ctor_baton_t *cb, const char *section)
 
 /* Constructor callback: Begins the [groups] section. */
 static svn_error_t *
-groups_open_section(void *baton, const char *section)
+groups_open_section(void *baton, svn_stringbuf_t *section)
 {
   ctor_baton_t *const cb = baton;
 
   if (cb->parsing_groups)
     SVN_ERR(check_open_section(cb, section));
 
-  if (0 == strcmp(section, groups_section))
+  if (0 == strcmp(section->data, groups_section))
     {
       cb->in_groups = TRUE;
       return SVN_NO_ERROR;
@@ -279,37 +279,39 @@ groups_open_section(void *baton, const char *section)
       (cb->parsing_groups
        ? _("Section is not valid in the global group file: [%s]")
        : _("Section is not valid in the authz file: [%s]")),
-      section);
+      section->data);
 }
 
 
 /* Constructor callback: Parses a group declaration. */
 static svn_error_t *
-groups_add_value(void *baton, const char *section,
-                 const char *option, const char *value)
+groups_add_value(void *baton, svn_stringbuf_t *section,
+                 svn_stringbuf_t *option, svn_stringbuf_t *value)
 {
   ctor_baton_t *const cb = baton;
   const char *group;
+  apr_size_t group_len;
 
   SVN_ERR_ASSERT(cb->in_groups);
 
-  if (strchr("@$&*~", *option))
+  if (strchr("@$&*~", *option->data))
     {
       if (cb->parsing_groups)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Global group name '%s' may not begin with '%c'"),
-            option, *option);
+            option->data, *option->data);
       else
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Group name '%s' may not begin with '%c'"),
-            option, *option);
+            option->data, *option->data);
     }
 
   /* Decorate the name to make lookups consistent. */
-  group = apr_pstrcat(cb->parser_pool, "@", option, SVN_VA_NULL);
-  if (svn_hash_gets(cb->parsed_groups, group))
+  group = apr_pstrcat(cb->parser_pool, "@", option->data, SVN_VA_NULL);
+  group_len = option->len + 1;
+  if (apr_hash_get(cb->parsed_groups, group, group_len))
     {
       if (cb->parsing_groups)
         return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
@@ -327,8 +329,9 @@ groups_add_value(void *baton, const char *section,
      temporary groups in the baton hash later to fully expand group
      memberships.
      At this point, we can finally internalize the group name. */
-  svn_hash_sets(cb->parsed_groups, intern_string(cb, group, -1),
-                svn_cstring_split(value, ",", TRUE, cb->parser_pool));
+  apr_hash_set(cb->parsed_groups,
+               intern_string(cb, group, group_len), group_len,
+               svn_cstring_split(value->data, ",", TRUE, cb->parser_pool));
 
   return SVN_NO_ERROR;
 }
@@ -336,75 +339,87 @@ groups_add_value(void *baton, const char *section,
 
 /* Constructor callback: Starts a rule or [aliases] section. */
 static svn_error_t *
-rules_open_section(void *baton, const char *section)
+rules_open_section(void *baton, svn_stringbuf_t *section)
 {
   ctor_baton_t *const cb = baton;
-  const char *rule = section;
+  const char *rule = section->data;
+  apr_size_t rule_len = section->len;
   const char *endp;
   parsed_acl_t acl;
 
   SVN_ERR(check_open_section(cb, section));
 
+  /* Parse rule property tokens. */
   if (*rule != ':')
     acl.acl.glob = FALSE;
   else
     {
       /* This must be a wildcard rule. */
-      endp = strchr(++rule, ':');
+      apr_size_t token_len;
+
+      ++rule; --rule_len;
+      endp = memchr(rule, ':', rule_len);
       if (!endp)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Empty repository name in authz rule [%s]"),
-            section);
+            section->data);
+
       /* Note: the size of glob_rule_token includes the NUL terminator. */
-      if (endp - rule != sizeof(glob_rule_token) - 1
-          || memcmp(rule, glob_rule_token, endp - rule))
+      token_len = endp - rule;
+      if (token_len != sizeof(glob_rule_token) - 1
+          || memcmp(rule, glob_rule_token, token_len))
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Invalid type token '%s' in authz rule [%s]"),
-            apr_pstrmemdup(cb->parser_pool, rule, endp - rule),
-            section);
+            apr_pstrmemdup(cb->parser_pool, rule, token_len),
+            section->data);
 
       acl.acl.glob = TRUE;
       rule = endp + 1;
     }
 
-  /* FIXME: Colons are potentially valid in paths; should check for a
-     path first to make the parser more robust. */
-  endp = strchr(rule, ':');
+  /* Parse the repository name. */
+  endp = (*rule == '/' ? NULL : memchr(rule, ':', rule_len));
   if (!endp)
     acl.acl.repos = AUTHZ_ANY_REPOSITORY;
   else
     {
+      const apr_size_t repos_len = endp - rule;
+
       /* The rule contains a repository name. */
-      if (endp == rule)
+      if (0 == repos_len)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Empty repository name in authz rule [%s]"),
-            section);
-      if (memchr(rule, '/', endp - rule))
+            section->data);
+
+      if (memchr(rule, '/', repos_len))
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Invalid repository name '%s' in authz rule [%s]"),
-            apr_pstrmemdup(cb->parser_pool, rule, endp - rule),
-            section);
+            apr_pstrmemdup(cb->parser_pool, rule, repos_len),
+            section->data);
 
-      acl.acl.repos = intern_string(cb, rule, endp - rule);
+      acl.acl.repos = intern_string(cb, rule, repos_len);
       rule = endp + 1;
     }
 
+  /* Parse the actual rule. */
   if (*rule == '/')
     {
-      ++rule;
+      ++rule; --rule_len;
       if (svn_fspath__is_canonical(rule))
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Non-canonical path '%s' in in authz rule [%s]"),
-            rule, section);
+            rule, section->data);
 
-      acl.acl.rule = intern_string(cb, rule, -1);
+      /* FIXME: Normalize any wildcard escape chars here, and turn off
+         the glob flag if the rule does not contain any wildcards. */
+      acl.acl.rule = intern_string(cb, rule, rule_len);
     }
-  else if (0 == strcmp(section, aliases_section))
+  else if (0 == strcmp(section->data, aliases_section))
     {
       cb->in_aliases = TRUE;
       return SVN_NO_ERROR;
@@ -435,28 +450,29 @@ rules_open_section(void *baton, const char *section)
    alias will always be interned. */
 static svn_error_t *
 add_alias_definition(ctor_baton_t *cb,
-                     const char *option, const char *value)
+                     svn_stringbuf_t *option, svn_stringbuf_t *value)
 {
   const char *alias;
+  apr_size_t alias_len;
   const char *user;
 
-  if (strchr("@$&*~", *option))
+  if (strchr("@$&*~", *option->data))
     return svn_error_createf(
         SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
         _("Alias name '%s' may not begin with '%c'"),
-        option, *option);
+        option->data, *option->data);
 
   /* Decorate the name to make lookups consistent. */
-  alias = apr_pstrcat(cb->parser_pool, "&", option, SVN_VA_NULL);
-
-  if (svn_hash_gets(cb->parsed_aliases, alias))
+  alias = apr_pstrcat(cb->parser_pool, "&", option->data, SVN_VA_NULL);
+  alias_len = option->len + 1;
+  if (apr_hash_get(cb->parsed_aliases, alias, alias_len))
     return svn_error_createf(
         SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
         _("Can't override definition of alias '%s'"),
         alias);
 
-  user = intern_string(cb, value, -1);
-  svn_hash_sets(cb->parsed_aliases, alias, user);
+  user = intern_string(cb, value->data, value->len);
+  apr_hash_set(cb->parsed_aliases, alias, alias_len, user);
 
   /* Prepare the global rights struct for this user. */
   prepare_global_rights(cb, user);
@@ -466,11 +482,12 @@ add_alias_definition(ctor_baton_t *cb,
 /* Parses an access entry. Groups and users in access entry names will
    always be interned, aliases will never be. */
 static svn_error_t *
-add_access_entry(ctor_baton_t *cb, const char *section,
-                 const char *option, const char *value)
+add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
+                 svn_stringbuf_t *option, svn_stringbuf_t *value)
 {
   parsed_acl_t *const acl = cb->current_acl;
-  const char *name = option;
+  const char *name = option->data;
+  apr_size_t name_len = option->len;
   const svn_boolean_t inverted = (*name == '~');
   svn_boolean_t anonymous = FALSE;
   svn_boolean_t authenticated = FALSE;
@@ -481,7 +498,10 @@ add_access_entry(ctor_baton_t *cb, const char *section,
   SVN_ERR_ASSERT(acl != NULL);
 
   if (inverted)
-    ++name;
+    {
+      ++name;
+      --name_len;
+    }
 
   /* Determine the access entry type. */
   switch (*name)
@@ -491,16 +511,16 @@ add_access_entry(ctor_baton_t *cb, const char *section,
           SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
           _("Access entry '%s' has more than one inversion;"
             " double negatives are not permitted"),
-          option);
+          option->data);
       break;
 
     case '*':
-      if (name[1] != '\0')
+      if (name_len != 1)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Access entry '%s' is not valid;"
               " it must be a single '*'"),
-            option);
+            option->data);
 
       if (inverted)
         return svn_error_createf(
@@ -531,7 +551,7 @@ add_access_entry(ctor_baton_t *cb, const char *section,
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Access entry token '%s' is not valid;"
               " should be '%s' or '%s'"),
-            option, anon_access_token, authn_access_token);
+            option->data, anon_access_token, authn_access_token);
       break;
 
     default:
@@ -539,26 +559,29 @@ add_access_entry(ctor_baton_t *cb, const char *section,
     }
 
   /* Parse the access rights. */
-  for (i = 0; value[i]; ++i)
-    switch (value[i])
-      {
-      case 'r':
-        access |= svn_authz_read;
-        break;
+  for (i = 0; i < value->len; ++i)
+    {
+      const char access_code = value->data[i];
+      switch (access_code)
+        {
+        case 'r':
+          access |= svn_authz_read;
+          break;
 
-      case 'w':
-        /* FIXME: Idiocy. Write access should imply read access. */
-        access |= svn_authz_write;
-        break;
+        case 'w':
+          /* FIXME: Idiocy. Write access should imply read access. */
+          access |= svn_authz_write;
+          break;
 
-      default:
-        if (!svn_ctype_isspace(value[i]))
-          return svn_error_createf(
-              SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-              _("The access mode '%c' in access entry '%s'"
-                "of rule [%s] is not valid"),
-              value[i], option, section);
+        default:
+          if (!svn_ctype_isspace(access_code))
+            return svn_error_createf(
+                SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                _("The access mode '%c' in access entry '%s'"
+                  "of rule [%s] is not valid"),
+                access_code, option->data, section->data);
       }
+    }
 
   /* Update the parsed ACL with this access entry. */
   if (anonymous || authenticated)
@@ -580,26 +603,27 @@ add_access_entry(ctor_baton_t *cb, const char *section,
          table, otherwise we can't tell regular and inverted
          entries appart. */
       const char *key = (inverted ? name - 1 : name);
+      const apr_size_t key_len = (inverted ? name_len + 1 : name_len);
       const svn_boolean_t aliased = (*name == '&');
       apr_hash_t *aces = (aliased ? acl->alias_aces : acl->aces);
 
-      ace = svn_hash_gets(aces, key);
+      ace = apr_hash_get(aces, key, key_len);
       if (ace)
         ace->access |= access;
       else
         {
           ace = apr_palloc(cb->parser_pool, sizeof(*ace));
           ace->name = (aliased
-                       ? apr_pstrdup(cb->parser_pool, name)
-                       : intern_string(cb, name, -1));
+                       ? apr_pstrmemdup(cb->parser_pool, name, name_len)
+                       : intern_string(cb, name, name_len));
           ace->members = NULL;
           ace->inverted = inverted;
           ace->access = access;
 
           key = (inverted
-                 ? apr_pstrdup(cb->parser_pool, key)
+                 ? apr_pstrmemdup(cb->parser_pool, key, key_len)
                  : ace->name);
-          svn_hash_sets(aces, key, ace);
+          apr_hash_set(aces, key, key_len, ace);
 
           /* Prepare the global rights struct for this user. */
           if (!aliased && *ace->name != '@')
@@ -612,8 +636,8 @@ add_access_entry(ctor_baton_t *cb, const char *section,
 
 /* Constructor callback: Parse a rule, alias or group delcaration. */
 static svn_error_t *
-rules_add_value(void *baton, const char *section,
-                const char *option, const char *value)
+rules_add_value(void *baton, svn_stringbuf_t *section,
+                svn_stringbuf_t *option, svn_stringbuf_t *value)
 {
   ctor_baton_t *const cb = baton;
 
@@ -629,11 +653,11 @@ rules_add_value(void *baton, const char *section,
 
 /* Constructor callback: Close a section. */
 static svn_error_t *
-close_section(void *baton, const char *section)
+close_section(void *baton, svn_stringbuf_t *section)
 {
   ctor_baton_t *const cb = baton;
 
-  SVN_ERR_ASSERT(0 == strcmp(cb->section, section));
+  SVN_ERR_ASSERT(0 == strcmp(cb->section, section->data));
   cb->section = NULL;
   cb->current_acl = NULL;
   cb->in_groups = FALSE;

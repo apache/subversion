@@ -33,6 +33,7 @@
 #include <apr_lib.h>
 #include "svn_hash.h"
 #include "svn_error.h"
+#include "svn_string.h"
 #include "svn_pools.h"
 #include "config_impl.h"
 
@@ -140,10 +141,14 @@ svn_config_read3(svn_config_t **cfgp, const char *file,
 }
 
 svn_error_t *
-svn_config__default_add_value_fn(void *baton, const char *section,
-                                 const char *option, const char *value)
+svn_config__default_add_value_fn(void *baton,
+                                 svn_stringbuf_t *section,
+                                 svn_stringbuf_t *option,
+                                 svn_stringbuf_t *value)
 {
-  svn_config_set((svn_config_t *)baton, section, option, value);
+  /* FIXME: We may as well propagate the known string sizes here. */
+  svn_config_set((svn_config_t *)baton, section->data,
+                 option->data, value->data);
   return SVN_NO_ERROR;
 }
 

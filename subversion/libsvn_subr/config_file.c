@@ -116,7 +116,7 @@ open_section(parse_context_t *ctx, svn_boolean_t *stop)
   if (ctx->constructor->open_section)
     {
       svn_error_t *err = ctx->constructor->open_section(
-          ctx->constructor_baton, ctx->section->data);
+          ctx->constructor_baton, ctx->section);
       if (err)
         {
           if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
@@ -144,7 +144,7 @@ close_section(parse_context_t *ctx, svn_boolean_t *stop)
   if (ctx->constructor->close_section)
     {
       svn_error_t *err = ctx->constructor->close_section(
-          ctx->constructor_baton, ctx->section->data);
+          ctx->constructor_baton, ctx->section);
       if (err)
         {
           if (err->apr_err == SVN_ERR_CEASE_INVOCATION)
@@ -169,8 +169,8 @@ add_value(parse_context_t *ctx, svn_boolean_t *stop)
   if (ctx->constructor->add_value)
     {
       svn_error_t *err =  ctx->constructor->add_value(
-          ctx->constructor_baton, ctx->section->data,
-          ctx->option->data, ctx->value->data);
+          ctx->constructor_baton, ctx->section,
+          ctx->option, ctx->value);
       if (err)
         {
           if (err->apr_err == SVN_ERR_CEASE_INVOCATION)

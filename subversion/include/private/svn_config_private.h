@@ -31,6 +31,7 @@
 
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +51,7 @@ typedef struct svn_config__constructor_t svn_config__constructor_t;
  * May return SVN_ERR_CEASE_INVOCATION to stop further parsing.
  */
 typedef svn_error_t *(*svn_config__open_section_fn)(
-    void *baton, const char *section);
+    void *baton, svn_stringbuf_t *section);
 
 /*
  * Constructor callback: called when the parsing of SECTION ends. If
@@ -60,7 +61,7 @@ typedef svn_error_t *(*svn_config__open_section_fn)(
  * May return SVN_ERR_CEASE_INVOCATION to stop further parsing.
  */
 typedef svn_error_t *(*svn_config__close_section_fn)(
-    void *baton, const char *section);
+    void *baton, svn_stringbuf_t *section);
 
 /*
  * Constructor callback: called OPTION with VALUE in SECTION was
@@ -70,8 +71,8 @@ typedef svn_error_t *(*svn_config__close_section_fn)(
  * May return SVN_ERR_CEASE_INVOCATION to stop further parsing.
  */
 typedef svn_error_t *(*svn_config__add_value_fn)(
-    void *baton, const char *section,
-    const char *option, const char *value);
+    void *baton, svn_stringbuf_t *section,
+    svn_stringbuf_t *option, svn_stringbuf_t *value);
 
 
 /*
