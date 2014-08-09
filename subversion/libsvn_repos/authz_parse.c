@@ -356,7 +356,9 @@ rules_open_section(void *baton, const char *section)
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Empty repository name in authz rule [%s]"),
             section);
-      if (strncmp(rule, glob_rule_token, endp - rule))
+      /* Note: the size of glob_rule_token includes the NUL terminator. */
+      if (endp - rule != sizeof(glob_rule_token) - 1
+          || memcmp(rule, glob_rule_token, endp - rule))
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
             _("Invalid type token '%s' in authz rule [%s]"),
