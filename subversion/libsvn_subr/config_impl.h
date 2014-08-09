@@ -79,8 +79,8 @@ struct svn_config_t
 /* The default add-value constructor callback, used by the default
    config parser that populates an svn_config_t. */
 svn_error_t *svn_config__default_add_value_fn(
-    void *baton, const char *section,
-    const char *option, const char *value);
+    void *baton, svn_stringbuf_t *section,
+    svn_stringbuf_t *option, svn_stringbuf_t *value);
 
 /* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file(svn_config_t *cfg,
