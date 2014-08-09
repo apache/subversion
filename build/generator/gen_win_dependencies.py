@@ -862,15 +862,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the right perl library name to link swig bindings with"
 
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print "$Config{libperl}\\n"; '
                   'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
                           '$Config{PERL_SUBVERSION}\\n"; '
                   'print "$Config{archlib}\\n"'), 'r')
     try:
       line = fp.readline()
       if line:
+        perl_lib = line.strip()
+      else:
+        return
+
+      if line:
         perl_version = line.strip()
         perl_ver = perl_version.split('.')
-        perl_lib = 'perl%s%s.lib' % (perl_ver[0], perl_ver[1])
       else:
         return
 
