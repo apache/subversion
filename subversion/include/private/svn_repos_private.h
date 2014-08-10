@@ -132,7 +132,8 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
  * or a location in the Windows registry.
  *
  * Retrieve the configuration data that PATH points at and parse it into
- * CFG_P allocated in POOL.
+ * CFG_P allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary
+ * allocations.
  *
  * If PATH cannot be parsed as a config file then an error is returned.  The
  * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
@@ -147,7 +148,8 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
                            const char *path,
                            svn_boolean_t must_exist,
                            svn_boolean_t case_sensitive,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /**
  * @defgroup svn_config_pool Configuration object pool API

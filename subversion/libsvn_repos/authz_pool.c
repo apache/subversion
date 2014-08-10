@@ -142,6 +142,10 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                           svn_repos_t *preferred_repos,
                           apr_pool_t *pool)
 {
+#if 1
+  SVN_ERR(svn_repos_authz_read2(authz_p, path, groups_path, must_exist,
+                                pool));
+#else
   apr_pool_t *authz_ref_pool
     = svn_object_pool__new_wrapper_pool(authz_pool->object_pool);
   authz_object_t *authz_ref
@@ -220,6 +224,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                                   authz_pool->object_pool,
                                   authz_ref->key, authz_ref, NULL,
                                   authz_ref_pool, pool));
+#endif
 
   return SVN_NO_ERROR;
 }
