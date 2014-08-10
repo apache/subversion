@@ -40,6 +40,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "repos.h"
+#include "authz.h"
 
 
 /*** Utilities. ***/
@@ -72,207 +73,40 @@ reverse_string(char *s,
 
 /*** Users, aliases and groups. ***/
 
-/* Callback baton used with add_alias(). */
-typedef struct add_alias_baton_t
-{
-  /* Store the alias names here (including the '&' prefix). */
-  apr_hash_t *aliases;
-
-  /* The user we are currently looking up. */
-  const char *user;
-} add_alias_baton_t;
-
-/* Implements svn_config_enumerator2_t processing all entries in the
- * [aliases] section. Collect all the aliases for the user specified
- * in VOID_BATON. */
-static svn_boolean_t
-add_alias(const char *name,
-          const char *value,
-          void *void_baton,
-          apr_pool_t *scrath_pool)
-{
-  add_alias_baton_t *baton = void_baton;
-
-  /* Is this an alias for the current user? */
-  if (strcmp(baton->user, value) == 0)
-    {
-      /* Add it to our results.  However, decorate it such that it will
-         match directly against all occurrences of that alias. */
-      apr_pool_t *result_pool = apr_hash_pool_get(baton->aliases);
-      const char *decorated_name = apr_pstrcat(result_pool, "&", name,
-                                               SVN_VA_NULL);
-      set_add_string(baton->aliases, decorated_name);
-    }
-
-  /* Keep going. */
-  return TRUE;
-}
-
-/* Wrapper around svn_config_enumerate2.  Return a hash set containing the
- * USER and all its aliases as defined in CONFIG. */
+/* Return a hash set of all name keys (plain user name and decorated group
+ * names) that refer to USER in the authz FULL_MODEL.  This includes
+ * indirect group memberships. */
 static apr_hash_t *
-get_aliases(svn_config_t *config,
-            const char *user,
-            apr_pool_t *result_pool,
-            apr_pool_t *scratch_pool)
-{
-  apr_hash_t *result = svn_hash__make(result_pool);
-
-  add_alias_baton_t baton;
-  baton.aliases = result;
-  baton.user = user;
-
-  set_add_string(result, user);
-  svn_config_enumerate2(config, "aliases", add_alias, &baton, scratch_pool);
-
-  return result;
-}
-
-/* Callback baton to be used with add_group(). */
-typedef struct add_group_baton_t
-{
-  /* Output: Maps C string name (user, decorated alias, decorated group) to
-   *         an array of C string decorated group names that the key name is
-   *         a direct member of.  I.e. reversal of the group declaration. */
-  apr_hash_t *memberships;
-
-  /* Name and aliases of the current user. */
-  apr_hash_t *aliases;
-} add_group_baton_t;
-
-/* Implements svn_config_enumerator2_t processing all entries in the
- * [groups] section. Collect all groups that contain other groups or
- * directly one of the aliases provided in VOID_BATON. */
-static svn_boolean_t
-add_group(const char *name,
-          const char *value,
-          void *void_baton,
-          apr_pool_t *scrath_pool)
-{
-  int i;
-  apr_array_header_t *list;
-  add_group_baton_t *baton = void_baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(baton->memberships);
-
-  /* Decorated group NAME (i.e. '@' added).  Lazily initialized since many
-   * groups may not be relevant. */
-  const char *decorated_name = NULL;
-
-  /* Store the reversed membership  All group members. */
-  list = svn_cstring_split(value, ",", TRUE, scrath_pool);
-  for (i = 0; i < list->nelts; i++)
-    {
-      /* We are only interested in other groups as well as the user(s) given
-         through all their aliases. */
-      const char *member = APR_ARRAY_IDX(list, i, const char *);
-      if (member[0] == '@' || svn_hash_gets(baton->aliases, member))
-        {
-          /* Ensure there is a map entry for MEMBER. */
-          apr_array_header_t *groups = svn_hash_gets(baton->memberships,
-                                                     member);
-          if (groups == NULL)
-            {
-              groups = apr_array_make(result_pool, 4, sizeof(const char *));
-              member = apr_pstrdup(result_pool, member);
-              svn_hash_sets(baton->memberships, member, groups);
-            }
-
-          /* Lazily initialize DECORATED_NAME. */
-          if (decorated_name == NULL)
-            decorated_name = apr_pstrcat(result_pool, "@", name, SVN_VA_NULL);
-
-          /* Finally, add the group to the list of memberships. */
-          APR_ARRAY_PUSH(groups, const char *) = decorated_name;
-        }
-    }
-
-  /* Keep going. */
-  return TRUE;
-}
-
-/* Wrapper around svn_config_enumerate2.  Find all groups that ALIASES are
- * members of and all groups that other groups are member of. */
-static apr_hash_t *
-get_group_memberships(svn_config_t *config,
-                      apr_hash_t *aliases,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  apr_hash_t *result = svn_hash__make(result_pool);
-
-  add_group_baton_t baton;
-  baton.aliases = aliases;
-  baton.memberships = result;
-  svn_config_enumerate2(config, SVN_CONFIG_SECTION_GROUPS, add_group,
-                        &baton, scratch_pool);
-
-  return result;
-}
-
-/* Return a hash set of all name keys (plain user name, decorated aliases
- * and decorated group names) that refer to USER in the authz CONFIG.
- * This include indirect group memberships. */
-static apr_hash_t *
-get_memberships(svn_config_t *config,
+get_memberships(svn_authz_tng_t *full_model,
                 const char *user,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *to_follow;
   apr_hash_index_t *hi;
-  apr_hash_t *result, *memberships;
-  int i, k;
+  apr_hash_t *result;
 
-  /* special case: anonymous user */
+  /* Special case: anonymous user. $anonymous and * access rights are
+   * already available at the ACL object itself and will not show up
+   * in the ACEs. */
+  result = svn_hash__make(result_pool);
   if (user == NULL)
+    return result;
+
+  /* Find all groups that contain USER. */
+  for (hi = apr_hash_first(scratch_pool, full_model->groups);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      result = svn_hash__make(result_pool);
-      set_add_string(result, "*");
-      set_add_string(result, "$anonymous");
-
-      return result;
-    }
-
-  /* The USER and all its aliases. */
-  result = get_aliases(config, user, result_pool, scratch_pool);
-
-  /* For each potentially relevant decorated user / group / alias name,
-   * find the immediate group memberships. */
-  memberships = get_group_memberships(config, result, scratch_pool,
-                                      scratch_pool);
-
-  /* Now, flatten everything and construct the full result.
-   * We start at the user / decorated alias names. */
-  to_follow = apr_array_make(scratch_pool, 16, sizeof(const char *));
-  for (hi = apr_hash_first(scratch_pool, result); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(to_follow, const char *) = apr_hash_this_key(hi);
-
-  /* Iteratively add group memberships. */
-  for (i = 0; i < to_follow->nelts; ++i)
-    {
-      /* Is NAME member of any groups? */
-      const char *name = APR_ARRAY_IDX(to_follow, i, const char *);
-      apr_array_header_t *next = svn_hash_gets(memberships, name);
-      if (next)
+      apr_hash_t *members = apr_hash_this_val(hi);
+      if (svn_hash_gets(members, user))
         {
-          /* Add all groups to the result, if not included already
-           * (multiple subgroups may belong to the same super group). */
-          for (k = 0; k < next->nelts; ++k)
-            {
-              const char *group = APR_ARRAY_IDX(next, k, const char *);
-              if (!svn_hash_gets(result, group))
-                {
-                  /* New group. Add to result and look for parents later. */
-                  set_add_string(result, group);
-                  APR_ARRAY_PUSH(to_follow, const char *) = group;
-                }
-            }
+          const char *group = apr_hash_this_key(hi);
+          set_add_string(result, group);
         }
     }
 
-  /* standard memberships */
-  set_add_string(result, "*");
-  set_add_string(result, "$authenticated");
+  /* The USER itself is of course also a matching name. */
+  set_add_string(result, user);
 
   return result;
 }
@@ -412,85 +246,55 @@ typedef struct node_t
   node_pattern_t *pattern_sub_nodes;
 } node_t;
 
-/* Callback baton to be used with process_rule(). */
-typedef struct process_rule_baton_t
-{
-  /* The user name, their aliases and names of all groups that the user is
-     a member of. */
-  apr_hash_t *memberships;
-
-  /* TRUE, if we found at least one rule that applies the user. */
-  svn_boolean_t found;
-
-  /* Aggregated rights granted to the user. */
-  svn_repos_authz_access_t access;
-} process_rule_baton_t;
-
-/* Implements svn_config_enumerator2_t processing all entries (rules) in a
- * rule set (path rule).  Aggregate all access rights in VOID_BATON.
- * Note that, within a rule set, are always accumulated, never subtracted. */
-static svn_boolean_t
-process_rule(const char *name,
-             const char *value,
-             void *void_baton,
-             apr_pool_t *scrath_pool)
-{
-  process_rule_baton_t *baton = void_baton;
-  svn_boolean_t inverted = FALSE;
-
-  /* Is this an inverted rule? */
-  if (name[0] == '~')
-    {
-      inverted = TRUE;
-      ++name;
-    }
-
-  /* Inversion simply means inverted membership / relevance check. */
-  if (inverted == !svn_hash_gets(baton->memberships, name))
-    {
-      /* The rule applies. Accumulate the rights that the user is given. */
-      baton->found = TRUE;
-      baton->access |= (strchr(value, 'r') ? svn_authz_read : svn_authz_none)
-                    | (strchr(value, 'w') ? svn_authz_write : svn_authz_none);
-    }
-
-  return TRUE;
-}
-
-/* Return whether the path rule SECTION in authz CONFIG applies to any of
- * the user's MEMBERSHIPS.  If it does, return the specified access rights
- * in *ACCESS.
+/* Return whether the ACL applies to any of the user's MEMBERSHIPS.  If it
+ * does, return the specified access rights in *ACCESS.  Non-authenticated
+ * users set the ANONYMOUS flag and provide an empty non-NULL MEMBERSHIPS
+ * hash.
  */
 static svn_boolean_t
 has_matching_rule(svn_repos_authz_access_t *access,
-                  svn_config_t *config,
-                  const char *section,
-                  apr_hash_t *memberships,
-                  apr_pool_t *scratch_pool)
+                  const authz_acl_t *acl,
+                  svn_boolean_t anonymous,
+                  apr_hash_t *memberships)
 {
-  /* Fully initialize the baton. */
-  process_rule_baton_t baton;
-  baton.memberships = memberships;
-  baton.found = FALSE;
-  baton.access = svn_authz_none;
+  int i;
+  svn_boolean_t found = FALSE;
 
-  /* Scan the whole rule set in SECTION and collect the access rights. */
-  svn_config_enumerate2(config, section, process_rule, &baton, scratch_pool);
+  /* $authenticated, $anonymous and * ACEs have already been evaluated and
+   * are available directly at the ACL object. */
+  *access = svn_authz_none;
+  if (anonymous)
+    {
+      if (acl->has_anon_access)
+        {
+          *access = acl->anon_access;
+          found = TRUE;
+        }
+    }
+  else
+    {
+      if (acl->has_authn_access)
+        {
+          *access = acl->authn_access;
+          found = TRUE;
+        }
+    }
 
-  /* Return the results. */
-  if (baton.found)
-    *access = baton.access;
+  /* All other group and user ACEs are provided as a simple list. */
+  for (i = 0; i < acl->user_access->nelts; ++i)
+    {
+      const authz_ace_t *ace
+        = &APR_ARRAY_IDX(acl->user_access, i, const authz_ace_t);
 
-  return baton.found;
-}
+      if (ace->inverted == !svn_hash_gets(memberships, ace->name))
+        {
+          /* The rule applies. Accumulate the rights that the user is given. */
+          found = TRUE;
+          *access |= ace->access;
+        }
+    }
 
-/* Return TRUE, iff PATH has been marked as supporting wildcards and is
- * actually using wildcards.
- */
-static svn_boolean_t
-has_wildcards(const char *path)
-{
-  return path[0] == '*' && strchr(path + 1, '*');
+  return found;
 }
 
 /* Return TRUE, if SEGMENT is a prefix pattern, i.e. contains exactly one
@@ -727,85 +531,45 @@ normalize_wildcards(const char *path,
   return buffer->data;
 }
 
-/* Callback baton to be used with  process_path_rule().
+/* If the ACL is relevant to the REPOSITORY and user (given as MEMBERSHIPS
+ * plus ANONYMOUS flag), insert the respective nodes into tree starting
+ * at ROOT.  Allocate new nodes in RESULT_POOL and use SCRATCH_POOL for
+ * temporary allocations.
  */
-typedef struct process_path_rule_baton_t
+static void
+process_acl(const authz_acl_t *acl,
+            node_t *root,
+            const char *repository,
+            svn_boolean_t anonymous,
+            apr_hash_t *memberships,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
-  /* The authz config structure from which we extract the user and repo-
-   * relevant information. */
-  svn_config_t *config;
-
-  /* Ignore path rules that don't apply to this repository. */
-  svn_string_t repository;
-
-  /* The user name, their aliases and names of all groups that the user is
-     a member of. */
-  apr_hash_t *memberships;
-
-  /* Next sequence number.  Basically a counter. */
-  apr_int64_t sequence_number;
-
-  /* Root node of the result tree. Never NULL. */
-  node_t *root;
-
-  /* Allocate all nodes and their data from this pool. */
-  apr_pool_t *pool;
-} process_path_rule_baton_t;
-
-/* Implements svn_config_section_enumerator2_t taking a
- * process_path_rule_baton_t in *VOID_BATON and inserting rules into the
- * result tree, if they are relevant to the given user and repository.
- */
-static svn_boolean_t
-process_path_rule(const char *name,
-                  void *void_baton,
-                  apr_pool_t *scratch_pool)
-{
-  process_path_rule_baton_t *baton = void_baton;
-  const char *colon_pos;
   const char *path;
-  access_t *access;
-  svn_repos_authz_access_t rights;
+  access_t access;
   apr_array_header_t *segments;
-  svn_boolean_t wildcards;
 
   /* Is this section is relevant to the selected repository? */
-  colon_pos = strchr(name, ':');
-  if (colon_pos)
-      if (   (colon_pos - name != baton->repository.len)
-          || memcmp(name, baton->repository.data, baton->repository.len))
-        return TRUE;
-
-  /* Ignore sections that are not path rules */
-  path = colon_pos ? colon_pos + 1 : name;
-  wildcards = has_wildcards(path);
-  if (path[0] == '*')
-    ++path;
-  if (path[0] != '/')
-    return TRUE;
+  if (acl->repos[0] && strcmp(acl->repos, repository))
+    return;
 
   /* Skip sections that don't say anything about the current user. */
-  if (!has_matching_rule(&rights, baton->config, name,
-                         baton->memberships, scratch_pool))
-    return TRUE;
+  if (!has_matching_rule(&access.rights, acl, anonymous, memberships))
+    return;
+  access.sequence_number = acl->sequence_number;
 
-  /* Process the path */
-  if (wildcards && strstr(path, "**"))
-    path = normalize_wildcards(path, scratch_pool);
+  /* Process the path. */
+  if (acl->glob && strstr(acl->rule, "**"))
+    path = normalize_wildcards(acl->rule, scratch_pool);
+  else
+    path = acl->rule;
 
   segments = svn_cstring_split(path, "/", FALSE, scratch_pool);
   APR_ARRAY_PUSH(segments, const char *) = NULL;
 
-  /* Access rights to assign. */
-  access = apr_pcalloc(baton->pool, sizeof(*access));
-  access->sequence_number = baton->sequence_number++;
-  access->rights = rights;
-
   /* Insert the path rule into the filtered tree. */
-  insert_path(baton->root, (void *)segments->elts, wildcards, access,
-              baton->pool, scratch_pool);
-
-  return TRUE;
+  insert_path(root, (void *)segments->elts, acl->glob, &access,
+              result_pool, scratch_pool);
 }
 
 /* Forward declaration ... */
@@ -890,46 +654,47 @@ finalize_tree(node_t *parent,
  * Return the filtered rule tree.
  */
 static node_t *
-create_user_authz(svn_config_t *config,
+create_user_authz(svn_authz_tng_t *full_model,
                   const char *repository,
                   const char *user,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
+  int i;
+  node_t *root = create_node("", result_pool);
+  apr_hash_t *memberships;
+
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* Initialize the simple BATON members. */
-  process_path_rule_baton_t baton;
-  baton.config = config;
-  baton.repository.data = repository;
-  baton.repository.len = strlen(repository);
-  baton.pool = result_pool;
-  baton.sequence_number = 1;
-
   /* Determine the user's aliases, group memberships etc. */
-  baton.memberships = get_memberships(config, user, scratch_pool, subpool);
+  memberships = get_memberships(full_model, user, scratch_pool, subpool);
   svn_pool_clear(subpool);
 
   /* Filtering and tree construction. */
-  baton.root = create_node("", result_pool);
-  svn_config_enumerate_sections2(config, process_path_rule, &baton, subpool);
+  for (i = 0; i < full_model->acls->nelts; ++i)
+    {
+      const authz_acl_t *acl = &APR_ARRAY_IDX(full_model->acls, i,
+                                              const authz_acl_t);
+      process_acl(acl, root, repository, user == NULL, memberships,
+                  result_pool, subpool);
+    }
 
   /* If there is no relevant rule at the root node, the "no access" default
    * applies. Give it a SEQUENCE_ID that will never overrule others. */
-  if (!has_local_rule(&baton.root->rights))
+  if (!has_local_rule(&root->rights))
     {
-      baton.root->rights.access.sequence_number = 0;
-      baton.root->rights.access.rights = svn_authz_none;
+      root->rights.access.sequence_number = 0;
+      root->rights.access.rights = svn_authz_none;
     }
 
   /* Calculate recursive rights etc. */
   svn_pool_clear(subpool);
-  finalize_tree(baton.root, &baton.root->rights.access, baton.root, subpool);
+  finalize_tree(root, &root->rights.access, root, subpool);
 
   /* Done. */
   svn_pool_destroy(subpool);
-  return baton.root;
+  return root;
 }
 
 
@@ -1417,293 +1182,6 @@ lookup(lookup_state_t *state,
 }
 
 
-/*** Validating the authz file. ***/
-
-/* Information for the config enumeration functions called during the
-   validation process. */
-struct authz_validate_baton {
-  svn_config_t *config; /* The configuration file being validated. */
-  svn_error_t *err;     /* The error being thrown out of the
-                           enumerator, if any. */
-};
-
-/* Check for errors in GROUP's definition of CFG.  The errors
- * detected are references to non-existent groups and circular
- * dependencies between groups.  If an error is found, return
- * SVN_ERR_AUTHZ_INVALID_CONFIG.  Use POOL for temporary
- * allocations only.
- *
- * CHECKED_GROUPS should be an empty (it is used for recursive calls).
- */
-static svn_error_t *
-authz_group_walk(svn_config_t *cfg,
-                 const char *group,
-                 apr_hash_t *checked_groups,
-                 apr_pool_t *pool)
-{
-  const char *value;
-  apr_array_header_t *list;
-  int i;
-
-  svn_config_get(cfg, &value, "groups", group, NULL);
-  /* Having a non-existent group in the ACL configuration might be the
-     sign of a typo.  Refuse to perform authz on uncertain rules. */
-  if (!value)
-    return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                             "An authz rule refers to group '%s', "
-                             "which is undefined",
-                             group);
-
-  list = svn_cstring_split(value, ",", TRUE, pool);
-
-  for (i = 0; i < list->nelts; i++)
-    {
-      const char *group_user = APR_ARRAY_IDX(list, i, char *);
-
-      /* If the 'user' is a subgroup, recurse into it. */
-      if (*group_user == '@')
-        {
-          /* A circular dependency between groups is a Bad Thing.  We
-             don't do authz with invalid ACL files. */
-          if (svn_hash_gets(checked_groups, &group_user[1]))
-            return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG,
-                                     NULL,
-                                     "Circular dependency between "
-                                     "groups '%s' and '%s'",
-                                     &group_user[1], group);
-
-          /* Add group to hash of checked groups. */
-          svn_hash_sets(checked_groups, &group_user[1], "");
-
-          /* Recurse on that group. */
-          SVN_ERR(authz_group_walk(cfg, &group_user[1],
-                                   checked_groups, pool));
-
-          /* Remove group from hash of checked groups, so that we don't
-             incorrectly report an error if we see it again as part of
-             another group. */
-          svn_hash_sets(checked_groups, &group_user[1], NULL);
-        }
-      else if (*group_user == '&')
-        {
-          const char *alias;
-
-          svn_config_get(cfg, &alias, "aliases", &group_user[1], NULL);
-          /* Having a non-existent alias in the ACL configuration might be the
-             sign of a typo.  Refuse to perform authz on uncertain rules. */
-          if (!alias)
-            return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "An authz rule refers to alias '%s', "
-                                     "which is undefined",
-                                     &group_user[1]);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Callback to perform some simple sanity checks on an authz rule.
- *
- * - If RULE_MATCH_STRING references a group or an alias, verify that
- *   the group or alias definition exists.
- * - If RULE_MATCH_STRING specifies a token (starts with $), verify
- *   that the token name is valid.
- * - If RULE_MATCH_STRING is using inversion, verify that it isn't
- *   doing it more than once within the one rule, and that it isn't
- *   "~*", as that would never match.
- * - Check that VALUE part of the rule specifies only allowed rule
- *   flag characters ('r' and 'w').
- *
- * Return TRUE if the rule has no errors. Use BATON for context and
- * error reporting.
- */
-static svn_boolean_t authz_validate_rule(const char *rule_match_string,
-                                         const char *value,
-                                         void *baton,
-                                         apr_pool_t *pool)
-{
-  const char *val;
-  const char *match = rule_match_string;
-  struct authz_validate_baton *b = baton;
-
-  /* Make sure the user isn't using double-negatives. */
-  if (match[0] == '~')
-    {
-      /* Bump the pointer past the inversion for the other checks. */
-      match++;
-
-      /* Another inversion is a double negative; we can't not stop. */
-      if (match[0] == '~')
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "Rule '%s' has more than one "
-                                     "inversion; double negatives are "
-                                     "not permitted.",
-                                     rule_match_string);
-          return FALSE;
-        }
-
-      /* Make sure that the rule isn't "~*", which won't ever match. */
-      if (strcmp(match, "*") == 0)
-        {
-          b->err = svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                    "Authz rules with match string '~*' "
-                                    "are not allowed, because they never "
-                                    "match anyone.");
-          return FALSE;
-        }
-    }
-
-  /* If the rule applies to a group, check its existence. */
-  if (match[0] == '@')
-    {
-      const char *group = &match[1];
-
-      svn_config_get(b->config, &val, "groups", group, NULL);
-
-      /* Having a non-existent group in the ACL configuration might be
-         the sign of a typo.  Refuse to perform authz on uncertain
-         rules. */
-      if (!val)
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "An authz rule refers to group "
-                                     "'%s', which is undefined",
-                                     rule_match_string);
-          return FALSE;
-        }
-    }
-
-  /* If the rule applies to an alias, check its existence. */
-  if (match[0] == '&')
-    {
-      const char *alias = &match[1];
-
-      svn_config_get(b->config, &val, "aliases", alias, NULL);
-
-      if (!val)
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "An authz rule refers to alias "
-                                     "'%s', which is undefined",
-                                     rule_match_string);
-          return FALSE;
-        }
-     }
-
-  /* If the rule specifies a token, check its validity. */
-  if (match[0] == '$')
-    {
-      const char *token_name = &match[1];
-
-      if ((strcmp(token_name, "anonymous") != 0)
-       && (strcmp(token_name, "authenticated") != 0))
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "Unrecognized authz token '%s'.",
-                                     rule_match_string);
-          return FALSE;
-        }
-    }
-
-  val = value;
-
-  while (*val)
-    {
-      if (*val != 'r' && *val != 'w' && ! svn_ctype_isspace(*val))
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "The character '%c' in rule '%s' is not "
-                                     "allowed in authz rules", *val,
-                                     rule_match_string);
-          return FALSE;
-        }
-
-      ++val;
-    }
-
-  return TRUE;
-}
-
-/* Callback to check ALIAS's definition for validity.  Use
-   BATON for context and error reporting. */
-static svn_boolean_t authz_validate_alias(const char *alias,
-                                          const char *value,
-                                          void *baton,
-                                          apr_pool_t *pool)
-{
-  /* No checking at the moment, every alias is valid */
-  return TRUE;
-}
-
-
-/* Callback to check GROUP's definition for cyclic dependancies.  Use
-   BATON for context and error reporting. */
-static svn_boolean_t authz_validate_group(const char *group,
-                                          const char *value,
-                                          void *baton,
-                                          apr_pool_t *pool)
-{
-  struct authz_validate_baton *b = baton;
-
-  b->err = authz_group_walk(b->config, group, apr_hash_make(pool), pool);
-  if (b->err)
-    return FALSE;
-
-  return TRUE;
-}
-
-
-/* Callback to check the contents of the configuration section given
-   by NAME.  Use BATON for context and error reporting. */
-static svn_boolean_t authz_validate_section(const char *name,
-                                            void *baton,
-                                            apr_pool_t *pool)
-{
-  struct authz_validate_baton *b = baton;
-
-  /* Use the group checking callback for the "groups" section... */
-  if (strcmp(name, "groups") == 0)
-    svn_config_enumerate2(b->config, name, authz_validate_group,
-                          baton, pool);
-  /* ...and the alias checking callback for "aliases"... */
-  else if (strcmp(name, "aliases") == 0)
-    svn_config_enumerate2(b->config, name, authz_validate_alias,
-                          baton, pool);
-  /* ...but for everything else use the rule checking callback. */
-  else
-    {
-      /* Validate the section's name. Skip the optional REPOS_NAME. */
-      const char *fspath = strchr(name, ':');
-      if (fspath)
-        fspath++;
-      else
-        fspath = name;
-      if (fspath[0] == '*')
-        ++fspath;
-
-      if (! svn_fspath__is_canonical(fspath))
-        {
-          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                     "Section name '%s' contains non-canonical "
-                                     "fspath '%s'",
-                                     name, fspath);
-          return FALSE;
-        }
-
-      svn_config_enumerate2(b->config, name, authz_validate_rule,
-                            baton, pool);
-    }
-
-  if (b->err)
-    return FALSE;
-
-  return TRUE;
-}
-
-
-
 
 /*** The authz data structure. ***/
 
@@ -1744,9 +1222,8 @@ typedef struct filtered_rules_t
 
 struct svn_authz_t
 {
-  /* The configuration containing the raw users, groups, aliases and rule
-   * sets data. */
-  svn_config_t *cfg;
+  /* The non-filtered authz data model. */
+  svn_authz_tng_t *full_model;
 
   /* LRU cache of the filtered path rule trees for the latest (user, repo)
    * combinations.  Empty / unused entries have NULL for ROOT. */
@@ -1883,41 +1360,6 @@ authz_retrieve_config_file(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-/* Callback to copy (name, value) group into the "groups" section
-   of another configuration. */
-static svn_boolean_t
-authz_copy_group(const char *name, const char *value,
-                 void *baton, apr_pool_t *pool)
-{
-  svn_config_t *authz_cfg = baton;
-
-  svn_config_set(authz_cfg, SVN_CONFIG_SECTION_GROUPS, name, value);
-
-  return TRUE;
-}
-
-/* Copy group definitions from GROUPS_CFG to the resulting authz CONFIG.
- * If CONFIG already contains any group definition, report an error.
- * Use POOL for temporary allocations. */
-static svn_error_t *
-authz_copy_groups(svn_config_t *config, svn_config_t *groups_cfg,
-                  apr_pool_t *pool)
-{
-  /* Easy out: we prohibit local groups in the authz file when global
-     groups are being used. */
-  if (svn_config_has_section(config, SVN_CONFIG_SECTION_GROUPS))
-    {
-      return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                              "Authz file cannot contain any groups "
-                              "when global groups are being used.");
-    }
-
-  svn_config_enumerate2(groups_cfg, SVN_CONFIG_SECTION_GROUPS,
-                        authz_copy_group, config, pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
  * one and return the fully initialized filtered_rules_t to start lookup
@@ -1984,8 +1426,9 @@ get_filtered_tree(svn_authz_t *authz,
   authz->prefiltered[i].pool = pool;
   authz->prefiltered[i].repository = apr_pstrdup(pool, repos_name);
   authz->prefiltered[i].user = user ? apr_pstrdup(pool, user) : NULL;
-  authz->prefiltered[i].root = create_user_authz(authz->cfg, repos_name,
-                                                 user, pool, scratch_pool);
+  authz->prefiltered[i].root = create_user_authz(authz->full_model,
+                                                 repos_name, user, pool,
+                                                 scratch_pool);
   authz->prefiltered[i].lookup_state = create_lookup_state(pool);
   if (*path)
     init_lockup_state(authz->prefiltered[i].lookup_state,
@@ -2027,32 +1470,17 @@ retrieve_config(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-authz_config_validate(svn_config_t *config,
-                      apr_pool_t *pool)
-{
-  struct authz_validate_baton baton = { 0 };
-
-  baton.err = SVN_NO_ERROR;
-  baton.config = config;
-
-  /* Step through the entire rule file stopping on error. */
-  svn_config_enumerate_sections2(config, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
-
-  return SVN_NO_ERROR;
-}
-
+/* Construct a new svn_authz_t instance based on the FULL_MODEL and return
+ * it in *AUTHZ_P. */
 static svn_error_t *
 create_authz(svn_authz_t **authz_p,
-             svn_config_t *config,
+             svn_authz_tng_t *full_model,
              apr_pool_t *result_pool)
 {
   svn_authz_t *result = apr_pcalloc(result_pool, sizeof(*result));
 
   result->pool = result_pool;
-  result->cfg = config;
+  result->full_model = full_model;
 
   *authz_p = result;
   return SVN_NO_ERROR;
@@ -2091,10 +1519,10 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
                       svn_boolean_t accept_urls, apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  svn_config_t *config;
-  svn_config_t *groups_cfg;
+  svn_authz_tng_t *full_model;
   svn_stream_t *rules;
   svn_stream_t *groups;
+  svn_error_t* err;
 
   /* Open the main authz file */
   if (accept_urls)
@@ -2104,41 +1532,34 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
     SVN_ERR(authz_retrieve_config_file(&rules, path, must_exist,
                                        scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_config_parse(&config, rules, TRUE, TRUE, result_pool));
-
   /* Open the optional groups file */
   if (groups_path)
     {
-      svn_error_t* err;
-
       if (accept_urls)
         SVN_ERR(retrieve_config(&groups, groups_path, must_exist,
                                 scratch_pool, scratch_pool));
       else
         SVN_ERR(authz_retrieve_config_file(&groups, groups_path, must_exist,
                                            scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_config_parse(&groups_cfg, groups, TRUE, TRUE, result_pool));
-
-      /* Copy the groups from groups_cfg into authz. */
-      err = authz_copy_groups(config, groups_cfg, result_pool);
-
-      /* Add the paths to the error stack since the authz_copy_groups
-         routine knows nothing about them. */
-      if (err != SVN_NO_ERROR)
-        return svn_error_createf(err->apr_err, err,
-                                 "Error reading authz file '%s' with "
-                                 "groups file '%s':", path, groups_path);
     }
   else
     {
       groups = NULL;
     }
 
-  /* Make sure there are no errors in the configuration. */
-  SVN_ERR(authz_config_validate(config, scratch_pool));
+  /* Parse the configuration(s) and construct the full authz model from it. */
+  err = svn_authz__tng_parse(&full_model, rules, groups, result_pool,
+                             scratch_pool);
 
-  SVN_ERR(create_authz(authz_p, config, result_pool));
+  /* Add the URL / file name to the error stack since the parser doesn't
+   * have it. */
+  if (err != SVN_NO_ERROR)
+    return svn_error_createf(err->apr_err, err,
+                             "Error while parsing config file: '%s':",
+                             path);
+
+  /* Construct our wrapper. */
+  SVN_ERR(create_authz(authz_p, full_model, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2166,26 +1587,14 @@ svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
                       svn_stream_t *groups_stream, apr_pool_t *pool)
 {
-  svn_config_t *config;
+  svn_authz_tng_t *full_model;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  /* Parse the authz stream */
-  SVN_ERR(svn_config_parse(&config, stream, TRUE, TRUE, pool));
+  /* Parse the configuration and construct the full authz model from it. */
+  SVN_ERR(svn_authz__tng_parse(&full_model, stream, groups_stream, pool,
+                               scratch_pool));
 
-  if (groups_stream)
-    {
-      svn_config_t *groups_cfg;
-
-      /* Parse the groups stream */
-      SVN_ERR(svn_config_parse(&groups_cfg, groups_stream, TRUE, TRUE, pool));
-
-      SVN_ERR(authz_copy_groups(config, groups_cfg, pool));
-    }
-
-  /* Make sure there are no errors in the configuration. */
-  SVN_ERR(authz_config_validate(config, scratch_pool));
-
-  SVN_ERR(create_authz(authz_p, config, pool));
+  SVN_ERR(create_authz(authz_p, full_model, pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
