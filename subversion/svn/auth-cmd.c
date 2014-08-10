@@ -193,7 +193,7 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
                              svn_x509_certinfo_get_issuer(certinfo)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
-                             svn_checksum_to_cstring_display(
+                             svn_x509_fingerprint_to_display(
                                  svn_x509_certinfo_get_digest(certinfo),
                                  scratch_pool)));
 

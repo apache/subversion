@@ -123,6 +123,15 @@ svn_x509_certinfo_get_digest(const svn_x509_certinfo_t *certinfo);
 const apr_array_header_t *
 svn_x509_certinfo_get_hostnames(const svn_x509_certinfo_t *certinfo);
 
+/** Return the properly formatted representation of a certificate
+ * @a fingerprint, allocating the string in @a pool.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_fingerprint_to_display(const svn_checksum_t *fingerprint,
+                                apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif
