@@ -873,6 +873,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         return
 
+      line = fp.readline()
       if line:
         perl_version = line.strip()
         perl_ver = perl_version.split('.')
