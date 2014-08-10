@@ -367,7 +367,7 @@ memcache_iter(svn_boolean_t *completed,
 static svn_boolean_t
 memcache_is_cachable(void *unused, apr_size_t size)
 {
-  (void)unused;  /* silence gcc warning. */
+  SVN_UNUSED(unused);
 
   /* The memcached cutoff seems to be a bit (header length?) under a megabyte.
    * We round down a little to be safe.
