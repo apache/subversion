@@ -1491,16 +1491,3 @@ svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
   svn_auth__get_gpg_agent_simple_provider(provider, pool);
 }
 #endif /* !WIN32 */
-
-/*** From checksum.c ***/
-const char *
-svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
-                                apr_pool_t
-                                *pool)
-{
-    return svn_checksum_to_cstring_display2(checksum,
-                                            SVN_CHECKSUM_CSTRING_LOWER,
-                                            pool);
-}
-
-
