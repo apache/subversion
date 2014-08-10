@@ -740,7 +740,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(ids_stream));
   noderevs->ids
-    = apr_array_make(result_pool, count, sizeof(binary_id_t));
+    = apr_array_make(result_pool, (int)count, sizeof(binary_id_t));
   for (i = 0; i < count; ++i)
     {
       binary_id_t id;
@@ -765,7 +765,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(noderevs_stream));
   noderevs->noderevs
-    = apr_array_make(result_pool, count, sizeof(binary_noderev_t));
+    = apr_array_make(result_pool, (int)count, sizeof(binary_noderev_t));
   for (i = 0; i < count; ++i)
     {
       binary_noderev_t noderev;

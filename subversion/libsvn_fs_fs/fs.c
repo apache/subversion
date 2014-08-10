@@ -245,6 +245,16 @@ initialize_fs_struct(svn_fs_t *fs)
   return SVN_NO_ERROR;
 }
 
+/* Reset vtable and fsap_data fields in FS such that the FS is basically
+ * closed now.  Note that FS must not hold locks when you call this. */
+static svn_error_t *
+uninitialize_fs_struct(svn_fs_t *fs)
+{
+  fs->vtable = NULL;
+  fs->fsap_data = NULL;
+  return SVN_NO_ERROR;
+}
+
 /* This implements the fs_library_vtable_t.create() API.  Create a new
    fsfs-backed Subversion filesystem at path PATH and link it into
    *FS.  Perform temporary allocations in POOL, and fs-global allocations
@@ -413,11 +423,13 @@ fs_hotcopy(svn_fs_t *src_fs,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Provide FFD for DST_FS, test / initialize target repo, remove FFD. */
+  /* Test target repo when in INCREMENTAL mode, initialize it when not.
+   * For this, we need our FS internal data structures to be temporarily
+   * available. */
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_fs__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                             incremental, pool));
-  dst_fs->fsap_data = NULL;
+  SVN_ERR(uninitialize_fs_struct(dst_fs));
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(fs_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));

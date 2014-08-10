@@ -851,6 +851,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 60,
              "Unsupported FS type")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_SIZE,
+             SVN_ERR_FS_CATEGORY_START + 61,
+             "Container capacity exceeded.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

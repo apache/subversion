@@ -27,6 +27,8 @@
 #include "private/svn_packed_data.h"
 #include "private/svn_temp_serializer.h"
 
+#include "svn_private_config.h"
+
 #include "cached_data.h"
 
 /* Length of the text chunks we hash and match.  The algorithm will find
@@ -37,6 +39,16 @@
  * Good choices are 32, 64 and 128.
  */
 #define MATCH_BLOCKSIZE 64
+
+/* Limit the total text body within a container to 16MB.  Larger values
+ * of up to 2GB are possible but become increasingly impractical as the
+ * container has to be loaded in its entirety before any of it can be read.
+ */
+#define MAX_TEXT_BODY 0x1000000
+
+/* Limit the size of the instructions stream.  This should not exceed the
+ * text body size limit. */
+#define MAX_INSTRUCTIONS (MAX_TEXT_BODY / 8)
 
 /* value of unused hash buckets */
 #define NO_OFFSET ((apr_uint32_t)(-1))
@@ -398,15 +410,17 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
 
   svn_stream_t *stream;
   svn_string_t *contents;
+  apr_size_t idx;
   SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, FALSE,
                                  scratch_pool));
   SVN_ERR(svn_string_from_stream(&contents, stream, scratch_pool,
                                  scratch_pool));
+  SVN_ERR(svn_fs_x__reps_add(&idx, builder, contents));
 
   base.revision = svn_fs_x__get_revnum(rep->id.change_set);
   base.item_index = rep->id.number;
   base.priority = priority;
-  base.rep = (apr_uint32_t)svn_fs_x__reps_add(builder, contents);
+  base.rep = (apr_uint32_t)idx;
 
   APR_ARRAY_PUSH(builder->bases, base_t) = base;
   builder->base_text_len += builder->text->len - text_start_offset;
@@ -430,8 +444,8 @@ add_new_text(svn_fs_x__reps_builder_t *builder,
     return;
 
   /* new instruction */
-  instruction.offset = builder->text->len;
-  instruction.count = len;
+  instruction.offset = (apr_int32_t)builder->text->len;
+  instruction.count = (apr_uint32_t)len;
   APR_ARRAY_PUSH(builder->instructions, instruction_t) = instruction;
 
   /* add to text corpus */
@@ -457,13 +471,14 @@ add_new_text(svn_fs_x__reps_builder_t *builder,
       else if (builder->hash.offsets[idx] >= instruction.offset)
         continue;
 
-      builder->hash.offsets[idx] = offset;
+      builder->hash.offsets[idx] = (apr_uint32_t)offset;
       builder->hash.prefixes[idx] = builder->text->data[offset];
     }
 }
 
-apr_size_t
-svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
+svn_error_t *
+svn_fs_x__reps_add(apr_size_t *rep_idx,
+                   svn_fs_x__reps_builder_t *builder,
                    const svn_string_t *contents)
 {
   rep_t rep;
@@ -472,8 +487,16 @@ svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
   const char *end = current + contents->len;
   const char *last_to_test = end - MATCH_BLOCKSIZE - 1;
 
-  rep.first_instruction = (apr_uint32_t)builder->instructions->nelts;
+  if (builder->text->len + contents->len > MAX_TEXT_BODY)
+    return svn_error_create(SVN_ERR_FS_CONTAINER_SIZE, NULL,
+                      _("Text body exceeds star delta container capacity"));
 
+  if (  builder->instructions->nelts + 2 * contents->len / MATCH_BLOCKSIZE
+      > MAX_INSTRUCTIONS)
+    return svn_error_create(SVN_ERR_FS_CONTAINER_SIZE, NULL,
+              _("Instruction count exceeds star delta container capacity"));
+
+  rep.first_instruction = (apr_uint32_t)builder->instructions->nelts;
   while (current < last_to_test)
     {
       hash_key_t key = hash_key(current);
@@ -501,7 +524,7 @@ svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
       if (current < last_to_test)
         {
           instruction_t instruction;
-          
+
           /* extend the match */
 
           size_t prefix_match
@@ -522,8 +545,9 @@ svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
 
           /* add instruction for matching section */
 
-          instruction.offset = offset - prefix_match;
-          instruction.count = prefix_match + postfix_match + MATCH_BLOCKSIZE;
+          instruction.offset = (apr_int32_t)(offset - prefix_match);
+          instruction.count = (apr_uint32_t)(prefix_match + postfix_match +
+                                             MATCH_BLOCKSIZE);
           APR_ARRAY_PUSH(builder->instructions, instruction_t) = instruction;
 
           processed = current + MATCH_BLOCKSIZE + postfix_match;
@@ -536,7 +560,8 @@ svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
                         - rep.first_instruction;
   APR_ARRAY_PUSH(builder->reps, rep_t) = rep;
 
-  return (apr_size_t)(builder->reps->nelts - 1);
+  *rep_idx = (apr_size_t)(builder->reps->nelts - 1);
+  return SVN_NO_ERROR;
 }
 
 apr_size_t
@@ -594,7 +619,7 @@ get_text(svn_fs_x__rep_extractor_t *extractor,
         /* a section that we need to fill from some external base rep. */
         missing_t missing;
         missing.base = 0;
-        missing.start = extractor->result->len;
+        missing.start = (apr_uint32_t)extractor->result->len;
         missing.count = instruction->count;
         missing.offset = instruction->offset;
         svn_stringbuf_appendfill(extractor->result, 0, instruction->count);
@@ -812,7 +837,7 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
   for (i = 0; i < reps->rep_count; ++i)
     first_instructions[i]
       = (apr_uint32_t)svn_packed__get_uint(reps_stream);
-  first_instructions[reps->rep_count] = reps->instruction_count;
+  first_instructions[reps->rep_count] = (apr_uint32_t)reps->instruction_count;
 
   /* other elements */
   reps->base_text_len = (apr_size_t)svn_packed__get_uint(misc_stream);
