@@ -53,9 +53,7 @@ escape_activity(const char *activity_id, apr_pool_t *pool)
   svn_checksum_t *checksum;
   svn_error_clear(svn_checksum(&checksum, svn_checksum_md5, activity_id,
                                strlen(activity_id), pool));
-  return svn_checksum_to_cstring_display2(checksum,
-                                          SVN_CHECKSUM_CSTRING_LOWER,
-                                          pool);
+  return svn_checksum_to_cstring_display(checksum, pool);
 }
 
 /* Return filename for ACTIVITY_ID under the repository in REPOS. */
