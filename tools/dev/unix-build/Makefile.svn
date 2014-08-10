@@ -633,6 +633,11 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	sed '/^#define HAVE_SSL_RAND_EGD/d' \
 		< $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig \
 		> $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig
+	sed 's/^\(#if (OPENSSL_VERSION_NUMBER >= 0x00908000)\)$$/\1 \&\& !defined(OPENSSL_NO_COMP)/' \
+		< $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c
 	touch $@
 
 # configure httpd
