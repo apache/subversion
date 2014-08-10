@@ -30,6 +30,7 @@
 #include "svn_compat.h"
 #include "svn_hash.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h"
 
@@ -1068,6 +1069,10 @@ svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  return svn_repos__authz_read(authz_p, file, NULL, must_exist,
-                               FALSE, pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  SVN_ERR(svn_repos__authz_read(authz_p, file, NULL, must_exist,
+                                FALSE, pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+
+  return SVN_NO_ERROR;
 }

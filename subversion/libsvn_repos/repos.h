@@ -365,8 +365,9 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
 
 /*** Authz Functions ***/
 
-/* Read authz configuration data from PATH into *AUTHZ_P, allocated
-   in POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
+/* Read authz configuration data from PATH into *AUTHZ_P, allocated in
+   RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
+   Use SCRATCH_POOL for temporary allocations.
 
    PATH and GROUPS_PATH may be a dirent or a registry path and iff ACCEPT_URLS
    is set it may also be an absolute file url.
@@ -381,17 +382,8 @@ svn_repos__authz_read(svn_authz_t **authz_p,
                       const char *groups_path,
                       svn_boolean_t must_exist,
                       svn_boolean_t accept_urls,
-                      apr_pool_t *pool);
-
-/* Walk the authz configuration CONFIG looking for any errors. */
-svn_error_t *
-svn_repos__authz_config_validate(svn_config_t *config,
-                                 apr_pool_t *pool);
-
-svn_error_t *
-svn_repos__create_authz(svn_authz_t **authz_p,
-                        svn_config_t *config,
-                        apr_pool_t *result_pool);
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 
 /*** Utility Functions ***/

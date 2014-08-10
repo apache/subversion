@@ -502,7 +502,8 @@ svn_repos__config_pool_get(svn_config_t **cfg,
           /* let the standard implementation handle all the difficult cases */
           svn_error_clear(err);
           err = svn_repos__retrieve_config(cfg, path, must_exist,
-                                           case_sensitive, pool);
+                                           case_sensitive, pool,
+                                           scratch_pool);
         }
     }
   else
