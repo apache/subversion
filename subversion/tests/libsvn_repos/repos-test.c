@@ -22,7 +22,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+
 #include <apr_pools.h>
+#include <apr_time.h>
 
 #include "../svn_test.h"
 
@@ -1448,8 +1450,8 @@ authz(apr_pool_t *pool)
         }
     }
   end = apr_time_now();
-  printf("%ld\n", end - start);
-  printf("%ld\n", (k * (i - 1) * 20 * 1000000l) / (end - start));
+  printf("%"APR_TIME_T_FMT"\n", end - start);
+  printf("%"APR_TIME_T_FMT"\n", (k * (i - 1) * 20 * 1000000l) / (end - start));
 
   /* Verify that the rule on /dir2/secret doesn't affect this
      request */
