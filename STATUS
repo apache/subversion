@@ -125,6 +125,20 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1462041
+   Fix issue issue 4339, diff suffix scanning invalid read at last chunk
+   boundary.
+   Justification:
+     Without this patch we access memory that isn't part of the diff, which
+     in some cases causes a segfault.
+   Notes:
+     This branch only merges the actual fix. Trunk and 1.8.x have a test
+     for this case.
+   Branch:
+     ^/subversion/branches/1.7.x-r1462041
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
