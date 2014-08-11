@@ -1562,7 +1562,9 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, pool));
   SVN_CMD_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
                                    full_path, TRUE, pool));
-  hex_digest = svn_checksum_to_cstring_display(checksum, pool);
+  hex_digest = svn_checksum_to_cstring_display2(checksum,
+                                                SVN_CHECKSUM_CSTRING_LOWER,
+                                                pool);
 
   /* Fetch the file's explicit and/or inherited properties if
      requested.  Although the wants-iprops boolean was added to the

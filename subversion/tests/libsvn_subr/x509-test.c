@@ -474,8 +474,10 @@ compare_results(struct x509_test *xt,
                             xt->subject,
                             pool));
 
-  v = svn_checksum_to_cstring_display(
-      svn_x509_certinfo_get_digest(certinfo), pool);
+  v = svn_checksum_to_cstring_display2(
+          svn_x509_certinfo_get_digest(certinfo),
+          SVN_CHECKSUM_CSTRING_LOWER,
+          pool);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No SHA1 digest for cert '%s'", xt->subject);
@@ -515,27 +517,7 @@ test_x509_parse_cert(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_svn_x509_fingerprint_to_display(apr_pool_t *pool)
-{
-  svn_checksum_t *md5_fingerprint;
-  svn_checksum_t *sha1_fingerprint;
-
-  SVN_ERR(svn_checksum_parse_hex(&md5_fingerprint, svn_checksum_md5,
-                                 "8518b76f7a45fe4de2d0955085b41f98", pool));
-  SVN_ERR(svn_checksum_parse_hex(&sha1_fingerprint, svn_checksum_sha1,
-                                 "74d82379bcc6771454377db03b912c2b62704139", pool));
-
-  SVN_TEST_STRING_ASSERT(
-    svn_x509_fingerprint_to_display(md5_fingerprint, pool),
-    "85:18:B7:6F:7A:45:FE:4D:E2:D0:95:50:85:B4:1F:98");
-
-  SVN_TEST_STRING_ASSERT(
-    svn_x509_fingerprint_to_display(sha1_fingerprint, pool),
-    "74:D8:23:79:BC:C6:77:14:54:37:7D:B0:3B:91:2C:2B:62:70:41:39");
-
-  return SVN_NO_ERROR;
-}
+
 /* The test table.  */
 
 static int max_threads = 1;
@@ -545,8 +527,6 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_x509_parse_cert,
                    "test svn_x509_parse_cert"),
-    SVN_TEST_PASS2(test_svn_x509_fingerprint_to_display,
-                   "test svn_x509_fingerprint_to_display"),
     SVN_TEST_NULL
   };
 

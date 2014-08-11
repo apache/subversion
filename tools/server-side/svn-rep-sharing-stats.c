@@ -344,8 +344,9 @@ pretty_print(const char *name,
       value = apr_hash_this_val(hi);
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
-                                 svn_checksum_to_cstring_display(
+                                 svn_checksum_to_cstring_display2(
                                    &value->checksum,
+                                   SVN_CHECKSUM_CSTRING_LOWER,
                                    scratch_pool)));
     }
 

@@ -45,7 +45,9 @@ checksum_parse_kind(const char *digest,
   svn_checksum_t *checksum;
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, kind, digest, pool));
-  checksum_display = svn_checksum_to_cstring_display(checksum, pool);
+  checksum_display = svn_checksum_to_cstring_display2(checksum,
+                                                      SVN_CHECKSUM_CSTRING_LOWER,
+                                                      pool);
 
   if (strcmp(checksum_display, digest) != 0)
     return svn_error_createf
