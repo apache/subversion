@@ -43,7 +43,9 @@ fnv1_to_string(apr_uint32_t fnv1,
   checksum.digest = (const unsigned char *)&digest;
 
   /* Convert the digest to hex. */
-  return svn_checksum_to_cstring_display(&checksum, pool);
+  return svn_checksum_to_cstring_display2(&checksum,
+                                          SVN_CHECKSUM_CSTRING_LOWER,
+                                          pool);
 }
 
 /* Map svn_fs_fs__p2l_entry_t.type to C string. */

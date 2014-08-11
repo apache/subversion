@@ -27,9 +27,6 @@
 
 #include <apr_pools.h>
 #include <apr_tables.h>
-#include <apr_md5.h>
-#include <apr_sha1.h>
-#include <svn_string.h>
 
 #include "svn_x509.h"
 #include "x509.h"
@@ -99,34 +96,4 @@ const apr_array_header_t *
 svn_x509_certinfo_get_hostnames(const svn_x509_certinfo_t *certinfo)
 {
   return certinfo->hostnames;
-}
-
-const char *
-svn_x509_fingerprint_to_display(const svn_checksum_t *fingerprint,
-                                apr_pool_t *pool)
-{
-  static const char *hex = "0123456789ABCDEF";
-  apr_size_t digest_size;
-  apr_size_t i;
-  svn_stringbuf_t *buf;
-
-  if (fingerprint->kind == svn_checksum_md5)
-    digest_size = APR_MD5_DIGESTSIZE;
-  else if(fingerprint->kind == svn_checksum_sha1)
-    digest_size = APR_SHA1_DIGESTSIZE;
-  else
-    return NULL;
-
-  buf = svn_stringbuf_create_ensure(digest_size * 3, pool);
-
-  for (i = 0; i < digest_size; i++)
-    {
-      if (i > 0)
-        svn_stringbuf_appendbyte(buf, ':');
-
-      svn_stringbuf_appendbyte(buf, hex[fingerprint->digest[i] >> 4]);
-      svn_stringbuf_appendbyte(buf, hex[fingerprint->digest[i] & 0x0f]);
-    }
-
-  return buf->data;
 }
