@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include <apr_thread_proc.h>
 #include <assert.h>
 
 #include "../svn_test.h"
@@ -37,6 +38,7 @@
 #include "svn_props.h"
 #include "svn_version.h"
 
+#include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 
@@ -5307,19 +5309,58 @@ dir_prop_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+#if APR_HAS_THREADS
+struct reopen_modify_baton_t {
+  const char *fs_path;
+  const char *txn_name;
+  apr_pool_t *pool;
+  svn_error_t *err;
+};
+
+static void * APR_THREAD_FUNC
+reopen_modify_child(apr_thread_t *tid, void *data)
+{
+  struct reopen_modify_baton_t *baton = data;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+
+  baton->err = svn_fs_open(&fs, baton->fs_path, NULL, baton->pool);
+  if (baton->err)
+    return NULL;
+  baton->err = svn_fs_open_txn(&txn, fs, baton->txn_name, baton->pool);
+  if (baton->err)
+    return NULL;
+  baton->err = svn_fs_txn_root(&root, txn, baton->pool);
+  if (baton->err)
+    return NULL;
+  baton->err = svn_fs_change_node_prop(root, "A", "name",
+                                  svn_string_create("value", baton->pool),
+                                  baton->pool);
+  svn_pool_destroy(baton->pool);
+  return NULL;
+}
+#endif
+
 static svn_error_t *
 reopen_modify(const svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
+#if APR_HAS_THREADS
   svn_fs_t *fs;
   svn_revnum_t head_rev = 0;
-  svn_fs_root_t *root, *reopen_root;
-  svn_fs_txn_t *txn, *reopen_txn;
-  const char *txn_name;
+  svn_fs_root_t *root;
+  svn_fs_txn_t *txn;
+  const char *fs_path, *txn_name;
   svn_string_t *value;
+  struct reopen_modify_baton_t baton;
+  apr_status_t status, child_status;
+  apr_threadattr_t *tattr;
+  apr_thread_t *tid;
 
   /* Create test repository with greek tree. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-reopen-modify", opts, pool));
+  fs_path = "test-reopen-modify";
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(root, pool));
@@ -5331,22 +5372,36 @@ reopen_modify(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_fs_make_dir(root, "X", pool));
 
-  /* Reopen, add more changes. */
-  SVN_ERR(svn_fs_open_txn(&reopen_txn, fs, txn_name, pool));
-  SVN_ERR(svn_fs_txn_root(&reopen_root, reopen_txn, pool));
-  SVN_ERR(svn_fs_change_node_prop(reopen_root, "A", "name",
-                                  svn_string_create("value", pool),
-                                  pool));
+  /* In another thread: reopen fs and txn, and add more changes.  This
+     works in BDB and FSX but in FSFS the txn_dir_cache becomes
+     out-of-date and the thread's changes don't reach the revision. */
+  baton.fs_path = fs_path;
+  baton.txn_name = txn_name;
+  baton.pool = svn_pool_create(pool);
+  status = apr_threadattr_create(&tattr, pool);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create threadattr"));
+  status = apr_thread_create(&tid, tattr, reopen_modify_child, &baton, pool);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create thread"));
+  status = apr_thread_join(&child_status, tid);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't join thread"));
+  if (baton.err)
+    return svn_error_trace(baton.err);
 
-  /* Reopen, commit */
-  SVN_ERR(svn_fs_open_txn(&reopen_txn, fs, txn_name, pool));
-  SVN_ERR(test_commit_txn(&head_rev, reopen_txn, NULL, pool));
+  /* Commit */
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
 
+  /* Check for change made by thread. */
   SVN_ERR(svn_fs_revision_root(&root, fs, head_rev, pool));
   SVN_ERR(svn_fs_node_prop(&value, root, "A", "name", pool));
   SVN_TEST_ASSERT(value && !strcmp(value->data, "value"));
 
   return SVN_NO_ERROR;
+#else
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, "no thread support");
+#endif
 }
 
 
@@ -5444,8 +5499,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs__compatible_version"),
     SVN_TEST_OPTS_PASS(dir_prop_merge,
                        "test merge directory properties"),
-    SVN_TEST_OPTS_PASS(reopen_modify,
-                       "test reopen and modify txn"),
+    SVN_TEST_OPTS_WIMP(reopen_modify,
+                       "test reopen and modify txn",
+                       "txn_dir_cache fail in FSFS"),
     SVN_TEST_NULL
   };
 
