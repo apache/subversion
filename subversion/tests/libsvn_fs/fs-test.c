@@ -5326,17 +5326,15 @@ reopen_modify_child(apr_thread_t *tid, void *data)
   svn_fs_root_t *root;
 
   baton->err = svn_fs_open(&fs, baton->fs_path, NULL, baton->pool);
-  if (baton->err)
-    return NULL;
-  baton->err = svn_fs_open_txn(&txn, fs, baton->txn_name, baton->pool);
-  if (baton->err)
-    return NULL;
-  baton->err = svn_fs_txn_root(&root, txn, baton->pool);
-  if (baton->err)
-    return NULL;
-  baton->err = svn_fs_change_node_prop(root, "A", "name",
-                                  svn_string_create("value", baton->pool),
-                                  baton->pool);
+  if (!baton->err)
+    baton->err = svn_fs_open_txn(&txn, fs, baton->txn_name, baton->pool);
+  if (!baton->err)
+    baton->err = svn_fs_txn_root(&root, txn, baton->pool);
+  if (!baton->err)
+    baton->err = svn_fs_change_node_prop(root, "A", "name",
+                                         svn_string_create("value",
+                                                           baton->pool),
+                                         baton->pool);
   svn_pool_destroy(baton->pool);
   apr_thread_exit(tid, 0);
   return NULL;
