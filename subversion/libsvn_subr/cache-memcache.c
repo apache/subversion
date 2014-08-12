@@ -119,9 +119,7 @@ build_key(const char **mc_key,
       long_key = apr_pstrcat(pool,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
-                             svn_checksum_to_cstring_display2(checksum,
-                                                              SVN_CHECKSUM_CSTRING_LOWER,
-                                                              pool),
+                             svn_checksum_to_cstring_display(checksum, pool),
                              SVN_VA_NULL);
     }
 

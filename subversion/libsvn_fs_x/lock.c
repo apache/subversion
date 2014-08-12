@@ -72,9 +72,7 @@ make_digest(const char **digest,
 
   SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool));
 
-  *digest = svn_checksum_to_cstring_display2(checksum,
-                                             SVN_CHECKSUM_CSTRING_LOWER,
-                                             pool);
+  *digest = svn_checksum_to_cstring_display(checksum, pool);
   return SVN_NO_ERROR;
 }
 

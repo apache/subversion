@@ -553,9 +553,7 @@ format_digest(const unsigned char *digest,
   if (is_null)
     return "(null)";
 
-  return svn_checksum_to_cstring_display2(&checksum,
-                                          SVN_CHECKSUM_CSTRING_LOWER,
-                                          pool);
+  return svn_checksum_to_cstring_display(&checksum, pool);
 }
 
 svn_stringbuf_t *

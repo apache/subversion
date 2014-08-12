@@ -42,8 +42,7 @@ const char *
 svn_md5_digest_to_cstring_display(const unsigned char digest[],
                                   apr_pool_t *pool)
 {
-  return svn__digest_to_cstring_display(digest, APR_MD5_DIGESTSIZE,
-                                        SVN_CHECKSUM_CSTRING_LOWER, pool);
+  return svn__digest_to_cstring_display(digest, APR_MD5_DIGESTSIZE, pool);
 }
 
 const char *

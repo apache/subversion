@@ -96,29 +96,18 @@ svn__empty_string_digest(svn_checksum_kind_t kind)
 const char *
 svn__digest_to_cstring_display(const unsigned char digest[],
                                apr_size_t digest_size,
-                               int format_flags,
                                apr_pool_t *pool)
 {
-  const char *hex;
-  svn_boolean_t colons = format_flags & SVN_CHECKSUM_CSTRING_COLONS;
-  int chars_per_byte = 2 + (colons ? 1 : 0);
-  char *str = apr_palloc(pool,
-                         (digest_size * chars_per_byte) + (colons ? 0 : 1));
+  static const char *hex = "0123456789abcdef";
+  char *str = apr_palloc(pool, (digest_size * 2) + 1);
   apr_size_t i;
-
-  if (format_flags & SVN_CHECKSUM_CSTRING_UPPER)
-    hex = "0123456789ABCDEF";
-  else
-    hex = "0123456789abcdef";
 
   for (i = 0; i < digest_size; i++)
     {
-      str[i*chars_per_byte]   = hex[digest[i] >> 4];
-      str[i*chars_per_byte+1] = hex[digest[i] & 0x0f];
-      if (colons)
-        str[i*chars_per_byte+2] = ':';
+      str[i*2]   = hex[digest[i] >> 4];
+      str[i*2+1] = hex[digest[i] & 0x0f];
     }
-  str[i*chars_per_byte-(colons ? 1 : 0)] = '\0';
+  str[i*2] = '\0';
 
   return str;
 }
@@ -132,9 +121,7 @@ svn__digest_to_cstring(const unsigned char digest[],
   static const unsigned char zeros_digest[MAX_DIGESTSIZE] = { 0 };
 
   if (memcmp(digest, zeros_digest, digest_size) != 0)
-    return svn__digest_to_cstring_display(digest, digest_size,
-                                          SVN_CHECKSUM_CSTRING_LOWER,
-                                          pool);
+    return svn__digest_to_cstring_display(digest, digest_size, pool);
   else
     return NULL;
 }
@@ -283,9 +270,8 @@ svn_checksum_match(const svn_checksum_t *checksum1,
 }
 
 const char *
-svn_checksum_to_cstring_display2(const svn_checksum_t *checksum,
-                                 int format_flags,
-                                 apr_pool_t *pool)
+svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
+                                apr_pool_t *pool)
 {
   switch (checksum->kind)
     {
@@ -295,7 +281,6 @@ svn_checksum_to_cstring_display2(const svn_checksum_t *checksum,
       case svn_checksum_fnv1a_32x4:
         return svn__digest_to_cstring_display(checksum->digest,
                                               digest_sizes[checksum->kind],
-                                              format_flags,
                                               pool);
 
       default:
@@ -649,12 +634,8 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
                              "   expected:  %s\n"
                              "     actual:  %s\n"),
                 desc,
-                svn_checksum_to_cstring_display2(expected,
-                                                 SVN_CHECKSUM_CSTRING_LOWER,
-                                                 scratch_pool),
-                svn_checksum_to_cstring_display2(actual,
-                                                 SVN_CHECKSUM_CSTRING_LOWER,
-                                                 scratch_pool));
+                svn_checksum_to_cstring_display(expected, scratch_pool),
+                svn_checksum_to_cstring_display(actual, scratch_pool));
 }
 
 svn_boolean_t

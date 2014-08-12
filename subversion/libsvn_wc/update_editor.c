@@ -3703,12 +3703,10 @@ apply_textdelta(void *file_baton,
                        "   expected:  %s\n"
                        "   recorded:  %s\n"),
                      svn_dirent_local_style(fb->local_abspath, pool),
-                     svn_checksum_to_cstring_display2(expected_base_checksum,
-                                                      SVN_CHECKSUM_CSTRING_LOWER,
-                                                      pool),
-                     svn_checksum_to_cstring_display2(recorded_base_checksum,
-                                                      SVN_CHECKSUM_CSTRING_LOWER,
-                                                      pool));
+                     svn_checksum_to_cstring_display(expected_base_checksum,
+                                                     pool),
+                     svn_checksum_to_cstring_display(recorded_base_checksum,
+                                                     pool));
 
   /* Open the text base for reading, unless this is an added file. */
 
