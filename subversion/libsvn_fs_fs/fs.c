@@ -72,9 +72,16 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      each separate repository opened during the lifetime of the
      svn_fs_initialize pool.  It's unlikely that anyone will notice
      the modest expenditure; the alternative is to allocate each structure
-     in a subpool, add a reference-count, and add a serialized destructor
-     to the FS vtable.  That's more machinery than it's worth. */
+     in a subpool, add a reference-count, and add a serialized deconstructor
+     to the FS vtable.  That's more machinery than it's worth.
 
+     Using the uuid to obtain the lock creates a corner case if a
+     caller uses svn_fs_set_uuid on the repository in a process where
+     other threads might be using the same repository through another
+     FS object.  The only real-world consumer of svn_fs_set_uuid is
+     "svnadmin load", so this is a low-priority problem, and we don't
+     know of a better way of associating such data with the
+     repository. */
   SVN_ERR_ASSERT(fs->uuid);
   key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
                     SVN_VA_NULL);
