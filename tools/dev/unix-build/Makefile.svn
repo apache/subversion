@@ -68,24 +68,23 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.5.0
+APR_VER		= 1.5.1
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.5.3
 HTTPD_VER	= 2.2.27
-NEON_VER	= 0.29.6
+NEON_VER	= 0.30.0
 SERF_VER	= 1.3.6
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3080403
-LIBMAGIC_VER	= 5.17
+SQLITE_VER	= 3080500
+LIBMAGIC_VER	= 5.19
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.3
+PYTHON_VER	= 2.7.8
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.18.3.1
 
-APR_1_5_PATCH	= apr-1.5.0-out-of-tree-build.patch
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
@@ -99,6 +98,33 @@ BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
+
+SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
+SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
+SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
+SHA256_${HTTPD_DIST} = 205973ded6ca55c056ce9c84d73ab708f7829f330193bd39b651463b8d4f8147
+SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d1650787990c2
+SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
+SHA256_${SQLITE_DIST} = 98c33abe4106e508e73fda648b2657ac9e969fe24695f543dcde68cc71f3091b
+SHA256_${LIBMAGIC_DIST} = 9484b3bbda1acc7b13a4f71031a85ce10c77bd0ffec7226741a219ef587e3a7c
+SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
+SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
+SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
+SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
+SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065eeb07245d
+
+define do_check_sha256
+if [ -x /bin/sha256 ]; then \
+	(cd $(DISTDIR) && \
+		echo "SHA256 (${1}) = ${SHA256_${1}}" | /bin/sha256 -C /dev/stdin "${1}"); \
+elif [ -x /usr/bin/sha256sum ]; then \
+	(cd $(DISTDIR) && \
+		echo "${SHA256_${1}} ${1}" | /usr/bin/sha256sum --quiet --check); \
+else \
+	echo "Error: No tool found to verify checksum"; \
+	false; \
+fi
+endef
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -118,24 +144,23 @@ FETCH_CMD	= wget -c
 
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
-APR_URL		= http://svn.apache.org/repos/asf/apr/apr
-APR_PATCHES_URL	= http://www.apache.org/dist/apr/patches
-APR_ICONV_URL	= http://www.apache.org/dist/apr/$(APR_ICONV_DIST)
-GNU_ICONV_URL	= http://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
-APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
-HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
+APR_URL		= https://svn.apache.org/repos/asf/apr/apr
+APR_ICONV_URL	= https://www.apache.org/dist/apr/$(APR_ICONV_DIST)
+GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
+APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
+HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
-SERF_URL	= http://serf.googlecode.com/svn/tags/$(SERF_VER)
-SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
-SQLITE_URL	= http://www.sqlite.org/2014/$(SQLITE_DIST)
+SERF_URL	= https://serf.googlecode.com/svn/tags/$(SERF_VER)
+SERF_OLD_URL	= https://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
+SQLITE_URL	= https://www.sqlite.org/2014/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
-PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
-GETTEXT_URL	= http://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
+PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
+GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -190,7 +215,7 @@ LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PR
 # Main targets.
 #######################################################################
 
-.PHONY: all reset clean nuke
+.PHONY: all reset clean nuke fetch
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
@@ -233,6 +258,8 @@ nuke:
 				;; \
 		esac
 
+fetch: $(DISTFILES)
+
 #######################################################################
 # directories
 #######################################################################
@@ -267,6 +294,7 @@ $(DISTDIR)/$(BDB_DIST):
 
 # retrieve bdb
 $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
+	$(call do_check_sha256,$(BDB_DIST))
 	[ -d $(BDB_OBJDIR) ] || mkdir -p $(BDB_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BDB_DIST)
 	touch $@
@@ -311,9 +339,6 @@ $(APR_OBJDIR)/.retrieved:
 	if [ ! -d $(APR_SRCDIR) ]; then \
 		svn export $(APR_URL)/tags/$(APR_VER)/ $(APR_SRCDIR); \
 	fi
-	-(cd $(APR_SRCDIR) && \
-		$(FETCH_CMD) $(APR_PATCHES_URL)/$(APR_1_5_PATCH) && \
-		patch -N -p1 < $(APR_1_5_PATCH))
 	touch $@
 
 ifeq ($(THREADING),yes)
@@ -373,6 +398,7 @@ $(DISTDIR)/$(APR_ICONV_DIST):
 
 # retrieve apr-iconv
 $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
+	$(call do_check_sha256,$(APR_ICONV_DIST))
 	[ -d $(APR_ICONV_OBJDIR) ] || mkdir -p $(APR_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(APR_ICONV_DIST)
 	touch $@
@@ -453,6 +479,7 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
 		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
+	$(call do_check_sha256,$(GNU_ICONV_DIST))
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
@@ -597,6 +624,7 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	$(HTTPD_OBJDIR)/chil-engine.diff
+	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
 	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
@@ -605,6 +633,11 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	sed '/^#define HAVE_SSL_RAND_EGD/d' \
 		< $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig \
 		> $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig
+	sed 's/^\(#if (OPENSSL_VERSION_NUMBER >= 0x00908000)\)$$/\1 \&\& !defined(OPENSSL_NO_COMP)/' \
+		< $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c
 	touch $@
 
 # configure httpd
@@ -675,19 +708,10 @@ $(DISTDIR)/$(NEON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
-NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
+	$(call do_check_sha256,$(NEON_DIST))
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
-	# fix build with OpenSSL lacking SSLv2 support:
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1872 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_session.c | patch -p0
 	touch $@
 
 # OpenBSD does not have krb5-config in PATH, but the neon port has
@@ -845,6 +869,7 @@ $(DISTDIR)/$(SQLITE_DIST):
 
 # retrieve sqlite
 $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
+	$(call do_check_sha256,$(SQLITE_DIST))
 	[ -d $(SQLITE_OBJDIR) ] || mkdir -p $(SQLITE_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
@@ -895,6 +920,7 @@ $(DISTDIR)/$(CYRUS_SASL_DIST):
 
 # retrieve cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+	$(call do_check_sha256,$(CYRUS_SASL_DIST))
 	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
 	# fixes build on Debian:
@@ -970,6 +996,7 @@ $(DISTDIR)/$(LIBMAGIC_DIST):
 
 # retrieve libmagic
 $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
+	$(call do_check_sha256,$(LIBMAGIC_DIST))
 	[ -d $(LIBMAGIC_OBJDIR) ] || mkdir -p $(LIBMAGIC_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBMAGIC_DIST)
 	touch $@
@@ -1015,6 +1042,7 @@ $(DISTDIR)/$(RUBY_DIST):
 # retrieve ruby
 #
 $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
@@ -1065,6 +1093,7 @@ $(DISTDIR)/$(BZ2_DIST):
 
 # retrieve bz2
 $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
+	$(call do_check_sha256,$(BZ2_DIST))
 	[ -d $(BZ2_OBJDIR) ] || mkdir -p $(BZ2_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BZ2_DIST)
 	touch $@
@@ -1102,13 +1131,14 @@ $(DISTDIR)/$(PYTHON_DIST):
 # retrieve python
 #
 $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
 	# Make setup.py use our own dependencies instead of system ones
 	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
 		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
-		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|#\1|" \
-		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|#\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|pass #\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|pass #\1|" \
 		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
 		< $(PYTHON_SRCDIR)/setup.py \
 		> $(PYTHON_SRCDIR)/setup.py.patched
@@ -1162,6 +1192,8 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 # fetch distfile for junit
 $(DISTDIR)/$(JUNIT_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(JUNIT_URL)
+	$(call do_check_sha256,$(JUNIT_DIST))
+
 
 #######################################################################
 # gettext
@@ -1184,6 +1216,7 @@ $(DISTDIR)/$(GETTEXT_DIST):
 
 # retrieve gettext
 $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
+	$(call do_check_sha256,$(GETTEXT_DIST))
 	[ -d $(GETTEXT_OBJDIR) ] || mkdir -p $(GETTEXT_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GETTEXT_DIST)
 	touch $@

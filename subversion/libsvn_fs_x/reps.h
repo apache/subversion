@@ -96,10 +96,11 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
                         apr_pool_t *scratch_pool);
 
 /* Add the byte string CONTENTS to BUILDER.  Return the item index under
- * which the fulltext can be retrieved from the final container.
+ * which the fulltext can be retrieved from the final container in *REP_IDX.
  */
-apr_size_t
-svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
+svn_error_t *
+svn_fs_x__reps_add(apr_size_t *rep_idx,
+                   svn_fs_x__reps_builder_t *builder,
                    const svn_string_t *contents);
 
 /* Return a rough estimate in bytes for the serialized representation

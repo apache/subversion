@@ -118,6 +118,10 @@
 #define SVN__PREDICT_TRUE(x)  (x)
 #define SVN__PREDICT_FALSE(x)  (x)
 
+/* Macro used to specify that a variable is intentionally left unused.
+   Supresses compiler warnings about the variable being unused.  */
+#define SVN_UNUSED(v) ( (void)(v) )
+
 #endif /* SVN_PRIVATE_CONFIG_HW */
 
 /* Inclusion of Berkeley DB header */

@@ -5307,6 +5307,48 @@ dir_prop_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+reopen_modify(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t head_rev = 0;
+  svn_fs_root_t *root, *reopen_root;
+  svn_fs_txn_t *txn, *reopen_txn;
+  const char *txn_name;
+  svn_string_t *value;
+
+  /* Create test repository with greek tree. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-reopen-modify", opts, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(root, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Create txn with changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool)); 
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "X", pool));
+
+  /* Reopen, add more changes. */
+  SVN_ERR(svn_fs_open_txn(&reopen_txn, fs, txn_name, pool));
+  SVN_ERR(svn_fs_txn_root(&reopen_root, reopen_txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(reopen_root, "A", "name",
+                                  svn_string_create("value", pool),
+                                  pool));
+
+  /* Reopen, commit */
+  SVN_ERR(svn_fs_open_txn(&reopen_txn, fs, txn_name, pool));
+  SVN_ERR(test_commit_txn(&head_rev, reopen_txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, head_rev, pool));
+  SVN_ERR(svn_fs_node_prop(&value, root, "A", "name", pool));
+  SVN_TEST_ASSERT(value && !strcmp(value->data, "value"));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -5402,6 +5444,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs__compatible_version"),
     SVN_TEST_OPTS_PASS(dir_prop_merge,
                        "test merge directory properties"),
+    SVN_TEST_OPTS_PASS(reopen_modify,
+                       "test reopen and modify txn"),
     SVN_TEST_NULL
   };
 

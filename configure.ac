@@ -779,6 +779,10 @@ AH_BOTTOM([
 # define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
+
+/* Macro used to specify that a variable is intentionally left unused.
+   Supresses compiler warnings about the variable being unused.  */
+#define SVN_UNUSED(v) ( (void)(v) )
 ])
 
 dnl Used to simulate makefile conditionals.

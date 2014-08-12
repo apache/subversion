@@ -226,6 +226,30 @@ svn_repos_upgrade(const char *path,
   return svn_repos_upgrade2(path, nonblocking, recovery_started, &rb, pool);
 }
 
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy3(src_path, dst_path, clean_logs,
+                                            incremental, NULL, NULL,
+                                            cancel_func, cancel_baton, pool));
+}
+
+svn_error_t *
+svn_repos_hotcopy(const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t clean_logs,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy2(src_path, dst_path, clean_logs,
+                                            FALSE, NULL, NULL, pool));
+}
+
 /*** From reporter.c ***/
 svn_error_t *
 svn_repos_begin_report(void **report_baton,

@@ -116,7 +116,17 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
   if ((page_name[0] == 'c' || page_name[0] == 'C')
       && (page_name[1] == 'p' || page_name[1] == 'P'))
     {
-      *page_id_p = atoi(page_name + 2);
+      int page_id;
+
+      err = svn_cstring_atoi(&page_id, page_name + 2);
+      if (err)
+        {
+          apr_status_t saved = err->apr_err;
+          svn_error_clear(err);
+          return saved;
+        }
+
+      *page_id_p = page_id;
       return APR_SUCCESS;
     }
 

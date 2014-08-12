@@ -277,7 +277,7 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
   /* The revision that was youngest, last time we checked. */

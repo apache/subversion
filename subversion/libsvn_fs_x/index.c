@@ -1638,7 +1638,7 @@ l2p_proto_index_lookup(apr_off_t *offset,
       if (!eof && entry.item_index == item_index)
         {
           *offset = (apr_off_t)entry.offset - 1;
-          *sub_item = (apr_off_t)entry.sub_item;
+          *sub_item = entry.sub_item;
           break;
         }
     }

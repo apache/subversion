@@ -155,11 +155,22 @@ fs_freeze_body(void *baton,
 }
 
 static svn_error_t *
+fs_freeze_body2(void *baton,
+                apr_pool_t *pool)
+{
+  struct fs_freeze_baton_t *b = baton;
+  SVN_ERR(svn_fs_fs__with_write_lock(b->fs, fs_freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 fs_freeze(svn_fs_t *fs,
           svn_fs_freeze_func_t freeze_func,
           void *freeze_baton,
           apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   struct fs_freeze_baton_t b;
 
   b.fs = fs;
@@ -167,7 +178,11 @@ fs_freeze(svn_fs_t *fs,
   b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__with_write_lock(fs, fs_freeze_body, &b, pool));
+
+  if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
+    SVN_ERR(svn_fs_fs__with_pack_lock(fs, fs_freeze_body2, &b, pool));
+  else
+    SVN_ERR(fs_freeze_body2(&b, pool));
 
   return SVN_NO_ERROR;
 }
@@ -226,6 +241,16 @@ initialize_fs_struct(svn_fs_t *fs)
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+  return SVN_NO_ERROR;
+}
+
+/* Reset vtable and fsap_data fields in FS such that the FS is basically
+ * closed now.  Note that FS must not hold locks when you call this. */
+static svn_error_t *
+uninitialize_fs_struct(svn_fs_t *fs)
+{
+  fs->vtable = NULL;
+  fs->fsap_data = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -397,11 +422,13 @@ fs_hotcopy(svn_fs_t *src_fs,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Provide FFD for DST_FS, test / initialize target repo, remove FFD. */
+  /* Test target repo when in INCREMENTAL mode, initialize it when not.
+   * For this, we need our FS internal data structures to be temporarily
+   * available. */
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_fs__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                             incremental, pool));
-  dst_fs->fsap_data = NULL;
+  SVN_ERR(uninitialize_fs_struct(dst_fs));
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(fs_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));

@@ -213,6 +213,24 @@ def get_txns(repo_dir):
 
   return txns
 
+def write_sharded_format(repo_dir, shards):
+  """Rewrite the format of the FSFS or FSX repository REPO_DIR so
+  that it would use sharding with SHARDS revisions per shard."""
+
+  format_path = os.path.join(repo_dir, "db", "format")
+  contents = open(format_path, 'rb').read()
+  processed_lines = []
+
+  for line in contents.split("\n"):
+    if line.startswith("layout "):
+      processed_lines.append("layout sharded %d" % shards)
+    else:
+      processed_lines.append(line)
+
+  new_contents = "\n".join(processed_lines)
+  os.chmod(format_path, 0666)
+  open(format_path, 'wb').write(new_contents)
+
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                revs, check_props, dump, *varargs):
   """Load the array of lines passed in DUMP into the current tests'
@@ -1734,24 +1752,21 @@ def hotcopy_incremental(sbox):
 @SkipUnless(svntest.main.fs_has_pack)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"
+
+  # Configure two files per shard to trigger packing.
   sbox.build()
+  write_sharded_format(sbox.repo_dir, 2)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
 
-  # Configure two files per shard to trigger packing
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  if svntest.main.options.server_minor_version >= 9:
-    format_file.write("7\nlayout sharded 2\n")
-  else:
-    format_file.write("6\nlayout sharded 2\n")
-  format_file.close()
-
-  # Pack revisions 0 and 1.
-  svntest.actions.run_and_verify_svnadmin(
-    None, ['Packing revisions in shard 0...done.\n'], [], "pack",
-    os.path.join(cwd, sbox.repo_dir))
+  # Pack revisions 0 and 1 if not already packed.
+  if not (svntest.main.is_fs_type_fsfs and svntest.main.options.fsfs_packing
+          and svntest.main.options.fsfs_sharding == 2):
+    svntest.actions.run_and_verify_svnadmin(
+      None, ['Packing revisions in shard 0...done.\n'], [], "pack",
+      os.path.join(cwd, sbox.repo_dir))
 
   # Commit 5 more revs, hotcopy and pack after each commit.
   for i in [1, 2, 3, 4, 5]:
@@ -1767,7 +1782,8 @@ def hotcopy_incremental_packed(sbox):
     if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
-      if not i % 2:
+      if (svntest.main.is_fs_type_fsfs and not svntest.main.options.fsfs_packing
+          and not i % 2):
         expected_output = ['Packing revisions in shard %d...done.\n' % (i/2)]
       else:
         expected_output = []
@@ -2384,23 +2400,10 @@ def fsfs_hotcopy_old_with_id_changes(sbox):
 @SkipUnless(svntest.main.fs_has_pack)
 def verify_packed(sbox):
   "verify packed with small shards"
-  sbox.build()
 
   # Configure two files per shard to trigger packing.
-  if svntest.main.is_fs_type_fsx():
-    format = "1\nlayout sharded 2\n"
-  elif svntest.main.is_fs_type_fsfs and \
-       svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 2\n"
-  elif svntest.main.is_fs_type_fsfs and \
-       svntest.main.options.server_minor_version < 9:
-    format = "6\nlayout sharded 2\n"
-  else:
-    raise svntest.Failure
-
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write(format)
-  format_file.close()
+  sbox.build()
+  write_sharded_format(sbox.repo_dir, 2)
 
   # Play with our greek tree.  These changesets fall into two
   # separate shards with r2 and r3 being in shard 1 ...
@@ -2463,7 +2466,7 @@ def verify_packed(sbox):
 def freeze_freeze(sbox):
   "svnadmin freeze svnadmin freeze (some-cmd)"
 
-  sbox.build(read_only=True) # need working copy as location for arg-file
+  sbox.build(create_wc=False, read_only=True)
   second_repo_dir, _ = sbox.add_repo_path('backup')
   svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
                                           sbox.repo_dir, second_repo_dir)
@@ -2475,7 +2478,7 @@ def freeze_freeze(sbox):
                  svntest.main.svnadmin_binary, 'freeze', '--', second_repo_dir,
                  sys.executable, '-c', 'True')
 
-  arg_file = sbox.ospath('arg-file')
+  arg_file = sbox.get_tempname()
   svntest.main.file_write(arg_file,
                           "%s\n%s\n" % (sbox.repo_dir, second_repo_dir))
 
@@ -2560,17 +2563,7 @@ def fsfs_hotcopy_progress(sbox):
   sbox.build(create_wc=False)
   svntest.main.safe_rmtree(sbox.repo_dir, True)
   svntest.main.create_repos(sbox.repo_dir)
-
-  if svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 3\n"
-  elif svntest.main.options.server_minor_version < 9:
-    format = "6\nlayout sharded 3\n"
-  else:
-    raise svntest.Failure
-
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write(format)
-  format_file.close()
+  write_sharded_format(sbox.repo_dir, 3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 

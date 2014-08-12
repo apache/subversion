@@ -874,7 +874,7 @@ write_config(svn_fs_t *fs,
 "### may improve latency while still maximizing throughput.  If block-read"  NL
 "### has not been enabled, this will be capped to 4 kBytes."                 NL
 "### Can be changed at any time but must be a power of 2."                   NL
-"### block-size is 64 kBytes by default."                                    NL
+"### block-size is given in kBytes and with a default of 64 kBytes."         NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 ;
 #undef NL
