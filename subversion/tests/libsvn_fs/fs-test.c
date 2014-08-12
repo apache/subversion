@@ -5338,6 +5338,7 @@ reopen_modify_child(apr_thread_t *tid, void *data)
                                   svn_string_create("value", baton->pool),
                                   baton->pool);
   svn_pool_destroy(baton->pool);
+  apr_thread_exit(tid, 0);
   return NULL;
 }
 #endif
