@@ -474,10 +474,8 @@ compare_results(struct x509_test *xt,
                             xt->subject,
                             pool));
 
-  v = svn_checksum_to_cstring_display2(
-          svn_x509_certinfo_get_digest(certinfo),
-          SVN_CHECKSUM_CSTRING_LOWER,
-          pool);
+  v = svn_checksum_to_cstring_display(
+      svn_x509_certinfo_get_digest(certinfo), pool);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No SHA1 digest for cert '%s'", xt->subject);

@@ -119,59 +119,12 @@ svn_checksum_t *
 svn_checksum_dup(const svn_checksum_t *checksum,
                  apr_pool_t *pool);
 
-/** Flags for use with svn_checksum_to_cstring_display2().
- *
- * @defgroup checksum_display_flags Checksum Display flags
- * @{
- */
-
-  /** Display hex characters as lower case letters.
-   *
-   * Either this flag or #SVN_CHECKSUM_CSTRING_UPPER should be specified,
-   * but not both.
-   */
-#define SVN_CHECKSUM_CSTRING_LOWER  0
-
-  /** Display hex characters as upper case letters.
-   *
-   * Either this flag or #SVN_CHECKSUM_CSTRING_LOWER should be specified,
-   * but not both.
-   */
-#define SVN_CHECKSUM_CSTRING_UPPER  1
-
-  /** Include colons between every 2 characters of output (one byte of
-   * checksum). */
-#define SVN_CHECKSUM_CSTRING_COLONS 2
-
-/** @} */
 
 /** Return the hex representation of @a checksum, allocating the string
  * in @a pool.
  *
- * The output can be modified by setting the @a flags.
- *
- * The caller can choose upper or lower case characters for the hex digits
- * by specifying #SVN_CHECKSUM_CSTRING_LOWER or #SVN_CHECKSUM_CSTRING_UPPER
- * in @a flags.
- *
- * The caller can request colons for every 2 characters of output by
- * specifying #SVN_CHECKSUM_CSTRING_COLONS.
- *
- * @since New in 1.9.
- */
-const char *
-svn_checksum_to_cstring_display2(const svn_checksum_t *checksum,
-                                 int format_flags,
-                                 apr_pool_t *pool);
-
-/** Similar to svn_checksum_to_cstring_display2() but with @a flags
- * set to #SVN_CHECKSUM_CSTRING_LOWER.
- *
- * @deprecated Provided for backwards compatibility with the 1.8 API
- *
  * @since New in 1.6.
  */
-SVN_DEPRECATED
 const char *
 svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
                                 apr_pool_t *pool);

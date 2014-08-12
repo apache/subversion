@@ -287,9 +287,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
       if (err)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                  "Checksum '%s' in rep-cache is beyond HEAD",
-                                 svn_checksum_to_cstring_display2(checksum,
-                                                                  SVN_CHECKSUM_CSTRING_LOWER,
-                                                                  pool));
+                                 svn_checksum_to_cstring_display(checksum,
+                                                                 pool));
     }
 
   return SVN_NO_ERROR;

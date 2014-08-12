@@ -45,7 +45,6 @@ svn__empty_string_digest(svn_checksum_kind_t kind);
 const char *
 svn__digest_to_cstring_display(const unsigned char digest[],
                                apr_size_t digest_size,
-                               int format_flags,
                                apr_pool_t *pool);
 
 

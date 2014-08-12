@@ -2055,14 +2055,10 @@ write_entry(struct write_baton **entry_node,
                                                          local_relpath,
                                                          scratch_pool),
                                          scratch_pool),
-                                       svn_checksum_to_cstring_display2(
-                                         entry_md5_checksum,
-                                         SVN_CHECKSUM_CSTRING_LOWER,
-                                         scratch_pool),
-                                       svn_checksum_to_cstring_display2(
-                                         found_md5_checksum,
-                                         SVN_CHECKSUM_CSTRING_LOWER,
-                                         scratch_pool));
+                                       svn_checksum_to_cstring_display(
+                                         entry_md5_checksum, scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         found_md5_checksum, scratch_pool));
               else
                 {
                   /* ### Not sure what conditions this should cover. */
