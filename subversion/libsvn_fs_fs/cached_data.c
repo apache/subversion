@@ -141,27 +141,11 @@ dbg_log_access(svn_fs_t *fs,
         }
     }
 
-<<<<<<< .working
   /* reduced logging for format 6 and earlier */
   printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
          "   %s\n",
          pack, (apr_uint64_t)(offset), type, revision, item_index,
          description);
-=======
-  /* some info is only available in format7 repos */
-  if (svn_fs_fs__use_log_addressing(fs, revision))
-    {
-      /* reverse index lookup: get item description in ENTRY */
-      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
-                                          offset, scratch_pool));
-      if (entry)
-        {
-          /* more details */
-          end_offset = offset + entry->size;
-          type = types[entry->type];
-        }
->>>>>>> .merge-right.r1605441
-
 #endif
 
   return SVN_NO_ERROR;
