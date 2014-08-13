@@ -420,8 +420,7 @@ detect_changed(apr_hash_t **changed,
           svn_pool_clear(iterpool);
           SVN_ERR(check_changed_path(&changed_item, &found_readable,
                                      &found_unreadable, root, fs, path,
-                                     change, authz_read_func,
-                                     authz_read_baton, pool, iterpool));
+                                     change, NULL, NULL, pool, iterpool));
 
           apr_hash_set(*changed, path, path_len, changed_item);
         }
