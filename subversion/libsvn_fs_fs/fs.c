@@ -254,12 +254,11 @@ initialize_fs_struct(svn_fs_t *fs)
 
 /* Reset vtable and fsap_data fields in FS such that the FS is basically
  * closed now.  Note that FS must not hold locks when you call this. */
-static svn_error_t *
+static void
 uninitialize_fs_struct(svn_fs_t *fs)
 {
   fs->vtable = NULL;
   fs->fsap_data = NULL;
-  return SVN_NO_ERROR;
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
@@ -436,7 +435,7 @@ fs_hotcopy(svn_fs_t *src_fs,
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_fs__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                             incremental, pool));
-  SVN_ERR(uninitialize_fs_struct(dst_fs));
+  uninitialize_fs_struct(dst_fs);
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(fs_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
