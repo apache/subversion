@@ -149,16 +149,6 @@ Candidate changes:
      +1: stefan2, ivan
      +1 (without r1615354): brane, breser
 
- * r1612225
-   Ignore ENOTIMPL and EINCOMPLETE errors when tweaking temporary file
-   permission bits on non-windows systems.
-   Justification:
-     These errors imply the underlying filesystem doesn't support
-     permissions. svn_io_copy_perms handles these errors in the
-     same way.
-   Votes:
-     +1: stsp, breser
-
 Veto-blocked changes:
 =====================
 
@@ -187,3 +177,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1612225
+   Ignore ENOTIMPL and EINCOMPLETE errors when tweaking temporary file
+   permission bits on non-windows systems.
+   Justification:
+     These errors imply the underlying filesystem doesn't support
+     permissions. svn_io_copy_perms handles these errors in the
+     same way.
+   Votes:
+     +1: stsp, breser, rhuijben
