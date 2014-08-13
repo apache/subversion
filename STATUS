@@ -109,14 +109,6 @@ Candidate changes:
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
 
- * r1592014, r1592034
-   Fix 'svn patch' skipping targets in valid --git diffs.
-   Justification:
-     'svn patch' should parse --git diffs correctly. User complained.
-     See http://svn.haxx.se/users/archive-2014-05/0003.shtml and replies.
-   Votes:
-     +1: stsp, breser
-
  * r1600331, r1600348, 1600368, r1600563, r1600781
    Improve gpg-agent support.
    Justification: Avoids spurious error logs, supports standard socket
@@ -185,5 +177,13 @@ Approved changes:
      These errors imply the underlying filesystem doesn't support
      permissions. svn_io_copy_perms handles these errors in the
      same way.
+   Votes:
+     +1: stsp, breser, rhuijben
+
+ * r1592014, r1592034
+   Fix 'svn patch' skipping targets in valid --git diffs.
+   Justification:
+     'svn patch' should parse --git diffs correctly. User complained.
+     See http://svn.haxx.se/users/archive-2014-05/0003.shtml and replies.
    Votes:
      +1: stsp, breser, rhuijben
