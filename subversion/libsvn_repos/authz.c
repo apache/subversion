@@ -869,11 +869,7 @@ add_complex_matches(lookup_state_t *state,
   for (i = 0; i < patterns->nelts; ++i)
     {
       node_t *node = APR_ARRAY_IDX(patterns, i, node_t *);
-
-      /* There should be not slashes and periods should be treated as
-       * literals. */
-      if (APR_SUCCESS == apr_fnmatch(node->segment.data, segment->data, 
-                                     APR_FNM_PATHNAME | APR_FNM_PERIOD))
+      if (!apr_fnmatch(node->segment.data, segment->data, 0))
         add_next_node(state, node);
     }
 }
