@@ -98,7 +98,7 @@ compare_conflict(const svn_wc_conflict_description3_t *actual,
 
   ASSERT_INT_EQ(actual->kind,           expected->kind);
   ASSERT_STR_EQ(actual->local_abspath,  expected->local_abspath);
-  ASSERT_INT_EQ(actual->node_kind,      expected->node_kind);
+  ASSERT_INT_EQ(actual->local_node_kind,expected->local_node_kind);
   ASSERT_STR_EQ(actual->property_name,  expected->property_name);
   ASSERT_INT_EQ(actual->is_binary,      expected->is_binary);
   ASSERT_STR_EQ(actual->mime_type,      expected->mime_type);
@@ -235,7 +235,7 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
   skel = svn_skel__parse(tree_conflict_data, strlen(tree_conflict_data), pool);
   SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, "", pool, pool));
 
-  if ((conflict->node_kind != exp_conflict->node_kind) ||
+  if ((conflict->local_node_kind != exp_conflict->local_node_kind) ||
       (conflict->incoming_change != exp_conflict->incoming_change) ||
       (conflict->local_change != exp_conflict->local_change) ||
       (conflict->operation != exp_conflict->operation) ||

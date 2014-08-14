@@ -1772,9 +1772,11 @@ typedef struct svn_wc_conflict_description3_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *local_abspath;
 
-  /** The node type of the path being operated on (for a tree conflict,
-   *  ### which version?) */
-  svn_node_kind_t node_kind;
+  /** The node type of the local node involved in this conflict.
+   * For a tree conflict, this is the node kind of the tree conflict victim.
+   * For the left/right node kinds of the incoming conflicting change see
+   * src_left_version->node_kind and src_right_version->node_kind. */
+  svn_node_kind_t local_node_kind;
 
   /** What sort of conflict are we describing? */
   svn_wc_conflict_kind_t kind;
@@ -2149,8 +2151,8 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field to
- * #svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
- * operation to @a operation, the @c src_left_version field to
+ * #svn_wc_conflict_kind_tree, the @c local_node_kind to @a local_node_kind,
+ * the @c operation to @a operation, the @c src_left_version field to
  * @a src_left_version, and the @c src_right_version field to
  * @a src_right_version.
  *
@@ -2162,7 +2164,7 @@ svn_wc_conflict_description_create_prop(const char *path,
 svn_wc_conflict_description3_t *
 svn_wc_conflict_description_create_tree3(
   const char *local_abspath,
-  svn_node_kind_t node_kind,
+  svn_node_kind_t local_node_kind,
   svn_wc_operation_t operation,
   const svn_wc_conflict_version_t *src_left_version,
   const svn_wc_conflict_version_t *src_right_version,

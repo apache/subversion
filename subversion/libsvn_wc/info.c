@@ -575,7 +575,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                     const svn_wc_conflict_description3_t *);
 
       if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
-                          tree_conflict->node_kind, iterpool))
+                          tree_conflict->local_node_kind, iterpool))
         continue;
 
       info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,

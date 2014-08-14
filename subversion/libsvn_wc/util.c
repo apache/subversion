@@ -198,7 +198,7 @@ svn_wc_conflict_description_create_text3(const char *local_abspath,
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = svn_node_file;
+  conflict->local_node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
   conflict->incoming_change = svn_wc_conflict_action_edit;
   conflict->local_change = svn_wc_conflict_reason_edited;
@@ -217,7 +217,7 @@ svn_wc_conflict_description_create_prop3(const char *local_abspath,
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = node_kind;
+  conflict->local_node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_property;
   conflict->property_name = apr_pstrdup(result_pool, property_name);
   return conflict;
@@ -226,7 +226,7 @@ svn_wc_conflict_description_create_prop3(const char *local_abspath,
 svn_wc_conflict_description3_t *
 svn_wc_conflict_description_create_tree3(
   const char *local_abspath,
-  svn_node_kind_t node_kind,
+  svn_node_kind_t local_node_kind,
   svn_wc_operation_t operation,
   const svn_wc_conflict_version_t *src_left_version,
   const svn_wc_conflict_version_t *src_right_version,
@@ -238,7 +238,7 @@ svn_wc_conflict_description_create_tree3(
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = node_kind;
+  conflict->local_node_kind = local_node_kind;
   conflict->kind = svn_wc_conflict_kind_tree;
   conflict->operation = operation;
   conflict->src_left_version = svn_wc_conflict_version_dup(src_left_version,
@@ -376,7 +376,7 @@ svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
   if (conflict->local_abspath)
     new_conflict->local_abspath = apr_pstrdup(result_pool,
                                               conflict->local_abspath);
-  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->node_kind = conflict->local_node_kind;
   new_conflict->kind = conflict->kind;
   if (conflict->property_name)
     new_conflict->property_name = apr_pstrdup(result_pool,
