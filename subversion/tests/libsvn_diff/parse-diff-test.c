@@ -132,8 +132,6 @@ static const char *bad_git_diff_header =
   "diff --git foo4 b/foo4"                                              NL
   "diff --git a/foo5 b/foo5"                                            NL
   "random noise"                                                        NL
-  "copy from foo5"                                                      NL
-  "copy to foo5"                                                        NL
   "diff --git a/foo6 b/foo6"                                            NL
   "copy from foo6"                                                      NL
   "random noise"                                                        NL
