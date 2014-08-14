@@ -569,14 +569,16 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
 }
 
 /* Create *LEFT and *RIGHT conflict versions for conflict victim
- * at VICTIM_ABSPATH, with kind NODE_KIND, using information obtained
- * from MERGE_SOURCE and TARGET.
+ * at VICTIM_ABSPATH, with merge-left node kind MERGE_LEFT_NODE_KIND
+ * and merge-right node kind MERGE_RIGHT_NODE_KIND, using information
+ * obtained from MERGE_SOURCE and TARGET.
  * Allocate returned conflict versions in RESULT_POOL. */
 static svn_error_t *
 make_conflict_versions(const svn_wc_conflict_version_t **left,
                        const svn_wc_conflict_version_t **right,
                        const char *victim_abspath,
-                       svn_node_kind_t node_kind,
+                       svn_node_kind_t merge_left_node_kind,
+                       svn_node_kind_t merge_right_node_kind,
                        const merge_source_t *merge_source,
                        const merge_target_t *target,
                        apr_pool_t *result_pool,
@@ -596,13 +598,15 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
             merge_source->loc1->repos_root_url,
             merge_source->loc1->repos_uuid,
             svn_relpath_join(left_relpath, child, scratch_pool),
-            merge_source->loc1->rev, node_kind, result_pool);
+            merge_source->loc1->rev,
+            merge_left_node_kind, result_pool);
 
   *right = svn_wc_conflict_version_create2(
              merge_source->loc2->repos_root_url,
              merge_source->loc2->repos_uuid,
              svn_relpath_join(right_relpath, child, scratch_pool),
-             merge_source->loc2->rev, node_kind, result_pool);
+             merge_source->loc2->rev,
+             merge_right_node_kind, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1181,6 +1185,9 @@ struct merge_dir_baton_t
    */
   svn_wc_conflict_reason_t tree_conflict_reason;
   svn_wc_conflict_action_t tree_conflict_action;
+  svn_node_kind_t tree_conflict_local_node_kind;
+  svn_node_kind_t tree_conflict_merge_left_node_kind;
+  svn_node_kind_t tree_conflict_merge_right_node_kind;
 
   /* When TREE_CONFLICT_REASON is CONFLICT_REASON_SKIP, the skip state to
      add to the notification */
@@ -1232,6 +1239,9 @@ struct merge_file_baton_t
      merge_tree_baton_t for an explanation. */
   svn_wc_conflict_reason_t tree_conflict_reason;
   svn_wc_conflict_action_t tree_conflict_action;
+  svn_node_kind_t tree_conflict_local_node_kind;
+  svn_node_kind_t tree_conflict_merge_left_node_kind;
+  svn_node_kind_t tree_conflict_merge_right_node_kind;
 
   /* When TREE_CONFLICT_REASON is CONFLICT_REASON_SKIP, the skip state to
      add to the notification */
@@ -1292,8 +1302,6 @@ record_skip(merge_cmd_baton_t *merge_b,
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
  *
- * NODE_KIND must be the node kind of "old" and "theirs" and "mine";
- * this function cannot cope with node kind clashes.
  * ACTION and REASON correspond to the fields
  * of the same names in svn_wc_tree_conflict_description_t.
  */
@@ -1301,7 +1309,9 @@ static svn_error_t *
 record_tree_conflict(merge_cmd_baton_t *merge_b,
                      const char *local_abspath,
                      struct merge_dir_baton_t *parent_baton,
-                     svn_node_kind_t node_kind,
+                     svn_node_kind_t local_node_kind,
+                     svn_node_kind_t merge_left_node_kind,
+                     svn_node_kind_t merge_right_node_kind,
                      svn_wc_conflict_action_t action,
                      svn_wc_conflict_reason_t reason,
                      const svn_wc_conflict_description3_t *existing_conflict,
@@ -1355,7 +1365,9 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
             reason = svn_wc_conflict_reason_moved_here;
         }
 
-      SVN_ERR(make_conflict_versions(&left, &right, local_abspath, node_kind,
+      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                     merge_left_node_kind,
+                                     merge_right_node_kind,
                                      &merge_b->merge_source, merge_b->target,
                                      result_pool, scratch_pool));
 
@@ -1364,7 +1376,8 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
           left = existing_conflict->src_left_version;
 
       conflict = svn_wc_conflict_description_create_tree3(
-                        local_abspath, node_kind, svn_wc_operation_merge,
+                        local_abspath, local_node_kind,
+                        svn_wc_operation_merge,
                         left, right, result_pool);
 
       conflict->incoming_change = action;
@@ -1400,7 +1413,7 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
 
       notify = svn_wc_create_notify(local_abspath, svn_wc_notify_tree_conflict,
                                     scratch_pool);
-      notify->kind = node_kind;
+      notify->kind = local_node_kind;
 
       (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
                                     scratch_pool);
@@ -1621,7 +1634,10 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
       /* open_directory() decided that a tree conflict should be raised */
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, db->parent_baton,
-                                   svn_node_dir, db->tree_conflict_action,
+                                   db->tree_conflict_local_node_kind,
+                                   db->tree_conflict_merge_left_node_kind,
+                                   db->tree_conflict_merge_right_node_kind,
+                                   db->tree_conflict_action,
                                    db->tree_conflict_reason,
                                    NULL, TRUE,
                                    scratch_pool));
@@ -1700,7 +1716,10 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
       /* open_file() decided that a tree conflict should be raised */
 
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, fb->parent_baton,
-                                   svn_node_file, fb->tree_conflict_action,
+                                   fb->tree_conflict_local_node_kind,
+                                   fb->tree_conflict_merge_left_node_kind,
+                                   fb->tree_conflict_merge_right_node_kind,
+                                   fb->tree_conflict_action,
                                    fb->tree_conflict_reason,
                                    NULL, TRUE,
                                    scratch_pool));
@@ -1740,6 +1759,16 @@ merge_file_opened(void **new_file_baton,
   fb->tree_conflict_action = svn_wc_conflict_action_edit;
   fb->skip_reason = svn_wc_notify_state_unknown;
 
+  if (left_source)
+    fb->tree_conflict_merge_left_node_kind = svn_node_file;
+  else
+    fb->tree_conflict_merge_left_node_kind = svn_node_none;
+
+  if (right_source)
+    fb->tree_conflict_merge_right_node_kind = svn_node_file;
+  else
+    fb->tree_conflict_merge_right_node_kind = svn_node_none;
+
   *new_file_baton = fb;
 
   if (pdb)
@@ -1756,7 +1785,6 @@ merge_file_opened(void **new_file_baton,
   else if (left_source != NULL)
     {
       /* Node is expected to be a file, which will be changed or deleted. */
-      svn_node_kind_t kind;
       svn_boolean_t is_deleted;
       svn_boolean_t excluded;
       svn_depth_t parent_depth;
@@ -1768,7 +1796,8 @@ merge_file_opened(void **new_file_baton,
         svn_wc_notify_state_t obstr_state;
 
         SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &excluded,
-                                          &kind, &parent_depth,
+                                          &fb->tree_conflict_local_node_kind,
+                                          &parent_depth,
                                           merge_b, local_abspath,
                                           scratch_pool));
 
@@ -1781,10 +1810,10 @@ merge_file_opened(void **new_file_baton,
           }
 
         if (is_deleted)
-          kind = svn_node_none;
+          fb->tree_conflict_local_node_kind = svn_node_none;
       }
 
-      if (kind == svn_node_none)
+      if (fb->tree_conflict_local_node_kind == svn_node_none)
         {
           fb->shadowed = TRUE;
 
@@ -1818,7 +1847,7 @@ merge_file_opened(void **new_file_baton,
           return SVN_NO_ERROR;
           /* ### /Similar */
         }
-      else if (kind != svn_node_file)
+      else if (fb->tree_conflict_local_node_kind != svn_node_file)
         {
           fb->shadowed = TRUE;
 
@@ -1877,6 +1906,8 @@ merge_file_opened(void **new_file_baton,
 
           /* Update the tree conflict to store that this is a replace */
           SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
+                                       old_tc->local_node_kind,
+                                       svn_node_none,
                                        svn_node_file,
                                        fb->tree_conflict_action,
                                        fb->tree_conflict_reason,
@@ -1903,12 +1934,11 @@ merge_file_opened(void **new_file_baton,
                   && ((pdb && pdb->added) || fb->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
-          svn_node_kind_t kind;
           svn_boolean_t is_deleted;
 
           SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, NULL,
-                                            &kind, NULL,
-                                            merge_b, local_abspath,
+                                            &fb->tree_conflict_local_node_kind,
+                                            NULL, merge_b, local_abspath,
                                             scratch_pool));
 
           if (obstr_state != svn_wc_notify_state_inapplicable)
@@ -1918,7 +1948,8 @@ merge_file_opened(void **new_file_baton,
               fb->tree_conflict_reason = CONFLICT_REASON_SKIP;
               fb->skip_reason = obstr_state;
             }
-          else if (kind != svn_node_none && !is_deleted)
+          else if (fb->tree_conflict_local_node_kind != svn_node_none
+                   && !is_deleted)
             {
               /* Set a tree conflict */
               fb->shadowed = TRUE;
@@ -1997,7 +2028,8 @@ merge_file_changed(const char *relpath,
                                       scratch_pool, scratch_pool));
 
   SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                 svn_node_file, &merge_b->merge_source, merge_b->target,
+                                 svn_node_file, svn_node_file,
+                                 &merge_b->merge_source, merge_b->target,
                                  scratch_pool, scratch_pool));
 
   /* Do property merge now, if we are not going to perform a text merge */
@@ -2422,6 +2454,10 @@ merge_file_deleted(const char *relpath,
        */
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, fb->parent_baton,
                                    svn_node_file,
+                                   svn_node_file,
+                                   fb->add_is_replace
+                                     ? svn_node_file
+                                     : svn_node_none,
                                    svn_wc_conflict_action_delete,
                                    svn_wc_conflict_reason_edited,
                                    NULL, TRUE,
@@ -2472,6 +2508,16 @@ merge_dir_opened(void **new_dir_baton,
 
   *new_dir_baton = db;
 
+  if (left_source)
+    db->tree_conflict_merge_left_node_kind = svn_node_dir;
+  else
+    db->tree_conflict_merge_left_node_kind = svn_node_none;
+
+  if (right_source)
+    db->tree_conflict_merge_right_node_kind = svn_node_dir;
+  else
+    db->tree_conflict_merge_right_node_kind = svn_node_none;
+
   if (pdb)
     {
       db->parent_baton = pdb;
@@ -2488,7 +2534,6 @@ merge_dir_opened(void **new_dir_baton,
   else if (left_source != NULL)
     {
       /* Node is expected to be a directory. */
-      svn_node_kind_t kind;
       svn_boolean_t is_deleted;
       svn_boolean_t excluded;
       svn_depth_t parent_depth;
@@ -2500,9 +2545,9 @@ merge_dir_opened(void **new_dir_baton,
       {
         svn_wc_notify_state_t obstr_state;
         SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, &excluded,
-                                          &kind, &parent_depth,
-                                          merge_b, local_abspath,
-                                          scratch_pool));
+                                          &db->tree_conflict_local_node_kind,
+                                          &parent_depth, merge_b,
+                                          local_abspath, scratch_pool));
 
         if (obstr_state != svn_wc_notify_state_inapplicable)
           {
@@ -2537,10 +2582,10 @@ merge_dir_opened(void **new_dir_baton,
           }
 
         if (is_deleted)
-          kind = svn_node_none;
+          db->tree_conflict_local_node_kind = svn_node_none;
       }
 
-      if (kind == svn_node_none)
+      if (db->tree_conflict_local_node_kind == svn_node_none)
         {
           db->shadowed = TRUE;
 
@@ -2576,7 +2621,7 @@ merge_dir_opened(void **new_dir_baton,
           return SVN_NO_ERROR;
           /* ### /avoid breaking tests */
         }
-      else if (kind != svn_node_dir)
+      else if (db->tree_conflict_local_node_kind != svn_node_dir)
         {
           db->shadowed = TRUE;
 
@@ -2667,6 +2712,8 @@ merge_dir_opened(void **new_dir_baton,
 
               /* Update the tree conflict to store that this is a replace */
               SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
+                                           old_tc->local_node_kind,
+                                           svn_node_none,
                                            svn_node_dir,
                                            db->tree_conflict_action,
                                            db->tree_conflict_reason,
@@ -2681,12 +2728,11 @@ merge_dir_opened(void **new_dir_baton,
              && ((pdb && pdb->added) || db->add_is_replace)))
         {
           svn_wc_notify_state_t obstr_state;
-          svn_node_kind_t kind;
           svn_boolean_t is_deleted;
 
           SVN_ERR(perform_obstruction_check(&obstr_state, &is_deleted, NULL,
-                                            &kind, NULL,
-                                            merge_b, local_abspath,
+                                            &db->tree_conflict_local_node_kind,
+                                            NULL, merge_b, local_abspath,
                                             scratch_pool));
 
           /* In this case of adding a directory, we have an exception to the
@@ -2696,7 +2742,8 @@ merge_dir_opened(void **new_dir_baton,
            * versioned but unexpectedly missing from disk, or is unversioned
            * but obstructed by a node of the wrong kind. */
           if (obstr_state == svn_wc_notify_state_obstructed
-              && (is_deleted || kind == svn_node_none))
+              && (is_deleted ||
+                  db->tree_conflict_local_node_kind == svn_node_none))
             {
               svn_node_kind_t disk_kind;
 
@@ -2717,7 +2764,8 @@ merge_dir_opened(void **new_dir_baton,
               db->tree_conflict_reason = CONFLICT_REASON_SKIP;
               db->skip_reason = obstr_state;
             }
-          else if (kind != svn_node_none && !is_deleted)
+          else if (db->tree_conflict_local_node_kind != svn_node_none
+                   && !is_deleted)
             {
               /* Set a tree conflict */
               db->shadowed = TRUE;
@@ -2796,6 +2844,8 @@ merge_dir_opened(void **new_dir_baton,
             {
               /* ### Should be atomic with svn_wc_add(4|_from_disk2)() */
               SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
+                                           old_tc->local_node_kind,
+                                           svn_node_none,
                                            svn_node_dir,
                                            db->tree_conflict_action,
                                            db->tree_conflict_reason,
@@ -2864,7 +2914,8 @@ merge_dir_changed(const char *relpath,
       svn_wc_notify_state_t prop_state;
 
       SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                     svn_node_dir, &merge_b->merge_source,
+                                     svn_node_dir, svn_node_dir,
+                                     &merge_b->merge_source,
                                      merge_b->target,
                                      scratch_pool, scratch_pool));
 
@@ -3212,6 +3263,8 @@ merge_dir_deleted(const char *relpath,
        */
       SVN_ERR(record_tree_conflict(merge_b, local_abspath, db->parent_baton,
                                    svn_node_dir,
+                                   svn_node_dir,
+                                   svn_node_none,
                                    svn_wc_conflict_action_delete,
                                    svn_wc_conflict_reason_edited,
                                    NULL, TRUE,
