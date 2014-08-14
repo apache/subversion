@@ -169,11 +169,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1592014, r1592034
-   Fix 'svn patch' skipping targets in valid --git diffs.
-   Justification:
-     'svn patch' should parse --git diffs correctly. User complained.
-     See http://svn.haxx.se/users/archive-2014-05/0003.shtml and replies.
-   Votes:
-     +1: stsp, breser, rhuijben
