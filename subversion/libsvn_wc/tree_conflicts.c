@@ -366,9 +366,10 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
                     result_pool);
 
   /* node_kind */
-  SVN_ERR_ASSERT(conflict->node_kind == svn_node_dir
-                 || conflict->node_kind == svn_node_file);
-  skel_prepend_enum(c_skel, node_kind_map, conflict->node_kind, result_pool);
+  SVN_ERR_ASSERT(conflict->local_node_kind == svn_node_dir
+                 || conflict->local_node_kind == svn_node_file);
+  skel_prepend_enum(c_skel, node_kind_map, conflict->local_node_kind,
+                    result_pool);
 
   /* Victim path (escaping separator chars). */
   victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
