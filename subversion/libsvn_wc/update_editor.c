@@ -840,9 +840,7 @@ complete_conflict(svn_skel_t *conflict,
   if (is_complete)
     return SVN_NO_ERROR; /* Already completed */
 
-  if (old_repos_relpath == NULL)
-    local_kind = svn_node_none;
-  if (SVN_IS_VALID_REVNUM(old_revision))
+  if (old_repos_relpath)
     original_version = svn_wc_conflict_version_create2(eb->repos_root,
                                                        eb->repos_uuid,
                                                        old_repos_relpath,
@@ -852,14 +850,15 @@ complete_conflict(svn_skel_t *conflict,
   else
     original_version = NULL;
 
-  if (new_repos_relpath == NULL)
-    target_kind = svn_node_none;
-  target_version = svn_wc_conflict_version_create2(eb->repos_root,
-                                                   eb->repos_uuid,
-                                                   new_repos_relpath,
-                                                   *eb->target_revision,
-                                                   target_kind,
-                                                   result_pool);
+  if (new_repos_relpath)
+    target_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        new_repos_relpath,
+                                                        *eb->target_revision,
+                                                        target_kind,
+                                                        result_pool);
+  else
+    target_version = NULL;
 
   if (eb->switch_repos_relpath)
     SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict,

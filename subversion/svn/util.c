@@ -923,11 +923,6 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
 
   if (node->path_in_repos)
     path_str = node->path_in_repos;
-  else if (node->node_kind == svn_node_none)
-    {
-      root_str = "";
-      path_str = "";
-    }
 
   return apr_psprintf(pool, "(%s) %s@%ld",
                       svn_cl__node_kind_str_human_readable(node->node_kind),
