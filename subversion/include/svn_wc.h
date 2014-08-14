@@ -1711,11 +1711,12 @@ typedef struct svn_wc_conflict_version_t
  * @a revision and the @c node_kind to @a kind. Make only shallow
  * copies of the pointer arguments.
  *
- * @a repos_root_url, @a repos_relpath and @a revision must be valid,
- * non-null values. @a repos_uuid should be a valid UUID, but can be
+ * @a repos_root_url, and @a revision must be valid, non-null values.
+ * @a repos_relpath must be a canonical fspath, but can be @c NULL if kind
+ * is @svn_node_none. @a repos_uuid should be a valid UUID, but can be
  * NULL if unknown. @a kind can be any kind, even 'none' or 'unknown'.
  *
- * @since New in 1.8.
+ * @since New in 1.8. As of 1.9 @a repos_relpath may be NULL if kind is 'none'.
  */
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create2(const char *repos_root_url,

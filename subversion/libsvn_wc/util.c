@@ -296,10 +296,14 @@ svn_wc_conflict_version_create2(const char *repos_url,
 
   version = apr_pcalloc(result_pool, sizeof(*version));
 
-    SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, result_pool)
-                             && svn_relpath_is_canonical(repos_relpath)
-                             && SVN_IS_VALID_REVNUM(revision)
-                             /* ### repos_uuid can be NULL :( */);
+  if (repos_relpath)
+    SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(repos_relpath));
+  else
+    SVN_ERR_ASSERT_NO_RETURN(kind == svn_node_none);
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, result_pool)
+                           && SVN_IS_VALID_REVNUM(revision)
+                           /* ### repos_uuid can be NULL :( */);
 
   version->repos_url = repos_url;
   version->peg_rev = revision;
