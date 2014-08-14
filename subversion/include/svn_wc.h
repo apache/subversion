@@ -1792,14 +1792,20 @@ typedef struct svn_wc_conflict_description3_t
    *  (Only if @c kind is 'text', else undefined.) */
   const char *mime_type;
 
-  /** The action being attempted on the conflicted node or property.
-   *  (When @c kind is 'text', this action must be 'edit'.) */
-  svn_wc_conflict_action_t action;
+  /** The incoming action being attempted on the conflicted node or property.
+   *  When @c kind is 'text', this action must be 'edit', but generally it can
+   *  be any kind of possible change. */
+  svn_wc_conflict_action_t incoming_change;
 
-  /** The state of the target node or property, relative to its merge-left
-   *  source, that is the reason for the conflict.
-   *  (When @c kind is 'text', this reason must be 'edited'.) */
-  svn_wc_conflict_reason_t reason;
+  /** The local change or state of the target node or property, relative
+   *  to its merge-left source, that conflicts with the incoming action.
+   *  When @c kind is 'text', this must be 'edited', but generally it can
+   *  be any kind of possible change.
+   *  Note that 'local' does not always refer to a working copy. A change
+   *  can be local to the target branch of a merge operation, for example,
+   *  and is not necessarily visible in a working copy of the target branch
+   *  at any given revision. */
+  svn_wc_conflict_reason_t local_change;
 
   /** If this is text-conflict and involves the merging of two files
    * descended from a common ancestor, here are the paths of up to

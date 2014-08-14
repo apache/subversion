@@ -208,8 +208,8 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                                           peg_rev2, kind2, pool);
   c = svn_wc_conflict_description_create_tree3(wc_abspath, kind,
                                               operation, left, right, pool);
-  c->action = (svn_wc_conflict_action_t)action;
-  c->reason = (svn_wc_conflict_reason_t)reason;
+  c->incoming_change = (svn_wc_conflict_action_t)action;
+  c->local_change = (svn_wc_conflict_reason_t)reason;
 
   /* Raise the conflict */
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));

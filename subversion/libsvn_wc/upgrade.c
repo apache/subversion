@@ -1450,8 +1450,8 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
 
       SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(conflict_data,
                                                       db, wri_abspath,
-                                                      tc->reason,
-                                                      tc->action,
+                                                      tc->local_change,
+                                                      tc->incoming_change,
                                                       NULL,
                                                       scratch_pool,
                                                       scratch_pool));

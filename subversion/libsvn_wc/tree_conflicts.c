@@ -269,8 +269,8 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description3_t **conflict,
   new_conflict = svn_wc_conflict_description_create_tree3(victim_abspath,
     node_kind, operation, src_left_version, src_right_version,
     result_pool);
-  new_conflict->action = action;
-  new_conflict->reason = reason;
+  new_conflict->incoming_change = action;
+  new_conflict->local_change = reason;
 
   *conflict = new_conflict;
 
@@ -353,13 +353,13 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
   else
     SVN_ERR(prepend_version_info_skel(c_skel, &null_version, result_pool));
 
-  /* reason */
-  skel_prepend_enum(c_skel, svn_wc__conflict_reason_map, conflict->reason,
-                    result_pool);
+  /* local change */
+  skel_prepend_enum(c_skel, svn_wc__conflict_reason_map,
+                    conflict->local_change, result_pool);
 
-  /* action */
-  skel_prepend_enum(c_skel, svn_wc__conflict_action_map, conflict->action,
-                    result_pool);
+  /* incoming change */
+  skel_prepend_enum(c_skel, svn_wc__conflict_action_map,
+                    conflict->incoming_change, result_pool);
 
   /* operation */
   skel_prepend_enum(c_skel, svn_wc__operation_map, conflict->operation,
@@ -409,10 +409,9 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
 
   SVN_ERR_ASSERT(conflict != NULL);
-  SVN_ERR_ASSERT(conflict->operation == svn_wc_operation_merge
-                 || (conflict->reason != svn_wc_conflict_reason_moved_away
-                     && conflict->reason != svn_wc_conflict_reason_moved_here)
-                );
+  SVN_ERR_ASSERT(conflict->operation == svn_wc_operation_merge ||
+                 (conflict->local_change != svn_wc_conflict_reason_moved_away &&
+                  conflict->local_change != svn_wc_conflict_reason_moved_here));
 
   /* Re-adding an existing tree conflict victim is an error. */
   err = svn_wc__internal_conflicted_p(NULL, NULL, &existing_conflict,
@@ -438,8 +437,8 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(conflict_skel, wc_ctx->db,
                                                   conflict->local_abspath,
-                                                  conflict->reason,
-                                                  conflict->action,
+                                                  conflict->local_change,
+                                                  conflict->incoming_change,
                                                   NULL,
                                                   scratch_pool, scratch_pool));
 

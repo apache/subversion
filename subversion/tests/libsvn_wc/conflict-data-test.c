@@ -102,8 +102,8 @@ compare_conflict(const svn_wc_conflict_description3_t *actual,
   ASSERT_STR_EQ(actual->property_name,  expected->property_name);
   ASSERT_INT_EQ(actual->is_binary,      expected->is_binary);
   ASSERT_STR_EQ(actual->mime_type,      expected->mime_type);
-  ASSERT_INT_EQ(actual->action,         expected->action);
-  ASSERT_INT_EQ(actual->reason,         expected->reason);
+  ASSERT_INT_EQ(actual->incoming_change, expected->incoming_change);
+  ASSERT_INT_EQ(actual->local_change,   expected->local_change);
   ASSERT_STR_EQ(actual->base_abspath,   expected->base_abspath);
   ASSERT_STR_EQ(actual->their_abspath,  expected->their_abspath);
   ASSERT_STR_EQ(actual->my_abspath,     expected->my_abspath);
@@ -208,8 +208,8 @@ tree_conflict_create(const char *local_abspath,
   conflict = svn_wc_conflict_description_create_tree3(
                     local_abspath, node_kind, operation,
                     left, right, result_pool);
-  conflict->action = action;
-  conflict->reason = reason;
+  conflict->incoming_change = action;
+  conflict->local_change = reason;
   return conflict;
 }
 
@@ -229,15 +229,15 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
   exp_conflict = svn_wc_conflict_description_create_tree3(
                         local_abspath, svn_node_file, svn_wc_operation_update,
                         NULL, NULL, pool);
-  exp_conflict->action = svn_wc_conflict_action_delete;
-  exp_conflict->reason = svn_wc_conflict_reason_edited;
+  exp_conflict->incoming_change = svn_wc_conflict_action_delete;
+  exp_conflict->local_change = svn_wc_conflict_reason_edited;
 
   skel = svn_skel__parse(tree_conflict_data, strlen(tree_conflict_data), pool);
   SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, "", pool, pool));
 
   if ((conflict->node_kind != exp_conflict->node_kind) ||
-      (conflict->action    != exp_conflict->action) ||
-      (conflict->reason    != exp_conflict->reason) ||
+      (conflict->incoming_change != exp_conflict->incoming_change) ||
+      (conflict->local_change != exp_conflict->local_change) ||
       (conflict->operation != exp_conflict->operation) ||
       (strcmp(conflict->local_abspath, exp_conflict->local_abspath) != 0))
     return fail(pool, "Unexpected tree conflict");
@@ -259,8 +259,8 @@ test_serialize_tree_conflict_data(apr_pool_t *pool)
   conflict = svn_wc_conflict_description_create_tree3(
                     local_abspath, svn_node_file, svn_wc_operation_update,
                     NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = svn_wc_conflict_reason_edited;
+  conflict->incoming_change = svn_wc_conflict_action_delete;
+  conflict->local_change = svn_wc_conflict_reason_edited;
 
   SVN_ERR(svn_wc__serialize_conflict(&skel, conflict, pool, pool));
   tree_conflict_data = svn_skel__unparse(skel, pool)->data;

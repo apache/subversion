@@ -1411,18 +1411,18 @@ generate_propconflict(svn_boolean_t *conflict_remains,
     }
 
   if (!incoming_old_val && incoming_new_val)
-    cdesc->action = svn_wc_conflict_action_add;
+    cdesc->incoming_change = svn_wc_conflict_action_add;
   else if (incoming_old_val && !incoming_new_val)
-    cdesc->action = svn_wc_conflict_action_delete;
+    cdesc->incoming_change = svn_wc_conflict_action_delete;
   else
-    cdesc->action = svn_wc_conflict_action_edit;
+    cdesc->incoming_change = svn_wc_conflict_action_edit;
 
   if (base_val && !working_val)
-    cdesc->reason = svn_wc_conflict_reason_deleted;
+    cdesc->local_change = svn_wc_conflict_reason_deleted;
   else if (!base_val && working_val)
-    cdesc->reason = svn_wc_conflict_reason_obstructed;
+    cdesc->local_change = svn_wc_conflict_reason_obstructed;
   else
-    cdesc->reason = svn_wc_conflict_reason_edited;
+    cdesc->local_change = svn_wc_conflict_reason_edited;
 
   /* Invoke the interactive conflict callback. */
   SVN_ERR(conflict_func(&result, svn_wc__cd3_to_cd2(cdesc, scratch_pool),
@@ -1916,8 +1916,8 @@ read_tree_conflict_desc(svn_wc_conflict_description3_t **desc,
                                                    operation,
                                                    left_version, right_version,
                                                    result_pool);
-  (*desc)->reason = local_change;
-  (*desc)->action = incoming_change;
+  (*desc)->local_change = local_change;
+  (*desc)->incoming_change = incoming_change;
 
   return SVN_NO_ERROR;
 }
@@ -2187,19 +2187,19 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
 
       /* Compute the incoming side of the conflict ('action'). */
       if (their_value == NULL)
-        desc->action = svn_wc_conflict_action_delete;
+        desc->incoming_change = svn_wc_conflict_action_delete;
       else if (old_value == NULL)
-        desc->action = svn_wc_conflict_action_add;
+        desc->incoming_change = svn_wc_conflict_action_add;
       else
-        desc->action = svn_wc_conflict_action_edit;
+        desc->incoming_change = svn_wc_conflict_action_edit;
 
       /* Compute the local side of the conflict ('reason'). */
       if (my_value == NULL)
-        desc->reason = svn_wc_conflict_reason_deleted;
+        desc->local_change = svn_wc_conflict_reason_deleted;
       else if (old_value == NULL)
-        desc->reason = svn_wc_conflict_reason_added;
+        desc->local_change = svn_wc_conflict_reason_added;
       else
-        desc->reason = svn_wc_conflict_reason_edited;
+        desc->local_change = svn_wc_conflict_reason_edited;
 
       desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
 

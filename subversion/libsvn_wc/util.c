@@ -200,8 +200,8 @@ svn_wc_conflict_description_create_text3(const char *local_abspath,
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
   conflict->node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
-  conflict->action = svn_wc_conflict_action_edit;
-  conflict->reason = svn_wc_conflict_reason_edited;
+  conflict->incoming_change = svn_wc_conflict_action_edit;
+  conflict->local_change = svn_wc_conflict_reason_edited;
   return conflict;
 }
 
@@ -384,8 +384,8 @@ svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
   new_conflict->is_binary = conflict->is_binary;
   if (conflict->mime_type)
     new_conflict->mime_type = apr_pstrdup(result_pool, conflict->mime_type);
-  new_conflict->action = conflict->action;
-  new_conflict->reason = conflict->reason;
+  new_conflict->action = conflict->incoming_change;
+  new_conflict->reason = conflict->local_change;
   if (conflict->base_abspath)
     new_conflict->base_abspath = apr_pstrdup(result_pool,
                                              conflict->base_abspath);
