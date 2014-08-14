@@ -1367,8 +1367,8 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                         local_abspath, node_kind, svn_wc_operation_merge,
                         left, right, result_pool);
 
-      conflict->action = action;
-      conflict->reason = reason;
+      conflict->incoming_change = action;
+      conflict->local_change = reason;
 
       /* May return SVN_ERR_WC_PATH_UNEXPECTED_STATUS */
       if (existing_conflict)
@@ -1873,7 +1873,7 @@ merge_file_opened(void **new_file_baton,
           && (old_tc = svn_hash_gets(pdb->new_tree_conflicts, local_abspath)))
         {
           fb->tree_conflict_action = svn_wc_conflict_action_replace;
-          fb->tree_conflict_reason = old_tc->reason;
+          fb->tree_conflict_reason = old_tc->local_change;
 
           /* Update the tree conflict to store that this is a replace */
           SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
@@ -1883,8 +1883,8 @@ merge_file_opened(void **new_file_baton,
                                        old_tc, FALSE,
                                        scratch_pool));
 
-          if (old_tc->reason == svn_wc_conflict_reason_deleted
-              || old_tc->reason == svn_wc_conflict_reason_moved_away)
+          if (old_tc->local_change == svn_wc_conflict_reason_deleted
+              || old_tc->local_change == svn_wc_conflict_reason_moved_away)
             {
               /* Issue #3806: Incoming replacements on local deletes produce
                  inconsistent result.
@@ -2649,10 +2649,10 @@ merge_dir_opened(void **new_dir_baton,
           && (old_tc = svn_hash_gets(pdb->new_tree_conflicts, local_abspath)))
         {
           db->tree_conflict_action = svn_wc_conflict_action_replace;
-          db->tree_conflict_reason = old_tc->reason;
+          db->tree_conflict_reason = old_tc->local_change;
 
-          if (old_tc->reason == svn_wc_conflict_reason_deleted
-             || old_tc->reason == svn_wc_conflict_reason_moved_away)
+          if (old_tc->local_change == svn_wc_conflict_reason_deleted
+             || old_tc->local_change == svn_wc_conflict_reason_moved_away)
             {
               /* Issue #3806: Incoming replacements on local deletes produce
                  inconsistent result.
