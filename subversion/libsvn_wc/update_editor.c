@@ -832,6 +832,8 @@ complete_conflict(svn_skel_t *conflict,
   svn_wc_conflict_version_t *target_version;
   svn_boolean_t is_complete;
 
+  SVN_ERR_ASSERT(new_repos_relpath);
+
   if (!conflict)
     return SVN_NO_ERROR; /* Not conflicted */
 
@@ -850,15 +852,12 @@ complete_conflict(svn_skel_t *conflict,
   else
     original_version = NULL;
 
-  if (new_repos_relpath)
-    target_version = svn_wc_conflict_version_create2(eb->repos_root,
-                                                        eb->repos_uuid,
-                                                        new_repos_relpath,
-                                                        *eb->target_revision,
-                                                        target_kind,
-                                                        result_pool);
-  else
-    target_version = NULL;
+  target_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   new_repos_relpath,
+                                                   *eb->target_revision,
+                                                   target_kind,
+                                                   result_pool);
 
   if (eb->switch_repos_relpath)
     SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict,
@@ -1697,6 +1696,7 @@ delete_entry(const char *path,
   const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *repos_relpath;
+  const char *deleted_repos_relpath;
   svn_node_kind_t kind;
   svn_revnum_t old_revision;
   svn_boolean_t conflicted;
@@ -1881,8 +1881,14 @@ delete_entry(const char *path,
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
 
+  /* Calculate the repository-relative path of the entry which was
+   * deleted. For updates it's the same as REPOS_RELPATH but for
+   * switches it is within the switch target. */
+  SVN_ERR(calculate_repos_relpath(&deleted_repos_relpath, local_abspath,
+                                  repos_relpath, eb, pb, scratch_pool,
+                                  scratch_pool));
   SVN_ERR(complete_conflict(tree_conflict, eb, local_abspath, repos_relpath,
-                            old_revision, NULL,
+                            old_revision, deleted_repos_relpath,
                             (kind == svn_node_dir)
                                 ? svn_node_dir
                                 : svn_node_file,
