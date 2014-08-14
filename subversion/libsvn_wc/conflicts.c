@@ -117,11 +117,8 @@ conflict__prepend_location(svn_skel_t *skel,
 
   svn_skel__prepend_int(location->peg_rev, loc, result_pool);
 
-  if (!location->path_in_repos) /* can be NULL if non-existent */
-    svn_skel__prepend(svn_skel__make_empty_list(result_pool), loc);
-  else
-    svn_skel__prepend_str(apr_pstrdup(result_pool, location->path_in_repos), loc,
-                          result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, location->path_in_repos), loc,
+                        result_pool);
 
   if (!location->repos_uuid) /* Can theoretically be NULL */
     svn_skel__prepend(svn_skel__make_empty_list(result_pool), loc);
@@ -171,10 +168,7 @@ conflict__read_location(svn_wc_conflict_version_t **location,
     repos_uuid = NULL;
   c = c->next;
 
-  if (c->is_atom)
-    repos_relpath = apr_pstrmemdup(result_pool, c->data, c->len);
-  else
-    repos_relpath = NULL;
+  repos_relpath = apr_pstrmemdup(result_pool, c->data, c->len);
   c = c->next;
 
   SVN_ERR(svn_skel__parse_int(&v, c, scratch_pool));
