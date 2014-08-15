@@ -72,7 +72,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      each separate repository opened during the lifetime of the
      svn_fs_initialize pool.  It's unlikely that anyone will notice
      the modest expenditure; the alternative is to allocate each structure
-     in a subpool, add a reference-count, and add a serialized deconstructor
+     in a subpool, add a reference-count, and add a serialized destructor
      to the FS vtable.  That's more machinery than it's worth.
 
      Picking an appropriate key for the shared data is tricky, because,
