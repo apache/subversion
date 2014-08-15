@@ -111,8 +111,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
                               TRUE, TRUE, common_pool));
 
       /* We also need a mutex for synchronizing access to the active
-         transaction list and free transaction pointer.  This one is
-         enabled unconditionally. */
+         transaction list and free transaction pointer. */
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
                               TRUE, TRUE, common_pool));
 
