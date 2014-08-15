@@ -227,7 +227,7 @@ def get_txns(repo_dir):
 
   return txns
 
-def write_sharded_format(repo_dir, shards):
+def patch_format(repo_dir, shard_size):
   """Rewrite the format of the FSFS or FSX repository REPO_DIR so
   that it would use sharding with SHARDS revisions per shard."""
 
@@ -237,7 +237,7 @@ def write_sharded_format(repo_dir, shards):
 
   for line in contents.split("\n"):
     if line.startswith("layout "):
-      processed_lines.append("layout sharded %d" % shards)
+      processed_lines.append("layout sharded %d" % shard_size)
     else:
       processed_lines.append(line)
 
@@ -1865,7 +1865,7 @@ def hotcopy_incremental_packed(sbox):
 
   # Configure two files per shard to trigger packing.
   sbox.build()
-  write_sharded_format(sbox.repo_dir, 2)
+  patch_format(sbox.repo_dir, shard_size=2)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
@@ -2516,7 +2516,7 @@ def verify_packed(sbox):
 
   # Configure two files per shard to trigger packing.
   sbox.build()
-  write_sharded_format(sbox.repo_dir, 2)
+  patch_format(sbox.repo_dir, shard_size=2)
 
   # Play with our greek tree.  These changesets fall into two
   # separate shards with r2 and r3 being in shard 1 ...
@@ -2687,7 +2687,7 @@ def fsfs_hotcopy_progress(sbox):
   sbox.build(create_wc=False)
   svntest.main.safe_rmtree(sbox.repo_dir, True)
   svntest.main.create_repos(sbox.repo_dir)
-  write_sharded_format(sbox.repo_dir, 3)
+  patch_format(sbox.repo_dir, shard_size=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 
