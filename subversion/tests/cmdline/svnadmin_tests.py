@@ -136,7 +136,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
           for i in range(len(rows1)):
             if rows1[i] != rows2[i]:
               raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
-                                    % (row, rows1[i]))
+                                    % (i, rows1[i], rows2[i]))
           continue
 
         # Special case for revprop-generation: It will always be zero in
