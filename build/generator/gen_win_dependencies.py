@@ -1381,7 +1381,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_name = None 
       defines.append('SVN_SQLITE_INLINE')
     else:
-      sys.stderr.write("ERROR: SQLite not found\n" % self.sqlite_path)
+      sys.stderr.write("ERROR: SQLite not found\n")
       sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
       sys.exit(1)
 
