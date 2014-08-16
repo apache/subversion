@@ -90,13 +90,8 @@ AC_SUBST([MKDIR])
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reason we require APR 0.9.7 is:
-dnl   It contains fixes to its file writing routines
-dnl   now generating errors instead of silently ignoring
-dnl   them.  Only .7 and later can guarantee repository
-dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["1\.[345]\. 2\."]
+APR_VER_REGEXES=["1\.[3-9]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -112,7 +107,7 @@ if test `expr $apr_version : 2` -ne 0; then
   SVN_APR_MAJOR_VERSION=2
 else
   svn_lib_ver=0
-  APU_VER_REGEXES=["1\.[345]\."]
+  APU_VER_REGEXES=["1\.[3-9]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
   SVN_APR_MAJOR_VERSION=1
 fi
