@@ -747,20 +747,6 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
   *tlen = tpos;
 }
 
-/* This is a private interlibrary compatibility wrapper. */
-void
-svn_txdelta__apply_instructions(svn_txdelta_window_t *window,
-                                const char *sbuf, char *tbuf,
-                                apr_size_t *tlen);
-void
-svn_txdelta__apply_instructions(svn_txdelta_window_t *window,
-                                const char *sbuf, char *tbuf,
-                                apr_size_t *tlen)
-{
-  svn_txdelta_apply_instructions(window, sbuf, tbuf, tlen);
-}
-
-
 /* Apply WINDOW to the streams given by APPL.  */
 static svn_error_t *
 apply_window(svn_txdelta_window_t *window, void *baton)
