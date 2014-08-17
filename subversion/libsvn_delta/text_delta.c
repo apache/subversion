@@ -649,9 +649,8 @@ fast_memcpy(char *target, const char *source, apr_size_t len)
     {
       /* memcpy is not exactly fast for small block sizes.
        * Since they are common, let's run optimized code for them. */
-      const char *end = source + len;
-      for (; source != end; source++)
-        *(target++) = *source;
+      while (len--)
+        *target++ = *source++;
     }
 
   return target;
@@ -663,28 +662,21 @@ fast_memcpy(char *target, const char *source, apr_size_t len)
 static APR_INLINE char *
 patterning_copy(char *target, const char *source, apr_size_t len)
 {
-  const char *end = source + len;
-
-  /* On many machines, we can do "chunky" copies. */
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  if (source + sizeof(apr_uint32_t) <= target)
+  /* If the source and target overlap, repeat the overlapping pattern
+     in the target buffer. Always copy from the source buffer because
+     presumably it will be in the L1 cache after the first iteration
+     and doing this should avoid pipeline stalls due to write/read
+     dependencies. */
+  const apr_size_t overlap = target - source;
+  while (len > overlap)
     {
-      /* Source and target are at least 4 bytes apart, so we can copy in
-       * 4-byte chunks.  */
-      for (; source + sizeof(apr_uint32_t) <= end;
-           source += sizeof(apr_uint32_t),
-           target += sizeof(apr_uint32_t))
-      *(apr_uint32_t *)(target) = *(apr_uint32_t *)(source);
+      target = fast_memcpy(target, source, overlap);
+      len -= overlap;
     }
 
-#endif
-
-  /* fall through to byte-wise copy (either for the below-chunk-size tail
-   * or the whole copy) */
-  for (; source != end; source++)
-    *(target++) = *source;
+  /* Copy any remaining source pattern. */
+  if (len)
+    target = fast_memcpy(target, source, len);
 
   return target;
 }
