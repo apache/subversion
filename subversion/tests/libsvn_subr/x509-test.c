@@ -359,6 +359,35 @@ static struct x509_test cert_tests[] = {
     "*.example.com, *.foo.example.com, *.bar.example.com, zig-zag.example.com",
     "3525fb617c232fdc738d736c1cbd5d97b19b51e4"
   },
+  /* Cert with the signature algorithm OID set to sha1WithRSA instead of
+   * sha1WithRSAEncryption.  Both have the same meaning but the sha1WithRSA
+   * doesn't seem to be used anymore and is shorter */
+  { "MIIDgDCCAmygAwIBAgIBATAJBgUrDgMCHQUAMEUxCzAJBgNVBAYTAkFVMRMwEQYD"
+    "VQQIFApTb21lLVN0YXRlMSEwHwYDVQQKFBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBM"
+    "dGQwHhcNMTQwODE4MDk1OTQ1WhcNMTUwODE4MDk1OTQ1WjBNMQswCQYDVQQGEwJV"
+    "SzEQMA4GA1UECBQHRW5nbGFuZDESMBAGA1UEBxQJU2hlZmZpZWxkMRgwFgYDVQQD"
+    "FA93d3cuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB"
+    "AQCkvtieKg33RSzhn5JMDPPRlDS8Q16CN96A4lLI9YrJCy33z46PrbR2mq2hOz5l"
+    "MdgbAaRF0MUGhcKv4msJ0bsWhkybaSBAVgnoC7ObQWPNF7ppMzUjeDAlUBXNfheR"
+    "ZcgcgGWqUkoB1uUMhvmVuPrzvxn+WCwyoP6zQCviYLsR8AygGQgdhV6c9wJ/x9HS"
+    "MRUvUOeo7SCmx9GK5Hc11QV2K3rwKXABeAxXNzbyQe7hFfQYCI2SB5s3bEnhIvg7"
+    "BG0BQmoprHjXWBftc0+msKQTFw7+jZ21NsfwGoPonuVsCOJjJ51jp2oKqk3b1GGc"
+    "DEmmMQ0JtqfHO5a7JACBaHbTAgMBAAGjezB5MAkGA1UdEwQCMAAwLAYJYIZIAYb4"
+    "QgENBB8WHU9wZW5TU0wgR2VuZXJhdGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBSo"
+    "jICtcIgZL6OCCB5BJ5PGf1UIyTAfBgNVHSMEGDAWgBT5KQMLMylrXSQvhMtONHZc"
+    "22Jm9TAJBgUrDgMCHQUAA4IBAQCvCJ4i2kRzSRhnlDxd0UbQtytVIJFFJlfREPTM"
+    "j8+VqqtCVyPSX8T5NU+HCiEmhVrTlm/W0i8ygJXr8izyIMGRqbyhn2M9b8hAY6Jl"
+    "0edztu/FV/YHsJbPznWkXWpMMaXDEX4wI329f5odccIbB5VSaaoAdKZ6Ne4nf6oV"
+    "95KRFWkXoYjm24TnpALsNnK1Kjjed6h5ApB+IANOpXYFbGcsfbuKhWbFd2nd6t5U"
+    "NpUcv4H9Tgdl6KgrfsbQtAeouWCgoiNzrul8FOaQTdJLZfCsjuE+IkGpM+DX8PiF"
+    "5M41EqkSKia8sChFIln+lkRY41OWP9uQ1VXCfdRIzOnXWh9U",
+    "C=UK, ST=England, L=Sheffield, CN=www.example.com",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2014-08-18T09:59:45.000000Z",
+    "2015-08-18T09:59:45.000000Z",
+    "www.example.com",
+    "0e0869961d508b13bb22aa8da675b2e9951c0e70"
+  },
   { NULL }
 };
 

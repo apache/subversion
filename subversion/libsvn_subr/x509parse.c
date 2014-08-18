@@ -139,6 +139,34 @@ asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+equal(const char *left, apr_size_t left_len,
+      const char *right, apr_size_t right_len)
+{
+  if (left_len != right_len)
+    return FALSE;
+
+  return memcmp(left, right, right_len) == 0;
+}
+
+static svn_boolean_t
+oids_equal(x509_buf *left, x509_buf *right)
+{
+  return equal((const char *)left->p, left->len,
+               (const char *)right->p, right->len);
+}
+
+static svn_boolean_t
+starts_with(const x509_buf *buf,
+                 const char *starts_with,
+                 apr_size_t sw_len)
+{
+  if (buf->len < sw_len)
+    return FALSE;
+
+  return memcmp((const char *)buf->p, starts_with, sw_len) == 0;
+}
+
 /*
  *  Version   ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
  */
@@ -581,8 +609,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
                                 NULL);
 
       /* skip all extensions except SubjectAltName */
-      if (len != sizeof(OID_SUBJECT_ALT_NAME) - 1 ||
-          memcmp(*p, OID_SUBJECT_ALT_NAME, sizeof(OID_SUBJECT_ALT_NAME) - 1) != 0)
+      if (!equal((const char *)*p, len,
+                 OID_SUBJECT_ALT_NAME, sizeof(OID_SUBJECT_ALT_NAME) - 1))
         {
           *p += ext_len - (*p - ext_start);
           continue;
@@ -875,49 +903,53 @@ x509parse_dn_gets(svn_stringbuf_t *buf, const x509_name * dn,
     if (name != dn)
       svn_stringbuf_appendcstr(buf, ", ");
 
-    if (memcmp(name->oid.p, OID_X520, 2) == 0) {
-      switch (name->oid.p[2]) {
-      case X520_COMMON_NAME:
-        svn_stringbuf_appendcstr(buf, "CN=");
-        break;
+    if (starts_with(&name->oid, OID_X520, sizeof(OID_X520) - 1))
+      {
+        switch (name->oid.p[2]) {
+        case X520_COMMON_NAME:
+          svn_stringbuf_appendcstr(buf, "CN=");
+          break;
 
-      case X520_COUNTRY:
-        svn_stringbuf_appendcstr(buf, "C=");
-        break;
+        case X520_COUNTRY:
+          svn_stringbuf_appendcstr(buf, "C=");
+          break;
 
-      case X520_LOCALITY:
-        svn_stringbuf_appendcstr(buf, "L=");
-        break;
+        case X520_LOCALITY:
+          svn_stringbuf_appendcstr(buf, "L=");
+          break;
 
-      case X520_STATE:
-        svn_stringbuf_appendcstr(buf, "ST=");
-        break;
+        case X520_STATE:
+          svn_stringbuf_appendcstr(buf, "ST=");
+          break;
 
-      case X520_ORGANIZATION:
-        svn_stringbuf_appendcstr(buf, "O=");
-        break;
+        case X520_ORGANIZATION:
+          svn_stringbuf_appendcstr(buf, "O=");
+          break;
 
-      case X520_ORG_UNIT:
-        svn_stringbuf_appendcstr(buf, "OU=");
-        break;
+        case X520_ORG_UNIT:
+          svn_stringbuf_appendcstr(buf, "OU=");
+          break;
 
-      default:
-        temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[2]);
-        svn_stringbuf_appendcstr(buf, temp);
-        break;
+        default:
+          temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[2]);
+          svn_stringbuf_appendcstr(buf, temp);
+          break;
+        }
       }
-    } else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0) {
-      switch (name->oid.p[8]) {
-      case PKCS9_EMAIL:
-        svn_stringbuf_appendcstr(buf, "emailAddress=");
-        break;
+    else if (starts_with(&name->oid, OID_PKCS9, sizeof(OID_PKCS9) - 1))
+      {
+        switch (name->oid.p[8]) {
+        case PKCS9_EMAIL:
+          svn_stringbuf_appendcstr(buf, "emailAddress=");
+          break;
 
-      default:
-        temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[8]);
-        svn_stringbuf_appendcstr(buf, temp);
-        break;
+        default:
+          temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[8]);
+          svn_stringbuf_appendcstr(buf, temp);
+          break;
+        }
       }
-    } else
+    else
       svn_stringbuf_appendcstr(buf, "\?\?=");
 
     utf8_value = x509name_to_utf8_string(name, scratch_pool);
@@ -996,7 +1028,7 @@ x509parse_get_hostnames(apr_array_header_t **names, x509_cert *crt,
       /* no SAN then get the hostname from the CommonName on the cert */
       while (name != NULL)
         {
-          if (memcmp(name->oid.p, OID_X520, 2) == 0)
+          if (starts_with(&name->oid, OID_X520, sizeof(OID_X520) - 1))
             {
               if (name->oid.p[2] == X520_COMMON_NAME)
                 {
@@ -1155,7 +1187,7 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
    */
   SVN_ERR(x509_get_alg(&p, end, &crt->sig_oid2));
 
-  if (memcmp(crt->sig_oid1.p, crt->sig_oid2.p, 9) != 0)
+  if (!oids_equal(&crt->sig_oid1, &crt->sig_oid2))
     return svn_error_create(SVN_ERR_X509_CERT_SIG_MISMATCH, NULL, NULL);
 
   SVN_ERR(x509_get_sig(&p, end, &crt->sig));
