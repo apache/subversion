@@ -600,6 +600,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
                                                                 iterpool);
+      info->wc_info->conflicts2 = conflicts;
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);
