@@ -140,8 +140,8 @@ asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 }
 
 static svn_boolean_t
-equal(const char *left, apr_size_t left_len,
-      const char *right, apr_size_t right_len)
+equal(const void *left, apr_size_t left_len,
+      const void *right, apr_size_t right_len)
 {
   if (left_len != right_len)
     return FALSE;
@@ -152,14 +152,14 @@ equal(const char *left, apr_size_t left_len,
 static svn_boolean_t
 oids_equal(x509_buf *left, x509_buf *right)
 {
-  return equal((const char *)left->p, left->len,
-               (const char *)right->p, right->len);
+  return equal(left->p, left->len,
+               right->p, right->len);
 }
 
 static svn_boolean_t
 starts_with(const x509_buf *buf,
-                 const char *starts_with,
-                 apr_size_t sw_len)
+            const char *starts_with,
+            apr_size_t sw_len)
 {
   if (buf->len < sw_len)
     return FALSE;
@@ -609,7 +609,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
                                 NULL);
 
       /* skip all extensions except SubjectAltName */
-      if (!equal((const char *)*p, len,
+      if (!equal(*p, len,
                  OID_SUBJECT_ALT_NAME, sizeof(OID_SUBJECT_ALT_NAME) - 1))
         {
           *p += ext_len - (*p - ext_start);
