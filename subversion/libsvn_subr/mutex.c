@@ -191,8 +191,7 @@ svn_mutex__unlock(svn_mutex__t *mutex,
                  thread ID.  Double check to be sure. */
               if (!apr_os_thread_equal((apr_os_thread_t)lock_owner,
                                        apr_os_thread_current()))
-                return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
-                                  _("Tried to release a non-locked mutex"));
+                SVN_ERR_MALFUNCTION();
             }
 
           /* Now, set it to NULL. */
@@ -207,9 +206,9 @@ svn_mutex__unlock(svn_mutex__t *mutex,
       /* Update lock counter. */
       if (mutex->checked)
         {
+          /* Trying to release a non-locked mutex? */
           if (mutex->count <= 0)
-            return svn_error_create(SVN_ERR_INVALID_UNLOCK, NULL, 
-                                    _("Tried to release a non-locked mutex"));
+            SVN_ERR_MALFUNCTION();
 
           --mutex->count;
         }
