@@ -74,9 +74,17 @@ locale_independent_strtol(long *result_p,
       if (c > 9)
         break;
 
+      /* Overflow check.  Passing this, NEXT can be no more than ULONG_MAX+9
+       * before being truncated to ULONG but it still covers 0 .. ULONG_MAX.
+       */
+      if (result > ULONG_MAX / 10)
+        return FALSE;
+
       next = result * 10 + c;
 
-      /* Overflow check. */
+      /* Overflow check.  In case of an overflow, NEXT is 0..9.
+       * In the non-overflow case, RESULT is either >= 10 or RESULT and NEXT
+       * are both 0. */
       if (next < result)
         return FALSE;
 
