@@ -1852,7 +1852,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create_empty(pool);
-      baton.context_size = (context_size > 0) ? context_size
+      baton.context_size = (context_size >= 0) ? context_size
                                               : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       if (show_c_function)

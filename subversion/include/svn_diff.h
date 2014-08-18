@@ -479,7 +479,7 @@ typedef struct svn_diff_file_options_t
   svn_boolean_t show_c_function;
 
   /** The number of context lines produced above and below modifications, if
-   * available. The number of context lines must be >= 1.
+   * available. The number of context lines must be >= 0.
    *
    * @since New in 1.9 */
   int context_size;
@@ -623,7 +623,7 @@ svn_diff_file_diff4(svn_diff_t **diff,
  * path of the target, an error is returned. Finally, if @a relative_to_dir
  * is a URL, an error will be returned.
  *
- * If @a context_size is greater than 0, then this number of context lines
+ * If @a context_size is not negative, then this number of context lines
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
@@ -645,7 +645,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_file_output_unified3(), but without cancel
- * support and with @a context_size -1.
+ * support and with @a context_size set to -1.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.8 API.
