@@ -1273,6 +1273,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                       const svn_string_t *incoming_new_val,
                       svn_wc_conflict_resolver_func2_t conflict_func,
                       void *conflict_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -1402,10 +1404,11 @@ generate_propconflict(svn_boolean_t *conflict_remains,
           SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
                                             working_val,
                                             incoming_new_val, options, scratch_pool));
-          SVN_ERR(svn_diff_mem_string_output_merge2(mergestream, diff,
+          SVN_ERR(svn_diff_mem_string_output_merge3(mergestream, diff,
                    conflict_base_val, working_val,
                    incoming_new_val, NULL, NULL, NULL, NULL,
-                   svn_diff_conflict_display_modified_latest, scratch_pool));
+                   svn_diff_conflict_display_modified_latest,
+                   cancel_func, cancel_baton, scratch_pool));
           SVN_ERR(svn_stream_close(mergestream));
         }
     }
@@ -2020,6 +2023,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                           ? svn_hash_gets(their_props, propname)
                                           : NULL,
                                         resolver_func, resolver_baton,
+                                        cancel_func, cancel_baton,
                                         iterpool));
 
           if (conflict_remains)

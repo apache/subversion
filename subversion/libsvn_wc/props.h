@@ -144,6 +144,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         const svn_skel_t *conflict_skel,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

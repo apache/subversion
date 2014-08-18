@@ -1066,7 +1066,7 @@ detect_eol(svn_string_t *token)
 }
 
 svn_error_t *
-svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_t *diff,
                                   const svn_string_t *original,
                                   const svn_string_t *modified,
@@ -1076,6 +1076,8 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   const char *conflict_latest,
                                   const char *conflict_separator,
                                   svn_diff_conflict_display_style_t style,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
                                   apr_pool_t *pool)
 {
   merge_output_baton_t btn;
@@ -1135,7 +1137,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                     : ">>>>>>> (latest)",
                                     pool));
 
-  SVN_ERR(svn_diff_output(diff, &btn, vtable));
+  SVN_ERR(svn_diff_output2(diff, &btn, vtable, cancel_func, cancel_baton));
   if (conflicts_only)
     svn_pool_destroy(btn.pool);
 
