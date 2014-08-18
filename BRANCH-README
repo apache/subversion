@@ -1,0 +1,22 @@
+apr_file_t is an abstraction that covers the whole range of what can be
+a file (including pipes etc.) and how it can be used (multi-threading,
+overlapped I/O etc.).  This limits the efficiency of its implementation.
+ 
+Design goals for svn_file_t:
+
+* Build upon non-buffered apr_file_t to get the platform support without
+  any of the buffer management overhead.
+* Use it for "real files" with at most one writer process only.  This
+  allows for efficient file length and EOF detection.
+* Map an unlimited number of instances to a limited number of file handles.
+  Handles to same file may be shared (depending on flags) and non-locking
+  file handles may be closed temporarily.
+
+* Use (up to) two buffers instead of one per file to allow for efficient
+  traversal in both directions.
+* Internalize seek() operations, i.e. don't pass them on to the OS.
+
+The current code is completely untested and does not fully comply with
+the design goals listed above.
+
+
