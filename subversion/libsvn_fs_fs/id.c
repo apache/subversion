@@ -57,12 +57,13 @@ typedef struct fs_fs__id_t
  * most CPU consuming parts of FSFS data access.  Better be quick.
  */
 static svn_boolean_t
-fast__strtol(long *result_p,
-             const char* buffer,
-             const char** end)
+locale_independent_strtol(long *result_p,
+                          const char* buffer,
+                          const char** end)
 {
-  /* We allow positive values only.  Unsigned arithmetics tend to be faster
-   * as they allow for a wider range of compiler-side optimizations. */
+  /* We allow positive values only.  We use unsigned arithmetics to get
+   * well-defined overflow behavior.  It also happens to allow for a wider
+   * range of compiler-side optimizations. */
   unsigned long result = 0;
   while (1)
     {
@@ -84,6 +85,9 @@ fast__strtol(long *result_p,
     }
 
   *end = buffer;
+  if (result > LONG_MAX)
+    return FALSE;
+
   *result_p = (long)result;
 
   return TRUE;
@@ -121,7 +125,7 @@ part_parse(svn_fs_fs__id_part_t *part,
       return *data == '\0';
     }
 
-  return fast__strtol(&part->revision, data+1, &end);
+  return locale_independent_strtol(&part->revision, data+1, &end);
 }
 
 /* Parse the transaction id in DATA and store the result in *TXN_ID.
@@ -132,7 +136,7 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
              const char *data)
 {
   const char *end;
-  if (!fast__strtol(&txn_id->revision, data, &end))
+  if (!locale_independent_strtol(&txn_id->revision, data, &end))
     return FALSE;
 
   data = strchr(end, '-');
@@ -529,7 +533,8 @@ svn_fs_fs__id_parse(char *data,
       str = svn_cstring_tokenize("/", &data);
       if (str == NULL)
         return NULL;
-      if (!fast__strtol(&id->private_id.rev_item.revision, str, &tmp))
+      if (!locale_independent_strtol(&id->private_id.rev_item.revision,
+                                     str, &tmp))
         return NULL;
 
       err = svn_cstring_atoi64(&val, data);
