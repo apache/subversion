@@ -3363,6 +3363,10 @@ typedef struct svn_wc_info_t
   /** The path the node was moved to, if it was moved away. Else NULL.
    * @since New in 1.8. */
   const char *moved_to_abspath;
+
+  /** Array of const svn_wc_conflict_description3_t * which contains info
+   * on any conflict of which this node is a victim. Otherwise NULL.  */
+  const apr_array_header_t *conflicts2;
 } svn_wc_info_t;
 
 /**
