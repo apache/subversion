@@ -524,8 +524,8 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
- * Leading whitespace in @a str is skipped in a locale-dependent way.
  * converted number is smaller than @a minval or larger than @a maxval.
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
