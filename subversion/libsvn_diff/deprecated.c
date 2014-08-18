@@ -340,12 +340,15 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   svn_diff_conflict_display_style_t style,
                                   apr_pool_t *pool)
 {
-  return svn_diff_mem_string_output_merge3(output_stream, diff, original,
-                                           modified, latest,
-                                           conflict_original,
-                                           conflict_modified,
-                                           conflict_latest,
-                                           conflict_separator, style,
-                                           NULL, NULL, /* no cancelation */
-                                           pool);
+  return svn_error_trace(svn_diff_mem_string_output_merge3(output_stream, diff,
+                                                           original,
+                                                           modified, latest,
+                                                           conflict_original,
+                                                           conflict_modified,
+                                                           conflict_latest,
+                                                           conflict_separator,
+                                                           style,
+                                                           /* no cancelation */
+                                                           NULL, NULL,
+                                                           pool));
 }
