@@ -393,7 +393,7 @@ svn_cl__get_conflict_func_interactive_baton(
  */
 svn_error_t *
 svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
-                                  const svn_wc_conflict_description2_t *desc,
+                                  const svn_wc_conflict_description3_t *desc,
                                   void *baton,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
