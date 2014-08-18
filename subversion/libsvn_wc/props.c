@@ -66,6 +66,8 @@
 static svn_error_t *
 prop_conflict_from_skel(const svn_string_t **conflict_desc,
                         const svn_skel_t *skel,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
@@ -76,13 +78,16 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
 static svn_error_t *
 append_prop_conflict(svn_stream_t *stream,
                      const svn_skel_t *prop_skel,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
                      apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   const svn_string_t *conflict_desc;
 
-  SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
+  SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel,
+                                  cancel_func, cancel_baton, pool, pool));
 
   return svn_stream_puts(stream, conflict_desc->data);
 }
@@ -544,6 +549,8 @@ maybe_prop_value(const svn_skel_t *skel,
 static svn_error_t *
 prop_conflict_from_skel(const svn_string_t **conflict_desc,
                         const svn_skel_t *skel,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -653,13 +660,15 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
           style = svn_diff_conflict_display_modified_original_latest;
           stream = svn_stream_from_stringbuf(buf, scratch_pool);
           SVN_ERR(svn_stream_skip(stream, buf->len));
-          SVN_ERR(svn_diff_mem_string_output_merge2(stream, diff,
+          SVN_ERR(svn_diff_mem_string_output_merge3(stream, diff,
                                                     incoming_base_ascii,
                                                     mine_ascii,
                                                     incoming_ascii,
                                                     incoming_base_marker, mine_marker,
                                                     incoming_marker, separator,
-                                                    style, scratch_pool));
+                                                    style,
+                                                    cancel_func, cancel_baton,
+                                                    scratch_pool));
           SVN_ERR(svn_stream_close(stream));
 
           *conflict_desc = svn_string_create_from_buf(buf, result_pool);
@@ -702,6 +711,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         const svn_skel_t *conflict_skel,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -723,7 +734,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
     {
       svn_pool_clear(iterpool);
 
-      SVN_ERR(append_prop_conflict(stream, scan, iterpool));
+      SVN_ERR(append_prop_conflict(stream, scan, cancel_func, cancel_baton,
+                                   iterpool));
     }
 
   SVN_ERR(svn_stream_close(stream));

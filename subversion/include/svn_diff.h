@@ -871,8 +871,30 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  *
  * @a conflict_style dictates how conflicts are displayed.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
+                                  svn_diff_t *diff,
+                                  const svn_string_t *original,
+                                  const svn_string_t *modified,
+                                  const svn_string_t *latest,
+                                  const char *conflict_original,
+                                  const char *conflict_modified,
+                                  const char *conflict_latest,
+                                  const char *conflict_separator,
+                                  svn_diff_conflict_display_style_t style,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_merge2(), but without cancel support.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   svn_diff_t *diff,

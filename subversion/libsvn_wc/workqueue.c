@@ -1124,6 +1124,7 @@ run_prej_install(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
                                   db, local_abspath,
                                   prop_conflict_skel,
+                                  cancel_func, cancel_baton,
                                   scratch_pool, scratch_pool));
 
   /* ... and atomically move it into place.  */
