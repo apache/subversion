@@ -173,12 +173,20 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
   const svn_string_t *der_cert;
   svn_x509_certinfo_t *certinfo;
   const apr_array_header_t *hostnames;
+  svn_error_t *err;
 
   /* Convert header-less PEM to DER by undoing base64 encoding. */
   der_cert = svn_base64_decode_string(pem_cert, scratch_pool);
 
-  SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
-                              scratch_pool, scratch_pool));
+  err = svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                            scratch_pool, scratch_pool);
+  if (err)
+    {
+      /* Just display X.509 parsing errors as warnings and continue */
+      svn_handle_warning2(stderr, err, "svn: ");
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"),
                              svn_x509_certinfo_get_subject(certinfo)));
