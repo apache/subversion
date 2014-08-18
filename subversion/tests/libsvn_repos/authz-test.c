@@ -170,12 +170,12 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
       if (acl->has_anon_access
           && (acl->anon_access & ~all_access) != svn_authz_none)
         printf("       $anonymous = %s\n",
-               access_string(acl->anon_access & ~all_access));
+               access_string(acl->anon_access));
 
       if (acl->has_authn_access
           && (acl->authn_access & ~all_access) != svn_authz_none)
         printf("       $authenticated = %s\n",
-               access_string(acl->authn_access & ~all_access));
+               access_string(acl->authn_access));
 
       for (j = 0; j < acl->user_access->nelts; ++j)
         {
