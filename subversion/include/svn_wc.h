@@ -3365,7 +3365,8 @@ typedef struct svn_wc_info_t
   const char *moved_to_abspath;
 
   /** Array of const svn_wc_conflict_description3_t * which contains info
-   * on any conflict of which this node is a victim. Otherwise NULL.  */
+   * on any conflict of which this node is a victim. Otherwise NULL. 
+   * @since New in 1.9. */
   const apr_array_header_t *conflicts2;
 } svn_wc_info_t;
 
