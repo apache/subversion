@@ -569,7 +569,6 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
           break;
 
         case 'w':
-          /* FIXME: Idiocy. Write access should imply read access. */
           access |= svn_authz_write;
           break;
 
@@ -578,10 +577,17 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
             return svn_error_createf(
                 SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                 _("The access mode '%c' in access entry '%s'"
-                  "of rule [%s] is not valid"),
+                  " of rule [%s] is not valid"),
                 access_code, option->data, section->data);
       }
     }
+
+  /* We do not support write-only access. */
+  if ((access & svn_authz_write) && !(access & svn_authz_read))
+    return svn_error_createf(
+        SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+        _("Write-only access entry '%s' of rule [%s] is not valid"),
+        option->data, section->data);
 
   /* Update the parsed ACL with this access entry. */
   if (anonymous || authenticated)

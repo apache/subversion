@@ -4,15 +4,15 @@
 
 [:glob:/]
 &x = r
-luser = w
+luser = rw
 
 [bloop:/]
 @x = r
-@y = w
+@y = rw
 
 [:glob:bloop:/]
 ~luser =
-~@x = w
+~@x = r
 luser = rw
 
 [aliases]
