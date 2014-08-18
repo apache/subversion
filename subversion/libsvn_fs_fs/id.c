@@ -48,12 +48,55 @@ typedef struct fs_fs__id_t
 
 
 
+/** Like strtol but with a fixed base of 10, locale independent and limited
+ * to non-negative values.  Overflows are indicated by a FALSE return value
+ * in which case *RESULT_P will not be modified.
+ *
+ * This allows the compiler to generate massively faster code.
+ * (E.g. Avoiding locale specific processing).  ID parsing is one of the
+ * most CPU consuming parts of FSFS data access.  Better be quick.
+ */
+static svn_boolean_t
+fast__strtol(long *result_p,
+             const char* buffer,
+             const char** end)
+{
+  /* We allow positive values only.  Unsigned arithmetics tend to be faster
+   * as they allow for a wider range of compiler-side optimizations. */
+  unsigned long result = 0;
+  while (1)
+    {
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
+      unsigned long next;
+
+      /* This implies the NUL check. */
+      if (c > 9)
+        break;
+
+      next = result * 10 + c;
+
+      /* Overflow check. */
+      if (next < result)
+        return FALSE;
+
+      result = next;
+      ++buffer;
+    }
+
+  *end = buffer;
+  *result_p = (long)result;
+
+  return TRUE;
+}
+
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  * Return TRUE if no errors were detected. */
 static svn_boolean_t
 part_parse(svn_fs_fs__id_part_t *part,
            const char *data)
 {
+  const char *end;
+
   /* special case: ID inside some transaction */
   if (data[0] == '_')
     {
@@ -78,12 +121,7 @@ part_parse(svn_fs_fs__id_part_t *part,
       return *data == '\0';
     }
 
-  {
-    const char *end;
-    part->revision = svn__strtol(data+1, &end);
-  }
-
-  return TRUE;
+  return fast__strtol(&part->revision, data+1, &end);
 }
 
 /* Parse the transaction id in DATA and store the result in *TXN_ID.
@@ -94,7 +132,9 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
              const char *data)
 {
   const char *end;
-  txn_id->revision = svn__strtol(data, &end);
+  if (!fast__strtol(&txn_id->revision, data, &end))
+    return FALSE;
+
   data = strchr(end, '-');
   if (data == NULL)
     return FALSE;
@@ -489,7 +529,8 @@ svn_fs_fs__id_parse(char *data,
       str = svn_cstring_tokenize("/", &data);
       if (str == NULL)
         return NULL;
-      id->private_id.rev_item.revision = svn__strtol(str, &tmp);
+      if (!fast__strtol(&id->private_id.rev_item.revision, str, &tmp))
+        return NULL;
 
       err = svn_cstring_atoi64(&val, data);
       if (err)
