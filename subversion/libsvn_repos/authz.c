@@ -23,7 +23,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_fnmatch.h>
@@ -44,60 +43,6 @@
 #include "authz.h"
 
 
-/*** Utilities. ***/
-
-/* We are using hashes to represent sets.  This glorified macro adds the
- * string KEY to SET. */
-static void
-set_add_string(apr_hash_t *set,
-               const char *key)
-{
-  apr_hash_set(set, key, strlen(key), "");
-}
-
-
-
-/*** Users, aliases and groups. ***/
-
-/* Return a hash set of all name keys (plain user name and decorated group
- * names) that refer to USER in the authz FULL_MODEL.  This includes
- * indirect group memberships. */
-static apr_hash_t *
-get_memberships(svn_authz_tng_t *full_model,
-                const char *user,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-  apr_hash_t *result;
-
-  /* Special case: anonymous user. $anonymous and * access rights are
-   * already available at the ACL object itself and will not show up
-   * in the ACEs. */
-  result = svn_hash__make(result_pool);
-  if (user == NULL)
-    return result;
-
-  /* Find all groups that contain USER. */
-  for (hi = apr_hash_first(scratch_pool, full_model->groups);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      apr_hash_t *members = apr_hash_this_val(hi);
-      if (svn_hash_gets(members, user))
-        {
-          const char *group = apr_hash_this_key(hi);
-          set_add_string(result, group);
-        }
-    }
-
-  /* The USER itself is of course also a matching name. */
-  set_add_string(result, user);
-
-  return result;
-}
-
-
 /*** Access rights. ***/
 
 /* This structure describes the access rights given to a specific user by
@@ -108,13 +53,13 @@ typedef struct access_t
 {
   /* Sequence number of the path rule that this struct was derived from.
    * If multiple rules apply to the same path (only possible with wildcard
-   * matching), the one with the highest SEQUENCE_ID wins, i.e. the latest
+   * matching), the one with the highest SEQUENCE_NUMBER wins, i.e. the latest
    * one defined in the authz file.
    *
    * A value of 0 denotes the default rule at the repository root denying
    * access to everybody.  User-defined path rules start with ID 1.
    */
-  apr_int64_t sequence_number;
+  int sequence_number;
 
   /* Access rights of the respective user as defined by the rule set. */
   svn_repos_authz_access_t rights;
@@ -232,96 +177,29 @@ typedef struct node_t
   node_pattern_t *pattern_sub_nodes;
 } node_t;
 
-/* Return whether the ACL applies to any of the user's MEMBERSHIPS.  If it
- * does, return the specified access rights in *ACCESS.  Non-authenticated
- * users set the ANONYMOUS flag and provide an empty non-NULL MEMBERSHIPS
- * hash.
- */
-static svn_boolean_t
-has_matching_rule(svn_repos_authz_access_t *access,
-                  const authz_acl_t *acl,
-                  svn_boolean_t anonymous,
-                  apr_hash_t *memberships)
-{
-  int i;
-  svn_boolean_t found = FALSE;
-
-  /* $authenticated, $anonymous and * ACEs have already been evaluated and
-   * are available directly at the ACL object. */
-  *access = svn_authz_none;
-  if (anonymous)
-    {
-      if (acl->has_anon_access)
-        {
-          *access = acl->anon_access;
-          found = TRUE;
-        }
-    }
-  else
-    {
-      if (acl->has_authn_access)
-        {
-          *access = acl->authn_access;
-          found = TRUE;
-        }
-    }
-
-  /* All other group and user ACEs are provided as a simple list. */
-  for (i = 0; i < acl->user_access->nelts; ++i)
-    {
-      const authz_ace_t *ace
-        = &APR_ARRAY_IDX(acl->user_access, i, const authz_ace_t);
-
-      if (ace->inverted == !svn_hash_gets(memberships, ace->name))
-        {
-          /* The rule applies. Accumulate the rights that the user is given. */
-          found = TRUE;
-          *access |= ace->access;
-        }
-    }
-
-  return found;
-}
-
-/* Return TRUE, if SEGMENT is a prefix pattern, i.e. contains exactly one
- * '*' and that is at the end of the string. */
-static svn_boolean_t
-is_prefix_segment(const char *segment)
-{
-  const char *wildcard_pos = strchr(segment, '*');
-  return wildcard_pos && wildcard_pos[1] == 0;
-}
-
-/* Return TRUE, if SEGMENT is a suffix pattern, i.e. contains exactly one
- * '*' and that is at the beginning of the string. */
-static svn_boolean_t
-is_suffix_segment(const char *segment)
-{
-  return segment[0] == '*' && !strchr(segment + 1, '*');
-}
-
-/* Constructor utility: Create a new tree node for SEGMENT.
- */
+/* Create a new tree node for SEGMENT.
+   Note: SEGMENT->pattern is always interned and therefore does not
+   have to be copied into the result pool. */
 static node_t *
-create_node(const char *segment,
+create_node(authz_rule_segment_t *segment,
             apr_pool_t *result_pool)
 {
-  apr_size_t len = strlen(segment);
-
   node_t *result = apr_pcalloc(result_pool, sizeof(*result));
-  result->segment.data = apr_pstrmemdup(result_pool, segment, len);
-  result->segment.len = len;
+  if (segment)
+    result->segment = segment->pattern;
+  else
+    {
+      result->segment.data = "";
+      result->segment.len = 0;
+    }
   result->rights.access.sequence_number = NO_SEQUENCE_NUMBER;
-
   return result;
 }
 
-/* Constructor utility: Auto-create a node in *NODE, make it apply to
- * SEGMENT and return it.
- */
+/* Auto-create a node in *NODE, make it apply to SEGMENT and return it. */
 static node_t *
 ensure_node(node_t **node,
-            const char *segment,
+            authz_rule_segment_t *segment,
             apr_pool_t *result_pool)
 {
   if (!*node)
@@ -338,9 +216,9 @@ compare_segment(const void *void_lhs,
                 const void *void_rhs)
 {
   const node_t *node = *(const node_t **)void_lhs;
-  const char *segment = void_rhs;
+  const authz_rule_segment_t *segment = void_rhs;
 
-  return strcmp(node->segment.data, segment);
+  return strcmp(node->segment.data, segment->pattern.data);
 }
 
 /* Make sure a node_t* for SEGMENT exists in *ARRAY and return it.
@@ -349,7 +227,7 @@ compare_segment(const void *void_lhs,
  */
 static node_t *
 ensure_node_in_array(apr_array_header_t **array,
-                     const char *segment,
+                     authz_rule_segment_t *segment,
                      apr_pool_t *result_pool)
 {
   int idx;
@@ -376,9 +254,7 @@ ensure_node_in_array(apr_array_header_t **array,
   return node;
 }
 
-/* Constructor utility: Auto-create the PATTERN_SUB_NODES sub-structure in
- * *NODE and return it.
- */
+/* Auto-create the PATTERN_SUB_NODES sub-structure in *NODE and return it. */
 static node_pattern_t *
 ensure_pattern_sub_nodes(node_t *node,
                          apr_pool_t *result_pool)
@@ -390,78 +266,73 @@ ensure_pattern_sub_nodes(node_t *node,
   return node->pattern_sub_nodes;
 }
 
-/* Constructor utility:  Below NODE, recursively insert sub-nodes for the
- * path given as *SEGMENTS.  The end of the path is indicated by a NULL
- * SEGMENT.  If ALLOW_WILDCARDS is FALSE, treat all characters literally.
- * If matching nodes already exist, use those instead of creating new ones.
- * Set the leave node's access rights spec to ACCESS.
+/* Below NODE, recursively insert sub-nodes for the path given as
+ * *SEGMENTS of length SEGMENT_COUNT. If matching nodes already exist,
+ * use those instead of creating new ones.  Set the leave node's
+ * access rights spec to ACCESS.
  */
 static void
 insert_path(node_t *node,
-            const char **segments,
-            svn_boolean_t allow_wildcards,
             access_t *access,
+            int segment_count,
+            authz_rule_segment_t *segment,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  const char *segment = *segments;
   node_t *sub_node;
 
   /* End of path? */
-  if (segment == NULL)
+  if (segment_count == 0)
     {
       /* Set access rights.  Since we call this function once per authz
        * config file section, there cannot be multiple paths having the
        * same leave node.  Hence, access gets never overwritten.
        */
-      assert(!has_local_rule(&node->rights));
+      SVN_ERR_ASSERT_NO_RETURN(!has_local_rule(&node->rights));
       node->rights.access = *access;
       return;
     }
 
-  /* Any wildcards? */
-  if (allow_wildcards && strchr(segment, '*'))
-    {
+  if (segment->kind != authz_rule_literal)
       ensure_pattern_sub_nodes(node, result_pool);
 
+  switch (segment->kind)
+    {
       /* A full wildcard segment? */
-      if (strcmp(segment, "*") == 0)
-        sub_node = ensure_node(&node->pattern_sub_nodes->any, segment,
-                               result_pool);
+    case authz_rule_any_segment:
+      sub_node = ensure_node(&node->pattern_sub_nodes->any,
+                             segment, result_pool);
+      break;
 
       /* One or more full wildcard segments? */
-      else if (strcmp(segment, "**") == 0)
-        {
-          sub_node = ensure_node(&node->pattern_sub_nodes->any_var, segment,
-                                result_pool);
-          ensure_pattern_sub_nodes(sub_node, result_pool)->repeat = TRUE;
-        }
+    case authz_rule_any_recursive:
+      sub_node = ensure_node(&node->pattern_sub_nodes->any_var,
+                             segment, result_pool);
+      ensure_pattern_sub_nodes(sub_node, result_pool)->repeat = TRUE;
+      break;
 
       /* A single wildcard at the end of the segment? */
-      else if (is_prefix_segment(segment))
-        {
-          segment = apr_pstrmemdup(scratch_pool, segment, strlen(segment)-1);
-          sub_node = ensure_node_in_array(&node->pattern_sub_nodes->prefixes,
-                                          segment, result_pool);
-        }
+    case authz_rule_prefix:
+      sub_node = ensure_node_in_array(&node->pattern_sub_nodes->prefixes,
+                                      segment, result_pool);
+      break;
 
       /* A single wildcard at the start of segments? */
-      else if (is_suffix_segment(segment))
-        {
-          char *reversed = apr_pstrdup(scratch_pool, segment + 1);
-          svn_authz__reverse_string(reversed, strlen(reversed));
-          sub_node = ensure_node_in_array(&node->pattern_sub_nodes->suffixes,
-                                          reversed, result_pool);
-        }
+    case authz_rule_suffix:
+      sub_node = ensure_node_in_array(&node->pattern_sub_nodes->suffixes,
+                                      segment, result_pool);
+      break;
 
-      /* General pattern */
-      else
-        sub_node = ensure_node_in_array(&node->pattern_sub_nodes->complex,
-                                        segment, result_pool);
-    }
-  else
-    {
-      /* There will be sub-nodes.  Ensure the container is there as well. */
+      /* General pattern? */
+    case authz_rule_fnmatch:
+      sub_node = ensure_node_in_array(&node->pattern_sub_nodes->complex,
+                                      segment, result_pool);
+      break;
+
+      /* Then it must be a literal. */
+    default:
+      SVN_ERR_ASSERT_NO_RETURN(segment->kind == authz_rule_literal);
+
       if (!node->sub_nodes)
         node->sub_nodes = svn_hash__make(result_pool);
 
@@ -470,44 +341,18 @@ insert_path(node_t *node,
       if (!sub_node)
         {
           sub_node = create_node(segment, result_pool);
-          apr_hash_set(node->sub_nodes, sub_node->segment.data,
-                       sub_node->segment.len, sub_node);
+          apr_hash_set(node->sub_nodes,
+                       sub_node->segment.data,
+                       sub_node->segment.len,
+                       sub_node);
         }
     }
 
   /* Continue at the sub-node with the next segment. */
-  insert_path(sub_node, segments + 1, allow_wildcards, access,
+  insert_path(sub_node, access, segment_count - 1, segment + 1,
               result_pool, scratch_pool);
 }
 
-/* Normalize the wildcard pattern PATH in accordance to
- * https://wiki.apache.org/subversion/AuthzImprovements
- * and return the result.
- */
-static const char *
-normalize_wildcards(const char *path,
-                    apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *buffer = svn_stringbuf_create(path, result_pool);
-
-  /* Reduce sequences variable-length segment matches to single segment
-   * matches with the other segment patterns reduced to "*". */
-  while (svn_stringbuf_replace_all(buffer, "/**/**/", "/*/**/"))
-    ;
-
-  /* Our tree traversal is more efficient if we put variable segment count
-   * wildcards last. */
-  while (svn_stringbuf_replace_all(buffer, "/**/*/", "/**/*/"))
-    ;
-
-  /* Reduce trailing "**" a single "*". */
-  while (   buffer->len > 1
-      && buffer->data[buffer->len-1] == '*'
-      && buffer->data[buffer->len-2] == '*')
-    svn_stringbuf_remove(buffer, buffer->len-1, 1);
-
-  return buffer->data;
-}
 
 /* If the ACL is relevant to the REPOSITORY and user (given as MEMBERSHIPS
  * plus ANONYMOUS flag), insert the respective nodes into tree starting
@@ -518,35 +363,21 @@ static void
 process_acl(const authz_acl_t *acl,
             node_t *root,
             const char *repository,
-            svn_boolean_t anonymous,
-            apr_hash_t *memberships,
+            const char *user,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  const char *path;
   access_t access;
-  apr_array_header_t *segments;
 
-  /* Is this section is relevant to the selected repository? */
-  if (acl->repos[0] && strcmp(acl->repos, repository))
+  /* Skip ACLs that don't say anything about the current user
+     and/or repository. */
+  if (!svn_authz__acl_get_access(&access.rights, acl, user, repository))
     return;
 
-  /* Skip sections that don't say anything about the current user. */
-  if (!has_matching_rule(&access.rights, acl, anonymous, memberships))
-    return;
+  /* Insert the rule into the filtered tree. */
   access.sequence_number = acl->sequence_number;
-
-  /* Process the path. */
-  if (acl->glob && strstr(acl->rule, "**"))
-    path = normalize_wildcards(acl->rule, scratch_pool);
-  else
-    path = acl->rule;
-
-  segments = svn_cstring_split(path, "/", FALSE, scratch_pool);
-  APR_ARRAY_PUSH(segments, const char *) = NULL;
-
-  /* Insert the path rule into the filtered tree. */
-  insert_path(root, (void *)segments->elts, acl->glob, &access,
+  insert_path(root, &access,
+              acl->rule.len, acl->rule.path,
               result_pool, scratch_pool);
 }
 
@@ -632,34 +463,25 @@ finalize_tree(node_t *parent,
  * Return the filtered rule tree.
  */
 static node_t *
-create_user_authz(svn_authz_tng_t *full_model,
+create_user_authz(svn_authz_t *authz,
                   const char *repository,
                   const char *user,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   int i;
-  node_t *root = create_node("", result_pool);
-  apr_hash_t *memberships;
+  node_t *root = create_node(NULL, result_pool);
 
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* Determine the user's aliases, group memberships etc. */
-  memberships = get_memberships(full_model, user, scratch_pool, subpool);
-  svn_pool_clear(subpool);
-
   /* Filtering and tree construction. */
-  for (i = 0; i < full_model->acls->nelts; ++i)
-    {
-      const authz_acl_t *acl = &APR_ARRAY_IDX(full_model->acls, i,
-                                              const authz_acl_t);
-      process_acl(acl, root, repository, user == NULL, memberships,
-                  result_pool, subpool);
-    }
+  for (i = 0; i < authz->acls->nelts; ++i)
+    process_acl(&APR_ARRAY_IDX(authz->acls, i, authz_acl_t),
+                root, repository, user, result_pool, subpool);
 
   /* If there is no relevant rule at the root node, the "no access" default
-   * applies. Give it a SEQUENCE_ID that will never overrule others. */
+   * applies. Give it a SEQUENCE_NUMBER that will never overrule others. */
   if (!has_local_rule(&root->rights))
     {
       root->rights.access.sequence_number = 0;
@@ -854,7 +676,7 @@ add_complex_matches(lookup_state_t *state,
   for (i = 0; i < patterns->nelts; ++i)
     {
       node_t *node = APR_ARRAY_IDX(patterns, i, node_t *);
-      if (!apr_fnmatch(node->segment.data, segment->data, 0))
+      if (0 == apr_fnmatch(node->segment.data, segment->data, 0))
         add_next_node(state, node);
     }
 }
@@ -1066,11 +888,11 @@ lookup(lookup_state_t *state,
 
 /*** The authz data structure. ***/
 
-/* An entry in svn_authz_t's PREFILTERED cache.  All members must be
+/* An entry in svn_authz_t's USER_RULES cache.  All members must be
  * allocated in the POOL and the latter has to be cleared / destroyed
  * before overwriting the entries' contents.
  */
-typedef struct filtered_rules_t
+struct authz_user_rules_t
 {
   /* User name for which we filtered the rules.
    * User NULL for the anonymous user. */
@@ -1088,30 +910,6 @@ typedef struct filtered_rules_t
 
   /* Pool from which all data within this struct got allocated.
    * Can be destroyed or cleaned up with no further side-effects. */
-  apr_pool_t *pool;
-} filtered_rules_t;
-
-/* Number of (user, respoitory) combinations per authz for which we can
- * cache the corresponding filtered path rule trees.
- *
- * Since authz instance are per connection and there is usually only one
- * repository per connection, 2 (user + anonymous) would be sufficient in
- * most cases.  Having 4 adds plenty of headroom and we expect high locality
- * in any case.
- */
-#define FILTER_CACHE_SIZE 4
-
-struct svn_authz_t
-{
-  /* The non-filtered authz data model. */
-  svn_authz_tng_t *full_model;
-
-  /* LRU cache of the filtered path rule trees for the latest (user, repo)
-   * combinations.  Empty / unused entries have NULL for ROOT. */
-  filtered_rules_t prefiltered[FILTER_CACHE_SIZE];
-
-  /* All members of this struct must be allocated from this pool or a pool
-   * with longer guaranteed lifetime. */
   apr_pool_t *pool;
 };
 
@@ -1243,7 +1041,7 @@ authz_retrieve_config_file(svn_stream_t **stream,
 
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
- * one and return the fully initialized filtered_rules_t to start lookup
+ * one and return the fully initialized authz_user_rules_t to start lookup
  * at *PATH.
  *
  * If *PATH is not NULL, *PATH may be reduced to the sub-path that has 
@@ -1251,7 +1049,7 @@ authz_retrieve_config_file(svn_stream_t **stream,
  * If *PATH is NULL, keep the lockup_state member as is - assuming the
  * caller will not use it but only the root node data.
  */
-static filtered_rules_t *
+static authz_user_rules_t *
 get_filtered_tree(svn_authz_t *authz,
                   const char *repos_name,
                   const char **path,
@@ -1262,60 +1060,61 @@ get_filtered_tree(svn_authz_t *authz,
   apr_size_t i;
 
   /* Search our cache for a suitable previously filtered tree. */
-  for (i = 0; i < FILTER_CACHE_SIZE && authz->prefiltered[i].root; ++i)
+  for (i = 0; i < AUTHZ_FILTERED_CACHE_SIZE && authz->user_rules[i]; ++i)
     {
       /* Does the user match? */
       if (user == NULL)
         {
-          if (authz->prefiltered[i].user != NULL)
+          if (authz->user_rules[i]->user != NULL)
             continue;
         }
       else
         {
-          if (   authz->prefiltered[i].user == NULL
-              || strcmp(user, authz->prefiltered[i].user))
+          if (   authz->user_rules[i]->user == NULL
+              || strcmp(user, authz->user_rules[i]->user))
             continue;
         }
 
       /* Does the repository match as well? */
-      if (strcmp(repos_name, authz->prefiltered[i].repository))
+      if (strcmp(repos_name, authz->user_rules[i]->repository))
         continue;
 
       /* LRU: Move up to first entry. */
       if (i > 0)
         {
-          filtered_rules_t temp = authz->prefiltered[i];
-          memmove(&authz->prefiltered[1], &authz->prefiltered[0],
+          authz_user_rules_t *temp = authz->user_rules[i];
+          memmove(&authz->user_rules[1], &authz->user_rules[0],
                   i * sizeof(temp));
-          authz->prefiltered[0] = temp;
+          authz->user_rules[0] = temp;
         }
 
       if (*path)
-        *path = init_lockup_state(authz->prefiltered[0].lookup_state,
-                                  authz->prefiltered[0].root,
+        *path = init_lockup_state(authz->user_rules[0]->lookup_state,
+                                  authz->user_rules[0]->root,
                                   *path);
 
-      return &authz->prefiltered[0];
+      return authz->user_rules[0];
     }
 
   /* Cache full? Drop last (i.e. oldest) entry. */
-  if (i == FILTER_CACHE_SIZE)
-    svn_pool_destroy(authz->prefiltered[--i].pool);
+  if (i == AUTHZ_FILTERED_CACHE_SIZE)
+    svn_pool_destroy(authz->user_rules[--i]->pool);
 
   /* Write a new entry. */
   pool = svn_pool_create(authz->pool);
-  authz->prefiltered[i].pool = pool;
-  authz->prefiltered[i].repository = apr_pstrdup(pool, repos_name);
-  authz->prefiltered[i].user = user ? apr_pstrdup(pool, user) : NULL;
-  authz->prefiltered[i].root = create_user_authz(authz->full_model,
+  authz->user_rules[i] = apr_palloc(pool, sizeof(*authz->user_rules[i]));
+  authz->user_rules[i]->pool = pool;
+  authz->user_rules[i]->repository = apr_pstrdup(pool, repos_name);
+  authz->user_rules[i]->user = user ? apr_pstrdup(pool, user) : NULL;
+  authz->user_rules[i]->root = create_user_authz(authz,
                                                  repos_name, user, pool,
                                                  scratch_pool);
-  authz->prefiltered[i].lookup_state = create_lookup_state(pool);
+  authz->user_rules[i]->lookup_state = create_lookup_state(pool);
   if (*path)
-    init_lockup_state(authz->prefiltered[i].lookup_state,
-                      authz->prefiltered[i].root, *path);
+    init_lockup_state(authz->user_rules[i]->lookup_state,
+                      authz->user_rules[i]->root, *path);
 
-  return &authz->prefiltered[i];
+  return authz->user_rules[i];
 }
 
 
@@ -1348,22 +1147,6 @@ retrieve_config(svn_stream_t **stream,
                                          result_pool, scratch_pool));
     }
 
-  return SVN_NO_ERROR;
-}
-
-/* Construct a new svn_authz_t instance based on the FULL_MODEL and return
- * it in *AUTHZ_P. */
-static svn_error_t *
-create_authz(svn_authz_t **authz_p,
-             svn_authz_tng_t *full_model,
-             apr_pool_t *result_pool)
-{
-  svn_authz_t *result = apr_pcalloc(result_pool, sizeof(*result));
-
-  result->pool = result_pool;
-  result->full_model = full_model;
-
-  *authz_p = result;
   return SVN_NO_ERROR;
 }
 
@@ -1400,7 +1183,6 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
                       svn_boolean_t accept_urls, apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  svn_authz_tng_t *full_model;
   svn_stream_t *rules;
   svn_stream_t *groups;
   svn_error_t* err;
@@ -1429,8 +1211,8 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
     }
 
   /* Parse the configuration(s) and construct the full authz model from it. */
-  err = svn_authz__tng_parse(&full_model, rules, groups, result_pool,
-                             scratch_pool);
+  err = svn_authz__parse(authz_p, rules, groups, result_pool,
+                         scratch_pool);
 
   /* Add the URL / file name to the error stack since the parser doesn't
    * have it. */
@@ -1438,9 +1220,6 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
     return svn_error_createf(err->apr_err, err,
                              "Error while parsing config file: '%s':",
                              path);
-
-  /* Construct our wrapper. */
-  SVN_ERR(create_authz(authz_p, full_model, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1468,14 +1247,11 @@ svn_error_t *
 svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
                       svn_stream_t *groups_stream, apr_pool_t *pool)
 {
-  svn_authz_tng_t *full_model;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* Parse the configuration and construct the full authz model from it. */
-  SVN_ERR(svn_authz__tng_parse(&full_model, stream, groups_stream, pool,
-                               scratch_pool));
-
-  SVN_ERR(create_authz(authz_p, full_model, pool));
+  SVN_ERR(svn_authz__parse(authz_p, stream, groups_stream, pool,
+                           scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
@@ -1489,9 +1265,10 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              apr_pool_t *pool)
 {
   /* Pick or create the suitable pre-filtered path rule tree. */
-  filtered_rules_t *rules = get_filtered_tree(authz,
-                                              repos_name ? repos_name : "",
-                                              &path, user, pool);
+  authz_user_rules_t *rules = get_filtered_tree(
+      authz,
+      (repos_name ? repos_name : AUTHZ_ANY_REPOSITORY),
+      &path, user, pool);
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)

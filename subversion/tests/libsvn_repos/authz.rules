@@ -1,8 +1,6 @@
 [/]
 ~$anonymous = rw
 ~$authenticated = r
-
-[:glob:/]
 &x = r
 luser = rw
 
@@ -10,7 +8,8 @@ luser = rw
 @x = r
 @y = rw
 
-[:glob:bloop:/]
+[:glob:bloop:/*a\bc/def*/**/*/**/ghi?jkl/**/**/mno\/**]
+$anonymous =
 ~luser =
 ~@x = r
 luser = rw

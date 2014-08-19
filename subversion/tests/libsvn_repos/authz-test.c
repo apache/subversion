@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include <apr_fnmatch.h>
+
 #include "svn_pools.h"
 #include "svn_iter.h"
 
@@ -106,10 +108,76 @@ print_user_rights(void *baton, const void *key, apr_ssize_t klen,
   return SVN_NO_ERROR;
 }
 
+static const char*
+rule_string(authz_rule_t* rule, apr_pool_t *pool)
+{
+  svn_stringbuf_t *str;
+  int i;
+
+  if (rule->len == 0)
+    return "/";
+
+  str = svn_stringbuf_create_empty(pool);
+
+  for (i = 0; i < rule->len; ++i)
+    {
+      authz_rule_segment_t *segment = &rule->path[i];
+
+      switch(segment->kind)
+        {
+        case authz_rule_any_segment:
+          svn_stringbuf_appendcstr(str, "/*");
+          break;
+
+        case authz_rule_any_recursive:
+          svn_stringbuf_appendcstr(str, "/**");
+          break;
+
+        case authz_rule_prefix:
+          svn_stringbuf_appendcstr(str, "/#");
+          svn_stringbuf_appendcstr(str, segment->pattern.data);
+          svn_stringbuf_appendbyte(str, '*');
+          break;
+
+        case authz_rule_suffix:
+          svn_stringbuf_appendcstr(str, "/#*");
+          svn_stringbuf_appendcstr(str, segment->pattern.data);
+          svn_authz__reverse_string(
+              str->data + str->len - segment->pattern.len,
+              segment->pattern.len);
+          break;
+
+        case authz_rule_fnmatch:
+          svn_stringbuf_appendcstr(str, "/%");
+          svn_stringbuf_appendcstr(str, segment->pattern.data);
+          break;
+
+        default:                /* literal */
+          svn_stringbuf_appendcstr(str, "//");
+          svn_stringbuf_appendcstr(str, segment->pattern.data);
+        }
+    }
+  return str->data;
+}
+
+
+static svn_boolean_t
+has_glob(authz_rule_t* rule)
+{
+  int i;
+  for (i = 0; i < rule->len; ++i)
+    {
+      authz_rule_segment_t *segment = &rule->path[i];
+      if (segment->kind != authz_rule_literal)
+        return TRUE;
+    }
+  return FALSE;
+}
+
 
 static svn_error_t *
-test_authz_parse_tng(const svn_test_opts_t *opts,
-                     apr_pool_t *pool)
+test_authz_parse(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
 {
   const char *srcdir;
   const char *rules_path;
@@ -118,7 +186,7 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
   const char *groups_path;
   apr_file_t *groups_file;
   svn_stream_t *groups;
-  svn_authz_tng_t *authz;
+  svn_authz_t *authz;
   int i;
 
   const char *check_user = "wunga";
@@ -137,7 +205,7 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
                            APR_READ, APR_OS_DEFAULT,
                            pool));
   groups = svn_stream_from_aprfile2(groups_file, FALSE, pool);
-  SVN_ERR(svn_authz__tng_parse(&authz, rules, groups, pool, pool));
+  SVN_ERR(svn_authz__parse(&authz, rules, groups, pool, pool));
 
   printf("Access check for ('%s', '%s')\n\n", check_user, check_repo);
 
@@ -154,17 +222,16 @@ test_authz_parse_tng(const svn_test_opts_t *opts,
 
       printf("%s%s%s   Sequence:   %d\n"
              "   Repository: [%s]\n"
-             "   Rule:  %s[/%s]\n",
+             "   Rule:  %s[%s]\n",
              (has_access ? "Match = " : ""),
              (has_access ? access_string(access) : ""),
              (has_access ? "\n" : ""),
              acl->sequence_number,
-             acl->repos,
-             (acl->glob ? "glob:" : "     "),
-             acl->rule);
+             acl->rule.repos,
+             (has_glob(&acl->rule) ? "glob:" : "     "),
+             rule_string(&acl->rule, pool));
 
-      if (acl->has_anon_access && acl->has_authn_access
-          && all_access != svn_authz_none)
+      if (acl->has_anon_access && acl->has_authn_access)
         printf("       * = %s\n", access_string(all_access));
 
       if (acl->has_anon_access
@@ -210,8 +277,8 @@ static int max_threads = 4;
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(test_authz_parse_tng,
-                       "test svn_authz__tng_parse"),
+    SVN_TEST_OPTS_PASS(test_authz_parse,
+                       "test svn_authz__parse"),
     SVN_TEST_NULL
   };
 
