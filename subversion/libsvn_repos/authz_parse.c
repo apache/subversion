@@ -20,6 +20,7 @@
  * ====================================================================
  */
 
+#include <apr_fnmatch.h>
 #include <apr_tables.h>
 
 #include "svn_ctype.h"
@@ -32,6 +33,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_config_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
@@ -43,7 +45,7 @@
 typedef struct parsed_acl_t
 {
   /* The global ACL.
-     ACL.repos and ACL>rule are allocated from the result pool.
+     The strings in ACL.rule are allocated from the result pool.
      ACL.user_access is null during the parsing stage. */
   authz_acl_t acl;
 
@@ -73,7 +75,7 @@ typedef struct parsed_group_t
 typedef struct ctor_baton_t
 {
   /* The final output of the parser. */
-  svn_authz_tng_t *authz;
+  svn_authz_t *authz;
 
   /* Interned-string set, allocated in AUTHZ->pool.
      Stores singleton instances of user, group and repository names,
@@ -103,6 +105,9 @@ typedef struct ctor_baton_t
   /* TRUE iff we're parsing an [aliases] section. */
   svn_boolean_t in_aliases;
 
+  /* A set of all the unique rules we parsed from the section names. */
+  apr_hash_t *parsed_rules;
+
   /* Temporary parsed-groups definitions. */
   apr_hash_t *parsed_groups;
 
@@ -115,6 +120,10 @@ typedef struct ctor_baton_t
   /* The temporary ACL we're currently constructing. */
   parsed_acl_t *current_acl;
 
+  /* Temporary buffers used to parse a rule into segments. */
+  svn_membuf_t rule_path_buffer;
+  svn_stringbuf_t *rule_string_buffer;
+
   /* The parser's scratch pool. This may not be the same pool as
      passed to the constructor callbacks, that is supposed to be an
      iteration pool maintained by the generic parser.
@@ -123,6 +132,9 @@ typedef struct ctor_baton_t
   apr_pool_t *parser_pool;
 } ctor_baton_t;
 
+
+/* An empty string with a known address. */
+static const char interned_empty_string[] = "";
 
 /* The name of the aliases section. */
 static const char aliases_section[] = "aliases";
@@ -163,6 +175,25 @@ init_global_rights(authz_global_rights_t *gr, const char *user,
 }
 
 
+/* Insert the default global ACL into the parsed ACLs. */
+static void
+insert_default_acl(ctor_baton_t *cb)
+{
+  parsed_acl_t *acl = &APR_ARRAY_PUSH(cb->parsed_acls, parsed_acl_t);
+  acl->acl.sequence_number = 0;
+  acl->acl.rule.repos = interned_empty_string;
+  acl->acl.rule.len = 0;
+  acl->acl.rule.path = NULL;
+  acl->acl.anon_access = svn_authz_none;
+  acl->acl.has_anon_access = TRUE;
+  acl->acl.authn_access = svn_authz_none;
+  acl->acl.has_authn_access = TRUE;
+  acl->acl.user_access = NULL;
+  acl->aces = svn_hash__make(cb->parser_pool);
+  acl->alias_aces = svn_hash__make(cb->parser_pool);
+}
+
+
 /* Initialize a constuctor baton. */
 static ctor_baton_t *
 create_ctor_baton(apr_pool_t *result_pool,
@@ -171,7 +202,7 @@ create_ctor_baton(apr_pool_t *result_pool,
   apr_pool_t *const parser_pool = svn_pool_create(scratch_pool);
   ctor_baton_t *const cb = apr_pcalloc(parser_pool, sizeof(*cb));
 
-  svn_authz_tng_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
+  svn_authz_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
   init_global_rights(&authz->anon_rights, anon_access_token, result_pool);
   init_global_rights(&authz->authn_rights, authn_access_token, result_pool);
   authz->user_rights = svn_hash__make(result_pool);
@@ -186,12 +217,18 @@ create_ctor_baton(apr_pool_t *result_pool,
   cb->in_groups = FALSE;
   cb->in_aliases = FALSE;
 
+  cb->parsed_rules = svn_hash__make(parser_pool);
   cb->parsed_groups = svn_hash__make(parser_pool);
   cb->parsed_aliases = svn_hash__make(parser_pool);
   cb->parsed_acls = apr_array_make(parser_pool, 64, sizeof(parsed_acl_t));
   cb->current_acl = NULL;
 
+  svn_membuf__create(&cb->rule_path_buffer, 0, parser_pool);
+  cb->rule_string_buffer = svn_stringbuf_create_empty(parser_pool);
+
   cb->parser_pool = parser_pool;
+
+  insert_default_acl(cb);
 
   return cb;
 }
@@ -254,7 +291,7 @@ check_open_section(ctor_baton_t *cb, svn_stringbuf_t *section)
     }
 
   cb->section = apr_pstrmemdup(cb->parser_pool, section->data, section->len);
-  svn_hash_sets(cb->sections,  cb->section, "");
+  svn_hash_sets(cb->sections,  cb->section, interned_empty_string);
   return SVN_NO_ERROR;
 }
 
@@ -337,6 +374,305 @@ groups_add_value(void *baton, svn_stringbuf_t *section,
 }
 
 
+/* Remove escape sequences in-place. */
+static void
+unescape_in_place(svn_stringbuf_t *buf)
+{
+  char *p = buf->data;
+  apr_size_t i;
+
+  /* Skip the string up to the first escape sequence. */
+  for (i = 0; i < buf->len; ++i)
+    {
+      if (*p == '\\')
+        break;
+      ++p;
+    }
+
+  if (i < buf->len)
+    {
+      /* Unescape the remainder of the string. */
+      svn_boolean_t escape = TRUE;
+      const char *q;
+
+      for (q = p + 1, ++i; i < buf->len; ++i)
+        {
+          if (escape)
+            {
+              *p++ = *q++;
+              escape = FALSE;
+            }
+          else if (*q == '\\')
+            {
+              ++q;
+              escape = TRUE;
+            }
+          else
+            *p++ = *q++;
+        }
+
+      /* A trailing backslash is literal, so make it part of the pattern. */
+      if (escape)
+        *p++ = '\\';
+      *p = '\0';
+      buf->len = p - buf->data;
+    }
+}
+
+
+/* Internalize a pattern. */
+static void
+intern_pattern(ctor_baton_t *cb,
+               svn_string_t *pattern,
+               const char *string,
+               apr_size_t len)
+{
+  pattern->data = intern_string(cb, string, len);
+  pattern->len = len;
+}
+
+
+/* Parse a rule path PATH up to PATH_LEN into *RULE.
+   If GLOB is TRUE, treat PATH as possibly containing wildcards.
+   SECTION is the whole rule in the authz file.
+   Use pools and buffers from CB to do the obvious thing. */
+static svn_error_t *
+parse_rule_path(authz_rule_t *rule,
+                ctor_baton_t *cb,
+                svn_boolean_t glob,
+                const char *path,
+                apr_size_t path_len,
+                const char *section)
+{
+  svn_stringbuf_t *const pattern = cb->rule_string_buffer;
+  const char *const path_end = path + path_len;
+  authz_rule_segment_t *segment;
+  const char *start;
+  const char *end;
+  int nseg;
+
+  SVN_ERR_ASSERT(*path == '/');
+
+  nseg = 0;
+  for (start = path; start != path_end; start = end)
+    {
+      apr_size_t pattern_len;
+
+      /* Skip the leading slash and find the end of the segment. */
+      end = memchr(++start, '/', path_len - 1);
+      if (!end)
+        end = path_end;
+
+      pattern_len = end - start;
+      path_len -= pattern_len + 1;
+
+      if (pattern_len == 0)
+        {
+          if (nseg == 0)
+            {
+              /* This is an empty (root) path. */
+              rule->len = 0;
+              rule->path = NULL;
+              return SVN_NO_ERROR;
+            }
+
+          /* A path with two consecutive slashes is not canonical. */
+          return svn_error_createf(
+              SVN_ERR_AUTHZ_INVALID_CONFIG,
+              svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                               _("Found empty name in authz rule path")),
+              _("Non-canonical path '%s' in authz rule [%s]"),
+              path, section);
+        }
+
+      /* A path with . or .. segments is not canonical. */
+      if (*start == '.'
+          && (pattern_len == 1
+              || (pattern_len == 2 && start[1] == '.')))
+        return svn_error_createf(
+            SVN_ERR_AUTHZ_INVALID_CONFIG,
+            (end == start + 1
+             ? svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                _("Found '.' in authz rule path"))
+             : svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                _("Found '..' in authz rule path"))),
+            _("Non-canonical path '%s' in authz rule [%s]"),
+            path, section);
+
+      /* Make space for the current segment. */
+      ++nseg;
+      svn_membuf__resize(&cb->rule_path_buffer, nseg * sizeof(*segment));
+      segment = cb->rule_path_buffer.data;
+      segment += (nseg - 1);
+
+      if (!glob)
+        {
+          /* Trivial case: this is not a glob rule, so every segment
+             is a literal match. */
+          segment->kind = authz_rule_literal;
+          intern_pattern(cb, &segment->pattern, start, pattern_len);
+          continue;
+        }
+
+      /* Copy the segment into the temporary buffer. */
+      svn_stringbuf_setempty(pattern);
+      svn_stringbuf_appendbytes(pattern, start, pattern_len);
+
+      if (0 == apr_fnmatch_test(pattern->data))
+        {
+          /* It's a literal match after all. */
+          segment->kind = authz_rule_literal;
+          unescape_in_place(pattern);
+          intern_pattern(cb, &segment->pattern, pattern->data, pattern->len);
+          continue;
+        }
+
+      if (*pattern->data == '*')
+        {
+          if (pattern->len == 1
+              || (pattern->len == 2 && pattern->data[1] == '*'))
+            {
+              /* Process * and **, applying normalization as per
+                 https://wiki.apache.org/subversion/AuthzImprovements. */
+
+              authz_rule_segment_t *const prev =
+                (nseg > 1 ? segment - 1 : NULL);
+
+              if (pattern_len == 1)
+                {
+                  /* This is a *. Replace **|* with *|**. */
+                  if (prev && prev->kind == authz_rule_any_recursive)
+                    {
+                      prev->kind = authz_rule_any_segment;
+                      segment->kind = authz_rule_any_recursive;
+                    }
+                  else
+                    segment->kind = authz_rule_any_segment;
+                }
+              else
+                {
+                  /* This is a **. Replace **|** with *|**. */
+                  if (prev && prev->kind == authz_rule_any_recursive)
+                    prev->kind = authz_rule_any_segment;
+                  segment->kind = authz_rule_any_recursive;
+                }
+
+              segment->pattern.data = interned_empty_string;
+              segment->pattern.len = 0;
+              continue;
+            }
+
+          /* Maybe it's a suffix match? */
+          if (0 == apr_fnmatch_test(pattern->data + 1))
+            {
+              svn_stringbuf_leftchop(pattern, 1);
+              segment->kind = authz_rule_suffix;
+              unescape_in_place(pattern);
+              svn_authz__reverse_string(pattern->data, pattern->len);
+              intern_pattern(cb, &segment->pattern,
+                             pattern->data, pattern->len);
+              continue;
+            }
+        }
+
+      if (pattern->data[pattern->len - 1] == '*')
+        {
+          /* Might be a prefix match. Note that because of the
+             previous test, we already know that the pattern is longer
+             than one character. */
+          if (pattern->data[pattern->len - 2] != '\\')
+            {
+              /* OK, the * wasn't  escaped. Chop off the wildcard. */
+              svn_stringbuf_chop(pattern, 1);
+              if (0 == apr_fnmatch_test(pattern->data))
+                {
+                  segment->kind = authz_rule_prefix;
+                  unescape_in_place(pattern);
+                  intern_pattern(cb, &segment->pattern,
+                                 pattern->data, pattern->len);
+                  continue;
+                }
+
+              /* Restore the wildcard since it was not a prefix match. */
+              svn_stringbuf_appendbyte(pattern, '*');
+            }
+        }
+
+      /* It's a generic fnmatch pattern. */
+      segment->kind = authz_rule_fnmatch;
+      intern_pattern(cb, &segment->pattern, pattern->data, pattern->len);
+    }
+
+  SVN_ERR_ASSERT(nseg > 0);
+
+  /* Replace a trailing ** with a *. */
+  if (nseg > 1)
+    {
+      segment = cb->rule_path_buffer.data;
+      segment += (nseg - 1);
+      if (segment->kind == authz_rule_any_recursive)
+        segment->kind = authz_rule_any_segment;
+    }
+
+
+  /* Copy the temporary segments array into the result pool. */
+  {
+    const apr_size_t path_size = nseg * sizeof(*segment);
+    SVN_ERR_ASSERT(path_size <= cb->rule_path_buffer.size);
+
+    rule->len = nseg;
+    rule->path = apr_palloc(cb->authz->pool, path_size);
+    memcpy(rule->path, cb->rule_path_buffer.data, path_size);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Check that the parsed RULE is unique within the authz file.
+   With the introduction of wildcards, just looking at the SECTION
+   names is not sufficient to determine uniqueness.
+   Use pools and buffers from CB to do the obvious thing. */
+static svn_error_t *
+check_unique_rule(ctor_baton_t *cb,
+                  const authz_rule_t *rule,
+                  const char *section)
+{
+  svn_stringbuf_t *const buf = cb->rule_string_buffer;
+  const char *exists;
+  int i;
+
+  /* Construct the key for this rule */
+  svn_stringbuf_setempty(buf);
+  svn_stringbuf_appendcstr(buf, rule->repos);
+  svn_stringbuf_appendbyte(buf, '\n');
+
+  for (i = 0; i < rule->len; ++i)
+    {
+      authz_rule_segment_t *const seg = &rule->path[i];
+      svn_stringbuf_appendbyte(buf, '@' + seg->kind);
+      svn_stringbuf_appendbytes(buf, seg->pattern.data, seg->pattern.len);
+      svn_stringbuf_appendbyte(buf, '\n');
+    }
+
+  /* Check if the section exists. */
+  exists = apr_hash_get(cb->parsed_rules, buf->data, buf->len);
+  if (exists)
+    return svn_error_createf(
+        SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+        _("Section [%s] describes the same rule as section [%s]"),
+        section, exists);
+
+  /* Insert the rule into the known rules set. */
+  apr_hash_set(cb->parsed_rules,
+               apr_pstrmemdup(cb->parser_pool, buf->data, buf->len),
+               buf->len,
+               apr_pstrdup(cb->parser_pool, section));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Constructor callback: Starts a rule or [aliases] section. */
 static svn_error_t *
 rules_open_section(void *baton, svn_stringbuf_t *section)
@@ -344,6 +680,7 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
   ctor_baton_t *const cb = baton;
   const char *rule = section->data;
   apr_size_t rule_len = section->len;
+  svn_boolean_t glob;
   const char *endp;
   parsed_acl_t acl;
 
@@ -351,7 +688,7 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
 
   /* Parse rule property tokens. */
   if (*rule != ':')
-    acl.acl.glob = FALSE;
+    glob = FALSE;
   else
     {
       /* This must be a wildcard rule. */
@@ -375,14 +712,15 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
             apr_pstrmemdup(cb->parser_pool, rule, token_len),
             section->data);
 
-      acl.acl.glob = TRUE;
+      glob = TRUE;
       rule = endp + 1;
+      rule_len -= token_len + 1;
     }
 
   /* Parse the repository name. */
   endp = (*rule == '/' ? NULL : memchr(rule, ':', rule_len));
   if (!endp)
-    acl.acl.repos = AUTHZ_ANY_REPOSITORY;
+    acl.acl.rule.repos = interned_empty_string;
   else
     {
       const apr_size_t repos_len = endp - rule;
@@ -401,23 +739,17 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
             apr_pstrmemdup(cb->parser_pool, rule, repos_len),
             section->data);
 
-      acl.acl.repos = intern_string(cb, rule, repos_len);
+      acl.acl.rule.repos = intern_string(cb, rule, repos_len);
       rule = endp + 1;
+      rule_len -= repos_len + 1;
     }
 
   /* Parse the actual rule. */
   if (*rule == '/')
     {
-      ++rule; --rule_len;
-      if (svn_fspath__is_canonical(rule))
-        return svn_error_createf(
-            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-            _("Non-canonical path '%s' in in authz rule [%s]"),
-            rule, section->data);
-
-      /* FIXME: Normalize any wildcard escape chars here, and turn off
-         the glob flag if the rule does not contain any wildcards. */
-      acl.acl.rule = intern_string(cb, rule, rule_len);
+      SVN_ERR(parse_rule_path(&acl.acl.rule, cb, glob, rule, rule_len,
+                              section->data));
+      SVN_ERR(check_unique_rule(cb, &acl.acl.rule, section->data));
     }
   else if (0 == strcmp(section->data, aliases_section))
     {
@@ -684,7 +1016,7 @@ add_to_group(ctor_baton_t *cb, const char *group, const char *user)
       members = svn_hash__make(cb->authz->pool);
       svn_hash_sets(cb->authz->groups, group, members);
     }
-  svn_hash_sets(members, user, "");
+  svn_hash_sets(members, user, interned_empty_string);
 }
 
 
@@ -890,10 +1222,10 @@ update_user_rights(void *baton,
   authz_global_rights_t *const gr = value;
   svn_repos_authz_access_t access;
   svn_boolean_t has_access =
-    svn_authz__acl_get_access(&access, acl, user, acl->repos);
+    svn_authz__acl_get_access(&access, acl, user, acl->rule.repos);
 
   if (has_access)
-    update_global_rights(gr, acl->repos, access);
+    update_global_rights(gr, acl->rule.repos, access);
   return SVN_NO_ERROR;
 }
 
@@ -939,13 +1271,13 @@ expand_acl_callback(void *baton,
     {
       cb->authz->has_anon_rights = TRUE;
       update_global_rights(&cb->authz->anon_rights,
-                           acl->repos, acl->anon_access);
+                           acl->rule.repos, acl->anon_access);
     }
   if (acl->has_authn_access)
     {
       cb->authz->has_authn_rights = TRUE;
       update_global_rights(&cb->authz->authn_rights,
-                           acl->repos, acl->authn_access);
+                           acl->rule.repos, acl->authn_access);
     }
   SVN_ERR(svn_iter_apr_hash(NULL, cb->authz->user_rights,
                             update_user_rights, acl, scratch_pool));
@@ -953,16 +1285,34 @@ expand_acl_callback(void *baton,
 }
 
 
+/* Compare two ACLs in rule lexical order, then repository order, then
+   order of definition. This ensures that our default ACL is always
+   first in the sorted array. */
+static int
+compare_parsed_acls(const void *va, const void *vb)
+{
+  const parsed_acl_t *const a = va;
+  const parsed_acl_t *const b = vb;
+
+  int cmp = svn_authz__compare_rules(&a->acl.rule, &b->acl.rule);
+  if (cmp == 0)
+    cmp = a->acl.sequence_number - b->acl.sequence_number;
+  return cmp;
+}
+
+
 svn_error_t *
-svn_authz__tng_parse(svn_authz_tng_t **authz,
-                     svn_stream_t *rules,
-                     svn_stream_t *groups,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_authz__parse(svn_authz_t **authz,
+                 svn_stream_t *rules,
+                 svn_stream_t *groups,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   ctor_baton_t *const cb = create_ctor_baton(result_pool, scratch_pool);
 
-  /* Pass 1: Parse the authz file. */
+  /*
+   * Pass 1: Parse the authz file.
+   */
   SVN_ERR(svn_config__parse_stream(rules,
                                    svn_config__constructor_create(
                                        rules_open_section,
@@ -971,7 +1321,9 @@ svn_authz__tng_parse(svn_authz_tng_t **authz,
                                        cb->parser_pool),
                                    cb, cb->parser_pool));
 
-  /* Pass 1.6487: Parse the global groups file. */
+  /*
+   * Pass 1.6487: Parse the global groups file.
+   */
   if (groups)
     {
       /* Check that the authz file did not contain any groups. */
@@ -991,10 +1343,42 @@ svn_authz__tng_parse(svn_authz_tng_t **authz,
                                        cb, cb->parser_pool));
     }
 
-  /* Pass 2: Expand groups and construct the final svn_authz_t. */
+  /*
+   * Pass 2: Expand groups and construct the final svn_authz_t.
+   */
   cb->authz->groups = svn_hash__make(cb->authz->pool);
   SVN_ERR(svn_iter_apr_hash(NULL, cb->parsed_groups,
                             expand_group_callback, cb, cb->parser_pool));
+
+
+  /* Sort the parsed ACLs in rule lexical order and pop off the
+     default global ACL iff an equivalent ACL was defined in the authz
+     file. */
+  if (cb->parsed_acls->nelts > 1)
+    {
+      parsed_acl_t *defacl;
+      parsed_acl_t *nxtacl;
+
+      svn_sort__array(cb->parsed_acls, compare_parsed_acls);
+      defacl = &APR_ARRAY_IDX(cb->parsed_acls, 0, parsed_acl_t);
+      nxtacl = &APR_ARRAY_IDX(cb->parsed_acls, 1, parsed_acl_t);
+
+      /* If the first ACL is not our default thingamajig, there's a
+         bug in our comparator. */
+      SVN_ERR_ASSERT(
+          defacl->acl.sequence_number == 0 && defacl->acl.rule.len == 0
+          && 0 == strcmp(defacl->acl.rule.repos, AUTHZ_ANY_REPOSITORY));
+
+      /* Pop the default ACL off the array if another equivalent
+         exists, after merging the default rights. */
+      if (0 == svn_authz__compare_rules(&defacl->acl.rule, &nxtacl->acl.rule))
+        {
+          nxtacl->acl.has_anon_access = TRUE;
+          nxtacl->acl.has_authn_access = TRUE;
+          cb->parsed_acls->elts = (char*)(nxtacl);
+          --cb->parsed_acls->nelts;
+        }
+    }
 
   cb->authz->acls = apr_array_make(cb->authz->pool, cb->parsed_acls->nelts,
                                    sizeof(authz_acl_t));
@@ -1018,4 +1402,40 @@ svn_authz__reverse_string(char *string, apr_size_t len)
       *left = *right;
       *right = c;
     }
+}
+
+
+int
+svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b)
+{
+  const int min_len = (a->len > b->len ? b->len : a->len);
+  int i;
+
+  for (i = 0; i < min_len; ++i)
+    {
+      int cmp = a->path[i].kind - b->path[i].kind;
+      if (0 == cmp)
+        {
+          const char *const aseg = a->path[i].pattern.data;
+          const char *const bseg = b->path[i].pattern.data;
+
+          /* Exploit the fact that segment patterns are interned. */
+          if (aseg != bseg)
+            cmp = strcmp(aseg, bseg);
+          else
+            cmp = 0;
+        }
+      if (0 != cmp)
+        return cmp;
+    }
+
+  /* Sort shorter rules first. */
+  if (a->len != b->len)
+    return a->len - b->len;
+
+  /* Repository names are interned, too. */
+  if (a->repos != b->repos)
+    return strcmp(a->repos, b->repos);
+
+  return 0;
 }

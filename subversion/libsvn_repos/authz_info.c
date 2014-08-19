@@ -42,7 +42,8 @@ svn_authz__acl_get_access(svn_repos_authz_access_t *access_p,
 
   /* The repository name must match the one in the rule, iff the rule
      was defined for a specific repository. */
-  if (strcmp(acl->repos, AUTHZ_ANY_REPOSITORY) && strcmp(repos, acl->repos))
+  if (strcmp(acl->rule.repos, AUTHZ_ANY_REPOSITORY)
+      && strcmp(repos, acl->rule.repos))
     return FALSE;
 
   /* Check anonymous access first. */

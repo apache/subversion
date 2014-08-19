@@ -8,9 +8,7 @@ https://wiki.apache.org/subversion/AuthzImprovements
 TODO:
 
 * implement precedence rules
-* rewrite the filtered rules generator to use svn_authz_tng_t
-* rename svn_authz_tng_t to svn_authz_t
-* implement wildcard escaping in glob rules
+* remove no-op escape sequences from wildcard rule segments
 
 DONE:
 
@@ -30,3 +28,6 @@ DONE:
 * calculate global access rules in svn_authz_tng_t
 * expose the svn_stringbuf_t buffers in the config parser constructor
   and use the known sizes when calling intern_string in authz_parse.c
+* rewrite the filtered rules generator to use svn_authz_tng_t
+* rename svn_authz_tng_t to svn_authz_t
+* implement wildcard escaping in glob rules

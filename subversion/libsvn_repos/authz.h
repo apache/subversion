@@ -94,7 +94,7 @@ typedef struct authz_global_rights_t
 
 
 /* Immutable authorization info */
-typedef struct svn_authz_tng_t
+struct svn_authz_t
 {
   /* All ACLs from the authz file, in the order of definition. */
   apr_array_header_t *acls;
@@ -126,7 +126,74 @@ typedef struct svn_authz_tng_t
      that the whole authz representation can be deallocated by
      destroying the pool. */
   apr_pool_t *pool;
-} svn_authz_tng_t;
+};
+
+
+/* Rule path segment descriptor. */
+typedef struct authz_rule_segment_t
+{
+  /* The segment type. */
+  enum {
+    /* A literal string match.
+       The path segment must exactly match the pattern.
+
+       Note: Make sure this is always the first constant in the
+             enumeration, otherwise rules that match the repository
+             root will not sort first in the ACL list and the implicit
+             default no-access ACE will not be applied correctly. */
+    authz_rule_literal,
+
+    /* A prefix match: a literal string followed by '*'.
+       The path segment must begin with the literal prefix. */
+    authz_rule_prefix,
+
+    /* A suffix match: '*' followed by a literal string.
+       The path segment must end with the literal suffix.
+       The pattern is stored reversed, so that the matching code can
+       perform a prefix match on the reversed path segment. */
+    authz_rule_suffix,
+
+    /* '*'
+       Matches any single non-empty path segment.
+       The pattern will be an empty string. */
+    authz_rule_any_segment,
+
+    /* '**'
+       Matches any sequence of one or more path segments.
+       The pattern will be an empty string. */
+    authz_rule_any_recursive,
+
+    /* Any other glob/fnmatch pattern. */
+    authz_rule_fnmatch
+  } kind;
+
+  /* The pattern for this path segment.
+     Any no-op fnmatch escape sequences (i.e., those that do not
+     escape a wildcard or character class) are stripped from the
+     string.
+
+     The pattern string will be interned; therefore, two identical
+     rule patterns will always contain the same pointer value and
+     equality can therefore be tested by comparing the pointer
+     values and segment kinds. */
+  svn_string_t pattern;
+} authz_rule_segment_t;
+
+/* Rule path descriptor. */
+typedef struct authz_rule_t
+{
+  /* The repository that this rule applies to. This will be the empty
+     string string if a the rule did not name a repository. The
+     repository name is interned. */
+  const char *repos;
+
+  /* The number of segments in the rule path. */
+  int len;
+
+  /* The array of path segments for this rule. Will be NULL for the
+     repository root. */
+  authz_rule_segment_t *path;
+} authz_rule_t;
 
 
 /* An access control list defined by access rules. */
@@ -138,15 +205,8 @@ typedef struct authz_acl_t
      matches. */
   int sequence_number;
 
-  /* The repository name from the rule. This will be empty string if a
-     the rule did not name a repository. */
-  const char *repos;
-
-  /* The path (or pattern) part of the rule, including the leading /. */
-  const char *rule;
-
-  /* TRUE if RULE contains wildcards. */
-  svn_boolean_t glob;
+  /* The parsed rule. */
+  authz_rule_t rule;
 
   /* Access rights for anonymous users */
   svn_boolean_t has_anon_access;
@@ -191,16 +251,21 @@ typedef struct authz_ace_t
  * The function uses SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_authz__tng_parse(svn_authz_tng_t **authz,
-                     svn_stream_t *rules,
-                     svn_stream_t *groups,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
+svn_authz__parse(svn_authz_t **authz,
+                 svn_stream_t *rules,
+                 svn_stream_t *groups,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
 
 /* Reverse a STRING of length LEN in place. */
 void
 svn_authz__reverse_string(char *string, apr_size_t len);
+
+
+/* Compare two rules in path lexical order, then repository lexical order. */
+int
+svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b);
 
 
 /*
