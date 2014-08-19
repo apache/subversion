@@ -610,7 +610,7 @@ static const svn_diff_output_fns_t mem_output_unified_vtable =
 
 
 svn_error_t *
-svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     svn_diff_t *diff,
                                     svn_boolean_t with_diff_header,
                                     const char *hunk_delimiter,
@@ -619,6 +619,8 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                                     const char *header_encoding,
                                     const svn_string_t *original,
                                     const svn_string_t *modified,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *pool)
 {
 
@@ -658,8 +660,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                     original_header, modified_header, pool));
         }
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &mem_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                              &mem_output_unified_vtable,
+                              cancel_func, cancel_baton));
 
       SVN_ERR(output_unified_flush_hunk(&baton, hunk_delimiter));
 
@@ -669,28 +672,6 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
-                                   svn_diff_t *diff,
-                                   const char *original_header,
-                                   const char *modified_header,
-                                   const char *header_encoding,
-                                   const svn_string_t *original,
-                                   const svn_string_t *modified,
-                                   apr_pool_t *pool)
-{
-  SVN_ERR(svn_diff_mem_string_output_unified2(output_stream,
-                                              diff,
-                                              TRUE,
-                                              NULL,
-                                              original_header,
-                                              modified_header,
-                                              header_encoding,
-                                              original,
-                                              modified,
-                                              pool));
-  return SVN_NO_ERROR;
-}
 
 
 

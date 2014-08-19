@@ -105,6 +105,8 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *original_props,
                              svn_boolean_t pretty_print_mergeinfo,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
 
