@@ -291,7 +291,7 @@ svn_wc__close_db(const char *external_abspath,
  * use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__get_tree_conflict(const svn_wc_conflict_description3_t **tree_conflict,
+svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
@@ -309,7 +309,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description3_t **tree_conflict,
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
-                          const svn_wc_conflict_description3_t *conflict,
+                          const svn_wc_conflict_description2_t *conflict,
                           apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
@@ -351,26 +351,6 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  * wc-ng.  Use them for new development now, but they may be disappearing
  * before the 1.7 release.
  */
-
-/*
- * Convert from svn_wc_conflict_description3_t to
- * svn_wc_conflict_description2_t.
- *
- * Allocate the result in RESULT_POOL.
- */
-svn_wc_conflict_description2_t *
-svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
-                   apr_pool_t *result_pool);
-
-/*
- * Convert an array of svn_wc_conflict_description3_t * elements to an
- * array of * svn_wc_conflict_description2_t * elements.
- *
- * Allocate the result in RESULT_POOL.
- */
-apr_array_header_t *
-svn_wc__cd3_array_to_cd2_array(const apr_array_header_t *conflicts,
-                               apr_pool_t *result_pool);
 
 /*
  * Convert from svn_wc_conflict_description2_t to

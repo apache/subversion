@@ -464,9 +464,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           for (j = 0; j < child_conflicts->nelts; j++)
             {
-              const svn_wc_conflict_description3_t *conflict =
+              const svn_wc_conflict_description2_t *conflict =
                 APR_ARRAY_IDX(child_conflicts, j,
-                              svn_wc_conflict_description3_t *);
+                              svn_wc_conflict_description2_t *);
 
               if (conflict->kind == svn_wc_conflict_kind_tree)
                 {
@@ -1894,13 +1894,13 @@ write_entry(struct write_baton **entry_node,
       skel = skel->children;
       while (skel)
         {
-          svn_wc_conflict_description3_t *conflict;
+          svn_wc_conflict_description2_t *conflict;
           svn_skel_t *new_skel;
           const char *key;
 
           /* *CONFLICT is allocated so it is safe to use a non-const pointer */
           SVN_ERR(svn_wc__deserialize_conflict(
-                             (const svn_wc_conflict_description3_t**)&conflict,
+                             (const svn_wc_conflict_description2_t**)&conflict,
                                                skel,
                                                svn_dirent_join(root_abspath,
                                                                local_relpath,
@@ -1911,7 +1911,7 @@ write_entry(struct write_baton **entry_node,
 
           /* Fix dubious data stored by old clients, local adds don't have
              a repository URL. */
-          if (conflict->local_change == svn_wc_conflict_reason_added)
+          if (conflict->reason == svn_wc_conflict_reason_added)
             conflict->src_left_version = NULL;
 
           SVN_ERR(svn_wc__serialize_conflict(&new_skel, conflict,

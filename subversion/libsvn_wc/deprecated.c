@@ -2735,12 +2735,8 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   if (old_status->conflicted)
     {
-      const svn_wc_conflict_description3_t *tree_conflict;
-      const svn_wc_conflict_description2_t *tree_conflict2;
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx, local_abspath,
+      SVN_ERR(svn_wc__get_tree_conflict(&(*status)->tree_conflict, wc_ctx, local_abspath,
                                         scratch_pool, scratch_pool));
-      tree_conflict2 = svn_wc__cd3_to_cd2(tree_conflict, scratch_pool);
-      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict2, result_pool);
     }
 
   (*status)->switched = old_status->switched;
@@ -4788,66 +4784,6 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                             TRUE /* show_deleted */,
                             show_hidden,
                             scratch_pool));
-}
-
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_text2(const char *local_abspath,
-                                         apr_pool_t *result_pool)
-{
-  svn_wc_conflict_description2_t *conflict;
-
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = svn_node_file;
-  conflict->kind = svn_wc_conflict_kind_text;
-  conflict->action = svn_wc_conflict_action_edit;
-  conflict->reason = svn_wc_conflict_reason_edited;
-  return conflict;
-}
-
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_prop2(const char *local_abspath,
-                                         svn_node_kind_t node_kind,
-                                         const char *property_name,
-                                         apr_pool_t *result_pool)
-{
-  svn_wc_conflict_description2_t *conflict;
-
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = node_kind;
-  conflict->kind = svn_wc_conflict_kind_property;
-  conflict->property_name = apr_pstrdup(result_pool, property_name);
-  return conflict;
-}
-
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_tree2(
-  const char *local_abspath,
-  svn_node_kind_t node_kind,
-  svn_wc_operation_t operation,
-  const svn_wc_conflict_version_t *src_left_version,
-  const svn_wc_conflict_version_t *src_right_version,
-  apr_pool_t *result_pool)
-{
-  svn_wc_conflict_description2_t *conflict;
-
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  conflict->node_kind = node_kind;
-  conflict->kind = svn_wc_conflict_kind_tree;
-  conflict->operation = operation;
-  conflict->src_left_version = svn_wc_conflict_version_dup(src_left_version,
-                                                           result_pool);
-  conflict->src_right_version = svn_wc_conflict_version_dup(src_right_version,
-                                                            result_pool);
-  return conflict;
 }
 
 svn_wc_conflict_description2_t *

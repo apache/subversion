@@ -1748,6 +1748,11 @@ svn_wc_conflict_version_t *
 svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
                             apr_pool_t *pool);
 
+
+/* Extended conflict information. */
+typedef struct svn_wc_conflict_description_private_t
+  svn_wc_conflict_description_private_t;
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.
  *
@@ -1761,13 +1766,13 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
- * svn_wc_conflict_description_create_text3() or
- * svn_wc_conflict_description_create_prop3() or
- * svn_wc_conflict_description_create_tree3() instead.
+ * svn_wc_conflict_description_create_text2() or
+ * svn_wc_conflict_description_create_prop2() or
+ * svn_wc_conflict_description_create_tree2() instead.
  *
- * @since New in 1.9.
+ * @since New in 1.7.
  */
-typedef struct svn_wc_conflict_description3_t
+typedef struct svn_wc_conflict_description2_t
 {
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *local_abspath;
@@ -1776,7 +1781,7 @@ typedef struct svn_wc_conflict_description3_t
    * For a tree conflict, this is the node kind of the tree conflict victim.
    * For the left/right node kinds of the incoming conflicting change see
    * src_left_version->node_kind and src_right_version->node_kind. */
-  svn_node_kind_t local_node_kind;
+  svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
   svn_wc_conflict_kind_t kind;
@@ -1797,7 +1802,7 @@ typedef struct svn_wc_conflict_description3_t
   /** The incoming action being attempted on the conflicted node or property.
    *  When @c kind is 'text', this action must be 'edit', but generally it can
    *  be any kind of possible change. */
-  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_action_t action;
 
   /** The local change or state of the target node or property, relative
    *  to its merge-left source, that conflicts with the incoming action.
@@ -1807,110 +1812,6 @@ typedef struct svn_wc_conflict_description3_t
    *  can be local to the target branch of a merge operation, for example,
    *  and is not necessarily visible in a working copy of the target branch
    *  at any given revision. */
-  svn_wc_conflict_reason_t local_change;
-
-  /** If this is text-conflict and involves the merging of two files
-   * descended from a common ancestor, here are the paths of up to
-   * four fulltext files that can be used to interactively resolve the
-   * conflict.
-   *
-   * @a base_abspath, @a their_abspath and @a my_abspath are absolute
-   * paths.
-   *
-   * All four files will be in repository-normal form -- Standardized LF
-   * and contracted keywords.  (If any of these files are not available
-   * they default to NULL.)
-   *
-   * On the other hand, if this is a property-conflict, then these
-   * paths represent temporary files that contain the three different
-   * property-values in conflict.  The fourth path (@c merged_file)
-   * may or may not be NULL;  if set, it represents libsvn_wc's
-   * attempt to merge the property values together.  (Remember that files
-   * and property values are technically binary values, and thus can't
-   * always be merged.)
-   */
-  const char *base_abspath;  /* common ancestor of the two files being merged */
-
-  /** their version of the file */
-  const char *their_abspath;
-
-  /** my locally-edited version of the file */
-  const char *my_abspath;
-
-  /** merged version; may contain conflict markers */
-  const char *merged_abspath;
-
-  /** For property conflicts, the path to the property reject file. */
-  const char *prop_reject_abspath;
-
-  /** The operation that exposed the conflict.
-   * Used only for tree conflicts.
-   */
-  svn_wc_operation_t operation;
-
-  /** Info on the "merge-left source" or "older" version of incoming change. */
-  const svn_wc_conflict_version_t *src_left_version;
-
-  /** Info on the "merge-right source" or "their" version of incoming change. */
-  const svn_wc_conflict_version_t *src_right_version;
-
-  /* Remember to adjust svn_wc__conflict_description3_dup()
-   * if you add new fields to this struct. */
-} svn_wc_conflict_description3_t;
-
-
-/** A struct that describes a conflict that has occurred in the
- * working copy.
- *
- * The conflict described by this structure is one of:
- *   - a conflict on the content of the file node @a local_abspath
- *   - a conflict on the property @a property_name of @a local_abspath
- *   - a tree conflict, of which @a local_abspath is the victim
- * Be aware that the victim of a tree conflict can be a non-existent node.
- * The three kinds of conflict are distinguished by @a kind.
- *
- * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, to preserve binary compatibility, users
- * should not directly allocate structures of this type but should use
- * svn_wc_conflict_description_create_text2() or
- * svn_wc_conflict_description_create_prop2() or
- * svn_wc_conflict_description_create_tree2() instead.
- *
- * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
- */
-typedef struct svn_wc_conflict_description2_t
-{
-  /** The path that is in conflict (for a tree conflict, it is the victim) */
-  const char *local_abspath;
-
-  /** The node type of the path being operated on (for a tree conflict,
-   *  ### which version?) */
-  svn_node_kind_t node_kind;
-
-  /** What sort of conflict are we describing? */
-  svn_wc_conflict_kind_t kind;
-
-  /** The name of the property whose conflict is being described.
-   *  (Only if @a kind is 'property'; else undefined.) */
-  const char *property_name;
-
-  /** Whether svn thinks ('my' version of) @c path is a 'binary' file.
-   *  (Only if @c kind is 'text', else undefined.) */
-  svn_boolean_t is_binary;
-
-  /** The svn:mime-type property of ('my' version of) @c path, if available,
-   *  else NULL.
-   *  (Only if @c kind is 'text', else undefined.) */
-  const char *mime_type;
-
-  /** The action being attempted on the conflicted node or property.
-   *  (When @c kind is 'text', this action must be 'edit'.) */
-  svn_wc_conflict_action_t action;
-
-  /** The state of the target node or property, relative to its merge-left
-   *  source, that is the reason for the conflict.
-   *  (When @c kind is 'text', this reason must be 'edited'.) */
   svn_wc_conflict_reason_t reason;
 
   /** If this is text-conflict and involves the merging of two files
@@ -1945,7 +1846,8 @@ typedef struct svn_wc_conflict_description2_t
   /** my locally-edited version of the file */
   const char *my_abspath;
 
-  /** merged version; may contain conflict markers */
+  /** merged version; may contain conflict markers
+   * ### For property conflicts, this contains 'their_abspath'. */
   const char *merged_file;
 
   /** The operation that exposed the conflict.
@@ -1959,8 +1861,11 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* Remember to adjust svn_wc_conflict_description2_dup()
-   * if you add new fields to this struct. */
+  /* Extended conflict information. */
+  svn_wc_conflict_description_private_t *priv;
+
+  /* Instead of adding new fields here, add new fields to the above
+   * 'priv' structure and provide accesstor functions for them. */
 } svn_wc_conflict_description2_t;
 
 
@@ -2056,7 +1961,7 @@ typedef struct svn_wc_conflict_description_t
 } svn_wc_conflict_description_t;
 
 /**
- * Allocate an #svn_wc_conflict_description3_t structure in @a result_pool,
+ * Allocate an #svn_wc_conflict_description2_t structure in @a result_pool,
  * initialize to represent a text conflict, and return it.
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
@@ -2068,19 +1973,8 @@ typedef struct svn_wc_conflict_description_t
  * @note It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c mime_type and @c is_binary).
  *
- * @since New in 1.9.
- */
-svn_wc_conflict_description3_t *
-svn_wc_conflict_description_create_text3(const char *local_abspath,
-                                         apr_pool_t *result_pool);
-
-/** Similar to svn_wc_conflict_description_create_text3(), but returns
- * an svn_wc_conflict_description2_t *.
- *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
-SVN_DEPRECATED
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_text2(const char *local_abspath,
                                          apr_pool_t *result_pool);
@@ -2099,7 +1993,7 @@ svn_wc_conflict_description_create_text(const char *path,
                                         apr_pool_t *pool);
 
 /**
- * Allocate an #svn_wc_conflict_description3_t structure in @a result_pool,
+ * Allocate an #svn_wc_conflict_description2_t structure in @a result_pool,
  * initialize to represent a property conflict, and return it.
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
@@ -2110,21 +2004,8 @@ svn_wc_conflict_description_create_text(const char *path,
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
  *
- * @since New in 1.9.
- */
-svn_wc_conflict_description3_t *
-svn_wc_conflict_description_create_prop3(const char *local_abspath,
-                                         svn_node_kind_t node_kind,
-                                         const char *property_name,
-                                         apr_pool_t *result_pool);
-
-/** Similar to svn_wc_conflict_description_create_prop3(), but returns
- * an svn_wc_conflict_description2_t *.
- *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
-SVN_DEPRECATED
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_prop2(const char *local_abspath,
                                          svn_node_kind_t node_kind,
@@ -2146,7 +2027,7 @@ svn_wc_conflict_description_create_prop(const char *path,
                                         apr_pool_t *pool);
 
 /**
- * Allocate an #svn_wc_conflict_description_t structure in @a pool,
+ * Allocate an #svn_wc_conflict_description2_t structure in @a pool,
  * initialize to represent a tree conflict, and return it.
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
@@ -2159,24 +2040,8 @@ svn_wc_conflict_description_create_prop(const char *path,
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
  *
- * @since New in 1.9.
- */
-svn_wc_conflict_description3_t *
-svn_wc_conflict_description_create_tree3(
-  const char *local_abspath,
-  svn_node_kind_t local_node_kind,
-  svn_wc_operation_t operation,
-  const svn_wc_conflict_version_t *src_left_version,
-  const svn_wc_conflict_version_t *src_right_version,
-  apr_pool_t *result_pool);
-
-/** Similar to svn_wc_conflict_description_create_tree3(), but returns
- * an svn_wc_conflict_description2_t *.
- *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
-SVN_DEPRECATED
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description_create_tree2(
   const char *local_abspath,
@@ -2208,18 +2073,7 @@ svn_wc_conflict_description_create_tree(
 /** Return a duplicate of @a conflict, allocated in @a result_pool.
  * A deep copy of all members will be made.
  *
- * @since New in 1.9.
- */
-svn_wc_conflict_description3_t *
-svn_wc__conflict_description3_dup(
-  const svn_wc_conflict_description3_t *conflict,
-  apr_pool_t *result_pool);
-
-
-/** Return a duplicate of @a conflict, allocated in @a result_pool.
- * A deep copy of all members will be made.
- *
- * @since New in 1.9.
+ * @since New in 1.7.
  */
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description2_dup(
@@ -2231,7 +2085,6 @@ svn_wc_conflict_description2_dup(
  * as a private function when it is intended to be a public API.
  *
  * @since New in 1.7.
- *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED
@@ -2344,21 +2197,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * of conflicts are automatically resolvable and which require user
  * interaction.
  *
- * @since New in 1.9.
- */
-typedef svn_error_t *(*svn_wc_conflict_resolver_func3_t)(
-  svn_wc_conflict_result_t **result,
-  const svn_wc_conflict_description3_t *description,
-  void *baton,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
-
-
-/** Similar to #svn_wc_conflict_resolver_func3_t, but expects an
- * svn_wc_conflict_description2_t description.
- *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)(
   svn_wc_conflict_result_t **result,
@@ -3375,11 +3214,6 @@ typedef struct svn_wc_info_t
   /** The path the node was moved to, if it was moved away. Else NULL.
    * @since New in 1.8. */
   const char *moved_to_abspath;
-
-  /** Array of const svn_wc_conflict_description3_t * which contains info
-   * on any conflict of which this node is a victim. Otherwise NULL. 
-   * @since New in 1.9. */
-  const apr_array_header_t *conflicts2;
 } svn_wc_info_t;
 
 /**
