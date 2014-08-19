@@ -1968,10 +1968,14 @@ context_saver_stream_write(void *baton,
                            apr_size_t *len)
 {
   context_saver_t *cs = baton;
-  cs->data[cs->next_slot] = data;
-  cs->len[cs->next_slot] = *len;
-  cs->next_slot = (cs->next_slot + 1) % cs->context_size;
-  cs->total_written++;
+
+  if (cs->context_size > 0)
+    {
+      cs->data[cs->next_slot] = data;
+      cs->len[cs->next_slot] = *len;
+      cs->next_slot = (cs->next_slot + 1) % cs->context_size;
+      cs->total_written++;
+    }
   return SVN_NO_ERROR;
 }
 
