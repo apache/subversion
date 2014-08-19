@@ -623,39 +623,6 @@ size_buffer(char **buf, apr_size_t *buf_size,
   return SVN_NO_ERROR;
 }
 
-/* Copy LEN bytes from SOURCE to TARGET, optimizing for the case where LEN
- * is often very small.  Return a pointer to the first byte after the copied
- * target range, unlike standard memcpy(), as a potential further
- * optimization for the caller.
- *
- * memcpy() is hard to tune for a wide range of buffer lengths.  Therefore,
- * it is often tuned for high throughput on large buffers and relatively
- * low latency for mid-sized buffers (tens of bytes).  However, the overhead
- * for very small buffers (<10 bytes) is still high.  Even passing the
- * parameters, for instance, may take as long as copying 3 bytes.
- *
- * Because short copy sequences seem to be a common case, at least in
- * "format 2" FSFS repositories, we copy them directly.  Larger buffer sizes
- * aren't hurt measurably by the exta 'if' clause.  */
-static APR_INLINE char *
-fast_memcpy(char *target, const char *source, apr_size_t len)
-{
-  if (len > 7)
-    {
-      memcpy(target, source, len);
-      target += len;
-    }
-  else
-    {
-      /* memcpy is not exactly fast for small block sizes.
-       * Since they are common, let's run optimized code for them. */
-      while (len--)
-        *target++ = *source++;
-    }
-
-  return target;
-}
-
 /* Copy LEN bytes from SOURCE to TARGET.  Unlike memmove() or memcpy(),
  * create repeating patterns if the source and target ranges overlap.
  * Return a pointer to the first byte after the copied target range.  */
@@ -670,13 +637,13 @@ patterning_copy(char *target, const char *source, apr_size_t len)
   const apr_size_t overlap = target - source;
   while (len > overlap)
     {
-      target = fast_memcpy(target, source, overlap);
+      target = memcpy(target, source, overlap);
       len -= overlap;
     }
 
   /* Copy any remaining source pattern. */
   if (len)
-    target = fast_memcpy(target, source, len);
+    target = memcpy(target, source, len);
 
   return target;
 }
@@ -703,7 +670,7 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
           /* Copy from source area.  */
           assert(sbuf);
           assert(op->offset + op->length <= window->sview_len);
-          fast_memcpy(tbuf + tpos, sbuf + op->offset, buf_len);
+          memcpy(tbuf + tpos, sbuf + op->offset, buf_len);
           break;
 
         case svn_txdelta_target:
@@ -720,9 +687,9 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
         case svn_txdelta_new:
           /* Copy from window new area.  */
           assert(op->offset + op->length <= window->new_data->len);
-          fast_memcpy(tbuf + tpos,
-                      window->new_data->data + op->offset,
-                      buf_len);
+          memcpy(tbuf + tpos,
+                 window->new_data->data + op->offset,
+                 buf_len);
           break;
 
         default:
