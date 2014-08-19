@@ -706,8 +706,30 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_separator is @c NULL, a default marker will be displayed.
  * @a conflict_style dictates how conflicts are displayed.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_diff_file_output_merge3(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t conflict_style,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+/** Similar to svn_diff_file_output_merge3, but without cancel support.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_merge2(svn_stream_t *output_stream,
                             svn_diff_t *diff,

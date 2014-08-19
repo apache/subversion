@@ -204,6 +204,8 @@ show_diff(const svn_wc_conflict_description3_t *desc,
  * and 'my' files of DESC. */
 static svn_error_t *
 show_conflicts(const svn_wc_conflict_description3_t *desc,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -220,7 +222,7 @@ show_conflicts(const svn_wc_conflict_description3_t *desc,
                                 options, pool));
   /* ### Consider putting the markers/labels from
      ### svn_wc__merge_internal in the conflict description. */
-  return svn_diff_file_output_merge2(output, diff,
+  return svn_diff_file_output_merge3(output, diff,
                                      desc->base_abspath,
                                      desc->my_abspath,
                                      desc->their_abspath,
@@ -229,6 +231,8 @@ show_conflicts(const svn_wc_conflict_description3_t *desc,
                                      _(">>>>>>> THEIRS (select with 'tc')"),
                                      "=======",
                                      svn_diff_conflict_display_only_conflicts,
+                                     cancel_func,
+                                     cancel_baton,
                                      pool);
 }
 
@@ -244,6 +248,8 @@ static svn_error_t *
 merge_prop_conflict(svn_stream_t *output,
                     const svn_wc_conflict_description3_t *desc,
                     const char *merged_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *pool)
 {
   const char *base_abspath = desc->base_abspath;
@@ -275,7 +281,7 @@ merge_prop_conflict(svn_stream_t *output,
                                 merged_abspath ? merged_abspath : my_abspath,
                                 their_abspath,
                                 options, pool));
-  SVN_ERR(svn_diff_file_output_merge2(output, diff,
+  SVN_ERR(svn_diff_file_output_merge3(output, diff,
                                       base_abspath,
                                       merged_abspath ? merged_abspath
                                                      : my_abspath,
@@ -285,6 +291,8 @@ merge_prop_conflict(svn_stream_t *output,
                                       _(">>>>>>> THEIRS"),
                                       "=======",
                                       svn_diff_conflict_display_modified_original_latest,
+                                      cancel_func,
+                                      cancel_baton,
                                       pool));
 
   return SVN_NO_ERROR;
@@ -300,12 +308,15 @@ merge_prop_conflict(svn_stream_t *output,
 static svn_error_t *
 show_prop_conflict(const svn_wc_conflict_description3_t *desc,
                    const char *merged_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_stream_t *output;
 
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath, pool));
+  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath,
+                              cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -374,7 +385,10 @@ edit_prop_conflict(const char **merged_file_path,
                                    result_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
-  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
+  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL,
+                              b->pb->cancel_func,
+                              b->pb->cancel_baton,
+                              scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
@@ -778,7 +792,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                             "files not available.\n\n")));
               continue;
             }
-          SVN_ERR(show_conflicts(desc, iterpool));
+          SVN_ERR(show_conflicts(desc,
+                                 b->pb->cancel_func,
+                                 b->pb->cancel_baton,
+                                 iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "df") == 0)
@@ -1020,7 +1037,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(desc, merged_file_path, scratch_pool));
+          SVN_ERR(show_prop_conflict(desc, merged_file_path,
+                                     b->pb->cancel_func, b->pb->cancel_baton,
+                                     scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
