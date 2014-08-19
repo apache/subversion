@@ -27,9 +27,9 @@
 
 #include "private/svn_sorts_private.h"
 
-#include "../../../subversion/libsvn_fs_fs/index.h"
-#include "../../../subversion/libsvn_fs_fs/transaction.h"
-#include "../../../subversion/libsvn_fs_fs/util.h"
+#include "../libsvn_fs_fs/index.h"
+#include "../libsvn_fs_fs/transaction.h"
+#include "../libsvn_fs_fs/util.h"
 
 #include "svn_private_config.h"
 

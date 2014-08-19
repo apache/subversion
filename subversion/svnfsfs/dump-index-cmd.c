@@ -23,11 +23,11 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 
-#include "../../../subversion/libsvn_fs_fs/fs.h"
-#include "../../../subversion/libsvn_fs_fs/index.h"
-#include "../../../subversion/libsvn_fs_fs/rev_file.h"
-#include "../../../subversion/libsvn_fs_fs/util.h"
-#include "../../../subversion/libsvn_fs/fs-loader.h"
+#include "../libsvn_fs_fs/fs.h"
+#include "../libsvn_fs_fs/index.h"
+#include "../libsvn_fs_fs/rev_file.h"
+#include "../libsvn_fs_fs/util.h"
+#include "../libsvn_fs/fs-loader.h"
 
 #include "svnfsfs.h"
 
