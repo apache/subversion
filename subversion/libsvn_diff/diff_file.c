@@ -2344,7 +2344,7 @@ output_conflict(void *baton,
 }
 
 svn_error_t *
-svn_diff_file_output_merge2(svn_stream_t *output_stream,
+svn_diff_file_output_merge3(svn_stream_t *output_stream,
                             svn_diff_t *diff,
                             const char *original_path,
                             const char *modified_path,
@@ -2354,6 +2354,8 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
                             const char *conflict_latest,
                             const char *conflict_separator,
                             svn_diff_conflict_display_style_t style,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool)
 {
   svn_diff3__file_output_baton_t baton;
@@ -2425,8 +2427,9 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
     eol = APR_EOL_STR;
   baton.marker_eol = eol;
 
-  SVN_ERR(svn_diff_output(diff, &baton,
-                          &svn_diff3__file_output_vtable));
+  SVN_ERR(svn_diff_output2(diff, &baton,
+                          &svn_diff3__file_output_vtable,
+                          cancel_func, cancel_baton));
 
   for (idx = 0; idx < 3; idx++)
     {

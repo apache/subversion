@@ -271,6 +271,31 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                                      pool);
 }
 
+svn_error_t *
+svn_diff_file_output_merge2(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t conflict_style,
+                            apr_pool_t *pool)
+{
+  return svn_error_trace(svn_diff_file_output_merge3(output_stream,
+                                                     diff, original_path,
+                                                     modified_path,
+                                                     latest_path,
+                                                     conflict_original,
+                                                     conflict_modified,
+                                                     conflict_latest,
+                                                     conflict_separator,
+                                                     conflict_style,
+                                                     NULL, NULL, /* cancel */
+                                                     pool));
+}
 
 /*** From diff.c ***/
 svn_error_t *

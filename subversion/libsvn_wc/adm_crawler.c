@@ -91,7 +91,8 @@ restore_file(svn_wc__db_t *db,
 
   /* Remove any text conflict */
   if (mark_resolved_text_conflict)
-    SVN_ERR(svn_wc__mark_resolved_text_conflict(db, local_abspath, scratch_pool));
+    SVN_ERR(svn_wc__mark_resolved_text_conflict(db, local_abspath, NULL, NULL,
+                                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
