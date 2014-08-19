@@ -496,6 +496,21 @@ svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes)
   str->data[str->len] = '\0';
 }
 
+void
+svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes)
+{
+  if (nbytes > str->len)
+    str->len = 0;
+  else
+    {
+      /* Note: This will irretrievably waste nbytes of space in the
+         stringbuf's pool, but unlike the alternative of memmoving the
+         data, it's a constant-time operation. */
+      str->data += nbytes;
+      str->len -= nbytes;
+      str->blocksize -= nbytes;
+    }
+}
 
 svn_boolean_t
 svn_stringbuf_isempty(const svn_stringbuf_t *str)
