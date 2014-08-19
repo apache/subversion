@@ -69,6 +69,8 @@ restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
              svn_boolean_t mark_resolved_text_conflict,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
@@ -86,12 +88,13 @@ restore_file(svn_wc__db_t *db,
 
   /* Run the work item immediately.  */
   SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                         NULL, NULL, /* ### nice to have cancel_func/baton */
+                         cancel_func, cancel_baton,
                          scratch_pool));
 
   /* Remove any text conflict */
   if (mark_resolved_text_conflict)
-    SVN_ERR(svn_wc__mark_resolved_text_conflict(db, local_abspath, NULL, NULL,
+    SVN_ERR(svn_wc__mark_resolved_text_conflict(db, local_abspath,
+                                                cancel_func, cancel_baton,
                                                 scratch_pool));
 
   return SVN_NO_ERROR;
@@ -103,6 +106,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                svn_boolean_t use_commit_times,
                apr_pool_t *scratch_pool)
 {
+  /* ### If ever revved: Add cancel func. */
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
   svn_node_kind_t disk_kind;
@@ -139,6 +143,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   if (kind == svn_node_file || kind == svn_node_symlink)
     SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times,
                          FALSE /*mark_resolved_text_conflict*/,
+                         NULL, NULL /* cancel func, baton */,
                          scratch_pool));
   else
     SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
@@ -158,6 +163,8 @@ restore_node(svn_wc__db_t *db,
              const char *local_abspath,
              svn_node_kind_t kind,
              svn_boolean_t use_commit_times,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
              apr_pool_t *scratch_pool)
@@ -167,6 +174,7 @@ restore_node(svn_wc__db_t *db,
       /* Recreate file from text-base; mark any text conflict as resolved */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
                            TRUE /*mark_resolved_text_conflict*/,
+                           cancel_func, cancel_baton,
                            scratch_pool));
     }
   else if (kind == svn_node_dir)
@@ -400,8 +408,9 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   SVN_ERR(restore_node(db, this_abspath, wrk_kind,
-                                       use_commit_times, notify_func,
-                                       notify_baton, iterpool));
+                                       use_commit_times,
+                                       cancel_func, cancel_baton,
+                                       notify_func, notify_baton, iterpool));
                 }
             }
         }
@@ -735,6 +744,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
                                wrk_kind, use_commit_times,
+                               cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));
         }
