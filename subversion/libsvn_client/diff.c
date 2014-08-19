@@ -511,6 +511,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
             TRUE /* pretty_print_mergeinfo */,
+            -1 /* context_size */,
             cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;

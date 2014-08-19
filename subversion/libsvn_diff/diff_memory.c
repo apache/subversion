@@ -619,6 +619,7 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     const char *header_encoding,
                                     const svn_string_t *original,
                                     const svn_string_t *modified,
+                                    int context_size,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
                                     apr_pool_t *pool)
@@ -638,7 +639,8 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
         = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
           ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
           : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
-      baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      baton.context_size = context_size >= 0 ? context_size
+                                             : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",

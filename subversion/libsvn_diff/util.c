@@ -516,6 +516,7 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *original_props,
                              svn_boolean_t pretty_print_mergeinfo,
+                             int context_size,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool)
@@ -604,7 +605,8 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
          * We also suppress the diff header. */
         SVN_ERR(svn_diff_mem_string_output_unified3(
                   outstream, diff, FALSE /* no header */, "##", NULL, NULL,
-                  encoding, orig, val, cancel_func, cancel_baton, iterpool));
+                  encoding, orig, val, context_size,
+                  cancel_func, cancel_baton, iterpool));
       }
     }
   svn_pool_destroy(iterpool);
