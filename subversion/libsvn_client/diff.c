@@ -440,6 +440,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    svn_boolean_t show_diff_header,
                    svn_boolean_t use_git_diff_format,
                    const char *ra_session_relpath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    svn_wc_context_t *wc_ctx,
                    apr_pool_t *scratch_pool)
 {
@@ -508,7 +510,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
-            TRUE /* pretty_print_mergeinfo */, scratch_pool));
+            TRUE /* pretty_print_mergeinfo */,
+            cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -636,6 +639,8 @@ diff_props_changed(const char *diff_relpath,
                                  show_diff_header,
                                  dwi->use_git_diff_format,
                                  dwi->ddi.session_relpath,
+                                 dwi->cancel_func,
+                                 dwi->cancel_baton,
                                  dwi->wc_ctx,
                                  scratch_pool));
     }

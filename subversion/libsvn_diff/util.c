@@ -516,6 +516,8 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
                              const apr_array_header_t *propchanges,
                              apr_hash_t *original_props,
                              svn_boolean_t pretty_print_mergeinfo,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool = scratch_pool;
@@ -600,9 +602,9 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
          * We also suppress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(
+        SVN_ERR(svn_diff_mem_string_output_unified3(
                   outstream, diff, FALSE /* no header */, "##", NULL, NULL,
-                  encoding, orig, val, iterpool));
+                  encoding, orig, val, cancel_func, cancel_baton, iterpool));
       }
     }
   svn_pool_destroy(iterpool);
