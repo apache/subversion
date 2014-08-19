@@ -1292,7 +1292,7 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/A]"                                                             NL
     "* = r"                                                                  NL
-    "plato = w"                                                              NL
+    "plato = rw"                                                             NL
     ""                                                                       NL
     "[greek:/iota]"                                                          NL
     "* ="                                                                    NL
@@ -1393,19 +1393,19 @@ authz(apr_pool_t *pool)
 
   /* The authz rules for the phase 5 tests */
   contents =
-    "[greek:*/A/*/G]"                                                        NL
+    "[:glob:greek:/A/*/G]"                                                   NL
     "* ="                                                                    NL
     ""                                                                       NL
-    "[greek:*/A/**/*a*]"                                                     NL
+    "[:glob:greek:/A/**/*a*]"                                                NL
     "* = r"                                                                  NL
     ""                                                                       NL
-    "[greek:*/**/*a]"                                                        NL
-    "* = w"                                                                  NL
+    "[:glob:greek:/**/*a]"                                                   NL
+    "* = rw"                                                                 NL
     ""                                                                       NL
-    "[greek:*/A/**/g*]"                                                      NL
+    "[:glob:greek:/A/**/g*]"                                                 NL
     "* ="                                                                    NL
     ""                                                                       NL
-    "[greek:*/**/lambda]"                                                    NL
+    "[:glob:greek:/**/lambda]"                                               NL
     "* = rw"                                                                 NL;
 
   /* Load the test authz rules. */
@@ -1882,7 +1882,7 @@ groups_authz(const svn_test_opts_t *opts,
 
   SVN_ERR(authz_check_access(authz_cfg, test_set1, pool));
 
-  /* Access rights in the global groups file are discarded. */
+  /* Access rights in the global groups file are forbidden. */
   groups_contents =
     "[groups]"                                                               NL
     "philosophers = socrates"                                                NL
@@ -1896,15 +1896,10 @@ groups_authz(const svn_test_opts_t *opts,
     "@philosophers = rw"                                                     NL
     ""                                                                       NL;
 
-  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
-                                  groups_contents, TRUE, pool));
-
-  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
-
-  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
-                                  groups_contents, FALSE, pool));
-
-  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
+  SVN_TEST_ASSERT_ERROR(
+      authz_groups_get_handle(&authz_cfg, authz_contents,
+                              groups_contents, TRUE, pool),
+      SVN_ERR_AUTHZ_INVALID_CONFIG);
 
   /* Local groups cannot be used in conjunction with global groups. */
   groups_contents =
