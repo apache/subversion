@@ -720,6 +720,10 @@ typedef struct merge_output_baton_t
   svn_diff_conflict_display_style_t conflict_style;
   int context_size;
 
+  /* cancel support */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
   /* The rest of the fields are for
      svn_diff_conflict_display_only_conflicts only.  Note that for
      these batons, OUTPUT_STREAM is either CONTEXT_SAVER->STREAM or
@@ -904,7 +908,8 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
       if (diff)
-        return svn_diff_output(diff, baton, &merge_output_vtable);
+        return svn_diff_output2(diff, baton, &merge_output_vtable,
+                                btn->cancel_func, btn->cancel_baton);
       else
         style = svn_diff_conflict_display_modified_latest;
     }
@@ -1096,6 +1101,8 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
     eol = APR_EOL_STR;  /* use the platform default */
 
   btn.marker_eol = eol;
+  btn.cancel_func = cancel_func;
+  btn.cancel_baton = cancel_baton;
 
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[1],
                                     conflict_modified
