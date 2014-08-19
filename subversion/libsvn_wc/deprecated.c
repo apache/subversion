@@ -2735,8 +2735,10 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   if (old_status->conflicted)
     {
-      SVN_ERR(svn_wc__get_tree_conflict(&(*status)->tree_conflict, wc_ctx, local_abspath,
+      const svn_wc_conflict_description2_t *tree_conflict2;
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict2, wc_ctx, local_abspath,
                                         scratch_pool, scratch_pool));
+      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict2, result_pool);
     }
 
   (*status)->switched = old_status->switched;
