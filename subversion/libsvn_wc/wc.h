@@ -676,7 +676,7 @@ svn_wc__write_check(svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
 
-/* Read into CONFLICTS svn_wc_conflict_description3_t* structs
+/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
  * for all conflicts that have LOCAL_ABSPATH as victim.
  *
  * Victim must be versioned or be part of a tree conflict.
