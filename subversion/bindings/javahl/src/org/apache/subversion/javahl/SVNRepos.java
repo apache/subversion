@@ -122,22 +122,22 @@ public class SVNRepos implements ISVNRepos
                             boolean useDeltas, ReposNotifyCallback callback)
             throws ClientException;
 
-    /**
-     * make a hot copy of the repository
-     * @param path              the path to the source repository
-     * @param targetPath        the path to the target repository
-     * @param cleanLogs         clean the unused log files in the source
-     *                          repository
-     * @throws ClientException  throw in case of problem
-     */
     public native void hotcopy(File path, File targetPath,
-                               boolean cleanLogs, boolean incremental)
+                               boolean cleanLogs, boolean incremental,
+                               ReposNotifyCallback callback)
             throws ClientException;
+
+    public void hotcopy(File path, File targetPath,
+                        boolean cleanLogs, boolean incremental)
+            throws ClientException
+    {
+        hotcopy(path, targetPath, cleanLogs, incremental, null);
+    }
 
     public void hotcopy(File path, File targetPath,
                         boolean cleanLogs) throws ClientException
     {
-        hotcopy(path, targetPath, cleanLogs, false);
+        hotcopy(path, targetPath, cleanLogs, false, null);
     }
 
     /**

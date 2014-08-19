@@ -97,7 +97,7 @@ public interface ISVNRepos {
 	 * @param end               the last revision to be dumped
 	 * @param incremental       the dump will be incremantal
 	 * @param useDeltas         the dump will contain deltas between nodes
-     * @param callback          the callback to receive notifications
+         * @param callback          the callback to receive notifications
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract void dump(File path, OutputStream dataOut,
@@ -111,10 +111,18 @@ public interface ISVNRepos {
 	 * @param targetPath        the path to the target repository
 	 * @param cleanLogs         clean the unused log files in the source
 	 *                          repository
+         * @param callback          the callback to receive notifications
 	 * @throws ClientException  throw in case of problem
+         * @since 1.9
 	 */
 	public abstract void hotcopy(File path, File targetPath,
-			boolean cleanLogs, boolean incremental) throws ClientException;
+                        boolean cleanLogs, boolean incremental,
+                        ReposNotifyCallback callback)
+                        throws ClientException;
+
+	public abstract void hotcopy(File path, File targetPath,
+			boolean cleanLogs, boolean incremental)
+                        throws ClientException;
 
 	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
