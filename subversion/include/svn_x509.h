@@ -79,14 +79,21 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
                       apr_pool_t *scratch_pool);
 
 /**
- * Returns the subject name from @a certinfo.
+ * Returns the subject DN from @a certinfo.
  * @since New in 1.9.
  */
 const char *
 svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo);
 
 /**
- * Returns the cerficiate issuer name from @a certinfo.
+ * Returns the subject CN from @a certinfo.
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_certinfo_get_subject_cn(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the cerficiate issuer DN from @a certinfo.
  * @since New in 1.9.
  */
 const char *
