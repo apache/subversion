@@ -70,7 +70,7 @@ svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo)
 }
 
 const char *
-svn-x509_certinfo_get_subject_cn(const svn_x509_certinfo_t *certinfo)
+svn_x509_certinfo_get_subject_cn(const svn_x509_certinfo_t *certinfo)
 {
   return certinfo->subject_cn;
 }
