@@ -396,6 +396,7 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                                                              header_encoding,
                                                              original,
                                                              modified,
+                                                             -1 /* context */,
                                                              /* cancel */
                                                              NULL, NULL,
                                                              pool));

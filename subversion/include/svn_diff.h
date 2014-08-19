@@ -831,6 +831,10 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * final line use the text "\ No newline at end of property" instead of
  * "\ No newline at end of file".
  *
+ * If @a context_size is not negative, then this number of context lines
+ * will be used in the generated diff output. Otherwise the legacy compile
+ * time default will be used.
+ *
  * @since New in 1.9
  */
 svn_error_t *
@@ -843,12 +847,13 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     const char *header_encoding,
                                     const svn_string_t *original,
                                     const svn_string_t *modified,
+                                    int context_size,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
                                     apr_pool_t *pool);
 
 /** Similar to svn_diff_mem_string_output_unified3() but without
- * cancel support.
+ * cancel support and with @a context_size set to -1.
  *
  * @since New in 1.7. Hunk delimiter "##" has the special meaning since 1.8.
  *

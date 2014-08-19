@@ -811,7 +811,9 @@ display_prop_diffs(svn_stream_t *outstream,
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
-            FALSE /* pretty_print_mergeinfo */, check_cancel, NULL, pool));
+            FALSE /* pretty_print_mergeinfo */,
+            -1 /* context_size */,
+            check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
