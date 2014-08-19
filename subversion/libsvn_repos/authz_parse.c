@@ -1005,3 +1005,17 @@ svn_authz__tng_parse(svn_authz_tng_t **authz,
   apr_pool_destroy(cb->parser_pool);
   return SVN_NO_ERROR;
 }
+
+
+void
+svn_authz__reverse_string(char *string, apr_size_t len)
+{
+  char *left = string;
+  char *right = string + len - 1;
+  for (; left < right; ++left, --right)
+    {
+      char c = *left;
+      *left = *right;
+      *right = c;
+    }
+}

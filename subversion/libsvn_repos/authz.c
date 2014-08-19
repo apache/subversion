@@ -55,21 +55,6 @@ set_add_string(apr_hash_t *set,
   apr_hash_set(set, key, strlen(key), "");
 }
 
-/* In situ reversal of the first LEN chars in S.
- * S must be at least LEN  characters long.
- */
-static void
-reverse_string(char *s,
-               apr_size_t len)
-{
-  char *lhs, *rhs;
-  for (lhs = s, rhs = s + len - 1; lhs < rhs; ++lhs, --rhs)
-    {
-      char c = *lhs;
-      *lhs = *rhs;
-      *rhs = c;
-    }
-}
 
 
 /*** Users, aliases and groups. ***/
@@ -464,7 +449,7 @@ insert_path(node_t *node,
       else if (is_suffix_segment(segment))
         {
           char *reversed = apr_pstrdup(scratch_pool, segment + 1);
-          reverse_string(reversed, strlen(reversed));
+          svn_authz__reverse_string(reversed, strlen(reversed));
           sub_node = ensure_node_in_array(&node->pattern_sub_nodes->suffixes,
                                           reversed, result_pool);
         }
@@ -1032,7 +1017,7 @@ lookup(lookup_state_t *state,
               if (node->pattern_sub_nodes->suffixes)
                 {
                   /* Suffixes behave like reversed prefixes. */
-                  reverse_string(segment->data, segment->len);
+                  svn_authz__reverse_string(segment->data, segment->len);
                   add_prefix_matches(state, segment,
                                      node->pattern_sub_nodes->suffixes);
                 }
