@@ -1959,7 +1959,7 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* Remember to adjust svn_wc__conflict_description2_dup()
+  /* Remember to adjust svn_wc_conflict_description2_dup()
    * if you add new fields to this struct. */
 } svn_wc_conflict_description2_t;
 
@@ -2216,10 +2216,22 @@ svn_wc__conflict_description3_dup(
   apr_pool_t *result_pool);
 
 
-/** Like svn_wc__conflict_description3_dup(), but duplicates objects
- * of type svn_wc_conflict_description2_t.
+/** Return a duplicate of @a conflict, allocated in @a result_pool.
+ * A deep copy of all members will be made.
+ *
+ * @since New in 1.9.
+ */
+svn_wc_conflict_description2_t *
+svn_wc_conflict_description2_dup(
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool);
+
+
+/** Like svn_wc_conflict_description2_dup(), but is improperly named
+ * as a private function when it is intended to be a public API.
  *
  * @since New in 1.7.
+ *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED

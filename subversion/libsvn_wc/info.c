@@ -52,7 +52,7 @@ svn_wc_info_dup(const svn_wc_info_t *info,
       for (i = 0; i < info->conflicts->nelts; i++)
         {
           APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description2_t *)
-            = svn_wc__conflict_description2_dup(
+            = svn_wc_conflict_description2_dup(
                 APR_ARRAY_IDX(info->conflicts, i,
                               const svn_wc_conflict_description2_t *),
                 pool);
