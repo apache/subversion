@@ -291,8 +291,7 @@ print_status(const char *target_abspath,
 
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                            &desc, svn_wc__cd3_to_cd2(tree_conflict, pool),
-                            pool));
+                            &desc, tree_conflict, pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
         }

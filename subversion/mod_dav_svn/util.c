@@ -177,10 +177,10 @@ get_last_history_rev(svn_revnum_t *revision,
   const char *ignored;
 
   /* Get an initial HISTORY baton. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, pool, pool));
 
   /* Now get the first *real* point of interesting history. */
-  SVN_ERR(svn_fs_history_prev(&history, history, FALSE, pool));
+  SVN_ERR(svn_fs_history_prev2(&history, history, FALSE, pool, pool));
 
   /* Fetch the location information for this history step. */
   return svn_fs_history_location(&ignored, revision, history, pool);

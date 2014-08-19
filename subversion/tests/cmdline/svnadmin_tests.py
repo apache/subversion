@@ -106,6 +106,20 @@ def check_hotcopy_fsfs_fsx(src, dst):
           raise svntest.Failure("%s does not exist in hotcopy "
                                 "destination" % dst_path)
 
+        # Special case for db/uuid: Only the UUID in the first line needs
+        # to match. Source and target must have the same number of lines
+        # (due to having the same format).
+        if src_path == os.path.join(src, 'db', 'uuid'):
+          lines1 = open(src_path, 'rb').read().split("\n")
+          lines2 = open(dst_path, 'rb').read().split("\n")
+          if len(lines1) != len(lines2):
+            raise svntest.Failure("%s differs in number of lines"
+                                  % dst_path)
+          if lines1[0] != lines2[0]:
+            raise svntest.Failure("%s contains different uuid: '%s' vs. '%s'"
+                                   % (dst_path, lines1[0], lines2[0]))
+          continue
+
         # Special case for rep-cache: It will always differ in a byte-by-byte
         # comparison, so compare db tables instead.
         if src_file == 'rep-cache.db':
@@ -122,7 +136,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
           for i in range(len(rows1)):
             if rows1[i] != rows2[i]:
               raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
-                                    % (row, rows1[i]))
+                                    % (i, rows1[i], rows2[i]))
           continue
 
         # Special case for revprop-generation: It will always be zero in
@@ -213,7 +227,7 @@ def get_txns(repo_dir):
 
   return txns
 
-def write_sharded_format(repo_dir, shards):
+def patch_format(repo_dir, shard_size):
   """Rewrite the format of the FSFS or FSX repository REPO_DIR so
   that it would use sharding with SHARDS revisions per shard."""
 
@@ -223,7 +237,7 @@ def write_sharded_format(repo_dir, shards):
 
   for line in contents.split("\n"):
     if line.startswith("layout "):
-      processed_lines.append("layout sharded %d" % shards)
+      processed_lines.append("layout sharded %d" % shard_size)
     else:
       processed_lines.append(line)
 
@@ -1851,7 +1865,7 @@ def hotcopy_incremental_packed(sbox):
 
   # Configure two files per shard to trigger packing.
   sbox.build()
-  write_sharded_format(sbox.repo_dir, 2)
+  patch_format(sbox.repo_dir, shard_size=2)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
@@ -2502,7 +2516,7 @@ def verify_packed(sbox):
 
   # Configure two files per shard to trigger packing.
   sbox.build()
-  write_sharded_format(sbox.repo_dir, 2)
+  patch_format(sbox.repo_dir, shard_size=2)
 
   # Play with our greek tree.  These changesets fall into two
   # separate shards with r2 and r3 being in shard 1 ...
@@ -2569,8 +2583,19 @@ def freeze_freeze(sbox):
   second_repo_dir, _ = sbox.add_repo_path('backup')
   svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
                                           sbox.repo_dir, second_repo_dir)
-  svntest.actions.run_and_verify_svnadmin(None, [], None,
-                                          'setuuid', second_repo_dir)
+
+  if svntest.main.is_fs_type_fsx() or \
+     (svntest.main.is_fs_type_fsfs() and \
+      svntest.main.options.server_minor_version < 9):
+    # FSFS repositories created with --compatible-version=1.8 and less
+    # erroneously share the filesystem data (locks, shared transaction
+    # data, ...) between hotcopy source and destination.  This is fixed
+    # for new FS formats, but in order to avoid SVN_ERR_RECURSIVE_LOCK
+    # for old formats, we have to manually assign a new UUID for the
+    # hotcopy destination.  As of trunk@1618024, the same applies to
+    # FSX repositories.
+    svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                            'setuuid', second_repo_dir)
 
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                  'freeze', '--', sbox.repo_dir,
@@ -2662,7 +2687,7 @@ def fsfs_hotcopy_progress(sbox):
   sbox.build(create_wc=False)
   svntest.main.safe_rmtree(sbox.repo_dir, True)
   svntest.main.create_repos(sbox.repo_dir)
-  write_sharded_format(sbox.repo_dir, 3)
+  patch_format(sbox.repo_dir, shard_size=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 
@@ -2871,6 +2896,44 @@ def fsfs_hotcopy_progress_old(sbox):
                                           sbox.repo_dir, inc_backup_dir)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def freeze_same_uuid(sbox):
+  "freeze multiple repositories with same UUID"
+
+  sbox.build(create_wc=False)
+
+  first_repo_dir, _ = sbox.add_repo_path('first')
+  second_repo_dir, _ = sbox.add_repo_path('second')
+
+  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock or
+  # error out with SVN_ERR_RECURSIVE_LOCK for new FSFS formats, even if 'A'
+  # and 'B' share the same UUID.  Create two repositories by loading the
+  # same dump file, ...
+  svntest.main.create_repos(first_repo_dir)
+  svntest.main.create_repos(second_repo_dir)
+
+  dump_path = os.path.join(os.path.dirname(sys.argv[0]),
+                                           'svnadmin_tests_data',
+                                           'skeleton_repos.dump')
+  dump_contents = open(dump_path, 'rb').readlines()
+  svntest.actions.run_and_verify_load(first_repo_dir, dump_contents)
+  svntest.actions.run_and_verify_load(second_repo_dir, dump_contents)
+
+  # ...and execute the 'svnadmin freeze -F' command.
+  if svntest.main.options.server_minor_version < 9:
+    expected_error = ".*svnadmin: E200043:.*"
+  else:
+    expected_error = None
+
+  arg_file = sbox.get_tempname()
+  svntest.main.file_write(arg_file,
+                          "%s\n%s\n" % (first_repo_dir, second_repo_dir))
+
+  svntest.actions.run_and_verify_svnadmin(None, None, expected_error,
+                                          'freeze', '-F', arg_file, '--',
+                                          sys.executable, '-c', 'True')
+
+
 ########################################################################
 # Run the tests
 
@@ -2922,6 +2985,7 @@ test_list = [ None,
               fsfs_hotcopy_progress,
               fsfs_hotcopy_progress_with_revprop_changes,
               fsfs_hotcopy_progress_old,
+              freeze_same_uuid,
              ]
 
 if __name__ == '__main__':

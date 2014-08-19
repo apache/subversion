@@ -417,8 +417,6 @@ struct edit_baton
   /* Introducing a new file external */
   svn_boolean_t added;
 
-  svn_wc_conflict_resolver_func2_t conflict_func;
-  void *conflict_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
@@ -991,8 +989,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *recorded_url,
                                  const svn_opt_revision_t *recorded_peg_rev,
                                  const svn_opt_revision_t *recorded_rev,
-                                 svn_wc_conflict_resolver_func2_t conflict_func,
-                                 void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -1041,8 +1037,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   else
     eb->recorded_revision = SVN_INVALID_REVNUM; /* Not fixed/HEAD */
 
-  eb->conflict_func = conflict_func;
-  eb->conflict_baton = conflict_baton;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
   eb->notify_func = notify_func;

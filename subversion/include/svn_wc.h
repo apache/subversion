@@ -1772,9 +1772,11 @@ typedef struct svn_wc_conflict_description3_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *local_abspath;
 
-  /** The node type of the path being operated on (for a tree conflict,
-   *  ### which version?) */
-  svn_node_kind_t node_kind;
+  /** The node type of the local node involved in this conflict.
+   * For a tree conflict, this is the node kind of the tree conflict victim.
+   * For the left/right node kinds of the incoming conflicting change see
+   * src_left_version->node_kind and src_right_version->node_kind. */
+  svn_node_kind_t local_node_kind;
 
   /** What sort of conflict are we describing? */
   svn_wc_conflict_kind_t kind;
@@ -1792,14 +1794,20 @@ typedef struct svn_wc_conflict_description3_t
    *  (Only if @c kind is 'text', else undefined.) */
   const char *mime_type;
 
-  /** The action being attempted on the conflicted node or property.
-   *  (When @c kind is 'text', this action must be 'edit'.) */
-  svn_wc_conflict_action_t action;
+  /** The incoming action being attempted on the conflicted node or property.
+   *  When @c kind is 'text', this action must be 'edit', but generally it can
+   *  be any kind of possible change. */
+  svn_wc_conflict_action_t incoming_change;
 
-  /** The state of the target node or property, relative to its merge-left
-   *  source, that is the reason for the conflict.
-   *  (When @c kind is 'text', this reason must be 'edited'.) */
-  svn_wc_conflict_reason_t reason;
+  /** The local change or state of the target node or property, relative
+   *  to its merge-left source, that conflicts with the incoming action.
+   *  When @c kind is 'text', this must be 'edited', but generally it can
+   *  be any kind of possible change.
+   *  Note that 'local' does not always refer to a working copy. A change
+   *  can be local to the target branch of a merge operation, for example,
+   *  and is not necessarily visible in a working copy of the target branch
+   *  at any given revision. */
+  svn_wc_conflict_reason_t local_change;
 
   /** If this is text-conflict and involves the merging of two files
    * descended from a common ancestor, here are the paths of up to
@@ -2143,8 +2151,8 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field to
- * #svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, the @c
- * operation to @a operation, the @c src_left_version field to
+ * #svn_wc_conflict_kind_tree, the @c local_node_kind to @a local_node_kind,
+ * the @c operation to @a operation, the @c src_left_version field to
  * @a src_left_version, and the @c src_right_version field to
  * @a src_right_version.
  *
@@ -2156,7 +2164,7 @@ svn_wc_conflict_description_create_prop(const char *path,
 svn_wc_conflict_description3_t *
 svn_wc_conflict_description_create_tree3(
   const char *local_abspath,
-  svn_node_kind_t node_kind,
+  svn_node_kind_t local_node_kind,
   svn_wc_operation_t operation,
   const svn_wc_conflict_version_t *src_left_version,
   const svn_wc_conflict_version_t *src_right_version,
@@ -3355,6 +3363,11 @@ typedef struct svn_wc_info_t
   /** The path the node was moved to, if it was moved away. Else NULL.
    * @since New in 1.8. */
   const char *moved_to_abspath;
+
+  /** Array of const svn_wc_conflict_description3_t * which contains info
+   * on any conflict of which this node is a victim. Otherwise NULL. 
+   * @since New in 1.9. */
+  const apr_array_header_t *conflicts2;
 } svn_wc_info_t;
 
 /**

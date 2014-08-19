@@ -1090,9 +1090,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                 ? "0\n" : "0 1 1\n"),
                              pool));
 
-  /* Create lock file and UUID. */
+  /* Create the lock and 'uuid' files.  Hotcopy destination receives a
+     new instance ID, but has the same filesystem UUID as the source. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(dst_fs, pool), pool));
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
+  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, NULL, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)

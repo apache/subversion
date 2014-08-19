@@ -1387,6 +1387,19 @@ svn_utf_cstring_from_utf8_ex(const char **dest,
   return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
 }
 
+/*** From error.c ***/
+void
+svn_handle_error(svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  svn_handle_error2(err, stream, fatal, "svn: ");
+}
+
+void
+svn_handle_warning(FILE *stream, svn_error_t *err)
+{
+  svn_handle_warning2(stream, err, "svn: ");
+}
+
 
 /*** From subst.c ***/
 svn_error_t *
