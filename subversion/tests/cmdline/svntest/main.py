@@ -155,6 +155,7 @@ svnsync_binary = P('svnsync/svnsync')
 svnversion_binary = P('svnversion/svnversion')
 svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
 svnmucc_binary = P('svnmucc/svnmucc')
+svnfsfs_binary = P('svnfsfs/svnfsfs')
 entriesdump_binary = P('tests/cmdline/entries-dump')
 lock_helper_binary = P('tests/cmdline/lock-helper')
 atomic_ra_revprop_change_binary = P('tests/cmdline/atomic-ra-revprop-change')
@@ -169,14 +170,6 @@ del P
 svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
 svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
-)
-
-######################################################################
-# The location of svnfsfs binary, relative to the only scripts that
-# import this file right now (they live in ../).
-# Use --tools to overide these defaults.
-svnfsfs_binary = os.path.abspath(
-    '../../../tools/server-side/svnfsfs/svnfsfs' + _exe
 )
 
 # Location to the pristine repository, will be calculated from test_area_url
