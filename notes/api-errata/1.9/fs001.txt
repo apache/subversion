@@ -1,4 +1,4 @@
-API ERRATUM -- $Id$
+API ERRATA -- $Id$
 
 Root Cause of Errata: implementation/docstring mismatch
  Library(s) Affected: libsvn_fs_fs, libsvn_fs_base
