@@ -238,9 +238,9 @@ print_info_xml(void *baton,
 
       for (i = 0; i < info->wc_info->conflicts->nelts; i++)
         {
-          const svn_wc_conflict_description2_t *conflict =
-                      APR_ARRAY_IDX(info->wc_info->conflicts, i,
-                                    const svn_wc_conflict_description2_t *);
+          const svn_wc_conflict_description3_t *conflict =
+                      APR_ARRAY_IDX(info->wc_info->conflicts2, i,
+                                    const svn_wc_conflict_description3_t *);
 
           SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, pool));
         }
@@ -445,9 +445,9 @@ print_info(void *baton,
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
             {
-              const svn_wc_conflict_description2_t *conflict =
-                    APR_ARRAY_IDX(info->wc_info->conflicts, i,
-                                  const svn_wc_conflict_description2_t *);
+              const svn_wc_conflict_description3_t *conflict =
+                    APR_ARRAY_IDX(info->wc_info->conflicts2, i,
+                                  const svn_wc_conflict_description3_t *);
               const char *desc;
 
               switch (conflict->kind)
@@ -479,8 +479,8 @@ print_info(void *baton,
                     if (! printed_prop_conflict_file)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Properties File: %s\n"),
-                                svn_dirent_local_style(conflict->their_abspath,
-                                                       pool)));
+                                svn_dirent_local_style(
+                                  conflict->prop_reject_abspath, pool)));
                     printed_prop_conflict_file = TRUE;
                   break;
 
@@ -502,9 +502,9 @@ print_info(void *baton,
           {
             const char *src_left_version;
             const char *src_right_version;
-            const svn_wc_conflict_description2_t *conflict =
-                  APR_ARRAY_IDX(info->wc_info->conflicts, 0,
-                                const svn_wc_conflict_description2_t *);
+            const svn_wc_conflict_description3_t *conflict =
+                  APR_ARRAY_IDX(info->wc_info->conflicts2, 0,
+                                const svn_wc_conflict_description3_t *);
 
             src_left_version =
                         svn_cl__node_description(conflict->src_left_version,

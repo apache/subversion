@@ -67,6 +67,22 @@ svn_wc_info_dup(const svn_wc_info_t *info,
     new_info->moved_from_abspath = apr_pstrdup(pool, info->moved_from_abspath);
   if (info->moved_to_abspath)
     new_info->moved_to_abspath = apr_pstrdup(pool, info->moved_to_abspath);
+  if (info->conflicts2)
+    {
+      int i;
+
+      apr_array_header_t *new_conflicts
+        = apr_array_make(pool, info->conflicts2->nelts, info->conflicts2->elt_size);
+      for (i = 0; i < info->conflicts2->nelts; i++)
+        {
+          APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description3_t *)
+            = svn_wc__conflict_description3_dup(
+                APR_ARRAY_IDX(info->conflicts2, i,
+                              const svn_wc_conflict_description3_t *),
+                pool);
+        }
+      new_info->conflicts2 = new_conflicts;
+    }
 
   return new_info;
 }
@@ -319,9 +335,13 @@ build_info_for_node(svn_wc__info2_t **info,
                                      result_pool, scratch_pool));
       wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
                                                           result_pool);
+      wc_info->conflicts2 = conflicts;
     }
   else
-    wc_info->conflicts = NULL;
+    {
+      wc_info->conflicts = NULL;
+      wc_info->conflicts2 = NULL;
+    }
 
   /* lock stuff */
   if (lock != NULL)
@@ -575,11 +595,12 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                     const svn_wc_conflict_description3_t *);
 
       if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
-                          tree_conflict->node_kind, iterpool))
+                          tree_conflict->local_node_kind, iterpool))
         continue;
 
       info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
                                                                 iterpool);
+      info->wc_info->conflicts2 = conflicts;
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);

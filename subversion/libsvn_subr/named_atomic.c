@@ -444,17 +444,21 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
        * with our data file)
        */
       if (new_ns->data->count > MAX_ATOMIC_COUNT)
-        return svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
-                       _("Number of atomics in namespace is too large."));
-
-      /* Cache the number of existing, complete entries.  There can't be
-       * incomplete ones from other processes because we hold the mutex.
-       * Our process will also not access this information since we are
-       * either being called from within svn_atomic__init_once or by
-       * svn_atomic_namespace__create for a new object.
-       */
-      new_ns->min_used = new_ns->data->count;
-      *ns = new_ns;
+        {
+          err = svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
+                        _("Number of atomics in namespace is too large."));
+        }
+      else
+        {
+          /* Cache the number of existing, complete entries.  There can't be
+           * incomplete ones from other processes because we hold the mutex.
+           * Our process will also not access this information since we are
+           * either being called from within svn_atomic__init_once or by
+           * svn_atomic_namespace__create for a new object.
+           */
+          new_ns->min_used = new_ns->data->count;
+          *ns = new_ns;
+        }
     }
 
   /* Unlock to allow other processes may access the shared memory as well.

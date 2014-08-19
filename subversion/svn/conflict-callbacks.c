@@ -127,7 +127,7 @@ svn_cl__accept_from_word(const char *word)
 /* Print on stdout a diff that shows incoming conflicting changes
  * corresponding to the conflict described in DESC. */
 static svn_error_t *
-show_diff(const svn_wc_conflict_description2_t *desc,
+show_diff(const svn_wc_conflict_description3_t *desc,
           const char *path_prefix,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
@@ -139,7 +139,7 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   svn_stream_t *output;
   svn_diff_file_options_t *options;
 
-  if (desc->merged_file)
+  if (desc->merged_abspath)
     {
       /* For conflicts recorded by the 'merge' operation, show a diff between
        * 'mine' (the working version of the file as it appeared before the
@@ -163,7 +163,7 @@ show_diff(const svn_wc_conflict_description2_t *desc,
           path1 = desc->their_abspath;
           label1 = _("THEIRS");
         }
-      path2 = desc->merged_file;
+      path2 = desc->merged_abspath;
       label2 = _("MERGED");
     }
   else
@@ -203,7 +203,9 @@ show_diff(const svn_wc_conflict_description2_t *desc,
 /* Print on stdout just the conflict hunks of a diff among the 'base', 'their'
  * and 'my' files of DESC. */
 static svn_error_t *
-show_conflicts(const svn_wc_conflict_description2_t *desc,
+show_conflicts(const svn_wc_conflict_description3_t *desc,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -220,7 +222,7 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                 options, pool));
   /* ### Consider putting the markers/labels from
      ### svn_wc__merge_internal in the conflict description. */
-  return svn_diff_file_output_merge2(output, diff,
+  return svn_diff_file_output_merge3(output, diff,
                                      desc->base_abspath,
                                      desc->my_abspath,
                                      desc->their_abspath,
@@ -229,6 +231,8 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                      _(">>>>>>> THEIRS (select with 'tc')"),
                                      "=======",
                                      svn_diff_conflict_display_only_conflicts,
+                                     cancel_func,
+                                     cancel_baton,
                                      pool);
 }
 
@@ -242,8 +246,10 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
  */
 static svn_error_t *
 merge_prop_conflict(svn_stream_t *output,
-                    const svn_wc_conflict_description2_t *desc,
+                    const svn_wc_conflict_description3_t *desc,
                     const char *merged_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *pool)
 {
   const char *base_abspath = desc->base_abspath;
@@ -275,7 +281,7 @@ merge_prop_conflict(svn_stream_t *output,
                                 merged_abspath ? merged_abspath : my_abspath,
                                 their_abspath,
                                 options, pool));
-  SVN_ERR(svn_diff_file_output_merge2(output, diff,
+  SVN_ERR(svn_diff_file_output_merge3(output, diff,
                                       base_abspath,
                                       merged_abspath ? merged_abspath
                                                      : my_abspath,
@@ -285,6 +291,8 @@ merge_prop_conflict(svn_stream_t *output,
                                       _(">>>>>>> THEIRS"),
                                       "=======",
                                       svn_diff_conflict_display_modified_original_latest,
+                                      cancel_func,
+                                      cancel_baton,
                                       pool));
 
   return SVN_NO_ERROR;
@@ -298,14 +306,17 @@ merge_prop_conflict(svn_stream_t *output,
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
-show_prop_conflict(const svn_wc_conflict_description2_t *desc,
+show_prop_conflict(const svn_wc_conflict_description3_t *desc,
                    const char *merged_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_stream_t *output;
 
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath, pool));
+  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath,
+                              cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -359,7 +370,7 @@ open_editor(svn_boolean_t *performed_edit,
  * environment variables; see svn_cl__edit_file_externally() for details. */
 static svn_error_t *
 edit_prop_conflict(const char **merged_file_path,
-                   const svn_wc_conflict_description2_t *desc,
+                   const svn_wc_conflict_description3_t *desc,
                    svn_cl__interactive_conflict_baton_t *b,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
@@ -374,7 +385,10 @@ edit_prop_conflict(const char **merged_file_path,
                                    result_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
-  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
+  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL,
+                              b->pb->cancel_func,
+                              b->pb->cancel_baton,
+                              scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
@@ -678,7 +692,7 @@ prompt_user(const resolver_option_t **opt,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_text_conflict(svn_wc_conflict_result_t *result,
-                     const svn_wc_conflict_description2_t *desc,
+                     const svn_wc_conflict_description3_t *desc,
                      svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *scratch_pool)
 {
@@ -704,7 +718,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
      markers to the user (this is the typical 3-way merge
      scenario), or if no base is available, we can show a diff
      between mine and theirs. */
-  if ((desc->merged_file && desc->base_abspath)
+  if ((desc->merged_abspath && desc->base_abspath)
       || (!desc->base_abspath && desc->my_abspath && desc->their_abspath))
     diff_allowed = TRUE;
 
@@ -778,7 +792,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                             "files not available.\n\n")));
               continue;
             }
-          SVN_ERR(show_conflicts(desc, iterpool));
+          SVN_ERR(show_conflicts(desc,
+                                 b->pb->cancel_func,
+                                 b->pb->cancel_baton,
+                                 iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "df") == 0)
@@ -798,7 +815,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, desc->merged_file, b, iterpool));
+          SVN_ERR(open_editor(&performed_edit, desc->merged_abspath, b,
+                              iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -810,7 +828,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           err = svn_cl__merge_file_externally(desc->base_abspath,
                                               desc->their_abspath,
                                               desc->my_abspath,
-                                              desc->merged_file,
+                                              desc->merged_abspath,
                                               desc->local_abspath, b->config,
                                               NULL, iterpool);
           if (err)
@@ -825,7 +843,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                              desc->base_abspath,
                                              desc->their_abspath,
                                              desc->my_abspath,
-                                             desc->merged_file,
+                                             desc->merged_abspath,
                                              desc->local_abspath,
                                              b->path_prefix,
                                              b->editor_cmd,
@@ -863,10 +881,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           /* ### This check should be earlier as it's nasty to offer an option
            *     and then when the user chooses it say 'Invalid option'. */
-          /* ### 'merged_file' shouldn't be necessary *before* we launch the
+          /* ### 'merged_abspath' shouldn't be necessary *before* we launch the
            *     resolver: it should be the *result* of doing so. */
           if (desc->base_abspath && desc->their_abspath &&
-              desc->my_abspath && desc->merged_file)
+              desc->my_abspath && desc->merged_abspath)
             {
               svn_error_t *err;
               char buf[1024];
@@ -875,7 +893,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               err = svn_cl__merge_file_externally(desc->base_abspath,
                                                   desc->their_abspath,
                                                   desc->my_abspath,
-                                                  desc->merged_file,
+                                                  desc->merged_abspath,
                                                   desc->local_abspath,
                                                   b->config, NULL, iterpool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
@@ -906,7 +924,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                      desc->base_abspath,
                                      desc->their_abspath,
                                      desc->my_abspath,
-                                     desc->merged_file,
+                                     desc->merged_abspath,
                                      desc->local_abspath,
                                      b->path_prefix,
                                      b->editor_cmd,
@@ -961,7 +979,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_prop_conflict(svn_wc_conflict_result_t *result,
-                     const svn_wc_conflict_description2_t *desc,
+                     const svn_wc_conflict_description3_t *desc,
                      svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
@@ -970,12 +988,6 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   const char *message;
   const char *merged_file_path = NULL;
   svn_boolean_t resolved_allowed = FALSE;
-
-  /* ### Work around a historical bug in the provider: the path to the
-   *     conflict description file was put in the 'theirs' field, and
-   *     'theirs' was put in the 'merged' field. */
-  ((svn_wc_conflict_description2_t *)desc)->their_abspath = desc->merged_file;
-  ((svn_wc_conflict_description2_t *)desc)->merged_file = NULL;
 
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_property);
 
@@ -1025,7 +1037,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(desc, merged_file_path, scratch_pool));
+          SVN_ERR(show_prop_conflict(desc, merged_file_path,
+                                     b->pb->cancel_func, b->pb->cancel_baton,
+                                     scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
@@ -1064,7 +1078,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_tree_conflict(svn_wc_conflict_result_t *result,
-                     const svn_wc_conflict_description2_t *desc,
+                     const svn_wc_conflict_description3_t *desc,
                      svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *scratch_pool)
 {
@@ -1094,15 +1108,15 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
       if (desc->operation == svn_wc_operation_update ||
           desc->operation == svn_wc_operation_switch)
         {
-          if (desc->reason == svn_wc_conflict_reason_moved_away)
+          if (desc->local_change == svn_wc_conflict_reason_moved_away)
             {
               tc_opts = tree_conflict_options_update_moved_away;
             }
-          else if (desc->reason == svn_wc_conflict_reason_deleted ||
-                   desc->reason == svn_wc_conflict_reason_replaced)
+          else if (desc->local_change == svn_wc_conflict_reason_deleted ||
+                   desc->local_change == svn_wc_conflict_reason_replaced)
             {
-              if (desc->action == svn_wc_conflict_action_edit &&
-                  desc->node_kind == svn_node_dir)
+              if (desc->incoming_change == svn_wc_conflict_action_edit &&
+                  desc->local_node_kind == svn_node_dir)
                 tc_opts = tree_conflict_options_update_edit_deleted_dir;
             }
         }
@@ -1135,7 +1149,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_obstructed_add(svn_wc_conflict_result_t *result,
-                      const svn_wc_conflict_description2_t *desc,
+                      const svn_wc_conflict_description3_t *desc,
                       svn_cl__interactive_conflict_baton_t *b,
                       apr_pool_t *scratch_pool)
 {
@@ -1182,7 +1196,7 @@ handle_obstructed_add(svn_wc_conflict_result_t *result,
 /* The body of svn_cl__conflict_func_interactive(). */
 static svn_error_t *
 conflict_func_interactive(svn_wc_conflict_result_t **result,
-                          const svn_wc_conflict_description2_t *desc,
+                          const svn_wc_conflict_description3_t *desc,
                           void *baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -1209,7 +1223,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
     case svn_cl__accept_working:
       /* If the caller didn't merge the property values, then I guess
        * 'choose working' means 'choose mine'... */
-      if (! desc->merged_file)
+      if (! desc->merged_abspath)
         (*result)->merged_file = desc->my_abspath;
       (*result)->choice = svn_wc_conflict_choose_merged;
       return SVN_NO_ERROR;
@@ -1226,7 +1240,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
       (*result)->choice = svn_wc_conflict_choose_theirs_full;
       return SVN_NO_ERROR;
     case svn_cl__accept_edit:
-      if (desc->merged_file)
+      if (desc->merged_abspath)
         {
           if (b->external_failed)
             {
@@ -1234,7 +1248,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
               return SVN_NO_ERROR;
             }
 
-          err = svn_cmdline__edit_file_externally(desc->merged_file,
+          err = svn_cmdline__edit_file_externally(desc->merged_abspath,
                                                   b->editor_cmd, b->config,
                                                   scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
@@ -1258,7 +1272,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
       break;
     case svn_cl__accept_launch:
       if (desc->base_abspath && desc->their_abspath
-          && desc->my_abspath && desc->merged_file)
+          && desc->my_abspath && desc->merged_abspath)
         {
           svn_boolean_t remains_in_conflict;
 
@@ -1271,7 +1285,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
           err = svn_cl__merge_file_externally(desc->base_abspath,
                                               desc->their_abspath,
                                               desc->my_abspath,
-                                              desc->merged_file,
+                                              desc->merged_abspath,
                                               desc->local_abspath,
                                               b->config,
                                               &remains_in_conflict,
@@ -1317,8 +1331,8 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
      Conflicting edits on a property.
   */
   if (((desc->kind == svn_wc_conflict_kind_text)
-       && (desc->action == svn_wc_conflict_action_edit)
-       && (desc->reason == svn_wc_conflict_reason_edited)))
+       && (desc->incoming_change == svn_wc_conflict_action_edit)
+       && (desc->local_change == svn_wc_conflict_reason_edited)))
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
   else if (desc->kind == svn_wc_conflict_kind_property)
     SVN_ERR(handle_prop_conflict(*result, desc, b, result_pool, scratch_pool));
@@ -1341,8 +1355,8 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
       postpone               [              bail out                 ]
 
    */
-  else if ((desc->action == svn_wc_conflict_action_add)
-           && (desc->reason == svn_wc_conflict_reason_obstructed))
+  else if ((desc->incoming_change == svn_wc_conflict_action_add)
+           && (desc->local_change == svn_wc_conflict_reason_obstructed))
     SVN_ERR(handle_obstructed_add(*result, desc, b, scratch_pool));
 
   else if (desc->kind == svn_wc_conflict_kind_tree)
@@ -1358,7 +1372,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
 
 svn_error_t *
 svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
-                                  const svn_wc_conflict_description2_t *desc,
+                                  const svn_wc_conflict_description3_t *desc,
                                   void *baton,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)

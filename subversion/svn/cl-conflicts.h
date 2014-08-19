@@ -48,7 +48,7 @@ extern "C" {
 svn_error_t *
 svn_cl__get_human_readable_prop_conflict_description(
   const char **desc,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_wc_conflict_description3_t *conflict,
   apr_pool_t *pool);
 
 /**
@@ -60,7 +60,7 @@ svn_cl__get_human_readable_prop_conflict_description(
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
   const char **desc,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_wc_conflict_description3_t *conflict,
   apr_pool_t *pool);
 
 /**
@@ -70,7 +70,7 @@ svn_cl__get_human_readable_tree_conflict_description(
 svn_error_t *
 svn_cl__append_conflict_info_xml(
   svn_stringbuf_t *str,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_wc_conflict_description3_t *conflict,
   apr_pool_t *pool);
 
 #ifdef __cplusplus
