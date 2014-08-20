@@ -942,6 +942,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              encoding for HTTP requests body."  NL
         "###   http-pipelining            Whether to use HTTP pipelining "   NL
         "###                              or send requests one by one."      NL
+        "###                              Pipelining is enabled by default." NL
+        "###                              The only known case where it should"
+                                                                             NL
+        "###                              be disabled is when the server"    NL
+        "###                              triggers SSL renegotiations in the"NL
+        "###                              middle of HTTP traffic, resulting" NL
+        "###                              in SSL communication errors."      NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
