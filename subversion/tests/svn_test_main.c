@@ -301,6 +301,7 @@ log_results(const char *progname,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       skip = TRUE;
+      xfail = FALSE; /* Or all XFail tests reporting SKIP would be failing */
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
