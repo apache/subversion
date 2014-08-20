@@ -1398,9 +1398,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
           svn_diff_file_options_t *options =
             svn_diff_file_options_create(scratch_pool);
 
-          /* ### For property conflicts, cd2 stores prop_reject_abspath in
-           * ### their_abspath, and stores theirs_abspath in merged_file. */
-          SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->their_abspath,
+          SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->prop_reject_abspath,
                                          NULL, svn_io_file_del_on_pool_cleanup,
                                          scratch_pool, scratch_pool));
           SVN_ERR(svn_diff_mem_string_diff3(&diff, conflict_base_val,
@@ -1412,6 +1410,10 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                    svn_diff_conflict_display_modified_latest,
                    cancel_func, cancel_baton, scratch_pool));
           SVN_ERR(svn_stream_close(mergestream));
+
+          /* ### For property conflicts, cd2 stores prop_reject_abspath in
+           * ### their_abspath, and stores theirs_abspath in merged_file. */
+          cdesc->their_abspath = cdesc->prop_reject_abspath;
         }
     }
 
@@ -2165,7 +2167,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
 
       /* ### For property conflicts, cd2 stores prop_reject_abspath in
        * ### their_abspath, and stores theirs_abspath in merged_file. */
-      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->their_abspath = desc->prop_reject_abspath;
 
       desc->operation = operation;
       desc->src_left_version = left_version;
@@ -2222,7 +2225,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
 
       /* ### For property conflicts, cd2 stores prop_reject_abspath in
        * ### their_abspath, and stores theirs_abspath in merged_file. */
-      desc->their_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
+      desc->their_abspath = desc->prop_reject_abspath;
 
       /* ### This should be changed. The conflict description for
        * ### props should contain these values as svn_string_t,
