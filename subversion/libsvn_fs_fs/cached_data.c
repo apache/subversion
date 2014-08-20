@@ -462,20 +462,11 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
    changed path offset in *CHANGES_OFFSET.  If either of these
    pointers is NULL, do nothing with it.
 
-   If PACKED is true, REV_FILE should be a packed shard file.
-   ### There is currently no such parameter.  This function assumes that
-       svn_fs_fs__is_packed_rev(FS, REV) will indicate whether REV_FILE is
-       a packed file.  Therefore FS->fsap_data->min_unpacked_rev must not
-       have been refreshed since REV_FILE was opened if there is a
-       possibility that revision REV may have become packed since then.
-       TODO: Take an IS_PACKED parameter instead, in order to remove this
-       requirement.
-
    Allocate temporary variables from POOL. */
 static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
-                        apr_file_t *rev_file,
+                        svn_fs_fs__revision_file_t *rev_file,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
@@ -498,8 +489,7 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if (svn_fs_fs__is_packed_rev(fs, rev)
-      && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if (rev_file->is_packed && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(svn_fs_fs__get_packed_offset(&end, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -511,14 +501,14 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   /* Offset of the revision from the start of the pack file, if applicable. */
-  if (svn_fs_fs__is_packed_rev(fs, rev))
+  if (rev_file->is_packed)
     SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
   else
     rev_offset = 0;
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
-  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &end, pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, seek_relative, &end, pool));
 
   if (end < sizeof(buffer))
     {
@@ -532,8 +522,9 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   /* Read in this last block, from which we will identify the last line. */
-  SVN_ERR(aligned_seek(fs, rev_file, NULL, start, pool));
-  SVN_ERR(svn_io_file_read_full2(rev_file, buffer, len, NULL, NULL, pool));
+  SVN_ERR(aligned_seek(fs, rev_file->file, NULL, start, pool));
+  SVN_ERR(svn_io_file_read_full2(rev_file->file, buffer, len, NULL, NULL,
+                                 pool));
 
   /* Parse the last line. */
   trailer = svn_stringbuf_ncreate(buffer, len, pool);
@@ -580,7 +571,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
                                                scratch_pool, scratch_pool));
       SVN_ERR(get_root_changes_offset(&root_offset, NULL,
-                                      revision_file->file, fs, rev,
+                                      revision_file, fs, rev,
                                       scratch_pool));
 
       SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
@@ -2726,7 +2717,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                                            scratch_pool));
           else
             SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                            revision_file->file, fs, rev,
+                                            revision_file, fs, rev,
                                             scratch_pool));
 
           /* Actual reading and parsing are the same, though. */

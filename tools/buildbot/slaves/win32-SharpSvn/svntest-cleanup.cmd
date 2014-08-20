@@ -28,10 +28,10 @@ PUSHD ..\deps
 ECHO Checking dependencies in %CD%
 
 IF NOT EXIST "imports\" (
-    svn co --username guest --password "" https://ctf.open.collab.net/svn/repos/sharpsvn/trunk/imports imports
+    svn co https://ctf.open.collab.net/svn/repos/sharpsvn/trunk/imports imports --username guest --password ""
 )
 IF NOT EXIST build\imports.done (
-    svn up imports
+    svn up imports --username guest --password ""
     copy /y imports\dev-default.build default.build
     nant prep-dev %NANTARGS%
     IF ERRORLEVEL 1 (

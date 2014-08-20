@@ -266,7 +266,7 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
   /* let the mutex live as long as the APR */
   apr_pool_t *global_pool = svn_pool_create(NULL);
 
-  return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, FALSE, global_pool);
+  return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, global_pool);
 }
 #endif /* APR_HAS_MMAP */
 
@@ -275,10 +275,14 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
 static svn_error_t *
 lock(struct mutex_t *mutex)
 {
-  SVN_MUTEX__WITH_LOCK(thread_mutex,
-                       svn_io__file_lock_autocreate(mutex->lock_name,
-                                                    mutex->pool));
-  return SVN_NO_ERROR;
+  svn_error_t *err;
+  SVN_ERR(svn_mutex__lock(thread_mutex));
+
+  err = svn_io__file_lock_autocreate(mutex->lock_name, mutex->pool);
+  if (err)
+    err = svn_mutex__unlock(thread_mutex, err);
+
+  return svn_error_trace(err);
 }
 
 /* Utility that releases the lock previously acquired via lock().  If the
@@ -440,17 +444,21 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
        * with our data file)
        */
       if (new_ns->data->count > MAX_ATOMIC_COUNT)
-        return svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
-                       _("Number of atomics in namespace is too large."));
-
-      /* Cache the number of existing, complete entries.  There can't be
-       * incomplete ones from other processes because we hold the mutex.
-       * Our process will also not access this information since we are
-       * either being called from within svn_atomic__init_once or by
-       * svn_atomic_namespace__create for a new object.
-       */
-      new_ns->min_used = new_ns->data->count;
-      *ns = new_ns;
+        {
+          err = svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
+                        _("Number of atomics in namespace is too large."));
+        }
+      else
+        {
+          /* Cache the number of existing, complete entries.  There can't be
+           * incomplete ones from other processes because we hold the mutex.
+           * Our process will also not access this information since we are
+           * either being called from within svn_atomic__init_once or by
+           * svn_atomic_namespace__create for a new object.
+           */
+          new_ns->min_used = new_ns->data->count;
+          *ns = new_ns;
+        }
     }
 
   /* Unlock to allow other processes may access the shared memory as well.

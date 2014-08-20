@@ -115,11 +115,13 @@ svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
 
-/* Set the uuid of repository FS to UUID, if UUID is not NULL;
-   otherwise, set the uuid of FS to a newly generated UUID.  Perform
-   temporary allocations in POOL. */
+/* Set the uuid of repository FS to UUID and the instance ID to INSTANCE_ID.
+   If any of them is NULL, use a newly generated UUID / ID instead.  Ignore
+   INSTANCE_ID whenever instance IDs are not supported by the FS format.
+   Perform temporary allocations in POOL. */
 svn_error_t *svn_fs_fs__set_uuid(svn_fs_t *fs,
                                  const char *uuid,
+                                 const char *instance_id,
                                  apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.

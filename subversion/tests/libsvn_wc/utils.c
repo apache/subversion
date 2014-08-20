@@ -282,7 +282,7 @@ sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
   SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
                                      dir_abspath, FALSE /* lock_anchor */,
                                      b->pool, b->pool));
-  SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+  SVN_ERR(svn_wc_revert5(b->wc_ctx, abspath, depth, FALSE, NULL, FALSE,
                          NULL, NULL, /* cancel baton + func */
                          NULL, NULL, /* notify baton + func */
                          b->pool));

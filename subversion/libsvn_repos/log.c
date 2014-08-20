@@ -199,7 +199,13 @@ detect_changed(apr_hash_t **changed,
   if (changes == NULL)
     {
       SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
-      *changed = changes;
+
+      /* If we are going to filter the results, we won't use the exact
+       * same keys but put them into a new hash. */
+      if (authz_read_func)
+        *changed = svn_hash__make(pool);
+      else
+        *changed = changes;
     }
   else
     {

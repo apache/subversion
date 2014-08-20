@@ -179,6 +179,9 @@ extern "C" {
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
 #define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
 
+/* Minimum format number that supports per-instance filesystem IDs. */
+#define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
+
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
@@ -295,13 +298,14 @@ typedef struct fs_fs_data_t
      and is not complete, yet. */
   svn_revnum_t min_log_addressing_rev;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
-  /* Rev / pack file granularity covered by phys-to-log index pages */
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   apr_int64_t p2l_page_size;
 
   /* If set, parse and cache *all* data of each block that we read
@@ -465,6 +469,12 @@ typedef struct fs_fs_data_t
 
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
+
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,

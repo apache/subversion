@@ -63,8 +63,6 @@ struct edit_baton {
 };
 
 #define FSPATH(relpath, pool) apr_pstrcat(pool, "/", relpath, SVN_VA_NULL)
-#define UNUSED(x) ((void)(x))
-
 
 static svn_error_t *
 get_root(svn_fs_root_t **root,
@@ -522,7 +520,8 @@ alter_symlink_cb(void *baton,
 {
   struct edit_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_UNUSED(eb);
+  SVN__NOT_IMPLEMENTED();
 }
 
 

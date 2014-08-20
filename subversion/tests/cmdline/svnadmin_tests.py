@@ -106,6 +106,20 @@ def check_hotcopy_fsfs_fsx(src, dst):
           raise svntest.Failure("%s does not exist in hotcopy "
                                 "destination" % dst_path)
 
+        # Special case for db/uuid: Only the UUID in the first line needs
+        # to match. Source and target must have the same number of lines
+        # (due to having the same format).
+        if src_path == os.path.join(src, 'db', 'uuid'):
+          lines1 = open(src_path, 'rb').read().split("\n")
+          lines2 = open(dst_path, 'rb').read().split("\n")
+          if len(lines1) != len(lines2):
+            raise svntest.Failure("%s differs in number of lines"
+                                  % dst_path)
+          if lines1[0] != lines2[0]:
+            raise svntest.Failure("%s contains different uuid: '%s' vs. '%s'"
+                                   % (dst_path, lines1[0], lines2[0]))
+          continue
+
         # Special case for rep-cache: It will always differ in a byte-by-byte
         # comparison, so compare db tables instead.
         if src_file == 'rep-cache.db':
@@ -122,7 +136,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
           for i in range(len(rows1)):
             if rows1[i] != rows2[i]:
               raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
-                                    % (row, rows1[i]))
+                                    % (i, rows1[i], rows2[i]))
           continue
 
         # Special case for revprop-generation: It will always be zero in
@@ -213,6 +227,24 @@ def get_txns(repo_dir):
 
   return txns
 
+def patch_format(repo_dir, shard_size):
+  """Rewrite the format of the FSFS or FSX repository REPO_DIR so
+  that it would use sharding with SHARDS revisions per shard."""
+
+  format_path = os.path.join(repo_dir, "db", "format")
+  contents = open(format_path, 'rb').read()
+  processed_lines = []
+
+  for line in contents.split("\n"):
+    if line.startswith("layout "):
+      processed_lines.append("layout sharded %d" % shard_size)
+    else:
+      processed_lines.append(line)
+
+  new_contents = "\n".join(processed_lines)
+  os.chmod(format_path, 0666)
+  open(format_path, 'wb').write(new_contents)
+
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                revs, check_props, dump, *varargs):
   """Load the array of lines passed in DUMP into the current tests'
@@ -267,11 +299,8 @@ class FSFS_Index:
   The interface returns P2L information and allows for item offsets
   and lengths to be modified. """
 
-  by_item = { }
-  revision = -1
-  repo_dir = None
-
   def __init__(self, sbox, revision):
+    self.by_item = { }
     self.revision = revision
     self.repo_dir = sbox.repo_dir
 
@@ -1833,24 +1862,21 @@ def hotcopy_incremental(sbox):
 @SkipUnless(svntest.main.fs_has_pack)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"
+
+  # Configure two files per shard to trigger packing.
   sbox.build()
+  patch_format(sbox.repo_dir, shard_size=2)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
 
-  # Configure two files per shard to trigger packing
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  if svntest.main.options.server_minor_version >= 9:
-    format_file.write("7\nlayout sharded 2\naddressing logical 0\n")
-  else:
-    format_file.write("6\nlayout sharded 2\n")
-  format_file.close()
-
-  # Pack revisions 0 and 1.
-  svntest.actions.run_and_verify_svnadmin(
-    None, ['Packing revisions in shard 0...done.\n'], [], "pack",
-    os.path.join(cwd, sbox.repo_dir))
+  # Pack revisions 0 and 1 if not already packed.
+  if not (svntest.main.is_fs_type_fsfs and svntest.main.options.fsfs_packing
+          and svntest.main.options.fsfs_sharding == 2):
+    svntest.actions.run_and_verify_svnadmin(
+      None, ['Packing revisions in shard 0...done.\n'], [], "pack",
+      os.path.join(cwd, sbox.repo_dir))
 
   # Commit 5 more revs, hotcopy and pack after each commit.
   for i in [1, 2, 3, 4, 5]:
@@ -1866,7 +1892,8 @@ def hotcopy_incremental_packed(sbox):
     if i < 5:
       sbox.simple_mkdir("newdir-%i" % i)
       sbox.simple_commit()
-      if not i % 2:
+      if (svntest.main.is_fs_type_fsfs and not svntest.main.options.fsfs_packing
+          and not i % 2):
         expected_output = ['Packing revisions in shard %d...done.\n' % (i/2)]
       else:
         expected_output = []
@@ -2486,23 +2513,10 @@ def fsfs_hotcopy_old_with_id_changes(sbox):
 @SkipUnless(svntest.main.fs_has_pack)
 def verify_packed(sbox):
   "verify packed with small shards"
-  sbox.build()
 
   # Configure two files per shard to trigger packing.
-  if svntest.main.is_fs_type_fsx():
-    format = "1\nlayout sharded 2\n"
-  elif svntest.main.is_fs_type_fsfs and \
-       svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 2\naddressing logical 0\n"
-  elif svntest.main.is_fs_type_fsfs and \
-       svntest.main.options.server_minor_version < 9:
-    format = "6\nlayout sharded 2\n"
-  else:
-    raise svntest.Failure
-
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write(format)
-  format_file.close()
+  sbox.build()
+  patch_format(sbox.repo_dir, shard_size=2)
 
   # Play with our greek tree.  These changesets fall into two
   # separate shards with r2 and r3 being in shard 1 ...
@@ -2565,19 +2579,30 @@ def verify_packed(sbox):
 def freeze_freeze(sbox):
   "svnadmin freeze svnadmin freeze (some-cmd)"
 
-  sbox.build(read_only=True) # need working copy as location for arg-file
+  sbox.build(create_wc=False, read_only=True)
   second_repo_dir, _ = sbox.add_repo_path('backup')
   svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
                                           sbox.repo_dir, second_repo_dir)
-  svntest.actions.run_and_verify_svnadmin(None, [], None,
-                                          'setuuid', second_repo_dir)
+
+  if svntest.main.is_fs_type_fsx() or \
+     (svntest.main.is_fs_type_fsfs() and \
+      svntest.main.options.server_minor_version < 9):
+    # FSFS repositories created with --compatible-version=1.8 and less
+    # erroneously share the filesystem data (locks, shared transaction
+    # data, ...) between hotcopy source and destination.  This is fixed
+    # for new FS formats, but in order to avoid SVN_ERR_RECURSIVE_LOCK
+    # for old formats, we have to manually assign a new UUID for the
+    # hotcopy destination.  As of trunk@1618024, the same applies to
+    # FSX repositories.
+    svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                            'setuuid', second_repo_dir)
 
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                  'freeze', '--', sbox.repo_dir,
                  svntest.main.svnadmin_binary, 'freeze', '--', second_repo_dir,
                  sys.executable, '-c', 'True')
 
-  arg_file = sbox.ospath('arg-file')
+  arg_file = sbox.get_tempname()
   svntest.main.file_write(arg_file,
                           "%s\n%s\n" % (sbox.repo_dir, second_repo_dir))
 
@@ -2662,17 +2687,7 @@ def fsfs_hotcopy_progress(sbox):
   sbox.build(create_wc=False)
   svntest.main.safe_rmtree(sbox.repo_dir, True)
   svntest.main.create_repos(sbox.repo_dir)
-
-  if svntest.main.options.server_minor_version >= 9:
-    format = "7\nlayout sharded 3\naddressing logical 0\n"
-  elif svntest.main.options.server_minor_version < 9:
-    format = "6\nlayout sharded 3\n"
-  else:
-    raise svntest.Failure
-
-  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write(format)
-  format_file.close()
+  patch_format(sbox.repo_dir, shard_size=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 
@@ -2881,6 +2896,44 @@ def fsfs_hotcopy_progress_old(sbox):
                                           sbox.repo_dir, inc_backup_dir)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def freeze_same_uuid(sbox):
+  "freeze multiple repositories with same UUID"
+
+  sbox.build(create_wc=False)
+
+  first_repo_dir, _ = sbox.add_repo_path('first')
+  second_repo_dir, _ = sbox.add_repo_path('second')
+
+  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock or
+  # error out with SVN_ERR_RECURSIVE_LOCK for new FSFS formats, even if 'A'
+  # and 'B' share the same UUID.  Create two repositories by loading the
+  # same dump file, ...
+  svntest.main.create_repos(first_repo_dir)
+  svntest.main.create_repos(second_repo_dir)
+
+  dump_path = os.path.join(os.path.dirname(sys.argv[0]),
+                                           'svnadmin_tests_data',
+                                           'skeleton_repos.dump')
+  dump_contents = open(dump_path, 'rb').readlines()
+  svntest.actions.run_and_verify_load(first_repo_dir, dump_contents)
+  svntest.actions.run_and_verify_load(second_repo_dir, dump_contents)
+
+  # ...and execute the 'svnadmin freeze -F' command.
+  if svntest.main.options.server_minor_version < 9:
+    expected_error = ".*svnadmin: E200043:.*"
+  else:
+    expected_error = None
+
+  arg_file = sbox.get_tempname()
+  svntest.main.file_write(arg_file,
+                          "%s\n%s\n" % (first_repo_dir, second_repo_dir))
+
+  svntest.actions.run_and_verify_svnadmin(None, None, expected_error,
+                                          'freeze', '-F', arg_file, '--',
+                                          sys.executable, '-c', 'True')
+
+
 ########################################################################
 # Run the tests
 
@@ -2932,6 +2985,7 @@ test_list = [ None,
               fsfs_hotcopy_progress,
               fsfs_hotcopy_progress_with_revprop_changes,
               fsfs_hotcopy_progress_old,
+              freeze_same_uuid,
              ]
 
 if __name__ == '__main__':

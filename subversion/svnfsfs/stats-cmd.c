@@ -29,11 +29,11 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
-#include "../../../subversion/libsvn_fs_fs/index.h"
-#include "../../../subversion/libsvn_fs_fs/pack.h"
-#include "../../../subversion/libsvn_fs_fs/rev_file.h"
-#include "../../../subversion/libsvn_fs_fs/util.h"
-#include "../../../subversion/libsvn_fs/fs-loader.h"
+#include "../libsvn_fs_fs/index.h"
+#include "../libsvn_fs_fs/pack.h"
+#include "../libsvn_fs_fs/rev_file.h"
+#include "../libsvn_fs_fs/util.h"
+#include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
 #include "svnfsfs.h"
