@@ -306,6 +306,11 @@ svn_wc_conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
     new_conflict->src_right_version =
       svn_wc_conflict_version_dup(conflict->src_right_version, pool);
 
+  /* ### For property conflicts, cd2 stores prop_reject_abspath in
+   * ### their_abspath, and stores theirs_abspath in merged_file. */
+  if (conflict->prop_reject_abspath)
+    new_conflict->prop_reject_abspath = new_conflict->their_abspath;
+
   return new_conflict;
 }
 
