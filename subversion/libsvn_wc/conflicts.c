@@ -1047,68 +1047,7 @@ svn_wc__conflict_read_markers(const apr_array_header_t **markers,
 
 /* --------------------------------------------------------------------
  */
-/* Helper for svn_wc__conflict_create_markers */
-static svn_skel_t *
-prop_conflict_skel_new(apr_pool_t *result_pool)
-{
-  svn_skel_t *operation = svn_skel__make_empty_list(result_pool);
-  svn_skel_t *result = svn_skel__make_empty_list(result_pool);
 
-  svn_skel__prepend(operation, result);
-  return result;
-}
-
-
-/* Helper for prop_conflict_skel_add */
-static void
-prepend_prop_value(const svn_string_t *value,
-                   svn_skel_t *skel,
-                   apr_pool_t *result_pool)
-{
-  svn_skel_t *value_skel = svn_skel__make_empty_list(result_pool);
-
-  if (value != NULL)
-    {
-      const void *dup = apr_pmemdup(result_pool, value->data, value->len);
-
-      svn_skel__prepend(svn_skel__mem_atom(dup, value->len, result_pool),
-                        value_skel);
-    }
-
-  svn_skel__prepend(value_skel, skel);
-}
-
-
-/* Helper for svn_wc__conflict_create_markers */
-static svn_error_t *
-prop_conflict_skel_add(
-  svn_skel_t *skel,
-  const char *prop_name,
-  const svn_string_t *original_value,
-  const svn_string_t *mine_value,
-  const svn_string_t *incoming_value,
-  const svn_string_t *incoming_base_value,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool)
-{
-  svn_skel_t *prop_skel = svn_skel__make_empty_list(result_pool);
-
-  /* ### check that OPERATION has been filled in.  */
-
-  /* See notes/wc-ng/conflict-storage  */
-  prepend_prop_value(incoming_base_value, prop_skel, result_pool);
-  prepend_prop_value(incoming_value, prop_skel, result_pool);
-  prepend_prop_value(mine_value, prop_skel, result_pool);
-  prepend_prop_value(original_value, prop_skel, result_pool);
-  svn_skel__prepend_str(apr_pstrdup(result_pool, prop_name), prop_skel,
-                        result_pool);
-  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_PROP, prop_skel, result_pool);
-
-  /* Now we append PROP_SKEL to the end of the provided conflict SKEL.  */
-  svn_skel__append(skel, prop_skel);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__conflict_create_markers(svn_skel_t **work_items,
@@ -1138,10 +1077,8 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
       /* Ok, currently we have to do a few things for property conflicts:
          - Create a marker file
-         - Create a WQ item that sets the marker name
-         - Create a WQ item that fills the marker with the expected data
-
-         This can be simplified once we really store conflict_skel in wc.db */
+         - Store the name in the conflict_skel
+         - Create a WQ item that fills the marker with the expected data */
 
       SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
@@ -1173,65 +1110,9 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
         svn_skel__prepend_str(marker_relpath, prop_conflict->children->next,
                             result_pool);
       }
-
-      /* Store the data in the WQ item in the same format used as 1.7.
-         Once we store the data in DB it is easier to just read it back
-         from the workqueue */
-      {
-        svn_skel_t *prop_data;
-        apr_hash_index_t *hi;
-        apr_hash_t *old_props;
-        apr_hash_t *mine_props;
-        apr_hash_t *their_original_props;
-        apr_hash_t *their_props;
-        apr_hash_t *conflicted_props;
-
-        SVN_ERR(svn_wc__conflict_read_prop_conflict(NULL,
-                                                    &mine_props,
-                                                    &their_original_props,
-                                                    &their_props,
-                                                    &conflicted_props,
-                                                    db, local_abspath,
-                                                    conflict_skel,
-                                                    scratch_pool,
-                                                    scratch_pool));
-
-        if (operation == svn_wc_operation_merge)
-          SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
-                                                 scratch_pool, scratch_pool));
-        else
-          old_props = their_original_props;
-
-        prop_data = prop_conflict_skel_new(result_pool);
-
-        for (hi = apr_hash_first(scratch_pool, conflicted_props);
-             hi;
-             hi = apr_hash_next(hi))
-          {
-            const char *propname = apr_hash_this_key(hi);
-
-            SVN_ERR(prop_conflict_skel_add(
-                            prop_data, propname,
-                            old_props
-                                    ? svn_hash_gets(old_props, propname)
-                                    : NULL,
-                            mine_props
-                                    ? svn_hash_gets(mine_props, propname)
-                                    : NULL,
-                            their_props
-                                    ? svn_hash_gets(their_props, propname)
-                                      : NULL,
-                            their_original_props
-                                    ? svn_hash_gets(their_original_props, propname)
-                                      : NULL,
-                            result_pool, scratch_pool));
-          }
-
-        SVN_ERR(svn_wc__wq_build_prej_install(work_items,
-                                              db, local_abspath,
-                                              prop_data,
-                                              scratch_pool, scratch_pool));
-      }
+      SVN_ERR(svn_wc__wq_build_prej_install(work_items,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
