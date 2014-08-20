@@ -423,13 +423,6 @@ do_test_num(const char *progname,
         err = (*desc->func2)(pool);
       else
         err = (*desc->func_opts)(opts, pool);
-
-      if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
-        {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          skip = TRUE;
-        }
     }
   else
     err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
