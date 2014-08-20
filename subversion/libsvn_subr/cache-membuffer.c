@@ -1840,8 +1840,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       /* Since a simple mutex already guarantees fully serialized access,
          we need this mutex only when we use multple-reader-1-writer locks. */
       SVN_ERR(svn_mutex__init(&c[seg].counter_mutex,
-                              thread_safe && !USE_SIMPLE_MUTEX, FALSE,
-                              pool));
+                              thread_safe && !USE_SIMPLE_MUTEX, pool));
     }
 
   /* done here
@@ -3132,7 +3131,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->priority = priority;
   cache->key_len = klen;
 
-  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, FALSE, result_pool));
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, result_pool));
 
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it

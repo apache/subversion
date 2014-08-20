@@ -719,7 +719,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
    * usage but make it thread-safe to allow for multi-threaded tests.
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(TRUE));
-  err = svn_mutex__init(&log_mutex, TRUE, TRUE, pool);
+  err = svn_mutex__init(&log_mutex, TRUE, pool);
   if (err)
     {
       svn_handle_error2(err, stderr, TRUE, "svn_tests: ");
