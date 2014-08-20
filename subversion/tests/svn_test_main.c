@@ -473,7 +473,7 @@ static void * APR_THREAD_FUNC
 test_thread(apr_thread_t *thread, void *data)
 {
   svn_boolean_t skip, xfail, wimp;
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   const struct svn_test_descriptor_t *desc;
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   test_params_t *params = data;
@@ -506,7 +506,7 @@ test_thread(apr_thread_t *thread, void *data)
 
       /* Do test */
       if (skip || !run_this_test)
-        ; /* pass */
+        err = NULL; /* pass */
       else if (desc->func2)
         err = (*desc->func2)(pool);
       else
