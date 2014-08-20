@@ -1749,10 +1749,6 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
                             apr_pool_t *pool);
 
 
-/* Extended conflict information. */
-typedef struct svn_wc_conflict_description_private_t
-  svn_wc_conflict_description_private_t;
-
 /** A struct that describes a conflict that has occurred in the
  * working copy.
  *
@@ -1861,11 +1857,12 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* Extended conflict information. */
-  svn_wc_conflict_description_private_t *priv;
-
-  /* Instead of adding new fields here, add new fields to the above
-   * 'priv' structure and provide accesstor functions for them. */
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update
+     svn_wc_conflict_description2_dup and perhaps
+     svn_wc_conflict_description_create_text2,
+     svn_wc_conflict_description_create_prop2, and
+     svn_wc_conflict_description_create_tree2. */
 } svn_wc_conflict_description2_t;
 
 
