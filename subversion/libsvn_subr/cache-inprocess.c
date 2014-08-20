@@ -680,7 +680,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
   /* The sentinel doesn't need a pool.  (We're happy to crash if we
    * accidentally try to treat it like a real page.) */
 
-  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
 
   cache->cache_pool = pool;
 
