@@ -1857,6 +1857,10 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
+  /* For property conflicts, the absolute path to the .prej file.
+   * @since New in 1.9. */
+  const char *prop_reject_abspath;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_wc_conflict_description2_dup and perhaps
