@@ -210,6 +210,7 @@ store_id(apr_array_header_t *ids,
 {
   binary_id_t bin_id = { { 0 } };
   int idx;
+  void *idx_void;
 
   if (id == NULL)
     return 0;
@@ -218,7 +219,8 @@ store_id(apr_array_header_t *ids,
   bin_id.copy_id = *svn_fs_x__id_copy_id(id);
   bin_id.noderev_id = *svn_fs_x__id_noderev_id(id);
 
-  idx = (int)(apr_uintptr_t)apr_hash_get(dict, &bin_id, sizeof(bin_id));
+  idx_void = apr_hash_get(dict, &bin_id, sizeof(bin_id));
+  idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
       APR_ARRAY_PUSH(ids, binary_id_t) = bin_id;
@@ -240,6 +242,7 @@ store_representation(apr_array_header_t *reps,
 {
   binary_representation_t binary_rep = { 0 };
   int idx;
+  void *idx_void;
 
   if (rep == NULL)
     return 0;
@@ -251,8 +254,8 @@ store_representation(apr_array_header_t *reps,
   binary_rep.size = rep->size;
   binary_rep.expanded_size = rep->expanded_size;
 
-  idx = (int)(apr_uintptr_t)apr_hash_get(dict, &binary_rep,
-                                         sizeof(binary_rep));
+  idx_void = apr_hash_get(dict, &binary_rep, sizeof(binary_rep));
+  idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
       APR_ARRAY_PUSH(reps, binary_representation_t) = binary_rep;

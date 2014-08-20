@@ -284,12 +284,13 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
   string = apr_pstrmemdup(builder->pool, string, len);
   if (len > MAX_SHORT_STRING_LEN)
     {
+      void *idx_void;
       svn_string_t item;
       item.data = string;
       item.len = len;
-      
-      result
-        = (apr_uintptr_t)apr_hash_get(table->long_string_dict, string, len);
+
+      idx_void = apr_hash_get(table->long_string_dict, string, len);
+      result = (apr_uintptr_t)idx_void;
       if (result)
         return result - 1
              + LONG_STRING_MASK
