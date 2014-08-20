@@ -1193,6 +1193,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                                   svn_io_file_del_on_pool_cleanup,
                                   scratch_pool));
       cdesc->my_abspath = svn_dirent_join(dirpath, file_name, scratch_pool);
+      cdesc->prop_value_working = working_val;
     }
 
   if (incoming_new_val)
@@ -1207,6 +1208,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
       /* ### For property conflicts, cd2 stores prop_reject_abspath in
        * ### their_abspath, and stores theirs_abspath in merged_file. */
       cdesc->merged_file = svn_dirent_join(dirpath, file_name, scratch_pool);
+      cdesc->prop_value_incoming_new = incoming_new_val;
     }
 
   if (!base_val && !incoming_old_val)
@@ -1271,6 +1273,9 @@ generate_propconflict(svn_boolean_t *conflict_remains,
                                   conflict_base_val->len,
                                   svn_io_file_del_on_pool_cleanup, scratch_pool));
       cdesc->base_abspath = svn_dirent_join(dirpath, file_name, scratch_pool);
+
+      cdesc->prop_value_base = base_val;
+      cdesc->prop_value_incoming_old = incoming_old_val;
 
       if (working_val && incoming_new_val)
         {
@@ -2021,6 +2026,7 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
                          apr_pool_t *scratch_pool)
 {
   const char *prop_reject_file;
+  apr_hash_t *base_props;
   apr_hash_t *my_props;
   apr_hash_t *their_old_props;
   apr_hash_t *their_props;
@@ -2060,6 +2066,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       return SVN_NO_ERROR;
     }
 
+  SVN_ERR(svn_wc__db_base_get_props(&base_props, db, local_abspath,
+                                    result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicted_props);
        hi;
@@ -2109,10 +2117,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       desc->prop_reject_abspath = apr_pstrdup(result_pool, prop_reject_file);
       desc->their_abspath = desc->prop_reject_abspath;
 
-      /* ### This should be changed. The conflict description for
-       * ### props should contain these values as svn_string_t,
-       * ### rather than in temporary files. We need to rev the
-       * ### conflict description struct for this. */
+      desc->prop_value_base = svn_hash_gets(base_props, propname);
+
       if (my_value)
         {
           svn_stream_t *s;
@@ -2124,6 +2130,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           len = my_value->len;
           SVN_ERR(svn_stream_write(s, my_value->data, &len));
           SVN_ERR(svn_stream_close(s));
+
+          desc->prop_value_working = svn_string_dup(my_value, result_pool);
         }
 
       if (their_value)
@@ -2139,6 +2147,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           len = their_value->len;
           SVN_ERR(svn_stream_write(s, their_value->data, &len));
           SVN_ERR(svn_stream_close(s));
+
+          desc->prop_value_incoming_new = svn_string_dup(their_value, result_pool);
         }
 
       if (old_value)
@@ -2152,6 +2162,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
           len = old_value->len;
           SVN_ERR(svn_stream_write(s, old_value->data, &len));
           SVN_ERR(svn_stream_close(s));
+
+          desc->prop_value_incoming_old = svn_string_dup(old_value, result_pool);
         }
 
       APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description2_t *) = desc;

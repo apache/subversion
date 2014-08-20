@@ -311,6 +311,19 @@ svn_wc_conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
   if (conflict->prop_reject_abspath)
     new_conflict->prop_reject_abspath = new_conflict->their_abspath;
 
+  if (conflict->prop_value_base)
+    new_conflict->prop_value_base =
+      svn_string_dup(conflict->prop_value_base, pool);
+  if (conflict->prop_value_working)
+    new_conflict->prop_value_working =
+      svn_string_dup(conflict->prop_value_working, pool);
+  if (conflict->prop_value_incoming_old)
+    new_conflict->prop_value_incoming_old =
+      svn_string_dup(conflict->prop_value_incoming_old, pool);
+  if (conflict->prop_value_incoming_new)
+    new_conflict->prop_value_incoming_new =
+      svn_string_dup(conflict->prop_value_incoming_new, pool);
+
   return new_conflict;
 }
 
