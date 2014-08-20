@@ -940,6 +940,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              HTTP operation."                   NL
         "###   http-chunked-requests      Whether to use chunked transfer"   NL
         "###                              encoding for HTTP requests body."  NL
+        "###   http-pipelining            Whether to use HTTP pipelining "   NL
+        "###                              or send requests one by one."      NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
