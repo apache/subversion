@@ -1861,7 +1861,35 @@ typedef struct svn_wc_conflict_description2_t
    * @since New in 1.9. */
   const char *prop_reject_abspath;
 
-  /* NOTE: Add new fields at the end to preserve binary compatibility.
+  /* For property conflicts, the local base value of the property, i.e. the
+   * value of the property as of the BASE revision of the working copy.
+   * For conflicts created during update/switch this contains the
+   * post-update/switch property value. The pre-update/switch value can
+   * be found in prop_value_incoming_old.
+   * Only set if available, so might be @c NULL.
+   * @since New in 1.9. */
+  const svn_string_t *prop_value_base;
+
+  /* For property conflicts, the local working value of the property,
+   * i.e. the value of the property in the working copy, possibly with
+   * local modiciations.
+   * Only set if available, so might be @c NULL.
+   * @since New in 1.9. */
+  const svn_string_t *prop_value_working;
+
+  /* For property conflicts, the incoming old value of the property,
+   * i.e. the value the property had at @c src_left_version.
+   * Only set if available, so might be @c NULL.
+   * @since New in 1.9 */
+  const svn_string_t *prop_value_incoming_old;
+
+  /* For property conflicts, the incoming new value of the property,
+   * i.e. the value the property had at @c src_right_version.
+   * Only set if available, so might be @c NULL.
+   * @since New in 1.9 */
+  const svn_string_t *prop_value_incoming_new;
+
+/* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_wc_conflict_description2_dup and perhaps
      svn_wc_conflict_description_create_text2,
