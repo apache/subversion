@@ -579,6 +579,11 @@ typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
  * Take an exclusive lock on @a fs to prevent commits and then invoke
  * @a freeze_func passing @a freeze_baton.
  *
+ * @note @a freeze_func must not, directly or indirectly, call any function
+ * that attempts to take out a lock on the underlying repository.  These
+ * include functions for packing, hotcopying, setting revprops and commits.
+ * Attempts to do so may result in a deadlock.
+ *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
  * higher level svn_repos_freeze() instead.
