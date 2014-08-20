@@ -41,6 +41,16 @@
 
 /*** Helper Functions ***/
 
+static void
+ignore_fs_warnings(void *baton, svn_error_t *err)
+{
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
+#endif
+  return;
+}
+
 /* Write the format number and maximum number of files per directory
    to a new format file in PATH, overwriting a previously existing
    file.  Use POOL for temporary allocation.
@@ -1184,10 +1194,6 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   if (strcmp(opts->fs_type, "fsfs") != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 
-  /* Revision property caching requires named atomics. */
-  if (!svn_named_atomic__is_supported())
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-
   /* Open two filesystem objects, enable revision property caching
    * in one of them. */
   SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
@@ -1196,6 +1202,11 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
 
   SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
+
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs2, ignore_fs_warnings, NULL);
 
   SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
   another_value_for_avoiding_warnings_from_a_broken_api = value;
@@ -1255,8 +1266,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_OPTS_PASS(metadata_checksumming,
                        "metadata checksums being checked"),
-    SVN_TEST_OPTS_XFAIL(revprop_caching_on_off,
-                        "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_WIMP(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching",
+                       "fails with FSFS / svn_named_atomic__is_efficient()"),
     SVN_TEST_NULL
   };
 
