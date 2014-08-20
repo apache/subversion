@@ -1072,7 +1072,7 @@ open_path(parent_path_t **parent_path_p,
 
           if (flags & open_path_node_only)
             {
-              /* Shortcut: the caller only wan'ts the final DAG node. */
+              /* Shortcut: the caller only wants the final DAG node. */
               parent_path->node = child;
             }
           else

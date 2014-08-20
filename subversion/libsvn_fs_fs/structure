@@ -62,7 +62,7 @@ repository) is:
   write-lock          Empty file, locked to serialise writers
   pack-lock           Empty file, locked to serialise 'svnadmin pack' (f. 7+)
   txn-current-lock    Empty file, locked to serialise 'txn-current'
-  uuid                File containing the UUID of the repository
+  uuid                File containing the repository IDs
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
@@ -203,6 +203,10 @@ Addressing:
   Format 1-6: Physical addressing; uses fixed positions within a rev file
   Format 7+:  Logical addressing; uses item index that will be translated
     on-the-fly to the actual rev / pack file location
+
+Repository IDs:
+  Format 1+:  The first line of db/uuid contains the repository UUID
+  Format 7+:  The second line contains the instance ID (in UUID formatting)
 
 # Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 

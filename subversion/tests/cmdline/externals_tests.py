@@ -3431,7 +3431,6 @@ def update_deletes_file_external(sbox):
                                      sbox.repo_url + '/A_copy')
 
   # Update the working copy
-  sbox.simple_commit()
   sbox.simple_update()
 
   # Remove the branch

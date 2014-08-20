@@ -54,9 +54,6 @@ extern "C" {
 #error Please update your version of serf to at least 1.2.1.
 #endif
 
-/** Use this to silence compiler warnings about unused parameters. */
-#define UNUSED_CTX(x) ((void)(x))
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
@@ -146,6 +143,13 @@ struct svn_ra_serf__session_t {
   /* Do we need to detect whether the connection supports chunked requests?
      i.e. is there a (reverse) proxy that does not support them?  */
   svn_boolean_t detect_chunking;
+
+  /* Can serf use HTTP pipelining, or should it send requests one by one.
+     HTTP pipelining is enabled by default. The only known case where it should
+     be disabled is when the server triggers SSL renegotiations in the middle
+     of HTTP traffic on a connection, which OpenSSL currently doesn't handle
+     well. See serf issue #135. */
+  svn_boolean_t http_pipelining;
 
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;

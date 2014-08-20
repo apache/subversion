@@ -638,10 +638,9 @@ encode_l2p_page(apr_array_header_t *entries,
         }
       else
         {
-          apr_uintptr_t idx
-            = (apr_uintptr_t)apr_hash_get(containers, &entry->offset,
-                                          sizeof(entry->offset));
-          if (idx == 0)
+          void *void_idx = apr_hash_get(containers, &entry->offset,
+                                        sizeof(entry->offset));
+          if (void_idx == NULL)
             {
               apr_uint64_t value = entry->offset + container_count;
               SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
@@ -649,6 +648,7 @@ encode_l2p_page(apr_array_header_t *entries,
             }
           else
             {
+              apr_uintptr_t idx = (apr_uintptr_t)void_idx;
               apr_uint64_t value = entry->sub_item;
               SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                           encode_uint(encoded, idx), pool));
@@ -1638,7 +1638,7 @@ l2p_proto_index_lookup(apr_off_t *offset,
       if (!eof && entry.item_index == item_index)
         {
           *offset = (apr_off_t)entry.offset - 1;
-          *sub_item = (apr_off_t)entry.sub_item;
+          *sub_item = entry.sub_item;
           break;
         }
     }

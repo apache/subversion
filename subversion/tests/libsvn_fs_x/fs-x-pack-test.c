@@ -814,11 +814,12 @@ test_reps(const svn_test_opts_t *opts,
   builder = svn_fs_x__reps_builder_create(fs, pool);
   for (i = 10000; i > 10; --i)
     {
+      apr_size_t idx;
       svn_string_t string;
       string.data = contents->data;
       string.len = i;
 
-      svn_fs_x__reps_add(builder, &string);
+      SVN_ERR(svn_fs_x__reps_add(&idx, builder, &string));
     }
 
   serialized = svn_stringbuf_create_empty(pool);

@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "private/svn_fspath.h"
+#include "private/svn_cert.h"
 
 #include "../svn_test.h"
 
@@ -2715,6 +2716,145 @@ test_fspath_get_longest_ancestor(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+struct cert_match_dns_test {
+  const char *pattern;
+  const char *hostname;
+  svn_boolean_t expected;
+};
+
+static svn_error_t *
+run_cert_match_dns_tests(struct cert_match_dns_test *tests, apr_pool_t *pool)
+{
+  struct cert_match_dns_test *ct;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (ct = tests; ct->pattern; ct++)
+    {
+      svn_boolean_t result;
+      svn_string_t *pattern, *hostname;
+
+      svn_pool_clear(iterpool);
+
+      pattern = svn_string_create(ct->pattern, iterpool);
+      hostname = svn_string_create(ct->hostname, iterpool);
+
+      result = svn_cert__match_dns_identity(pattern, hostname);
+      if (result != ct->expected)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected %s but got %s for pattern '%s' on "
+                                 "hostname '%s'",
+                                 ct->expected ? "match" : "no match",
+                                 result ? "match" : "no match",
+                                 pattern->data, hostname->data);
+
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static struct cert_match_dns_test cert_match_dns_tests[] = {
+  { "foo.example.com", "foo.example.com", TRUE }, /* exact match */
+  { "foo.example.com", "FOO.EXAMPLE.COM", TRUE }, /* case differences */
+  { "FOO.EXAMPLE.COM", "foo.example.com", TRUE },
+  { "*.example.com", "FoO.ExAmPlE.CoM", TRUE },
+  { "*.ExAmPlE.CoM", "foo.example.com", TRUE },
+  { "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", TRUE },
+  { "abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", TRUE },
+  { "foo.example.com", "bar.example.com", FALSE }, /* difference at start */
+  { "foo.example.com", "foo.example.net", FALSE }, /* difference at end */
+  { "foo.example.com", "foo.example.commercial", FALSE }, /* hostname longer */
+  { "foo.example.commercial", "foo.example.com", FALSE }, /* pattern longer */
+  { "foo.example.comcom", "foo.example.com", FALSE }, /* repeated suffix */
+  { "foo.example.com", "foo.example.comcom", FALSE },
+  { "foo.example.com.com", "foo.example.com", FALSE },
+  { "foo.example.com", "foo.example.com.com", FALSE },
+  { "foofoo.example.com", "foo.example.com", FALSE }, /* repeated prefix */
+  { "foo.example.com", "foofoo.example.com", FALSE },
+  { "foo.foo.example.com", "foo.example.com", FALSE },
+  { "foo.example.com", "foo.foo.example.com", FALSE },
+  { "foo.*.example.com", "foo.bar.example.com", FALSE }, /* RFC 6125 s. 6.4.3
+                                                            Rule 1 */
+  { "*.example.com", "foo.example.com", TRUE }, /* RFC 6125 s. 6.4.3 Rule 2 */
+  { "*.example.com", "bar.foo.example.com", FALSE }, /* Rule 2 */
+  { "*.example.com", "example.com", FALSE }, /* Rule 2 */
+  { "*.example.com", ".example.com", FALSE }, /* RFC doesn't say what to do
+                                                 here and a leading period on
+                                                 a hostname doesn't make sense
+                                                 so we'll just reject this. */
+  { "*", "foo.example.com", FALSE }, /* wildcard must be left-most label,
+                                        implies that there must be more than
+                                        one label. */
+  { "*", "example.com", FALSE },
+  { "*", "com", FALSE },
+  { "*.example.com", "foo.example.net", FALSE }, /* difference in literal text
+                                                    with a wildcard. */
+  { "*.com", "example.com", TRUE }, /* See Errata ID 3090 for RFC 6125,
+                                       probably shouldn't allow this but
+                                       we do for now. */
+  { "*.", "example.com", FALSE }, /* test some dubious 2 character wildcard
+                                     patterns */
+  { "*.", "example.", TRUE }, /* This one feels questionable */
+  { "*.", "example", FALSE },
+  { "*.", ".", FALSE },
+  { "a", "a", TRUE }, /* check that single letter exact matches work */
+  { "a", "b", FALSE }, /* and single letter not matches shouldn't */
+  { "*.*.com", "foo.example.com", FALSE }, /* unsupported wildcards */
+  { "*.*.com", "example.com", FALSE },
+  { "**.example.com", "foo.example.com", FALSE },
+  { "**.example.com", "example.com", FALSE },
+  { "f*.example.com", "foo.example.com", FALSE },
+  { "f*.example.com", "bar.example.com", FALSE },
+  { "*o.example.com", "foo.example.com", FALSE },
+  { "*o.example.com", "bar.example.com", FALSE },
+  { "f*o.example.com", "foo.example.com", FALSE },
+  { "f*o.example.com", "bar.example.com", FALSE },
+  { "foo.e*.com", "foo.example.com", FALSE },
+  { "foo.*e.com", "foo.example.com", FALSE },
+  { "foo.e*e.com", "foo.example.com", FALSE },
+  { "foo.example.com", "foo.example.com.", TRUE }, /* trailing dot */
+  { "*.example.com", "foo.example.com.", TRUE },
+  { "foo", "foo.", TRUE },
+  { "foo.example.com.", "foo.example.com", FALSE },
+  { "*.example.com.", "foo.example.com", FALSE },
+  { "foo.", "foo", FALSE },
+  { "foo.example.com", "foo.example.com..", FALSE },
+  { "*.example.com", "foo.example.com..", FALSE },
+  { "foo", "foo..", FALSE },
+  { "foo.example.com..", "foo.example.com", FALSE },
+  { "*.example.com..", "foo.example.com", FALSE },
+  { "foo..", "foo", FALSE },
+  { NULL }
+};
+
+static svn_error_t *
+test_cert_match_dns_identity(apr_pool_t *pool)
+{
+  return run_cert_match_dns_tests(cert_match_dns_tests, pool);
+}
+
+/* This test table implements results that should happen if we supported
+ * RFC 6125 s. 6.4.3 Rule 3.  We don't so it's expected to fail for now. */
+static struct cert_match_dns_test rule3_tests[] = {
+  { "baz*.example.net", "baz1.example.net", TRUE },
+  { "*baz.example.net", "foobaz.example.net", TRUE },
+  { "b*z.example.net", "buuz.example.net", TRUE },
+  { "b*z.example.net", "bz.example.net", FALSE }, /* presume wildcard can't
+                                                     match nothing */
+  { "baz*.example.net", "baz.example.net", FALSE },
+  { "*baz.example.net", "baz.example.net", FALSE },
+  { "b*z.example.net", "buuzuuz.example.net", TRUE }, /* presume wildcard
+                                                         should be greedy */
+  { NULL }
+};
+
+static svn_error_t *
+test_rule3(apr_pool_t *pool)
+{
+  return run_cert_match_dns_tests(rule3_tests, pool);
+}
+
 
 /* The test table.  */
 
@@ -2815,6 +2955,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_fspath__dirname/basename/split"),
     SVN_TEST_PASS2(test_fspath_get_longest_ancestor,
                    "test svn_fspath__get_longest_ancestor"),
+    SVN_TEST_PASS2(test_cert_match_dns_identity,
+                   "test svn_cert__match_dns_identity"),
+    SVN_TEST_XFAIL2(test_rule3,
+                    "test match with RFC 6125 s. 6.4.3 Rule 3"),
     SVN_TEST_NULL
   };
 

@@ -48,7 +48,7 @@ svn_root_pools__create(svn_root_pools__t **pools)
 
   /* construct result object */
   svn_root_pools__t *result = apr_pcalloc(pool, sizeof(*result));
-  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
   result->unused_pools = apr_array_make(pool, 16, sizeof(apr_pool_t *));
 
   /* done */

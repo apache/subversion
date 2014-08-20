@@ -51,13 +51,14 @@ do_diff3(svn_stream_t *ostream,
 
   *has_changes = svn_diff_contains_diffs(diff);
 
-  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+  SVN_ERR(svn_diff_file_output_merge3(ostream, diff,
                                       original, modified, latest,
                                       conflict_original,
                                       conflict_modified,
                                       conflict_latest,
                                       "=======",
                                       conflict_style,
+                                      NULL, NULL, /* cancel */
                                       pool));
 
   return NULL;
