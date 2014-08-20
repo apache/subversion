@@ -1817,7 +1817,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
 #  if USE_SIMPLE_MUTEX
 
-      SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, FALSE, pool));
+      SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
 
 #  else
 
