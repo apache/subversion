@@ -1178,6 +1178,7 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   svn_fs_t *fs2;
   apr_hash_t *fs_config;
   svn_string_t *value;
+  const svn_string_t *another_value_for_avoiding_warnings_from_a_broken_api;
   const svn_string_t *new_value = svn_string_create("new", pool);
 
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -1197,8 +1198,11 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
 
   SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
-  SVN_ERR(svn_fs_change_rev_prop2(fs1, 0, "svn:date", &value,
-                                  new_value, pool));
+  another_value_for_avoiding_warnings_from_a_broken_api = value;
+  SVN_ERR(svn_fs_change_rev_prop2(
+              fs1, 0, "svn:date",
+              &another_value_for_avoiding_warnings_from_a_broken_api,
+              new_value, pool));
 
   /* Expect the change to be visible through both objects.*/
   SVN_ERR(svn_fs_revision_prop(&value, fs1, 0, "svn:date", pool));
