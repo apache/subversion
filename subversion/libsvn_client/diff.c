@@ -1027,7 +1027,7 @@ diff_file_added(const char *relpath,
   else if (copyfrom_source && right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
-                                 DIFF_REVNUM_NONEXISTENT,
+                                 copyfrom_source->revision,
                                  right_source->revision,
                                  svn_prop_get_value(left_props,
                                                     SVN_PROP_MIME_TYPE),
@@ -1190,7 +1190,8 @@ diff_dir_added(const char *relpath,
                          scratch_pool));
 
   return svn_error_trace(diff_props_changed(relpath,
-                                            DIFF_REVNUM_NONEXISTENT,
+                                            copyfrom_source ? copyfrom_source->revision
+                                                            : DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
                                             left_props,

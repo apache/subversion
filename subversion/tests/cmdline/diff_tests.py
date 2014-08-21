@@ -3215,7 +3215,7 @@ def diff_git_format_wc_wc(sbox):
 
   expected_output = make_git_diff_header(
                          alpha_copied_path, "A/B/E/alpha_copied",
-                         "nonexistent", "working copy",
+                         "revision 1", "working copy",
                          copyfrom_path="A/B/E/alpha",
                          copyfrom_rev='1', cp=True,
                          text_changes=True) + [
@@ -4809,9 +4809,7 @@ def diff_local_copied_dir(sbox):
     expected_output_C3 = [
       'Index: C3\n',
       '===================================================================\n',
-      '--- C3	(nonexistent)\n',  ### This is the present display, but really
-                                   ### it should show the copy-from:
-                                   ### "(revision 1)"
+      '--- C3	(revision 2)\n',
       '+++ C3	(working copy)\n',
       '\n',
       'Property changes on: C3\n',
