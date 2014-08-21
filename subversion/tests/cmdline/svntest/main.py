@@ -1827,6 +1827,8 @@ def _create_parser():
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
+  parser.add_option('--fsfs-version', type='int', action='store',
+                    help='FSFS version (fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
