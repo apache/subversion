@@ -240,6 +240,12 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
+/* Explicitly initialize the revprop cache in FS - independent of
+   global cache settings. Use POOL for temporary allocations.  If the
+   cache has already been initialized, we'll keep that instance. */
+svn_error_t *
+svn_fs_fs__initialize_revprop_caches(svn_fs_t *fs, apr_pool_t *pool);
+
 /* Initialize all transaction-local caches in FS according to the global
    cache settings and make TXN_ID part of their key space. Use POOL for
    allocations.

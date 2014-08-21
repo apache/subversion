@@ -126,7 +126,7 @@ open_repos(svn_repos_t **repos,
   apr_hash_t *fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "3");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
                            svn_uuid_generate(pool));
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
