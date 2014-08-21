@@ -1798,7 +1798,7 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t tc_kind;
+  svn_node_kind_t local_kind;
   svn_wc_conflict_reason_t reason;
   svn_wc_conflict_action_t action;
 
@@ -1806,14 +1806,42 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
             &reason, &action, NULL,
             db, local_abspath, conflict_skel, scratch_pool, scratch_pool));
 
-  if (left_version)
-    tc_kind = left_version->node_kind;
-  else if (right_version)
-    tc_kind = right_version->node_kind;
+  if (reason == svn_wc_conflict_reason_missing)
+    local_kind = svn_node_none;
+  else if (reason == svn_wc_conflict_reason_unversioned ||
+           reason == svn_wc_conflict_reason_obstructed)
+    SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
+  else if (operation == svn_wc_operation_merge)
+    {
+      /* Read the tree conflict victim's node kind from the working
+       * or base tree. */
+      SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
+                                   TRUE, TRUE, TRUE, scratch_pool));
+      if (local_kind == svn_node_unknown)
+        SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
+    }
+  else if (operation == svn_wc_operation_update ||
+           operation == svn_wc_operation_switch)
+    {
+      /* For updates, the left version corresponds to the pre-update state. */
+      if (left_version)
+        local_kind = left_version->node_kind;
+      else
+        {
+          /* No left version is available, so the conflict was flagged
+           * because of a locally added node which was not part of the
+           * BASE tree before the update. */
+          SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
+                                       TRUE, TRUE, TRUE, scratch_pool));
+          if (local_kind == svn_node_unknown)
+            SVN_ERR(svn_io_check_path(local_abspath, &local_kind,
+                                      scratch_pool));
+        }
+    }
   else
-    tc_kind = svn_node_file; /* Avoid assertion */
+    SVN_ERR_MALFUNCTION();
 
-  *desc = svn_wc_conflict_description_create_tree2(local_abspath, tc_kind,
+  *desc = svn_wc_conflict_description_create_tree2(local_abspath, local_kind,
                                                    operation,
                                                    left_version, right_version,
                                                    result_pool);
