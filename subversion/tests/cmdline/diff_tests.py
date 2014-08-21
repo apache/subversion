@@ -4782,6 +4782,52 @@ def diff_replaced_moved(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', sbox.ospath('AA/B'), '-r1')
 
+# Regression test for the fix in r1619380. Prior to this (and in releases
+# 1.8.0 through 1.8.10) a local diff incorrectly showed a copied dir's
+# properties as added, whereas it should show only the changes against the
+# copy-source.
+def diff_local_copied_dir(sbox):
+  "local WC diff of copied dir"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  try:
+    sbox.simple_propset('p1', 'v1', 'A/C')
+    sbox.simple_commit()
+
+    # dir with no prop changes
+    sbox.simple_copy('A/C', 'C2')
+    # dir with prop changes
+    sbox.simple_copy('A/C', 'C3')
+    sbox.simple_propset('p2', 'v2', 'C3')
+
+    expected_output_C2 = []
+    expected_output_C3 = [
+      'Index: C3\n',
+      '===================================================================\n',
+      '--- C3	(nonexistent)\n',  ### This is the present display, but really
+                                   ### it should show the copy-from:
+                                   ### "(revision 1)"
+      '+++ C3	(working copy)\n',
+      '\n',
+      'Property changes on: C3\n',
+      '___________________________________________________________________\n',
+      'Added: p2\n',
+      '## -0,0 +1 ##\n',
+      '+v2\n',
+      '\ No newline at end of property\n',
+    ]
+
+    svntest.actions.run_and_verify_svn(None, expected_output_C2, [],
+                                       'diff', 'C2')
+    svntest.actions.run_and_verify_svn(None, expected_output_C3, [],
+                                       'diff', 'C3')
+  finally:
+    os.chdir(was_cwd)
 
 
 ########################################################################
@@ -4873,6 +4919,7 @@ test_list = [ None,
               diff_parent_dir,
               diff_deleted_in_move_against_repos,
               diff_replaced_moved,
+              diff_local_copied_dir,
               ]
 
 if __name__ == '__main__':
