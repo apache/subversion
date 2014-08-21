@@ -481,9 +481,8 @@ svn_fs_id_t *
 svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)source;
-  fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  fs_fs__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
-  *new_id = *id;
   new_id->generic_id.fsap_data = new_id;
 
   return (svn_fs_id_t *)new_id;
