@@ -1,6 +1,6 @@
 /*
- * diff_pristine.c -- A simple diff walker which compares local files against
- *                    their pristine versions.
+ * diff_local.c -- A simple diff walker which compares local files against
+ *                 their pristine versions.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
