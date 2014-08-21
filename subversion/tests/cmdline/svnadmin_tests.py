@@ -2896,7 +2896,8 @@ def fsfs_hotcopy_progress_old(sbox):
                                           sbox.repo_dir, inc_backup_dir)
 
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(lambda: svntest.main.is_fs_type_fsfs()
+            and svntest.main.options.server_minor_version >= 9)
 def freeze_same_uuid(sbox):
   "freeze multiple repositories with same UUID"
 
@@ -2920,16 +2921,11 @@ def freeze_same_uuid(sbox):
   svntest.actions.run_and_verify_load(second_repo_dir, dump_contents)
 
   # ...and execute the 'svnadmin freeze -F' command.
-  if svntest.main.options.server_minor_version < 9:
-    expected_error = ".*svnadmin: E200043:.*"
-  else:
-    expected_error = None
-
   arg_file = sbox.get_tempname()
   svntest.main.file_write(arg_file,
                           "%s\n%s\n" % (first_repo_dir, second_repo_dir))
 
-  svntest.actions.run_and_verify_svnadmin(None, None, expected_error,
+  svntest.actions.run_and_verify_svnadmin(None, None, None,
                                           'freeze', '-F', arg_file, '--',
                                           sys.executable, '-c', 'True')
 
