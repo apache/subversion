@@ -1351,6 +1351,9 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def tests_use_prepacakaged_repository():
+  return options.fsfs_version is not None
+
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
 
