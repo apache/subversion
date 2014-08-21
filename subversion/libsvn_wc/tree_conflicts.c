@@ -46,6 +46,7 @@ static const svn_token_map_t node_kind_map[] =
   { "file", svn_node_file },
   { "dir",  svn_node_dir },
   { "",     svn_node_unknown },
+  /* ### should also map svn_node_symlink */
   { NULL }
 };
 
