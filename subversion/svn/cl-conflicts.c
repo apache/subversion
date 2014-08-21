@@ -75,6 +75,7 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
   switch (kind)
     {
       case svn_node_file:
+      case svn_node_symlink:
         switch (reason)
           {
           case svn_wc_conflict_reason_edited:
@@ -126,9 +127,32 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
             return _("local dir moved here");
           }
         break;
-      case svn_node_symlink:
       case svn_node_none:
       case svn_node_unknown:
+        switch (reason)
+          {
+          case svn_wc_conflict_reason_edited:
+            return _("local edit");
+          case svn_wc_conflict_reason_obstructed:
+            return _("local obstruction");
+          case svn_wc_conflict_reason_deleted:
+            return _("local delete");
+          case svn_wc_conflict_reason_missing:
+            if (operation == svn_wc_operation_merge)
+              return _("local deleted or moved away");
+            else
+              return _("local missing");
+          case svn_wc_conflict_reason_unversioned:
+            return _("local unversioned");
+          case svn_wc_conflict_reason_added:
+            return _("local add");
+          case svn_wc_conflict_reason_replaced:
+            return _("local replace");
+          case svn_wc_conflict_reason_moved_away:
+            return _("local moved away");
+          case svn_wc_conflict_reason_moved_here:
+            return _("local moved here");
+          }
         break;
     }
   return NULL;
@@ -142,6 +166,7 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
   switch (kind)
     {
       case svn_node_file:
+      case svn_node_symlink:
         switch (action)
           {
             case svn_wc_conflict_action_edit:
@@ -167,9 +192,19 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
               return _("incoming dir replace");
           }
         break;
-      case svn_node_symlink:
       case svn_node_none:
       case svn_node_unknown:
+        switch (action)
+          {
+            case svn_wc_conflict_action_edit:
+              return _("incoming edit");
+            case svn_wc_conflict_action_add:
+              return _("incoming add");
+            case svn_wc_conflict_action_delete:
+              return _("incoming delete or move");
+            case svn_wc_conflict_action_replace:
+              return _("incoming replace");
+          }
         break;
     }
   return NULL;
