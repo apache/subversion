@@ -103,7 +103,8 @@ enum test_options_e {
   srcdir_opt,
   mode_filter_opt,
   sqlite_log_opt,
-  parallel_opt
+  parallel_opt,
+  fsfs_version_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -116,6 +117,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("specify test config file ARG")},
   {"fs-type",       fstype_opt, 1,
                     N_("specify a filesystem backend type ARG")},
+  {"fsfs-version",  fsfs_version_opt, 1,
+                    N_("specify the FSFS version ARG")},
   {"list",          list_opt, 0,
                     N_("lists all the tests with their short description")},
   {"mode-filter",   mode_filter_opt, 1,
