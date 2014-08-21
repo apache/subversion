@@ -264,7 +264,7 @@ svn_fs_x__id_check_related(const svn_fs_id_t *a,
   /* Items from different txns are unrelated. */
   if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
       && svn_fs_x__is_txn(id_b->noderev_id.change_set)
-      && id_a->noderev_id.change_set != id_a->noderev_id.change_set)
+      && id_a->noderev_id.change_set != id_b->noderev_id.change_set)
     return FALSE;
 
   /* related if they trace back to the same node creation */
