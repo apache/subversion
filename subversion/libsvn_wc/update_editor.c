@@ -2995,6 +2995,7 @@ absent_node(const char *path,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
+  svn_skel_t *tree_conflict = NULL;
 
   if (pb->skip_this)
     return SVN_NO_ERROR;
@@ -3083,24 +3084,27 @@ absent_node(const char *path,
     {
       /* We have a local addition. If this would be a BASE node it would have
          been deleted before we get here. (Which might have turned it into
-         a copy).
-
-         ### This should be recorded as a tree conflict and the update
-         ### can just continue, as we can just record the absent status
-         ### in BASE.
-       */
+         a copy). */
       SVN_ERR_ASSERT(status != svn_wc__db_status_normal);
 
-      return svn_error_createf(
-         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-         _("Failed to mark '%s' absent: item of the same name is already "
-           "scheduled for addition"),
-         svn_dirent_local_style(local_abspath, pool));
+      if (!pb->shadowed && !pb->edit_obstructed)
+        SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
+                                    status, FALSE, svn_node_unknown,
+                                    svn_wc_conflict_action_add,
+                                    scratch_pool, scratch_pool));
+
     }
 
   {
     const char *repos_relpath;
     repos_relpath = svn_relpath_join(pb->new_repos_relpath, name, scratch_pool);
+
+    if (tree_conflict)
+      SVN_ERR(complete_conflict(tree_conflict, eb, local_abspath,
+                                NULL, SVN_INVALID_REVNUM, repos_relpath,
+                                svn_node_unknown, kind,
+                                scratch_pool, scratch_pool));
+                                
 
     /* Insert an excluded node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
@@ -3110,8 +3114,23 @@ absent_node(const char *path,
                                               *(eb->target_revision),
                                               absent_kind,
                                               svn_wc__db_status_server_excluded,
-                                              NULL, NULL,
+                                              tree_conflict, NULL,
                                               scratch_pool));
+
+    if (tree_conflict)
+      {
+        if (eb->conflict_func)
+          SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                   tree_conflict,
+                                                   NULL /* merge_options */,
+                                                   eb->conflict_func,
+                                                   eb->conflict_baton,
+                                                   eb->cancel_func,
+                                                   eb->cancel_baton,
+                                                   scratch_pool));
+        do_notification(eb, local_abspath, kind, svn_wc_notify_tree_conflict,
+                        scratch_pool);
+      }
   }
 
   svn_pool_destroy(scratch_pool);
