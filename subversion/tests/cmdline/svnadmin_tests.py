@@ -2591,10 +2591,9 @@ def freeze_freeze(sbox):
     # FSFS repositories created with --compatible-version=1.8 and less
     # erroneously share the filesystem data (locks, shared transaction
     # data, ...) between hotcopy source and destination.  This is fixed
-    # for new FS formats, but in order to avoid SVN_ERR_RECURSIVE_LOCK
-    # for old formats, we have to manually assign a new UUID for the
-    # hotcopy destination.  As of trunk@1618024, the same applies to
-    # FSX repositories.
+    # for new FS formats, but in order to avoid a deadlock for old formats,
+    # we have to manually assign a new UUID for the hotcopy destination.
+    # As of trunk@1618024, the same applies to FSX repositories.
     svntest.actions.run_and_verify_svnadmin(None, [], None,
                                             'setuuid', second_repo_dir)
 
@@ -2906,10 +2905,9 @@ def freeze_same_uuid(sbox):
   first_repo_dir, _ = sbox.add_repo_path('first')
   second_repo_dir, _ = sbox.add_repo_path('second')
 
-  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock or
-  # error out with SVN_ERR_RECURSIVE_LOCK for new FSFS formats, even if 'A'
-  # and 'B' share the same UUID.  Create two repositories by loading the
-  # same dump file, ...
+  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock for
+  # new FSFS formats, even if 'A' and 'B' share the same UUID.  Create two
+  # repositories by loading the same dump file, ...
   svntest.main.create_repos(first_repo_dir)
   svntest.main.create_repos(second_repo_dir)
 
