@@ -1243,6 +1243,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.tests_use_prepacakaged_repository)
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 
@@ -2385,7 +2386,7 @@ def load_ignore_dates(sbox):
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-dates')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
-  for rev in range(6):
+  for rev in range(1, 6):
     exit_code, output, errput = svntest.main.run_svnlook('date', '-r', rev,
                                                          sbox.repo_dir)
     if errput:
