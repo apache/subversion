@@ -2896,8 +2896,7 @@ def fsfs_hotcopy_progress_old(sbox):
                                           sbox.repo_dir, inc_backup_dir)
 
 
-@SkipUnless(lambda: svntest.main.is_fs_type_fsfs()
-            and svntest.main.options.server_minor_version >= 9)
+@SkipUnless(svntest.main.fs_has_unique_freeze)
 def freeze_same_uuid(sbox):
   "freeze multiple repositories with same UUID"
 

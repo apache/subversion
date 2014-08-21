@@ -36,6 +36,7 @@ import xml
 import urllib
 import logging
 import hashlib
+import zipfile
 from urlparse import urlparse
 
 try:
@@ -915,14 +916,29 @@ def create_repos(path, minor_version = None):
   if not os.path.exists(path):
     os.makedirs(path) # this creates all the intermediate dirs, if necessary
 
-  opts = ("--bdb-txn-nosync",)
-  if minor_version is None or minor_version > options.server_minor_version:
-    minor_version = options.server_minor_version
-  opts += ("--compatible-version=1.%d" % (minor_version),)
-  if options.fs_type is not None:
-    opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False, "create",
-                                          path, *opts)
+  if options.fsfs_version is None:
+    if options.fs_type == "bdb":
+      opts = ("--bdb-txn-nosync",)
+    else:
+      opts = ()
+    if minor_version is None or minor_version > options.server_minor_version:
+      minor_version = options.server_minor_version
+    opts += ("--compatible-version=1.%d" % (minor_version),)
+    if options.fs_type is not None:
+      opts += ("--fs-type=" + options.fs_type,)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "create", path, *opts)
+  else:
+    # Copy a pre-cooked FSFS repository
+    assert options.fs_type == "fsfs"
+    testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+    template = os.path.join(os.path.dirname(testdir),
+                            "templates",
+                            "empty-fsfs-v%d.zip" % options.fsfs_version)
+    repozip = zipfile.ZipFile(template, 'r')
+    repozip.extractall(path)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "setuuid", path)
 
   # Skip tests if we can't create the repository.
   if stderr:
@@ -1380,6 +1396,10 @@ def fs_has_pack():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 6)
 
+def fs_has_unique_freeze():
+  return (is_fs_type_fsfs() and options.server_minor_version >= 9
+          or is_fs_type_bdb())
+
 def is_os_windows():
   return os.name == 'nt'
 
@@ -1505,6 +1525,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-sharding=' + str(options.fsfs_sharding))
     if options.fsfs_packing:
       args.append('--fsfs-packing')
+    if options.fsfs_version:
+      args.append('--fsfs-version=' + str(options.fsfs_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1897,6 +1919,19 @@ def _parse_options(arglist=sys.argv[1:]):
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  # Make sure the server-minor-version matches the fsfs-version parameter.
+  if options.fsfs_version:
+    if options.fsfs_version == 6:
+      if options.server_minor_version \
+        and options.server_minor_version != 8 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=6 requires --server-minor-version=8")
+      options.server_minor_version = 8
+    pass
+    # ### Add more tweaks here if and when we support pre-cooked versions
+    # ### of FSFS repositories.
+  pass
 
   return (parser, args)
 
