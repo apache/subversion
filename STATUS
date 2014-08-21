@@ -149,6 +149,11 @@ Candidate changes:
      Behaviour regression introduced in 1.8.0.
    Notes:
      r1619380 is the fix; r1619393 a test for it.
+     The test on trunk@1619393 is tweaked to account for a trunk bug in the
+     display of diff headers; the backport branch provides the correct
+     version for 1.8.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: julianfoad
 
