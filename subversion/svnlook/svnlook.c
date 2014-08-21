@@ -2083,8 +2083,10 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
                apr_pool_t *pool)
 {
   svnlook_ctxt_t *baton = apr_pcalloc(pool, sizeof(*baton));
+  apr_hash_t *fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "3");
 
-  SVN_ERR(svn_repos_open3(&(baton->repos), opt_state->repos_path, NULL,
+  SVN_ERR(svn_repos_open3(&(baton->repos), opt_state->repos_path, fs_config,
                           pool, pool));
   baton->fs = svn_repos_fs(baton->repos);
   svn_fs_set_warning_func(baton->fs, warning_func, NULL);

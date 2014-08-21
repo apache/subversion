@@ -80,6 +80,8 @@ read_config(const char **cache_namespace,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
+  const char *revprop_option;
+
   /* No cache namespace by default.  I.e. all FS instances share the
    * cached data.  If you specify different namespaces, the data will
    * share / compete for the same cache memory but keys will not match
@@ -126,16 +128,31 @@ read_config(const char **cache_namespace,
    *
    * If the caller chose option "2", enable revprop caching if
    * the required API support is there to make it efficient.
+   *
+   * If the caller chose option "3", don't enable revprop caching
+   * right now but set a flag in FS that it should be enabled if
+   * the repo had been previously accessed using revprop caching.
    */
-  if (strcmp(svn_hash__get_cstring(fs->config,
-                                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                                   ""), "2"))
-    *cache_revprops
-      = svn_hash__get_bool(fs->config,
-                           SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                           FALSE);
+  revprop_option = svn_hash__get_cstring(fs->config,
+                                         SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                                         "");
+  if (0 == strcmp(revprop_option, "3"))
+    {
+      fs_fs_data_t *ffd = fs->fsap_data;
+      ffd->auto_enable_revprop_caching = TRUE;
+      *cache_revprops = FALSE;
+    }
+  else if (0 == strcmp(revprop_option, "2"))
+    {
+      *cache_revprops = svn_named_atomic__is_efficient();
+    }
   else
-    *cache_revprops = svn_named_atomic__is_efficient();
+    {
+      *cache_revprops
+        = svn_hash__get_bool(fs->config,
+                            SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                            FALSE);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -354,17 +371,71 @@ create_cache(svn_cache__t **cache_p,
   return SVN_NO_ERROR;
 }
 
+/* Return the cache key prefix for FS, including CACHE_NAMESPACE.
+ * Allocate the result in RESULT_POOL. */
+static const char *
+cache_key_prefix(svn_fs_t *fs,
+                 const char *cache_namespace,
+                 apr_pool_t *result_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return apr_pstrcat(result_pool,
+                     "ns:", cache_namespace, ":",
+                     "fsfs:", fs->uuid,
+                     ":", ffd->instance_id,
+                     "/", normalize_key_part(fs->path, result_pool),
+                     ":",
+                     SVN_VA_NULL);
+}
+
+svn_error_t *
+svn_fs_fs__initialize_revprop_caches(svn_fs_t *fs,
+                                     apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *prefix;
+  svn_boolean_t no_handler = ffd->fail_stop;
+  svn_boolean_t cache_txdeltas;
+  svn_boolean_t cache_fulltexts;
+  svn_boolean_t cache_revprops;
+  const char *cache_namespace;
+
+  /* Don't replace an existing cache instance. */
+  if (ffd->revprop_cache)
+    return SVN_NO_ERROR;
+
+  /* Evaluating the cache configuration. */
+  SVN_ERR(read_config(&cache_namespace,
+                      &cache_txdeltas,
+                      &cache_fulltexts,
+                      &cache_revprops,
+                      fs,
+                      pool));
+
+  /* Instantiate the cache unconditionally. */
+  prefix = cache_key_prefix(fs, cache_namespace, pool);
+  SVN_ERR(create_cache(&(ffd->revprop_cache),
+                       NULL,
+                       svn_cache__get_global_membuffer_cache(),
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_properties,
+                       svn_fs_fs__deserialize_properties,
+                       sizeof(pair_cache_key_t),
+                       apr_pstrcat(pool, prefix, "REVPROP", SVN_VA_NULL),
+                       SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       fs,
+                       no_handler,
+                       fs->pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", fs->uuid,
-                                   ":", ffd->instance_id,
-                                   "/", normalize_key_part(fs->path, pool),
-                                   ":",
-                                   SVN_VA_NULL);
+  const char *prefix;
   svn_membuffer_t *membuffer;
   svn_boolean_t no_handler = ffd->fail_stop;
   svn_boolean_t cache_txdeltas;
@@ -380,8 +451,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                       fs,
                       pool));
 
-  prefix = apr_pstrcat(pool, "ns:", cache_namespace, ":", prefix, SVN_VA_NULL);
-
+  prefix = cache_key_prefix(fs, cache_namespace, pool);
   membuffer = svn_cache__get_global_membuffer_cache();
 
   /* General rules for assigning cache priorities:
@@ -583,26 +653,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     }
 
   /* if enabled, cache revprops */
+  ffd->revprop_cache = NULL;
   if (cache_revprops)
-    {
-      SVN_ERR(create_cache(&(ffd->revprop_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           svn_fs_fs__serialize_properties,
-                           svn_fs_fs__deserialize_properties,
-                           sizeof(pair_cache_key_t),
-                           apr_pstrcat(pool, prefix, "REVPROP",
-                                       SVN_VA_NULL),
-                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                           fs,
-                           no_handler,
-                           fs->pool, pool));
-    }
-  else
-    {
-      ffd->revprop_cache = NULL;
-    }
+    SVN_ERR(svn_fs_fs__initialize_revprop_caches(fs, pool));
 
   /* if enabled, cache text deltas and their combinations */
   if (cache_txdeltas)
