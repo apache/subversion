@@ -191,6 +191,13 @@ class TestHarness:
       TextColors.disable()
     self.skip_c_tests = (not not skip_c_tests)
 
+    # Parse out the FSFS version number
+    if self.fs_type is not None and self.fs_type.startswith('fsfs-v'):
+      self.fsfs_version = int(self.fs_type[6:])
+      self.fs_type = 'fsfs'
+    else:
+      self.fsfs_version = None
+
   def run(self, list):
     '''Run all test programs given in LIST. Print a summary of results, if
        there is a log file. Return zero iff all test programs passed.'''
@@ -384,6 +391,8 @@ class TestHarness:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append('--fs-type=' + self.fs_type)
+    if self.fsfs_version is not None:
+      cmdline.append('--fsfs-version=%d' % self.fsfs_version)
     if self.server_minor_version is not None:
       cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
@@ -470,7 +479,7 @@ class TestHarness:
       svntest.main.options.enable_sasl = True
     if self.parallel is not None:
       try:
-        num_parallel = int(self.parallel) 
+        num_parallel = int(self.parallel)
       except exceptions.ValueError:
         num_parallel = svntest.main.default_num_threads
       if num_parallel > 1:
@@ -485,6 +494,8 @@ class TestHarness:
       svntest.main.options.cleanup = True
     if self.fs_type is not None:
       svntest.main.options.fs_type = self.fs_type
+    if self.fsfs_version is not None:
+      svntest.main.options.fsfs_version = self.fsfs_version
     if self.http_library is not None:
       svntest.main.options.http_library = self.http_library
     if self.server_minor_version is not None:
