@@ -853,8 +853,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                    NULL, NULL, scratch_pool));
         }
 
-      /* We have a printed a diff for this path, mark it as visited. */
-      *wrote_header = TRUE;
+      /* If we have printed a diff for this path, mark it as visited. */
+      if (exitcode == 1)
+        *wrote_header = TRUE;
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -911,8 +912,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
 
-          /* We have a printed a diff for this path, mark it as visited. */
-          *wrote_header = TRUE;
+          /* If we have printed a diff for this path, mark it as visited. */
+          if (dwi->use_git_diff_format || svn_diff_contains_diffs(diff))
+            *wrote_header = TRUE;
         }
     }
 
