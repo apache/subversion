@@ -1813,11 +1813,14 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
     SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
   else if (operation == svn_wc_operation_merge)
     {
-      /* Read the tree conflict victim's node kind from the working
-       * or base tree. */
+      /* Read the tree conflict victim's node kind from the working copy,
+         or if it doesn't exist directly from disk. */
       SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
-                                   TRUE, TRUE, TRUE, scratch_pool));
-      if (local_kind == svn_node_unknown)
+                                   TRUE /* allow missing */,
+                                   FALSE /* show deleted */,
+                                   FALSE /* show hidden */, scratch_pool));
+
+      if (local_kind == svn_node_unknown || local_kind == svn_node_none)
         SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
     }
   else if (operation == svn_wc_operation_update ||
@@ -1832,8 +1835,10 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
            * because of a locally added node which was not part of the
            * BASE tree before the update. */
           SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
-                                       TRUE, TRUE, TRUE, scratch_pool));
-          if (local_kind == svn_node_unknown)
+                                       TRUE /* allow missing */,
+                                       TRUE /* show deleted */,
+                                       FALSE /* show hidden */, scratch_pool));
+          if (local_kind == svn_node_unknown || local_kind == svn_node_none)
             SVN_ERR(svn_io_check_path(local_abspath, &local_kind,
                                       scratch_pool));
         }
