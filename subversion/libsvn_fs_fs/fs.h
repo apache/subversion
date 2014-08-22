@@ -357,11 +357,6 @@ typedef struct fs_fs_data_t
      the first access. */
   svn_named_atomic__t *revprop_timeout;
 
-  /* If TRUE, delay instantiation of the REVPROP_CACHE until we find
-     the repo being / having been accessed with revprop caching by
-     other svn_fs_t instances. */
-  svn_boolean_t auto_enable_revprop_caching;
-
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
 

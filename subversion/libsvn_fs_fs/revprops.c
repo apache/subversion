@@ -194,59 +194,6 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
  * initialization phase, they will never operate on stale data.
  */
 
-/* Forward declaration. */
-static svn_error_t *
-read_revprop_generation_file(apr_int64_t *current,
-                             svn_fs_t *fs,
-                             apr_pool_t *pool);
-
-/* Baton to be used with init_revprop_generation_file. */
-typedef struct init_generation_baton_t
-{
-  /* FS for which to create the file / ensure its existence. */
-  svn_fs_t *fs;
-
-  /* File path to check and auto-create. */
-  const char *path;
-
-  /* Where to return the generation. */
-  apr_int64_t *generation;
-} init_generation_baton_t;
-
-/* "with-fs-lock" compatible function taking an init_generation_baton_t*
- * in VOID_BATON.  It assumes that the write lock has been acquired and
- * will then create the revprop generation file at the specified path.
- * If that already exists, read it and return its contents.
- */
-static svn_error_t *
-init_revprop_generation_file(void *void_baton,
-                             apr_pool_t *scratch_pool)
-{
-  init_generation_baton_t *baton = void_baton;
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_io_check_path(baton->path, &kind, scratch_pool));
-  if (kind == svn_node_none)
-    {
-      /* First generation is "2" as odd numbers are used as crash
-       * indicators and we reserve the use of "0" for "not set /
-       * unspecified" internally. */
-      *baton->generation = 2;
-      SVN_ERR(svn_fs_fs__write_revprop_generation_file(baton->fs,
-                                                       *baton->generation,
-                                                       scratch_pool));
-    }
-  else
-    {
-      /* Race condition.  By the time we finally got the FS write lock,
-       * somebody else already created the file.  Simply read it. */
-      SVN_ERR(read_revprop_generation_file(baton->generation, baton->fs,
-                                           scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Read revprop generation as stored on disk for repository FS. The result
  * is returned in *CURRENT. Default to 2 if no such file is available.
  */
@@ -255,7 +202,6 @@ read_revprop_generation_file(apr_int64_t *current,
                              svn_fs_t *fs,
                              apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
   apr_file_t *file;
   char buf[80];
@@ -267,23 +213,8 @@ read_revprop_generation_file(apr_int64_t *current,
                          APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      /* The file does not exist.  Because we use it to indicate that
-       * revprop caching is / may be in effect on FS, we must create the
-       * file before actually caching any contents. */
-      init_generation_baton_t baton;
       svn_error_clear(err);
-
-      baton.fs = fs;
-      baton.generation = current;
-      baton.path = path;
-
-      /* We must synchronize writing to / creating the file.
-       * We may or may not have the write lock acquired already. */
-      if (ffd->has_write_lock)
-        SVN_ERR(init_revprop_generation_file(&baton, pool));
-      else
-        SVN_ERR(svn_fs_fs__with_write_lock(fs, init_revprop_generation_file,
-                                           &baton, pool));
+      *current = 2;
 
       return SVN_NO_ERROR;
     }
@@ -1485,50 +1416,6 @@ write_packed_revprop(const char **final_path,
   return SVN_NO_ERROR;
 }
 
-/* Make sure revprops in FS are being written to with consistent revprop
- * caching settings.  Once we read or wrote revprops using revprop cache
- * infra, all writers must use it.  Otherwise, caches may become stale.
- */
-static svn_error_t *
-enforce_consistent_caching(svn_fs_t *fs,
-                           apr_pool_t *scratch_pool)
-{
-  /* Reading or writing a revprop with revprop caching enabled will auto-
-   * create the generation file.  Since writes are serialized via repo
-   * write lock and we are currently holding it, this file presence check
-   * is not racy with the automatic generation file creation.
-   */
-  if (! has_revprop_cache(fs, scratch_pool))
-    {
-      fs_fs_data_t *ffd = fs->fsap_data;
-
-      /* We won't use revprop caching.  That is only safe if nobody else
-       * does.  Effectively however, we can only test whether somebody did
-       * at some point in the past and leave it to the administrator to
-       * remove the flag file manually if they need to.
-       */
-      const char *path = svn_fs_fs__path_revprop_generation(fs, scratch_pool);
-      svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
-
-      if (kind != svn_node_none)
-        {
-          /* Are we supposed to enable revprop caching on demand?
-           * If so, we have to do it now (or won't be allowed to proceed). */
-          if (ffd->auto_enable_revprop_caching)
-            SVN_ERR(svn_fs_fs__initialize_revprop_caches(fs, scratch_pool));
-
-          /* Error out if revprop caching infrastructure is not available. */
-          if (! has_revprop_cache(fs, scratch_pool))
-            return svn_error_create(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE, 
-                                    NULL, _("Writing revprops requires "
-                                            "revprop caching to be enabled."));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
 svn_error_t *
@@ -1548,10 +1435,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
-
-  /* Make sure that everyone accessing revprops on this repository either
-   * uses revprop caching or nobody does it. */
-  SVN_ERR(enforce_consistent_caching(fs, pool));
 
   /* Test whether revprops already exist for this revision.
    * Only then will we need to bump the revprop generation. */

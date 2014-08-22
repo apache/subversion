@@ -1228,81 +1228,6 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
 #undef REPO_NAME
 
 /* ------------------------------------------------------------------------ */
-
-#define REPO_NAME "revprop_cache_setting"
-
-static svn_error_t *
-enforce_consistent_revprop_caching(const svn_test_opts_t *opts,
-                                   apr_pool_t *pool)
-{
-  svn_fs_t *fs_cache;
-  svn_fs_t *fs_no_cache;
-  svn_fs_t *fs_auto_cache;
-  apr_hash_t *fs_config = apr_hash_make(pool);
-  svn_string_t value = { "0", 1 };
-
-  if (strcmp(opts->fs_type, "fsfs") != 0)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-
-  /* Create test repository with greek tree. */
-  SVN_ERR(svn_test__create_fs(&fs_no_cache, REPO_NAME, opts, pool));
-
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
-  SVN_ERR(svn_fs_open2(&fs_cache, REPO_NAME, fs_config, pool, pool));
-  /* With inefficient named atomics, the filesystem will output a warning
-     and disable the revprop caching, but we still would like to test
-     these cases.  Ignore the warning(s). */
-  svn_fs_set_warning_func(fs_cache, ignore_fs_warnings, NULL);
-
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "3");
-  SVN_ERR(svn_fs_open2(&fs_auto_cache, REPO_NAME, fs_config, pool, pool));
-  /* With inefficient named atomics, the filesystem will output a warning
-     and disable the revprop caching, but we still would like to test
-     these cases.  Ignore the warning(s). */
-  svn_fs_set_warning_func(fs_auto_cache, ignore_fs_warnings, NULL);
-
-  /* Revprop mods not using the revprop cache is fine by default */
-  value.data = "1";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_no_cache, 0, "rp", NULL, &value, pool));
-
-  /* Revprop caching should not auto-enable now b/c no caching access
-   * happened yet. */
-  value.data = "2";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_auto_cache, 0, "rp", NULL, &value, pool));
-  value.data = "3";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_no_cache, 0, "rp", NULL, &value, pool));
-
-  /* Revprop mods using the revprop cache are also fine by default */
-  value.data = "4";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_cache, 0, "rp", NULL, &value, pool));
-
-  /* Form now on, we need the revprop cache to be active in our FS struct
-   * or we get an error when trying to set a revprop value. */
-  value.data = "5";
-  SVN_TEST_ASSERT_ERROR(svn_fs_change_rev_prop2(fs_no_cache, 0, "rp", NULL,
-                                                &value, pool),
-                        SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE);
-  value.data = "6";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_cache, 0, "rp", NULL, &value, pool));
-  value.data = "7";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_auto_cache, 0, "rp", NULL, &value, pool));
-
-  /* Manually removing the revprop generation file will allow non-caching
-   * revprop changes changes again. */
-  SVN_ERR(svn_io_remove_file2(REPO_NAME "/revprop-generation", FALSE, pool));
-  value.data = "8";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_no_cache, 0, "rp", NULL, &value, pool));
-  value.data = "9";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_auto_cache, 0, "rp", NULL, &value, pool));
-  value.data = "10";
-  SVN_ERR(svn_fs_change_rev_prop2(fs_cache, 0, "rp", NULL, &value, pool));
-
-  return SVN_NO_ERROR;
-}
-
-#undef REPO_NAME
-
-/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -1344,9 +1269,6 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_WIMP(revprop_caching_on_off,
                        "change revprops with enabled and disabled caching",
                        "fails with FSFS / svn_named_atomic__is_efficient()"),
-    SVN_TEST_OPTS_WIMP(enforce_consistent_revprop_caching,
-                       "test revprop cache setting consistency",
-                       "fails with FSFS / !svn_named_atomic__is_efficient()"),
     SVN_TEST_NULL
   };
 
