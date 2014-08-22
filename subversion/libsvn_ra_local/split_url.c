@@ -25,8 +25,8 @@
 #include <string.h>
 #include "svn_path.h"
 #include "svn_dirent_uri.h"
-#include "svn_hash.h"
 #include "svn_private_config.h"
+
 
 svn_error_t *
 svn_ra_local__split_URL(svn_repos_t **repos,
@@ -41,9 +41,6 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   svn_stringbuf_t *urlbuf;
   apr_size_t root_end;
 
-  apr_hash_t *fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "3");
-
   SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dirent, URL, pool));
 
   /* Search for a repository in the full path. */
@@ -53,7 +50,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
                              _("Unable to open repository '%s'"), URL);
 
   /* Attempt to open a repository at URL. */
-  err = svn_repos_open3(repos, repos_root_dirent, fs_config, pool, pool);
+  err = svn_repos_open3(repos, repos_root_dirent, NULL, pool, pool);
   if (err)
     return svn_error_createf(SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
                              _("Unable to open repository '%s'"), URL);

@@ -91,9 +91,6 @@ typedef struct svn_fs_t svn_fs_t;
  * i.e. this will not create warning at runtime if there
  * if no efficient support for revprop caching.
  *
- * "3" is allowed as well and means "enable if required by the repository".
- * (valid in 1.9+ only).
- *
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
