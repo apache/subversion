@@ -214,6 +214,20 @@ fs_info(const void **fsfs_info,
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around svn_fs_fs__get_revision_proplist() adapting between function
+   signatures. */
+static svn_error_t *
+fs_revision_proplist(apr_hash_t **proplist_p,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *pool)
+{
+  /* No need to bypass the caches for r/o access to revprops. */
+  return svn_error_trace(svn_fs_fs__get_revision_proplist(proplist_p, fs,
+                                                          rev, FALSE, pool));
+}
+
+
 /* Wrapper around svn_fs_fs__set_uuid() adapting between function
    signatures. */
 static svn_error_t *
@@ -232,7 +246,7 @@ fs_set_uuid(svn_fs_t *fs,
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
-  svn_fs_fs__get_revision_proplist,
+  fs_revision_proplist,
   svn_fs_fs__change_rev_prop,
   fs_set_uuid,
   svn_fs_fs__revision_root,

@@ -911,6 +911,7 @@ svn_error_t *
 svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
+                                 svn_boolean_t bypass_cache,
                                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -923,7 +924,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   /* Try cache lookup first. */
-  if (has_revprop_cache(fs, pool))
+  if (!bypass_cache && has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
       pair_cache_key_t key = { 0 };

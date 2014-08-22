@@ -68,6 +68,7 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                          apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
  *
  * Allocations will be done in POOL.
  */
@@ -75,6 +76,7 @@ svn_error_t *
 svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
+                                 svn_boolean_t bypass_cache,
                                  apr_pool_t *pool);
 
 /* Set the revision property list of revision REV in filesystem FS to

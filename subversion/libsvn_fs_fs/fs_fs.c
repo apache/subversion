@@ -1946,7 +1946,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, FALSE, pool));
 
   *value_p = svn_hash_gets(table, propname);
 
@@ -1972,7 +1972,8 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   struct change_rev_prop_baton *cb = baton;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
+                                           pool));
 
   if (cb->old_value_p)
     {
