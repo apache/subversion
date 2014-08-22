@@ -908,6 +908,16 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
+def _unpack_precooked_repos(path, template):
+  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
+  zipfile.ZipFile(repozip, 'r').extractall(path)
+
+# For creating new, pre-cooked greek repositories
+def unpack_greek_repos(path):
+  template = "greek-fsfs-v%d.zip" % options.fsfs_version
+  _unpack_precooked_repos(path, template)
+
 # For creating blank new repositories
 def create_repos(path, minor_version = None):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
@@ -931,12 +941,8 @@ def create_repos(path, minor_version = None):
   else:
     # Copy a pre-cooked FSFS repository
     assert options.fs_type == "fsfs"
-    testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-    template = os.path.join(os.path.dirname(testdir),
-                            "templates",
-                            "empty-fsfs-v%d.zip" % options.fsfs_version)
-    repozip = zipfile.ZipFile(template, 'r')
-    repozip.extractall(path)
+    template = "empty-fsfs-v%d.zip" % options.fsfs_version
+    _unpack_precooked_repos(path, template)
     exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
                                             "setuuid", path)
 
