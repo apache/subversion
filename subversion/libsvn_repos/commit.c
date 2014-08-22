@@ -836,13 +836,16 @@ abort_edit(void *edit_baton,
 }
 
 
+/* Fetch kind and/or props and/or text */
 static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 svn_revnum_t base_revision,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+fetch_func(svn_node_kind_t *kind,
+           apr_hash_t **props,
+           const char **filename,
+           void *baton,
+           const char *path,
+           svn_revnum_t base_revision,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_fs_root_t *fs_root;
@@ -853,74 +856,46 @@ fetch_props_func(apr_hash_t **props,
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
-  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+  if (kind)
     {
-      svn_error_clear(err);
-      *props = apr_hash_make(result_pool);
-      return SVN_NO_ERROR;
+      SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
     }
-  else if (err)
-    return svn_error_trace(err);
 
-  return SVN_NO_ERROR;
-}
+  if (props)
+        {
+      err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *props = apr_hash_make(result_pool);
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+    }
 
-static svn_error_t *
-fetch_kind_func(svn_node_kind_t *kind,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *scratch_pool)
-{
-  struct edit_baton *eb = baton;
-  svn_fs_root_t *fs_root;
-
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = svn_fs_txn_base_revision(eb->txn);
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
-
-  SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_base_func(const char **filename,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  struct edit_baton *eb = baton;
-  svn_stream_t *contents;
-  svn_stream_t *file_stream;
-  const char *tmp_filename;
-  svn_fs_root_t *fs_root;
-  svn_error_t *err;
-
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = svn_fs_txn_base_revision(eb->txn);
-
-  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
-
-  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+  if (filename)
     {
-      svn_error_clear(err);
-      *filename = NULL;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_trace(err);
-  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
-                                 svn_io_file_del_none,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+      svn_stream_t *contents;
+      svn_stream_t *file_stream;
+      const char *tmp_filename;
 
-  *filename = apr_pstrdup(result_pool, tmp_filename);
+      err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *filename = NULL;
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+      SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                     svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+      *filename = apr_pstrdup(result_pool, tmp_filename);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -946,8 +921,6 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   svn_delta_editor_t *e;
   apr_pool_t *subpool = svn_pool_create(pool);
   struct edit_baton *eb;
-  svn_delta_shim_callbacks_t *shim_callbacks =
-                                    svn_delta_shim_callbacks_default(pool);
 
   /* Do a global authz access lookup.  Users with no write access
      whatsoever to the repository don't get a commit editor. */
@@ -999,15 +972,10 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = e;
 
-  shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_baton = eb;
-
   SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                     eb->repos_url,
                                     svn_relpath_canonicalize(eb->base_path, pool),
-                                    shim_callbacks, pool, pool));
+                                    fetch_func, eb, pool, pool));
 
   return SVN_NO_ERROR;
 }

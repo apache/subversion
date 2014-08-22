@@ -808,44 +808,6 @@ fetch(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-fetch_kind(svn_node_kind_t *kind,
-           void *baton,
-           const char *repos_relpath,
-           svn_revnum_t base_revision,
-           apr_pool_t *scratch_pool)
-{
-  return fetch(kind, NULL, NULL,
-               baton, repos_relpath, base_revision,
-               scratch_pool, scratch_pool);
-}
-
-static svn_error_t *
-fetch_props(apr_hash_t **props,
-            void *baton,
-            const char *repos_relpath,
-            svn_revnum_t base_revision,
-            apr_pool_t *result_pool,
-            apr_pool_t *scratch_pool)
-{
-  return fetch(NULL, props, NULL,
-               baton, repos_relpath, base_revision,
-               result_pool, scratch_pool);
-}
-
-static svn_error_t *
-fetch_base(const char **filename,
-           void *baton,
-           const char *repos_relpath,
-           svn_revnum_t base_revision,
-           apr_pool_t *result_pool,
-           apr_pool_t *scratch_pool)
-{
-  return fetch(NULL, NULL, filename,
-               baton, repos_relpath, base_revision,
-               result_pool, scratch_pool);
-}
-
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -868,23 +830,17 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
   /* Insert Ev3 shims */
   {
     const char *repos_root_url, *session_url, *base_relpath;
-    svn_delta_shim_callbacks_t *shim_callbacks
-      = svn_delta_shim_callbacks_default(pool);
     struct fb_baton *fbb = apr_palloc(pool, sizeof(*fbb));
 
     SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
     SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
     base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, pool);
-    shim_callbacks->fetch_props_func = fetch_props;
-    shim_callbacks->fetch_kind_func = fetch_kind;
-    shim_callbacks->fetch_base_func = fetch_base;
-    shim_callbacks->fetch_baton = fbb;
     SVN_ERR(svn_ra_dup_session(&fbb->session, session, repos_root_url, pool, pool));
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
     SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                       repos_root_url, base_relpath,
-                                      shim_callbacks, pool, pool));
+                                      fetch, fbb, pool, pool));
   }
 
   return SVN_NO_ERROR;

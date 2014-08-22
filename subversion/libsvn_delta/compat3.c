@@ -72,7 +72,7 @@
  * The shim connector enables a more exact round-trip conversion from an
  * Ev1 drive to Ev3 and back to Ev1.
  */
-struct svn_delta__shim_connector_t
+struct svn_editor3__shim_connector_t
 {
   /* Set to true if and when an Ev1 receiving shim receives an absolute
    * path (prefixed with '/') from the delta edit, and causes the Ev1
@@ -117,12 +117,13 @@ svn_editor3__insert_shims(
                         void *old_dedit_baton,
                         const char *repos_root,
                         const char *base_relpath,
-                        const svn_delta_shim_callbacks_t *shim_cb,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   svn_editor3_t *editor3;
-  svn_delta__shim_connector_t *shim_connector;
+  svn_editor3__shim_connector_t *shim_connector;
 
 #ifdef SVN_DEBUG
   /*SVN_ERR(svn_delta__get_debug_editor(&old_deditor, &old_dedit_baton,
@@ -134,8 +135,7 @@ svn_editor3__insert_shims(
                         &shim_connector,
                         old_deditor, old_dedit_baton,
                         repos_root, base_relpath,
-                        shim_cb->fetch_kind_func, shim_cb->fetch_baton,
-                        shim_cb->fetch_props_func, shim_cb->fetch_baton,
+                        fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         result_pool, scratch_pool));
 #ifdef SVN_DEBUG
@@ -145,8 +145,7 @@ svn_editor3__insert_shims(
                         new_deditor, new_dedit_baton,
                         editor3,
                         repos_root, base_relpath,
-                        shim_cb->fetch_props_func, shim_cb->fetch_baton,
-                        shim_cb->fetch_base_func, shim_cb->fetch_baton,
+                        fetch_func, fetch_baton,
                         shim_connector,
                         result_pool, scratch_pool));
 #ifdef SVN_DEBUG
@@ -584,13 +583,10 @@ struct ev3_edit_baton
   /* Base directory of the edit, relative to the repository root. */
   const char *base_relpath;
 
-  const svn_delta__shim_connector_t *shim_connector;
+  const svn_editor3__shim_connector_t *shim_connector;
 
-  svn_delta_fetch_props_func_t fetch_props_func;
-  void *fetch_props_baton;
-
-  svn_delta_fetch_base_func_t fetch_base_func;
-  void *fetch_base_baton;
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
 
   svn_boolean_t closed;
 
@@ -953,10 +949,10 @@ apply_propedit(struct ev3_edit_baton *eb,
          Otherwise, we get the properties from BASE.  */
       if (copyfrom_path)
         {
-          SVN_ERR(eb->fetch_props_func(&change->props,
-                                       eb->fetch_props_baton,
-                                       copyfrom_path, copyfrom_rev,
-                                       eb->edit_pool, scratch_pool));
+          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL,
+                                 eb->fetch_baton,
+                                 copyfrom_path, copyfrom_rev,
+                                 eb->edit_pool, scratch_pool));
         }
       else if (change->action == RESTRUCTURE_ADD)
         {
@@ -966,10 +962,10 @@ apply_propedit(struct ev3_edit_baton *eb,
         {
           if (! SVN_IS_VALID_REVNUM(base_revision))
             SVN_DBG(("apply_propedit: base_revision == -1"));
-          SVN_ERR(eb->fetch_props_func(&change->props,
-                                       eb->fetch_props_baton,
-                                       relpath, base_revision,
-                                       eb->edit_pool, scratch_pool));
+          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL,
+                                 eb->fetch_baton,
+                                 relpath, base_revision,
+                                 eb->edit_pool, scratch_pool));
         }
     }
 
@@ -1162,11 +1158,11 @@ ev3_add_file(const char *path,
                                                    fb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
 
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
-                                      fb->eb->fetch_base_baton,
-                                      change->copyfrom_path,
-                                      change->copyfrom_rev,
-                                      result_pool, scratch_pool));
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+                                 fb->eb->fetch_baton,
+                                 change->copyfrom_path,
+                                 change->copyfrom_rev,
+                                 result_pool, scratch_pool));
       fb->copyfrom_relpath = change->copyfrom_path;
       fb->copyfrom_rev = change->copyfrom_rev;
     }
@@ -1215,17 +1211,17 @@ ev3_open_file(const char *path,
 
       fb->copyfrom_relpath = copyfrom_relpath;
       fb->copyfrom_rev = pb->copyfrom_rev;
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
-                                      fb->eb->fetch_base_baton,
-                                      copyfrom_relpath, pb->copyfrom_rev,
-                                      result_pool, scratch_pool));
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+                                 fb->eb->fetch_baton,
+                                 copyfrom_relpath, pb->copyfrom_rev,
+                                 result_pool, scratch_pool));
     }
   else
     {
-      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base_abspath,
-                                      fb->eb->fetch_base_baton,
-                                      relpath, base_revision,
-                                      result_pool, scratch_pool));
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+                                 fb->eb->fetch_baton,
+                                 relpath, base_revision,
+                                 result_pool, scratch_pool));
     }
 
   *file_baton = fb;
@@ -1503,11 +1499,9 @@ svn_delta__delta_from_ev3_for_commit(
                         svn_editor3_t *editor,
                         const char *repos_root,
                         const char *base_relpath,
-                        svn_delta_fetch_props_func_t fetch_props_func,
-                        void *fetch_props_baton,
-                        svn_delta_fetch_base_func_t fetch_base_func,
-                        void *fetch_base_baton,
-                        const svn_delta__shim_connector_t *shim_connector,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        const svn_editor3__shim_connector_t *shim_connector,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -1550,11 +1544,8 @@ svn_delta__delta_from_ev3_for_commit(
   eb->repos_root = apr_pstrdup(result_pool, repos_root);
   eb->base_relpath = apr_pstrdup(result_pool, base_relpath);
 
-  eb->fetch_props_func = fetch_props_func;
-  eb->fetch_props_baton = fetch_props_baton;
-
-  eb->fetch_base_func = fetch_base_func;
-  eb->fetch_base_baton = fetch_base_baton;
+  eb->fetch_func = fetch_func;
+  eb->fetch_baton = fetch_baton;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
@@ -1667,10 +1658,8 @@ typedef struct ev3_from_delta_baton_t
   void *dedit_baton;
 
   /* Callbacks */
-  svn_delta_fetch_kind_func_t fetch_kind_func;
-  void *fetch_kind_baton;
-  svn_delta_fetch_props_func_t fetch_props_func;
-  void *fetch_props_baton;
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
 
   /* The Ev1 root directory baton if we have opened the root, else null. */
   void *ev1_root_dir_baton;
@@ -1780,8 +1769,8 @@ static svn_error_t *
 fetch_base_props(apr_hash_t **base_props,
                  apr_hash_t *changes,
                  const char *repos_relpath,
-                 svn_delta_fetch_props_func_t fetch_props_func,
-                 void *fetch_props_baton,
+                 svn_editor3__shim_fetch_func_t fetch_func,
+                 void *fetch_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -1830,9 +1819,9 @@ fetch_base_props(apr_hash_t **base_props,
 
   if (source_path)
     {
-      SVN_ERR(fetch_props_func(base_props, fetch_props_baton,
-                               source_path, source_rev,
-                               result_pool, scratch_pool));
+      SVN_ERR(fetch_func(NULL, base_props, NULL,
+                         fetch_baton, source_path, source_rev,
+                         result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1924,7 +1913,7 @@ apply_change(void **dir_baton,
   *dir_baton = NULL;
 
   SVN_ERR(fetch_base_props(&base_props, eb->changes, relpath,
-                           eb->fetch_props_func, eb->fetch_props_baton,
+                           eb->fetch_func, eb->fetch_baton,
                            scratch_pool, scratch_pool));
 
   /* Are we editing the root of the tree?  */
@@ -2228,9 +2217,10 @@ editor3_cp(void *baton,
   change->copyfrom_rev = from_peg_loc.rev;
   /* We need the source's kind to know whether to call add_directory()
      or add_file() later on.  */
-  SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
-                              from_peg_loc.relpath, from_peg_loc.rev,
-                              scratch_pool));
+  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL,
+                         eb->fetch_baton,
+                         from_peg_loc.relpath, from_peg_loc.rev,
+                         scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2266,8 +2256,9 @@ editor3_mv(void *baton,
      already recorded a change -- an earlier move, I suppose -- then the
      'kind' has already been recorded there and we could potentially
      re-use it here. But we have no need yet to optimise that case.) */
-  SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
-                              from_loc.relpath, from_loc.rev, scratch_pool));
+  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL, eb->fetch_baton,
+                         from_loc.relpath, from_loc.rev,
+                         scratch_pool, scratch_pool));
 
   /* duplicate any child changes into the copy destination */
   SVN_ERR(duplicate_child_changes(eb->changes, from_txnpath, new_txnpath,
@@ -2442,15 +2433,13 @@ editor3_abort(void *baton,
 svn_error_t *
 svn_delta__ev3_from_delta_for_commit(
                         svn_editor3_t **editor_p,
-                        svn_delta__shim_connector_t **shim_connector,
+                        svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_delta_fetch_kind_func_t fetch_kind_func,
-                        void *fetch_kind_baton,
-                        svn_delta_fetch_props_func_t fetch_props_func,
-                        void *fetch_props_baton,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
@@ -2480,10 +2469,8 @@ svn_delta__ev3_from_delta_for_commit(
   eb->changes = apr_hash_make(result_pool);
   eb->moves = apr_hash_make(result_pool);
 
-  eb->fetch_kind_func = fetch_kind_func;
-  eb->fetch_kind_baton = fetch_kind_baton;
-  eb->fetch_props_func = fetch_props_func;
-  eb->fetch_props_baton = fetch_props_baton;
+  eb->fetch_func = fetch_func;
+  eb->fetch_baton = fetch_baton;
 
   eb->edit_pool = result_pool;
 
