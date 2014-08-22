@@ -1350,4 +1350,3 @@ static struct svn_test_descriptor_t test_funcs[] =
   };
 
 SVN_TEST_MAIN
-  
