@@ -1397,6 +1397,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   const char *tmp_path;
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
@@ -1404,8 +1405,9 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
 
   /* Test whether revprops already exist for this revision.
-   * Only then will we need to bump the revprop generation. */
-  if (has_revprop_cache(fs, pool))
+   * Only then will we need to bump the revprop generation.
+   * The fact that they did not yet exist is never cached. */
+  if (ffd->format >= SVN_FS_FS__MIN_REVPROP_CACHING_FORMAT)
     {
       if (is_packed)
         {
