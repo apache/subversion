@@ -1249,9 +1249,17 @@ enforce_consistent_revprop_caching(const svn_test_opts_t *opts,
 
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
   SVN_ERR(svn_fs_open2(&fs_cache, REPO_NAME, fs_config, pool, pool));
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs_cache, ignore_fs_warnings, NULL);
 
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "3");
   SVN_ERR(svn_fs_open2(&fs_auto_cache, REPO_NAME, fs_config, pool, pool));
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs_auto_cache, ignore_fs_warnings, NULL);
 
   /* Revprop mods not using the revprop cache is fine by default */
   value.data = "1";
