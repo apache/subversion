@@ -182,6 +182,9 @@ extern "C" {
 /* Minimum format number that supports per-instance filesystem IDs. */
 #define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
 
+/* Minimum format number that supports revprop caching. */
+#define SVN_FS_FS__MIN_REVPROP_CACHING_FORMAT 7
+
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
@@ -345,17 +348,9 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
   /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
+     the first access.  May be also get closed and set to NULL again. */
+  apr_file_t *revprop_generation_file;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;

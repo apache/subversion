@@ -119,9 +119,21 @@ read_config(const char **cache_namespace,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
 
-  /* For now, always disable revprop caching.
+  /* don't cache revprops by default.
+   * Revprop caching significantly speeds up operations like
+   * svn ls -v. However, it requires synchronization that may
+   * not be available or efficient in the current server setup.
+   * Option "2" is equivalent to "1".
    */
-  *cache_revprops = FALSE;
+  if (strcmp(svn_hash__get_cstring(fs->config,
+                                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                                   ""), "2"))
+    *cache_revprops
+      = svn_hash__get_bool(fs->config,
+                          SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                          FALSE);
+  else
+    *cache_revprops = TRUE;
 
   return SVN_NO_ERROR;
 }

@@ -22,16 +22,14 @@
 
 #include "svn_fs.h"
 
-/* Write the CURRENT revprop generation to disk for repository FS.
+/* Auto-create / replace the revprop generation file in FS with its
+ * initial contents, if supported by the format.  Otherwise remove any
+ * left-over revprop generation files from e.g. 1.8.x.  In any case,
+ * FS will not hold an open handle to it after this function succeeds.
  */
 svn_error_t *
-svn_fs_fs__write_revprop_generation_file(svn_fs_t *fs,
-                                         apr_int64_t current,
+svn_fs_fs__reset_revprop_generation_file(svn_fs_t *fs,
                                          apr_pool_t *pool);
-
-/* Make sure the revprop_namespace member in FS is set. */
-svn_error_t *
-svn_fs_fs__cleanup_revprop_namespace(svn_fs_t *fs);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
  * 

@@ -1206,6 +1206,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
      accidentally uses outdated information.  Keep the UUID. */
   SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
+  /* Initialize / fix up the revprop caching info. */
+  SVN_ERR(svn_fs_fs__reset_revprop_generation_file(fs, pool));
+
   /* Bump the format file. */
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
   if (upgrade_baton->notify_func)
@@ -1714,6 +1717,10 @@ svn_fs_fs__create(svn_fs_t *fs,
                                  svn_fs_fs__path_txn_current_lock(fs, pool),
                                  pool));
     }
+
+  /* Initialize the revprop caching info. */
+  if (format >= SVN_FS_FS__MIN_REVPROP_CACHING_FORMAT)
+    SVN_ERR(svn_fs_fs__reset_revprop_generation_file(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));

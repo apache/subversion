@@ -345,8 +345,8 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(fs));
+  /* Revert revprop generation file into a consistent state. */
+  SVN_ERR(svn_fs_fs__reset_revprop_generation_file(fs, pool));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
