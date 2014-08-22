@@ -1931,6 +1931,12 @@ def _parse_options(arglist=sys.argv[1:]):
         and options.server_minor_version != SVN_VER_MINOR:
         parser.error("--fsfs-version=6 requires --server-minor-version=8")
       options.server_minor_version = 8
+    if options.fsfs_version == 4:
+      if options.server_minor_version \
+        and options.server_minor_version != 7 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=4 requires --server-minor-version=7")
+      options.server_minor_version = 7
     pass
     # ### Add more tweaks here if and when we support pre-cooked versions
     # ### of FSFS repositories.
