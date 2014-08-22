@@ -1133,17 +1133,6 @@ set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-check_tree_conflict(svn_skel_t **pconflict,
-                    struct edit_baton *eb,
-                    const char *local_abspath,
-                    svn_wc__db_status_t working_status,
-                    svn_boolean_t exists_in_repos,
-                    svn_node_kind_t expected_kind,
-                    svn_wc_conflict_action_t action,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
-
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 open_root(void *edit_baton,
