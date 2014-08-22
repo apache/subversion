@@ -1813,6 +1813,15 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
     SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
   else if (operation == svn_wc_operation_merge)
     {
+      /* ### If the merge replaced the node, this will read the kind of
+       * ### the merge-right node, which is not necessarily the node
+       * ### kind of the tree conflict victim.
+       * ### This needs the BASE node kind if the node was not replaced
+       * ### at the time the merge was run. But if the node was already
+       * ### replaced before the merge, it needs the kind of the replacing
+       * ### node. Ideally, we'd store the victim node kind in conflict
+       * ### storage instead of guessing it here...
+       */
       /* Read the tree conflict victim's node kind from the working copy,
          or if it doesn't exist directly from disk. */
       SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
