@@ -1344,8 +1344,9 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_WIMP(revprop_caching_on_off,
                        "change revprops with enabled and disabled caching",
                        "fails with FSFS / svn_named_atomic__is_efficient()"),
-    SVN_TEST_OPTS_PASS(enforce_consistent_revprop_caching,
-                       "test revprop cache setting consistency"),
+    SVN_TEST_OPTS_WIMP(enforce_consistent_revprop_caching,
+                       "test revprop cache setting consistency",
+                       "fails with FSFS / !svn_named_atomic__is_efficient()"),
     SVN_TEST_NULL
   };
 
