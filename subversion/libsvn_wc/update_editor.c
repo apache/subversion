@@ -3102,7 +3102,7 @@ absent_node(const char *path,
     if (tree_conflict)
       SVN_ERR(complete_conflict(tree_conflict, eb, local_abspath,
                                 NULL, SVN_INVALID_REVNUM, repos_relpath,
-                                svn_node_unknown, kind,
+                                kind, svn_node_unknown,
                                 scratch_pool, scratch_pool));
                                 
 
