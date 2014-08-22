@@ -114,18 +114,7 @@ create_fs(svn_fs_t **fs_p,
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
-    {
-      if (finfo.filetype == APR_DIR)
-        SVN_ERR_W(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool),
-                  apr_psprintf(pool,
-                               "cannot create fs '%s' there is already "
-                               "a directory of that name", name));
-      else
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "cannot create fs '%s' there is already "
-                                 "a file of that name", name);
-    }
+  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_fs_create(fs_p, name, fs_config, pool));
   if (! *fs_p)
@@ -227,17 +216,7 @@ svn_test__create_repos(svn_repos_t **repos_p,
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
-    {
-      if (finfo.filetype == APR_DIR)
-        SVN_ERR_W(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool),
-                  apr_psprintf(pool,
-                               "cannot create repos '%s' there is already "
-                               "a directory of that name", name));
-      else
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "there is already a file named '%s'", name);
-    }
+  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
                            fs_config, pool));
