@@ -106,7 +106,6 @@ create_fs(svn_fs_t **fs_p,
           int server_minor_version,
           apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
   apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
@@ -205,7 +204,6 @@ svn_test__create_repos(svn_repos_t **repos_p,
                        const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
