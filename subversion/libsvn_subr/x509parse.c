@@ -1009,7 +1009,7 @@ static void
 x509parse_get_hostnames(apr_array_header_t **names, x509_cert *crt,
                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  if (crt->dnsnames->nelts > 0)
+  if (crt->dnsnames && crt->dnsnames->nelts > 0)
     {
       int i;
 
