@@ -1266,9 +1266,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_OPTS_PASS(metadata_checksumming,
                        "metadata checksums being checked"),
-    SVN_TEST_OPTS_WIMP(revprop_caching_on_off,
-                       "change revprops with enabled and disabled caching",
-                       "fails with FSFS / svn_named_atomic__is_efficient()"),
+    SVN_TEST_OPTS_PASS(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching"),
     SVN_TEST_NULL
   };
 
