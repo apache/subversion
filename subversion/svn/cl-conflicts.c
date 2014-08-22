@@ -139,7 +139,7 @@ local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
             return _("local delete");
           case svn_wc_conflict_reason_missing:
             if (operation == svn_wc_operation_merge)
-              return _("local deleted or moved away");
+              return _("local missing or deleted or moved away");
             else
               return _("local missing");
           case svn_wc_conflict_reason_unversioned:
@@ -176,7 +176,7 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
             case svn_wc_conflict_action_delete:
               return _("incoming file delete or move");
             case svn_wc_conflict_action_replace:
-              return _("incoming file replace");
+              return _("incoming replace with file");
           }
         break;
       case svn_node_dir:
@@ -189,7 +189,7 @@ incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
             case svn_wc_conflict_action_delete:
               return _("incoming dir delete or move");
             case svn_wc_conflict_action_replace:
-              return _("incoming dir replace");
+              return _("incoming replace with dir");
           }
         break;
       case svn_node_none:
