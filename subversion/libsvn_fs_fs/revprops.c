@@ -522,15 +522,22 @@ read_revprop_generation(apr_int64_t *generation,
   /* is an unfinished revprop write under the way? */
   if (current % 2)
     {
-      apr_time_t mtime;
-      SVN_ERR(svn_io_file_affected_time(&mtime,
-                       svn_fs_fs__path_revprop_generation(fs, scratch_pool),
-                       scratch_pool));
+      svn_boolean_t timeout = FALSE;
 
-      /* has the writer process been aborted,
-       * i.e. has the timeout been reached?
+      /* Has the writer process been aborted?
+       * Either by timeout or by us being the writer now.
        */
-      if (apr_time_now() > mtime + REVPROP_CHANGE_TIMEOUT)
+      if (!ffd->has_write_lock)
+        {
+          apr_time_t mtime;
+          SVN_ERR(svn_io_file_affected_time(&mtime,
+                          svn_fs_fs__path_revprop_generation(fs,
+                                                             scratch_pool),
+                          scratch_pool));
+          timeout = apr_time_now() > mtime + REVPROP_CHANGE_TIMEOUT;
+        }
+
+      if (ffd->has_write_lock || timeout)
         {
           revprop_generation_upgrade_t baton;
           baton.generation = &current;
