@@ -196,6 +196,23 @@ ensure_revprop_generation(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* If the revprop generation file in FS is open, close it.  This is a no-op
+ * if the file is not open.
+ */
+static svn_error_t *
+close_revprop_generation_file(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->revprop_generation_file)
+    {
+      SVN_ERR(svn_io_file_close(ffd->revprop_generation_file, scratch_pool));
+      ffd->revprop_generation_file = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Read revprop generation as stored on disk for repository FS. The result is
  * returned in *CURRENT.  Call only for repos that support revprop caching.
  */
@@ -260,11 +277,7 @@ svn_fs_fs__reset_revprop_generation_file(svn_fs_t *fs,
 
   /* Unconditionally close the revprop generation file.
    * Don't care about FS formats. This ensures consistent internal state. */
-  if (ffd->revprop_generation_file)
-    {
-      SVN_ERR(svn_io_file_close(ffd->revprop_generation_file, scratch_pool));
-      ffd->revprop_generation_file = NULL;
-    }
+  SVN_ERR(close_revprop_generation_file(fs, scratch_pool));
 
   /* Unconditionally remove any old revprop generation file.
    * Don't care about FS formats.  This ensures consistent on-disk state
