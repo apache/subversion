@@ -41,12 +41,6 @@
    process got aborted and that we have re-read revprops. */
 #define REVPROP_CHANGE_TIMEOUT (10 * 1000000)
 
-/* The following are names of atomics that will be used to communicate
- * revprop updates across all processes on this machine. */
-#define ATOMIC_REVPROP_GENERATION "rev-prop-generation"
-#define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
-#define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
-
 svn_error_t *
 svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
                                  svn_fs_upgrade_notify_t notify_func,
@@ -143,57 +137,44 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
 
 /* Revprop caching management.
  *
- * ### TODO ### Update!
- *
  * Mechanism:
  * ----------
  *
  * Revprop caching needs to be activated and will be deactivated for the
  * respective FS instance if the necessary infrastructure could not be
- * initialized.  In deactivated mode, there is almost no runtime overhead
- * associated with revprop caching.  As long as no revprops are being read
- * or changed, revprop caching imposes no overhead.
+ * initialized.  As long as no revprops are being read or changed, revprop
+ * caching imposes no overhead.
  *
  * When activated, we cache revprops using (revision, generation) pairs
  * as keys with the generation being incremented upon every revprop change.
  * Since the cache is process-local, the generation needs to be tracked
  * for at least as long as the process lives but may be reset afterwards.
  *
- * To track the revprop generation, we use two-layer approach. On the lower
- * level, we use named atomics to have a system-wide consistent value for
- * the current revprop generation.  However, those named atomics will only
- * remain valid for as long as at least one process / thread in the system
- * accesses revprops in the respective repository.  The underlying shared
- * memory gets cleaned up afterwards.
+ * We track the revprop generation in a persistent, unbuffered file that
+ * we may keep open for the lifetime of the svn_fs_t.  It is the OS'
+ * responsibility to provide us with the latest contents upon read.  To
+ * detect incomplete updates due to non-atomic reads, we put a MD5 checksum
+ * next to the actual generation number and verify that it matches.
  *
- * On the second level, we will use a persistent file to track the latest
- * revprop generation.  It will be written upon each revprop change but
- * only be read if we are the first process to initialize the named atomics
- * with that value.
+ * Since we cannot guarantee that the OS will provide us with up-to-date
+ * data buffers for open files, we re-open and re-read the file before
+ * modifying it.  This will prevent lost updates.
  *
- * The overhead for the second and following accesses to revprops is
- * almost zero on most systems.
+ * A race condition exists between switching to the modified revprop data
+ * and bumping the generation number.  In particular, the process may crash
+ * just after switching to the new revprop data and before bumping the
+ * generation.  To be able to detect this scenario, we bump the generation
+ * twice per revprop change: once immediately before (creating an odd number)
+ * and once after the atomic switch (even generation).
  *
- *
- * Tech aspects:
- * -------------
- *
- * A problem is that we need to provide a globally available file name to
- * back the SHM implementation on OSes that need it.  We can only assume
- * write access to some file within the respective repositories.  Because
- * a given server process may access thousands of repositories during its
- * lifetime, keeping the SHM data alive for all of them is also not an
- * option.
- *
- * So, we store the new revprop generation on disk as part of each
- * setrevprop call, i.e. this write will be serialized and the write order
- * be guaranteed by the repository write lock.
- *
- * The only racy situation occurs when the data is being read again by two
- * processes concurrently but in that situation, the first process to
- * finish that procedure is guaranteed to be the only one that initializes
- * the SHM data.  Since even writers will first go through that
- * initialization phase, they will never operate on stale data.
+ * A writer holding the write lock can immediately assume a crashed writer
+ * in case of an odd generation or they would not have been able to acquire
+ * the lock.  A reader detecting an odd generation will use that number and
+ * be forced to re-read any revprop data - usually getting the new revprops
+ * already.  If the generation file modification timestamp is too old, the
+ * reader will assume a crashed writer, acquire the write lock and bump
+ * the generation if it is still odd.  So, for about REVPROP_CHANGE_TIMEOUT
+ * after the crash, reader caches may be stale.
  */
 
 /* Make sure the revprop_generation member in FS is set.
