@@ -188,25 +188,6 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
  * after the crash, reader caches may be stale.
  */
 
-/* Make sure the revprop_generation member in FS is set.
- * Call only for repos that support revprop caching.
- */
-static svn_error_t *
-ensure_revprop_generation(svn_fs_t *fs,
-                          apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  if (ffd->revprop_generation_file == NULL)
-    {
-      const char *path = svn_fs_fs__path_revprop_generation(fs, scratch_pool);
-      SVN_ERR(svn_io_file_open(&ffd->revprop_generation_file, path,
-                               APR_READ | APR_WRITE, APR_OS_DEFAULT,
-                               fs->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* If the revprop generation file in FS is open, close it.  This is a no-op
  * if the file is not open.
  */
@@ -219,6 +200,37 @@ close_revprop_generation_file(svn_fs_t *fs,
     {
       SVN_ERR(svn_io_file_close(ffd->revprop_generation_file, scratch_pool));
       ffd->revprop_generation_file = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Make sure the revprop_generation member in FS is set.  If READ_ONLY is
+ * set, open the file w/o write permission if the file is not open yet.
+ * The file is kept open if it has sufficient rights (or more) but will be
+ * closed and re-opened if it provided insufficient access rights.
+ *
+ * Call only for repos that support revprop caching.
+ */
+static svn_error_t *
+ensure_revprop_generation(svn_fs_t *fs,
+                          svn_boolean_t read_only,
+                          apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_int32_t flags = read_only ? APR_READ : (APR_READ | APR_WRITE);
+
+  /* Close the current file handle if it has insufficient rights. */
+  if (   ffd->revprop_generation_file
+      && (apr_file_flags_get(ffd->revprop_generation_file) & flags) != flags)
+    SVN_ERR(close_revprop_generation_file(fs, scratch_pool));
+
+  /* If not open already, open with sufficient rights. */
+  if (ffd->revprop_generation_file == NULL)
+    {
+      const char *path = svn_fs_fs__path_revprop_generation(fs, scratch_pool);
+      SVN_ERR(svn_io_file_open(&ffd->revprop_generation_file, path,
+                               flags, APR_OS_DEFAULT, fs->pool));
     }
 
   return SVN_NO_ERROR;
@@ -305,7 +317,7 @@ read_revprop_generation_file(apr_int64_t *current,
       /* If we can't even access the data, things are very wrong.
        * Don't retry in that case.
        */
-      SVN_ERR(ensure_revprop_generation(fs, iterpool));
+      SVN_ERR(ensure_revprop_generation(fs, TRUE, iterpool));
       SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
                               iterpool));
 
@@ -349,7 +361,7 @@ write_revprop_generation_file(svn_fs_t *fs,
 
   SVN_ERR(checkedsummed_number(&buffer, current, scratch_pool, scratch_pool));
 
-  SVN_ERR(ensure_revprop_generation(fs, scratch_pool));
+  SVN_ERR(ensure_revprop_generation(fs, FALSE, scratch_pool));
   SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
                            scratch_pool));
   SVN_ERR(svn_io_file_write_full(ffd->revprop_generation_file, buffer->data,
@@ -430,7 +442,7 @@ has_revprop_cache(svn_fs_t *fs,
     return FALSE;
 
   /* try initialize our file-backed infrastructure */
-  error = ensure_revprop_generation(fs, scratch_pool);
+  error = ensure_revprop_generation(fs, TRUE, scratch_pool);
   if (error)
     {
       /* failure -> disable revprop cache for good */
