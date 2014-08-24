@@ -21,6 +21,7 @@
  */
 
 #include <assert.h>
+#include <apr_md5.h>
 
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -40,6 +41,16 @@
    file with a new one. After that time, we assume that the writing
    process got aborted and that we have re-read revprops. */
 #define REVPROP_CHANGE_TIMEOUT (10 * 1000000)
+
+/* In case of an inconsistent read, close the generation file, yield,
+   re-open and re-read.  This is the number of times we try this before
+   giving up. */
+#define GENERATION_READ_RETRY_COUNT 100
+
+/* Maximum size of the generation number file contents (including NUL). */
+#define CHECKSUMMED_NUMBER_BUFFER_LEN \
+           (SVN_INT64_BUFFER_SIZE + 3 + APR_MD5_DIGESTSIZE * 2)
+
 
 svn_error_t *
 svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
@@ -213,6 +224,62 @@ close_revprop_generation_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Return the textual representation of NUMBER and its checksum in *BUFFER.
+ */
+static svn_error_t *
+checkedsummed_number(svn_stringbuf_t **buffer,
+                     apr_int64_t number,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_checksum_t *checksum;
+  const char *digest;
+
+  char str[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(str, number);
+  str[len] = 0;
+
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str, len, scratch_pool));
+  digest = svn_checksum_to_cstring_display(checksum, scratch_pool);
+
+  *buffer = svn_stringbuf_createf(result_pool, "%s %s\n", digest, str);
+
+  return SVN_NO_ERROR;
+}
+
+/* Extract the generation number from the text BUFFER of LEN bytes and
+ * verify it against the checksum in the same BUFFER.  If they match, return
+ * the generation in *NUMBER.  Otherwise, return an error.
+ * BUFFER does not need to be NUL-terminated.
+ */
+static svn_error_t *
+verify_extract_number(apr_int64_t *number,
+                      const char *buffer,
+                      apr_size_t len,
+                      apr_pool_t *scratch_pool)
+{
+  const char *digest_end = strchr(buffer, ' ');
+
+  /* Does the buffer even contain checksum _and_ number? */
+  if (digest_end != NULL)
+    {
+      svn_checksum_t *expected;
+      svn_checksum_t *actual;
+
+      SVN_ERR(svn_checksum_parse_hex(&expected, svn_checksum_md5, buffer,
+                                     scratch_pool));
+      SVN_ERR(svn_checksum(&actual, svn_checksum_md5, digest_end + 1,
+                           (buffer + len) - (digest_end + 1), scratch_pool));
+
+      if (svn_checksum_match(expected, actual))
+        return svn_error_trace(svn_cstring_atoi64(number, digest_end + 1));
+    }
+
+  /* Incomplete buffer or not a match. */
+  return svn_error_create(SVN_ERR_FS_INVALID_GENERATION, NULL,
+                          _("Invalid generation number data."));
+}
+
 /* Read revprop generation as stored on disk for repository FS. The result is
  * returned in *CURRENT.  Call only for repos that support revprop caching.
  */
@@ -222,25 +289,50 @@ read_revprop_generation_file(apr_int64_t *current,
                              apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  char buf[80];
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  char buf[CHECKSUMMED_NUMBER_BUFFER_LEN];
   apr_size_t len;
   apr_off_t offset = 0;
+  int i;
+  svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR(ensure_revprop_generation(fs, scratch_pool));
-  SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
-                           scratch_pool));
+  /* Retry in case of incomplete file buffer updates. */
+  for (i = 0; i < GENERATION_READ_RETRY_COUNT; ++i)
+    {
+      svn_error_clear(err);
+      svn_pool_clear(iterpool);
 
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(ffd->revprop_generation_file, buf, &len,
-                                  scratch_pool));
+      /* If we can't even access the data, things are very wrong.
+       * Don't retry in that case.
+       */
+      SVN_ERR(ensure_revprop_generation(fs, iterpool));
+      SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
+                              iterpool));
 
-  /* Check that the first line contains only digits. */
-/*  SVN_ERR(svn_fs_fs__check_file_buffer_numeric(buf, 0,
-                                               ffd->revprop_generation_file,
-                                               "Revprop Generation", pool));*/
-  SVN_ERR(svn_cstring_atoi64(current, buf));
+      len = sizeof(buf);
+      SVN_ERR(svn_io_read_length_line(ffd->revprop_generation_file, buf, &len,
+                                      iterpool));
 
-  return SVN_NO_ERROR;
+      /* Some data has been read.  It will most likely be complete and
+       * consistent.  Extract and verify anyway. */
+      err = verify_extract_number(current, buf, len, iterpool);
+      if (!err)
+        break;
+
+      /* Got unlucky and data was invalid.  Retry. */
+      SVN_ERR(close_revprop_generation_file(fs, iterpool));
+
+#if APR_HAS_THREADS
+      apr_thread_yield();
+#else
+      apr_sleep(0);
+#endif
+    }
+
+  svn_pool_destroy(iterpool);
+
+  /* If we had to give up, propagate the error. */
+  return svn_error_trace(err);
 }
 
 /* Write the CURRENT revprop generation to disk for repository FS.
@@ -252,18 +344,18 @@ write_revprop_generation_file(svn_fs_t *fs,
                               apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  char buf[SVN_INT64_BUFFER_SIZE];
+  svn_stringbuf_t *buffer;
   apr_off_t offset = 0;
 
-  apr_size_t len = svn__i64toa(buf, current);
-  buf[len] = '\n';
+  SVN_ERR(checkedsummed_number(&buffer, current, scratch_pool, scratch_pool));
 
   SVN_ERR(ensure_revprop_generation(fs, scratch_pool));
   SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
                            scratch_pool));
-  SVN_ERR(svn_io_file_write_full(ffd->revprop_generation_file, buf, len + 1,
-                                 NULL, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(ffd->revprop_generation_file, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(ffd->revprop_generation_file, buffer->data,
+                                 buffer->len, NULL, scratch_pool));
+  SVN_ERR(svn_io_file_flush_to_disk(ffd->revprop_generation_file,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -288,7 +380,13 @@ svn_fs_fs__reset_revprop_generation_file(svn_fs_t *fs,
    * the current format.  This ensures consistent on-disk state for new
    * format repositories. */
   if (ffd->format >= SVN_FS_FS__MIN_REVPROP_CACHING_FORMAT)
-    SVN_ERR(svn_io_write_atomic(path, "0\n", 2, NULL, scratch_pool));
+    {
+      svn_stringbuf_t *buffer;
+
+      SVN_ERR(checkedsummed_number(&buffer, 0, scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_write_atomic(path, buffer->data, buffer->len, NULL,
+                                  scratch_pool));
+    }
 
   /* ffd->revprop_generation_file will be re-opened on demand. */
 
