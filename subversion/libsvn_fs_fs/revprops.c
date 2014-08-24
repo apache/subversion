@@ -570,6 +570,10 @@ begin_revprop_change(apr_int64_t *generation,
   if (ffd->format < SVN_FS_FS__MIN_REVPROP_CACHING_FORMAT)
     return SVN_NO_ERROR;
 
+  /* Close and re-open to make sure we read the latest data. */
+  SVN_ERR(close_revprop_generation_file(fs, scratch_pool));
+  SVN_ERR(ensure_revprop_generation(fs, FALSE, scratch_pool));
+
   /* Set the revprop generation to an odd value to indicate
    * that a write is in progress.
    */
