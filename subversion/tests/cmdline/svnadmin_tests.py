@@ -86,12 +86,6 @@ def check_hotcopy_fsfs_fsx(src, dst):
                                 "source" % src_dirent)
       # Compare all files in this directory
       for src_file in src_files:
-        # Exclude temporary files
-        if src_file == 'rev-prop-atomics.shm':
-          continue
-        if src_file == 'rev-prop-atomics.mutex':
-          continue
-
         # Ignore auto-created empty lock files as they may or may not
         # be present and are neither required by nor do they harm to
         # the destination repository.
@@ -143,7 +137,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
         # the hotcopy destination (i.e. a fresh cache generation)
         if src_file == 'revprop-generation':
           f2 = open(dst_path, 'r')
-          revprop_gen = int(f2.read().strip())
+          revprop_gen = int(f2.read().strip().split()[1])
           if revprop_gen != 0:
               raise svntest.Failure("Hotcopy destination has non-zero " +
                                     "revprop generation")
