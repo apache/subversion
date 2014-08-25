@@ -208,17 +208,12 @@ def relocate_and_propset(sbox):
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
+  svntest.actions.guarantee_greek_repository(
+      sbox.repo_dir, svntest.main.options.server_minor_version)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
-  greek_dump_dir = sbox.add_wc_path('greek-dump')
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(greek_dump_dir)
-  exit_code, output, errput = svntest.main.run_svn(
-    None, 'import', '-m', 'Log message for revision 1.',
-    greek_dump_dir, sbox.repo_url)
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
@@ -274,7 +269,8 @@ def single_file_relocate(sbox):
 
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
+  svntest.actions.guarantee_greek_repository(
+      sbox.repo_dir, svntest.main.options.server_minor_version)
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(sbox.wc_dir, 'iota')
@@ -282,12 +278,6 @@ def single_file_relocate(sbox):
   repo_url = sbox.repo_url
   iota_url = repo_url + '/iota'
   greek_dump_dir = sbox.add_wc_path('greek-dump')
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(greek_dump_dir)
-  exit_code, output, errput = svntest.main.run_svn(
-    None, 'import', '-m', 'Log message for revision 1.',
-    greek_dump_dir, sbox.repo_url)
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
