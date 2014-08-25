@@ -213,9 +213,9 @@ close_revprop_generation_file(svn_fs_t *fs,
  * Call only for repos that support revprop caching.
  */
 static svn_error_t *
-ensure_revprop_generation(svn_fs_t *fs,
-                          svn_boolean_t read_only,
-                          apr_pool_t *scratch_pool)
+open_revprop_generation_file(svn_fs_t *fs,
+                             svn_boolean_t read_only,
+                             apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_int32_t flags = read_only ? APR_READ : (APR_READ | APR_WRITE);
@@ -317,7 +317,7 @@ read_revprop_generation_file(apr_int64_t *current,
       /* If we can't even access the data, things are very wrong.
        * Don't retry in that case.
        */
-      SVN_ERR(ensure_revprop_generation(fs, TRUE, iterpool));
+      SVN_ERR(open_revprop_generation_file(fs, TRUE, iterpool));
       SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
                               iterpool));
 
@@ -361,7 +361,7 @@ write_revprop_generation_file(svn_fs_t *fs,
 
   SVN_ERR(checkedsummed_number(&buffer, current, scratch_pool, scratch_pool));
 
-  SVN_ERR(ensure_revprop_generation(fs, FALSE, scratch_pool));
+  SVN_ERR(open_revprop_generation_file(fs, FALSE, scratch_pool));
   SVN_ERR(svn_io_file_seek(ffd->revprop_generation_file, APR_SET, &offset,
                            scratch_pool));
   SVN_ERR(svn_io_file_write_full(ffd->revprop_generation_file, buffer->data,
@@ -442,7 +442,7 @@ has_revprop_cache(svn_fs_t *fs,
     return FALSE;
 
   /* try initialize our file-backed infrastructure */
-  error = ensure_revprop_generation(fs, TRUE, scratch_pool);
+  error = open_revprop_generation_file(fs, TRUE, scratch_pool);
   if (error)
     {
       /* failure -> disable revprop cache for good */
@@ -582,7 +582,7 @@ begin_revprop_change(apr_int64_t *generation,
 
   /* Close and re-open to make sure we read the latest data. */
   SVN_ERR(close_revprop_generation_file(fs, scratch_pool));
-  SVN_ERR(ensure_revprop_generation(fs, FALSE, scratch_pool));
+  SVN_ERR(open_revprop_generation_file(fs, FALSE, scratch_pool));
 
   /* Set the revprop generation to an odd value to indicate
    * that a write is in progress.
