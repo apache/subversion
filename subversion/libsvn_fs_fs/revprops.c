@@ -485,6 +485,9 @@ revprop_generation_fixup(void *void_baton,
   fs_fs_data_t *ffd = baton->fs->fsap_data;
   assert(ffd->has_write_lock);
 
+  /* Make sure we don't operate on stale OS buffers. */
+  SVN_ERR(close_revprop_generation_file(baton->fs, scratch_pool));
+
   /* Maybe, either the original revprop writer or some other reader has
      already corrected / bumped the revprop generation.  Thus, we need
      to read it again.  However, we will now be the only ones changing
