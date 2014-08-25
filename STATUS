@@ -157,6 +157,15 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1620332
+   Remove broken conflict resolver menu options.
+   Justification:
+     svn shouldn't offer menu options that always error out.
+   Notes:
+     Run merge with --accept theirs-conflict
+   Votes:
+     +1: stsp
+   
 Veto-blocked changes:
 =====================
 
