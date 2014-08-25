@@ -68,6 +68,7 @@ repository) is:
   min-unpacked-rev    File containing the oldest revision not in a pack file
   min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
+  revprop-generation  File containing the current revprop generation (f. 7+)
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -412,6 +413,25 @@ Writing to packed revprops
   filesystem write lock.  We only need to build a few retries into
   the reader code to gracefully handle manifest changes and pack
   file deletions.
+
+
+Revision property generation
+----------------------------
+
+Since format 7, revision properties can be cached.  To detect updates,
+the revision property generation number gets incremented twice during
+each revprop change - once immediately before and once immediately
+after the change became active.  Hence, odd generation numbers indicate
+a revprop modification in progress and must only appear in open
+repositories.
+
+The revprop generation file format is as follows:
+
+    <MD5> ' ' <generation> '\n'
+
+where <generation> is the decimal ASCII value of the revision property
+generation and <MD5> is the hexadecimal MD5 digest of that decimal
+string.
 
 
 Node-revision IDs
