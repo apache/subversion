@@ -1,2 +1,28 @@
 This branch is develop a revised revprop caching logic as discussed in
 http://svn.haxx.se/dev/archive-2014-08/0273.shtml.
+
+Implementation is now complete.  This is what got implemented:
+
+* Bind revprop caching feature to format bump.  This prevents 1.8 processes
+  from using 1.9+ revprop generation files and vice versa.  Also, 1.8
+  revprop generation files get automatically cleaned up during format
+  upgrade.
+
+* Always read the revprop generation from the respective file, keep the
+  latter open for quasi-SHM speed.
+* Non-caching processes will bump the generation number as well to keep
+  other, caching ones up-to-date.
+* Atomicy of revprop generation changes cannot be guaranteed (reader /
+  writer race condition).  Use an MD5 checksum to ensure that consistent
+  has been read.
+* Open the generation file in read-only mode by default to prevent errors
+  on r/o file systems.  This is an improvement over the 1.8 code.
+
+* Close and reopen the generation file when bumping its content for the
+  first time after we acquired the FS write lock.  This keeps us from
+  reading from stale file buffers (lost updates) in case of networked
+  storage.
+* Always read the revprop data from disk when atomically changing it.
+  This is to prevent lost updates in the revprop data itself.
+
+* Removal of the whole named atomics code.
