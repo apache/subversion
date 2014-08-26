@@ -732,28 +732,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       subPool.getPool()), );
 }
 
-void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
-                                 const char *localPath, bool dryRun)
-{
-    SVN::Pool subPool(pool);
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-    SVN_JNI_NULL_PTR_EX(localPath, "localPath", );
-    Path intLocalPath(localPath, subPool);
-    SVN_JNI_ERR(intLocalPath.error_occurred(), );
-
-    Path srcPath(path, subPool);
-    SVN_JNI_ERR(srcPath.error_occurred(), );
-
-    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
-    if (ctx == NULL)
-        return;
-
-    SVN_JNI_ERR(svn_client_merge_reintegrate(srcPath.c_str(),
-                                             pegRevision.revision(),
-                                             intLocalPath.c_str(),
-                                             dryRun, NULL, ctx,
-                                             subPool.getPool()), );
-}
+/* SVNClient::mergeReintegrate is implemented in deprecated.cpp. */
 
 jobject
 SVNClient::getMergeinfo(const char *target, Revision &pegRevision)

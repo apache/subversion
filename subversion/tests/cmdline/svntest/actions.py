@@ -76,46 +76,49 @@ def setup_pristine_greek_repository():
 
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_greek_repos_dir):
-    main.create_repos(main.pristine_greek_repos_dir)
+    if main.options.fsfs_version is not None:
+      main.unpack_greek_repos(main.pristine_greek_repos_dir)
+    else:
+      main.create_repos(main.pristine_greek_repos_dir)
 
-    # if this is dav, gives us access rights to import the greek tree.
-    if main.is_ra_type_dav():
-      authz_file = os.path.join(main.work_dir, "authz")
-      main.file_write(authz_file, "[/]\n* = rw\n")
+      # if this is dav, gives us access rights to import the greek tree.
+      if main.is_ra_type_dav():
+        authz_file = os.path.join(main.work_dir, "authz")
+        main.file_write(authz_file, "[/]\n* = rw\n")
 
-    # dump the greek tree to disk.
-    main.greek_state.write_to_disk(main.greek_dump_dir)
+      # dump the greek tree to disk.
+      main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    # import the greek tree, using l:foo/p:bar
-    ### todo: svn should not be prompting for auth info when using
-    ### repositories with no auth/auth requirements
-    _, output, _ = main.run_svn(None, 'import', '-m',
-                                'Log message for revision 1.',
-                                main.greek_dump_dir,
-                                main.pristine_greek_repos_url)
+      # import the greek tree, using l:foo/p:bar
+      ### todo: svn should not be prompting for auth info when using
+      ### repositories with no auth/auth requirements
+      _, output, _ = main.run_svn(None, 'import', '-m',
+                                  'Log message for revision 1.',
+                                  main.greek_dump_dir,
+                                  main.pristine_greek_repos_url)
 
-    # verify the printed output of 'svn import'.
-    lastline = output.pop().strip()
-    match = re.search("(Committed|Imported) revision [0-9]+.", lastline)
-    if not match:
-      logger.error("import did not succeed, while creating greek repos.")
-      logger.error("The final line from 'svn import' was:")
-      logger.error(lastline)
-      sys.exit(1)
-    output_tree = wc.State.from_commit(output)
+      # verify the printed output of 'svn import'.
+      lastline = output.pop().strip()
+      match = re.search("(Committed|Imported) revision [0-9]+.", lastline)
+      if not match:
+        logger.error("import did not succeed, while creating greek repos.")
+        logger.error("The final line from 'svn import' was:")
+        logger.error(lastline)
+        sys.exit(1)
+      output_tree = wc.State.from_commit(output)
 
-    expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
-    expected_output_tree.tweak(verb='Adding',
-                               contents=None)
+      expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
+      expected_output_tree.tweak(verb='Adding',
+                                 contents=None)
 
-    try:
-      expected_output_tree.compare_and_display('output', output_tree)
-    except tree.SVNTreeUnequal:
-      verify.display_trees("ERROR:  output of import command is unexpected.",
-                           "OUTPUT TREE",
-                           expected_output_tree.old_tree(),
-                           output_tree.old_tree())
-      sys.exit(1)
+      try:
+        expected_output_tree.compare_and_display('output', output_tree)
+      except tree.SVNTreeUnequal:
+        verify.display_trees("ERROR:  output of import command is unexpected.",
+                             "OUTPUT TREE",
+                             expected_output_tree.old_tree(),
+                             output_tree.old_tree())
+        sys.exit(1)
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
@@ -153,7 +156,12 @@ def guarantee_greek_repository(path, minor_version):
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_greek_repos_dir, path, 1, 1, minor_version):
+  if (main.options.fsfs_version is not None):
+    failed = main.unpack_greek_repos(path)
+  else:
+    failed = main.copy_repos(main.pristine_greek_repos_dir,
+                             path, 1, 1, minor_version)
+  if failed:
     logger.error("copying repository failed.")
     sys.exit(1)
 

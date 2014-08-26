@@ -896,14 +896,48 @@ read_global_config(svn_fs_t *fs)
   return SVN_NO_ERROR;
 }
 
+/* Read FS's UUID file and store the data in the FS struct. */
+static svn_error_t *
+read_uuid(svn_fs_t *fs,
+          apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_file_t *uuid_file;
+  char buf[APR_UUID_FORMATTED_LENGTH + 2];
+  apr_size_t limit;
+
+  /* Read the repository uuid. */
+  SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
+
+  limit = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, scratch_pool));
+  fs->uuid = apr_pstrdup(fs->pool, buf);
+
+  /* Read the instance ID. */
+  if (ffd->format >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT)
+    {
+      limit = sizeof(buf);
+      SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit,
+                                      scratch_pool));
+      ffd->instance_id = apr_pstrdup(fs->pool, buf);
+    }
+  else
+    {
+      ffd->instance_id = fs->uuid;
+    }
+
+  SVN_ERR(svn_io_file_close(uuid_file, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *uuid_file;
   int format, max_files_per_dir;
-  char buf[APR_UUID_FORMATTED_LENGTH + 2];
-  apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
@@ -916,14 +950,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->max_files_per_dir = max_files_per_dir;
 
   /* Read in and cache the repository uuid. */
-  SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  fs->uuid = apr_pstrdup(fs->pool, buf);
-
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
+  SVN_ERR(read_uuid(fs, pool));
 
   /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -1045,10 +1072,21 @@ upgrade_body(void *baton, apr_pool_t *pool)
                                                pool));
     }
 
-  /* Bump the format file. */
+  /* We will need the UUID info shortly ...
+     Read it before the format bump as the UUID file still uses the old
+     format. */
+  SVN_ERR(read_uuid(fs, pool));
+
+  /* Update the format info in the FS struct.  Upgrade steps further
+     down will use the format from FS to create missing info. */
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
 
+  /* Always add / bump the instance ID such that no form of caching
+     accidentally uses outdated information.  Keep the UUID. */
+  SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
+
+  /* Bump the format file. */
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
   if (upgrade_baton->notify_func)
     SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
@@ -1453,7 +1491,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                               ? "0\n" : "0 1 1\n"),
                              pool));
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
-  SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
+  SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, NULL, pool));
 
   /* Create the fsfs.conf file if supported.  Older server versions would
      simply ignore the file but that might result in a different behavior
@@ -1496,28 +1534,40 @@ svn_fs_fs__create(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
+                    const char *instance_id,
                     apr_pool_t *pool)
 {
-  char *my_uuid;
-  apr_size_t my_uuid_len;
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *uuid_path = path_uuid(fs, pool);
+  svn_stringbuf_t *contents = svn_stringbuf_create_empty(pool);
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
 
-  /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", SVN_VA_NULL);
-  my_uuid_len = strlen(my_uuid);
+  if (! instance_id)
+    instance_id = svn_uuid_generate(pool);
+
+  svn_stringbuf_appendcstr(contents, uuid);
+  svn_stringbuf_appendcstr(contents, "\n");
+
+  if (ffd->format >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT)
+    {
+      svn_stringbuf_appendcstr(contents, instance_id);
+      svn_stringbuf_appendcstr(contents, "\n");
+    }
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_io_write_atomic(uuid_path, my_uuid, my_uuid_len,
+  SVN_ERR(svn_io_write_atomic(uuid_path, contents->data, contents->len,
                               svn_fs_fs__path_current(fs, pool) /* perms */,
                               pool));
 
-  /* Remove the newline we added, and stash the UUID. */
-  my_uuid[my_uuid_len - 1] = '\0';
-  fs->uuid = my_uuid;
+  fs->uuid = apr_pstrdup(fs->pool, uuid);
+
+  if (ffd->format >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT)
+    ffd->instance_id = apr_pstrdup(fs->pool, instance_id);
+  else
+    ffd->instance_id = fs->uuid;
 
   return SVN_NO_ERROR;
 }

@@ -1154,8 +1154,13 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_dir_make_recursive(path_apr, APR_OS_DEFAULT, pool);
-  WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
-                                                   APR_OS_DEFAULT, pool));
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
+                                                     APR_OS_DEFAULT, pool));
+#endif
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't make directory '%s'"),
@@ -4083,7 +4088,13 @@ dir_make(const char *path, apr_fileperms_t perm,
 #endif
 
   status = apr_dir_make(path_apr, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (status == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+#endif
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create directory '%s'"),

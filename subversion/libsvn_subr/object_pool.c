@@ -329,7 +329,7 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
    * cleanup and to prevent threading issues with the allocator
    */
   result = apr_pcalloc(pool, sizeof(*result));
-  SVN_ERR(svn_mutex__init(&result->mutex, thread_safe, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, thread_safe, pool));
 
   result->pool = pool;
   result->objects = svn_hash__make(result->pool);

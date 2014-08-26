@@ -2460,7 +2460,7 @@ typedef enum copy_type_t
   copy_type_plain_add,
 
   /* add with history */
-  copy_type_add_with_history,
+  copy_type_add_with_history
 } copy_type_t;
 
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under

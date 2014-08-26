@@ -73,11 +73,28 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      svn_fs_initialize pool.  It's unlikely that anyone will notice
      the modest expenditure; the alternative is to allocate each structure
      in a subpool, add a reference-count, and add a serialized destructor
-     to the FS vtable.  That's more machinery than it's worth. */
+     to the FS vtable.  That's more machinery than it's worth.
+
+     Picking an appropriate key for the shared data is tricky, because,
+     unfortunately, a filesystem UUID is not really unique.  It is implicitly
+     shared between hotcopied (1), dump / loaded (2) or naively copied (3)
+     filesystems.  We tackle this problem by using a combination of the UUID
+     and an instance ID as the key.  This allows us to avoid key clashing
+     in (1) and (2) for formats >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT, which
+     do support instance IDs.  For old formats the shared data (locks, shared
+     transaction data, ...) will still clash.
+
+     Speaking of (3), there is not so much we can do about it, except maybe
+     provide a convenient way of fixing things.  Naively copied filesystems
+     have identical filesystem UUIDs *and* instance IDs.  With the key being
+     a combination of these two, clashes can be fixed by changing either of
+     them (or both), e.g. with svn_fs_set_uuid(). */
 
   SVN_ERR_ASSERT(fs->uuid);
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
-                    SVN_VA_NULL);
+  SVN_ERR_ASSERT(ffd->instance_id);
+
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX,
+                    fs->uuid, ":", ffd->instance_id, SVN_VA_NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't fetch FSFS shared data"));
@@ -91,22 +108,17 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
-      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
-                              TRUE, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock, TRUE, common_pool));
 
       /* ... the pack lock ... */
-      SVN_ERR(svn_mutex__init(&ffsd->fs_pack_lock,
-                              TRUE, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_pack_lock, TRUE, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
-                              TRUE, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, TRUE, common_pool));
 
       /* We also need a mutex for synchronizing access to the active
-         transaction list and free transaction pointer.  This one is
-         enabled unconditionally. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
-                              TRUE, TRUE, common_pool));
+         transaction list and free transaction pointer. */
+      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock, TRUE, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -202,6 +214,18 @@ fs_info(const void **fsfs_info,
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around svn_fs_fs__set_uuid() adapting between function
+   signatures. */
+static svn_error_t *
+fs_set_uuid(svn_fs_t *fs,
+            const char *uuid,
+            apr_pool_t *pool)
+{
+  /* Whenever we set a new UUID, imply that FS will also be a different
+   * instance (on formats that support this). */
+  return svn_error_trace(svn_fs_fs__set_uuid(fs, uuid, NULL, pool));
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
@@ -210,7 +234,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__revision_prop,
   svn_fs_fs__get_revision_proplist,
   svn_fs_fs__change_rev_prop,
-  svn_fs_fs__set_uuid,
+  fs_set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
   svn_fs_fs__open_txn,
@@ -246,12 +270,11 @@ initialize_fs_struct(svn_fs_t *fs)
 
 /* Reset vtable and fsap_data fields in FS such that the FS is basically
  * closed now.  Note that FS must not hold locks when you call this. */
-static svn_error_t *
+static void
 uninitialize_fs_struct(svn_fs_t *fs)
 {
   fs->vtable = NULL;
   fs->fsap_data = NULL;
-  return SVN_NO_ERROR;
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
@@ -428,7 +451,7 @@ fs_hotcopy(svn_fs_t *src_fs,
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_fs__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                             incremental, pool));
-  SVN_ERR(uninitialize_fs_struct(dst_fs));
+  uninitialize_fs_struct(dst_fs);
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(fs_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));

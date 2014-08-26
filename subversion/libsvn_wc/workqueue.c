@@ -1116,14 +1116,15 @@ run_prej_install(work_item_baton_t *wqb,
                                               scratch_pool, scratch_pool));
 
   if (arg1->next != NULL)
-    prop_conflict_skel = arg1->next;
+    prop_conflict_skel = arg1->next; /* Before Subversion 1.9 */
   else
-    SVN_ERR_MALFUNCTION();  /* ### wc_db can't provide it ... yet.  */
+    prop_conflict_skel = NULL; /* Read from DB */
 
   /* Construct a property reject file in the temporary area.  */
   SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
                                   db, local_abspath,
                                   prop_conflict_skel,
+                                  cancel_func, cancel_baton,
                                   scratch_pool, scratch_pool));
 
   /* ... and atomically move it into place.  */
@@ -1139,21 +1140,21 @@ svn_error_t *
 svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              svn_skel_t *conflict_skel,
+                              /*svn_skel_t *conflict_skel,*/
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
   *work_item = svn_skel__make_empty_list(result_pool);
 
-  /* ### gotta have this, today  */
-  SVN_ERR_ASSERT(conflict_skel != NULL);
-
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  if (conflict_skel != NULL)
-    svn_skel__prepend(conflict_skel, *work_item);
+  /* ### In Subversion 1.7 and 1.8 we created a legacy property conflict skel
+         here:
+    if (conflict_skel != NULL)
+      svn_skel__prepend(conflict_skel, *work_item);
+   */
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
   svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);
 

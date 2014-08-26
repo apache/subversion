@@ -244,6 +244,12 @@ load_config(svn_ra_serf__session_t *session,
                                   SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                                   "auto", svn_tristate_unknown));
 
+  /* Should we use HTTP pipelining. */
+  SVN_ERR(svn_config_get_bool(config, &session->http_pipelining,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_PIPELINING,
+                              TRUE));
+
 #if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
   SVN_ERR(svn_config_get_int64(config, &log_components,
                                SVN_CONFIG_SECTION_GLOBAL,
@@ -310,6 +316,12 @@ load_config(svn_ra_serf__session_t *session,
                                       server_group,
                                       SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                                       "auto", chunked_requests));
+
+      /* Should we use HTTP pipelining. */
+      SVN_ERR(svn_config_get_bool(config, &session->http_pipelining,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_HTTP_PIPELINING,
+                                  session->http_pipelining));
 
 #if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
       SVN_ERR(svn_config_get_int64(config, &log_components,
@@ -570,6 +582,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
   if (status)
     return svn_ra_serf__wrap_err(status, NULL);
 
+  if (!serf_sess->http_pipelining) {
+      serf_connection_set_max_outstanding_requests(serf_sess->conns[0]->conn, 1);
+  }
+
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
                                serf_sess);
@@ -770,6 +786,10 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
                             result_pool);
   if (status)
     return svn_ra_serf__wrap_err(status, NULL);
+
+  if (!new_sess->http_pipelining) {
+      serf_connection_set_max_outstanding_requests(new_sess->conns[0]->conn, 1);
+  }
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(new_sess->context, svn_ra_serf__progress,

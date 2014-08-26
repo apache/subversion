@@ -537,12 +537,6 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 }
 
 void
-svn_handle_error(svn_error_t *err, FILE *stream, svn_boolean_t fatal)
-{
-  svn_handle_error2(err, stream, fatal, "svn: ");
-}
-
-void
 svn_handle_error2(svn_error_t *err,
                   FILE *stream,
                   svn_boolean_t fatal,
@@ -611,13 +605,6 @@ svn_handle_error2(svn_error_t *err,
          get called. */
       exit(EXIT_FAILURE);
     }
-}
-
-
-void
-svn_handle_warning(FILE *stream, svn_error_t *err)
-{
-  svn_handle_warning2(stream, err, "svn: ");
 }
 
 void

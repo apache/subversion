@@ -48,12 +48,67 @@ typedef struct fs_fs__id_t
 
 
 
+/** Like strtol but with a fixed base of 10, locale independent and limited
+ * to non-negative values.  Overflows are indicated by a FALSE return value
+ * in which case *RESULT_P will not be modified.
+ *
+ * This allows the compiler to generate massively faster code.
+ * (E.g. Avoiding locale specific processing).  ID parsing is one of the
+ * most CPU consuming parts of FSFS data access.  Better be quick.
+ */
+static svn_boolean_t
+locale_independent_strtol(long *result_p,
+                          const char* buffer,
+                          const char** end)
+{
+  /* We allow positive values only.  We use unsigned arithmetics to get
+   * well-defined overflow behavior.  It also happens to allow for a wider
+   * range of compiler-side optimizations. */
+  unsigned long result = 0;
+  while (1)
+    {
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
+      unsigned long next;
+
+      /* This implies the NUL check. */
+      if (c > 9)
+        break;
+
+      /* Overflow check.  Passing this, NEXT can be no more than ULONG_MAX+9
+       * before being truncated to ULONG but it still covers 0 .. ULONG_MAX.
+       */
+      if (result > ULONG_MAX / 10)
+        return FALSE;
+
+      next = result * 10 + c;
+
+      /* Overflow check.  In case of an overflow, NEXT is 0..9.
+       * In the non-overflow case, RESULT is either >= 10 or RESULT and NEXT
+       * are both 0. */
+      if (next < result)
+        return FALSE;
+
+      result = next;
+      ++buffer;
+    }
+
+  *end = buffer;
+  if (result > LONG_MAX)
+    return FALSE;
+
+  *result_p = (long)result;
+
+  return TRUE;
+}
+
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  * Return TRUE if no errors were detected. */
 static svn_boolean_t
 part_parse(svn_fs_fs__id_part_t *part,
            const char *data)
 {
+  const char *end;
+
   /* special case: ID inside some transaction */
   if (data[0] == '_')
     {
@@ -78,12 +133,7 @@ part_parse(svn_fs_fs__id_part_t *part,
       return *data == '\0';
     }
 
-  {
-    const char *end;
-    part->revision = svn__strtol(data+1, &end);
-  }
-
-  return TRUE;
+  return locale_independent_strtol(&part->revision, data+1, &end);
 }
 
 /* Parse the transaction id in DATA and store the result in *TXN_ID.
@@ -94,7 +144,9 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
              const char *data)
 {
   const char *end;
-  txn_id->revision = svn__strtol(data, &end);
+  if (!locale_independent_strtol(&txn_id->revision, data, &end))
+    return FALSE;
+
   data = strchr(end, '-');
   if (data == NULL)
     return FALSE;
@@ -429,9 +481,8 @@ svn_fs_id_t *
 svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)source;
-  fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  fs_fs__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
-  *new_id = *id;
   new_id->generic_id.fsap_data = new_id;
 
   return (svn_fs_id_t *)new_id;
@@ -489,7 +540,9 @@ svn_fs_fs__id_parse(char *data,
       str = svn_cstring_tokenize("/", &data);
       if (str == NULL)
         return NULL;
-      id->private_id.rev_item.revision = svn__strtol(str, &tmp);
+      if (!locale_independent_strtol(&id->private_id.rev_item.revision,
+                                     str, &tmp))
+        return NULL;
 
       err = svn_cstring_atoi64(&val, data);
       if (err)

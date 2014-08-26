@@ -28,6 +28,7 @@
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_fs.h"
@@ -38,6 +39,16 @@
 
 
 /*** Helper Functions ***/
+
+static void
+ignore_fs_warnings(void *baton, svn_error_t *err)
+{
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
+#endif
+  return;
+}
 
 /* Write the format number and maximum number of files per directory
    to a new format file in PATH, overwriting a previously existing
@@ -1089,38 +1100,48 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
+#define REPO_NAME "revprop_caching_on_off"
 static svn_error_t *
-never_reached(void *baton,
-              apr_pool_t *pool)
+revprop_caching_on_off(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
 {
-  return SVN_NO_ERROR;
-}
+  svn_fs_t *fs1;
+  svn_fs_t *fs2;
+  apr_hash_t *fs_config;
+  svn_string_t *value;
+  const svn_string_t *another_value_for_avoiding_warnings_from_a_broken_api;
+  const svn_string_t *new_value = svn_string_create("new", pool);
 
-static svn_error_t *
-lock_again(void *baton,
-           apr_pool_t *pool)
-{
-  svn_fs_t *fs = baton;
-  SVN_TEST_ASSERT_ERROR(svn_fs_fs__with_all_locks(fs, never_reached, fs,
-                                                  pool),
-                        SVN_ERR_RECURSIVE_LOCK);
-  return SVN_NO_ERROR;
-}
-
-#define REPO_NAME "recursive_locking"
-static svn_error_t *
-recursive_locking(const svn_test_opts_t *opts,
-                  apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-
-  /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 
-  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
-  SVN_ERR(svn_fs_fs__with_all_locks(fs, lock_again, fs, pool));
+  /* Open two filesystem objects, enable revision property caching
+   * in one of them. */
+  SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
+
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
+
+  SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
+
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs2, ignore_fs_warnings, NULL);
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  another_value_for_avoiding_warnings_from_a_broken_api = value;
+  SVN_ERR(svn_fs_change_rev_prop2(
+              fs1, 0, "svn:date",
+              &another_value_for_avoiding_warnings_from_a_broken_api,
+              new_value, pool));
+
+  /* Expect the change to be visible through both objects.*/
+  SVN_ERR(svn_fs_revision_prop(&value, fs1, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
 
   return SVN_NO_ERROR;
 }
@@ -1164,8 +1185,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns to log addressing in shared FSFS"),
     SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
                        "upgrade txns started before svnadmin upgrade"),
-    SVN_TEST_OPTS_PASS(recursive_locking,
-                       "prevent recursive locking"),
+    SVN_TEST_OPTS_PASS(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching"),
     SVN_TEST_NULL
   };
 

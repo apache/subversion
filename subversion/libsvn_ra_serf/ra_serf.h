@@ -144,6 +144,13 @@ struct svn_ra_serf__session_t {
      i.e. is there a (reverse) proxy that does not support them?  */
   svn_boolean_t detect_chunking;
 
+  /* Can serf use HTTP pipelining, or should it send requests one by one.
+     HTTP pipelining is enabled by default. The only known case where it should
+     be disabled is when the server triggers SSL renegotiations in the middle
+     of HTTP traffic on a connection, which OpenSSL currently doesn't handle
+     well. See serf issue #135. */
+  svn_boolean_t http_pipelining;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 

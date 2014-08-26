@@ -1426,18 +1426,8 @@ SVN_ERROR_START
              "Additional errors:")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_RECURSIVE_LOCK,
-             SVN_ERR_MISC_CATEGORY_START + 43,
-             "Recursive locks are not supported")
-
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_INVALID_UNLOCK,
-             SVN_ERR_MISC_CATEGORY_START + 44,
-             "Tried to release a non-locked mutex")
-
-  /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_INVALID_INPUT,
-             SVN_ERR_MISC_CATEGORY_START + 45,
+             SVN_ERR_MISC_CATEGORY_START + 43,
              "Parser error: invalid input")
 
   /* command-line client errors */

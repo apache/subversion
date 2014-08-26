@@ -36,6 +36,7 @@ import xml
 import urllib
 import logging
 import hashlib
+import zipfile
 from urlparse import urlparse
 
 try:
@@ -155,6 +156,7 @@ svnsync_binary = P('svnsync/svnsync')
 svnversion_binary = P('svnversion/svnversion')
 svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
 svnmucc_binary = P('svnmucc/svnmucc')
+svnfsfs_binary = P('svnfsfs/svnfsfs')
 entriesdump_binary = P('tests/cmdline/entries-dump')
 lock_helper_binary = P('tests/cmdline/lock-helper')
 atomic_ra_revprop_change_binary = P('tests/cmdline/atomic-ra-revprop-change')
@@ -169,14 +171,6 @@ del P
 svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
 svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
-)
-
-######################################################################
-# The location of svnfsfs binary, relative to the only scripts that
-# import this file right now (they live in ../).
-# Use --tools to overide these defaults.
-svnfsfs_binary = os.path.abspath(
-    '../../../tools/server-side/svnfsfs/svnfsfs' + _exe
 )
 
 # Location to the pristine repository, will be calculated from test_area_url
@@ -914,6 +908,16 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
+def _unpack_precooked_repos(path, template):
+  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
+  zipfile.ZipFile(repozip, 'r').extractall(path)
+
+# For creating new, pre-cooked greek repositories
+def unpack_greek_repos(path):
+  template = "greek-fsfs-v%d.zip" % options.fsfs_version
+  _unpack_precooked_repos(path, template)
+
 # For creating blank new repositories
 def create_repos(path, minor_version = None):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
@@ -922,14 +926,25 @@ def create_repos(path, minor_version = None):
   if not os.path.exists(path):
     os.makedirs(path) # this creates all the intermediate dirs, if necessary
 
-  opts = ("--bdb-txn-nosync",)
-  if minor_version is None or minor_version > options.server_minor_version:
-    minor_version = options.server_minor_version
-  opts += ("--compatible-version=1.%d" % (minor_version),)
-  if options.fs_type is not None:
-    opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False, "create",
-                                          path, *opts)
+  if options.fsfs_version is None:
+    if options.fs_type == "bdb":
+      opts = ("--bdb-txn-nosync",)
+    else:
+      opts = ()
+    if minor_version is None or minor_version > options.server_minor_version:
+      minor_version = options.server_minor_version
+    opts += ("--compatible-version=1.%d" % (minor_version),)
+    if options.fs_type is not None:
+      opts += ("--fs-type=" + options.fs_type,)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "create", path, *opts)
+  else:
+    # Copy a pre-cooked FSFS repository
+    assert options.fs_type == "fsfs"
+    template = "empty-fsfs-v%d.zip" % options.fsfs_version
+    _unpack_precooked_repos(path, template)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "setuuid", path)
 
   # Skip tests if we can't create the repository.
   if stderr:
@@ -1342,6 +1357,9 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def tests_use_prepacakaged_repository():
+  return options.fsfs_version is not None
+
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
 
@@ -1385,6 +1403,10 @@ def fs_has_rep_sharing():
 def fs_has_pack():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_unique_freeze():
+  return (is_fs_type_fsfs() and options.server_minor_version >= 9
+          or is_fs_type_bdb())
 
 def is_os_windows():
   return os.name == 'nt'
@@ -1511,6 +1533,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-sharding=' + str(options.fsfs_sharding))
     if options.fsfs_packing:
       args.append('--fsfs-packing')
+    if options.fsfs_version:
+      args.append('--fsfs-version=' + str(options.fsfs_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1833,6 +1857,8 @@ def _create_parser():
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
+  parser.add_option('--fsfs-version', type='int', action='store',
+                    help='FSFS version (fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
@@ -1901,6 +1927,25 @@ def _parse_options(arglist=sys.argv[1:]):
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  # Make sure the server-minor-version matches the fsfs-version parameter.
+  if options.fsfs_version:
+    if options.fsfs_version == 6:
+      if options.server_minor_version \
+        and options.server_minor_version != 8 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=6 requires --server-minor-version=8")
+      options.server_minor_version = 8
+    if options.fsfs_version == 4:
+      if options.server_minor_version \
+        and options.server_minor_version != 7 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=4 requires --server-minor-version=7")
+      options.server_minor_version = 7
+    pass
+    # ### Add more tweaks here if and when we support pre-cooked versions
+    # ### of FSFS repositories.
+  pass
 
   return (parser, args)
 

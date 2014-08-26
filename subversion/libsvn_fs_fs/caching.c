@@ -118,23 +118,9 @@ read_config(const char **cache_namespace,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
 
-  /* don't cache revprops by default.
-   * Revprop caching significantly speeds up operations like
-   * svn ls -v. However, it requires synchronization that may
-   * not be available or efficient in the current server setup.
-   *
-   * If the caller chose option "2", enable revprop caching if
-   * the required API support is there to make it efficient.
+  /* For now, always disable revprop caching.
    */
-  if (strcmp(svn_hash__get_cstring(fs->config,
-                                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                                   ""), "2"))
-    *cache_revprops
-      = svn_hash__get_bool(fs->config,
-                           SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                           FALSE);
-  else
-    *cache_revprops = svn_named_atomic__is_efficient();
+  *cache_revprops = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -360,6 +346,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
+                                   ":", ffd->instance_id,
                                    "/", normalize_key_part(fs->path, pool),
                                    ":",
                                    SVN_VA_NULL);
@@ -721,6 +708,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
      Therefore, throw in a uuid as well - just to be sure. */
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
+                                   ":", ffd->instance_id,
                                    "/", fs->path,
                                    ":", txn_id,
                                    ":", svn_uuid_generate(pool), ":",

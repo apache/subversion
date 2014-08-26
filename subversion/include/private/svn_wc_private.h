@@ -82,8 +82,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *recorded_url,
                                  const svn_opt_revision_t *recorded_peg_rev,
                                  const svn_opt_revision_t *recorded_rev,
-                                 svn_wc_conflict_resolver_func2_t conflict_func,
-                                 void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -293,7 +291,7 @@ svn_wc__close_db(const char *external_abspath,
  * use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__get_tree_conflict(const svn_wc_conflict_description3_t **tree_conflict,
+svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
                           svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *result_pool,
@@ -311,7 +309,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description3_t **tree_conflict,
  */
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
-                          const svn_wc_conflict_description3_t *conflict,
+                          const svn_wc_conflict_description2_t *conflict,
                           apr_pool_t *scratch_pool);
 
 /* Remove any tree conflict on victim @a victim_abspath using @a wc_ctx.
@@ -353,26 +351,6 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  * wc-ng.  Use them for new development now, but they may be disappearing
  * before the 1.7 release.
  */
-
-/*
- * Convert from svn_wc_conflict_description3_t to
- * svn_wc_conflict_description2_t.
- *
- * Allocate the result in RESULT_POOL.
- */
-svn_wc_conflict_description2_t *
-svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
-                   apr_pool_t *result_pool);
-
-/*
- * Convert an array of svn_wc_conflict_description3_t * elements to an
- * array of * svn_wc_conflict_description2_t * elements.
- *
- * Allocate the result in RESULT_POOL.
- */
-apr_array_header_t *
-svn_wc__cd3_array_to_cd2_array(const apr_array_header_t *conflicts,
-                               apr_pool_t *result_pool);
 
 /*
  * Convert from svn_wc_conflict_description2_t to
@@ -1575,8 +1553,12 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
- * Normally, the difference from repository->working_copy is shown.
- * If @a reverse_order is TRUE, then show working_copy->repository diffs.
+ * Normally, the difference from repository->working_copy is shown. If
+ * @a reverse_order is TRUE, then we want to show working_copy->repository
+ * diffs. Most of the reversal is done by the caller; here we just swap the
+ * order of reporting a replacement so that the local addition is reported
+ * before the remote delete. (The caller's diff processor can then transform
+ * adds into deletes and deletes into adds, but it can't reorder the output.)
  *
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.

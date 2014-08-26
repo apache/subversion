@@ -90,13 +90,8 @@ AC_SUBST([MKDIR])
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reason we require APR 0.9.7 is:
-dnl   It contains fixes to its file writing routines
-dnl   now generating errors instead of silently ignoring
-dnl   them.  Only .7 and later can guarantee repository
-dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["1\.[345]\. 2\."]
+APR_VER_REGEXES=["1\.[3-9]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -112,7 +107,7 @@ if test `expr $apr_version : 2` -ne 0; then
   SVN_APR_MAJOR_VERSION=2
 else
   svn_lib_ver=0
-  APU_VER_REGEXES=["1\.[345]\."]
+  APU_VER_REGEXES=["1\.[3-9]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
   SVN_APR_MAJOR_VERSION=1
 fi
@@ -1065,14 +1060,13 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
-        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
         SVN_CFLAGS_ADD_IFELSE([-Wmissing-variable-declarations])
 
         CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
-        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
