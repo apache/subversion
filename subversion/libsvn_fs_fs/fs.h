@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
