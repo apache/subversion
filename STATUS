@@ -125,23 +125,6 @@ Candidate changes:
    Votes:
      +1: breser, philip
 
- * r1611379, r1612405, r1615354, r1617687
-   Fix revprop caching initialization delays for ra_serf on Windows.
-   Justification:
-     Without this patch, even small checkouts may take 20 to 40
-     seconds longer.  This patch switches the named atomics SHM
-     initialization guard to the same "never delete the lock file"
-     pattern that we use for FSFS-internal locks.
-   Notes:
-     Branch is needed since SVN_VA_NULL is not available in 1.8.x.
-     Same goes for svn_io_file_create_empty.
-   Branch:
-     ^/subversion/branches/1.8.x-r1611379
-   Votes:
-     +1: stefan2
-     +1 (without r1617687): ivan
-     +1 (without r1615354, r1617687): brane, breser
-
  * r1619380, r1619393
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
@@ -156,6 +139,15 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: julianfoad
+
+ * r1619774
+   Disable the revprop caching feature.
+   Justification:
+     The deployment restrictions that come with the 1.8 implementation
+     of this feature make it hard to use correctly. See also
+     http://svn.haxx.se/dev/archive-2014-08/0273.shtml
+   Votes:
+     +1: stefan2
 
  * r1620332
    Remove broken conflict resolver menu options.
