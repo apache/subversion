@@ -344,8 +344,14 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->private_id, &id_b->private_id,
-                sizeof(id_a->private_id)) == 0;
+  return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
+                               &id_b->private_id.node_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.copy_id,
+                               &id_b->private_id.copy_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                               &id_b->private_id.txn_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.rev_item,
+                               &id_b->private_id.rev_item);
 }
 
 
