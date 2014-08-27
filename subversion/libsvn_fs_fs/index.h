@@ -23,52 +23,9 @@
 #ifndef SVN_LIBSVN_FS__INDEX_H
 #define SVN_LIBSVN_FS__INDEX_H
 
+#include "private/svn_fs_fs_private.h"
+
 #include "fs.h"
-#include "rev_file.h"
-
-/* Per-defined item index values.  They are used to identify empty or
- * mandatory items.
- */
-#define SVN_FS_FS__ITEM_INDEX_UNUSED     0  /* invalid / reserved value */
-#define SVN_FS_FS__ITEM_INDEX_CHANGES    1  /* list of changed paths */
-#define SVN_FS_FS__ITEM_INDEX_ROOT_NODE  2  /* the root noderev */
-#define SVN_FS_FS__ITEM_INDEX_FIRST_USER 3  /* first noderev to be freely
-                                               assigned */
-
-/* Data / item types as stored in the phys-to-log index.
- */
-#define SVN_FS_FS__ITEM_TYPE_UNUSED     0  /* file section not used */
-#define SVN_FS_FS__ITEM_TYPE_FILE_REP   1  /* item is a file representation */
-#define SVN_FS_FS__ITEM_TYPE_DIR_REP    2  /* item is a directory rep. */
-#define SVN_FS_FS__ITEM_TYPE_FILE_PROPS 3  /* item is a file property rep. */
-#define SVN_FS_FS__ITEM_TYPE_DIR_PROPS  4  /* item is a directory prop rep */
-#define SVN_FS_FS__ITEM_TYPE_NODEREV    5  /* item is a noderev */
-#define SVN_FS_FS__ITEM_TYPE_CHANGES    6  /* item is a changed paths list */
-
-#define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
-                                              Only used in pre-format7. */
-
-/* (user visible) entry in the phys-to-log index.  It describes a section
- * of some packed / non-packed rev file as containing a specific item.
- * There must be no overlapping / conflicting entries.
- */
-typedef struct svn_fs_fs__p2l_entry_t
-{
-  /* offset of the first byte that belongs to the item */
-  apr_off_t offset;
-  
-  /* length of the item in bytes */
-  apr_off_t size;
-
-  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
-  unsigned type;
-
-  /* modified FNV-1a checksum.  0 if unknown checksum */
-  apr_uint32_t fnv1_checksum;
-
-  /* item in that block */
-  svn_fs_fs__id_part_t item;
-} svn_fs_fs__p2l_entry_t;
 
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
@@ -153,26 +110,6 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
                             svn_revnum_t revision,
                             apr_pool_t *pool);
 
-/* Use the phys-to-log mapping files in FS to build a list of entries
- * that (at least partly) overlap with the range given by BLOCK_START
- * offset and BLOCK_SIZE in the rep / pack file containing REVISION.
- * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements.
- * REV_FILE determines whether to access single rev or pack file data.
- * If that is not available anymore (neither in cache nor on disk),
- * return an error.  Use POOL for allocations.
- *
- * Note that (only) the first and the last mapping may cross a cluster
- * boundary.
- */
-svn_error_t *
-svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
-                            svn_fs_t *fs,
-                            svn_fs_fs__revision_file_t *rev_file,
-                            svn_revnum_t revision,
-                            apr_off_t block_start,
-                            apr_off_t block_size,
-                            apr_pool_t *pool);
-
 /* Use the phys-to-log mapping files in FS to return the entry for the
  * item starting at global OFFSET in the rep file containing REVISION in
  * *ENTRY.  Sets *ENTRY to NULL if no item starts at exactly that offset.
@@ -219,50 +156,6 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            svn_revnum_t start_rev,
                            apr_size_t count,
                            apr_pool_t *pool);
-
-/* In *OFFSET, return the last OFFSET in the pack / rev file containing.
- * REV_FILE determines whether to access single rev or pack file data.
- * If that is not available anymore (neither in cache nor on disk), re-open
- * the rev / pack file and retry to open the index file.
- * Use POOL for allocations.
- */
-svn_error_t *
-svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
-                              svn_fs_t *fs,
-                              svn_fs_fs__revision_file_t *rev_file,
-                              svn_revnum_t revision,
-                              apr_pool_t *pool);
-
-/* Index (re-)creation utilities.
- */
-
-/* For FS, create a new L2P auto-deleting proto index file in POOL and return
- * its name in *PROTONAME.  All entries to write are given in ENTRIES and
- * entries are of type svn_fs_fs__p2l_entry_t* (sic!).  The ENTRIES array
- * will be reordered.  Give the proto index file the lifetime of RESULT_POOL
- * and use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_fs_fs__l2p_index_from_p2l_entries(const char **protoname,
-                                      svn_fs_t *fs,
-                                      apr_array_header_t *entries,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
-
-/* For FS, create a new P2L auto-deleting proto index file in POOL and return
- * its name in *PROTONAME.  All entries to write are given in ENTRIES and
- * of type svn_fs_fs__p2l_entry_t*.  The FVN1 checksums are not taken from
- * ENTRIES but are begin calculated from the current contents of REV_FILE
- * as we go.  Give the proto index file the lifetime of RESULT_POOL and use
- * SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_fs_fs__p2l_index_from_p2l_entries(const char **protoname,
-                                      svn_fs_t *fs,
-                                      svn_fs_fs__revision_file_t *rev_file,
-                                      apr_array_header_t *entries,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
 
 /* Serialization and caching interface
  */

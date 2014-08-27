@@ -22,14 +22,10 @@
 
 #include "svn_ctype.h"
 #include "svn_dirent_uri.h"
-#include "svn_io.h"
 #include "svn_pools.h"
 
 #include "private/svn_sorts_private.h"
-
-#include "../libsvn_fs_fs/index.h"
-#include "../libsvn_fs_fs/transaction.h"
-#include "../libsvn_fs_fs/util.h"
+#include "private/svn_fs_fs_private.h"
 
 #include "svn_private_config.h"
 

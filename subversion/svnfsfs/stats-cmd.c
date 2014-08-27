@@ -21,18 +21,14 @@
  */
 
 #include "svn_dirent_uri.h"
-#include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 
 #include "private/svn_cache.h"
+#include "private/svn_fs_fs_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
-#include "../libsvn_fs_fs/index.h"
-#include "../libsvn_fs_fs/pack.h"
-#include "../libsvn_fs_fs/rev_file.h"
-#include "../libsvn_fs_fs/util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"

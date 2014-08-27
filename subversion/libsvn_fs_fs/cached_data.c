@@ -38,6 +38,7 @@
 #include "index.h"
 #include "low_level.h"
 #include "pack.h"
+#include "rev_file.h"
 #include "util.h"
 #include "temp_serializer.h"
 
