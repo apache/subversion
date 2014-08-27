@@ -185,6 +185,17 @@ extern "C" {
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_FS__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_FS__USE_LOCK_MUTEX 0
+#endif
+
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
