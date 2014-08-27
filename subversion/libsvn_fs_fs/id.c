@@ -147,8 +147,8 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
   if (!locale_independent_strtol(&txn_id->revision, data, &end))
     return FALSE;
 
-  data = strchr(end, '-');
-  if (data == NULL)
+  data = end;
+  if (*data != '-')
     return FALSE;
 
   ++data;
