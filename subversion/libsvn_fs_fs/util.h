@@ -381,4 +381,9 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            const char *perms_reference,
                            apr_pool_t *pool);
 
+/* Return TRUE, iff revision REV in FS requires logical addressing. */
+svn_boolean_t
+svn_fs_fs__use_log_addressing(svn_fs_t *fs,
+                              svn_revnum_t rev);
+
 #endif

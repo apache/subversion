@@ -23,7 +23,7 @@
 #ifndef SVN_LIBSVN_FS__PACK_H
 #define SVN_LIBSVN_FS__PACK_H
 
-#include "private/svn_fs_fs_private.h"
+#include "fs.h"
 
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.
@@ -38,6 +38,17 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool);
+
+/**
+ * For the packed revision @a rev in @a fs,  determine the offset within
+ * the revision pack file and return it in @a rev_offset.  Use @a pool for
+ * allocations.
+ */
+svn_error_t *
+svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
 
 /* Return the svn_dir_entry_t* objects of DIRECTORY in an APR array
  * allocated in POOL with entries added in storage (on-disk) order.
