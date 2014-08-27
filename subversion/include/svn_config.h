@@ -193,7 +193,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
-  "*.rej *~ #*# .#* .*.swp .DS_Store"
+  "*.rej *~ #*# .#* .*.swp .DS_Store [Tt]humbs.db"
 #endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
