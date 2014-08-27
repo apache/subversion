@@ -20,13 +20,12 @@
  * ====================================================================
  */
 
+#define APR_WANT_BYTEFUNC
+
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 
-#include "../libsvn_fs_fs/fs.h"
-#include "../libsvn_fs_fs/index.h"
-#include "../libsvn_fs_fs/rev_file.h"
-#include "../libsvn_fs_fs/util.h"
+#include "private/svn_fs_fs_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svnfsfs.h"
