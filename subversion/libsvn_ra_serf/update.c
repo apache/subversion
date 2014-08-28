@@ -723,11 +723,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int num_active_reqs)
       if (status)
         return svn_ra_serf__wrap_err(status, NULL);
 
-      if (!sess->http_pipelining) {
-          serf_connection_set_max_outstanding_requests(sess->conns[cur]->conn,
-                                                       1);
-      }
-
       sess->num_conns++;
     }
 

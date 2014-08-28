@@ -97,8 +97,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS     "http-chunked-requests"
-/** @since New in 1.9. */
-#define SVN_CONFIG_OPTION_HTTP_PIPELINING           "http-pipelining"
 
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS       "serf-log-components"
