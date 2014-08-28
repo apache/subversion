@@ -904,6 +904,41 @@ test_stringbuf_replace_all(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stringbuf_leftchop(apr_pool_t *pool)
+{
+  svn_stringbuf_t *s;
+
+  s = svn_stringbuf_create("abcd", pool);
+  svn_stringbuf_leftchop(s, 0);
+  SVN_TEST_ASSERT(s->len == 4);
+  SVN_TEST_STRING_ASSERT(s->data, "abcd");
+
+  svn_stringbuf_leftchop(s, 2);
+  SVN_TEST_ASSERT(s->len == 2);
+  SVN_TEST_STRING_ASSERT(s->data, "cd");
+
+  svn_stringbuf_leftchop(s, 4);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  s = svn_stringbuf_create("abcd", pool);
+  svn_stringbuf_leftchop(s, 4);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  s = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_leftchop(s, 0);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  svn_stringbuf_leftchop(s, 2);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -982,6 +1017,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_cstring_skip_prefix()"),
     SVN_TEST_PASS2(test_stringbuf_replace_all,
                    "test svn_stringbuf_replace_all"),
+    SVN_TEST_PASS2(test_stringbuf_leftchop,
+                   "test svn_stringbuf_leftchop"),
     SVN_TEST_NULL
   };
 

@@ -499,8 +499,14 @@ svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes)
 void
 svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes)
 {
-  if (nbytes > str->len)
-    str->len = 0;
+  if (str->len == 0)
+    return;
+
+  if (nbytes >= str->len)
+    {
+      str->len = 0;
+      *str->data = '\0';
+    }
   else
     {
       /* Note: This will irretrievably waste nbytes of space in the
