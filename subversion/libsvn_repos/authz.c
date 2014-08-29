@@ -344,10 +344,16 @@ insert_path(node_t *node,
       SVN_ERR_ASSERT_NO_RETURN(segment->kind == authz_rule_literal);
 
       if (!node->sub_nodes)
-        node->sub_nodes = svn_hash__make(result_pool);
+        {
+          node->sub_nodes = svn_hash__make(result_pool);
+          sub_node = NULL;
+        }
+      else
+        {
+          sub_node = svn_hash_gets(node->sub_nodes, segment);
+        }
 
       /* Auto-insert a sub-node for the current segment. */
-      sub_node = svn_hash_gets(node->sub_nodes, segment);
       if (!sub_node)
         {
           sub_node = create_node(segment, result_pool);
