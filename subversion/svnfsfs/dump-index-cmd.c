@@ -110,7 +110,7 @@ dump_index(const char *path,
           offset = entry->offset + entry->size;
 
           printf("%12" APR_UINT64_T_HEX_FMT " %12" APR_UINT64_T_HEX_FMT
-                 " %s %9ld %8" APR_UINT64_T_HEX_FMT " %s\n",
+                 " %s %9ld %8" APR_UINT64_T_FMT " %s\n",
                  (apr_uint64_t)entry->offset, (apr_uint64_t)entry->size,
                  type_str, entry->item.revision, entry->item.number,
                  fnv1_to_string(entry->fnv1_checksum, iterpool));
