@@ -303,8 +303,9 @@ insert_path(node_t *node,
       return;
     }
 
+  /* Any wildcards?  They will go into a separate sub-structure. */
   if (segment->kind != authz_rule_literal)
-      ensure_pattern_sub_nodes(node, result_pool);
+    ensure_pattern_sub_nodes(node, result_pool);
 
   switch (segment->kind)
     {
