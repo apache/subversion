@@ -551,10 +551,13 @@ parse_rule_path(authz_rule_t *rule,
                 }
               else
                 {
-                  /* This is a **. Replace **|** with *|**. */
+                  /* This is a **. Replace **|** with a single **. */
                   if (prev && prev->kind == authz_rule_any_recursive)
-                    prev->kind = authz_rule_any_segment;
-                  segment->kind = authz_rule_any_recursive;
+                    {
+                      /* Simply drop the new segment. */
+                      --nseg;
+                      continue;
+                    }
                 }
 
               segment->pattern.data = interned_empty_string;

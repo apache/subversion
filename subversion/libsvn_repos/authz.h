@@ -159,7 +159,7 @@ typedef struct authz_rule_segment_t
     authz_rule_any_segment,
 
     /* '**'
-       Matches any sequence of one or more path segments.
+       Matches any sequence of zero or more path segments.
        The pattern will be an empty string. */
     authz_rule_any_recursive,
 
