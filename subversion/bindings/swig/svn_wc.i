@@ -40,8 +40,9 @@
 */
 %ignore svn_wc_set_auth_file;
 
-/* ### ignore this structure because the accessors will need a pool */
+/* ### ignore these structures because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
+%ignore svn_wc_conflict_description2_t;
 
 #ifdef SWIGRUBY
 %ignore svn_wc_external_item_create;

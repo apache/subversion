@@ -170,7 +170,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 {
   int i = 0;
   svn_wc_conflict_version_t *left, *right;
-  svn_wc_conflict_description3_t *c;
+  svn_wc_conflict_description2_t *c;
   svn_wc_context_t *wc_ctx;
 
   /* Conflict description parameters */
@@ -206,10 +206,10 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                                          peg_rev1, kind1, pool);
   right = svn_wc_conflict_version_create2(repos_url2, NULL, path_in_repos2,
                                           peg_rev2, kind2, pool);
-  c = svn_wc_conflict_description_create_tree3(wc_abspath, kind,
-                                              operation, left, right, pool);
-  c->incoming_change = (svn_wc_conflict_action_t)action;
-  c->local_change = (svn_wc_conflict_reason_t)reason;
+  c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
+                                               operation, left, right, pool);
+  c->action = (svn_wc_conflict_action_t)action;
+  c->reason = (svn_wc_conflict_reason_t)reason;
 
   /* Raise the conflict */
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));

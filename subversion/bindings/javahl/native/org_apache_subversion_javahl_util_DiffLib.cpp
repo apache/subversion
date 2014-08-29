@@ -190,7 +190,7 @@ Java_org_apache_subversion_javahl_util_DiffLib_nativeFileMerge(
 
   OutputStream result_stream(jresult_stream);
 
-  SVN_JNI_ERR(svn_diff_file_output_merge2(
+  SVN_JNI_ERR(svn_diff_file_output_merge3(
                   result_stream.getStream(pool), diff,
                   original.c_str(), modified.c_str(), latest.c_str(),
                   conflict_original.c_str(),
@@ -198,6 +198,7 @@ Java_org_apache_subversion_javahl_util_DiffLib_nativeFileMerge(
                   conflict_latest.c_str(),
                   conflict_separator.c_str(),
                   svn_diff_conflict_display_style_t(jconflict_style_ordinal),
+                  NULL, NULL,
                   pool.getPool()),
               false);
 

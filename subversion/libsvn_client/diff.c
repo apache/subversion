@@ -853,8 +853,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                    NULL, NULL, scratch_pool));
         }
 
-      /* We have a printed a diff for this path, mark it as visited. */
-      *wrote_header = TRUE;
+      /* If we have printed a diff for this path, mark it as visited. */
+      if (exitcode == 1)
+        *wrote_header = TRUE;
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -911,8 +912,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
 
-          /* We have a printed a diff for this path, mark it as visited. */
-          *wrote_header = TRUE;
+          /* If we have printed a diff for this path, mark it as visited. */
+          if (dwi->use_git_diff_format || svn_diff_contains_diffs(diff))
+            *wrote_header = TRUE;
         }
     }
 
@@ -1027,7 +1029,7 @@ diff_file_added(const char *relpath,
   else if (copyfrom_source && right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
-                                 DIFF_REVNUM_NONEXISTENT,
+                                 copyfrom_source->revision,
                                  right_source->revision,
                                  svn_prop_get_value(left_props,
                                                     SVN_PROP_MIME_TYPE),
@@ -1190,7 +1192,8 @@ diff_dir_added(const char *relpath,
                          scratch_pool));
 
   return svn_error_trace(diff_props_changed(relpath,
-                                            DIFF_REVNUM_NONEXISTENT,
+                                            copyfrom_source ? copyfrom_source->revision
+                                                            : DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
                                             left_props,

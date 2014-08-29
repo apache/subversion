@@ -578,6 +578,10 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
   return SVN_NO_ERROR;
 }
 
+static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
+static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
+#define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
+
 static svn_error_t *
 write_handler(void *baton,
               const char *buffer,
@@ -590,14 +594,14 @@ write_handler(void *baton,
   apr_size_t buflen = *len;
 
   /* Chew up four bytes at the beginning for the header.  */
-  if (db->header_bytes < 4)
+  if (db->header_bytes < SVNDIFF_HEADER_SIZE)
     {
-      apr_size_t nheader = 4 - db->header_bytes;
+      apr_size_t nheader = SVNDIFF_HEADER_SIZE - db->header_bytes;
       if (nheader > buflen)
         nheader = buflen;
-      if (memcmp(buffer, "SVN\0" + db->header_bytes, nheader) == 0)
+      if (memcmp(buffer, SVNDIFF_V0 + db->header_bytes, nheader) == 0)
         db->version = 0;
-      else if (memcmp(buffer, "SVN\1" + db->header_bytes, nheader) == 0)
+      else if (memcmp(buffer, SVNDIFF_V1 + db->header_bytes, nheader) == 0)
         db->version = 1;
       else
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,

@@ -1243,6 +1243,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.tests_use_prepacakaged_repository)
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 
@@ -2385,7 +2386,7 @@ def load_ignore_dates(sbox):
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-dates')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
-  for rev in range(6):
+  for rev in range(1, 6):
     exit_code, output, errput = svntest.main.run_svnlook('date', '-r', rev,
                                                          sbox.repo_dir)
     if errput:
@@ -2590,10 +2591,9 @@ def freeze_freeze(sbox):
     # FSFS repositories created with --compatible-version=1.8 and less
     # erroneously share the filesystem data (locks, shared transaction
     # data, ...) between hotcopy source and destination.  This is fixed
-    # for new FS formats, but in order to avoid SVN_ERR_RECURSIVE_LOCK
-    # for old formats, we have to manually assign a new UUID for the
-    # hotcopy destination.  As of trunk@1618024, the same applies to
-    # FSX repositories.
+    # for new FS formats, but in order to avoid a deadlock for old formats,
+    # we have to manually assign a new UUID for the hotcopy destination.
+    # As of trunk@1618024, the same applies to FSX repositories.
     svntest.actions.run_and_verify_svnadmin(None, [], None,
                                             'setuuid', second_repo_dir)
 
@@ -2896,7 +2896,7 @@ def fsfs_hotcopy_progress_old(sbox):
                                           sbox.repo_dir, inc_backup_dir)
 
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_unique_freeze)
 def freeze_same_uuid(sbox):
   "freeze multiple repositories with same UUID"
 
@@ -2905,10 +2905,9 @@ def freeze_same_uuid(sbox):
   first_repo_dir, _ = sbox.add_repo_path('first')
   second_repo_dir, _ = sbox.add_repo_path('second')
 
-  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock or
-  # error out with SVN_ERR_RECURSIVE_LOCK for new FSFS formats, even if 'A'
-  # and 'B' share the same UUID.  Create two repositories by loading the
-  # same dump file, ...
+  # Test that 'svnadmin freeze A (svnadmin freeze B)' does not deadlock for
+  # new FSFS formats, even if 'A' and 'B' share the same UUID.  Create two
+  # repositories by loading the same dump file, ...
   svntest.main.create_repos(first_repo_dir)
   svntest.main.create_repos(second_repo_dir)
 
@@ -2920,16 +2919,11 @@ def freeze_same_uuid(sbox):
   svntest.actions.run_and_verify_load(second_repo_dir, dump_contents)
 
   # ...and execute the 'svnadmin freeze -F' command.
-  if svntest.main.options.server_minor_version < 9:
-    expected_error = ".*svnadmin: E200043:.*"
-  else:
-    expected_error = None
-
   arg_file = sbox.get_tempname()
   svntest.main.file_write(arg_file,
                           "%s\n%s\n" % (first_repo_dir, second_repo_dir))
 
-  svntest.actions.run_and_verify_svnadmin(None, None, expected_error,
+  svntest.actions.run_and_verify_svnadmin(None, None, None,
                                           'freeze', '-F', arg_file, '--',
                                           sys.executable, '-c', 'True')
 
