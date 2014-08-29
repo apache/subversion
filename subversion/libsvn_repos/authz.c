@@ -748,6 +748,17 @@ init_lockup_state(lookup_state_t *state,
   apr_array_clear(state->current);
   APR_ARRAY_PUSH(state->current, node_t *) = root;
 
+  /* Var-segment rules match empty segments as well */
+  if (root->pattern_sub_nodes && root->pattern_sub_nodes->any_var)
+   {
+      node_t *node = root->pattern_sub_nodes->any_var;
+
+      /* This is non-recursive due to ACL normalization. */
+      combine_access(&state->rights, &node->rights);
+      combine_right_limits(&state->rights, &node->rights);
+      APR_ARRAY_PUSH(state->current, node_t *) = node;
+   }
+
   svn_stringbuf_setempty(state->parent_path);
   svn_stringbuf_setempty(state->scratch_pad);
 
@@ -778,6 +789,18 @@ add_next_node(lookup_state_t *state,
 
       /* NODE is now enlisted as a (potential) match for the next segment. */
       APR_ARRAY_PUSH(state->next, node_t *) = node;
+
+      /* Variable length sub-segment sequences apply to the same node due
+       * to matching empty sequences as well. */
+      if (node->pattern_sub_nodes && node->pattern_sub_nodes->any_var)
+        {
+          node = node->pattern_sub_nodes->any_var;
+
+          /* This is non-recursive due to ACL normalization. */
+          combine_access(&state->rights, &node->rights);
+          combine_right_limits(&state->rights, &node->rights);
+          APR_ARRAY_PUSH(state->next, node_t *) = node;
+        }
     }
 }
 
@@ -961,7 +984,6 @@ lookup(lookup_state_t *state,
           if (node->pattern_sub_nodes)
             {
               add_next_node(state, node->pattern_sub_nodes->any);
-              add_next_node(state, node->pattern_sub_nodes->any_var);
 
               /* If the current node represents a "**" pattern, it matches
                * to all levels. So, add it to the list for the NEXT level. */
