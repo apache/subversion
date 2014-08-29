@@ -276,13 +276,46 @@ ensure_pattern_sub_nodes(node_t *node,
   return node->pattern_sub_nodes;
 }
 
-/* Below NODE, recursively insert sub-nodes for the path given as
- * *SEGMENTS of length SEGMENT_COUNT. If matching nodes already exist,
- * use those instead of creating new ones.  Set the leave node's
- * access rights spec to ACCESS.
+/* Combine an ACL rule segment with the corresponding node in our filtered
+ * data model. */
+typedef struct node_segment_pair_t
+{
+  authz_rule_segment_t *segment;
+  node_t *node;
+} node_segment_pair_t;
+
+/* Context object to be used with process_acl. It allows us to re-use
+ * information from previous insertions. */
+typedef struct construction_context_t
+{
+  /* Array of node_segment_pair_t.  It contains all segments already
+   * processed of the current insertion together with the respective
+   * nodes in our filtered tree.  Before the next lookup, the tree
+   * walk for the common prefix can be skipped. */
+  apr_array_header_t *path;
+} construction_context_t;
+
+/* Return a new context object allocated in RESULT_POOL. */
+static construction_context_t *
+create_construction_context(apr_pool_t *result_pool)
+{
+  construction_context_t *result = apr_pcalloc(result_pool, sizeof(*result));
+
+  /* Array will be auto-extended but this initial size will make it rarely
+   * ever necessary. */
+  result->path = apr_array_make(result_pool, 32, sizeof(node_segment_pair_t));
+
+  return result;
+}
+
+/* Constructor utility:  Below NODE, recursively insert sub-nodes for the
+ * path given as *SEGMENTS of length SEGMENT_COUNT. If matching nodes
+ * already exist, use those instead of creating new ones.  Set the leave
+ * node's access rights spec to ACCESS.  Update the conext info in CTX.
  */
 static void
-insert_path(node_t *node,
+insert_path(construction_context_t *ctx,
+            node_t *node,
             access_t *access,
             int segment_count,
             authz_rule_segment_t *segment,
@@ -290,6 +323,7 @@ insert_path(node_t *node,
             apr_pool_t *scratch_pool)
 {
   node_t *sub_node;
+  node_segment_pair_t *node_segment;
 
   /* End of path? */
   if (segment_count == 0)
@@ -365,19 +399,26 @@ insert_path(node_t *node,
         }
     }
 
+  /* Update context. */
+  node_segment = apr_array_push(ctx->path);
+  node_segment->segment = segment;
+  node_segment->node = sub_node;
+
   /* Continue at the sub-node with the next segment. */
-  insert_path(sub_node, access, segment_count - 1, segment + 1,
+  insert_path(ctx, sub_node, access, segment_count - 1, segment + 1,
               result_pool, scratch_pool);
 }
 
 
 /* If the ACL is relevant to the REPOSITORY and user (given as MEMBERSHIPS
  * plus ANONYMOUS flag), insert the respective nodes into tree starting
- * at ROOT.  Allocate new nodes in RESULT_POOL and use SCRATCH_POOL for
- * temporary allocations.
+ * at ROOT.  Use the context info of the previous call in CTX to eliminate
+ * repeated lookups.  Allocate new nodes in RESULT_POOL and use SCRATCH_POOL
+ * for temporary allocations.
  */
 static void
-process_acl(const authz_acl_t *acl,
+process_acl(construction_context_t *ctx,
+            const authz_acl_t *acl,
             node_t *root,
             const char *repository,
             const char *user,
@@ -385,6 +426,8 @@ process_acl(const authz_acl_t *acl,
             apr_pool_t *scratch_pool)
 {
   access_t access;
+  int i;
+  node_t *node;
 
   /* Skip ACLs that don't say anything about the current user
      and/or repository. */
@@ -393,8 +436,33 @@ process_acl(const authz_acl_t *acl,
 
   /* Insert the rule into the filtered tree. */
   access.sequence_number = acl->sequence_number;
-  insert_path(root, &access,
-              acl->rule.len, acl->rule.path,
+
+  /* Try to reuse results from previous runs.
+   * Basically, skip the commen prefix. */
+  node = root;
+  for (i = 0; i < ctx->path->nelts; ++i)
+    {
+      const node_segment_pair_t *step
+        = &APR_ARRAY_IDX(ctx->path, i, const node_segment_pair_t);
+
+      /* Exploit the fact that all strings in the authz model are unique /
+       * internized and can be identified by address alone. */
+      if (   !step->node
+          || i >= acl->rule.len
+          || step->segment->pattern.data != acl->rule.path[i].pattern.data)
+        {
+          ctx->path->nelts = i;
+          break;
+        }
+      else
+        {
+          node = step->node;
+        }
+    }
+
+  /* Insert the path rule into the filtered tree. */
+  insert_path(ctx, node, &access,
+              acl->rule.len - i, acl->rule.path + i,
               result_pool, scratch_pool);
 }
 
@@ -488,13 +556,14 @@ create_user_authz(svn_authz_t *authz,
 {
   int i;
   node_t *root = create_node(NULL, result_pool);
+  construction_context_t *ctx = create_construction_context(scratch_pool);
 
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   /* Filtering and tree construction. */
   for (i = 0; i < authz->acls->nelts; ++i)
-    process_acl(&APR_ARRAY_IDX(authz->acls, i, authz_acl_t),
+    process_acl(ctx, &APR_ARRAY_IDX(authz->acls, i, authz_acl_t),
                 root, repository, user, result_pool, subpool);
 
   /* If there is no relevant rule at the root node, the "no access" default
