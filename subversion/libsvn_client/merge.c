@@ -1208,7 +1208,7 @@ struct merge_dir_baton_t
   apr_hash_t *pending_deletes;
 
   /* NULL, or an hashtable mapping const char * LOCAL_ABSPATHs to
-     a const svn_wc_conflict_description3_t * instance, describing the just
+     a const svn_wc_conflict_description2_t * instance, describing the just
      installed conflict */
   apr_hash_t *new_tree_conflicts;
 
@@ -1314,7 +1314,7 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                      svn_node_kind_t merge_right_node_kind,
                      svn_wc_conflict_action_t action,
                      svn_wc_conflict_reason_t reason,
-                     const svn_wc_conflict_description3_t *existing_conflict,
+                     const svn_wc_conflict_description2_t *existing_conflict,
                      svn_boolean_t notify_tc,
                      apr_pool_t *scratch_pool)
 {
@@ -1334,7 +1334,7 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
 
   if (!merge_b->dry_run)
     {
-       svn_wc_conflict_description3_t *conflict;
+       svn_wc_conflict_description2_t *conflict;
        const svn_wc_conflict_version_t *left;
        const svn_wc_conflict_version_t *right;
        apr_pool_t *result_pool = parent_baton ? parent_baton->pool
@@ -1375,13 +1375,13 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
       if (existing_conflict != NULL && existing_conflict->src_left_version)
           left = existing_conflict->src_left_version;
 
-      conflict = svn_wc_conflict_description_create_tree3(
+      conflict = svn_wc_conflict_description_create_tree2(
                         local_abspath, local_node_kind,
                         svn_wc_operation_merge,
                         left, right, result_pool);
 
-      conflict->incoming_change = action;
-      conflict->local_change = reason;
+      conflict->action = action;
+      conflict->reason = reason;
 
       /* May return SVN_ERR_WC_PATH_UNEXPECTED_STATUS */
       if (existing_conflict)
@@ -1882,7 +1882,7 @@ merge_file_opened(void **new_file_baton,
     }
   else
     {
-      const svn_wc_conflict_description3_t *old_tc = NULL;
+      const svn_wc_conflict_description2_t *old_tc = NULL;
 
       /* The node doesn't exist pre-merge: We have an addition */
       fb->added = TRUE;
@@ -1902,11 +1902,11 @@ merge_file_opened(void **new_file_baton,
           && (old_tc = svn_hash_gets(pdb->new_tree_conflicts, local_abspath)))
         {
           fb->tree_conflict_action = svn_wc_conflict_action_replace;
-          fb->tree_conflict_reason = old_tc->local_change;
+          fb->tree_conflict_reason = old_tc->reason;
 
           /* Update the tree conflict to store that this is a replace */
           SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
-                                       old_tc->local_node_kind,
+                                       old_tc->node_kind,
                                        old_tc->src_left_version->node_kind,
                                        svn_node_file,
                                        fb->tree_conflict_action,
@@ -1914,8 +1914,8 @@ merge_file_opened(void **new_file_baton,
                                        old_tc, FALSE,
                                        scratch_pool));
 
-          if (old_tc->local_change == svn_wc_conflict_reason_deleted
-              || old_tc->local_change == svn_wc_conflict_reason_moved_away)
+          if (old_tc->reason == svn_wc_conflict_reason_deleted
+              || old_tc->reason == svn_wc_conflict_reason_moved_away)
             {
               /* Issue #3806: Incoming replacements on local deletes produce
                  inconsistent result.
@@ -2672,7 +2672,7 @@ merge_dir_opened(void **new_dir_baton,
     }
   else
     {
-      const svn_wc_conflict_description3_t *old_tc = NULL;
+      const svn_wc_conflict_description2_t *old_tc = NULL;
 
       /* The node doesn't exist pre-merge: We have an addition */
       db->added = TRUE;
@@ -2692,10 +2692,10 @@ merge_dir_opened(void **new_dir_baton,
           && (old_tc = svn_hash_gets(pdb->new_tree_conflicts, local_abspath)))
         {
           db->tree_conflict_action = svn_wc_conflict_action_replace;
-          db->tree_conflict_reason = old_tc->local_change;
+          db->tree_conflict_reason = old_tc->reason;
 
-          if (old_tc->local_change == svn_wc_conflict_reason_deleted
-             || old_tc->local_change == svn_wc_conflict_reason_moved_away)
+          if (old_tc->reason == svn_wc_conflict_reason_deleted
+             || old_tc->reason == svn_wc_conflict_reason_moved_away)
             {
               /* Issue #3806: Incoming replacements on local deletes produce
                  inconsistent result.
@@ -2710,7 +2710,7 @@ merge_dir_opened(void **new_dir_baton,
 
               /* Update the tree conflict to store that this is a replace */
               SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
-                                           old_tc->local_node_kind,
+                                           old_tc->node_kind,
                                            old_tc->src_left_version->node_kind,
                                            svn_node_dir,
                                            db->tree_conflict_action,
@@ -2842,7 +2842,7 @@ merge_dir_opened(void **new_dir_baton,
             {
               /* ### Should be atomic with svn_wc_add(4|_from_disk2)() */
               SVN_ERR(record_tree_conflict(merge_b, local_abspath, pdb,
-                                           old_tc->local_node_kind,
+                                           old_tc->node_kind,
                                            svn_node_none,
                                            svn_node_dir,
                                            db->tree_conflict_action,

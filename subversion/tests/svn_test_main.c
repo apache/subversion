@@ -103,7 +103,8 @@ enum test_options_e {
   srcdir_opt,
   mode_filter_opt,
   sqlite_log_opt,
-  parallel_opt
+  parallel_opt,
+  fsfs_version_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -116,6 +117,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("specify test config file ARG")},
   {"fs-type",       fstype_opt, 1,
                     N_("specify a filesystem backend type ARG")},
+  {"fsfs-version",  fsfs_version_opt, 1,
+                    N_("specify the FSFS version ARG")},
   {"list",          list_opt, 0,
                     N_("lists all the tests with their short description")},
   {"mode-filter",   mode_filter_opt, 1,
@@ -301,6 +304,7 @@ log_results(const char *progname,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       skip = TRUE;
+      xfail = FALSE; /* Or all XFail tests reporting SKIP would be failing */
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
@@ -422,13 +426,6 @@ do_test_num(const char *progname,
         err = (*desc->func2)(pool);
       else
         err = (*desc->func_opts)(opts, pool);
-
-      if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
-        {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          skip = TRUE;
-        }
     }
   else
     err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
@@ -479,7 +476,7 @@ static void * APR_THREAD_FUNC
 test_thread(apr_thread_t *thread, void *data)
 {
   svn_boolean_t skip, xfail, wimp;
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   const struct svn_test_descriptor_t *desc;
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   test_params_t *params = data;
@@ -512,7 +509,7 @@ test_thread(apr_thread_t *thread, void *data)
 
       /* Do test */
       if (skip || !run_this_test)
-        ; /* pass */
+        err = NULL; /* pass */
       else if (desc->func2)
         err = (*desc->func2)(pool);
       else
@@ -719,7 +716,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
    * usage but make it thread-safe to allow for multi-threaded tests.
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(TRUE));
-  err = svn_mutex__init(&log_mutex, TRUE, TRUE, pool);
+  err = svn_mutex__init(&log_mutex, TRUE, pool);
   if (err)
     {
       svn_handle_error2(err, stderr, TRUE, "svn_tests: ");

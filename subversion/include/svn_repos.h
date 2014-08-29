@@ -813,6 +813,11 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  * FS backend the repository uses.  Repositories are locked in the
  * order in which they are specified in the array.
  *
+ * @note @a freeze_func must not, directly or indirectly, call any function
+ * that attempts to take out a lock on the underlying repository.  These
+ * include functions for packing, hotcopying, setting revprops and commits.
+ * Attempts to do so may result in a deadlock.
+ *
  * @note On some platforms the exclusive lock does not exclude other
  * threads in the same process so this function should only be called
  * by a single threaded process, or by a multi-threaded process when

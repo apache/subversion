@@ -93,7 +93,7 @@ static svn_error_t *
 sasl_mutex_alloc_cb_internal(svn_mutex__t **mutex)
 {
   if (apr_is_empty_array(free_mutexes))
-    return svn_mutex__init(mutex, TRUE, FALSE, sasl_pool);
+    return svn_mutex__init(mutex, TRUE, sasl_pool);
   else
     *mutex = *((svn_mutex__t**)apr_array_pop(free_mutexes));
 
@@ -179,7 +179,7 @@ svn_ra_svn__sasl_common_init(apr_pool_t *pool)
                  sasl_mutex_unlock_cb,
                  sasl_mutex_free_cb);
   free_mutexes = apr_array_make(sasl_pool, 0, sizeof(svn_mutex__t *));
-  SVN_ERR(svn_mutex__init(&array_mutex, TRUE, FALSE, sasl_pool));
+  SVN_ERR(svn_mutex__init(&array_mutex, TRUE, sasl_pool));
 
 #endif /* APR_HAS_THREADS */
 

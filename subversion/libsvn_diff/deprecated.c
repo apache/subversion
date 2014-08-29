@@ -353,6 +353,42 @@ svn_diff_output(svn_diff_t *diff,
 
 /*** From diff_memory.c ***/
 svn_error_t *
+svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
+                                 svn_diff_t *diff,
+                                 const svn_string_t *original,
+                                 const svn_string_t *modified,
+                                 const svn_string_t *latest,
+                                 const char *conflict_original,
+                                 const char *conflict_modified,
+                                 const char *conflict_latest,
+                                 const char *conflict_separator,
+                                 svn_boolean_t display_original_in_conflict,
+                                 svn_boolean_t display_resolved_conflicts,
+                                 apr_pool_t *pool)
+{
+  svn_diff_conflict_display_style_t style =
+    svn_diff_conflict_display_modified_latest;
+
+  if (display_resolved_conflicts)
+    style = svn_diff_conflict_display_resolved_modified_latest;
+
+  if (display_original_in_conflict)
+    style = svn_diff_conflict_display_modified_original_latest;
+
+  return svn_diff_mem_string_output_merge2(output_stream,
+                                           diff,
+                                           original,
+                                           modified,
+                                           latest,
+                                           conflict_original,
+                                           conflict_modified,
+                                           conflict_latest,
+                                           conflict_separator,
+                                           style,
+                                           pool);
+}
+
+svn_error_t *
 svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   svn_diff_t *diff,
                                   const svn_string_t *original,

@@ -37,8 +37,6 @@ repository) is:
     <shard>.pack/     Pack directory, if the repo has been packed (see below)
       pack            Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
-      pack.l2p        Log-to-phys index file (format 7+, see below)
-      pack.p2l        Phys-to-log index file (format 7+, see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
@@ -327,8 +325,10 @@ the pack file.  The offsets are stored as ASCII decimal, and separated by
 a newline character.
 
 Revision pack files using logical addressing don't use manifest files but
-index files instead.  The revisions inside a pack file will also get
-interleaved to reduce I/O for typical access patterns.
+appends index data to the revision contents.  The revisions inside a pack
+file will also get interleaved to reduce I/O for typical access patterns.
+There is no structural difference between packed and non-packed revision
+files in that mode.
 
 
 Packing revision properties (format 5: SQLite)
@@ -526,7 +526,8 @@ A revision file contains a concatenation of various kinds of data:
   * Text and property representations
   * Node-revisions
   * The changed-path data
-  * Two offsets at the very end (physical addressing mode only)
+  * Index data (logical addressing only)
+  * Revision / pack file footer (logical addressing only)
 
 A representation begins with a line containing either "PLAIN\n" or
 "DELTA\n" or "DELTA <rev> <item_index> <length>\n", where <rev>,
@@ -604,13 +605,19 @@ Starting with FS format 4, <action> may contain the kind ("file" or
 "dir") of the node, after a hyphen; for example, an added directory
 may be represented as "add-dir".
 
-Before with FS format 7, <mergeinfo-mod> flag is not available.  It may
+Prior to FS format 7, <mergeinfo-mod> flag is not available.  It may
 also be missing in revisions upgraded from pre-f7 formats.
 
 In physical addressing mode, at the very end of a rev file is a pair of
 lines containing "\n<root-offset> <cp-offset>\n", where <root-offset> is
 the offset of the root directory node revision and <cp-offset> is the
 offset of the changed-path data.
+
+In logical addressing mode, the revision footer is pair of offsets,
+separated by a space and the whole is terminated a single byte.  That
+byte contains the length (as plain 8 bit value) of the footer excluding
+the length byte.  The first offset is the start of the log-to-phys index,
+the other is the start offset of the phys-to-log index.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.
@@ -732,11 +739,12 @@ digests, too, so you would simply iterate over those digests and
 consult the files they reference for lock information.
 
 
-Index files
------------
+Index Data
+----------
 
 Format 7 introduces logical addressing that requires item indexes
 to be translated / mapped to physical rev / pack file offsets.
+These indexes are appended to the respective rev / pack file.
 
 Details of the binary format used by these index files can be
 found in structure-indexes.

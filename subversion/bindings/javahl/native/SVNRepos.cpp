@@ -251,7 +251,8 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
 }
 
 void SVNRepos::hotcopy(File &path, File &targetPath,
-                       bool cleanLogs, bool incremental)
+                       bool cleanLogs, bool incremental,
+                       ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
 
@@ -267,9 +268,13 @@ void SVNRepos::hotcopy(File &path, File &targetPath,
       return;
     }
 
-  SVN_JNI_ERR(svn_repos_hotcopy2(path.getInternalStyle(requestPool),
+  SVN_JNI_ERR(svn_repos_hotcopy3(path.getInternalStyle(requestPool),
                                  targetPath.getInternalStyle(requestPool),
                                  cleanLogs, incremental,
+                                 notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                 notifyCallback,
                                  checkCancel, this /* cancel callback/baton */,
                                  requestPool.getPool()),
              );
