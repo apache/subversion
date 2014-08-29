@@ -468,39 +468,40 @@ process_acl(construction_context_t *ctx,
 
 /* Forward declaration ... */
 static void
-finalize_tree(node_t *parent,
-              access_t *inherited_access,
-              node_t *node,
-              apr_pool_t *scratch_pool);
+finalize_up_tree(node_t *parent,
+                 access_t *inherited_access,
+                 node_t *node,
+                 apr_pool_t *scratch_pool);
 
-/* Call finalize_tree() on all elements in the ARRAY of node_t *.
+/* Call finalize_up_tree() on all elements in the ARRAY of node_t *.
  * ARRAY may be NULL.
  */
 static void
-finalize_subnode_array(node_t *parent,
-                       access_t *inherited_access,
-                       apr_array_header_t *array,
-                       apr_pool_t *scratch_pool)
+finalize_up_subnode_array(node_t *parent,
+                          access_t *inherited_access,
+                          apr_array_header_t *array,
+                          apr_pool_t *scratch_pool)
 {
   if (array)
     {
       int i;
       for (i = 0; i < array->nelts; ++i)
-        finalize_tree(parent, inherited_access,
-                      APR_ARRAY_IDX(array, i, node_t *), scratch_pool);
+        finalize_up_tree(parent, inherited_access,
+                         APR_ARRAY_IDX(array, i, node_t *), scratch_pool);
     }
 }
 
-/* Recursively update / finalize tree node properties for NODE immediately
- * below PARENT.  The access rights inherited from the parent path are
- * given in INHERITED_ACCESS.  None of the pointers may be NULL.
- * The tree root node may be used as its own parent.
+/* Bottomp-up phase of the recursive update / finalization of the tree
+ * node properties for NODE immediately below PARENT.  The access rights
+ * inherited from the parent path are given in INHERITED_ACCESS.  None of
+ * the pointers may be NULL. The tree root node may be used as its own
+ * parent.
  */
 static void
-finalize_tree(node_t *parent,
-              access_t *inherited_access,
-              node_t *node,
-              apr_pool_t *scratch_pool)
+finalize_up_tree(node_t *parent,
+                 access_t *inherited_access,
+                 node_t *node,
+                 apr_pool_t *scratch_pool)
 {
   /* Access rights at NODE. */
   access_t *access = has_local_rule(&node->rights)
@@ -518,30 +519,102 @@ finalize_tree(node_t *parent,
       for (hi = apr_hash_first(scratch_pool, node->sub_nodes);
            hi;
            hi = apr_hash_next(hi))
-        finalize_tree(node, access, apr_hash_this_val(hi), scratch_pool);
+        finalize_up_tree(node, access, apr_hash_this_val(hi),
+                         scratch_pool);
     }
 
   /* Do the same thing for all other sub-nodes as well. */
   if (node->pattern_sub_nodes)
     {
       if (node->pattern_sub_nodes->any)
-        finalize_tree(node, access, node->pattern_sub_nodes->any,
-                      scratch_pool);
+        finalize_up_tree(node, access, node->pattern_sub_nodes->any,
+                         scratch_pool);
       if (node->pattern_sub_nodes->any_var)
-        finalize_tree(node, access, node->pattern_sub_nodes->any_var,
-                      scratch_pool);
+        finalize_up_tree(node, access, node->pattern_sub_nodes->any_var,
+                         scratch_pool);
 
-      finalize_subnode_array(node, access, node->pattern_sub_nodes->prefixes,
-                             scratch_pool);
-      finalize_subnode_array(node, access, node->pattern_sub_nodes->suffixes,
-                             scratch_pool);
-      finalize_subnode_array(node, access, node->pattern_sub_nodes->complex,
-                             scratch_pool);
+      finalize_up_subnode_array(node, access,
+                                node->pattern_sub_nodes->prefixes,
+                                scratch_pool);
+      finalize_up_subnode_array(node, access,
+                                node->pattern_sub_nodes->suffixes,
+                                scratch_pool);
+      finalize_up_subnode_array(node, access,
+                                node->pattern_sub_nodes->complex,
+                                scratch_pool);
     }
 
   /* Add our min / max info to the parent's info.
    * Idempotent for parent == node (happens at root). */
   combine_right_limits(&parent->rights, &node->rights);
+}
+
+/* Forward declaration ... */
+static void
+finalize_down_tree(node_t *node,
+                   limited_rights_t rights,
+                   apr_pool_t *scratch_pool);
+
+/* Call finalize_down_tree() on all elements in the ARRAY of node_t *.
+ * ARRAY may be NULL.
+ */
+static void
+finalize_down_subnode_array(apr_array_header_t *array,
+                            const limited_rights_t *rights,
+                            apr_pool_t *scratch_pool)
+{
+  if (array)
+    {
+      int i;
+      for (i = 0; i < array->nelts; ++i)
+        finalize_down_tree(APR_ARRAY_IDX(array, i, node_t *),
+                           *rights, scratch_pool);
+    }
+}
+
+/* Top-down phase of the recursive update / finalization of the tree
+ * node properties for NODE.  The min / max access rights of all var-
+ * segment rules that apply to the sub-tree of NODE are given in RIGHTS.
+ */
+static void
+finalize_down_tree(node_t *node,
+                   limited_rights_t rights,
+                   apr_pool_t *scratch_pool)
+{
+  /* Update the NODE's right limits. */
+  combine_right_limits(&node->rights, &rights);
+
+  /* If there are more var-segment rules, aggregate their rights as all
+   * these rules are implictly repeated on all sub-nodes. */
+  if (node->pattern_sub_nodes && node->pattern_sub_nodes->any_var)
+    combine_right_limits(&rights, &node->pattern_sub_nodes->any_var->rights);
+
+  /* Resurse into the sub-nodes. */
+  if (node->sub_nodes)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(scratch_pool, node->sub_nodes);
+           hi;
+           hi = apr_hash_next(hi))
+        finalize_down_tree(apr_hash_this_val(hi), rights, scratch_pool);
+    }
+
+  if (node->pattern_sub_nodes)
+    {
+      if (node->pattern_sub_nodes->any)
+        finalize_down_tree(node->pattern_sub_nodes->any, rights,
+                           scratch_pool);
+      if (node->pattern_sub_nodes->any_var)
+        finalize_down_tree(node->pattern_sub_nodes->any_var, rights,
+                           scratch_pool);
+
+      finalize_down_subnode_array(node->pattern_sub_nodes->prefixes,
+                                  &rights, scratch_pool);
+      finalize_down_subnode_array(node->pattern_sub_nodes->suffixes,
+                                  &rights, scratch_pool);
+      finalize_down_subnode_array(node->pattern_sub_nodes->complex,
+                                  &rights, scratch_pool);
+    }
 }
 
 /* From the authz CONFIG, extract the parts relevant to USER and REPOSITORY.
@@ -555,6 +628,7 @@ create_user_authz(svn_authz_t *authz,
                   apr_pool_t *scratch_pool)
 {
   int i;
+  limited_rights_t var_rights;
   node_t *root = create_node(NULL, result_pool);
   construction_context_t *ctx = create_construction_context(scratch_pool);
 
@@ -576,7 +650,12 @@ create_user_authz(svn_authz_t *authz,
 
   /* Calculate recursive rights etc. */
   svn_pool_clear(subpool);
-  finalize_tree(root, &root->rights.access, root, subpool);
+  finalize_up_tree(root, &root->rights.access, root, subpool);
+
+  svn_pool_clear(subpool);
+  var_rights.max_rights = svn_authz_none;
+  var_rights.min_rights = svn_authz_read | svn_authz_write;
+  finalize_down_tree(root, var_rights, subpool);
 
   /* Done. */
   svn_pool_destroy(subpool);
