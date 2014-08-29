@@ -205,16 +205,29 @@ ensure_node(node_t **node,
 }
 
 /* compare_func comparing segment names. It takes a node_t** as VOID_LHS
- * and a const char * as VOID_RHS.
+ * and a const authz_rule_segment_t * as VOID_RHS.
  */
 static int
-compare_segment(const void *void_lhs,
-                const void *void_rhs)
+compare_node_rule_segment(const void *void_lhs,
+                          const void *void_rhs)
 {
   const node_t *node = *(const node_t **)void_lhs;
   const authz_rule_segment_t *segment = void_rhs;
 
   return strcmp(node->segment.data, segment->pattern.data);
+}
+
+/* compare_func comparing segment names. It takes a node_t** as VOID_LHS
+ * and a const char * as VOID_RHS.
+ */
+static int
+compare_node_path_segment(const void *void_lhs,
+                          const void *void_rhs)
+{
+  const node_t *node = *(const node_t **)void_lhs;
+  const char *segment = void_rhs;
+
+  return strcmp(node->segment.data, segment);
 }
 
 /* Make sure a node_t* for SEGMENT exists in *ARRAY and return it.
@@ -238,7 +251,8 @@ ensure_node_in_array(apr_array_header_t **array,
    * Initialize IDX such that we won't attempt a hinted lookup (likely
    * to fail and therefore pure overhead). */
   idx = (*array)->nelts;
-  node_ref = svn_sort__array_lookup(*array, segment, &idx, compare_segment);
+  node_ref = svn_sort__array_lookup(*array, segment, &idx,
+                                    compare_node_rule_segment);
   if (node_ref)
     return *node_ref;
 
@@ -622,7 +636,7 @@ add_prefix_matches(lookup_state_t *state,
   /* Index of the first node that might be a match.  All matches will
    * be at this and the immediately following indexes. */
   int i = svn_sort__bsearch_lower_bound(prefixes, segment->data,
-                                        compare_segment);
+                                        compare_node_path_segment);
   for (; i < prefixes->nelts; ++i)
     {
       node_t *node = APR_ARRAY_IDX(prefixes, i, node_t *);
