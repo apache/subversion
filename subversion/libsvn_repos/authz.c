@@ -150,10 +150,6 @@ typedef struct node_pattern_t
   svn_boolean_t repeat;
 } node_pattern_t;
 
-/* For arrays smaller with fewer entries than this, binary search with all
- * the calling overhead etc. will be slower than a simple array scan. */
-#define SORTING_THRESHOLD 8
-
 /* The pattern tree.  All relevant path rules are being folded into this
  * prefix tree, with a single, whole segment stored at each node.  The whole
  * tree applies to a single user only.
@@ -623,44 +619,22 @@ add_prefix_matches(lookup_state_t *state,
                    const svn_stringbuf_t *segment,
                    apr_array_header_t *prefixes)
 {
-  int i;
-
-  /* Larger arrays will have been sorted by segment, so we can use binary
-   * search on them.  Smaller arrays don't warrant the overhead. */
-  if (prefixes->nelts > SORTING_THRESHOLD)
-    {
-      /* Index of the first node that might be a match.  All matches will
-       * be at this and the immediately following indexes. */
-      i = svn_sort__bsearch_lower_bound(prefixes, segment->data,
+  /* Index of the first node that might be a match.  All matches will
+   * be at this and the immediately following indexes. */
+  int i = svn_sort__bsearch_lower_bound(prefixes, segment->data,
                                         compare_segment);
-      for (; i < prefixes->nelts; ++i)
-        {
-          node_t *node = APR_ARRAY_IDX(prefixes, i, node_t *);
-
-          /* The first mismatch will mean no more matches will follow. */
-          if (node->segment.len > segment->len)
-            return;
-
-          if (memcmp(node->segment.data, segment->data, node->segment.len))
-            return;
-
-          add_next_node(state, node);
-        }
-    }
-  else
+  for (; i < prefixes->nelts; ++i)
     {
-      /* Simply scan through all nodes with minimal overhead. */
-      for (i = 0; i < prefixes->nelts; ++i)
-        {
-          node_t *node = APR_ARRAY_IDX(prefixes, i, node_t *);
-          if (node->segment.len > segment->len)
-            continue;
+      node_t *node = APR_ARRAY_IDX(prefixes, i, node_t *);
 
-          if (memcmp(node->segment.data, segment->data, node->segment.len))
-            continue;
+      /* The first mismatch will mean no more matches will follow. */
+      if (node->segment.len > segment->len)
+        return;
 
-          add_next_node(state, node);
-        }
+      if (memcmp(node->segment.data, segment->data, node->segment.len))
+        return;
+
+      add_next_node(state, node);
     }
 }
 
