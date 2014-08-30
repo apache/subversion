@@ -385,7 +385,7 @@ insert_path(construction_context_t *ctx,
         }
       else
         {
-          sub_node = svn_hash_gets(node->sub_nodes, segment);
+          sub_node = svn_hash_gets(node->sub_nodes, segment->pattern.data);
         }
 
       /* Auto-insert a sub-node for the current segment. */
@@ -449,6 +449,7 @@ process_acl(construction_context_t *ctx,
        * internized and can be identified by address alone. */
       if (   !step->node
           || i >= acl->rule.len
+          || step->segment->kind != acl->rule.path[i].kind
           || step->segment->pattern.data != acl->rule.path[i].pattern.data)
         {
           ctx->path->nelts = i;
