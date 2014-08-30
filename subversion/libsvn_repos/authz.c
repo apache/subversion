@@ -1100,7 +1100,7 @@ lookup(lookup_state_t *state,
        * continue, make it the current and put the old one into the recycler.
        *
        * If this is the end of the path, keep the parent path and rights in
-       * STATE as are such that sibbling lookups will benefit from it.
+       * STATE as are such that sibling lookups will benefit from it.
        */
       if (path)
         {
@@ -1108,7 +1108,7 @@ lookup(lookup_state_t *state,
           state->current = state->next;
           state->next = temp;
 
-		  /* In STATE, PARENT_PATH, PARENT_RIGHTS and CURRENT are now in sync. */
+          /* In STATE, PARENT_PATH, PARENT_RIGHTS and CURRENT are now in sync. */
           state->parent_rights = state->rights;
         }
     }
