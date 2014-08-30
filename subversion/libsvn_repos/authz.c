@@ -120,6 +120,17 @@ combine_right_limits(limited_rights_t *target,
 
 /*** Constructing the prefix tree. ***/
 
+/* Since prefix arrays may have more than one hit, we need to link them
+ * for fast lookup. */
+typedef struct sorted_pattern_t
+{
+  /* The filtered tree node carrying the prefix. */
+  struct node_t *node;
+
+  /* Entry that is a prefix to this one or NULL. */
+  struct sorted_pattern_t *next;
+} sorted_pattern_t;
+
 /* Substructure of node_t.  It contains all sub-node that use patterns
  * in the next segment level. We keep it separate to save a bit of memory
  * and to be able to check for pattern presence in a single operation.
@@ -132,17 +143,18 @@ typedef struct node_pattern_t
   /* If not NULL, this represents the "**" follow-segment. */
   struct node_t *any_var;
 
-  /* If not NULL, the segments of all nodes_t* in this array are the prefix
-   * part of "prefix*" patterns.  Sorted by segment prefix. */
+  /* If not NULL, the segments of all sorted_pattern_t in this array are the
+   * prefix part of "prefix*" patterns.  Sorted by segment prefix. */
   apr_array_header_t *prefixes;
 
-  /* If not NULL, the segments of all nodes_t* in this array are the
+  /* If not NULL, the segments of all sorted_pattern_t in this array are the
    * reversed suffix part of "*suffix" patterns.  Sorted by reversed
    * segment suffix. */
   apr_array_header_t *suffixes;
 
-  /* If not NULL, the segments of all nodes_t* in this array contain
-   * wildcards and don't fit into any of the above categories. */
+  /* If not NULL, the segments of all sorted_pattern_t in this array contain
+   * wildcards and don't fit into any of the above categories.
+   * The NEXT members of the elements will not be used. */
   apr_array_header_t *complex;
 
   /* This node itself is a "**" segment and must therefore itself be added
@@ -204,30 +216,30 @@ ensure_node(node_t **node,
   return *node;
 }
 
-/* compare_func comparing segment names. It takes a node_t** as VOID_LHS
- * and a const authz_rule_segment_t * as VOID_RHS.
+/* compare_func comparing segment names. It takes a sorted_pattern_t* as
+ * VOID_LHS and a const authz_rule_segment_t * as VOID_RHS.
  */
 static int
 compare_node_rule_segment(const void *void_lhs,
                           const void *void_rhs)
 {
-  const node_t *node = *(const node_t **)void_lhs;
+  const sorted_pattern_t *element = void_lhs;
   const authz_rule_segment_t *segment = void_rhs;
 
-  return strcmp(node->segment.data, segment->pattern.data);
+  return strcmp(element->node->segment.data, segment->pattern.data);
 }
 
-/* compare_func comparing segment names. It takes a node_t** as VOID_LHS
- * and a const char * as VOID_RHS.
+/* compare_func comparing segment names. It takes a sorted_pattern_t* as
+ * VOID_LHS and a const char * as VOID_RHS.
  */
 static int
 compare_node_path_segment(const void *void_lhs,
                           const void *void_rhs)
 {
-  const node_t *node = *(const node_t **)void_lhs;
+  const sorted_pattern_t *element = void_lhs;
   const char *segment = void_rhs;
 
-  return strcmp(node->segment.data, segment);
+  return strcmp(element->node->segment.data, segment);
 }
 
 /* Make sure a node_t* for SEGMENT exists in *ARRAY and return it.
@@ -240,28 +252,29 @@ ensure_node_in_array(apr_array_header_t **array,
                      apr_pool_t *result_pool)
 {
   int idx;
-  node_t *node;
-  node_t **node_ref;
+  sorted_pattern_t entry;
+  sorted_pattern_t *entry_ptr;
 
   /* Auto-create the array. */
   if (!*array)
-    *array = apr_array_make(result_pool, 4, sizeof(node_t *));
+    *array = apr_array_make(result_pool, 4, sizeof(sorted_pattern_t));
 
   /* Find the node in ARRAY and the IDX at which it were to be inserted.
    * Initialize IDX such that we won't attempt a hinted lookup (likely
    * to fail and therefore pure overhead). */
   idx = (*array)->nelts;
-  node_ref = svn_sort__array_lookup(*array, segment, &idx,
-                                    compare_node_rule_segment);
-  if (node_ref)
-    return *node_ref;
+  entry_ptr = svn_sort__array_lookup(*array, segment, &idx,
+                                     compare_node_rule_segment);
+  if (entry_ptr)
+    return entry_ptr->node;
 
   /* There is no such node, yet.
    * Create one and insert it into the sorted array. */
-  node = create_node(segment, result_pool);
-  svn_sort__array_insert(*array, &node, idx);
+  entry.node = create_node(segment, result_pool);
+  entry.next = NULL;
+  svn_sort__array_insert(*array, &entry, idx);
 
-  return node;
+  return entry.node;
 }
 
 /* Auto-create the PATTERN_SUB_NODES sub-structure in *NODE and return it. */
@@ -488,7 +501,43 @@ finalize_up_subnode_array(node_t *parent,
       int i;
       for (i = 0; i < array->nelts; ++i)
         finalize_up_tree(parent, inherited_access,
-                         APR_ARRAY_IDX(array, i, node_t *), scratch_pool);
+                         APR_ARRAY_IDX(array, i, sorted_pattern_t).node,
+                         scratch_pool);
+    }
+}
+
+/* Link prefixes within the sorted ARRAY. */
+static void
+link_prefix_patterns(apr_array_header_t *array)
+{
+  int i;
+  if (!array)
+    return;
+
+  for (i = 1; i < array->nelts; ++i)
+    {
+      sorted_pattern_t *prev
+        = &APR_ARRAY_IDX(array, i - 1, sorted_pattern_t);
+      sorted_pattern_t *pattern
+        = &APR_ARRAY_IDX(array, i, sorted_pattern_t);
+
+      /* Does PATTERN potentially have a prefix in ARRAY?
+       * If so, at least the first char must match with the predecessor's
+       * because the array is sorted by that string. */
+      if (prev->node->segment.data[0] != pattern->node->segment.data[0])
+        continue;
+
+      /* Only the predecessor or any of its prefixes can be the closest
+       * prefix to PATTERN. */
+      for ( ; prev; prev = prev->next)
+        if (   prev->node->segment.len < pattern->node->segment.len
+            && !memcmp(prev->node->segment.data,
+                       pattern->node->segment.data,
+                       prev->node->segment.len))
+          {
+            pattern->next = prev;
+            break;
+          }
     }
 }
 
@@ -543,6 +592,10 @@ finalize_up_tree(node_t *parent,
       finalize_up_subnode_array(node, access,
                                 node->pattern_sub_nodes->complex,
                                 scratch_pool);
+
+      /* Link up the prefixes / suffixes. */
+      link_prefix_patterns(node->pattern_sub_nodes->prefixes);
+      link_prefix_patterns(node->pattern_sub_nodes->suffixes);
     }
 
   /* Add our min / max info to the parent's info.
@@ -568,7 +621,7 @@ finalize_down_subnode_array(apr_array_header_t *array,
     {
       int i;
       for (i = 0; i < array->nelts; ++i)
-        finalize_down_tree(APR_ARRAY_IDX(array, i, node_t *),
+        finalize_down_tree(APR_ARRAY_IDX(array, i, sorted_pattern_t).node,
                            *rights, scratch_pool);
     }
 }
@@ -805,6 +858,19 @@ add_next_node(lookup_state_t *state,
     }
 }
 
+/* If PREFIX is indeed a prefix (or exact match) or SEGMENT, add the
+ * node in PREFIX to STATE. */
+static void
+add_if_prefix_matches(lookup_state_t *state,
+                      const sorted_pattern_t *prefix,
+                      const svn_stringbuf_t *segment)
+{
+  node_t *node = prefix->node;
+  if (   node->segment.len <= segment->len
+      && !memcmp(node->segment.data, segment->data, node->segment.len))
+    add_next_node(state, node);
+}
+
 /* Scan the PREFIXES array of node_t* for all entries whose SEGMENT members
  * are prefixes of SEGMENT.  Add these to STATE for the next tree level. */
 static void
@@ -816,18 +882,26 @@ add_prefix_matches(lookup_state_t *state,
    * be at this and the immediately following indexes. */
   int i = svn_sort__bsearch_lower_bound(prefixes, segment->data,
                                         compare_node_path_segment);
-  for (; i < prefixes->nelts; ++i)
+
+  /* The entry we found may be an exact match (but not a true prefix).
+   * The prefix matching test will still work. */
+  if (i < prefixes->nelts)
+    add_if_prefix_matches(state,
+                          &APR_ARRAY_IDX(prefixes, i, sorted_pattern_t),
+                          segment);
+
+  /* The immediate predecessor may be a true prefix and all potential
+   * prefixes can be found following the NEXT links between the array
+   * indexes. */
+  if (i > 0)
     {
-      node_t *node = APR_ARRAY_IDX(prefixes, i, node_t *);
-
-      /* The first mismatch will mean no more matches will follow. */
-      if (node->segment.len > segment->len)
-        return;
-
-      if (memcmp(node->segment.data, segment->data, node->segment.len))
-        return;
-
-      add_next_node(state, node);
+      sorted_pattern_t *pattern;
+      for (pattern = &APR_ARRAY_IDX(prefixes, i - 1, sorted_pattern_t);
+           pattern;
+           pattern = pattern->next)
+        {
+          add_if_prefix_matches(state, pattern, segment);
+        }
     }
 }
 
@@ -842,7 +916,7 @@ add_complex_matches(lookup_state_t *state,
   int i;
   for (i = 0; i < patterns->nelts; ++i)
     {
-      node_t *node = APR_ARRAY_IDX(patterns, i, node_t *);
+      node_t *node = APR_ARRAY_IDX(patterns, i, sorted_pattern_t).node;
       if (0 == apr_fnmatch(node->segment.data, segment->data, 0))
         add_next_node(state, node);
     }
