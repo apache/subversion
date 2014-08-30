@@ -610,16 +610,6 @@ parse_rule_path(authz_rule_t *rule,
 
   SVN_ERR_ASSERT(nseg > 0);
 
-  /* Replace a trailing ** with a *. */
-  if (nseg > 1)
-    {
-      segment = cb->rule_path_buffer.data;
-      segment += (nseg - 1);
-      if (segment->kind == authz_rule_any_recursive)
-        segment->kind = authz_rule_any_segment;
-    }
-
-
   /* Copy the temporary segments array into the result pool. */
   {
     const apr_size_t path_size = nseg * sizeof(*segment);
