@@ -61,14 +61,12 @@ dump_index(const char *path,
 {
   svn_fs_fs__revision_file_t *rev_file;
   svn_fs_t *fs;
-  fs_fs_data_t *ffd;
   int i;
   apr_off_t offset, max_offset;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Check repository type and open it. */
   SVN_ERR(open_fs(&fs, path, pool));
-  ffd = fs->fsap_data;
 
   /* Check the FS format. */
   if (! svn_fs_fs__use_log_addressing(fs, revision))
@@ -94,7 +92,7 @@ dump_index(const char *path,
        * we start at the first offset not covered. */
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, rev_file, revision,
-                                          offset, ffd->p2l_page_size,
+                                          offset, INDEX_BLOCK_SIZE,
                                           iterpool));
 
       /* Print entries for this block, one line per entry. */
