@@ -1279,6 +1279,27 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+int
+svn_fs_fs__shard_size(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->max_files_per_dir;
+}
+
+svn_error_t *
+svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+  *min_unpacked = ffd->min_unpacked_rev;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,
