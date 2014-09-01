@@ -117,6 +117,9 @@ typedef struct ctor_baton_t
   /* Temporary parsed-acl definitions. */
   apr_array_header_t *parsed_acls;
 
+  /* Temporary expanded groups definitions. */
+  apr_hash_t *expanded_groups;
+
   /* The temporary ACL we're currently constructing. */
   parsed_acl_t *current_acl;
 
@@ -1004,12 +1007,12 @@ close_section(void *baton, svn_stringbuf_t *section)
 static void
 add_to_group(ctor_baton_t *cb, const char *group, const char *user)
 {
-  apr_hash_t *members = svn_hash_gets(cb->authz->groups, group);
+  apr_hash_t *members = svn_hash_gets(cb->expanded_groups, group);
   if (!members)
     {
       group = intern_string(cb, group, -1);
       members = svn_hash__make(cb->authz->pool);
-      svn_hash_sets(cb->authz->groups, group, members);
+      svn_hash_sets(cb->expanded_groups, group, members);
     }
   svn_hash_sets(members, user, interned_empty_string);
 }
@@ -1155,7 +1158,7 @@ array_insert_ace(void *baton,
   if (*ace->name == '@')
     {
       SVN_ERR_ASSERT(ace->members == NULL);
-      ace->members = svn_hash_gets(iab->cb->authz->groups, ace->name);
+      ace->members = svn_hash_gets(iab->cb->expanded_groups, ace->name);
       if (!ace->members)
         return svn_error_createf(
             SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
@@ -1341,7 +1344,7 @@ svn_authz__parse(svn_authz_t **authz,
   /*
    * Pass 2: Expand groups and construct the final svn_authz_t.
    */
-  cb->authz->groups = svn_hash__make(cb->authz->pool);
+  cb->expanded_groups = svn_hash__make(cb->parser_pool);
   SVN_ERR(svn_iter_apr_hash(NULL, cb->parsed_groups,
                             expand_group_callback, cb, cb->parser_pool));
 

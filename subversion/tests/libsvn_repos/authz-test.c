@@ -24,6 +24,8 @@
 
 #include "svn_pools.h"
 #include "svn_iter.h"
+#include "svn_hash.h"
+#include "private/svn_subr_private.h"
 
 #include "../../libsvn_repos/authz.h"
 
@@ -187,6 +189,7 @@ test_authz_parse(const svn_test_opts_t *opts,
   apr_file_t *groups_file;
   svn_stream_t *groups;
   svn_authz_t *authz;
+  apr_hash_t *groupdefs = svn_hash__make(pool);
   int i;
 
   const char *check_user = "wunga";
@@ -250,12 +253,14 @@ test_authz_parse(const svn_test_opts_t *opts,
           printf("      %c%s = %s\n",
                  (ace->inverted ? '~' : ' '),
                  ace->name, access_string(ace->access));
+          if (ace->members)
+            svn_hash_sets(groupdefs, ace->name, ace->members);
         }
       printf("\n\n");
     }
 
   printf("[groups]\n");
-  SVN_ERR(svn_iter_apr_hash(NULL, authz->groups,
+  SVN_ERR(svn_iter_apr_hash(NULL, groupdefs,
                             print_group, NULL, pool));
   printf("\n\n");
 

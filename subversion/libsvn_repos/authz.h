@@ -112,9 +112,6 @@ struct svn_authz_t
      an authz_global_rights_t*. */
   apr_hash_t *user_rights;
 
-  /* Fully recursively expanded group definitions, indexed by group name. */
-  apr_hash_t *groups;
-
   /* A cache of rules filtered for a particular user.
      These will be generated on-demand. */
   authz_user_rules_t *user_rules[AUTHZ_FILTERED_CACHE_SIZE];
