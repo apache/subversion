@@ -1220,7 +1220,7 @@ update_user_rights(void *baton,
   authz_global_rights_t *const gr = value;
   svn_repos_authz_access_t access;
   svn_boolean_t has_access =
-    svn_authz__acl_get_access(&access, acl, user, acl->rule.repos);
+    svn_authz__get_acl_access(&access, acl, user, acl->rule.repos);
 
   if (has_access)
     update_global_rights(gr, acl->rule.repos, access);

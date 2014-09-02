@@ -444,7 +444,7 @@ process_acl(construction_context_t *ctx,
 
   /* Skip ACLs that don't say anything about the current user
      and/or repository. */
-  if (!svn_authz__acl_get_access(&access.rights, acl, user, repository))
+  if (!svn_authz__get_acl_access(&access.rights, acl, user, repository))
     return;
 
   /* Insert the rule into the filtered tree. */

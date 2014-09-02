@@ -194,6 +194,8 @@ test_authz_parse(const svn_test_opts_t *opts,
 
   const char *check_user = "wunga";
   const char *check_repo = "bloop";
+  authz_rights_t global_rights;
+  svn_boolean_t global_explicit;
 
 
   SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
@@ -210,7 +212,14 @@ test_authz_parse(const svn_test_opts_t *opts,
   groups = svn_stream_from_aprfile2(groups_file, FALSE, pool);
   SVN_ERR(svn_authz__parse(&authz, rules, groups, pool, pool));
 
-  printf("Access check for ('%s', '%s')\n\n", check_user, check_repo);
+  printf("Access check for ('%s', '%s')\n", check_user, check_repo);
+
+  global_explicit = svn_authz__get_global_rights(&global_rights, authz,
+                                                 check_user, check_repo);
+  printf("Global rights: min=%s, max=%s (%s)\n\n",
+         access_string(global_rights.min_access),
+         access_string(global_rights.max_access),
+         (global_explicit ? "explicit" : "implicit"));
 
   printf("[rules]\n");
   for (i = 0; i < authz->acls->nelts; ++i)
@@ -220,7 +229,7 @@ test_authz_parse(const svn_test_opts_t *opts,
         (acl->anon_access & acl->authn_access);
       svn_repos_authz_access_t access;
       svn_boolean_t has_access =
-        svn_authz__acl_get_access(&access, acl, check_user, check_repo);
+        svn_authz__get_acl_access(&access, acl, check_user, check_repo);
       int j;
 
       printf("%s%s%s   Sequence:   %d\n"
