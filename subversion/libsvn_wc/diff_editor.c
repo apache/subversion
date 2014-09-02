@@ -1036,9 +1036,6 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   svn_boolean_t skip_children = FALSE;
   svn_diff_source_t *right_src = svn_diff__source_create(SVN_INVALID_REVNUM,
                                                          scratch_pool);
-  svn_depth_t depth_below_here = depth;
-  apr_hash_t *nodes;
-  apr_hash_t *conflicts;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1088,71 +1085,82 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                                 processor_parent_baton,
                                 processor,
                                 scratch_pool, iterpool));
-  /* ### skip_children is not used */
 
-  SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db, local_abspath,
-                                        FALSE /* base_tree_only */,
-                                        scratch_pool, iterpool));
-
-  if (depth_below_here == svn_depth_immediates)
-    depth_below_here = svn_depth_empty;
-
-  children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
-                            scratch_pool);
-
-  for (i = 0; i < children->nelts; i++)
+  if ((depth > svn_depth_empty || depth == svn_depth_unknown)
+      && ! skip_children)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(children, i, svn_sort__item_t);
-      const char *name = item->key;
-      struct svn_wc__db_info_t *info = item->value;
-      const char *child_abspath;
-      const char *child_relpath;
+      svn_depth_t depth_below_here = depth;
+      apr_hash_t *nodes;
+      apr_hash_t *conflicts;
 
-      svn_pool_clear(iterpool);
+      if (depth_below_here == svn_depth_immediates)
+        depth_below_here = svn_depth_empty;
 
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+      SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
+                                            db, local_abspath,
+                                            FALSE /* base_tree_only */,
+                                            scratch_pool, iterpool));
 
-      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      if (NOT_PRESENT(info->status))
+      children = svn_sort__hash(nodes, svn_sort_compare_items_lexically,
+                                scratch_pool);
+
+      for (i = 0; i < children->nelts; i++)
         {
-          continue;
-        }
+          svn_sort__item_t *item = &APR_ARRAY_IDX(children, i, svn_sort__item_t);
+          const char *name = item->key;
+          struct svn_wc__db_info_t *info = item->value;
+          const char *child_abspath;
+          const char *child_relpath;
 
-      /* If comparing against WORKING, skip entries that are
-         schedule-deleted - they don't really exist. */
-      if (!diff_pristine && info->status == svn_wc__db_status_deleted)
-        continue;
+          svn_pool_clear(iterpool);
 
-      child_relpath = svn_relpath_join(relpath, name, iterpool);
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
 
-      switch (info->kind)
-        {
-        case svn_node_file:
-        case svn_node_symlink:
-          SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
-                                               child_relpath,
-                                               processor, pdb,
-                                               diff_pristine,
-                                               cancel_func, cancel_baton,
-                                               scratch_pool));
-          break;
+          child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-        case svn_node_dir:
-          if (depth > svn_depth_files || depth == svn_depth_unknown)
+          if (NOT_PRESENT(info->status))
             {
-              SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
-                                                  child_relpath, depth_below_here,
-                                                  processor, pdb,
-                                                  diff_pristine,
-                                                  cancel_func, cancel_baton,
-                                                  iterpool));
+              continue;
             }
-          break;
 
-        default:
-          break;
+          /* If comparing against WORKING, skip entries that are
+             schedule-deleted - they don't really exist. */
+          if (!diff_pristine && info->status == svn_wc__db_status_deleted)
+            continue;
+
+          child_relpath = svn_relpath_join(relpath, name, iterpool);
+
+          switch (info->kind)
+            {
+            case svn_node_file:
+            case svn_node_symlink:
+              SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
+                                                   child_relpath,
+                                                   processor, pdb,
+                                                   diff_pristine,
+                                                   cancel_func, cancel_baton,
+                                                   scratch_pool));
+              break;
+
+            case svn_node_dir:
+              if (depth > svn_depth_files || depth == svn_depth_unknown)
+                {
+                  SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
+                                                      child_relpath,
+                                                      depth_below_here,
+                                                      processor, pdb,
+                                                      diff_pristine,
+                                                      cancel_func,
+                                                      cancel_baton,
+                                                      iterpool));
+                }
+              break;
+
+            default:
+              break;
+            }
         }
     }
 
