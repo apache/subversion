@@ -2902,29 +2902,12 @@ filter_file_opened(void **new_file_baton,
   struct filter_tree_baton_t *fb = processor->baton;
   const char *local_abspath
     = svn_dirent_join(fb->root_local_abspath, relpath, scratch_pool);
-  const char *changelist;
-  svn_error_t *err;
 
-  /* Skip if not a member of a given changelist*/
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, &changelist, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
-                             fb->wc_ctx->db, local_abspath,
-                             scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      changelist = NULL;
-    }
-  else
-    SVN_ERR(err);
-  if (fb->changelist_hash
-      && (!changelist || !svn_hash_gets(fb->changelist_hash, changelist)))
+  /* Skip if not a member of a given changelist */
+  if (! svn_wc__changelist_match(fb->wc_ctx, local_abspath,
+                                 fb->changelist_hash, scratch_pool))
     {
       *skip = TRUE;
-      SVN_DBG(("filter: skipping '%s'", relpath));
       return SVN_NO_ERROR;
     }
 
