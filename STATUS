@@ -157,7 +157,19 @@ Candidate changes:
      Run merge with --accept theirs-conflict
    Votes:
      +1: stsp
-   
+
+ * r1621978, r1621981
+   Fix changelist filtering for repos-WC and WC-WC diffs.
+   Justification:
+     Changelist filtering, enabled by "svn diff --cl foo" for example, was
+     broken (it crashed in common cases) and incomplete even if the crash
+     were avoided. See email thread "Segmentation fault during diff generation"
+     starting at <http://svn.haxx.se/dev/archive-2014-08/0325.shtml>.
+   Branch:
+     ^/subversion/branches/1.8.x-r1621978
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
