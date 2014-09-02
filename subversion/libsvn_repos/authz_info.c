@@ -32,7 +32,7 @@
 
 
 svn_boolean_t
-svn_authz__acl_get_access(svn_repos_authz_access_t *access_p,
+svn_authz__get_acl_access(svn_repos_authz_access_t *access_p,
                           const authz_acl_t *acl,
                           const char *user, const char *repos)
 {
@@ -80,4 +80,77 @@ svn_authz__acl_get_access(svn_repos_authz_access_t *access_p,
   if (access_p)
     *access_p = access;
   return has_access;
+}
+
+
+/* Given GLOBAL_RIGHTS and a repository name REPOS, set *RIGHTS_P to
+ * to the actual accumulated rights defined for that repository.
+ * Return TRUE if these rights were defined explicitly.
+ */
+static svn_boolean_t
+resolve_global_rights(authz_rights_t *rights_p,
+                      const authz_global_rights_t *global_rights,
+                      const char *repos)
+{
+  if (0 == strcmp(repos, AUTHZ_ANY_REPOSITORY))
+    {
+      /* Return the accumulated rights that are not repository-specific. */
+      *rights_p = global_rights->any_repos_rights;
+      return TRUE;
+    }
+  else
+    {
+      /* Check if we have explicit rights for this repository. */
+      const authz_rights_t *const rights =
+        svn_hash_gets(global_rights->per_repos_rights, repos);
+
+      if (rights)
+        {
+          *rights_p = *rights;
+          return TRUE;
+        }
+    }
+
+  /* Fall-through: return accumulated rights across all repositories. */
+  *rights_p = global_rights->all_repos_rights;
+  return FALSE;
+}
+
+
+svn_boolean_t
+svn_authz__get_global_rights(authz_rights_t *rights_p,
+                             const svn_authz_t *authz,
+                             const char *user, const char *repos)
+{
+  if (!user || 0 == strcmp(user, AUTHZ_ANONYMOUS_USER))
+    {
+      /* Check if we have explicit rights for anonymous access. */
+      if (authz->has_anon_rights)
+        return resolve_global_rights(rights_p, &authz->anon_rights, repos);
+    }
+  else
+    {
+      /* Check if we have explicit rights for this user. */
+      const authz_global_rights_t *const user_rights =
+        svn_hash_gets(authz->user_rights, user);
+
+      if (user_rights)
+        {
+          authz_rights_t rights;
+          if (resolve_global_rights(&rights, user_rights, repos))
+            {
+              *rights_p = rights;
+              return TRUE;
+            }
+        }
+
+      /* Check if we have explicit rights for authenticated access. */
+      if (authz->has_authn_rights)
+        return resolve_global_rights(rights_p, &authz->authn_rights, repos);
+    }
+
+  /* Fall-through: return the implicit rights, i.e., none. */
+  rights_p->min_access = svn_authz_none;
+  rights_p->max_access = svn_authz_none;
+  return FALSE;
 }

@@ -79,13 +79,13 @@ typedef struct authz_global_rights_t
   /* The user name. */
   const char *user;
 
-  /* Accumulated rights for this user across all repositories. */
-  authz_rights_t all_repos_rights;
-
   /* Accumulated rights for this user from rules that are not
      repository-specific. We use this to avoid a hash lookup for the
      "any" repository rights. */
   authz_rights_t any_repos_rights;
+
+  /* Accumulated rights for this user across all repositories. */
+  authz_rights_t all_repos_rights;
 
   /* Accumulated rights for specific repositories.
      The key is repository name, the value is an authz_rights_t*. */
@@ -279,14 +279,22 @@ svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b);
 /* Check if the ACL applies to the (USER, REPOS) pair.  If it does,
  * and ACCESS is not NULL, set *ACCESS to the actual access rights for
  * the user in this repository.
- *
- * Use SCRATCH_POOL for temporary allocations.
  */
 svn_boolean_t
-svn_authz__acl_get_access(svn_repos_authz_access_t *access,
+svn_authz__get_acl_access(svn_repos_authz_access_t *access,
                           const authz_acl_t *acl,
                           const char *user, const char *repos);
 
+
+/* Set *RIGHTS to the accumulated global access rights calculated in
+ * AUTHZ for (USER, REPOS).
+ * Return TRUE if the rights are explicit (i.e., an ACL for REPOS
+ * applies to USER, or REPOS is AUTHZ_ANY_REPOSITORY).
+ */
+svn_boolean_t
+svn_authz__get_global_rights(authz_rights_t *rights,
+                             const svn_authz_t *authz,
+                             const char *user, const char *repos);
 
 
 #ifdef __cplusplus
