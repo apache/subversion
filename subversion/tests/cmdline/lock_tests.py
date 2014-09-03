@@ -1964,7 +1964,6 @@ def lock_hook_messages(sbox):
                                            expected_err, actual_stderr)
 
 
-@XFail(svntest.main.is_ra_type_dav)
 def failing_post_hooks(sbox):
   "locking with failing post-lock and post-unlock"
 
@@ -1978,20 +1977,25 @@ def failing_post_hooks(sbox):
   pi_path = sbox.ospath('A/D/G/pi')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', writelocked='K')
-  expected_fail_err_re = ".*error text"
-  
+
+  if svntest.main.is_ra_type_dav():
+    expected_lock_err = []
+    expected_unlock_err = '.*svn: E165009: Unlock succeeded.*' #
+  else:
+    expected_unlock_err = expected_lock_err = ".*error text"
+
   # Failing post-lock doesn't stop lock being created.
-  svntest.actions.run_and_verify_svn2(None, "'pi' locked by user",
-                                      expected_fail_err_re, 1,
-                                      'lock', '-m', '', pi_path)
+  svntest.actions.run_and_verify_svn(None, "'pi' locked by user",
+                                     expected_lock_err,
+                                     'lock', '-m', '', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_status.tweak('A/D/G/pi', writelocked=None)
 
   # Failing post-unlock doesn't stop lock being removed.
-  svntest.actions.run_and_verify_svn2(None, "'pi' unlocked",
-                                      expected_fail_err_re, 1,
-                                      'unlock', pi_path)
+  svntest.actions.run_and_verify_svn(None, "'pi' unlocked",
+                                     expected_unlock_err,
+                                     'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @XFail()
