@@ -156,7 +156,7 @@ Candidate changes:
    Notes:
      Run merge with --accept theirs-conflict
    Votes:
-     +1: stsp
+     +1: stsp, julianfoad
 
  * r1621978, r1621981
    Fix changelist filtering for repos-WC and WC-WC diffs.
