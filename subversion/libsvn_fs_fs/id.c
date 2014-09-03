@@ -147,8 +147,8 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
   if (!locale_independent_strtol(&txn_id->revision, data, &end))
     return FALSE;
 
-  data = strchr(end, '-');
-  if (data == NULL)
+  data = end;
+  if (*data != '-')
     return FALSE;
 
   ++data;
@@ -344,8 +344,14 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->private_id, &id_b->private_id,
-                sizeof(id_a->private_id)) == 0;
+  return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
+                               &id_b->private_id.node_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.copy_id,
+                               &id_b->private_id.copy_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                               &id_b->private_id.txn_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.rev_item,
+                               &id_b->private_id.rev_item);
 }
 
 
@@ -481,9 +487,8 @@ svn_fs_id_t *
 svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)source;
-  fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  fs_fs__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
-  *new_id = *id;
   new_id->generic_id.fsap_data = new_id;
 
   return (svn_fs_id_t *)new_id;

@@ -47,7 +47,7 @@ typedef enum mtcc_kind_t
   OP_OPEN_FILE,
   OP_ADD_DIR,
   OP_ADD_FILE,
-  OP_DELETE,
+  OP_DELETE
 } mtcc_kind_t;
 
 typedef struct mtcc_op_t

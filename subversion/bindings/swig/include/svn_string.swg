@@ -208,11 +208,6 @@ typedef struct svn_string_t svn_string_t;
 
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
-#ifdef SWIGPYTHON
-%typemap(memberin) const svn_string_t * {
-    $1 = svn_string_dup($input, _global_pool);
-}
-#endif
 #ifdef SWIGPERL
 %typemap(memberin) const svn_string_t * {
     $1 = svn_string_dup($input, _global_pool);

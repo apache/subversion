@@ -97,8 +97,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS     "http-chunked-requests"
-/** @since New in 1.9. */
-#define SVN_CONFIG_OPTION_HTTP_PIPELINING           "http-pipelining"
 
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS       "serf-log-components"
@@ -193,7 +191,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
-  "*.rej *~ #*# .#* .*.swp .DS_Store"
+  "*.rej *~ #*# .#* .*.swp .DS_Store [Tt]humbs.db"
 #endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \

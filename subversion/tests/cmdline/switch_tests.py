@@ -1025,8 +1025,8 @@ def forced_switch_failures(sbox):
   main.file_write(A_C_H, "The file 'H'\n")
 
   # Test three cases where forced switch should cause a tree conflict
-  # 1) A forced switch that tries to add a file when an unversioned
-  #    directory of the same name already exists.  (Currently fails)
+  # 1) A forced switch that tries to add a directory when an unversioned
+  #    file of the same name already exists.  (Currently fails)
   # svn switch --force url/A/D A/C
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/G'             : Item(status='A '),
@@ -1071,7 +1071,7 @@ def forced_switch_failures(sbox):
                                 '--ignore-ancestry')
 
 
-  # 2) A forced switch that tries to add a dir when a file of the same
+  # 2) A forced switch that tries to add a file when a dir of the same
   #    name already exists. (Tree conflict)
   # svn switch --force url/A/D/G A/B/F
   expected_output = svntest.wc.State(wc_dir, {
@@ -1099,7 +1099,7 @@ def forced_switch_failures(sbox):
 
   # svn info A/B/F/pi
   expected_stdout = verify.ExpectedOutput(
-    'Tree conflict: local file unversioned, incoming file add upon switch\n',
+    'Tree conflict: local dir unversioned, incoming file add upon switch\n',
     match_all=False)
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',

@@ -51,6 +51,17 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
+/* Return the shard size of filesystem FS.  Return 0 for non-shared ones. */
+int
+svn_fs_fs__shard_size(svn_fs_t *fs);
+
+/* Set *MIN_UNPACKED to the oldest non-packed revision in filesystem FS.
+   Do any temporary allocation in POOL. */
+svn_error_t *
+svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool);
+
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
    revision number, else return success. */

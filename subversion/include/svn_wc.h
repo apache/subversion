@@ -8175,7 +8175,17 @@ typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
 
 
 /**
- * ### TODO: Doc string, please.
+ * Beginning at @a local_abspath, crawl to @a depth to discover every path in
+ * or under @a local_abspath which belongs to one of the changelists in @a
+ * changelist_filter (an array of <tt>const char *</tt> changelist names).
+ * If @a changelist_filter is @c NULL, discover paths with any changelist.
+ * Call @a callback_func (with @a callback_baton) each time a
+ * changelist-having path is discovered.
+ *
+ * @a local_abspath is a local WC path.
+ *
+ * If @a cancel_func is not @c NULL, invoke it passing @a cancel_baton
+ * during the recursive walk.
  *
  * @since New in 1.7.
  */
