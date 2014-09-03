@@ -148,6 +148,8 @@ Candidate changes:
      http://svn.haxx.se/dev/archive-2014-08/0273.shtml
    Votes:
      +1: stefan2
+     -0: ivan (texts conflicts; misses relevant tests (r1619105 and
+               follow-ups); But I agree with backport in general)
 
  * r1620332
    Remove broken conflict resolver menu options.
