@@ -2458,7 +2458,7 @@ svn_delta__ev3_from_delta_for_commit(
     editor3_complete,
     editor3_abort
   };
-  ev3_from_delta_baton_t *eb = apr_palloc(result_pool, sizeof(*eb));
+  ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
 
   eb->deditor = deditor;
   eb->dedit_baton = dedit_baton;
