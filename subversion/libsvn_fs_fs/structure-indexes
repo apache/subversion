@@ -1,17 +1,17 @@
-This file describes the design, data model, and file formats of FSFS
-index files.
+This file describes the design, data model, and storage formats of FSFS
+index data.
 
 
 Design
 ======
 
-For each pack and each rev file using logical addressing, there is exactly
-two index files.  One, the log-to-phys index, maps the (rev, item_index)
+Each pack and each rev file using logical addressing contains exactly
+two index sections.  One, the log-to-phys index, maps the (rev, item_index)
 pairs to absolute file offsets.  The other, phys-to-log, is a reverse
 index that gives basic information on any file location.  This is enough
 to read and cache any data without traversing DAGs.
 
-Rev and pack files are immutable, so the same is true for index files.
+Rev and pack files are immutable, so the same is true for index data.
 During a transaction or while packing a file, a proto index file gets
 written (actually, one log-to-phys and one phys-to-log).  Its format is
 a simple concatenation of runtime structs and as such, an implementation
@@ -52,7 +52,7 @@ and pre-defined item_index values.
 Encoding
 --------
 
-The final index file format is tuned for space and decoding efficiency.
+The final index data format is tuned for space and decoding efficiency.
 Indexes are stored as a sequence of variable integers.  The encoding is
 as follows:
 
@@ -105,13 +105,13 @@ hierarchy:
   offset = offsets[item_index % page_size];
 
   Different log-to-phys indexes in the same repository may have different
-  page sizes but within any given index file, the page size is the same
-  and immutable.
+  page sizes but within any given index, the page size is the same and
+  immutable.
 
 header:
 
-  <first revision>   ... first revision covered by this index file
-  <revision count>   ... number of revision covered by this index file
+  <first revision>   ... first revision covered by this index
+  <revision count>   ... number of revision covered by this index
   <page size>        ... maximum number of entries per page
   <page table index> ... array, for each revision containing the index in
                          <page table> of the first page that belongs to
@@ -123,7 +123,7 @@ header:
 page table:
 
   <offset>           ... absolute position of the page contents within the
-                         index file
+                         index
   <entry count>      ... number of offset entries in the page.
                          Must match <header>.<page size> unless this is
                          the last page for the respective revision.
@@ -140,10 +140,10 @@ page:
                          pack file.  This has <entry count> entries.
 
                          
-Index file format
------------------
+Index on-disk format
+--------------------
 
-  file := header revisions pages offsets
+  index := header revisions pages offsets
 
   header := u(<header>.<first revision>) \
             u(<header>.<page size>) \
@@ -217,7 +217,7 @@ hierarchy:
   offset is does not match any actual item start.  To simplify the lookup,
   the last index page will have an "unused item" entry for the section
   behind EOF.  Holes aren't allowed as well, i.e. every byte of the rev /
-  pack is expected to be covered by the index file.
+  pack is expected to be covered by the index.
 
   Also, there may be items stretching across page borders or even over
   multiple pages.  The data model solves this issue by storing the item
@@ -227,7 +227,7 @@ hierarchy:
 
 header:
 
-  <first revision>   ... first revision covered by this index file
+  <first revision>   ... first revision covered by this index
   <file size>        ... size of the rev / pack file in bytes
   <page size>        ... number of bytes in the rev / pack file covered by
                          each index page
@@ -253,10 +253,10 @@ entry:
   <item_index>       ... item_index within that revision
 
 
-Index file format
------------------
+Index on-disk format
+--------------------
 
-  file := header pages items
+  index := header pages items
 
   header := u(<header>.<first revision>) \
             u(<header>.<file size>) \
@@ -303,7 +303,7 @@ are not allowed; zero-length items are.
 In transactions, the final revision number may not be known when writing
 the proto index file (e.g. while still writing the proto rev file).  Items
 with revision set to SVN_INVALID_REVNUM will therefore be automatically
-updated when creating the index file.  This is possible in conjunction
+updated when creating the final index.  This is possible in conjunction
 with rev files but not for pack files.
 
 

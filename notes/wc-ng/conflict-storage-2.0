@@ -81,9 +81,14 @@ this format in a future version if we want to keep the conflicts valid.
 path from before the update/switch. The new location is already available in
 BASE so doesn't have to be duplicated. If the node is an addition the empty
 list is used.
+### stsp: The implementation *does* duplicate the new BASE node in the skel
+### in a second PATH_REV item.
 
 Merge will have 2 items: the left and right paths. These can come from a
 different repository.
+### stsp: The implementation is storing the pre-merge BASE node, and
+### the incoming merge-right node. What about merge-left?
+### How can merge-left/merge-right come from a different repository?
 
 An empty skel specifies that there is no location. (Tree conflicts and/or
 upgrade scenarios). Future versions may introduce other origins.

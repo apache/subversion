@@ -41,6 +41,16 @@
 
 /*** Helper Functions ***/
 
+static void
+ignore_fs_warnings(void *baton, svn_error_t *err)
+{
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
+#endif
+  return;
+}
+
 /* Write the format number and maximum number of files per directory
    to a new format file in PATH, overwriting a previously existing
    file.  Use POOL for temporary allocation.
@@ -1184,10 +1194,6 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   if (strcmp(opts->fs_type, "fsfs") != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 
-  /* Revision property caching requires named atomics. */
-  if (!svn_named_atomic__is_supported())
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-
   /* Open two filesystem objects, enable revision property caching
    * in one of them. */
   SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
@@ -1196,6 +1202,11 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
 
   SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
+
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs2, ignore_fs_warnings, NULL);
 
   SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
   another_value_for_avoiding_warnings_from_a_broken_api = value;
@@ -1217,6 +1228,94 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
 #undef REPO_NAME
 
 /* ------------------------------------------------------------------------ */
+
+static svn_error_t *
+id_parser_test(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+ #define LONG_MAX_STR #LONG_MAX
+  
+  /* Verify the revision number parser (e.g. first element of a txn ID) */
+  svn_fs_fs__id_part_t id_part;
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "0-0"));
+
+#if LONG_MAX == 2147483647L
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "2147483647-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2147483648-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836470-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836479-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967295-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967296-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967304-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967305-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672950-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672959-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x120000000 = 4831838208.
+   * 483183820 < 10*483183820 mod 2^32 = 536870904 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4831838208-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#else
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "9223372036854775807-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "9223372036854775808-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758070-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758079-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551615-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551616-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551624-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551625-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516150-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516159-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x12000000000000000 = 20752587082923245568.
+   * 2075258708292324556 < 10*2075258708292324556 mod 2^32 = 2305843009213693944 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "20752587082923245568-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#endif
+
+  /* Invalid characters */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2e4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2-4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1255,8 +1354,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_OPTS_PASS(metadata_checksumming,
                        "metadata checksums being checked"),
-    SVN_TEST_OPTS_XFAIL(revprop_caching_on_off,
-                        "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_PASS(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_PASS(id_parser_test,
+                       "id parser test"),
     SVN_TEST_NULL
   };
 
