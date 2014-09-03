@@ -787,7 +787,7 @@ append_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock creation is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))
@@ -1016,7 +1016,7 @@ refresh_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock refreshing is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))
