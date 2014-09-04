@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
+#include "private/svn_io_private.h"
 
 /* Implementation aspects.
  *
@@ -197,8 +198,8 @@ struct shared_data_t
  */
 struct mutex_t
 {
-  /* Inter-process sync. is handled by through lock file. */
-  apr_file_t *lock_file;
+  /* Inter-process sync. is handled by through a lock file. */
+  const char *lock_name;
 
   /* Pool to be used with lock / unlock functions */
   apr_pool_t *pool;
@@ -251,6 +252,7 @@ struct svn_atomic_namespace__t
  */
 static svn_mutex__t *thread_mutex = NULL;
 
+#if APR_HAS_MMAP
 /* Initialization flag for the above used by svn_atomic__init_once.
  */
 static volatile svn_atomic_t mutex_initialized = FALSE;
@@ -266,6 +268,7 @@ init_thread_mutex(void *baton, apr_pool_t *pool)
 
   return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, global_pool);
 }
+#endif /* APR_HAS_MMAP */
 
 /* Utility that acquires our global mutex and converts error types.
  */
@@ -273,14 +276,13 @@ static svn_error_t *
 lock(struct mutex_t *mutex)
 {
   svn_error_t *err;
-
-  /* Get lock on the filehandle. */
   SVN_ERR(svn_mutex__lock(thread_mutex));
-  err = svn_io_lock_open_file(mutex->lock_file, TRUE, FALSE, mutex->pool);
 
-  return err
-    ? svn_mutex__unlock(thread_mutex, err)
-    : err;
+  err = svn_io__file_lock_autocreate(mutex->lock_name, mutex->pool);
+  if (err)
+    err = svn_mutex__unlock(thread_mutex, err);
+
+  return svn_error_trace(err);
 }
 
 /* Utility that releases the lock previously acquired via lock().  If the
@@ -290,33 +292,8 @@ lock(struct mutex_t *mutex)
 static svn_error_t *
 unlock(struct mutex_t *mutex, svn_error_t * outer_err)
 {
-  svn_error_t *unlock_err
-      = svn_io_unlock_open_file(mutex->lock_file, mutex->pool);
-  return svn_mutex__unlock(thread_mutex,
-                           svn_error_compose_create(outer_err,
-                                                    unlock_err));
-}
-
-/* The last user to close a particular namespace should also remove the
- * lock file.  Failure to do so, however, does not affect further uses
- * of the same namespace.
- */
-static apr_status_t
-delete_lock_file(void *arg)
-{
-  struct mutex_t *mutex = arg;
-  const char *lock_name = NULL;
-
-  /* locks have already been cleaned up. Simply close the file */
-  apr_status_t status = apr_file_close(mutex->lock_file);
-
-  /* Remove the file from disk. This will fail if there ares still other
-   * users of this lock file, i.e. namespace. */
-  apr_file_name_get(&lock_name, mutex->lock_file);
-  if (lock_name)
-    apr_file_remove(lock_name, mutex->pool);
-
-  return status;
+  svn_pool_clear(mutex->pool);
+  return svn_mutex__unlock(thread_mutex, outer_err);
 }
 
 /* Validate the ATOMIC parameter, i.e it's address.  Correct code will
@@ -351,7 +328,11 @@ return_atomic(svn_named_atomic__t **atomic,
 svn_boolean_t
 svn_named_atomic__is_supported(void)
 {
-#ifdef _WIN32
+#if !APR_HAS_MMAP
+  return FALSE;
+#elif !defined(_WIN32)
+  return TRUE;
+#else
   static svn_tristate_t result = svn_tristate_unknown;
 
   if (result == svn_tristate_unknown)
@@ -373,9 +354,7 @@ svn_named_atomic__is_supported(void)
     }
 
   return result == svn_tristate_true;
-#else
-  return TRUE;
-#endif
+#endif /* _WIN32 */
 }
 
 svn_boolean_t
@@ -389,6 +368,9 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                              const char *name,
                              apr_pool_t *result_pool)
 {
+#if !APR_HAS_MMAP
+  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+#else
   apr_status_t apr_err;
   svn_error_t *err;
   apr_file_t *file;
@@ -402,29 +384,18 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
    */
   svn_atomic_namespace__t *new_ns = apr_pcalloc(result_pool, sizeof(**ns));
 
-  /* construct the names of the system objects that we need
+  /* construct the name of the system objects that we need
    */
-  shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, NULL);
-  lock_name = apr_pstrcat(subpool, name, MUTEX_NAME_SUFFIX, NULL);
+  shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, SVN_VA_NULL);
+  lock_name = apr_pstrcat(result_pool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
 
   /* initialize the lock objects
    */
   SVN_ERR(svn_atomic__init_once(&mutex_initialized, init_thread_mutex, NULL,
                                 result_pool));
 
-  new_ns->mutex.pool = result_pool;
-  SVN_ERR(svn_io_file_open(&new_ns->mutex.lock_file, lock_name,
-                           APR_READ | APR_WRITE | APR_CREATE,
-                           APR_OS_DEFAULT,
-                           result_pool));
-
-  /* Make sure the last user of our lock file will actually remove it.
-   * Please note that only the last file handle begin closed will actually
-   * remove the underlying file (see docstring for apr_file_remove).
-   */
-  apr_pool_cleanup_register(result_pool, &new_ns->mutex,
-                            delete_lock_file,
-                            apr_pool_cleanup_null);
+  new_ns->mutex.pool = svn_pool_create(result_pool);
+  new_ns->mutex.lock_name = lock_name;
 
   /* Prevent concurrent initialization.
    */
@@ -473,22 +444,27 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
        * with our data file)
        */
       if (new_ns->data->count > MAX_ATOMIC_COUNT)
-        return svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
-                       _("Number of atomics in namespace is too large."));
-
-      /* Cache the number of existing, complete entries.  There can't be
-       * incomplete ones from other processes because we hold the mutex.
-       * Our process will also not access this information since we are
-       * either being called from within svn_atomic__init_once or by
-       * svn_atomic_namespace__create for a new object.
-       */
-      new_ns->min_used = new_ns->data->count;
-      *ns = new_ns;
+        {
+          err = svn_error_create(SVN_ERR_CORRUPTED_ATOMIC_STORAGE, 0,
+                        _("Number of atomics in namespace is too large."));
+        }
+      else
+        {
+          /* Cache the number of existing, complete entries.  There can't be
+           * incomplete ones from other processes because we hold the mutex.
+           * Our process will also not access this information since we are
+           * either being called from within svn_atomic__init_once or by
+           * svn_atomic_namespace__create for a new object.
+           */
+          new_ns->min_used = new_ns->data->count;
+          *ns = new_ns;
+        }
     }
 
   /* Unlock to allow other processes may access the shared memory as well.
    */
   return unlock(&new_ns->mutex, err);
+#endif /* APR_HAS_MMAP */
 }
 
 svn_error_t *
@@ -498,8 +474,8 @@ svn_atomic_namespace__cleanup(const char *name,
   const char *shm_name, *lock_name;
 
   /* file names used for the specified namespace */
-  shm_name = apr_pstrcat(pool, name, SHM_NAME_SUFFIX, NULL);
-  lock_name = apr_pstrcat(pool, name, MUTEX_NAME_SUFFIX, NULL);
+  shm_name = apr_pstrcat(pool, name, SHM_NAME_SUFFIX, SVN_VA_NULL);
+  lock_name = apr_pstrcat(pool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
 
   /* remove these files if they exist */
   SVN_ERR(svn_io_remove_file2(shm_name, TRUE, pool));

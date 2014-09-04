@@ -57,7 +57,7 @@ dav_svn__allow_read(request_rec *r,
   /* Sometimes we get paths that do not start with '/' and
      hence below uri concatenation would lead to wrong uris .*/
   if (path && path[0] != '/')
-    path = apr_pstrcat(pool, "/", path, NULL);
+    path = apr_pstrcat(pool, "/", path, SVN_VA_NULL);
 
   /* If bypass is specified and authz has exported the provider.
      Otherwise, we fall through to the full version.  This should be
@@ -80,7 +80,8 @@ dav_svn__allow_read(request_rec *r,
     uri_type = DAV_SVN__BUILD_URI_PUBLIC;
 
   /* Build a Version Resource uri representing (rev, path). */
-  uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
+  uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE /* add_href */,
+                           pool);
 
   /* Check if GET would work against this uri. */
   subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);

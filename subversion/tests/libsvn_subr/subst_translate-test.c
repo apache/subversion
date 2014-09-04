@@ -500,7 +500,9 @@ test_svn_subst_long_keywords(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_svn_subst_translate_string2,
@@ -519,3 +521,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test long keywords (issue 4350)"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN
+

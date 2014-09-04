@@ -162,12 +162,12 @@ _svn()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
-	cmds='add blame annotate praise cat changelist cl checkout co cleanup'
+	cmds='add auth blame annotate praise cat changelist cl checkout co cleanup'
 	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
-	cmds="$cmds  switch unlock update upgrade"
+	cmds="$cmds switch unlock update upgrade youngest"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -798,12 +798,15 @@ _svn()
 		cmdOpts="--auto-props --no-auto-props --force --targets \
 		         --no-ignore --parents $nOpts $qOpts $pOpts"
 		;;
+	auth)
+		cmdOpts="--remove --show-passwords $pOpts"
+		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
 		         -x --extensions --force $gOpts"
 		;;
 	cat)
-		cmdOpts="$rOpts $pOpts"
+		cmdOpts="$rOpts $pOpts --ignore-keywords"
 		;;
 	changelist|cl)
 		cmdOpts="--targets $pOpts $qOpts $cOpts \
@@ -814,7 +817,8 @@ _svn()
                          --force"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd $pOpts"
+		cmdOpts="--diff3-cmd $pOpts --include-externals -q --quiet\
+			--remove-ignored --remove-unversioned"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
@@ -850,7 +854,7 @@ _svn()
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
-                         --incremental --xml $cOpts"
+                         --include-externals --incremental --xml $cOpts"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
@@ -865,7 +869,7 @@ _svn()
 		         --incremental --xml $qOpts -l --limit -c --change \
                          $gOpts --with-all-revprops --with-revprop --depth \
 		         --diff --diff-cmd -x --extensions --internal-diff \
-		         --with-no-revprops --search --search-and"
+		         --with-no-revprops --search --search-and --auto-moves"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
@@ -874,7 +878,8 @@ _svn()
 		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
-	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive"
+	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive \
+		         $qOpts -v --verbose --incremental --log"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
@@ -947,6 +952,9 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	youngest)
+		cmdOpts="$pOpts --no-newline"
 		;;
 	*)
 		;;
@@ -1030,7 +1038,7 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create deltify dump freeze help hotcopy list-dblogs \
+	cmds='crashtest create deltify dump freeze help hotcopy info list-dblogs \
 	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
@@ -1226,8 +1234,8 @@ _svnlook ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='author cat changed date diff dirs-changed help history info \
-	      lock log propget proplist tree uuid youngest --version'
+	cmds='author cat changed date diff dirs-changed filesize help history \
+	      info lock log propget proplist tree uuid youngest --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -1266,6 +1274,9 @@ _svnlook ()
 		         --no-diff-added --no-diff-deleted -x --extensions"
 		;;
 	dirs-changed)
+		cmdOpts="-r --revision -t --transaction"
+		;;
+	filesize)
 		cmdOpts="-r --revision -t --transaction"
 		;;
 	help|h|\?)
@@ -1380,7 +1391,8 @@ _svnsync ()
 	copy-revprops|initialize|init|synchronize|sync)
 		cmdOpts="--non-interactive --no-auth-cache --trust-server-cert \
 		         --source-username --source-password --sync-username \
-		         --sync-password --config-dir --config-option -q --quiet"
+		         --sync-password --config-dir --config-option \
+		         -q --quiet -M --memory-cache-size"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"

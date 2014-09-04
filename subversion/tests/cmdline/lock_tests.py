@@ -165,14 +165,20 @@ def commit_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   sbox.simple_append('A/mu', 'Tweak!\n')
-  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(verb='Sending'),
+  })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.tweak('iota', wc_rev=2)
 
-  # Make sure the file is unlocked
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # Make sure both iota an mu are unlocked, but only mu is bumped
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 def commit_propchange(sbox):
@@ -1309,7 +1315,7 @@ def unlock_wrong_token(sbox):
   ### The error message returned is actually this, but let's worry about that
   ### another day...
   svntest.actions.run_and_verify_svn2(
-    None, None, ".*((No lock on path)|(400 Bad Request))", 0,
+    None, None, ".*(No lock on path)", 0,
     'unlock', file_path)
 
 #----------------------------------------------------------------------
@@ -1365,7 +1371,7 @@ def unlocked_lock_of_other_user(sbox):
 
   # now try to unlock with user jconstant, should fail but exit 0.
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = "svn: warning: W160039: .*[Uu]nlock of .*403 Forbidden.*"
   else:
     expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
@@ -1460,8 +1466,7 @@ def lock_path_not_in_head(sbox):
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning: W160042: " \
-  "((Path .* doesn't exist in HEAD revision)" \
-  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
+  "(Path .* doesn't exist in HEAD revision)"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
@@ -1500,7 +1505,7 @@ def verify_path_escaping(sbox):
 
   svntest.main.run_svn(None, 'add', file1, file2, file3)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'commit', wc_dir)
+  sbox.simple_commit(message='commit')
 
   svntest.main.run_svn(None, 'lock', '-m', 'lock 1', file1)
   svntest.main.run_svn(None, 'lock', '-m', 'lock 2', sbox.repo_url + '/file%20%232')
@@ -1521,7 +1526,6 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
@@ -1554,11 +1558,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
-  # Recreate path for single-db
-  if not os.path.exists(G_path):
-    os.mkdir(G_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'add', G_path)
+                                     'mkdir', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', rho_path)
@@ -1685,9 +1687,9 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Make sure the unlock operation fails as pre-unlock hook blocks it.
-  expected_unlock_fail_err_re = ".*error text|.*500 Internal Server Error"
+  expected_unlock_fail_err_re = ".*error text"
   svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
-                                      1, 'unlock', pi_path)
+                                      0, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -1723,8 +1725,8 @@ def lock_multi_wc(sbox):
   wc2_name = os.path.basename(sbox2.wc_dir)
 
   expected_output = svntest.verify.UnorderedOutput([
-    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc_name, 'iota'),
-    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc2_name, 'A', 'mu'),
+    '\'%s\' locked by user \'jrandom\'.\n' % sbox.ospath('iota'),
+    '\'%s\' locked by user \'jrandom\'.\n' % sbox2.ospath('A/mu'),
   ])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1732,8 +1734,8 @@ def lock_multi_wc(sbox):
                                              sbox2.ospath('A/mu'))
 
   expected_output = svntest.verify.UnorderedOutput([
-    '\'%s\' unlocked.\n' % os.path.join(wc_name, 'iota'),
-    '\'%s\' unlocked.\n' % os.path.join(wc2_name, 'A', 'mu'),
+    '\'%s\' unlocked.\n' % sbox.ospath('iota'),
+    '\'%s\' unlocked.\n' % sbox2.ospath('A/mu'),
   ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'unlock', sbox.ospath('iota'),
@@ -1815,6 +1817,545 @@ def lock_unlock_deleted(sbox):
   expected_status.tweak('A/mu', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(4369)
+def commit_stolen_lock(sbox):
+  "commit with a stolen lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu', 'zig-zag')
+  sbox.simple_lock('A/mu')
+
+  expected_output = '\'.*mu\' locked by user \'jrandom\'.'
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'lock', '--force',
+                                     sbox.repo_url + '/A/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', writelocked='T')
+  err_re = "(.*E160037: Cannot verify lock on path '/A/mu')|" + \
+           "(.*E160038: '/.*/A/mu': no lock token available)"
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        err_re,
+                                        wc_dir)
+
+# When removing directories, the locks of contained files were not 
+# correctly removed from the working copy database, thus they later 
+# magically reappeared when new files or directories with the same
+# pathes were added.
+@Issue(4364)
+def drop_locks_on_parent_deletion(sbox):
+  "drop locks when the parent is deleted"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock some files, and remove them.
+  sbox.simple_lock('A/B/lambda')
+  sbox.simple_lock('A/B/E/alpha')
+  sbox.simple_lock('A/B/E/beta')
+  sbox.simple_rm('A/B')
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove_subtree('A/B')
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # now re-add entities to the deleted pathes.
+  sbox.simple_mkdir('A/B')
+  sbox.simple_add_text('new file replacing old file', 'A/B/lambda')
+  sbox.simple_add_text('file replacing former dir', 'A/B/F')
+  # The bug also resurrected locks on directories when their path
+  # matched a former file.
+  sbox.simple_mkdir('A/B/E', 'A/B/E/alpha')
+    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/F',
+                        'A/B/lambda',
+                        wc_rev='3')
+  expected_status.remove('A/B/E/beta')
+   
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        [],
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+
+def copy_with_lock(sbox):
+  """copy with lock on source"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  lock_url = sbox.repo_url + '/A/B/E/alpha'
+
+  svntest.actions.run_and_validate_lock(lock_url, svntest.main.wc_author)
+  sbox.simple_copy('A/B/E', 'A/B/E2')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', writelocked='O')
+  expected_status.add({
+    'A/B/E2'       : Item(status='  ', wc_rev=2),
+    'A/B/E2/alpha' : Item(status='  ', wc_rev=2),
+    'A/B/E2/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  # This is really a regression test for httpd: 2.2.25 and 2.4.6, and
+  # earlier, have a bug that causes mod_dav to check for locks on the
+  # copy source and so the commit fails.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+def lock_hook_messages(sbox):
+  "verify (un)lock message is transferred correctly"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+
+  iota_url = sbox.repo_url + "/iota"
+  mu_url = sbox.repo_url + "/A/mu"
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     iota_url)
+
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "pre-lock", error_msg)
+  svntest.actions.create_failing_hook(repo_dir, "pre-unlock", error_msg)
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
+                                     None, [], svntest.verify.AnyOutput, 0,
+                                     'lock', mu_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-lock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
+                                     None, [], svntest.verify.AnyOutput, 0,
+                                     'unlock', iota_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
+def failing_post_hooks(sbox):
+  "locking with failing post-lock and post-unlock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  svntest.actions.create_failing_hook(repo_dir, "post-lock", "error text")
+  svntest.actions.create_failing_hook(repo_dir, "post-unlock", "error text")
+
+  pi_path = sbox.ospath('A/D/G/pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+
+  if svntest.main.is_ra_type_dav():
+    expected_lock_err = []
+    expected_unlock_err = '.*svn: E165009: Unlock succeeded.*' #
+  else:
+    expected_unlock_err = expected_lock_err = ".*error text"
+
+  # Failing post-lock doesn't stop lock being created.
+  svntest.actions.run_and_verify_svn(None, "'pi' locked by user",
+                                     expected_lock_err,
+                                     'lock', '-m', '', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+
+  # Failing post-unlock doesn't stop lock being removed.
+  svntest.actions.run_and_verify_svn(None, "'pi' unlocked",
+                                     expected_unlock_err,
+                                     'unlock', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail()
+def break_delete_add(sbox):
+  "break a lock, delete and add the file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock',
+                                     '-m', 'some lock comment',
+                                     sbox.ospath('A/mu'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [],
+                                     'unlock', '--force',
+                                     sbox.repo_url + '/A/mu')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     '-m', 'delete file',
+                                     sbox.repo_url + '/A/mu')
+
+  # Update removes the locked file and should remove the lock token.
+  sbox.simple_update()
+
+  # Lock token not visible on newly added file.
+  sbox.simple_append('A/mu', 'another mu')
+  sbox.simple_add('A/mu')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', status='A ', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  ### XFAIL Broken lock token now visible in status.
+  sbox.simple_commit()
+  expected_status.tweak('A/mu', status='  ', wc_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def dav_lock_timeout(sbox):
+  "unlock a lock with timeout"
+
+  # Locks with timeouts are only created by generic DAV clients but a
+  # Subversion client may need to view or unlock one over any RA
+  # layer.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  # Lock should have an expiration date
+  expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
+
+  # Verify that there is a lock, by trying to obtain one
+  svntest.actions.run_and_verify_svn2(None, None, ".*locked by user", 0,
+                                      'lock', '-m', '', sbox.ospath('iota'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This used to fail over serf with a parse error of the timeout.
+  expected_err = "svn: warning: W160039:"
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                     'unlock', sbox.repo_url + '/iota')
+
+  # Force unlock via working copy, this also used to fail over serf.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.ospath('iota'), '--force')
+  expected_status.tweak('iota', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock again
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Force unlock via URL, this also used to fail over serf
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/iota',
+                                     '--force')
+  expected_status.tweak('iota', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock again
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Force lock via working copy, this also used to fail over serf.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'lock', sbox.ospath('iota'), '--force')
+  expected_status.tweak('iota', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@SkipUnless(svntest.main.is_ra_type_dav)
+def create_dav_lock_timeout(sbox):
+  "create generic DAV lock with timeout"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
+              '<D:lockinfo xmlns:D="DAV:">' \
+              '  <D:lockscope><D:exclusive/></D:lockscope>' \
+              '  <D:locktype><D:write/></D:locktype>' \
+              '  <D:owner>' \
+              '       <D:href>http://a/test</D:href>' \
+              '  </D:owner>' \
+              '</D:lockinfo>'
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Timeout': 'Second-86400'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
+
+  r = h.getresponse()
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock should have an expiration date
+  expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
+
+def non_root_locks(sbox):
+  "locks for working copies not at repos root"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.repo_url, sbox.repo_url + '/X',
+                                     '-m', 'copy greek tree')
+
+  sbox.simple_switch(sbox.repo_url + '/X')  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock a file
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Updates don't break the lock
+  sbox.simple_update('A/D')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  sbox.simple_update('')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Break the lock
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Subdir update reports the break
+  sbox.simple_update('A/D')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Relock and break
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Root update reports the break
+  sbox.simple_update('')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def many_locks_hooks(sbox):
+  "many locks with hooks"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Prevent locking '/A/D/G/pi'.
+  svntest.main.create_python_hook_script(os.path.join(sbox.repo_dir,
+                                                      'hooks', 'pre-lock'),
+                                         'import sys\n'
+                                         'if sys.argv[2] == "/A/D/G/pi":\n'
+                                         '  sys.exit(1)\n'
+                                         'sys.exit(0)\n')
+
+  # Prevent unlocking '/A/mu'.
+  svntest.main.create_python_hook_script(os.path.join(sbox.repo_dir,
+                                                      'hooks', 'pre-unlock'),
+                                         'import sys\n'
+                                         'if sys.argv[2] == "/A/mu":\n'
+                                         '  sys.exit(1)\n'
+                                         'sys.exit(0)\n')
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      ".* locked",
+                                      "svn: warning: W165001: .*", 0,
+                                      'lock',
+                                      sbox.ospath('iota'),
+                                      sbox.ospath('A/mu'),
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/D/G/pi'),
+                                      sbox.ospath('A/D/G/rho'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha', 'A/D/G/rho',
+                        writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      ".* unlocked",
+                                      "svn: warning: W165001: .*", 0,
+                                      'unlock',
+                                      sbox.ospath('iota'),
+                                      sbox.ospath('A/mu'),
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/D/G/rho'))
+
+  expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/G/rho',
+                        writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+
+@Issue(3515)
+@SkipUnless(svntest.main.is_ra_type_dav)
+def dav_lock_refresh(sbox):
+  "refresh timeout of DAV lock"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build(create_wc = False)
+
+  # Acquire lock on 'iota'
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     sbox.repo_url + '/iota')
+
+  # Try to refresh lock using 'If' header
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
+    'If': '(<' + lock_token + '>)',
+    'Timeout': 'Second-7200'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', '', lock_headers)
+
+  # XFAIL Refreshing of DAV lock fails with error '412 Precondition Failed'
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
+
+@SkipUnless(svntest.main.is_ra_type_dav)
+def delete_locked_file_with_percent(sbox):
+  "lock and delete a file called 'a %( ) .txt'"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  locked_filename = 'a %( ) .txt'
+  locked_path = sbox.ospath(locked_filename)
+  svntest.main.file_write(locked_path, "content\n")
+  sbox.simple_add(locked_filename)
+  sbox.simple_commit()
+
+  sbox.simple_lock(locked_filename)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'a %( ) .txt' : Item(status='  ', wc_rev='2', writelocked='K')
+  })
+  expected_infos = [
+      { 'Lock Owner' : 'jrandom' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.path('a %( ) .txt'),
+                                      '-rHEAD')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  sbox.simple_rm(locked_filename)
+
+  # XFAIL: With a 1.8.x client, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '/svn-test-work/repositories/lock_tests-52/!svn/txr/2-2/a%20%25(%20)%20.txt'
+  # and the following error in the httpd error log:
+  #  Invalid percent encoded URI in tagged If-header [400, #104]
+  sbox.simple_commit()
+
+def lock_commit_bump(sbox):
+  "a commit should not bump just locked files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_lock('iota')
+
+  changed_file = sbox.ospath('changed')
+  sbox.simple_append('changed', 'Changed!')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'unlock', '--force',
+                                     sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'put', changed_file, 'iota')
+
+  sbox.simple_append('A/mu', 'GOAAAAAAAAL!')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(verb='Sending'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=3)
+  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  # We explicitly check both the Revision and Last Changed Revision.
+  expected_infos = [ { 
+    'Revision'           : '1' ,
+    'Last Changed Rev'   : '1' ,
+    'URL'                : '.*',
+    'Lock Token'         : None, }
+  ]
+  svntest.actions.run_and_verify_info(expected_infos, 
+                                      sbox.ospath('iota'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1866,6 +2407,19 @@ test_list = [ None,
               lock_multi_wc,
               locks_stick_over_switch,
               lock_unlock_deleted,
+              commit_stolen_lock,
+              drop_locks_on_parent_deletion,
+              copy_with_lock,
+              lock_hook_messages,
+              failing_post_hooks,
+              break_delete_add,
+              dav_lock_timeout,
+              create_dav_lock_timeout,
+              non_root_locks,
+              many_locks_hooks,
+              dav_lock_refresh,
+              delete_locked_file_with_percent,
+              lock_commit_bump,
             ]
 
 if __name__ == '__main__':

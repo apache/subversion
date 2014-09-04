@@ -27,18 +27,18 @@
 #undef TRUE
 #undef FALSE
 
+namespace apache {
 namespace subversion {
 namespace cxxhl {
-namespace version_1_9_dev {
 
-tristate::tristate(short value) throw()
+Tristate::Tristate(short value) throw()
     : m_value(value)
 {}
 
-const tristate tristate::TRUE = tristate(svn_tristate_true);
-const tristate tristate::FALSE = tristate(svn_tristate_false);
-const tristate tristate::UNKNOWN = tristate(svn_tristate_unknown);
+const Tristate Tristate::TRUE = Tristate(svn_tristate_true);
+const Tristate Tristate::FALSE = Tristate(svn_tristate_false);
+const Tristate Tristate::UNKNOWN = Tristate(svn_tristate_unknown);
 
-} // namespace version_1_9_dev
 } // namespace cxxhl
 } // namespace subversion
+} // namespace apache

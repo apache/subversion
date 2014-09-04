@@ -233,6 +233,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 15,
              "Invalid atomic")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_BAD_COMPRESSION_METHOD,
+             SVN_ERR_BAD_CATEGORY_START + 16,
+             "Invalid compression method")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -254,6 +259,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_XML_UNESCAPABLE_DATA,
              SVN_ERR_XML_CATEGORY_START + 4,
              "Data cannot be safely XML-escaped")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_XML_UNEXPECTED_ELEMENT,
+             SVN_ERR_XML_CATEGORY_START + 5,
+             "Unexpected XML element found")
 
   /* io errors */
 
@@ -311,6 +321,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
              SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support seeking")
+
+  /** Since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_STREAM_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 4,
+             "Stream doesn't support this capability")
 
   /* node errors */
 
@@ -796,6 +811,51 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
+             SVN_ERR_FS_CATEGORY_START + 53,
+             "Malformed transaction ID string.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+             SVN_ERR_FS_CATEGORY_START + 54,
+             "Corrupt index file.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
+             SVN_ERR_FS_CATEGORY_START + 55,
+             "Revision not covered by index.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
+             SVN_ERR_FS_CATEGORY_START + 56,
+             "Item index too large for this revision.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_INDEX,
+             SVN_ERR_FS_CATEGORY_START + 57,
+             "Container index out of range.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+             SVN_ERR_FS_CATEGORY_START + 58,
+             "Index files are inconsistent.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_LOCK_OPERATION_FAILED,
+             SVN_ERR_FS_CATEGORY_START + 59,
+             "Lock operation failed")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_UNSUPPORTED_TYPE,
+             SVN_ERR_FS_CATEGORY_START + 60,
+             "Unsupported FS type")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_SIZE,
+             SVN_ERR_FS_CATEGORY_START + 61,
+             "Container capacity exceeded.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -849,6 +909,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
+             SVN_ERR_REPOS_CATEGORY_START + 11,
+             "Repository is corrupt")
 
   /* generic RA errors */
 
@@ -909,6 +974,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_TUNNEL,
              SVN_ERR_RA_CATEGORY_START + 12,
              "Can't create tunnel")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_SESSION,
+             SVN_ERR_RA_CATEGORY_START + 13,
+             "Can't create session")
 
   /* ra_dav errors */
 
@@ -978,6 +1048,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
              SVN_ERR_RA_DAV_CATEGORY_START + 13,
              "URL access forbidden for unknown reason")
+
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_PRECONDITION_FAILED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 14,
+             "The server state conflicts with the requested preconditions")
 
   /* ra_local errors */
 
@@ -1339,6 +1414,21 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UTF8_GLOB,
              SVN_ERR_MISC_CATEGORY_START + 40,
              "Bad arguments to SQL operators GLOB or LIKE")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
+             SVN_ERR_MISC_CATEGORY_START + 41,
+             "Packed data stream is corrupt")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_COMPOSED_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 42,
+             "Additional errors:")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_INVALID_INPUT,
+             SVN_ERR_MISC_CATEGORY_START + 43,
+             "Parser error: invalid input")
 
   /* command-line client errors */
 

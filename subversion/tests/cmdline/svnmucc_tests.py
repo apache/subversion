@@ -310,22 +310,21 @@ def basic_svnmucc(sbox):
 
   # Expected cannot be younger error
   xtest_svnmucc(sbox.repo_url,
-                ['svnmucc: E205000: Copy source revision cannot be younger ' +
-                 'than base revision',
+                ['svnmucc: E160006: No such revision 42',
                  ], #---------
                 '-m', 'log msg',
                 'cp', '42', 'a', 'b')
 
   # Expected already exists error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'foo' already exists",
+                ["svnmucc: E160020: Path 'foo' already exists",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'a', 'foo')
 
   # Expected copy_src already exists error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'a/bar' (from 'foo/bar:17') already exists",
+                ["svnmucc: E160020: Path 'a/bar' already exists",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'foo', 'a',
@@ -333,7 +332,7 @@ def basic_svnmucc(sbox):
 
   # Expected not found error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'a' not found",
+                ["svnmucc: E160013: Path 'a' not found in revision 17",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'a', 'b')
@@ -354,7 +353,8 @@ def propset_root_internal(sbox, target):
                                          '-m', 'log msg',
                                          'propdel', 'foo',
                                          target)
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [],
+                                     '.*W200017: Property.*not found',
                                      'propget', '--strict', 'foo',
                                      target)
 
@@ -411,6 +411,48 @@ def no_log_msg_non_interactive(sbox):
                 'mkdir', 'A/subdir')
 
 
+def nested_replaces(sbox):
+  "nested replaces"
+
+  sbox.build(create_wc=False)
+  repo_url = sbox.repo_url
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url, '-m', 'r2: create tree',
+                           'rm', 'A',
+                           'rm', 'iota',
+                           'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
+                           'mkdir', 'M', 'mkdir', 'M/N', 'mkdir', 'M/N/O',
+                           'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z')
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url, '-m', 'r3: nested replaces',
+                           *("""
+rm A rm M rm X
+cp HEAD X/Y/Z A cp HEAD A/B/C M cp HEAD M/N/O X
+cp HEAD A/B A/B cp HEAD M/N M/N cp HEAD X/Y X/Y
+rm A/B/C rm M/N/O rm X/Y/Z
+cp HEAD X A/B/C cp HEAD A M/N/O cp HEAD M X/Y/Z
+rm A/B/C/Y
+                           """.split()))
+
+  # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
+  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+    '   R /A (from /X/Y/Z:2)',
+    '   A /A/B (from /A/B:2)',
+    '   R /A/B/C (from /X:2)',
+    '   R /M (from /A/B/C:2)',
+    '   A /M/N (from /M/N:2)',
+    '   R /M/N/O (from /A:2)',
+    '   R /X (from /M/N/O:2)',
+    '   A /X/Y (from /X/Y:2)',
+    '   R /X/Y/Z (from /M:2)',
+    '   D /A/B/C/Y',
+  ]) + [
+    '^-', '^r3', '^-', '^Changed paths:',
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'log', '-qvr3', repo_url)
+
+
 ######################################################################
 
 test_list = [ None,
@@ -419,6 +461,7 @@ test_list = [ None,
               propset_root,
               too_many_log_messages,
               no_log_msg_non_interactive,
+              nested_replaces,
             ]
 
 if __name__ == '__main__':

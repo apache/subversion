@@ -37,9 +37,7 @@
 #define HUGE_VALUE 1234567890123456ll
 
 /* to separate this code from any production environment */
-const char *name_namespace = NULL;
-const char *name_namespace1 = NULL;
-const char *name_namespace2 = NULL;
+static const char *name_namespace = NULL;
 
 /* data structure containing all information we need to check for
  * a) passing some deadline
@@ -50,7 +48,8 @@ typedef struct watchdog_t
   apr_time_t deadline;
   svn_named_atomic__t *atomic_counter;
   int iterations;
-  int call_count; /* don't call apr_time_now() too often '*/
+  int call_count;             /* don't call apr_time_now() too often '*/
+  svn_boolean_t throttle;     /* TRUE -> we are using file locks for sync */
 } watchdog_t;
 
 /* init the WATCHDOG data structure for checking ATOMIC_COUNTER to reach
@@ -67,6 +66,7 @@ init_watchdog(watchdog_t *watchdog,
   watchdog->atomic_counter = atomic_counter;
   watchdog->iterations = iterations;
   watchdog->call_count = 0;
+  watchdog->throttle = !svn_named_atomic__is_efficient();
 }
 
 /* test for watchdog conditions */
@@ -85,6 +85,12 @@ check_watchdog(watchdog_t *watchdog, svn_boolean_t *done)
       *done = TRUE;
       return SVN_NO_ERROR;
     }
+
+  /* If we are using file locks for synchronization, our polling loops will
+   * simply hammering them instead of giving the system time to actually
+   * do something.  So, slow down to get faster ... */
+  if (watchdog->throttle)
+    apr_sleep(1000);
 
   /* Check the system time and indicate when deadline has passed */
   if (++watchdog->call_count > 100)
@@ -156,8 +162,11 @@ test_pipeline_loop(svn_named_atomic__t *atomic_in,
       do
         {
           SVN_ERR(svn_named_atomic__write(&value, 0, atomic_in));
-          SVN_ERR(check_watchdog(watchdog, &done));
-          if (done) return SVN_NO_ERROR;
+          if (!value)
+            {
+              SVN_ERR(check_watchdog(watchdog, &done));
+              if (done) return SVN_NO_ERROR;
+            }
         }
       while (value == 0);
 
@@ -172,8 +181,11 @@ test_pipeline_loop(svn_named_atomic__t *atomic_in,
                                             value,
                                             0,
                                             atomic_out));
-          SVN_ERR(check_watchdog(watchdog, &done));
-          if (done) return SVN_NO_ERROR;
+          if (old_value)
+            {
+              SVN_ERR(check_watchdog(watchdog, &done));
+              if (done) return SVN_NO_ERROR;
+            }
         }
       while (old_value != 0);
 
@@ -209,7 +221,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
                                                      id),
-                                            NULL),
+                                            SVN_VA_NULL),
                                 FALSE));
   SVN_ERR(svn_named_atomic__get(&atomic_out,
                                 ns,
@@ -217,7 +229,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
                                                      (id + 1) % count),
-                                            NULL),
+                                            SVN_VA_NULL),
                                 FALSE));
 
   /* our iteration counter */

@@ -92,7 +92,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
                                     "<D:owner xmlns:D=\"DAV:\">",
                                     apr_xml_quote_string(pool,
                                                          slock->comment, 1),
-                                    "</D:owner>", (char *)NULL);
+                                    "</D:owner>", SVN_VA_NULL);
         }
       else
         {
@@ -134,7 +134,7 @@ unescape_xml(const char **output,
   apr_xml_doc *xml_doc;
   apr_status_t apr_err;
   const char *xml_input = apr_pstrcat
-    (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, (char *)NULL);
+    (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, SVN_VA_NULL);
 
   apr_err = apr_xml_parser_feed(xml_parser, xml_input, strlen(xml_input));
   if (!apr_err)
@@ -274,8 +274,13 @@ parse_locktoken(apr_pool_t *pool,
 static const char *
 format_locktoken(apr_pool_t *p, const dav_locktoken *locktoken)
 {
-  /* libsvn_fs already produces a valid locktoken URI. */
-  return apr_pstrdup(p, locktoken->uuid_str);
+  svn_stringbuf_t *formatted
+    = svn_stringbuf_create_ensure(strlen(locktoken->uuid_str), p);
+
+  /* libsvn_fs produces a locktoken URI that will be valid XML when
+     escaped. */
+  svn_xml_escape_cdata_cstring(&formatted, locktoken->uuid_str, p);
+  return formatted->data;
 }
 
 
@@ -453,7 +458,8 @@ get_locks(dav_lockdb *lockdb,
      lock.  For the --force case, this is required and for the non-force case,
      we allow the filesystem to produce a better error for svn clients.
   */
-  if (info->r->method_number == M_LOCK)
+  if (info->r->method_number == M_LOCK
+      && resource->info->repos->is_svn_client)
     {
       *locks = NULL;
       return 0;
@@ -594,7 +600,8 @@ has_locks(dav_lockdb *lockdb, const dav_resource *resource, int *locks_present)
      lock.  For the --force case, this is required and for the non-force case,
      we allow the filesystem to produce a better error for svn clients.
   */
-  if (info->r->method_number == M_LOCK)
+  if (info->r->method_number == M_LOCK
+      && resource->info->repos->is_svn_client)
     {
       *locks_present = 0;
       return 0;
@@ -647,7 +654,7 @@ append_locks(dav_lockdb *lockdb,
 
   /* We don't allow anonymous locks */
   if (! repos->username)
-    return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+    return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                               DAV_ERR_LOCK_SAVE_LOCK,
                               "Anonymous lock creation is not allowed.");
 
@@ -776,11 +783,35 @@ append_locks(dav_lockdb *lockdb,
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     {
       svn_error_clear(serr);
-      return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+      return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock creation is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && serr->apr_err == SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED)
+    {
+      /* The lock was created in the repository, so we should report the node
+         as locked to the client */
+
+      /* First log the hook failure, for diagnostics. This clears serr */
+      dav_svn__log_err(info->r,
+                       dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                            "Post lock hook failure.",
+                                            resource->pool),
+                       APLOG_WARNING);
+
+      /* How can we report the error to the client?
+
+         We can't return an error code, as that would make it impossible
+         to return the lock details?
+
+         Add yet another custom header?
+         Just an header doesn't handle a full error chain... 
+
+         ### Current behavior: we don't report an error.
+       */
+
+    }
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))
@@ -836,14 +867,14 @@ remove_lock(dav_lockdb *lockdb,
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
   if (! resource->info->repos_path)
-    return 0;
+    return NULL;
 
   /* Another easy out: if an svn client sent a 'keep_locks' header
      (typically in a DELETE request, as part of 'svn commit
      --no-unlock'), then ignore dav_method_delete()'s attempt to
      unconditionally remove the lock.  */
   if (info->keep_locks)
-    return 0;
+    return NULL;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be removed from it. */
@@ -886,9 +917,25 @@ remove_lock(dav_lockdb *lockdb,
       if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
         {
           svn_error_clear(serr);
-          return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+          return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                     DAV_ERR_LOCK_SAVE_LOCK,
                                     "Anonymous lock removal is not allowed.");
+        }
+      else if (serr && serr->apr_err == SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED
+               && !resource->info->repos->is_svn_client)
+        {
+          /* Generic DAV clients don't understand the specific error code we
+             would produce here as being just a warning, so lets produce a
+             success result. We removed the lock anyway. */
+
+          /* First log the hook failure, for diagnostics. This clears serr */
+          dav_svn__log_err(info->r,
+                           dav_svn__convert_err(serr,
+                                                HTTP_INTERNAL_SERVER_ERROR,
+                                                "Post unlock hook failure.",
+                                                resource->pool),
+                           APLOG_WARNING);
+
         }
       else if (serr)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -903,8 +950,39 @@ remove_lock(dav_lockdb *lockdb,
                                    resource->info->r->pool));
     }
 
-  return 0;
+  return NULL;
 }
+
+static dav_error *
+remove_lock_svn_output(dav_lockdb *lockdb,
+                       const dav_resource *resource,
+                       const dav_locktoken *locktoken)
+{
+  dav_error *derr = remove_lock(lockdb, resource, locktoken);
+  int status;
+
+  if (!derr
+      || !resource->info->repos
+      || !resource->info->repos->is_svn_client
+      || (strcmp(lockdb->info->r->method, "UNLOCK") != 0))
+    return derr;
+
+  /* Ok, we have a nice error chain but mod_dav doesn't offer us a way to
+     present it to the client as it will only use the status code for
+     generating a standard error...
+
+     Luckily the unlock processing for the "UNLOCK" method is very simple:
+     call this function and return the result.
+
+     That allows us to just force a response and tell httpd that we are done */
+  status = dav_svn__error_response_tag(lockdb->info->r, derr);
+
+  /* status = DONE */
+
+  /* And push an error that will make mod_dav just report that it is done */
+  return dav_push_error(resource->pool, status, derr->error_id, NULL, derr);
+}
+
 
 
 /*
@@ -953,7 +1031,7 @@ refresh_locks(dav_lockdb *lockdb,
      current lock on the incoming resource? */
   if ((! slock)
       || (strcmp(token->uuid_str, slock->token) != 0))
-    return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+    return dav_svn__new_error(resource->pool, HTTP_PRECONDITION_FAILED,
                               DAV_ERR_LOCK_SAVE_LOCK,
                               "Lock refresh request doesn't match existing "
                               "lock.");
@@ -974,11 +1052,11 @@ refresh_locks(dav_lockdb *lockdb,
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     {
       svn_error_clear(serr);
-      return dav_svn__new_error(resource->pool, HTTP_UNAUTHORIZED,
+      return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock refreshing is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))
@@ -1012,7 +1090,7 @@ const dav_hooks_locks dav_svn__hooks_locks = {
   find_lock,
   has_locks,
   append_locks,
-  remove_lock,
+  remove_lock_svn_output,
   refresh_locks,
   NULL,
   NULL                          /* hook structure context */

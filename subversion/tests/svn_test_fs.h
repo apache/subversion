@@ -112,6 +112,14 @@ svn_test__validate_tree(svn_fs_root_t *root,
                         int num_entries,
                         apr_pool_t *pool);
 
+/* Verify that svn_fs_paths_changed2(ROOT) returns a hash with exactly
+   the same keys as EXPECTED_KEYS.  Values are not currently verified.
+ */
+svn_error_t *
+svn_test__validate_changes(svn_fs_root_t *root,
+                           apr_hash_t *expected_keys,
+                           apr_pool_t *pool);
+
 /* Structure for describing script-ish commands to perform on a
    transaction using svn_test__txn_script_exec().  */
 typedef struct svn_test__txn_script_command_t

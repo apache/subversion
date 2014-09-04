@@ -63,23 +63,9 @@ class Sandbox:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
       self.repo_url = svntest.main.pristine_greek_repos_url
 
-    ### TODO: Move this into to the build() method
-    # For dav tests we need a single authz file which must be present,
-    # so we recreate it each time a sandbox is created with some default
-    # contents, making sure that an empty file is never present
     if self.repo_url.startswith("http"):
-      # this dir doesn't exist out of the box, so we may have to make it
-      if not os.path.exists(svntest.main.work_dir):
-        os.makedirs(svntest.main.work_dir)
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
-      tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
-      open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
-      shutil.move(tmp_authz_file, self.authz_file)
       self.groups_file = os.path.join(svntest.main.work_dir, "groups")
-
-    # For svnserve tests we have a per-repository authz file, and it
-    # doesn't need to be there in order for things to work, so we don't
-    # have any default contents.
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
       self.groups_file = os.path.join(self.repo_dir, "conf", "groups")
@@ -108,8 +94,23 @@ class Sandbox:
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
+    self._ensure_authz()
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, minor_version)
     self._is_built = True
+
+  def _ensure_authz(self):
+    "make sure the repository is accessible"
+
+    if self.repo_url.startswith("http"):
+      default_authz = "[/]\n* = rw\n"
+
+      if (svntest.main.options.parallel == 0
+          and (not os.path.isfile(self.authz_file)
+               or open(self.authz_file,'r').read() != default_authz)):
+
+        tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
+        open(tmp_authz_file, 'w').write(default_authz)
+        shutil.move(tmp_authz_file, self.authz_file)
 
   def authz_name(self, repo_dir=None):
     "return this sandbox's name for use in an authz file"
@@ -185,7 +186,11 @@ class Sandbox:
        of this sbox, or relative to OS-style path WC_DIR if supplied."""
     if wc_dir is None:
       wc_dir = self.wc_dir
-    return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
+
+    if relpath == '':
+      return wc_dir
+    else:
+      return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
 
   def ospaths(self, relpaths, wc_dir=None):
     """Return a list of RELPATHS but with each path converted to an OS-style
@@ -362,6 +367,19 @@ class Sandbox:
        DEST is a relpath relative to the WC."""
     open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
 
+  def simple_lock(self, *targets):
+    """Lock TARGETS in the WC.
+       TARGETS are relpaths relative to the WC."""
+    assert len(targets) > 0
+    targets = self.ospaths(targets)
+    svntest.main.run_svn(False, 'lock', *targets)
+
+  def youngest(self):
+    _, output, _ = svntest.actions.run_and_verify_svnlook(
+                     None, svntest.verify.AnyOutput, [],
+                     'youngest', self.repo_dir)
+    youngest = int(output[0])
+    return youngest
 
 def is_url(target):
   return (target.startswith('^/')

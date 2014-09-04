@@ -23,14 +23,6 @@
 
 
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#define PSAPI_VERSION 1
-#include <windows.h>
-#include <psapi.h>
-#include <Ws2tcpip.h>
-#endif
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -278,7 +270,7 @@ release_name_from_uname(apr_pool_t *pool)
 
 #if __linux__
 /* Split a stringbuf into a key/value pair.
-   Return the key, leaving the striped value in the stringbuf. */
+   Return the key, leaving the stripped value in the stringbuf. */
 static const char *
 stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
 {
@@ -290,11 +282,21 @@ stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
     return NULL;
 
   svn_stringbuf_strip_whitespace(buffer);
+
+  /* Now we split the currently allocated buffer in two parts:
+      - a const char * HEAD
+      - the remaining stringbuf_t. */
+
+  /* Create HEAD as '\0' terminated const char * */
   key = buffer->data;
   end = strchr(key, delim);
   *end = '\0';
-  buffer->len = 1 + end - key;
+
+  /* And update the TAIL to be a smaller, but still valid stringbuf */
   buffer->data = end + 1;
+  buffer->len -= 1 + end - key;
+  buffer->blocksize -= 1 + end - key;
+
   svn_stringbuf_strip_whitespace(buffer);
 
   return key;
@@ -508,7 +510,7 @@ debian_release(apr_pool_t *pool)
       return NULL;
 
   stringbuf_first_line_only(buffer);
-  return apr_pstrcat(pool, "Debian ", buffer->data, NULL);
+  return apr_pstrcat(pool, "Debian ", buffer->data, SVN_VA_NULL);
 }
 
 /* Try to find the Linux distribution name, or return info from uname. */
@@ -546,24 +548,48 @@ linux_release_name(apr_pool_t *pool)
 
 #ifdef WIN32
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
-typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE, DWORD, LPDWORD);
+typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE*, DWORD, LPDWORD);
 
-/* Get system and version info, and try to tell the difference
-   between the native system type and the runtime environment of the
-   current process. Populate results in SYSINFO, LOCAL_SYSINFO
-   (optional) and OSINFO. */
+svn_boolean_t
+svn_sysinfo___fill_windows_version(OSVERSIONINFOEXW *version_info)
+{
+  memset(version_info, 0, sizeof(*version_info));
+
+  version_info->dwOSVersionInfoSize = sizeof(*version_info);
+
+  /* Kill warnings with the Windows 8 and later platform SDK */
+#if _MSC_VER > 1600 && NTDDI_VERSION >= _0x06020000
+  /* Windows 8 deprecated the API to retrieve the Windows version to avoid
+     backwards compatibility problems... It might return a constant version
+     in future Windows versions... But let's kill the warning.
+
+     We can implementation this using a different function later. */
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+  /* Prototype supports OSVERSIONINFO */
+  return GetVersionExW((LPVOID)version_info);
+#if _MSC_VER > 1600 && NTDDI_VERSION >= _0x06020000
+#pragma warning(pop)
+#pragma warning(disable: 4996)
+#endif
+}
+
+/* Get system info, and try to tell the difference between the native
+   system type and the runtime environment of the current process.
+   Populate results in SYSINFO and LOCAL_SYSINFO (optional). */
 static BOOL
 system_info(SYSTEM_INFO *sysinfo,
-            SYSTEM_INFO *local_sysinfo,
-            OSVERSIONINFOEXW *osinfo)
+            SYSTEM_INFO *local_sysinfo)
 {
   FNGETNATIVESYSTEMINFO GetNativeSystemInfo_ = (FNGETNATIVESYSTEMINFO)
     GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetNativeSystemInfo");
 
-  ZeroMemory(sysinfo, sizeof *sysinfo);
+  memset(sysinfo, 0, sizeof *sysinfo);
   if (local_sysinfo)
     {
-      ZeroMemory(local_sysinfo, sizeof *local_sysinfo);
+      memset(local_sysinfo, 0, sizeof *local_sysinfo);
       GetSystemInfo(local_sysinfo);
       if (GetNativeSystemInfo_)
         GetNativeSystemInfo_(sysinfo);
@@ -572,11 +598,6 @@ system_info(SYSTEM_INFO *sysinfo,
     }
   else
     GetSystemInfo(sysinfo);
-
-  ZeroMemory(osinfo, sizeof *osinfo);
-  osinfo->dwOSVersionInfoSize = sizeof *osinfo;
-  if (!GetVersionExW((LPVOID)osinfo))
-    return FALSE;
 
   return TRUE;
 }
@@ -610,7 +631,8 @@ win32_canonical_host(apr_pool_t *pool)
   SYSTEM_INFO local_sysinfo;
   OSVERSIONINFOEXW osinfo;
 
-  if (system_info(&sysinfo, &local_sysinfo, &osinfo))
+  if (system_info(&sysinfo, &local_sysinfo)
+      && svn_sysinfo___fill_windows_version(&osinfo))
     {
       const char *arch = processor_name(&local_sysinfo);
       const char *machine = processor_name(&sysinfo);
@@ -674,7 +696,8 @@ win32_release_name(apr_pool_t *pool)
   OSVERSIONINFOEXW osinfo;
   HKEY hkcv;
 
-  if (!system_info(&sysinfo, NULL, &osinfo))
+  if (!system_info(&sysinfo, NULL)
+      || !svn_sysinfo___fill_windows_version(&osinfo))
     return NULL;
 
   if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE,
@@ -763,16 +786,36 @@ win32_release_name(apr_pool_t *pool)
 static HMODULE *
 enum_loaded_modules(apr_pool_t *pool)
 {
+  HMODULE psapi_dll = 0;
   HANDLE current = GetCurrentProcess();
   HMODULE dummy[1];
   HMODULE *handles;
   DWORD size;
+  FNENUMPROCESSMODULES EnumProcessModules_;
 
-  if (!EnumProcessModules(current, dummy, sizeof(dummy), &size))
+  psapi_dll = GetModuleHandleA("psapi.dll");
+
+  if (!psapi_dll)
+    {
+      /* Load and never unload, just like static linking */
+      psapi_dll = LoadLibraryA("psapi.dll");
+    }
+
+  if (!psapi_dll)
+      return NULL;
+
+  EnumProcessModules_ = (FNENUMPROCESSMODULES)
+                              GetProcAddress(psapi_dll, "EnumProcessModules");
+
+  /* Before Windows XP psapi was an optional module */
+  if (! EnumProcessModules_)
+    return NULL;
+
+  if (!EnumProcessModules_(current, dummy, sizeof(dummy), &size))
     return NULL;
 
   handles = apr_palloc(pool, size + sizeof *handles);
-  if (!EnumProcessModules(current, handles, size, &size))
+  if (! EnumProcessModules_(current, handles, size, &size))
     return NULL;
   handles[size / sizeof *handles] = NULL;
   return handles;
@@ -858,64 +901,80 @@ win32_shared_libs(apr_pool_t *pool)
 
 
 #ifdef SVN_HAVE_MACOS_PLIST
+/* implements svn_write_fn_t to copy the data into a CFMutableDataRef that's
+ * in the baton. */
+static svn_error_t *
+write_to_cfmutabledata(void *baton, const char *data, apr_size_t *len)
+{
+  CFMutableDataRef *resource = (CFMutableDataRef *) baton;
+
+  CFDataAppendBytes(*resource, (UInt8 *)data, *len);
+
+  return SVN_NO_ERROR;
+}
+
 /* Load the SystemVersion.plist or ServerVersion.plist file into a
    property list. Set SERVER to TRUE if the file read was
    ServerVersion.plist. */
 static CFDictionaryRef
 system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
 {
-  static const UInt8 server_version[] =
+  static const char server_version[] =
     "/System/Library/CoreServices/ServerVersion.plist";
-  static const UInt8 system_version[] =
+  static const char system_version[] =
     "/System/Library/CoreServices/SystemVersion.plist";
-
+  svn_stream_t *read_stream, *write_stream;
+  svn_error_t *err;
   CFPropertyListRef plist = NULL;
-  CFDataRef resource = NULL;
+  CFMutableDataRef resource = CFDataCreateMutable(kCFAllocatorDefault, 0);
   CFStringRef errstr = NULL;
-  CFURLRef url = NULL;
-  SInt32 errcode;
 
-  url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                server_version,
-                                                sizeof(server_version) - 1,
-                                                FALSE);
-  if (!url)
+  /* failed getting the CFMutableDataRef, shouldn't happen */
+  if (!resource)
     return NULL;
 
-  if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-                                                url, &resource,
-                                                NULL, NULL, &errcode))
+  /* Try to open the plist files to get the data */
+  err = svn_stream_open_readonly(&read_stream, server_version, pool, pool);
+  if (err)
     {
-      CFRelease(url);
-      url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                    system_version,
-                                                    sizeof(system_version) - 1,
-                                                    FALSE);
-      if (!url)
-        return NULL;
-
-      if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-                                                    url, &resource,
-                                                    NULL, NULL, &errcode))
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          CFRelease(url);
+          svn_error_clear(err);
           return NULL;
         }
       else
         {
-          CFRelease(url);
+          svn_error_clear(err);
+          err = svn_stream_open_readonly(&read_stream, system_version,
+                                         pool, pool);
+          if (err)
+            {
+              svn_error_clear(err);
+              return NULL;
+            }
+
           *server = FALSE;
         }
     }
   else
     {
-      CFRelease(url);
       *server = TRUE;
+    }
+
+  /* copy the data onto the CFMutableDataRef to allow us to provide it to
+   * the CoreFoundation functions that parse proprerty lists */
+  write_stream = svn_stream_create(&resource, pool);
+  svn_stream_set_write(write_stream, write_to_cfmutabledata);
+  err = svn_stream_copy3(read_stream, write_stream, NULL, NULL, pool);
+  if (err) 
+    {
+      svn_error_clear(err);
+      return NULL;
     }
 
   /* ### CFPropertyListCreateFromXMLData is obsolete, but its
          replacement CFPropertyListCreateWithData is only available
-         from Mac OS 1.6 onward. */
+         from Mac OS 10.6 onward. */
   plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, resource,
                                           kCFPropertyListImmutable,
                                           &errstr);
@@ -992,6 +1051,7 @@ release_name_from_version(const char *osver)
     case 6: return "Snow Leopard";
     case 7: return "Lion";
     case 8: return "Mountain Lion";
+    case 9: return "Mavericks";
     }
 
   return NULL;

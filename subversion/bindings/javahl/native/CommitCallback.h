@@ -47,11 +47,26 @@ class CommitCallback
   svn_error_t *commitInfo(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool);
 
- private:
   /**
    * This a local reference to the Java object.
    */
   jobject m_callback;
+};
+
+/**
+ * Like CommitCallback, but maintains a reference to the Java object
+ * across JNI calls.
+ */
+class PersistentCommitCallback : protected CommitCallback
+{
+ public:
+  PersistentCommitCallback(jobject jcallback);
+  ~PersistentCommitCallback();
+  static svn_error_t *callback(const svn_commit_info_t *commit_info,
+                               void *baton, apr_pool_t *pool)
+    {
+      return CommitCallback::callback(commit_info, baton, pool);
+    }
 };
 
 #endif  // COMMITCALLBACK_H

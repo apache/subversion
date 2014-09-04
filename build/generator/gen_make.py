@@ -62,6 +62,8 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     ('pyd', 'target'): '.la',
     ('pyd', 'object'): '.lo',
+    ('so', 'target'): '.la',
+    ('so', 'object'): '.lo',
     }
 
   def __init__(self, fname, verfname, options=None):
@@ -236,6 +238,7 @@ class Generator(gen_base.GeneratorBase):
       header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
+      add_deps = target_ob.add_deps.split()
 
       for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
         if isinstance(link_dep, gen_base.TargetJava):
@@ -286,7 +289,7 @@ class Generator(gen_base.GeneratorBase):
                             varname=targ_varname,
                             path=path,
                             install=None,
-                            add_deps=target_ob.add_deps,
+                            add_deps=add_deps,
                             objects=objects,
                             deps=deps,
                             when=target_ob.when,
@@ -379,7 +382,10 @@ class Generator(gen_base.GeneratorBase):
           dirname, fname = build_path_splitfile(file.filename)
           return _eztdata(mode=None,
                           dirname=dirname, fullname=file.filename,
-                          filename=fname, when=file.when)
+                          filename=fname, when=file.when,
+                          pc_fullname=None,
+                          pc_installdir=None,
+                          pc_install_fname=None,)
 
       def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
@@ -412,6 +418,15 @@ class Generator(gen_base.GeneratorBase):
             else:
               ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
                                                        ezt_file.filename)
+
+          # Install pkg-config files
+          if (isinstance(file.target, gen_base.TargetLib) and
+              ezt_file.fullname.startswith('subversion/libsvn_')):
+            ezt_file.pc_fullname = ezt_file.fullname.replace('-1.la', '.pc')
+            ezt_file.pc_installdir = '$(pkgconfig_dir)'
+            pc_install_fname = ezt_file.filename.replace('-1.la', '.pc')
+            ezt_file.pc_install_fname = build_path_join(ezt_file.pc_installdir,
+                                                        pc_install_fname)
           ezt_area.files.append(ezt_file)
 
         # certain areas require hooks for extra install rules defined
@@ -468,6 +483,8 @@ class Generator(gen_base.GeneratorBase):
     self.write_standalone()
 
     self.write_transform_libtool_scripts(install_sources)
+
+    self.write_pkg_config_dot_in_files(install_sources)
 
   def write_standalone(self):
     """Write autogen-standalone.mk"""
@@ -579,6 +596,62 @@ DIR=`pwd`
         libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'))
       libdep_cache[target_name] = sorted(libs)
     return libdep_cache[target_name]
+
+  def write_pkg_config_dot_in_files(self, install_sources):
+    """Write pkg-config .pc.in files for Subversion libraries."""
+    for target_ob in install_sources:
+      if not (isinstance(target_ob, gen_base.TargetLib) and
+              target_ob.path.startswith('subversion/libsvn_')):
+        continue
+
+      lib_name = target_ob.name
+      lib_path = self.sections[lib_name].options.get('path')
+      lib_deps = self.sections[lib_name].options.get('libs')
+      lib_desc = self.sections[lib_name].options.get('description')
+      output_path = build_path_join(lib_path, lib_name + '.pc.in')
+      template = ezt.Template(os.path.join('build', 'generator', 'templates',
+                                           'pkg-config.in.ezt'),
+                              compress_whitespace=False)
+      class _eztdata(object):
+        def __init__(self, **kw):
+          vars(self).update(kw)
+
+      data = _eztdata(
+        lib_name=lib_name,
+        lib_desc=lib_desc,
+        lib_deps=[],
+        lib_required=[],
+        lib_required_private=[],
+        )
+      # libsvn_foo -> -lsvn_foo
+      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
+      for lib_dep in lib_deps.split():
+        if lib_dep == 'apriconv':
+          # apriconv is part of apr-util, skip it
+          continue
+        external_lib = self.sections[lib_dep].options.get('external-lib')
+        if external_lib:
+          ### Some of Subversion's internal libraries can appear as external
+          ### libs to handle conditional compilation. Skip these for now.
+          if external_lib in ['$(SVN_RA_LIB_LINK)', '$(SVN_FS_LIB_LINK)']:
+            continue
+          # If the external library is known to support pkg-config,
+          # add it to the Required: or Required.private: section.
+          # Otherwise, add the external library to linker flags.
+          pkg_config = self.sections[lib_dep].options.get('pkg-config')
+          if pkg_config:
+            private = self.sections[lib_dep].options.get('pkg-config-private')
+            if private:
+              data.lib_required_private.append(pkg_config)
+            else:
+              data.lib_required.append(pkg_config)
+          else:
+            # $(EXTERNAL_LIB) -> @EXTERNAL_LIB@
+            data.lib_deps.append('@%s@' % external_lib[2:-1])
+        else:
+          data.lib_required_private.append(lib_dep)
+
+      template.generate(open(output_path, 'w'), data)
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."

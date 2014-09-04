@@ -1039,8 +1039,8 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-  # Validate the merge info of the copy destination (we expect none)
-  svntest.actions.run_and_verify_svn(None, [], [],
+  # Validate the mergeinfo of the copy destination (we expect none)
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(D_dir, 'B'))
 
@@ -1095,7 +1095,8 @@ def url_copy_parent_into_child(sbox):
 
   # Issue 1367 parent/child URL-to-URL was rejected.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a can of worms',
                                      B_url, F_url)
@@ -1157,7 +1158,8 @@ def wc_copy_parent_into_child(sbox):
 
   svntest.actions.run_and_verify_svn(None,
                                      ['Adding copy of        .\n',
-                                     '\n', 'Committed revision 2.\n'], [],
+                                      'Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a larger can',
                                      '.', F_B_url)
@@ -2737,8 +2739,8 @@ def copy_added_paths_to_URL(sbox):
                                      'cp', '-m', '',
                                      upsilon_path, upsilon_copy_URL)
 
-  # Validate the merge info of the copy destination (we expect none).
-  svntest.actions.run_and_verify_svn(None, [], [],
+  # Validate the mergeinfo of the copy destination (we expect none).
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget',
                                      SVN_PROP_MERGEINFO, upsilon_copy_URL)
 
@@ -3428,7 +3430,7 @@ def copy_peg_rev_url(sbox):
                                      sigma_url + '@', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO, sigma_url)
 
   # Update to HEAD and verify disk contents
@@ -5787,6 +5789,89 @@ def copy_over_excluded(sbox):
                                        sbox.ospath('A/C'),
                                        sbox.ospath('A/D'))
 
+def copy_relocate(sbox):
+  "copy from a relocated location"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  tmp_dir, url = sbox.add_repo_path('relocated')
+
+  shutil.copytree(sbox.repo_dir, tmp_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', url, wc_dir)
+
+  copiedpath = sbox.ospath('AA')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', url + '/A', copiedpath)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'info', copiedpath)
+
+def ext_wc_copy_deleted(sbox):
+  "copy deleted tree from separate wc"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  sbox.simple_rm('A/B')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/D'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url, wc2_dir, '-r', 1)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'), os.path.join(wc2_dir,'AA'))
+
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
+def copy_subtree_deleted(sbox):
+  "copy to-be-deleted subtree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc2_dir)
+
+  sbox.simple_rm('A/B')
+
+  # Commit copy within a working copy
+  sbox.simple_copy('A', 'AA')
+  expected_output = expected_output = svntest.wc.State(wc_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        sbox.ospath('AA'))
+
+  # Commit copy between working copies
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'),
+                                     os.path.join(wc2_dir,'AA2'))
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA2'    : Item(verb='Adding'),
+    'AA2/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -5904,6 +5989,9 @@ test_list = [ None,
               copy_to_unversioned_parent,
               copy_text_conflict,
               copy_over_excluded,
+              copy_relocate,
+              ext_wc_copy_deleted,
+              copy_subtree_deleted,
              ]
 
 if __name__ == '__main__':

@@ -239,6 +239,11 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   svn_boolean_t show_inherited_props;  /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
+  svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
+  svn_boolean_t remove_unversioned;/* remove unversioned items */
+  svn_boolean_t remove_ignored;    /* remove ignored items */
+  svn_boolean_t no_newline;        /* do not output the trailing newline */
+  svn_boolean_t show_passwords;    /* show cached passwords */
 } svn_cl__opt_state_t;
 
 
@@ -252,6 +257,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__auth,
   svn_cl__blame,
   svn_cl__cat,
   svn_cl__changelist,
@@ -286,7 +292,8 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade;
+  svn_cl__upgrade,
+  svn_cl__youngest;
 
 
 /* See definition in svn.c for documentation. */
@@ -314,7 +321,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
- * forget to terminate the argument list with SVN_NO_ERROR.
+ * forget to terminate the argument list with 0 (or APR_SUCCESS).
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,
@@ -436,12 +443,12 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
 */
 svn_error_t *
-svn_cl__print_status(const char *cwd_abspath,
+svn_cl__print_status(const char *target_abspath,
+                     const char *target_path,
                      const char *path,
                      const svn_client_status_t *status,
                      svn_boolean_t suppress_externals_placeholders,
@@ -459,12 +466,12 @@ svn_cl__print_status(const char *cwd_abspath,
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
    allocations.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
  */
 svn_error_t *
-svn_cl__print_status_xml(const char *cwd_abspath,
+svn_cl__print_status_xml(const char *target_abspath,
+                         const char *target_path,
                          const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
@@ -526,7 +533,8 @@ svn_cl__merge_file_externally(const char *base_path,
 /* Like svn_cl__merge_file_externally, but using a built-in merge tool
  * with help from an external editor specified by EDITOR_CMD. */
 svn_error_t *
-svn_cl__merge_file(const char *base_path,
+svn_cl__merge_file(svn_boolean_t *remains_in_conflict,
+                   const char *base_path,
                    const char *their_path,
                    const char *my_path,
                    const char *merged_path,
@@ -534,7 +542,8 @@ svn_cl__merge_file(const char *base_path,
                    const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
-                   svn_boolean_t *remains_in_conflict,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool);
 
 
@@ -819,23 +828,6 @@ const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
-
-/* Check that PATH_OR_URL1@REVISION1 is related to PATH_OR_URL2@REVISION2.
- * Raise an error if not.
- *
- * ### Ideally we would also check that they are on different lines of
- * history.  That is easy in common cases, but to give a correct answer in
- * general we need to know the operative revision(s) as well.  For example,
- * when one location is the branch point from which the other branch was
- * copied.
- */
-svn_error_t *
-svn_cl__check_related_source_and_target(const char *path_or_url1,
-                                        const svn_opt_revision_t *revision1,
-                                        const char *path_or_url2,
-                                        const svn_opt_revision_t *revision2,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool);
 
 /* If the user is setting a mime-type to mark one of the TARGETS as binary,
  * as determined by property name PROPNAME and value PROPVAL, then check

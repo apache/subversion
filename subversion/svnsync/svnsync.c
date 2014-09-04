@@ -112,7 +112,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "mirror of the source repository.\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
         svnsync_opt_allow_non_empty, svnsync_opt_disable_locking,
-        svnsync_opt_steal_lock } },
+        svnsync_opt_steal_lock, 'M' } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
          "\n"
@@ -125,7 +125,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "if untrusted users/administrators may have write access to the\n"
          "DEST_URL repository.\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage:\n"
          "\n"
@@ -146,7 +146,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "\n"
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -237,6 +237,10 @@ static const apr_getopt_option_t svnsync_options[] =
                           "and is not being concurrently accessed by another\n"
                           "                             "
                           "svnsync instance.")},
+    {"memory-cache-size", 'M', 1,
+                       N_("size of the extra in-memory cache in MB used to\n"
+                          "                             "
+                          "minimize operations for local 'file' scheme.\n")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -312,7 +316,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -482,7 +486,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
+      const char *propname = apr_hash_this_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -526,8 +530,8 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
   for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
-      void *propval = svn__apr_hash_index_val(hi);
+      const char *propname = apr_hash_this_key(hi);
+      void *propval = apr_hash_this_val(hi);
 
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
@@ -568,8 +572,8 @@ write_revprops(int *filtered_count,
 
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
-      const svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const char *propname = apr_hash_this_key(hi);
+      const svn_string_t *propval = apr_hash_this_val(hi);
 
       svn_pool_clear(subpool);
 
@@ -936,7 +940,8 @@ open_source_session(svn_ra_session_t **from_session,
   /* ### TODO: Should we validate that FROM_URL_STR->data matches any
      provided FROM_URL here?  */
   if (! from_url)
-    from_url = from_url_str->data;
+    SVN_ERR(svn_opt__arg_canonicalize_url(&from_url, from_url_str->data,
+                                          pool));
 
   /* Open the session to copy the revision data. */
   SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
@@ -966,14 +971,18 @@ open_target_session(svn_ra_session_t **target_session_p,
 typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
-  /* Extra 'backdoor' session for fetching data *from* the target repo. */
-  svn_ra_session_t *extra_to_session;
   svn_revnum_t current_revision;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
+  svn_boolean_t has_atomic_revprops_capability;
   int normalized_rev_props_count;
   int normalized_node_props_count;
   const char *to_root;
+
+#ifdef ENABLE_EV2_SHIMS
+  /* Extra 'backdoor' session for fetching data *from* the target repo. */
+  svn_ra_session_t *extra_to_session;
+#endif
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1050,7 +1059,7 @@ filter_include_log(const char *key)
   return ! filter_exclude_log(key);
 }
 
-
+#ifdef ENABLE_EV2_SHIMS
 static svn_error_t *
 fetch_base_func(const char **filename,
                 void *baton,
@@ -1178,6 +1187,7 @@ get_shim_callbacks(replay_baton_t *rb,
 
   return callbacks;
 }
+#endif
 
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -1246,8 +1256,10 @@ replay_rev_started(svn_revnum_t revision,
                                      rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
+#ifdef ENABLE_EV2_SHIMS
   SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->to_session,
                                 get_shim_callbacks(rb, pool)));
+#endif
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
@@ -1290,6 +1302,7 @@ replay_rev_finished(svn_revnum_t revision,
   apr_hash_t *filtered, *existing_props;
   int filtered_count;
   int normalized_count;
+  const svn_string_t *rev_str;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
@@ -1297,7 +1310,7 @@ replay_rev_finished(svn_revnum_t revision,
   if (rb->sb->committed_rev != revision)
     return svn_error_createf
              (APR_EINVAL, NULL,
-              _("Commit created rev %ld but should have created %ld"),
+              _("Commit created r%ld but should have created r%ld"),
               rb->sb->committed_rev, revision);
 
   SVN_ERR(svn_ra_rev_proplist(rb->to_session, revision, &existing_props,
@@ -1329,21 +1342,24 @@ replay_rev_finished(svn_revnum_t revision,
 
   svn_pool_clear(subpool);
 
+  rev_str = svn_string_createf(subpool, "%ld", revision);
+
   /* Ok, we're done, bring the last-merged-rev property up to date. */
   SVN_ERR(svn_ra_change_rev_prop2(
            rb->to_session,
            0,
            SVNSYNC_PROP_LAST_MERGED_REV,
            NULL,
-           svn_string_create(apr_psprintf(pool, "%ld", revision),
-                             subpool),
+           rev_str,
            subpool));
 
   /* And finally drop the currently copying prop, since we're done
      with this revision. */
   SVN_ERR(svn_ra_change_rev_prop2(rb->to_session, 0,
                                   SVNSYNC_PROP_CURRENTLY_COPYING,
-                                  NULL, NULL, subpool));
+                                  rb->has_atomic_revprops_capability
+                                    ? &rev_str : NULL,
+                                  NULL, subpool));
 
   /* Notify the user that we copied revision properties. */
   if (! rb->sb->quiet)
@@ -1471,6 +1487,11 @@ do_synchronize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_has_capability(rb->to_session,
                                 &rb->has_commit_revprops_capability,
                                 SVN_RA_CAPABILITY_COMMIT_REVPROPS,
+                                pool));
+
+  SVN_ERR(svn_ra_has_capability(rb->to_session,
+                                &rb->has_atomic_revprops_capability,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
 
   start_revision = last_merged + 1;
@@ -1847,6 +1868,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   const char *header =
     _("general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+      "Subversion repository replication tool.\n"
       "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnsync --version' to see the program version and RA modules.\n"
       "\n"
@@ -1875,8 +1897,13 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /*** Main ***/
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   apr_array_header_t *received_opts;
@@ -1884,7 +1911,6 @@ main(int argc, const char *argv[])
   svn_config_t *config;
   apr_status_t apr_err;
   apr_getopt_t *os;
-  apr_pool_t *pool;
   svn_error_t *err;
   int opt_id, i;
   const char *username = NULL, *source_username = NULL, *sync_username = NULL;
@@ -1893,23 +1919,10 @@ main(int argc, const char *argv[])
   const char *source_prop_encoding = NULL;
   svn_boolean_t force_interactive = FALSE;
 
-  if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
-    {
-      return EXIT_FAILURE;
-    }
+  /* Check library versions */
+  SVN_ERR(check_lib_versions());
 
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
-  err = svn_ra_initialize(pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_ra_initialize(pool));
 
   /* Initialize the option baton. */
   memset(&opt_baton, 0, sizeof(opt_baton));
@@ -1920,14 +1933,12 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      SVN_ERR(help_cmd(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
 
@@ -1941,9 +1952,9 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(help_cmd(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       APR_ARRAY_PUSH(received_opts, int) = opt_id;
@@ -2005,12 +2016,9 @@ main(int argc, const char *argv[])
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 
-            err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
-            if (!err)
-              err = svn_cmdline__parse_config_option(config_options,
-                                                     opt_arg, pool);
-            if (err)
-              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+            SVN_ERR(svn_cmdline__parse_config_option(config_options,
+                                                     opt_arg, pool));
             break;
 
           case svnsync_opt_source_prop_encoding:
@@ -2044,13 +2052,11 @@ main(int argc, const char *argv[])
                                        opt_arg, pool) != 0)
               {
                 const char *utf8_opt_arg;
-                err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-                if (! err)
-                  err = svn_error_createf(
+                SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+                return svn_error_createf(
                             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Syntax error in revision argument '%s'"),
                             utf8_opt_arg);
-                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
               }
 
             /* We only allow numbers and 'HEAD'. */
@@ -2060,11 +2066,25 @@ main(int argc, const char *argv[])
                     (opt_baton.end_rev.kind != svn_opt_revision_head) &&
                     (opt_baton.end_rev.kind != svn_opt_revision_unspecified)))
               {
-                err = svn_error_createf(
+                return svn_error_createf(
                           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                           _("Invalid revision range '%s' provided"), opt_arg);
-                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
               }
+            break;
+
+          case 'M':
+            if (!config_options)
+              config_options =
+                    apr_array_make(pool, 1,
+                                   sizeof(svn_cmdline__config_argument_t*));
+
+            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+            SVN_ERR(svn_cmdline__parse_config_option(
+                      config_options,
+                      apr_psprintf(pool,
+                                   "config:miscellany:memory-cache-size=%s",
+                                   opt_arg),
+                      pool));
             break;
 
           case '?':
@@ -2074,14 +2094,14 @@ main(int argc, const char *argv[])
 
           default:
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
 
-      if(opt_err)
-        return svn_cmdline_handle_exit_error(opt_err, pool, "svnsync: ");
+      if (opt_err)
+        return opt_err;
     }
 
   if (opt_baton.help)
@@ -2091,10 +2111,9 @@ main(int argc, const char *argv[])
    * exclusive. */
   if (opt_baton.non_interactive && force_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--non-interactive and --force-interactive "
-                               "are mutually exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--non-interactive and --force-interactive "
+                                "are mutually exclusive"));
     }
   else
     opt_baton.non_interactive = !svn_cmdline__be_interactive(
@@ -2108,12 +2127,11 @@ main(int argc, const char *argv[])
       && (source_username || sync_username
           || source_password || sync_password))
     {
-      err = svn_error_create
+      return svn_error_create
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          _("Cannot use --username or --password with any of "
            "--source-username, --source-password, --sync-username, "
            "or --sync-password.\n"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
   if (username)
     {
@@ -2133,24 +2151,20 @@ main(int argc, const char *argv[])
   /* Disallow mixing of --steal-lock and --disable-locking. */
   if (opt_baton.steal_lock && opt_baton.disable_locking)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--disable-locking and --steal-lock are "
-                               "mutually exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--disable-locking and --steal-lock are "
+                                "mutually exclusive"));
     }
 
   /* --trust-server-cert can only be used with --non-interactive */
   if (opt_baton.trust_server_cert && !opt_baton.non_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--trust-server-cert requires "
-                               "--non-interactive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--trust-server-cert requires "
+                                "--non-interactive"));
     }
 
-  err = svn_config_ensure(opt_baton.config_dir, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "synsync: ");
+  SVN_ERR(svn_config_ensure(opt_baton.config_dir, pool));
 
   if (subcommand == NULL)
     {
@@ -2169,9 +2183,9 @@ main(int argc, const char *argv[])
             }
           else
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -2181,9 +2195,9 @@ main(int argc, const char *argv[])
                                                          first_arg);
           if (subcommand == NULL)
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -2204,23 +2218,20 @@ main(int argc, const char *argv[])
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
+              SVN_ERR(help_cmd(NULL, NULL, pool));
             }
           else
             {
-              err = svn_error_createf
+              return svn_error_createf
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Subcommand '%s' doesn't accept option '%s'\n"
                    "Type 'svnsync help %s' for usage.\n"),
                  subcommand->name, optstr, subcommand->name);
-              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
             }
         }
     }
 
-  err = svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool));
 
   /* Update the options in the config */
   if (config_options)
@@ -2296,10 +2307,40 @@ main(int argc, const char *argv[])
                                      _("Try 'svnsync help' for more info"));
         }
 
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
     }
 
   svn_pool_destroy(pool);
-
-  return EXIT_SUCCESS;
+  return exit_code;
 }

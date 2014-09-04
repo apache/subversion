@@ -33,6 +33,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_hash.h"
 
 #include "svn_test_fs.h"
 
@@ -74,15 +75,16 @@ make_fs_config(const char *fs_type,
                apr_pool_t *pool)
 {
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
-               APR_HASH_KEY_STRING,
-               fs_type);
+
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, fs_type);
   if (server_minor_version)
     {
-      if (server_minor_version == 6)
-        /* no SVN_FS_CONFIG_PRE_1_7_COMPATIBLE */;
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
+                    apr_psprintf(pool, "1.%d.0", server_minor_version));
+      if (server_minor_version == 6 || server_minor_version == 7)
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
       else if (server_minor_version == 5)
         apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                      APR_HASH_KEY_STRING, "1");
@@ -104,7 +106,6 @@ create_fs(svn_fs_t **fs_p,
           int server_minor_version,
           apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
   apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
@@ -112,18 +113,7 @@ create_fs(svn_fs_t **fs_p,
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
-    {
-      if (finfo.filetype == APR_DIR)
-        SVN_ERR_W(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool),
-                  apr_psprintf(pool,
-                               "cannot create fs '%s' there is already "
-                               "a directory of that name", name));
-      else
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "cannot create fs '%s' there is already "
-                                 "a file of that name", name);
-    }
+  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_fs_create(fs_p, name, fs_config, pool));
   if (! *fs_p)
@@ -143,21 +133,36 @@ create_fs(svn_fs_t **fs_p,
  * copy that file into the filesystem FS and set *MUST_REOPEN to TRUE, else
  * set *MUST_REOPEN to FALSE. */
 static svn_error_t *
-maybe_install_fsfs_conf(svn_fs_t *fs,
-                        const svn_test_opts_t *opts,
-                        svn_boolean_t *must_reopen,
-                        apr_pool_t *pool)
+maybe_install_fs_conf(svn_fs_t *fs,
+                      const svn_test_opts_t *opts,
+                      svn_boolean_t *must_reopen,
+                      apr_pool_t *pool)
 {
   *must_reopen = FALSE;
-  if (strcmp(opts->fs_type, "fsfs") != 0 || ! opts->config_file)
+  if (! opts->config_file)
     return SVN_NO_ERROR;
 
-  *must_reopen = TRUE;
-  return svn_io_copy_file(opts->config_file,
-                          svn_path_join(svn_fs_path(fs, pool),
-                                        "fsfs.conf", pool),
-                          FALSE /* copy_perms */,
-                          pool);
+  if (strcmp(opts->fs_type, "fsfs") == 0)
+    {
+      *must_reopen = TRUE;
+      return svn_io_copy_file(opts->config_file,
+                              svn_path_join(svn_fs_path(fs, pool),
+                                            "fsfs.conf", pool),
+                              FALSE /* copy_perms */,
+                              pool);
+    }
+
+  if (strcmp(opts->fs_type, "fsx") == 0)
+    {
+      *must_reopen = TRUE;
+      return svn_io_copy_file(opts->config_file,
+                              svn_path_join(svn_fs_path(fs, pool),
+                                            "fsx.conf", pool),
+                              FALSE /* copy_perms */,
+                              pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -182,10 +187,10 @@ svn_test__create_fs(svn_fs_t **fs_p,
   SVN_ERR(create_fs(fs_p, name, opts->fs_type,
                     opts->server_minor_version, pool));
 
-  SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
+  SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
+      SVN_ERR(svn_fs_open2(fs_p, name, NULL, pool, pool));
       svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
     }
 
@@ -199,7 +204,6 @@ svn_test__create_repos(svn_repos_t **repos_p,
                        const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
@@ -210,17 +214,7 @@ svn_test__create_repos(svn_repos_t **repos_p,
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  if (apr_stat(&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
-    {
-      if (finfo.filetype == APR_DIR)
-        SVN_ERR_W(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool),
-                  apr_psprintf(pool,
-                               "cannot create repos '%s' there is already "
-                               "a directory of that name", name));
-      else
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "there is already a file named '%s'", name);
-    }
+  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
                            fs_config, pool));
@@ -228,11 +222,11 @@ svn_test__create_repos(svn_repos_t **repos_p,
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup(name);
 
-  SVN_ERR(maybe_install_fsfs_conf(svn_repos_fs(repos), opts, &must_reopen,
-                                  pool));
+  SVN_ERR(maybe_install_fs_conf(svn_repos_fs(repos), opts, &must_reopen,
+                                pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_repos_open2(&repos, name, NULL, pool));
+      SVN_ERR(svn_repos_open3(&repos, name, NULL, pool, pool));
       svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
     }
 
@@ -263,7 +257,7 @@ svn_test__stream_to_string(svn_stringbuf_t **string,
   do
     {
       len = sizeof(buf);
-      SVN_ERR(svn_stream_read(stream, buf, &len));
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
 
       /* Now copy however many bytes were *actually* read into str. */
       svn_stringbuf_appendbytes(str, buf, len);
@@ -354,6 +348,8 @@ get_dir_entries(apr_hash_t *tree_entries,
 }
 
 
+/* Verify that PATH under ROOT is: a directory if contents is NULL;
+   a file with contents CONTENTS otherwise. */
 static svn_error_t *
 validate_tree_entry(svn_fs_root_t *root,
                     const char *path,
@@ -513,6 +509,42 @@ svn_test__validate_tree(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_test__validate_changes(svn_fs_root_t *root,
+                           apr_hash_t *expected,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *actual;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_paths_changed2(&actual, root, pool));
+
+#if 0
+  /* Print ACTUAL and EXPECTED. */
+  {
+    int i;
+    for (i=0, hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+      SVN_DBG(("expected[%d] = '%s'\n", i++, apr_hash_this_key(hi)));
+    for (i=0, hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+      SVN_DBG(("actual[%d] = '%s'\n", i++, apr_hash_this_key(hi)));
+  }
+#endif
+
+  for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+    if (NULL == svn_hash_gets(actual, apr_hash_this_key(hi)))
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Path '%s' missing from actual changed-paths",
+                               (const char *)apr_hash_this_key(hi));
+
+  for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+    if (NULL == svn_hash_gets(expected, apr_hash_this_key(hi)))
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Path '%s' missing from expected changed-paths",
+                               (const char *)apr_hash_this_key(hi));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_test__txn_script_exec(svn_fs_root_t *txn_root,

@@ -25,8 +25,16 @@
 #endif
 
 #include <winresrc.h>
-#include <apr_general.h>
+
+#define SVN_WIN32_RESOURCE_COMPILATION
 #include "../../subversion/include/svn_version.h"
+
+#ifndef APR_STRINGIFY
+/** Properly quote a value as a string in the C preprocessor */
+#define APR_STRINGIFY(n) APR_STRINGIFY_HELPER(n)
+/** Helper macro for APR_STRINGIFY */
+#define APR_STRINGIFY_HELPER(n) #n
+#endif
 
 #ifndef _DEBUG
 # if SVN_VER_REVISION == 0
@@ -66,7 +74,7 @@ BEGIN
       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
       VALUE "FileVersion", SVN_VER_NUMBER "\0"
       VALUE "InternalName", "SVN\0"
-      VALUE "LegalCopyright", "Copyright (c) 2011 The Apache Software Foundation\0"
+      VALUE "LegalCopyright", "Copyright (c) The Apache Software Foundation\0"
       VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
       VALUE "ProductName", "Subversion\0"
       VALUE "ProductVersion", SVN_VERSION "\0"

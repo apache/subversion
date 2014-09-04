@@ -25,10 +25,12 @@ IF ERRORLEVEL 1 EXIT /B 1
 
 PUSHD ..\deps
 
-nant gen-dev -D:wc=..\build -D:impBase=../deps/build/win32 -D:botBuild=true %NANTARGS%
+nant gen-dev -D:wc=..\build -D:impBase=../deps/build/win32 -D:botBuild=true %SVN_NANT_ARGS%
 IF ERRORLEVEL 1 EXIT /B 1
 
 POPD
 
-msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=win32 /t:__ALL_TESTS__
+msbuild subversion_vcnet.sln /m /v:m /p:Configuration=Debug /p:Platform=Win32 /t:__ALL_TESTS__ %SVN_MSBUILD_ARGS%
 IF ERRORLEVEL 1 EXIT /B 1
+
+EXIT /B 0

@@ -92,4 +92,14 @@ public class Property
      * flag property if a lock is needed to modify this node
      */
     public static final String NEEDS_LOCK = "svn:needs-lock";
+
+    /**
+     * server-side inherited configuration for auto-props
+     */
+    public static final String INHERITABLE_AUTO_PROPS = "svn:auto-props";
+
+    /**
+     * server-side inherited configuration for global ignore patterns
+     */
+    public static final String INHERITABLE_IGNORES = "svn:global-ignores";
 }

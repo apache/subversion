@@ -193,7 +193,6 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *txn_name)
 {
   const char *final_path;
-  const char *tmp_path;
   const char *activity_contents;
   svn_error_t *err;
 

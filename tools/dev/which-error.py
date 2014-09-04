@@ -72,7 +72,8 @@ def get_errors():
   ## errno values.
   errs.update(errno.errorcode)
   ## APR-defined errors, from apr_errno.h.
-  for line in open(os.path.join(os.path.dirname(sys.argv[0]), 'aprerr.txt')):
+  dirname = os.path.dirname(os.path.realpath(__file__))
+  for line in open(os.path.join(dirname, 'aprerr.txt')):
     # aprerr.txt parsing duplicated in gen_base.py:write_errno_table()
     if line.startswith('#'):
        continue

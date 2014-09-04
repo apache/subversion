@@ -179,7 +179,9 @@ class SvnClientTest < Test::Unit::TestCase
 
       infos = []
       ctx.set_notify_func do |notify|
-        infos << [notify.path, notify]
+        if notify.action != Svn::Wc::NOTIFY_COMMIT_FINALIZING
+          infos << [notify.path, notify]
+        end
       end
 
       assert_equal([false, false], dirs_path.collect {|path| path.exist?})
@@ -223,7 +225,9 @@ class SvnClientTest < Test::Unit::TestCase
 
       infos = []
       ctx.set_notify_func do |notify|
-        infos << [notify.path, notify]
+        if notify.action != Svn::Wc::NOTIFY_COMMIT_FINALIZING
+          infos << [notify.path, notify]
+        end
       end
 
       assert_equal([false, false], [dir_path.exist?, child_dir_path.exist?])
@@ -1155,7 +1159,8 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.relocate(@wc_path, @repos_uri, @repos_svnserve_uri)
 
       make_context(log) do |ctx|
-        assert_raises(Svn::Error::AuthnNoProvider) do
+        # ### TODO: Verify Svn::Error::AuthnNoProvider in error chain
+        assert_raises(Svn::Error::RaCannotCreateSession) do
           ctx.cat(path)
         end
       end
@@ -1227,10 +1232,12 @@ class SvnClientTest < Test::Unit::TestCase
       end
       ctx.ci(@wc_path)
 
-      assert_equal([full_path2.to_s].sort,
+      assert_equal([full_path2.to_s, '.'].sort,
                    infos.collect{|path, notify| path}.sort)
       path2_notify = infos.assoc(full_path2.to_s)[1]
       assert(path2_notify.commit_added?)
+      finalizing_notify = infos.assoc('.')[1]
+      assert(finalizing_notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING)
       assert_equal(File.open(path1) {|f| f.read},
                    File.open(path2) {|f| f.read})
     end
@@ -1258,12 +1265,16 @@ class SvnClientTest < Test::Unit::TestCase
       end
       ctx.ci(@wc_path)
 
-      assert_equal([path1, path2].sort.collect{|p|File.expand_path(p)},
+      assert_equal([path1, path2].collect do |p|
+                     File.expand_path(p)
+                   end.push('.').sort,
                    infos.collect{|path, notify| path}.sort)
       path1_notify = infos.assoc(File.expand_path(path1))[1]
       assert(path1_notify.commit_deleted?)
       path2_notify = infos.assoc(File.expand_path(path2))[1]
       assert(path2_notify.commit_added?)
+      finalizing_notify = infos.assoc('.')[1]
+      assert(finalizing_notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING)
       assert_equal(src, File.open(path2) {|f| f.read})
     end
   end
@@ -1302,7 +1313,9 @@ class SvnClientTest < Test::Unit::TestCase
       paths = notifies.collect do |notify|
         notify.path
       end
-      assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)},
+      assert_equal([path1, path2, path2].collect do |p|
+                     File.expand_path(p)
+                   end.push('.').sort,
                    paths.sort)
 
       deleted_paths = notifies.find_all do |notify|
@@ -1328,6 +1341,13 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                    postfix_txdelta_paths.sort)
+
+      finalizing_paths = notifies.find_all do |notify|
+        notify.action == Svn::Wc::NOTIFY_COMMIT_FINALIZING
+      end.collect do |notify|
+        notify.path
+      end
+      assert_equal(['.'], finalizing_paths)
 
       assert_equal(src2, File.open(path2) {|f| f.read})
     end
@@ -2022,7 +2042,8 @@ class SvnClientTest < Test::Unit::TestCase
     end
 
     Svn::Client::Context.new do |ctx|
-      assert_raises(Svn::Error::AuthnNoProvider) do
+      # ### TODO: Verify Svn::Error::AuthnNoProvider in error chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.cat(svnserve_uri)
       end
 
@@ -2031,7 +2052,8 @@ class SvnClientTest < Test::Unit::TestCase
         cred.password = @password
         cred.may_save = false
       end
-      assert_raises(Svn::Error::RaNotAuthorized) do
+      # ### TODO: Verify Svn::Error::RaNotAuthorized in error chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.cat(svnserve_uri)
       end
 
@@ -2040,7 +2062,8 @@ class SvnClientTest < Test::Unit::TestCase
         cred.password = "wrong-#{@password}"
         cred.may_save = false
       end
-      assert_raises(Svn::Error::RaNotAuthorized) do
+      # ### TODO: Verify Svn::Error::RaNotAuthorized in error chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.cat(svnserve_uri)
       end
 
@@ -2071,7 +2094,8 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.send(method)
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    # ### Verify Svn::Error::RaNotAuthorized in chain
+    assert_raises(Svn::Error::RaCannotCreateSession) do
       ctx.cat(svnserve_uri)
     end
 
@@ -2262,7 +2286,6 @@ class SvnClientTest < Test::Unit::TestCase
         end
       end
       config = Svn::Core::Config.config(@config_path)
-      assert_nil(ctx.config)
       assert_equal(options, config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
       ctx.config = config
       assert_equal(options,
@@ -2494,7 +2517,7 @@ class SvnClientTest < Test::Unit::TestCase
       assert_not_nil(info)
       assert_equal(3, info.revision)
 
-      assert_equal("<<<<<<< .mine\nafter\n=======\nbefore\n>>>>>>> .r2\n",
+      assert_equal("<<<<<<< .mine\nafter\n||||||| .r1\n=======\nbefore\n>>>>>>> .r2\n",
                    File.read(path))
     end
   end

@@ -71,7 +71,7 @@ struct base_origin_t
 };
 
 /* Data for testing node_get_base and node_get_origin. */
-struct base_origin_t base_origin_subtests[] =
+static struct base_origin_t base_origin_subtests[] =
   {
     /* file copied onto nothing */
     { "A/C/copy1",  -1, "iota",   {"iota", 1} },
@@ -181,6 +181,7 @@ test_node_get_origin(const svn_test_opts_t *opts, apr_pool_t *pool)
 
         SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
                                         &repos_root_url, &repos_uuid, NULL,
+                                        NULL,
                                         b->wc_ctx, local_abspath, FALSE,
                                         b->pool, b->pool));
         SVN_TEST_ASSERT(revision == subtest->origin.rev);
@@ -308,7 +309,9 @@ test_externals_parse_erratic(apr_pool_t *pool)
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 2;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_node_get_base,
@@ -321,3 +324,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "parse erratic externals definition"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

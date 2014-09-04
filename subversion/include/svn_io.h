@@ -691,6 +691,27 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
+/** Create file at utf8-encoded @a file with binary contents @a contents
+ * of @a length bytes.  @a file must not already exist.
+ * Use @a pool for memory allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_file_create_binary(const char *file,
+                          const char *contents,
+                          apr_size_t length,
+                          apr_pool_t *pool);
+
+/** Create empty file at utf8-encoded @a file, which must not already exist.
+ * Use @a pool for memory allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_file_create_empty(const char *file,
+                         apr_pool_t *pool);
+
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
@@ -759,6 +780,12 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  * memory allocations.
  *
+ * @note This function uses advanced file control operations to flush buffers
+ * to disk that aren't always accessible and can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please avoid using
+ * this function in cases where the file should just work on any network
+ * filesystem. In many cases a normal svn_io_file_flush() will work just fine.
+ *
  * @since New in 1.1.
  */
 svn_error_t *
@@ -804,14 +831,16 @@ svn_io_dir_file_copy(const char *src_path,
  * On entry to the handler, the pointed-to value should be the amount
  * of data which can be read or the amount of data to write.  When the
  * handler returns, the value is reset to the amount of data actually
- * read or written.  Handlers are obliged to complete a read or write
- * to the maximum extent possible; thus, a short read with no
- * associated error implies the end of the input stream, and a short
- * write should never occur without an associated error.
+ * read or written.  The write and full read handler are obliged to
+ * complete a read or write to the maximum extent possible; thus, a
+ * short read with no associated error implies the end of the input
+ * stream, and a short write should never occur without an associated
+ * error. In Subversion 1.9 the stream api was extended to also support
+ * limited reads via the new svn_stream_read2() api.
  *
- * In Subversion 1.7 reset support was added as an optional feature of
- * streams. If a stream implements resetting it allows reading the data
- * again after a successful call to svn_stream_reset().
+ * In Subversion 1.7 mark, seek and reset support was added as an optional
+ * feature of streams. If a stream implements resetting it allows reading
+ * the data again after a successful call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -861,7 +890,15 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
-                                         const svn_stream_mark_t *mark);
+                                             const svn_stream_mark_t *mark);
+
+/** Poll handler for generic streams that support incomplete reads, @see
+ * svn_stream_t and svn_stream_data_available().
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
+                                              svn_boolean_t *data_available);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -873,7 +910,24 @@ void
 svn_stream_set_baton(svn_stream_t *stream,
                      void *baton);
 
-/** Set @a stream's read function to @a read_fn */
+/** Set @a stream's read functions to @a read_fn and @a read_full_fn. If
+ * @a read_full_fn is NULL a default implementation based on multiple calls
+ * to @a read_fn will be used.
+ *
+ * @since New in 1.9.
+ */
+void
+svn_stream_set_read2(svn_stream_t *stream,
+                     svn_read_fn_t read_fn,
+                     svn_read_fn_t read_full_fn);
+
+/** Set @a stream's read function to @a read_fn.
+ *
+ * This function sets only the full read function to read_fn.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn);
@@ -911,6 +965,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
+
+/** Set @a stream's data available function to @a data_available_fn
+ *
+ * @since New in 1.9.
+ */
+void
+svn_stream_set_data_available(svn_stream_t *stream,
+                              svn_stream_data_available_fn_t data_available);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1049,6 +1111,20 @@ svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
+/** Set @a *str to a string buffer allocated in @a pool that contains all
+ * data from the current position in @a stream to its end.  @a len_hint
+ * specifies the initial capacity of the string buffer and may be 0.  The
+ * buffer gets automatically resized to fit the actual amount of data being
+ * read from @a stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stringbuf_from_stream(svn_stringbuf_t **str,
+                          svn_stream_t *stream,
+                          apr_size_t len_hint,
+                          apr_pool_t *pool);
+
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
  */
@@ -1131,7 +1207,48 @@ svn_stream_checksummed(svn_stream_t *stream,
                        svn_boolean_t read_all,
                        apr_pool_t *pool);
 
-/** Read from a generic stream. @see svn_stream_t. */
+/** Read from a generic stream until @a buffer is filled upto @a *len or
+ * until EOF is reached. @see svn_stream_t
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_read_full(svn_stream_t *stream,
+                     char *buffer,
+                     apr_size_t *len);
+
+
+/** Returns @c TRUE if the generic @c stream supports svn_stream_read2().
+ *
+ * @since New in 1.9.
+ */
+svn_boolean_t
+svn_stream_supports_partial_read(svn_stream_t *stream);
+
+/** Read all currently available upto @a *len into @a buffer. Use
+ * svn_stream_read_full() if you want to wait for the buffer to be filled
+ * or EOF. If the stream doesn't support limited reads this function will
+ * return an #SVN_ERR_STREAM_NOT_SUPPORTED error.
+ *
+ * A 0 byte read signals the end of the stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_read2(svn_stream_t *stream,
+                 char *buffer,
+                 apr_size_t *len);
+
+
+/** Read from a generic stream until the buffer is completely filled or EOF.
+ * @see svn_stream_t.
+ *
+ * @note This function is a wrapper of svn_stream_read_full() now, which name
+ * better documents the behavior of this function.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_read(svn_stream_t *stream,
                 char *buffer,
@@ -1206,6 +1323,20 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** When a stream supports polling for available data, obtain a boolean
+ * indicating whether data is waiting to be read. If the stream doesn't
+ * support polling this function returns a #SVN_ERR_STREAM_NOT_SUPPORTED
+ * error.
+ *
+ * If the data_available callback is implemented and the stream is at the end
+ * the stream will set @a *data_available to FALSE.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_data_available(svn_stream_t *stream,
+                          svn_boolean_t *data_available);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
@@ -2065,6 +2196,28 @@ svn_io_file_seek(apr_file_t *file,
                  apr_off_t *offset,
                  apr_pool_t *pool);
 
+/** Set the file pointer of the #APR_BUFFERED @a file to @a offset.  In
+ * contrast to #svn_io_file_seek, this function will attempt to resize the
+ * internal data buffer to @a block_size bytes and to read data aligned to
+ * multiples of that value.  The beginning of the block will be returned
+ * in @a buffer_start, if that is not NULL.
+ * Uses @a pool for temporary allocations.
+ *
+ * @note Due to limitations of the APR API, in particular pre-1.3 APR,
+ * the alignment may not be successful.  If you never use any other seek
+ * function on @a file, you are, however, virtually guaranteed to get at
+ * least 4kByte alignments for all reads.
+ *
+ * @note Calling this for non-buffered files is legal but inefficient.
+ *
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_aligned_seek(apr_file_t *file,
+                         apr_off_t block_size,
+                         apr_off_t *buffer_start,
+                         apr_off_t offset,
+                         apr_pool_t *pool);
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *
@@ -2098,6 +2251,11 @@ svn_io_file_write_full(apr_file_t *file,
  *
  * If @a copy_perms_path is not NULL, copy the permissions applied on @a
  * @a copy_perms_path on the temporary file before renaming.
+ *
+ * @note This function uses advanced file control operations to flush buffers
+ * to disk that aren't always accessible and can be very expensive. Avoid
+ * using this function in cases where the file should just work on any
+ * network filesystem.
  *
  * @since New in 1.9.
  */

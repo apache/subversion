@@ -109,12 +109,9 @@ open_tempfile(const char *name_template, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *fp = NULL;
-  char *templ;
-
-  if (!name_template)
-    templ = apr_pstrdup(pool, "tempfile_XXXXXX");
-  else
-    templ = apr_pstrdup(pool, name_template);
+  char *templ = (char *)apr_pstrdup(
+      pool, svn_test_data_path(
+          name_template ? name_template : "tempfile_XXXXXX", pool));
 
   apr_err = apr_file_mktemp(&fp, templ, 0, pool);
   assert(apr_err == 0);
@@ -283,9 +280,10 @@ copy_tempfile(apr_file_t *fp, apr_pool_t *pool)
 
 
 
-/* Implements svn_test_driver_t. */
+/* (Note: *LAST_SEED is an output parameter.) */
 static svn_error_t *
-random_test(apr_pool_t *pool)
+do_random_test(apr_pool_t *pool,
+               apr_uint32_t *last_seed)
 {
   apr_uint32_t seed, maxlen;
   apr_size_t bytes_range;
@@ -300,7 +298,7 @@ random_test(apr_pool_t *pool)
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      apr_uint32_t subseed_base = svn_test_rand(&seed);
+      apr_uint32_t subseed_base = svn_test_rand((*last_seed = seed, &seed));
       apr_file_t *source = generate_random_file(maxlen, subseed_base, &seed,
                                                 random_bytes, bytes_range,
                                                 dump_files, pool);
@@ -358,6 +356,17 @@ random_test(apr_pool_t *pool)
     }
 
   return SVN_NO_ERROR;
+}
+
+/* Implements svn_test_driver_t. */
+static svn_error_t *
+random_test(apr_pool_t *pool)
+{
+  apr_uint32_t seed;
+  svn_error_t *err = do_random_test(pool, &seed);
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
+  return err;
 }
 
 
@@ -515,7 +524,9 @@ random_combine_test(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(random_test,
@@ -528,3 +539,5 @@ struct svn_test_descriptor_t test_funcs[] =
 #endif
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

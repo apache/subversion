@@ -29,16 +29,19 @@
 #   | the bot's health after making changes to this file.          |
 #   |______________________________________________________________|
 
-ENABLE_PERL_BINDINGS ?= yes
+PERL ?= yes
+ENABLE_PERL_BINDINGS = $(PERL)
 THREADING ?= yes
 ifeq ($(THREADING),yes)
-ENABLE_JAVA_BINDINGS ?= yes
+JAVA ?= yes
 else
-ENABLE_JAVA_BINDINGS ?= no
+JAVA ?= no
 endif
+ENABLE_JAVA_BINDINGS = $(JAVA)
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
+EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
@@ -65,21 +68,22 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.4.6
+APR_VER		= 1.5.1
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
-APR_UTIL_VER	= 1.4.1
-HTTPD_VER	= 2.2.22
-NEON_VER	= 0.29.6
-SERF_VER	= 1.2.0
+APR_UTIL_VER	= 1.5.3
+HTTPD_VER	= 2.2.27
+NEON_VER	= 0.30.0
+SERF_VER	= 1.3.7
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3071600
-LIBMAGIC_VER	= 5.11
+SQLITE_VER	= 3080500
+LIBMAGIC_VER	= 5.19
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.3
+PYTHON_VER	= 2.7.8
 JUNIT_VER	= 4.10
+GETTEXT_VER	= 0.18.3.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -93,6 +97,34 @@ RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
+GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
+
+SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
+SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
+SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
+SHA256_${HTTPD_DIST} = 205973ded6ca55c056ce9c84d73ab708f7829f330193bd39b651463b8d4f8147
+SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d1650787990c2
+SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
+SHA256_${SQLITE_DIST} = 98c33abe4106e508e73fda648b2657ac9e969fe24695f543dcde68cc71f3091b
+SHA256_${LIBMAGIC_DIST} = 9484b3bbda1acc7b13a4f71031a85ce10c77bd0ffec7226741a219ef587e3a7c
+SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
+SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
+SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
+SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
+SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065eeb07245d
+
+define do_check_sha256
+if [ -x /bin/sha256 ]; then \
+	(cd $(DISTDIR) && \
+		echo "SHA256 (${1}) = ${SHA256_${1}}" | /bin/sha256 -C /dev/stdin "${1}"); \
+elif [ -x /usr/bin/sha256sum ]; then \
+	(cd $(DISTDIR) && \
+		echo "${SHA256_${1}} ${1}" | /usr/bin/sha256sum --quiet --check); \
+else \
+	echo "Error: No tool found to verify checksum"; \
+	false; \
+fi
+endef
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -105,28 +137,30 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
 		$(DISTDIR)/$(PYTHON_DIST) \
-		$(DISTDIR)/$(JUNIT_DIST)
+		$(DISTDIR)/$(JUNIT_DIST) \
+		$(DISTDIR)/$(GETTEXT_DIST)
 
 FETCH_CMD	= wget -c
 
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
-BDB_URL		= http://ftp2.de.freebsd.org/pub/FreeBSD/distfiles/bdb/$(BDB_DIST)
-APR_URL		= http://svn.apache.org/repos/asf/apr/apr
-APR_ICONV_URL	= http://www.apache.org/dist/apr/$(APR_ICONV_DIST)
-GNU_ICONV_URL	= http://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
-APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
-HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
+BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
+APR_URL		= https://svn.apache.org/repos/asf/apr/apr
+APR_ICONV_URL	= https://www.apache.org/dist/apr/$(APR_ICONV_DIST)
+GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
+APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
+HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
-SERF_URL	= http://serf.googlecode.com/svn/tags/$(SERF_VER)
-SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
-SQLITE_URL	= http://www.sqlite.org/2013/$(SQLITE_DIST)
+SERF_URL	= https://serf.googlecode.com/svn/tags/$(SERF_VER)
+SERF_OLD_URL	= https://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
+SQLITE_URL	= https://www.sqlite.org/2014/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
-PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
+GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -144,6 +178,7 @@ LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
+GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -161,6 +196,7 @@ LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
+GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -173,30 +209,30 @@ PROFILE_CFLAGS=-pg
 endif
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
 
 #######################################################################
 # Main targets.
 #######################################################################
 
-.PHONY: all reset clean nuke
+.PHONY: all reset clean nuke fetch
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	ruby-install bz2-install python-install \
+	ruby-install bz2-install python-install gettext-install \
 	svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
 	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-reset svn-reset
+	bz2-reset gettext-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean bz2-clean python-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -221,6 +257,8 @@ nuke:
 			*)      echo "You said $$ANSWER."; \
 				;; \
 		esac
+
+fetch: $(DISTFILES)
 
 #######################################################################
 # directories
@@ -248,7 +286,7 @@ bdb-reset:
 		rm -f $(BDB_OBJDIR)/$(f);)
 
 bdb-clean:
-	-(cd $(BDB_SRCDIR)/build_unix/ && make clean)
+	-(cd $(BDB_SRCDIR)/build_unix/ && env MAKEFLAGS= make clean)
 
 # fetch distfile for bdb
 $(DISTDIR)/$(BDB_DIST):
@@ -256,6 +294,7 @@ $(DISTDIR)/$(BDB_DIST):
 
 # retrieve bdb
 $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
+	$(call do_check_sha256,$(BDB_DIST))
 	[ -d $(BDB_OBJDIR) ] || mkdir -p $(BDB_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BDB_DIST)
 	touch $@
@@ -271,12 +310,12 @@ $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 
 # compile bdb
 $(BDB_OBJDIR)/.compiled: $(BDB_OBJDIR)/.configured
-	(cd $(BDB_SRCDIR)/build_unix && make)
+	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make)
 	touch $@
 
 # install bdb
 $(BDB_OBJDIR)/.installed: $(BDB_OBJDIR)/.compiled
-	(cd $(BDB_SRCDIR)/build_unix && make install)
+	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -292,7 +331,7 @@ apr-reset:
 		rm -f $(APR_OBJDIR)/$(f);)
 
 apr-clean:
-	-(cd $(APR_OBJDIR) && make clean)
+	-(cd $(APR_OBJDIR) && env MAKEFLAGS= make clean)
 
 # retrieve apr if not present yet
 $(APR_OBJDIR)/.retrieved:
@@ -310,10 +349,14 @@ endif
 
 ifdef POOL_DEBUG
 POOL_DEBUG_FLAG=--enable-pool-debug=all
+else
+# Map apr_palloc()/apr_pool_{clear,destroy}() to malloc()/free().
+# This also puts poison bytes into freed memory to help detect use after free.
+POOL_DEBUG_FLAG=--enable-pool-debug=yes
 endif
 
 # configure apr
-$(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
+$(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
@@ -326,12 +369,12 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 
 # compile apr
 $(APR_OBJDIR)/.compiled: $(APR_OBJDIR)/.configured
-	(cd $(APR_OBJDIR) && make)
+	(cd $(APR_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install apr
 $(APR_OBJDIR)/.installed: $(APR_OBJDIR)/.compiled
-	(cd $(APR_OBJDIR) && make install)
+	(cd $(APR_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -347,7 +390,7 @@ apr-iconv-reset:
 		rm -f $(APR_ICONV_OBJDIR)/$(f);)
 
 apr-iconv-clean:
-	-(cd $(APR_ICONV_OBJDIR) && make clean)
+	-(cd $(APR_ICONV_OBJDIR) && env MAKEFLAGS= make clean)
 
 # fetch distfile for apr-iconv
 $(DISTDIR)/$(APR_ICONV_DIST):
@@ -355,14 +398,17 @@ $(DISTDIR)/$(APR_ICONV_DIST):
 
 # retrieve apr-iconv
 $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
+	$(call do_check_sha256,$(APR_ICONV_DIST))
 	[ -d $(APR_ICONV_OBJDIR) ] || mkdir -p $(APR_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(APR_ICONV_DIST)
 	touch $@
 
 # configure apr-iconv
-$(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved
+$(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
+	$(APR_OBJDIR)/.installed
 	cd $(APR_ICONV_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		GREP="`which grep`" \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -371,12 +417,12 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved
 # compile apr-iconv
 $(APR_ICONV_OBJDIR)/.compiled: $(APR_ICONV_OBJDIR)/.configured
 	(cd $(APR_ICONV_OBJDIR) \
-		&& make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)")
+		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)")
 	touch $@
 
 # install apr-iconv
 $(APR_ICONV_OBJDIR)/.installed: $(APR_ICONV_OBJDIR)/.compiled
-	(cd $(APR_ICONV_OBJDIR) && make install)
+	(cd $(APR_ICONV_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -392,7 +438,7 @@ gnu-iconv-reset:
 		rm -f $(GNU_ICONV_OBJDIR)/$(f);)
 
 gnu-iconv-clean:
-	-(cd $(GNU_ICONV_OBJDIR) && make clean)
+	-(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make clean)
 	rm -f $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff
 	rm -f $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 
@@ -433,6 +479,7 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
 		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
+	$(call do_check_sha256,$(GNU_ICONV_DIST))
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
@@ -452,12 +499,12 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 
 # compile gnu-iconv
 $(GNU_ICONV_OBJDIR)/.compiled: $(GNU_ICONV_OBJDIR)/.configured
-	(cd $(GNU_ICONV_OBJDIR) && make)
+	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install gnu-iconv
 $(GNU_ICONV_OBJDIR)/.installed: $(GNU_ICONV_OBJDIR)/.compiled
-	(cd $(GNU_ICONV_OBJDIR) && make install)
+	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -489,7 +536,7 @@ apr-util-reset:
 		rm -f $(APR_UTIL_OBJDIR)/$(f);)
 
 apr-util-clean:
-	-(cd $(APR_UTIL_OBJDIR) && make clean)
+	-(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make clean)
 
 
 # retrieve apr-util if not present yet
@@ -503,16 +550,19 @@ $(APR_UTIL_OBJDIR)/.retrieved:
 
 ifeq ($(USE_APR_ICONV),yes)
 ICONV_FLAG=--with-iconv=$(PREFIX)/apr
+ICONV_OBJDIR=$(APR_ICONV_OBJDIR)
 else
 ICONV_FLAG=--with-iconv=$(PREFIX)/iconv
+ICONV_OBJDIR=$(GNU_ICONV_OBJDIR)
 endif
 
 # configure apr-util
-$(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
+$(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
+	$(APR_OBJDIR)/.installed $(ICONV_OBJDIR)/.installed
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
@@ -524,12 +574,12 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 
 # compile apr-util
 $(APR_UTIL_OBJDIR)/.compiled: $(APR_UTIL_OBJDIR)/.configured
-	(cd $(APR_UTIL_OBJDIR) && make)
+	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install apr-util
 $(APR_UTIL_OBJDIR)/.installed: $(APR_UTIL_OBJDIR)/.compiled
-	(cd $(APR_UTIL_OBJDIR) && make install)
+	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -546,22 +596,56 @@ httpd-reset:
 		rm -f $(HTTPD_OBJDIR)/$(f);)
 
 httpd-clean:
-	-(cd $(HTTPD_OBJDIR) && make clean)
+	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
+$(HTTPD_OBJDIR)/chil-engine.diff:
+	mkdir -p $(dir $@)
+	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Mon Apr 14 13:20:57 2014'
+	echo >>$@.tmp '+++ modules/ssl/ssl_engine_init.c	Mon Apr 14 13:21:22 2014'
+	echo >>$@.tmp '@@ -406,9 +406,11 @@ void ssl_init_Engine(server_rec *s, apr_pool_t *p)'
+	echo >>$@.tmp '             ssl_die();'
+	echo >>$@.tmp '         }'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '+#ifdef ENGINE_CTRL_CHIL_SET_FORKCHECK'
+	echo >>$@.tmp '         if (strEQ(mc->szCryptoDevice, "chil")) {'
+	echo >>$@.tmp '             ENGINE_ctrl(e, ENGINE_CTRL_CHIL_SET_FORKCHECK, 1, 0, 0);'
+	echo >>$@.tmp '         }'
+	echo >>$@.tmp '+#endif'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '         if (!ENGINE_set_default(e, ENGINE_METHOD_ALL)) {'
+	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
+	mv -f $@.tmp $@
+
+
 # retrieve httpd
-$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
+$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
+	$(HTTPD_OBJDIR)/chil-engine.diff
+	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
+	sed '/^#define HAVE_SSL_RAND_EGD/d' \
+		< $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig
+	sed 's/^\(#if (OPENSSL_VERSION_NUMBER >= 0x00908000)\)$$/\1 \&\& !defined(OPENSSL_NO_COMP)/' \
+		< $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c
 	touch $@
 
 # configure httpd
-$(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved
+$(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
+	$(APR_UTIL_OBJDIR)/.installed
 	cd $(HTTPD_OBJDIR) \
-		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		GREP="`which grep`" \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -574,12 +658,12 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved
 
 # compile httpd
 $(HTTPD_OBJDIR)/.compiled: $(HTTPD_OBJDIR)/.configured
-	(cd $(HTTPD_OBJDIR) && make)
+	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install httpd
 $(HTTPD_OBJDIR)/.installed: $(HTTPD_OBJDIR)/.compiled
-	(cd $(HTTPD_OBJDIR) && make install)
+	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 # create a httpd.conf for mod_dav_svn
@@ -617,26 +701,17 @@ neon-reset:
 		rm -f $(NEON_OBJDIR)/$(f);)
 
 neon-clean:
-	-(cd $(NEON_OBJDIR) && make clean)
+	-(cd $(NEON_OBJDIR) && env MAKEFLAGS= make clean)
 
 # fetch distfile for neon
 $(DISTDIR)/$(NEON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
-NEON_SVN_URL=http://svn.webdav.org/repos/projects/neon/trunk
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
+	$(call do_check_sha256,$(NEON_DIST))
 	[ -d $(NEON_OBJDIR) ] || mkdir -p $(NEON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
-	# fix build with OpenSSL lacking SSLv2 support:
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1872 \
-		$(NEON_SVN_URL)/src/ne_openssl.c | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_ssl.h | patch -p0
-	cd $(NEON_SRCDIR)/src && svn diff -c 1865 \
-		$(NEON_SVN_URL)/src/ne_session.c | patch -p0
 	touch $@
 
 # OpenBSD does not have krb5-config in PATH, but the neon port has
@@ -664,12 +739,12 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 
 # compile neon
 $(NEON_OBJDIR)/.compiled: $(NEON_OBJDIR)/.configured
-	(cd $(NEON_OBJDIR) && make)
+	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install neon
 $(NEON_OBJDIR)/.installed: $(NEON_OBJDIR)/.compiled
-	(cd $(NEON_OBJDIR) && make install)
+	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 
@@ -686,7 +761,7 @@ serf-reset:
 		rm -f $(SERF_OBJDIR)/$(f);)
 
 serf-clean:
-	-(cd $(SERF_SRCDIR) && ./serfmake clean)
+	-(cd $(SERF_SRCDIR) && scons -c)
 
 
 # fetch distfile for serf
@@ -710,21 +785,24 @@ $(SERF_OBJDIR)/.retrieved:
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
-$(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
+$(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
+	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
-		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
-			./serfmake --with-apr=$(PREFIX)/apr \
-			--prefix=$(PREFIX)/serf \
-			build
+		scons DEBUG=1 \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			APR=$(PREFIX)/apr \
+			APU=$(PREFIX)/apr \
+			PREFIX=$(PREFIX)/serf
 	touch $@
 
 # install serf
 $(SERF_OBJDIR)/.installed: $(SERF_OBJDIR)/.compiled
+	rm -rf $(PREFIX)/serf # XXX scons cannot reinstall :(
 	cd $(SERF_SRCDIR) && \
-		./serfmake --with-apr=$(PREFIX)/apr \
-			--with-apr-util=$(PREFIX)/apr \
-			--prefix=$(PREFIX)/serf \
-			install
+		scons install
+	# work around unportable scons shared lib support
+	-ln -s libserf-1.so.$(shell echo $(SERF_VER) | sed -e 's/[0-9]$$/0/') \
+		$(PREFIX)/serf/lib/libserf-1.so
 	touch $@
 
 #######################################################################
@@ -751,9 +829,10 @@ $(SERF_OLD_OBJDIR)/.retrieved:
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
-$(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved
+$(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved \
+	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_OLD_SRCDIR) && \
-		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+		env CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf-old \
 			build
@@ -782,7 +861,7 @@ sqlite-reset:
 		rm -f $(SQLITE_OBJDIR)/$(f);)
 
 sqlite-clean:
-	-cd $(SQLITE_OBJDIR) && make clean
+	-cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make clean
 
 # fetch distfile for sqlite
 $(DISTDIR)/$(SQLITE_DIST):
@@ -790,6 +869,7 @@ $(DISTDIR)/$(SQLITE_DIST):
 
 # retrieve sqlite
 $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
+	$(call do_check_sha256,$(SQLITE_DIST))
 	[ -d $(SQLITE_OBJDIR) ] || mkdir -p $(SQLITE_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
@@ -811,12 +891,12 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 
 # compile sqlite
 $(SQLITE_OBJDIR)/.compiled: $(SQLITE_OBJDIR)/.configured
-	(cd $(SQLITE_OBJDIR) && make)
+	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install sqlite
 $(SQLITE_OBJDIR)/.installed: $(SQLITE_OBJDIR)/.compiled
-	(cd $(SQLITE_OBJDIR) && make install)
+	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -832,7 +912,7 @@ cyrus-sasl-reset:
 		rm -f $(CYRUS_SASL_OBJDIR)/$(f);)
 
 cyrus-sasl-clean:
-	-(cd $(CYRUS_SASL_OBJDIR) && make distclean)
+	-(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make distclean)
 
 # fetch distfile for cyrus-sasl
 $(DISTDIR)/$(CYRUS_SASL_DIST):
@@ -840,6 +920,7 @@ $(DISTDIR)/$(CYRUS_SASL_DIST):
 
 # retrieve cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+	$(call do_check_sha256,$(CYRUS_SASL_DIST))
 	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
 	# fixes build on Debian:
@@ -867,7 +948,8 @@ endif
 	touch $@
 
 # configure cyrus-sasl
-$(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
+$(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
+	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed
 	cd $(CYRUS_SASL_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
@@ -885,12 +967,12 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
 
 # compile cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
-	(cd $(CYRUS_SASL_OBJDIR) && make)
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
-	(cd $(CYRUS_SASL_OBJDIR) && make install)
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -906,7 +988,7 @@ libmagic-reset:
 		rm -f $(LIBMAGIC_OBJDIR)/$(f);)
 
 libmagic-clean:
-	-(cd $(LIBMAGIC_OBJDIR) && make distclean)
+	-(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make distclean)
 
 # fetch distfile for libmagic
 $(DISTDIR)/$(LIBMAGIC_DIST):
@@ -914,6 +996,7 @@ $(DISTDIR)/$(LIBMAGIC_DIST):
 
 # retrieve libmagic
 $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
+	$(call do_check_sha256,$(LIBMAGIC_DIST))
 	[ -d $(LIBMAGIC_OBJDIR) ] || mkdir -p $(LIBMAGIC_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LIBMAGIC_DIST)
 	touch $@
@@ -929,12 +1012,12 @@ $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 
 # compile libmagic
 $(LIBMAGIC_OBJDIR)/.compiled: $(LIBMAGIC_OBJDIR)/.configured
-	(cd $(LIBMAGIC_OBJDIR) && make)
+	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install libmagic
 $(LIBMAGIC_OBJDIR)/.installed: $(LIBMAGIC_OBJDIR)/.compiled
-	(cd $(LIBMAGIC_OBJDIR) && make install)
+	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -950,7 +1033,7 @@ ruby-reset:
 		rm -f $(RUBY_OBJDIR)/$(f);)
 
 ruby-clean:
-	-(cd $(RUBY_OBJDIR) && make distclean)
+	-(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make distclean)
 
 # fetch distfile for ruby
 $(DISTDIR)/$(RUBY_DIST):
@@ -959,6 +1042,7 @@ $(DISTDIR)/$(RUBY_DIST):
 # retrieve ruby
 #
 $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	touch $@
@@ -981,12 +1065,12 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 
 # compile ruby
 $(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
-	(cd $(RUBY_OBJDIR) && make)
+	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install ruby
 $(RUBY_OBJDIR)/.installed: $(RUBY_OBJDIR)/.compiled
-	(cd $(RUBY_OBJDIR) && make install)
+	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 #######################################################################
@@ -1001,7 +1085,7 @@ bz2-reset:
 		rm -f $(BZ2_OBJDIR)/$(f);)
 
 bz2-clean:
-	-(cd $(BZ2_SRCDIR) && make distclean)
+	-(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make distclean)
 
 # fetch distfile for bz2
 $(DISTDIR)/$(BZ2_DIST):
@@ -1009,18 +1093,19 @@ $(DISTDIR)/$(BZ2_DIST):
 
 # retrieve bz2
 $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
+	$(call do_check_sha256,$(BZ2_DIST))
 	[ -d $(BZ2_OBJDIR) ] || mkdir -p $(BZ2_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(BZ2_DIST)
 	touch $@
 
 # compile bz2
 $(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
-	(cd $(BZ2_SRCDIR) && make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC")
+	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC")
 	touch $@
 
 # install bz2
 $(BZ2_OBJDIR)/.installed: $(BZ2_OBJDIR)/.compiled
-	(cd $(BZ2_SRCDIR) && make install PREFIX=$(PREFIX)/bz2)
+	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make install PREFIX=$(PREFIX)/bz2)
 	touch $@
 
 
@@ -1037,7 +1122,7 @@ python-reset:
 		rm -f $(PYTHON_OBJDIR)/$(f);)
 
 python-clean:
-	-(cd $(PYTHON_OBJDIR) && make distclean)
+	-(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make distclean)
 
 # fetch distfile for python
 $(DISTDIR)/$(PYTHON_DIST):
@@ -1046,13 +1131,14 @@ $(DISTDIR)/$(PYTHON_DIST):
 # retrieve python
 #
 $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
 	# Make setup.py use our own dependencies instead of system ones
 	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
 		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
-		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|#\1|" \
-		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|#\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|pass #\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|pass #\1|" \
 		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
 		< $(PYTHON_SRCDIR)/setup.py \
 		> $(PYTHON_SRCDIR)/setup.py.patched
@@ -1074,7 +1160,8 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 ifdef PROFILE
 PYTHON_PROFILING=--enable-profiling
 endif
-$(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved
+$(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
+	$(BZ2_OBJDIR)/.installed
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
@@ -1089,12 +1176,12 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved
 
 # compile python
 $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
-	(cd $(PYTHON_OBJDIR) && make)
+	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install python
 $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
-	(cd $(PYTHON_OBJDIR) && make install)
+	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make install)
 	touch $@
 
 
@@ -1105,6 +1192,65 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 # fetch distfile for junit
 $(DISTDIR)/$(JUNIT_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(JUNIT_URL)
+	$(call do_check_sha256,$(JUNIT_DIST))
+
+
+#######################################################################
+# gettext
+#######################################################################
+
+gettext-retrieve:	$(GETTEXT_OBJDIR)/.retrieved
+gettext-configure:	$(GETTEXT_OBJDIR)/.configured
+gettext-compile:	$(GETTEXT_OBJDIR)/.compiled
+gettext-install:	$(GETTEXT_OBJDIR)/.installed
+gettext-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(GETTEXT_OBJDIR)/$(f);)
+
+gettext-clean:
+	-(cd $(GETTEXT_OBJDIR) && env MAKEFLAGS= make clean)
+
+# fetch distfile for gettext
+$(DISTDIR)/$(GETTEXT_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(GETTEXT_URL)
+
+# retrieve gettext
+$(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
+	$(call do_check_sha256,$(GETTEXT_DIST))
+	[ -d $(GETTEXT_OBJDIR) ] || mkdir -p $(GETTEXT_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GETTEXT_DIST)
+	touch $@
+
+# (gettext won't compile outside its source tree)
+# configure gettext
+$(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
+	cd $(GETTEXT_SRCDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		LDFLAGS="-L$(PREFIX)/iconv/lib" \
+		$(GETTEXT_SRCDIR)/configure \
+		--prefix=$(PREFIX)/gettext \
+		--with-libiconv-prefix=$(PREFIX)/iconv \
+		--disable-c++ \
+		--disable-java \
+		--disable-csharp \
+		$(THREADS_FLAG)
+	-which gsed && \
+		sed -e 's/sed /gsed /g' < $(GETTEXT_SRCDIR)/build-aux/moopp \
+		> $(GETTEXT_SRCDIR)/build-aux/moopp.fixed && \
+		mv $(GETTEXT_SRCDIR)/build-aux/moopp.fixed \
+		$(GETTEXT_SRCDIR)/build-aux/moopp && \
+		chmod +x $(GETTEXT_SRCDIR)/build-aux/moopp
+	touch $@
+
+# compile gettext
+$(GETTEXT_OBJDIR)/.compiled: $(GETTEXT_OBJDIR)/.configured
+	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make)
+	touch $@
+
+# install gettext
+$(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
+	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make install)
+	touch $@
 
 #######################################################################
 # svn
@@ -1129,7 +1275,7 @@ svn-reset: svn-bindings-reset
 		rm -f $(SVN_OBJDIR)/$(f);)
 
 svn-clean:
-	-(cd $(svn_builddir) && make distclean)
+	-(cd $(svn_builddir) && env MAKEFLAGS= make distclean)
 
 # retrieve svn if not present yet
 $(SVN_OBJDIR)/.retrieved:
@@ -1153,16 +1299,20 @@ $(SVN_OBJDIR)/.retrieved:
 ifeq ($(BRANCH_MAJOR),1.7)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
@@ -1171,6 +1321,7 @@ BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/mod_dontdothat.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
@@ -1178,8 +1329,12 @@ JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
+# so we have to do that ourselves :(
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
 endif
@@ -1192,21 +1347,29 @@ else
 endif
 
 ifdef PROFILE
-SVN_ALL_STATIC=--enable-all-static
+SVN_STATIC_FLAG=--enable-all-static
 else
+SVN_STATIC_FLAG=--disable-static
 SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
-# configure svn
-$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
+$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
+	$(APR_OBJDIR)/.installed $(APR_UTIL_OBJDIR)/.installed \
+	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed \
+	$(HTTPD_OBJDIR)/.installed $(CYRUS_SASL_OBJDIR)/.installed \
+	$(LIBMAGIC_OBJDIR)/.installed $(NEON_OBJDIR)/.installed \
+	$(SERF_OBJDIR)/.installed $(SERF_OLD_OBJDIR)/.installed \
+	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
+			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
-			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$$PATH \
+			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
@@ -1223,20 +1386,20 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
-			$(SVN_ALL_STATIC) \
+			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
 
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
+		&& env MAKEFLAGS= make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
 	touch $@
 
 # install svn
 $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 	cd $(svn_builddir) \
-		&& make install
+		&& env MAKEFLAGS= make install install-tools
 	touch $@
 
 # SWIG 1.x and 2.x are not compatible. If SWIG 2.x is used to generated .swg
@@ -1246,44 +1409,44 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 # by the same version of SWIG.
 $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 	-cd $(svn_builddir) \
-		&& make clean-swig
+		&& env MAKEFLAGS= make clean-swig
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
 	cd $(svn_builddir) \
 		&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make swig-py
+			env MAKEFLAGS= make swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 			&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-				make swig-pl; \
+				env MAKEFLAGS= make swig-pl; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& make javahl; \
+			&& env MAKEFLAGS= make javahl; \
 	fi
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 	cd $(svn_builddir) \
 	  && env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		make install-swig-py
+		env MAKEFLAGS= make install-swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make install-swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-	    && make install-swig-pl-lib; \
+	    && env MAKEFLAGS= make install-swig-pl-lib; \
 	  cd subversion/bindings/swig/perl/native \
 		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
-		  && make install; \
+		  && env MAKEFLAGS= make install; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& make install-javahl; \
+			&& env MAKEFLAGS= make install-javahl; \
 	fi
 	touch $@
 
@@ -1291,6 +1454,13 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_PORT=8081
+MOD_DONTDOTHAT_CONF=$(PREFIX)/httpd/conf/dontdothat
+
+$(MOD_DONTDOTHAT_CONF):
+	mkdir -p $(dir $@)
+	echo > $@.tmp '[recursive-actions]'
+	echo >>$@.tmp '/ = deny'
+	mv -f $@.tmp $@
 
 $(HTTPD_CHECK_USERS):
 	mkdir -p $(dir $@)
@@ -1298,12 +1468,13 @@ $(HTTPD_CHECK_USERS):
 	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
 	mv -f $@.tmp $@
 
-$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS)
+$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS) $(MOD_DONTDOTHAT_CONF)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
 	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
 	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
+	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
 	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
 	echo >>$@.tmp '# These two Locations are used for "make check"'
 	echo >>$@.tmp '<Directory />'
@@ -1347,15 +1518,35 @@ endif
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNParentPath /tmp'
 	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    #AuthType Basic'
+	echo >>$@.tmp '    #AuthName "Subversion Repository"'
+	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    #Require valid-user'
 ifeq ($(USE_HTTPV1),yes)
-	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+	echo >> $@.tmp '   SVNAdvertiseV2Protocol off'
 endif
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
-	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+	echo >> $@.tmp '   SVNPathAuthz short_circuit'
 endif
 	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '# Location for tests using mod_dontdothat'
+	echo >>$@.tmp '<Location /ddt-test-work/repositories>'
+	echo >> $@.tmp 'DAV               svn'
+	echo >> $@.tmp 'SVNParentPath     "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories"'
+	echo >> $@.tmp 'AuthzSVNAccessFile "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz"'
+	echo >> $@.tmp 'AuthType          Basic'
+	echo >> $@.tmp 'AuthName          "Subversion Repository"'
+	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+	echo >> $@.tmp 'AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >> $@.tmp 'Require           valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >> $@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >> $@.tmp 'DontDoThatConfigFile "$(MOD_DONTDOTHAT_CONF)"'
+	echo >> $@.tmp '</Location>'
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
+	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
 	mv -f $@.tmp $@
 
 .PHONY: libpath
@@ -1407,7 +1598,7 @@ start-httpd-debug: $(HTTPD_CHECK_CONF)
 	@sleep 1
 	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
 
-stop-httpd:
+stop-httpd: $(HTTPD_CHECK_CONF)
 	$(HTTPD_STOP_CMD)
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
@@ -1421,7 +1612,9 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+        env MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) \
+	  MEMCACHED_SERVER=$(MEMCACHED_SERVER) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
@@ -1477,14 +1670,14 @@ svn-check-swig-pl:
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			$(LIB_PTHREAD_HACK) \
-			make check-swig-pl 2>&1) | \
+			env MAKEFLAGS= make check-swig-pl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.pl; \
 	fi
 
 svn-check-swig-py:
 	-(cd $(svn_builddir) && \
 		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		make check-swig-py 2>&1) | \
+		env MAKEFLAGS= make check-swig-py 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.py
 
 # We add the svn prefix to PATH here because the ruby tests
@@ -1495,14 +1688,14 @@ svn-check-swig-rb:
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		PATH=$(SVN_PREFIX)/bin:$$PATH \
 		$(LIB_PTHREAD_HACK) \
-			make check-swig-rb 2>&1) | \
+			env MAKEFLAGS= make check-swig-rb 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.rb
 
 svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make $(JAVAHL_CHECK_TARGET) 2>&1) | \
+			env MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

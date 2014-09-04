@@ -74,10 +74,14 @@ check_error_codes_unique(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(check_error_codes_unique,
                    "check that error codes are unique"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

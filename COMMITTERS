@@ -58,6 +58,7 @@ Blanket commit access:
        stefan2   Stefan Fuhrmann <stefan.fuhrmann@wandisco.com>
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
          trent   Trent Nelson <trent@snakebite.org>
+        kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -158,8 +159,10 @@ Commit access for specific areas:
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
          arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
           joes   Joe Schaefer <joe_schaefer@yahoo.com>       (svnpubsub)
-      prabhugs   Prabhu Gnana Sundar <prabhugs@collab.net>   (verify-keep-going)
-
+     humbedooh   Daniel Gruno <humbedooh@apache.org>         (svnpubsub)
+      prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
+        schabi   Markus Schaber <schabi@apache.org>          (testsuite)
+	gbg      Gabriela Gibson <gabriela.gibson@gmail.com> (gtest) 
 
   Translation of message files:
 

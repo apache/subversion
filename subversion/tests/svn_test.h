@@ -104,9 +104,12 @@ typedef struct svn_test_opts_t
   const char *fs_type;
   /* Config file. */
   const char *config_file;
+  /* Source dir. */
+  const char *srcdir;
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;
+  svn_boolean_t verbose;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 
@@ -149,8 +152,22 @@ struct svn_test_descriptor_t
 
 /* All Subversion test programs include an array of svn_test_descriptor_t's
  * (all of our sub-tests) that begins and ends with a SVN_TEST_NULL entry.
+ * This descriptor must be passed to the svn_test_main function.
+ *
+ * MAX_THREADS is the number of concurrent tests to run.  Set to 1 if
+ * all tests must be executed serially.  Numbers less than 1 mean
+ * "unbounded".
  */
-extern struct svn_test_descriptor_t test_funcs[];
+int svn_test_main(int argc, const char *argv[], int max_threads,
+                  struct svn_test_descriptor_t *test_funcs);
+
+/* Boilerplate for the main function for each test program. */
+#define SVN_TEST_MAIN                                 \
+  int main(int argc, const char *argv[])              \
+    {                                                 \
+      return svn_test_main(argc, argv,                \
+                           max_threads, test_funcs);  \
+    }
 
 /* A null initializer for the test descriptor. */
 #define SVN_TEST_NULL  {0}
@@ -187,7 +204,6 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_OPTS_WIMP_COND(func, p, msg, wip) \
   {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg, wip}
 
-
 
 /* Return a pseudo-random number based on SEED, and modify SEED.
  *
@@ -221,6 +237,20 @@ svn_test__tree_t;
 /* The standard Greek tree, terminated by a node with path=NULL. */
 extern const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
 
+
+/* Returns a path to BASENAME within the transient data area for the
+   current test. */
+const char *
+svn_test_data_path(const char* basename, apr_pool_t *result_pool);
+
+
+/* Some tests require the --srcdir option and should use this function
+ * to get it. If not provided, print a warning and attempt to run the
+ * tests under the assumption that --srcdir is the current directory. */
+svn_error_t *
+svn_test_get_srcdir(const char **srcdir,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

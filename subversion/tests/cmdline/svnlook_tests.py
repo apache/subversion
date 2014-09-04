@@ -709,12 +709,12 @@ fp.close()"""
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',
+                    '  svn:txn-user-agent\n',
                     ]
-  # ra_dav and ra_svn add the user-agent ephemeral property
-  if svntest.main.is_ra_type_dav() or svntest.main.is_ra_type_svn():
-    expected_data.append('  svn:txn-user-agent\n')
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
+# From r1293375 until fixed in r1303856, 'svnlook changed' and 'svnlook diff'
+# produced no output on a property delete.
 def property_delete(sbox):
   "property delete"
 
@@ -726,8 +726,6 @@ def property_delete(sbox):
   sbox.simple_propdel('foo', 'A/mu')
   sbox.simple_commit()
 
-  # XFail since r1293375, changed and diff produce no output on a
-  # property delete
   svntest.actions.run_and_verify_svnlook(None, ["_U  A/mu\n"], [],
                                          'changed', repo_dir)
 

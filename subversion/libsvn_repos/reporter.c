@@ -499,7 +499,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
     }
 
   *revision_info = info;
@@ -576,8 +576,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_changed(&changed, b->t_root, t_path, s_root,
-                                   s_path, pool));
+      SVN_ERR(svn_fs_props_different(&changed, b->t_root, t_path, s_root,
+                                     s_path, pool));
       if (! changed)
         return SVN_NO_ERROR;
 
@@ -603,10 +603,9 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* So source, i.e. all new.  Transmit all target props. */
       for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *key = apr_hash_this_key(hi);
+          svn_string_t *val = apr_hash_this_val(hi);
 
-          apr_hash_this(hi, &key, NULL, &val);
           SVN_ERR(change_fn(b, object, key, val, pool));
         }
     }
@@ -842,7 +841,7 @@ add_file_smartly(report_baton_t *b,
          starting with '/', so make sure o_path always starts with a '/'
          too. */
       if (*o_path != '/')
-        o_path = apr_pstrcat(pool, "/", o_path, (char *)NULL);
+        o_path = apr_pstrcat(pool, "/", o_path, SVN_VA_NULL);
 
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
@@ -1140,40 +1139,46 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
            svn_boolean_t start_empty, svn_depth_t wc_depth,
            svn_depth_t requested_depth, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root;
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool;
-  const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
-  path_info_t *info;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_array_header_t *t_ordered_entries = NULL;
+  int i;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
 
      When we support directory locks, we must pass the lock token here. */
   SVN_ERR(delta_proplists(b, s_rev, start_empty ? NULL : s_path, t_path,
-                          NULL, change_dir_prop, dir_baton, pool));
+                          NULL, change_dir_prop, dir_baton, subpool));
+  svn_pool_clear(subpool);
 
   if (requested_depth > svn_depth_empty
       || requested_depth == svn_depth_unknown)
     {
+      apr_pool_t *iterpool;
+
       /* Get the list of entries in each of source and target. */
       if (s_path && !start_empty)
         {
+          svn_fs_root_t *s_root;
+
           SVN_ERR(get_source_root(b, &s_root, s_rev));
-          SVN_ERR(svn_fs_dir_entries(&s_entries, s_root, s_path, pool));
+          SVN_ERR(svn_fs_dir_entries(&s_entries, s_root, s_path, subpool));
         }
-      SVN_ERR(svn_fs_dir_entries(&t_entries, b->t_root, t_path, pool));
+      SVN_ERR(svn_fs_dir_entries(&t_entries, b->t_root, t_path, subpool));
 
       /* Iterate over the report information for this directory. */
-      subpool = svn_pool_create(pool);
+      iterpool = svn_pool_create(subpool);
 
       while (1)
         {
+          path_info_t *info;
+          const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
           const svn_fs_dirent_t *s_entry, *t_entry;
 
-          svn_pool_clear(subpool);
-          SVN_ERR(fetch_path_info(b, &name, &info, e_path, subpool));
+          svn_pool_clear(iterpool);
+          SVN_ERR(fetch_path_info(b, &name, &info, e_path, iterpool));
           if (!name)
             break;
 
@@ -1190,17 +1195,18 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                  but don't update the entry yet. */
               if (s_entries)
                 svn_hash_sets(s_entries, name, NULL);
+
+              svn_pool_destroy(info->pool);
               continue;
             }
 
-          e_fullpath = svn_relpath_join(e_path, name, subpool);
-          t_fullpath = svn_fspath__join(t_path, name, subpool);
+          e_fullpath = svn_relpath_join(e_path, name, iterpool);
+          t_fullpath = svn_fspath__join(t_path, name, iterpool);
           t_entry = svn_hash_gets(t_entries, name);
-          s_fullpath = s_path ? svn_fspath__join(s_path, name, subpool) : NULL;
-          s_entry = s_entries ?
-            svn_hash_gets(s_entries, name) : NULL;
+          s_fullpath = s_path ? svn_fspath__join(s_path, name, iterpool) : NULL;
+          s_entry = s_entries ? svn_hash_gets(s_entries, name) : NULL;
 
-          /* The only special cases here are
+          /* The only special cases where we don't process the entry are
 
              - When requested_depth is files but the reported path is
              a directory.  This is technically a client error, but we
@@ -1208,15 +1214,15 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
              - When the reported depth is svn_depth_exclude.
           */
-          if ((! info || info->depth != svn_depth_exclude)
-              && (requested_depth != svn_depth_files
-                  || ((! t_entry || t_entry->kind != svn_node_dir)
-                      && (! s_entry || s_entry->kind != svn_node_dir))))
+          if (! ((requested_depth == svn_depth_files
+                  && ((t_entry && t_entry->kind == svn_node_dir)
+                      || (s_entry && s_entry->kind == svn_node_dir)))
+                 || (info && info->depth == svn_depth_exclude)))
             SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                  t_entry, dir_baton, e_fullpath, info,
                                  info ? info->depth
                                       : DEPTH_BELOW_HERE(wc_depth),
-                                 DEPTH_BELOW_HERE(requested_depth), subpool));
+                                 DEPTH_BELOW_HERE(requested_depth), iterpool));
 
           /* Don't revisit this name in the target or source entries. */
           svn_hash_sets(t_entries, name, NULL);
@@ -1236,17 +1242,17 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
          target, for graceful handling of case-only renames. */
       if (s_entries)
         {
-          for (hi = apr_hash_first(pool, s_entries);
+          for (hi = apr_hash_first(subpool, s_entries);
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry;
+              const svn_fs_dirent_t *s_entry = apr_hash_this_val(hi);
 
-              svn_pool_clear(subpool);
-              s_entry = svn__apr_hash_index_val(hi);
+              svn_pool_clear(iterpool);
 
               if (svn_hash_gets(t_entries, s_entry->name) == NULL)
                 {
+                  const char *e_fullpath;
                   svn_revnum_t deleted_rev;
 
                   if (s_entry->kind == svn_node_file
@@ -1259,28 +1265,32 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                     continue;
 
                   /* There is no corresponding target entry, so delete. */
-                  e_fullpath = svn_relpath_join(e_path, s_entry->name, subpool);
+                  e_fullpath = svn_relpath_join(e_path, s_entry->name, iterpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
                                                 svn_fspath__join(t_path,
                                                                  s_entry->name,
-                                                                 subpool),
+                                                                 iterpool),
                                                 s_rev, b->t_rev,
-                                                &deleted_rev, subpool));
+                                                &deleted_rev, iterpool));
 
                   SVN_ERR(b->editor->delete_entry(e_fullpath,
                                                   deleted_rev,
-                                                  dir_baton, subpool));
+                                                  dir_baton, iterpool));
                 }
             }
         }
 
       /* Loop over the dirents in the target. */
-      for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
+      SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
+                                       t_entries, subpool));
+      for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
-          const svn_fs_dirent_t *s_entry, *t_entry;
+          const svn_fs_dirent_t *t_entry
+             = APR_ARRAY_IDX(t_ordered_entries, i, svn_fs_dirent_t *);
+          const svn_fs_dirent_t *s_entry;
+          const char *s_fullpath, *t_fullpath, *e_fullpath;
 
-          svn_pool_clear(subpool);
-          t_entry = svn__apr_hash_index_val(hi);
+          svn_pool_clear(iterpool);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {
@@ -1301,30 +1311,29 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                       || requested_depth == svn_depth_files))
                 continue;
 
-              /* Look for an entry with the same name
-                 in the source dirents. */
+              /* Look for an entry with the same name in the source dirents. */
               s_entry = s_entries ?
-                  svn_hash_gets(s_entries, t_entry->name)
-                  : NULL;
+                  svn_hash_gets(s_entries, t_entry->name) : NULL;
               s_fullpath = s_entry ?
-                  svn_fspath__join(s_path, t_entry->name, subpool) : NULL;
+                  svn_fspath__join(s_path, t_entry->name, iterpool) : NULL;
             }
 
           /* Compose the report, editor, and target paths for this entry. */
-          e_fullpath = svn_relpath_join(e_path, t_entry->name, subpool);
-          t_fullpath = svn_fspath__join(t_path, t_entry->name, subpool);
+          e_fullpath = svn_relpath_join(e_path, t_entry->name, iterpool);
+          t_fullpath = svn_fspath__join(t_path, t_entry->name, iterpool);
 
           SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                t_entry, dir_baton, e_fullpath, NULL,
                                DEPTH_BELOW_HERE(wc_depth),
                                DEPTH_BELOW_HERE(requested_depth),
-                               subpool));
+                               iterpool));
         }
 
-
-      /* Destroy iteration subpool. */
-      svn_pool_destroy(subpool);
+      /* iterpool is destroyed by destroying its parent (subpool) below */
     }
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 

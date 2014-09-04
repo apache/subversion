@@ -414,7 +414,7 @@ if [ ${RC} -ne 0 ]; then
     echo "failed" >&2
 else
     [ ${VERBOSE} = true ] && \
-        echo "successfull completed."
+        echo "successfully completed."
 fi
 exit ${RC}
 

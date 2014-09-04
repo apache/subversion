@@ -36,7 +36,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 enum drev_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   VERSION_NAME
 };
@@ -75,11 +75,13 @@ getdrev_closed(svn_ra_serf__xml_estate_t *xes,
                apr_pool_t *scratch_pool)
 {
   drev_context_t *drev_ctx = baton;
+  apr_int64_t rev;
 
   SVN_ERR_ASSERT(leaving_state == VERSION_NAME);
   SVN_ERR_ASSERT(cdata != NULL);
 
-  *drev_ctx->revision_deleted = SVN_STR_TO_REV(cdata->data);
+  SVN_ERR(svn_cstring_atoi64(&rev, cdata->data));
+  *drev_ctx->revision_deleted = (svn_revnum_t)rev;
 
   return SVN_NO_ERROR;
 }
@@ -101,7 +103,7 @@ create_getdrev_body(serf_bucket_t **body_bkt,
                                     "S:get-deleted-rev-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL, NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", drev_ctx->path,
@@ -154,7 +156,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                                            NULL, getdrev_closed, NULL,
                                            drev_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;

@@ -193,12 +193,6 @@ def _usage_exit(err=None):
   print("  --enable-nls")
   print("           add support for gettext localization")
   print("")
-  print("  --enable-bdb-in-apr-util")
-  print("           configure APR-Util to use Berkeley DB")
-  print("")
-  print("  --enable-ml")
-  print("           enable use of ML assembler with zlib")
-  print("")
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
@@ -209,11 +203,18 @@ def _usage_exit(err=None):
   print("           Use static openssl")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008,")
+  print("           2010, 2012 or 2013)")
+  print("           [only valid in combination with '-t vcproj']")
+  print("")
+  print(" -D NAME[=value]")
+  print("           define NAME macro during compilation")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
+  print("  --disable-gmock")
+  print("           do not use Googlemock")
   sys.exit(1)
 
 
@@ -222,16 +223,17 @@ class Options:
     self.list = []
     self.dict = {}
 
-  def add(self, opt, val):
+  def add(self, opt, val, overwrite=True):
     if opt in self.dict:
-      self.list[self.dict[opt]] = (opt, val)
+      if overwrite:
+        self.list[self.dict[opt]] = (opt, val)
     else:
       self.dict[opt] = len(self.list)
       self.list.append((opt, val))
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
+    opts, args = my_getopt(sys.argv[1:], 'st:D:',
                            ['debug',
                             'release',
                             'reload',
@@ -257,18 +259,10 @@ if __name__ == '__main__':
                             'enable-purify',
                             'enable-quantify',
                             'enable-nls',
-                            'enable-bdb-in-apr-util',
-                            'enable-ml',
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-
-                            # Keep distributions that help by adding a path
-                            # working. On unix this would be filtered by
-                            # configure, but on Windows gen-make.py is used
-                            # directly.
-                            'with-neon=',
-                            'without-neon',
+                            'disable-gmock',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
@@ -307,9 +301,12 @@ if __name__ == '__main__':
       gentype = val
     else:
       if opt == '--with-httpd':
-        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
-        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
-        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
+        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'),
+                 overwrite=False)
+        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'),
+                 overwrite=False)
+        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'),
+                 overwrite=False)
 
   # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')

@@ -91,6 +91,10 @@ struct parse_baton
   /* The oldest revision loaded from the dump stream, or
      SVN_INVALID_REVNUM if none have been loaded. */
   svn_revnum_t oldest_dumpstream_rev;
+
+  /* An hash containing specific revision properties to skip while
+     loading. */
+  apr_hash_t *skip_revprops;
 };
 
 /**
@@ -277,7 +281,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  inclusive there is one possible valid start revision that
                  won't be found in the PB->REV_MAP mapping of load stream
                  revsions to loaded revisions: The revision immediately
-                 preceeding the oldest revision from the load stream.
+                 preceding the oldest revision from the load stream.
                  This is a valid revision for mergeinfo, but not a valid
                  copy from revision (which PB->REV_MAP also maps for) so it
                  will never be in the mapping.
@@ -553,8 +557,8 @@ new_revision_record(void **revision_baton,
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const char *hname = svn__apr_hash_index_key(hi);
-      const char *hval = svn__apr_hash_index_val(hi);
+      const char *hname = apr_hash_this_key(hi);
+      const char *hval = apr_hash_this_val(hi);
 
       if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
         rb->rev = atoi(hval);
@@ -665,8 +669,8 @@ new_node_record(void **node_baton,
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const char *hname = svn__apr_hash_index_key(hi);
-      const char *hval = svn__apr_hash_index_val(hi);
+      const char *hname = apr_hash_this_key(hi);
+      const char *hval = apr_hash_this_val(hi);
 
       /* Parse the different kinds of headers we can encounter and
          stuff them into the node_baton for writing later */
@@ -858,11 +862,13 @@ set_revision_property(void *baton,
 
   if (rb->rev > 0)
     {
-      svn_hash_sets(rb->revprop_table,
-                    apr_pstrdup(rb->pool, name),
-                    svn_string_dup(value, rb->pool));
+      if (! svn_hash_gets(rb->pb->skip_revprops, name))
+        svn_hash_sets(rb->revprop_table,
+                      apr_pstrdup(rb->pool, name),
+                      svn_string_dup(value, rb->pool));
     }
-  else if (rb->rev_offset == -1)
+  else if (rb->rev_offset == -1
+           && ! svn_hash_gets(rb->pb->skip_revprops, name))
     {
       /* Special case: set revision 0 properties directly (which is
          safe because the commit_editor hasn't been created yet), but
@@ -1003,7 +1009,7 @@ remove_node_props(void *baton)
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
+      const char *name = apr_hash_this_key(hi);
       svn_prop_kind_t kind = svn_property_kind2(name);
 
       if (kind == svn_prop_regular_kind)
@@ -1131,16 +1137,22 @@ close_revision(void *baton)
 
   if (SVN_IS_VALID_REVNUM(committed_rev))
     {
-      SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
-                                       rb->datestamp, rb->pool));
-      SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
-                                      SVN_PROP_REVISION_DATE,
-                                      NULL, rb->datestamp, rb->pool));
-      SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
-                                       rb->author, rb->pool));
-      SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
-                                      SVN_PROP_REVISION_AUTHOR,
-                                      NULL, rb->author, rb->pool));
+      if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_DATE))
+        {
+          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
+                                           rb->datestamp, rb->pool));
+          SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
+                                          SVN_PROP_REVISION_DATE,
+                                          NULL, rb->datestamp, rb->pool));
+        }
+      if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_AUTHOR))
+        {
+          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
+                                           rb->author, rb->pool));
+          SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
+                                          SVN_PROP_REVISION_AUTHOR,
+                                          NULL, rb->author, rb->pool));
+        }
     }
 
   svn_pool_destroy(rb->pool);
@@ -1153,6 +1165,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                            svn_ra_session_t *session,
                            svn_ra_session_t *aux_session,
                            svn_boolean_t quiet,
+                           apr_hash_t *skip_revprops,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool)
@@ -1196,6 +1209,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->rev_map = apr_hash_make(pool);
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
+  parse_baton->skip_revprops = skip_revprops;
 
   err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
                                     cancel_func, cancel_baton, pool);

@@ -47,8 +47,11 @@ typedef int win32_xlate__dummy;
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "private/svn_atomic.h"
+#include "private/svn_subr_private.h"
 
 #include "win32_xlate.h"
+
+#include "svn_private_config.h"
 
 static svn_atomic_t com_initialized = 0;
 
@@ -113,16 +116,26 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
   if ((page_name[0] == 'c' || page_name[0] == 'C')
       && (page_name[1] == 'p' || page_name[1] == 'P'))
     {
-      *page_id_p = atoi(page_name + 2);
+      int page_id;
+
+      err = svn_cstring_atoi(&page_id, page_name + 2);
+      if (err)
+        {
+          apr_status_t saved = err->apr_err;
+          svn_error_clear(err);
+          return saved;
+        }
+
+      *page_id_p = page_id;
       return APR_SUCCESS;
     }
 
   err = svn_atomic__init_once(&com_initialized, initialize_com, NULL, pool);
-
   if (err)
     {
+      apr_status_t saved = err->apr_err;
       svn_error_clear(err);
-      return APR_EGENERAL;
+      return saved; /* probably SVN_ERR_ATOMIC_INIT_FAILURE */
     }
 
   hr = CoCreateInstance(&CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER,

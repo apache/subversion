@@ -99,7 +99,7 @@ autogen-swig: autogen-swig-[swig_langs.short]
 install-[target.install]: [target.install_deps][end]
 [is target.type "java"][target.varname]_HEADERS = [for target.headers][if-index target.headers first][else] [end][target.headers][end]
 [target.varname]_OBJECTS = [for target.objects][if-index target.objects first][else] [end][target.objects][end]
-[target.varname]_DEPS = $([target.varname]_HEADERS) $([target.varname]_OBJECTS) [target.add_deps] [for target.deps][if-index target.deps first][else] [end][target.deps][end]
+[target.varname]_DEPS = $([target.varname]_HEADERS) $([target.varname]_OBJECTS)[for target.add_deps] [target.add_deps][end][for target.deps][if-index target.deps first][else] [end][target.deps][end]
 [target.name]: $([target.varname]_DEPS)
 [if-any target.headers][target.varname]_CLASS_FILENAMES =[for target.header_class_filenames] [target.header_class_filenames][end]
 [target.varname]_CLASSES =[for target.header_classes] [target.header_classes][end]
@@ -110,9 +110,9 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 	[target.link_cmd] -d [target.output_dir] -classpath [target.classes]:$([target.varname]_CLASSPATH) $([target.varname]_SRC)
 [if-any target.jar]
 	$(JAR) cf [target.jar_path] -C [target.classes][for target.packages] [target.packages][end][end][end]
-[else][is target.type "i18n"][target.varname]_DEPS = [target.add_deps][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
+[else][is target.type "i18n"][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
 [target.name]: $([target.varname]_DEPS)
-[else][target.varname]_DEPS = [target.add_deps][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
+[else][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
 [target.varname]_OBJECTS =[for target.objnames] [target.objnames][end]
 [target.filename]: $([target.varname]_DEPS)
 	[if-any target.when]if $([target.when]) ; then [else][end]cd [target.path] && [target.link_cmd] $([target.varname]_LDFLAGS) -o [target.basename] [target.undefined_flag] $([target.varname]_OBJECTS)[for target.libs] [target.libs][end] $(LIBS)[if-any target.when] ; else echo "fake" > [target.filename] ; fi[else][end]
@@ -130,9 +130,10 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 ########################################
 [for areas]
 install-[areas.type]: [for areas.files][if-index areas.files first][else] [end][areas.files.fullname][end]
-[if-any areas.files][for areas.files]	[is areas.files.mode "apache-mod"][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.files.name] [areas.files.filename][if-any areas.files.when] ; fi[else][end][else][if-index areas.files first]$(MKDIR) $(DESTDIR)$([areas.varname]dir)
+[if-any areas.files][for areas.files]	[is areas.files.mode "apache-mod"][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.files.name] [areas.files.filename][if-any areas.files.when] ; fi[else][end][else][if-index areas.files first]$(MKDIR) $(DESTDIR)$([areas.varname]dir)[if-any areas.files.pc_installdir] $(DESTDIR)[areas.files.pc_installdir][end]
 	[else][end][is areas.type "locale"]$(MKDIR) [areas.files.installdir]
-	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][if-any areas.files.when] ; fi[else][end][else][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][if-any areas.files.when] ; fi[else][end][end][end]
+	[if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][if-any areas.files.when] ; fi[else][end][else][if-any areas.files.when]if $([areas.files.when]) ; then [else][end]cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][if-any areas.files.when] ; fi[else][end]
+	[if-any areas.files.pc_fullname]$(INSTALL_DATA) [areas.files.pc_fullname] $(DESTDIR)[areas.files.pc_install_fname][end][end][end]
 [end][else]	$(MKDIR) $(DESTDIR)$([areas.varname]dir)
 [end][if-any areas.extra_install]	$(INSTALL_EXTRA_[areas.uppervar])
 [end][end]

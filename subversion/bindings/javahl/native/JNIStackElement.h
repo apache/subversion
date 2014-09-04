@@ -73,7 +73,7 @@ class JNIStackElement
    * A buffer for the result for jthis.toString to identify the
    * object.
    */
-  char m_objectID[JNIUtil::formatBufferSize];
+  char m_objectID[2048];
 };
 
 #endif // JNISTACKELEMENT_H

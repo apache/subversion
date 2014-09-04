@@ -232,6 +232,15 @@ svn_stringbuf_create_ensure(apr_size_t minimum_size, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool);
 
+/** Create a new stringbuf using the given @a str as initial buffer.
+ * Allocate the result in @a pool.  In contrast to #svn_stringbuf_create,
+ * the contents of @a str may change when the stringbuf gets modified.
+ *
+ * @since New in 1.9
+ */
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool);
+
 /** Create a new stringbuf by printf-style formatting using @a fmt and the
  * variable arguments, which are as appropriate for apr_psprintf().
  */
@@ -303,6 +312,16 @@ void
 svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
                           const char *bytes,
                           apr_size_t count);
+
+/** Append @a byte @a count times onto @a targetstr.
+ *
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * @since New in 1.9.
+ */
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
+                         char byte,
+                         apr_size_t count);
 
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
@@ -506,6 +525,7 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -518,6 +538,7 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -528,6 +549,7 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str);
  * Parse the C string @a str into a 32 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -539,6 +561,7 @@ svn_cstring_atoi(int *n, const char *str);
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -551,6 +574,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -561,11 +585,22 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
  * Parse the C string @a str into an unsigned 32 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_cstring_atoui(unsigned int *n, const char *str);
+
+/**
+ * Skip the common prefix @a prefix from the C string @a str, and return
+ * a pointer to the next character after the prefix.
+ * Return @c NULL if @a str does not start with @a prefix.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix);
 
 /** @} */
 

@@ -97,7 +97,7 @@ public interface ISVNRepos {
 	 * @param end               the last revision to be dumped
 	 * @param incremental       the dump will be incremantal
 	 * @param useDeltas         the dump will contain deltas between nodes
-     * @param callback          the callback to recieve notifications
+         * @param callback          the callback to receive notifications
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract void dump(File path, OutputStream dataOut,
@@ -111,10 +111,18 @@ public interface ISVNRepos {
 	 * @param targetPath        the path to the target repository
 	 * @param cleanLogs         clean the unused log files in the source
 	 *                          repository
+         * @param callback          the callback to receive notifications
 	 * @throws ClientException  throw in case of problem
+         * @since 1.9
 	 */
 	public abstract void hotcopy(File path, File targetPath,
-			boolean cleanLogs, boolean incremental) throws ClientException;
+                        boolean cleanLogs, boolean incremental,
+                        ReposNotifyCallback callback)
+                        throws ClientException;
+
+	public abstract void hotcopy(File path, File targetPath,
+			boolean cleanLogs, boolean incremental)
+                        throws ClientException;
 
 	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
@@ -140,6 +148,39 @@ public interface ISVNRepos {
 
 	/**
 	 * load the data of a dump into a repository
+	 * @param path              the path to the repository
+	 * @param dataInput         the data input source
+         * @param start             the first revision to load
+         * @param end               the last revision to load
+	 * @param ignoreUUID        ignore any UUID found in the input stream
+	 * @param forceUUID         set the repository UUID to any found in the
+	 *                          stream
+	 * @param usePreCommitHook  use the pre-commit hook when processing commits
+	 * @param usePostCommitHook use the post-commit hook when processing commits
+         * @param validateProps     validate "svn:" revision and node properties
+         * @param ignoreDates       ignore revision datestamps in the dump stream
+	 * @param relativePath      the directory in the repository, where the data
+	 *                          in put optional.
+	 * @param callback          the target for processing messages
+	 * @throws ClientException  throw in case of problem
+         * @since 1.9
+	 */
+	public abstract void load(File path, InputStream dataInput,
+                                  Revision start, Revision end,
+                                  boolean ignoreUUID, boolean forceUUID,
+                                  boolean usePreCommitHook,
+                                  boolean usePostCommitHook,
+                                  boolean validateProps,
+                                  boolean ignoreDates,
+                                  String relativePath,
+                                  ReposNotifyCallback callback)
+        throws ClientException;
+
+	/**
+	 * Load the data of a dump into a repository.  Sets
+         * <code>validateProps</code> and <code>ignoreDates</code> to
+         * <code>false</code>.
+         *
 	 * @param path              the path to the repository
 	 * @param dataInput         the data input source
          * @param start             the first revision to load
@@ -258,7 +299,28 @@ public interface ISVNRepos {
 	 * @param path              the path to the repository
 	 * @param start             the first revision
 	 * @param end               the last revision
-     * @param callback          the callback to recieve notifications
+         * @param keepGoing         continue verification even if a revision is bad
+         * @param checkNormalization report directory entry and mergeinfo name collisions
+         *                           caused by denormalized Unicode representations
+         * @param metadataOnly      check only metadata, not file contents
+         * @param callback          the callback to receive notifications
+	 * @throws ClientException If an error occurred.
+         * @since 1.9
+	 */
+	public abstract void verify(File path, Revision start, Revision end,
+                boolean keepGoing, boolean checkNormalization,
+                boolean metadataOnly,
+                ReposNotifyCallback callback)
+            throws ClientException;
+
+	/**
+	 * Verify the repository at <code>path</code> between revisions
+	 * <code>start</code> and <code>end</code>.
+	 *
+	 * @param path              the path to the repository
+	 * @param start             the first revision
+	 * @param end               the last revision
+         * @param callback          the callback to receive notifications
 	 * @throws ClientException If an error occurred.
 	 */
 	public abstract void verify(File path, Revision start, Revision end,

@@ -549,7 +549,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_BC,
                                  resource->info->root.rev, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_checked_in:
@@ -578,7 +578,8 @@ insert_prop_internal(const dav_resource *resource,
             }
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_BASELINE,
-                                 revnum, NULL, 0 /* add_href */, scratch_pool);
+                                 revnum, NULL, FALSE /* add_href */,
+                                 scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -596,7 +597,7 @@ insert_prop_internal(const dav_resource *resource,
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_VERSION,
                                  rev_to_use, resource->info->repos_path,
-                                0 /* add_href */, scratch_pool);
+                                 FALSE /* add_href */, scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -610,7 +611,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_VCC,
                                  SVN_IGNORED_REVNUM, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_version_name:

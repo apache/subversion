@@ -20,7 +20,8 @@
  *    under the License.
  * ====================================================================
  */
-
+
+
 
 #ifndef SVN_LIBSVN_CLIENT_H
 #define SVN_LIBSVN_CLIENT_H
@@ -92,12 +93,17 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 /* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
    that served as the source of the copy from which PATH_OR_URL at REVISION was
    created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
-   REVISION was not the result of a copy operation. */
+   REVISION was not the result of a copy operation.
+
+   If RA_SESSION is not NULL it is an existing session to the repository that
+   might be reparented temporarily to obtain the information.
+   */
 svn_error_t *
 svn_client__get_copy_source(const char **original_repos_relpath,
                             svn_revnum_t *original_revision,
                             const char *path_or_url,
                             const svn_opt_revision_t *revision,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
@@ -208,7 +214,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    Use the authentication baton cached in CTX to authenticate against
    the repository.  Use POOL for all allocations.
 
-   See also svn_client__youngest_common_ancestor().
+   See also svn_client__calc_youngest_common_ancestor() to find youngest
+   common ancestor for already fetched history-as-mergeinfo information.
+
 */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
@@ -218,6 +226,34 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
+
+/* Find the common ancestor of two locations in a repository using already
+   fetched history-as-mergeinfo information.
+
+   Ancestry is determined by the 'copy-from' relationship and the normal
+   successor relationship.
+
+   Set *ANCESTOR_P to the location of the youngest common ancestor of
+   LOC1 and LOC2.  If the locations have no common ancestor (including if
+   they don't have the same repository root URL), set *ANCESTOR_P to NULL.
+
+   HISTORY1, HAS_REV_ZERO_HISTORY1, HISTORY2, HAS_REV_ZERO_HISTORY2 are
+   history-as-mergeinfo information as returned by
+   svn_client__get_history_as_mergeinfo() for LOC1 and LOC2 respectively.
+
+   See also svn_client__get_youngest_common_ancestor().
+
+*/
+svn_error_t *
+svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
+                                          const svn_client__pathrev_t *loc1,
+                                          apr_hash_t *history1,
+                                          svn_boolean_t has_rev_zero_history1,
+                                          const svn_client__pathrev_t *loc2,
+                                          apr_hash_t *history2,
+                                          svn_boolean_t has_rev_zero_history2,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.
@@ -247,7 +283,8 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** RA callbacks ***/
 
 
@@ -329,7 +366,8 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
                              apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Add/delete ***/
 
 /* If AUTOPROPS is not null: Then read automatic properties matching PATH
@@ -433,16 +471,17 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
                            apr_pool_t *pool);
 
 
-/* Make PATH and add it to the working copy, optionally making all the
-   intermediate parent directories if MAKE_PARENTS is TRUE. */
+/* Make LOCAL_ABSPATH and add it to the working copy, optionally making all
+   the intermediate parent directories if MAKE_PARENTS is TRUE. */
 svn_error_t *
-svn_client__make_local_parents(const char *path,
+svn_client__make_local_parents(const char *local_abspath,
                                svn_boolean_t make_parents,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Checkout, update and switch ***/
 
 /* Update a working copy LOCAL_ABSPATH to REVISION, and (if not NULL) set
@@ -528,8 +567,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    unversioned children of LOCAL_ABSPATH that obstruct items added from
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
-
-   If INNERCHECKOUT is true, no anchor check is performed on the target.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
@@ -581,7 +618,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Inheritable Properties ***/
 
 /* Convert any svn_prop_inherited_item_t elements in INHERITED_PROPS which
@@ -626,7 +664,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
                                   apr_pool_t *scratch_pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Editor for repository diff ***/
 
 /* Create an editor for a pure repository comparison, i.e. comparing one
@@ -666,30 +705,36 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
                              apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Editor for diff summary ***/
 
-/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
-   report a diff summary, i.e. only providing information about the changed
-   items without the text deltas.
+/* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
+   to SUMMARIZE_FUNC.
 
-   TARGET is the target path, relative to the anchor, of the diff.
+   P_ROOT_RELPATH will return a pointer to a string that must be set to
+   the root of the operation before the processor is called.
+
+   ORIGINAL_PATH specifies the original path and will be used with
+   **ANCHOR_PATH to create paths as the user originally provided them
+   to the diff function.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
    created callbacks for each changed item.
 */
 svn_error_t *
 svn_client__get_diff_summarize_callbacks(
-                        svn_wc_diff_callbacks4_t **callbacks,
-                        void **callback_baton,
-                        const char *target,
-                        svn_boolean_t reversed,
+                        const svn_diff_tree_processor_t **diff_processor,
+                        const char ***p_root_relpath,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
-                        apr_pool_t *pool);
+                        const char *original_target,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Copy Stuff ***/
 
 /* This structure is used to associate a specific copy or move SRC with a
@@ -730,7 +775,8 @@ typedef struct svn_client__copy_pair_t
 } svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */
-
+
+
 /*** Commit Stuff ***/
 
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual
@@ -899,18 +945,6 @@ svn_client__condense_commit_items(const char **base_url,
                                   apr_array_header_t *commit_items,
                                   apr_pool_t *pool);
 
-
-/* Like svn_ra_stat() on the ra session root, but with a compatibility
-   hack for pre-1.2 svnserve that don't support this api. */
-svn_error_t *
-svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
-                               svn_revnum_t rev,
-                               svn_dirent_t **dirent_p,
-                               apr_uint32_t dirent_fields,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *result_pool);
-
-
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
@@ -944,7 +978,8 @@ svn_client__do_commit(const char *base_url,
                       apr_pool_t *scratch_pool);
 
 
-
+
+
 /*** Externals (Modules) ***/
 
 /* Handle changes to the svn:externals property described by EXTERNALS_NEW,
@@ -1116,7 +1151,27 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool);
 
-
+/* Produce a diff with depth DEPTH between two files or two directories at
+ * LEFT_ABSPATH1 and RIGHT_ABSPATH, using the provided diff callbacks to
+ * show changes in files. The files and directories involved may be part of
+ * a working copy or they may be unversioned. For versioned files, show
+ * property changes, too.
+ *
+ * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
+ * the first processor call. (The anchor is LEFT_ABSPATH or an ancestor of it)
+ */
+svn_error_t *
+svn_client__arbitrary_nodes_diff(const char **root_relpath,
+                                 svn_boolean_t *root_is_dir,
+                                 const char *left_abspath,
+                                 const char *right_abspath,
+                                 svn_depth_t depth,
+                                 const svn_diff_tree_processor_t *diff_processor,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

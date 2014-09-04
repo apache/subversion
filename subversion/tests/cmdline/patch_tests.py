@@ -4657,6 +4657,37 @@ def patch_with_custom_keywords(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_git_rename(sbox):
+  """--git patch with rename header"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # a simple --git rename patch
+  unidiff_patch = [
+    "diff --git a/iota b/iota2\n",
+    "similarity index 100%\n",
+    "rename from iota\n",
+    "rename to iota2\n",
+  ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [ 'A         %s\n' % sbox.ospath('iota2'),
+                      'D         %s\n' % sbox.ospath('iota')]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.add({'iota2' : Item(contents="This is the file 'iota'.\n")})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota2' : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
+  })
+  expected_status.tweak('iota', status='D ', wc_rev=1, moved_to='iota2')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
 
 ########################################################################
 #Run the tests
@@ -4710,6 +4741,7 @@ test_list = [ None,
               patch_apply_no_fuz,
               patch_lacking_trailing_eol_on_context,
               patch_with_custom_keywords,
+              patch_git_rename
             ]
 
 if __name__ == '__main__':

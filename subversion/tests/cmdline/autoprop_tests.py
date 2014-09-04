@@ -102,7 +102,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  tmp_dir = os.path.abspath(sbox.add_wc_path('autoprops'))
   config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 
@@ -415,7 +415,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  tmp_dir = os.path.abspath(sbox.add_wc_path('iautoprops'))
   config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 
@@ -646,7 +646,7 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   #
   # Then revert the previous additions and add again, only the
   # svn:auto-props should be applied.
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  tmp_dir = os.path.abspath(sbox.add_wc_path('temp'))
   config_dir = os.path.join(tmp_dir,
                             'autoprops_config_disabled_' + sbox.name)
   create_inherited_autoprops_config(config_dir, False)
@@ -695,8 +695,7 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
                        '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
   svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=native', sbox.ospath('A/D'))
-  svntest.main.run_svn(None, 'ci', '-m', 'Add inheritable autoprops',
-                       sbox.wc_dir)
+  sbox.simple_commit(message='Add inheritable autoprops')
 
   # Create two subtrees, each with one new file.
   os.mkdir(Z_path)

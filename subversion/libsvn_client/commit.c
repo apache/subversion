@@ -45,6 +45,7 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "svn_private_config.h"
 
@@ -110,7 +111,8 @@ get_ra_editor(const svn_delta_editor_t **editor,
             continue;
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL,
+                                          NULL, NULL,
                                           ctx->wc_ctx, item->path, FALSE, pool,
                                           iterpool));
           if (relpath)
@@ -203,8 +205,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *url = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+      const char *url = apr_hash_this_key(hi);
+      const char *token = apr_hash_this_val(hi);
       const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
       if (relpath)
@@ -240,81 +242,46 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   remove_lock = (! keep_locks && (item->state_flags
                                        & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
 
-  return svn_wc_queue_committed3(queue, wc_ctx, item->path,
-                                 loop_recurse, item->incoming_prop_changes,
+  /* When the node was deleted (or replaced), we need to always remove the 
+     locks, as they're invalidated on the server. We cannot honor the 
+     SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN flag here because it does not tell
+     us whether we have locked children. */
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+    remove_lock = TRUE;
+
+  return svn_error_trace(
+         svn_wc_queue_committed3(queue, wc_ctx, item->path,
+                                 loop_recurse,
+                                 item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 sha1_checksum, scratch_pool);
+                                 sha1_checksum, scratch_pool));
 }
 
-
+/* Do similar handling as post_process_commit_item() but for items that
+ * are commit items, but aren't actual changes. Most importantly
+ * remove lock tokens. */
 static svn_error_t *
-check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
-                              const char *target_abspath,
-                              svn_depth_t depth,
-                              apr_pool_t *scratch_pool)
+post_process_no_commit_item(const svn_client_commit_item3_t *item,
+                            svn_wc_context_t *wc_ctx,
+                            svn_boolean_t keep_changelists,
+                            svn_boolean_t keep_locks,
+                            apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
-
-  SVN_ERR_ASSERT(depth != svn_depth_infinity);
-
-  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, target_abspath,
-                            TRUE, FALSE, scratch_pool));
-
-
-  /* ### TODO(sd): This check is slightly too strict.  It should be
-     ### possible to:
-     ###
-     ###   * delete a directory containing only files when
-     ###     depth==svn_depth_files;
-     ###
-     ###   * delete a directory containing only files and empty
-     ###     subdirs when depth==svn_depth_immediates.
-     ###
-     ### But for now, we insist on svn_depth_infinity if you're
-     ### going to delete a directory, because we're lazy and
-     ### trying to get depthy commits working in the first place.
-     ###
-     ### This would be fairly easy to fix, though: just, well,
-     ### check the above conditions!
-     ###
-     ### GJS: I think there may be some confusion here. there is
-     ###      the depth of the commit, and the depth of a checked-out
-     ###      directory in the working copy. Delete, by its nature, will
-     ###      always delete all of its children, so it seems a bit
-     ###      strange to worry about what is in the working copy.
-  */
-  if (kind == svn_node_dir)
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+      && !keep_locks)
     {
-      svn_wc_schedule_t schedule;
-
-      /* ### Looking at schedule is probably enough, no need for
-         pristine compare etc. */
-      SVN_ERR(svn_wc__node_get_schedule(&schedule, NULL,
-                                        wc_ctx, target_abspath,
-                                        scratch_pool));
-
-      if (schedule == svn_wc_schedule_delete
-          || schedule == svn_wc_schedule_replace)
-        {
-          const apr_array_header_t *children;
-
-          SVN_ERR(svn_wc__node_get_children(&children, wc_ctx,
-                                            target_abspath, TRUE,
-                                            scratch_pool, scratch_pool));
-
-          if (children->nelts > 0)
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("Cannot delete the directory '%s' "
-                                       "in a non-recursive commit "
-                                       "because it has children"),
-                                     svn_dirent_local_style(target_abspath,
-                                                            scratch_pool));
-        }
+      SVN_ERR(svn_wc_remove_lock2(wc_ctx, item->path, scratch_pool));
     }
+
+  if (!keep_changelists)
+    SVN_ERR(svn_wc_set_changelist2(wc_ctx, item->path, NULL,
+                                   svn_depth_empty, NULL,
+                                   NULL, NULL,
+                                   NULL, NULL,
+                                   scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 /* Given a list of committables described by their common base abspath
    BASE_ABSPATH and a list of relative dirents TARGET_RELPATHS determine
@@ -386,8 +353,8 @@ determine_lock_targets(apr_array_header_t **lock_targets,
        hi = apr_hash_next(hi))
     {
       const char *common;
-      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
-      apr_array_header_t *wc_targets = svn__apr_hash_index_val(hi);
+      const char *wcroot_abspath = apr_hash_this_key(hi);
+      apr_array_header_t *wc_targets = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -413,8 +380,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           SVN_ERR(svn_dirent_condense_targets(&common, &wc_targets, wc_targets,
                                               FALSE, iterpool, iterpool));
 
-          qsort(wc_targets->elts, wc_targets->nelts, wc_targets->elt_size,
-                svn_sort_compare_paths);
+          svn_sort__array(wc_targets, svn_sort_compare_paths);
 
           if (wc_targets->nelts == 0
               || !svn_path_is_empty(APR_ARRAY_IDX(wc_targets, 0, const char*))
@@ -666,26 +632,6 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                   base_abspath,
                                                   pool);
 
-  /* If a non-recursive commit is desired, do not allow a deleted directory
-     as one of the targets. */
-  if (depth != svn_depth_infinity && ! commit_as_operations)
-    for (i = 0; i < rel_targets->nelts; i++)
-      {
-        const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
-        const char *target_abspath;
-
-        svn_pool_clear(iterpool);
-
-        target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
-
-        cmt_err = svn_error_trace(
-          check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
-                                        depth, iterpool));
-
-        if (cmt_err)
-          goto cleanup;
-      }
-
   /* Crawl the working copy for commit items. */
   {
     struct check_url_kind_baton cukb;
@@ -734,7 +680,7 @@ svn_client_commit6(const apr_array_header_t *targets,
     apr_hash_index_t *hi = apr_hash_first(iterpool,
                                           committables->by_repository);
 
-    commit_items = svn__apr_hash_index_val(hi);
+    commit_items = apr_hash_this_val(hi);
   }
 
   /* If our array of targets contains only locks (and no actual file
@@ -847,6 +793,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                               svn_dirent_local_style(item->path, iterpool),
                               svn_dirent_local_style(delete_op_root_abspath,
                                                      iterpool));
+
+                  if (ctx->notify_func2)
+                    {
+                      svn_wc_notify_t *notify;
+                      notify = svn_wc_create_notify(
+                                    delete_op_root_abspath,
+                                    svn_wc_notify_failed_requires_target,
+                                    iterpool);
+                      notify->err = cmt_err;
+
+                      ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                    }
+
                   goto cleanup;
                 }
             }
@@ -878,6 +837,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                          svn_dirent_local_style(item->path, iterpool),
                          svn_dirent_local_style(copy_op_root_abspath,
                                                 iterpool));
+
+              if (ctx->notify_func2)
+                {
+                    svn_wc_notify_t *notify;
+                    notify = svn_wc_create_notify(
+                                copy_op_root_abspath,
+                                svn_wc_notify_failed_requires_target,
+                                iterpool);
+                    notify->err = cmt_err;
+
+                    ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                }
+
               goto cleanup;
             }
         }
@@ -971,6 +943,11 @@ svn_client_commit6(const apr_array_header_t *targets,
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
+          if (! (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
+            {
+              continue; /* Nothing to post process via the queue */
+            }
+
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
@@ -989,12 +966,45 @@ svn_client_commit6(const apr_array_header_t *targets,
                    commit_info->author,
                    ctx->cancel_func, ctx->cancel_baton,
                    iterpool);
+
+      if (bump_err)
+        goto cleanup;
+
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+          if (item->state_flags & ~ SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            continue; /* Already processed via the queue */
+
+          svn_pool_clear(iterpool);
+          bump_err = post_process_no_commit_item(
+                       item, ctx->wc_ctx,
+                       keep_changelists, keep_locks,
+                       iterpool);
+          if (bump_err)
+            goto cleanup;
+        }
     }
 
  cleanup:
-  /* Sleep to ensure timestamp integrity. */
+  /* Sleep to ensure timestamp integrity.  BASE_ABSPATH may have been
+     removed by the commit or it may the common ancestor of multiple
+     working copies. */
   if (timestamp_sleep)
-    svn_io_sleep_for_timestamps(base_abspath, pool);
+    {
+      const char *sleep_abspath;
+      svn_error_t *err = svn_wc__get_wcroot(&sleep_abspath, ctx->wc_ctx,
+                                            base_abspath, pool, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          sleep_abspath = base_abspath;
+        }
+
+      svn_io_sleep_for_timestamps(sleep_abspath, pool);
+    }
 
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */

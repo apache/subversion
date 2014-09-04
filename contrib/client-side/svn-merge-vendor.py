@@ -148,7 +148,7 @@ def copy(wc_dir_orig, wc_dir, file):
     global logger
     logger.info("A+ %s" % (file))
 
-    # Retreiving the original URL
+    # Retrieving the original URL
     os.chdir(wc_dir_orig)
     info_tree = call_cmd_xml_tree_out(["svn", "info", "--xml", os.path.join(wc_dir_orig, file)])
     url = get_xml_text_content(info_tree, "/info/entry/url")
@@ -173,7 +173,7 @@ def copy(wc_dir_orig, wc_dir, file):
         os.chdir(wc_dir_orig)
         orig_svn_root_subroot = get_xml_text_content(info_tree, "/info/entry/repository/root") + orig_svn_subroot
         real_from = str(int(r_from)+1)
-        logger.info("Retreiving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to))
+        logger.info("Retrieving log of the original trunk %s between revisions %s and %s ..." % (orig_svn_root_subroot, real_from, r_to))
         log_tree = call_cmd_xml_tree_out(["svn", "log", "--xml", "-v", "-r", "%s:%s" % (real_from, r_to), orig_svn_root_subroot])
 
     # Detecting the path of the original moved or copied file

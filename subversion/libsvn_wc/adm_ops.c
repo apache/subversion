@@ -36,6 +36,7 @@
 #include <apr_time.h>
 #include <apr_errno.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -53,9 +54,9 @@
 #include "conflicts.h"
 #include "workqueue.h"
 
-#include "svn_private_config.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 
 
 struct svn_wc_committed_queue_t
@@ -148,6 +149,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                 db, local_abspath,
                                 FALSE /* keep_as_working */,
                                 FALSE /* queue_deletes */,
+                                TRUE  /* remove_locks */,
                                 (! via_recurse)
                                     ? new_revnum : SVN_INVALID_REVNUM,
                                 NULL, NULL,
@@ -415,7 +417,7 @@ have_recursive_parent(apr_hash_t *queue,
 
   for (hi = apr_hash_first(scratch_pool, queue); hi; hi = apr_hash_next(hi))
     {
-      const committed_queue_item_t *qi = svn__apr_hash_index_val(hi);
+      const committed_queue_item_t *qi = apr_hash_this_val(hi);
 
       if (qi == item)
         continue;
@@ -507,7 +509,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+      const char *wcroot_abspath = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
@@ -630,10 +632,12 @@ check_can_add_to_parent(const char **repos_root_url,
                                          db, parent_abspath,
                                          result_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__db_scan_base_repos(NULL,
-                                           repos_root_url, repos_uuid,
-                                           db, parent_abspath,
-                                           result_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                         repos_root_url, repos_uuid, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -886,11 +890,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       const char *repos_relpath, *inner_repos_root_url, *inner_repos_uuid;
       const char *inner_url;
 
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                         &inner_repos_root_url,
-                                         &inner_repos_uuid,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                       &inner_repos_root_url,
+                                       &inner_repos_uuid, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
 
       if (strcmp(inner_repos_uuid, repos_uuid)
           || strcmp(repos_root_url, inner_repos_root_url))
@@ -991,9 +997,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
 
 svn_error_t *
-svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       const apr_hash_t *props,
+                      svn_boolean_t skip_checks,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *scratch_pool)
@@ -1012,7 +1019,7 @@ svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_wc__canonicalize_props(
                 &new_props,
-                local_abspath, kind, props, FALSE /* skip_some_checks */,
+                local_abspath, kind, props, skip_checks,
                 scratch_pool, scratch_pool));
       props = new_props;
     }
@@ -1175,10 +1182,9 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* ### Enable after fixing callers */
-  /*SVN_ERR(svn_wc__write_check(wc_ctx->db,
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
                               svn_dirent_dirname(local_abspath, scratch_pool),
-                              scratch_pool));*/
+                              scratch_pool));
 
   db_lock.token = lock->token;
   db_lock.owner = lock->owner;
@@ -1229,10 +1235,9 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* ### Enable after fixing callers */
-  /*SVN_ERR(svn_wc__write_check(wc_ctx->db,
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
                               svn_dirent_dirname(local_abspath, scratch_pool),
-                              scratch_pool));*/
+                              scratch_pool));
 
   err = svn_wc__db_lock_remove(wc_ctx->db, local_abspath, scratch_pool);
   if (err)

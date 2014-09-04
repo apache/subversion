@@ -72,7 +72,17 @@ del_lines_res = [
                  re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
                  re.compile(r"  - with Cyrus SASL authentication"),
+                 re.compile(r"  - using serf \d+\.\d+\.\d+"),
                  re.compile(r"\* fs_(base|fs) :"),
+
+                 # Remove 'svn --version' list of platform-specific
+                 # auth cache providers.
+                 re.compile(r"\* Wincrypt cache.*"),
+                 re.compile(r"\* Plaintext cache.*"),
+                 re.compile(r"\* Gnome Keyring"),
+                 re.compile(r"\* GPG-Agent"),
+                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
 # This is a list of lines to search and replace text on.
@@ -89,13 +99,6 @@ rep_lines_res = [
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
-                 # 'svn --help' has a line with the version number.
-                 # It can vary, for example:
-                 # "Subversion command-line client, version 1.1.0."
-                 # "Subversion command-line client, version 1.1.0-dev."
-                 (re.compile(r'Subversion command-line client, '
-                             'version \d+\.\d+\.\d+(.|-[a-zA-Z0-9]+\.)$'),
-                  'Subversion command-line client, version X.Y.Z.'),
                 ]
 
 # This is a trigger pattern that selects the secondary set of

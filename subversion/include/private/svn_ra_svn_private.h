@@ -43,6 +43,12 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
                                svn_delta_shim_callbacks_t *shim_callbacks);
 
 /**
+ * Return the memory pool used to allocate @a conn.
+ */
+apr_pool_t *
+svn_ra_svn__get_pool(svn_ra_svn_conn_t *conn);
+
+/**
  * @defgroup ra_svn_deprecated ra_svn low-level functions
  * @{
  */
@@ -250,6 +256,33 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
                               const char *fmt, ...);
 
+/** Check the receive buffer and socket of @a conn whether there is some
+ * unprocessed incoming data without waiting for new data to come in.
+ * If data is found, set @a *has_command to TRUE.  If the connection does
+ * not contain any more data and has been closed, set @a *terminated to
+ * TRUE.
+ */
+svn_error_t *
+svn_ra_svn__has_command(svn_boolean_t *has_command,
+                        svn_boolean_t *terminated,
+                        svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool);
+
+/** Accept a single command from @a conn and handle them according
+ * to @a cmd_hash.  Command handlers will be passed @a conn, @a pool,
+ * the parameters of the command, and @a baton.  @a *terminate will be
+ * set if either @a error_on_disconnect is FALSE and the connection got
+ * closed, or if the command being handled has the "terminate" flag set
+ * in the command table.
+ */
+svn_error_t *
+svn_ra_svn__handle_command(svn_boolean_t *terminate,
+                           apr_hash_t *cmd_hash,
+                           void *baton,
+                           svn_ra_svn_conn_t *conn,
+                           svn_boolean_t error_on_disconnect,
+                           apr_pool_t *pool);
+
 /** Accept commands over the network and handle them according to @a
  * commands.  Command handlers will be passed @a conn, a subpool of @a
  * pool (cleared after each command is handled), the parameters of the
@@ -281,11 +314,13 @@ svn_ra_svn__write_cmd_response(svn_ra_svn_conn_t *conn,
                                apr_pool_t *pool,
                                const char *fmt, ...);
 
-/** Write an unsuccessful command response over the network. */
+/** Write an unsuccessful command response over the network.
+ *
+ * @note This does not clear @a err. */
 svn_error_t *
 svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
-                              svn_error_t *err);
+                              const svn_error_t *err);
 
 /**
  * @}
@@ -577,7 +612,11 @@ svn_ra_svn__write_cmd_get_dated_rev(svn_ra_svn_conn_t *conn,
 /** Send a "change-rev-prop2" command over connection @a conn.
  * Use @a pool for allocations.
  *
- * @see #svn_ra_change_rev_prop2 for a description.
+ * If @a dont_care is false then check that the old value matches
+ * @a old_value. If @a dont_care is true then do not check the old
+ * value; in this case @a old_value must be NULL.
+ *
+ * @see #svn_ra_change_rev_prop2 for the rest of the description.
  */
 svn_error_t *
 svn_ra_svn__write_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn,
@@ -835,7 +874,7 @@ svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
  */
 
 /**
- * @defgroup svn_data sending data structures over ra_svn
+ * @defgroup svn_send_data sending data structures over ra_svn
  * @{
  */
 
@@ -875,11 +914,35 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  const svn_string_t *message,
                                  svn_boolean_t has_children,
                                  svn_boolean_t invalid_revnum,
-                                 int revprop_count);
+                                 unsigned revprop_count);
 
 /**
  * @}
  */
+
+/**
+ * @defgroup svn_read_data reading data structures from ra_svn
+ * @{
+ */
+
+/** Take the data tuple ITEMS received over ra_svn and convert it to the
+ * a changed path (as part of receiving a log entry).
+ *
+ * @see svn_log_changed_path2_t for a description of the output parameters.
+ */
+svn_error_t *
+svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+                                        svn_string_t **cpath,
+                                        const char **action,
+                                        const char **copy_path,
+                                        svn_revnum_t *copy_rev,
+                                        const char **kind_str,
+                                        apr_uint64_t *text_mods,
+                                        apr_uint64_t *prop_mods);
+/**
+ * @}
+ */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -29,3 +29,22 @@ SET TMP=%TEMP%
 
 IF NOT EXIST "%TESTDIR%\" MKDIR "%TESTDIR%"
 IF NOT EXIST "%TEMP%\" MKDIR "%TEMP%"
+
+
+
+
+
+SET SVN_URL=
+SET SVN_RELURL=
+for /F "usebackq tokens=1,* delims=:" %%i IN (`svn info .`) do (
+
+  IF "%%i" == "URL" (
+    SET SVN_URL=%%j
+  ) ELSE IF "%%i" == "Relative URL" (
+    SET SVN_RELURL=%%j
+  )
+)
+SET SVN_URL=%SVN_URL:~1%
+SET SVN_RELURL=%SVN_RELURL:~3%
+SET SVN_SUBBRANCH=%SVN_RELURL:~11%
+SET SVN_BRANCH=%SVN_SUBBRANCH:branches/=%

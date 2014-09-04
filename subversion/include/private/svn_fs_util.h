@@ -210,6 +210,26 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
                                const char *rel_path,
                                apr_pool_t *pool);
 
+/* Given the FS creation options in CONFIG, return the oldest version that
+   we shall be compatible with in *COMPATIBLE_VERSION.  The patch level
+   is always set to 0 and the tag to "".   Allocate the result in POOL.
+
+   Note that the result will always be compatible to the current tool
+   version, i.e. will be a version number not more recent than this tool. */
+svn_error_t *
+svn_fs__compatible_version(svn_version_t **compatible_version,
+                           apr_hash_t *config,
+                           apr_pool_t *pool);
+
+/* Compare the property lists A and B using POOL for temporary allocations.
+   Return true iff both lists contain the same properties with the same
+   values.  A and B may be NULL in which case they will be equal to and
+   empty list. */
+svn_boolean_t
+svn_fs__prop_lists_equal(apr_hash_t *a,
+                         apr_hash_t *b,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

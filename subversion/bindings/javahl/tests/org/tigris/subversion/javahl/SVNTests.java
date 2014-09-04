@@ -158,7 +158,7 @@ class SVNTests extends TestCase
 
     private void init()
     {
-        // if not already set, get a usefull value for rootDir
+        // if not already set, get a useful value for rootDir
         if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
         if (rootDirectoryName == null)
@@ -309,12 +309,12 @@ class SVNTests extends TestCase
 
         public boolean prompt(String realm, String username)
         {
-            return false;
+            return true;
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return false;
+            return true;
         }
 
         public String askQuestion(String realm, String question,

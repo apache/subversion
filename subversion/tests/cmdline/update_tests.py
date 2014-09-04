@@ -34,8 +34,8 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 from svntest import wc, actions, verify, deeptrees
-from merge_tests import expected_merge_output
-from merge_tests import set_up_branch
+from svntest.mergetrees import expected_merge_output
+from svntest.mergetrees import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -658,6 +658,7 @@ def update_to_resolve_text_conflicts(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -666,6 +667,7 @@ def update_to_resolve_text_conflicts(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -1236,7 +1238,8 @@ def another_hudson_problem(sbox):
 
   # Delete directory G from the repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 3.\n'], [],
                                      'rm', '-m', 'log msg',
                                      sbox.repo_url + '/A/D/G')
 
@@ -1338,7 +1341,8 @@ def new_dir_with_spaces(sbox):
 
   # Create a new directory ("spacey dir") directly in repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
                                      sbox.repo_url
                                      + '/A/spacey%20dir')
@@ -1798,6 +1802,7 @@ def conflict_markers_matching_eol(sbox):
     'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
       "<<<<<<< .mine" + eolchar +
       "Conflicting appended text for mu" + eolchar +
+      "||||||| .r" + str(cur_rev - 1) + eolchar +
       "=======" + eolchar +
       "Original appended text for mu" + eolchar +
       ">>>>>>> .r" + str(cur_rev) + eolchar),
@@ -1980,7 +1985,7 @@ def update_copy_of_old_rev(sbox):
 
   # Commit, and check that it says it's committing the right thing
   exp_out = ['Adding         ' + dir2 + '\n',
-             '\n',
+             'Committing transaction...\n',
              'Committed revision 3.\n']
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'ci', '-m', '', wc_dir)
@@ -2737,6 +2742,7 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/J'     : Item(props={'propname1' : 'propval-WC'}),
     'A/D/H/I/J/eta' : Item("\n".join(["<<<<<<< .mine",
                                       "This is WC file 'eta'",
+                                      "||||||| .r0",
                                       "=======",
                                       "This is REPOS file 'eta'",
                                       ">>>>>>> .r2",
@@ -2746,6 +2752,7 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/L'     : Item(),
     'A/D/kappa'     : Item("\n".join(["<<<<<<< .mine",
                                       "This is WC file 'kappa'",
+                                      "||||||| .r0",
                                       "=======",
                                       "This is REPOS file 'kappa'",
                                       ">>>>>>> .r2",
@@ -2753,6 +2760,7 @@ def update_with_obstructing_additions(sbox):
                            props={'propname1' : 'propval-WC'}),
     'A/D/epsilon'     : Item("\n".join(["<<<<<<< .mine",
                                         "This is WC file 'epsilon'",
+                                        "||||||| .r0",
                                         "=======",
                                         "This is REPOS file 'epsilon'",
                                         ">>>>>>> .r2",
@@ -3033,6 +3041,7 @@ def update_conflicted(sbox):
                       contents="\n".join(["This is the file 'iota'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for iota",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for iota",
                                           ">>>>>>> .r2",
@@ -3041,6 +3050,7 @@ def update_conflicted(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -3876,12 +3886,14 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
                                         '<<<<<<< .mine\n'
                                         'My appended text for iota\n'
+                                        '||||||| .r1\n'
                                         '=======\n'
                                         'Their appended text for iota\n'
                                         '>>>>>>> .r2\n'))
   expected_disk.tweak('A/B/lambda', contents=("This is the file 'lambda'.\n"
                                               '<<<<<<< .mine\n'
                                               'My appended text for lambda\n'
+                                              '||||||| .r1\n'
                                               '=======\n'
                                               'Their appended text for lambda\n'
                                               '>>>>>>> .r2\n'))
@@ -3893,6 +3905,7 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('A/D/G/pi', contents=("This is the file 'pi'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for pi\n'
+                                             '||||||| .r1\n'
                                              '=======\n'
                                              'Their appended text for pi\n'
                                              '>>>>>>> .r2\n'
@@ -3900,6 +3913,7 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for rho\n'
+                                             '||||||| .r1\n'
                                              '=======\n'
                                              'Their appended text for rho\n'
                                              '>>>>>>> .r2\n'
@@ -3934,109 +3948,6 @@ def update_accept_conflicts(sbox):
                                         None,
                                         svntest.tree.detect_conflict_files,
                                         extra_files)
-
-# Test for a wc corruption race condition (possibly introduced in
-# r863416) which is easy to trigger if interactive conflict resolution
-# dies in the middle of prompting.  Specifically, we run an update
-# with interactive-conflicts on but close stdin immediately, so the
-# prompt errors out; then the dir_baton pool cleanup handlers in the
-# WC update editor flush and run incomplete logs and lead to WC
-# corruption, detectable by another update command.
-
-# FIXME: With issue #4280 fixed and this test using --force-interactive,
-#        the test driver can no longer redirect terminal input to cause
-#        an EOF. Consequently, skip this test so that it does not hang
-#        the test suite.
-@Skip()
-def eof_in_interactive_conflict_resolver(sbox):
-  "eof in interactive resolution can't break wc"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Set up a custom config directory which *doesn't* turn off
-  # interactive resolution
-  config_contents = '''\
-[auth]
-password-stores =
-
-[miscellany]
-interactive-conflicts = true
-'''
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'interactive-conflicts-config')
-  svntest.main.create_config_dir(config_dir, config_contents)
-
-  iota_path = sbox.ospath('iota')
-
-  # Modify iota and commit for r2.
-  svntest.main.file_append(iota_path, "Appended text in r2.\n")
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota': Item(verb="Sending"),
-  })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', wc_rev=2)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # Go back to revision 1.
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='U '),
-    })
-
-  expected_disk = svntest.main.greek_state.copy()
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, 1,
-                                        '-r1', wc_dir)
-
-  # Modify iota differently and try to update *with the interactive
-  # resolver*.  ### The parser won't go so well with the output
-  svntest.main.file_append(iota_path, "Local mods to r1 text.\n")
-  svntest.actions.run_and_verify_update(
-    wc_dir, None, None, None,
-    "End of file while reading from terminal",
-    None, None, None, None, 1,
-    wc_dir, '--force-interactive', '--config-dir', config_dir)
-
-  # Now update -r1 again.  Hopefully we don't get a checksum error!
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota': Item(verb="Skipped"),
-  })
-
-  # The interactive callback aborts, so the file remains in conflict.
-  expected_disk.tweak('iota', contents="This is the file 'iota'.\n"
-                                        "<<<<<<< .mine\n"
-                                        "Local mods to r1 text.\n"
-                                        "=======\n"
-                                        "Appended text in r2.\n"
-                                        ">>>>>>> .r2\n"),
-  expected_disk.add({
-    'iota.r1'   : Item(contents="This is the file 'iota'.\n"),
-    'iota.r2'   : Item(contents="This is the file 'iota'.\n"
-                                 "Appended text in r2.\n"),
-    'iota.mine' : Item(contents="This is the file 'iota'.\n"
-                                "Local mods to r1 text.\n"),
-  })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='C ', wc_rev=2)
-
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, 1,
-                                        '-r1', wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -4189,8 +4100,6 @@ disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
 
-disk_empty_dirs = svntest.deeptrees.deep_trees_empty_dirs
-
 deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 deep_trees_conflict_output_skipped = \
     svntest.deeptrees.deep_trees_conflict_output_skipped
@@ -4223,11 +4132,14 @@ def tree_conflicts_on_update_1_1(sbox):
     'DF/D1/beta'        : Item(status='  ', treeconflict='U'),
   })
 
-  expected_disk = disk_empty_dirs.copy()
-  expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
-                       'DDF/D1', 'DDF/D1/D2',
-                       'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
-
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
   # for deletion.
@@ -4307,7 +4219,14 @@ def tree_conflicts_on_update_1_2(sbox):
     'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='D'),
   })
 
-  expected_disk = disk_empty_dirs.copy()
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
 
   expected_status = deep_trees_status_local_tree_del.copy()
 
@@ -4330,18 +4249,10 @@ def tree_conflicts_on_update_1_2(sbox):
                          'DDF/D1/D2/gamma',
                          'DF/D1/beta')
 
-  ### Why does the deep trees state not include files?
-  expected_disk.remove('D/D1',
-                       'DD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DF/D1', 'DD/D1',
-                       'DDF/D1', 'DDF/D1/D2',
-                       'DDD/D1', 'DDD/D1/D2')
-
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
@@ -4359,7 +4270,7 @@ def tree_conflicts_on_update_1_2(sbox):
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
@@ -4424,37 +4335,37 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file edit, incoming file delete upon update'
+        '^local file edit, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir edit, incoming dir delete upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -4486,7 +4397,14 @@ def tree_conflicts_on_update_2_2(sbox):
   ### when dirs_same_p() is implemented)
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs.copy()
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
 
   expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item()})
@@ -4519,50 +4437,40 @@ def tree_conflicts_on_update_2_2(sbox):
                          'DDF/D1/D2',
                          'DDF/D1/D2/gamma',)
 
-  expected_disk.remove('D/D1',
-                       'DD/D1',
-                       'DD/D1/D2',
-                       'DF/D1',
-                       'DDD/D1',
-                       'DDD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DDF/D1',
-                       'DDF/D1/D2',)
-
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -4659,8 +4567,14 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs.copy()
-
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
   expected_status = deep_trees_status_local_tree_del.copy()
 
   # Expect the incoming tree deletes and the local tree deletes to mean
@@ -4681,50 +4595,40 @@ def tree_conflicts_on_update_3(sbox):
                          'DDF/D1/D2',
                          'DDF/D1/D2/gamma',)
 
-  expected_disk.remove('D/D1',
-                       'DD/D1',
-                       'DD/D1/D2',
-                       'DF/D1',
-                       'DDD/D1',
-                       'DDD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DDF/D1',
-                       'DDF/D1/D2',)
-
   expected_info = {
     'F/alpha' : {
       'Tree conflict' :
-        '^local file delete, incoming file delete upon update'
+        '^local file delete, incoming file delete or move upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*(/F/alpha@3)?$',
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
     'D/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*(/D/D1@3)?$',
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete upon update'
+        '^local dir delete, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -5186,6 +5090,7 @@ def update_empty_hides_entries(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3573 'local non-inheritable mergeinfo changes not
 # properly merged with updated mergeinfo'
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_updates_merge_with_local_mods(sbox):
   "local mergeinfo changes are merged with updates"
 
@@ -6567,7 +6472,6 @@ def move_update_props(sbox):
 
 @Issues(3288)
 @SkipUnless(svntest.main.is_os_windows)
-@XFail(svntest.main.is_ra_type_dav)
 def windows_update_backslash(sbox):
   "test filename with backslashes inside"
 
@@ -6575,18 +6479,45 @@ def windows_update_backslash(sbox):
 
   wc_dir = sbox.wc_dir
 
+  mucc_url = sbox.repo_url
+
+  if mucc_url.startswith('http'):
+    # Apache Httpd doesn't allow creating paths with '\\' in them on Windows
+    # AH00026: found %2f (encoded '/') in URI (decoded='/svn-test-work/repositories/authz_tests-30/!svn/ver/2/A/completely\\unusable\\dir'), returning 404
+    #
+    # Let's use file:// to work around.
+    mucc_url = 'file:///' + os.path.abspath(sbox.repo_dir).replace('\\', '/')
+
   svntest.actions.run_and_verify_svnmucc(None, None, [],
-                    '-U', sbox.repo_url,
+                    '-U', mucc_url,
                     '-m', '',
                     'mkdir', 'A/completely\\unusable\\dir')
 
   # No error and a proper skip + recording in the working copy would also
   # be a good result. This just verifies current behavior.
 
-  expected_error = 'svn: E155000: .* is not valid.*'
-  svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
-                                     wc_dir)
+  if sbox.repo_url.startswith('http'):
+    # Apache Httpd doesn't allow paths with '\\' in them on Windows, so the
+    # test if a user is allowed to read them returns a failure. This makes
+    # mod_dav_svn report the path as server excluded (aka absent), which
+    # doesn't produce output when updating.
+    expected_output = [
+      "Updating '%s':\n" % wc_dir,
+      "At revision 2.\n"
+    ]
+    expected_err = []
+  else:
+    expected_output = None
+    expected_err = 'svn: E155000: .* is not valid.*'
 
+  svntest.actions.run_and_verify_svn(wc_dir, expected_output, expected_err,
+                                     'up', wc_dir)
+
+  if sbox.repo_url.startswith('http'):
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail() # Tries to modify unlocked part of working copy; found via r1561425
 def update_moved_away(sbox):
   "update subtree of moved away"
 
@@ -6743,21 +6674,20 @@ def update_child_below_add(sbox):
   wc_dir = sbox.wc_dir
 
   sbox.simple_update('A/B', 0)
+  e_path = sbox.ospath('A/B/E')
 
-  # Update skips A/B/E because A/B has a not-present BASE node.
-  expected_output = svntest.wc.State(wc_dir, {
-      'A/B/E' : Item(verb='Skipped'),
-  })
+  # Update skips and errors on A/B/E because A/B has a not-present BASE node.
+  expected_output = ["Skipped '"+e_path+"'\n"]
+  expected_err = "svn: E155007: "
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                          'A/B/F', 'A/B/lambda')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        None,
-                                        expected_status,
-                                        None, None, None,
-                                        None, None, None,
-                                        sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_svn("update A/B/E",
+                                     expected_output,
+                                     expected_err,
+                                     'update', e_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
   # Add working nodes over A/B
   sbox.simple_mkdir('A/B')
@@ -6768,6 +6698,9 @@ def update_child_below_add(sbox):
       'A/B'         : Item(status='A ', wc_rev='-'),
       'A/B/E'       : Item(status='A ', wc_rev='-'),
       'A/B/E/alpha' : Item(status='A ', wc_rev='-'),
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/E' : Item(verb='Skipped'),
   })
   # Update should still skip A/B/E
   svntest.actions.run_and_verify_update(wc_dir,
@@ -6823,7 +6756,6 @@ test_list = [ None,
               update_copied_from_replaced_and_changed,
               update_copied_and_deleted_prop,
               update_accept_conflicts,
-              eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               restarted_update_should_delete_dir_prop,
               tree_conflicts_on_update_1_1,

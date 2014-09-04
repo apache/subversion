@@ -353,6 +353,7 @@ copy_versioned_dir(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_children_info(&versioned_children,
                                         &conflicted_children,
                                         db, src_abspath,
+                                        FALSE /* base_tree_only */,
                                         scratch_pool, iterpool));
   for (hi = apr_hash_first(scratch_pool, versioned_children);
        hi;
@@ -366,8 +367,8 @@ copy_versioned_dir(svn_wc__db_t *db,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      child_name = svn__apr_hash_index_key(hi);
-      info = svn__apr_hash_index_val(hi);
+      child_name = apr_hash_this_key(hi);
+      info = apr_hash_this_val(hi);
       child_src_abspath = svn_dirent_join(src_abspath, child_name, iterpool);
       child_dst_abspath = svn_dirent_join(dst_abspath, child_name, iterpool);
 
@@ -467,7 +468,7 @@ copy_versioned_dir(svn_wc__db_t *db,
       for (hi = apr_hash_first(scratch_pool, disk_children); hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
+          const char *name = apr_hash_this_key(hi);
           const char *unver_src_abspath, *unver_dst_abspath;
           svn_skel_t *work_item;
 
@@ -643,10 +644,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                            scratch_pool, scratch_pool));
         else
           /* If not added, the node must have a base or we can't copy */
-          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &src_repos_root_url,
-                                             &src_repos_uuid,
-                                             db, src_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                           &src_repos_root_url,
+                                           &src_repos_uuid, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
       }
 
     if (!dst_repos_root_url)
@@ -660,10 +664,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                            scratch_pool, scratch_pool));
         else
           /* If not added, the node must have a base or we can't copy */
-          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &dst_repos_root_url,
-                                             &dst_repos_uuid,
-                                             db, dstdir_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                           &dst_repos_root_url,
+                                           &dst_repos_uuid, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           db, dstdir_abspath,
+                                           scratch_pool, scratch_pool));
       }
 
     if (strcmp(src_repos_root_url, dst_repos_root_url) != 0
@@ -936,14 +943,15 @@ remove_all_conflict_markers(svn_wc__db_t *db,
           artillery. */
   SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts, db,
                                         src_dir_abspath,
+                                        FALSE /* base_tree_only */,
                                         scratch_pool, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, nodes);
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      struct svn_wc__db_info_t *info = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      struct svn_wc__db_info_t *info = apr_hash_this_val(hi);
 
       if (info->conflicted)
         {

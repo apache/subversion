@@ -35,7 +35,7 @@ svn_rdump__normalize_prop(const char *name,
                           const svn_string_t **value,
                           apr_pool_t *result_pool)
 {
-  if (svn_prop_needs_translation(name))
+  if (svn_prop_needs_translation(name) && *value)
     {
       const char *cstring;
 
@@ -61,8 +61,8 @@ svn_rdump__normalize_props(apr_hash_t **normal_props,
   for (hi = apr_hash_first(result_pool, props); hi;
         hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      const svn_string_t *value = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      const svn_string_t *value = apr_hash_this_val(hi);
 
       SVN_ERR(svn_rdump__normalize_prop(key, &value,
                                         result_pool));

@@ -228,7 +228,7 @@ Purpose: Present what we have in our WC to the server and let it tell us what
 Target URL: Base VCC URL
             Example: REPORT /repos/test/!svn/vcc/default
 
-Note: ra_serf will not set the send-all attribute to the update-report.  It
+Note: ra_serf may not set the send-all attribute to the update-report.  It
       will instead take the returned D:checked-in href and do a pipelined
       PROPFIND / GET on that resource.
 

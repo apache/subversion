@@ -808,7 +808,6 @@ def copy_inherits_special_props(sbox):
 # non-Posix platforms, we won't have to skip here:
 @Skip(is_non_posix_and_non_windows_os)
 @Issue(3086)
-@XFail(svntest.main.is_ra_type_dav)
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 
@@ -848,14 +847,10 @@ def revprop_change(sbox):
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
-  actual_exit, actual_stdout, actual_stderr = svntest.main.run_svn(
-    None, 'pg', '--revprop', '-r', '0', 'cash-sound', sbox.wc_dir)
-
   # The property should have been deleted.
-  regex = 'cha-ching'
-  for line in actual_stdout:
-    if re.match(regex, line):
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None,
+    '.*(E195011|E200017).*cash-sound.*',
+    'propget', '--revprop', '-r', '0', 'cash-sound', sbox.wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -910,7 +905,7 @@ def prop_value_conversions(sbox):
   svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
-  # client converts to local encoding and local eoln style.
+  # client converts to local encoding and local eol style.
   # Therefore, the expected output must contain the right kind of eoln
   # strings. That's why we use os.linesep in the tests below, not just
   # plain '\n'. The _last_ \n is also from the client, but it's not
@@ -1606,12 +1601,13 @@ def props_over_time(sbox):
         pget_expected = expected
         if pget_expected:
           pget_expected = [ pget_expected + "\n" ]
+        expected_err = [] if expected else '.*W200017: Property.*not found.*'
         if op_rev != 0:
-          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+          svntest.actions.run_and_verify_svn(None, pget_expected, expected_err,
                                              'propget', 'revision', peg_path,
                                              '-r', str(op_rev))
         else:
-          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+          svntest.actions.run_and_verify_svn(None, pget_expected, expected_err,
                                              'propget', 'revision', peg_path)
 
         ### Test 'svn proplist -v'
@@ -1634,7 +1630,6 @@ def props_over_time(sbox):
 
 # XFail the same reason revprop_change() is.
 @SkipUnless(svntest.main.server_enforces_date_syntax)
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3086)
 def invalid_propvalues(sbox):
   "test handling invalid svn:* property values"
@@ -1740,9 +1735,9 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  # serf/neon/mod_dav_svn give SVN_ERR_RA_DAV_REQUEST_FAILED
+  # serf/mod_dav_svn give SVN_ERR_RA_DAV_PROPPATCH_FAILED
   # file/svn give SVN_ERR_REPOS_HOOK_FAILURE
-  expected_error = 'svn: (E175002|E165001).*post-revprop-change hook failed'
+  expected_error = 'svn: (E175008|E165001).*post-revprop-change hook failed'
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
@@ -1884,8 +1879,9 @@ def prop_reject_grind(sbox):
     "Trying to change property 'edit.none'\n"
     "but the property does not exist locally.\n"
     "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.del'\n"
     "but the property has been locally deleted and had a different value.\n",
@@ -1893,75 +1889,84 @@ def prop_reject_grind(sbox):
     "Trying to delete property 'del.edit'\n"
     "but the local property value is different.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.del'\n"
     "but the property has been locally deleted.\n"
     "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.edit'\n"
     "but the property has already been locally changed to a different value.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.edit2'\n"
     "but the property has been locally modified.\n"
     "<<<<<<< (local property value)\n"
-    "repos.changed=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "repos.changed||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.add'\n"
     "but the property has been locally added.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to delete property 'del.diff'\n"
     "but the local property value is different.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    ">>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    ">>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.add'\n"
     "but the property has been locally added with a different value.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to change property 'edit.diff'\n"
     "but the local property value conflicts with the incoming change.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos.changed>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "repos=======\n"
+    "repos.changed>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.add'\n"
     "but the property already exists.\n"
     "<<<<<<< (local property value)\n"
-    "local=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "local||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.diff'\n"
     "but the property already exists.\n"
-    "Local property value:\n"
-    "local\n"
-    "Incoming property value:\n"
-    "repos\n",
+    "<<<<<<< (local property value)\n"
+    "local||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
 
     "Trying to add new property 'add.del'\n"
     "but the property has been locally deleted.\n"
-    "<<<<<<< (local property value)\n"
-    "=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "Incoming property value:\n"
+    "repos\n",
 
     "Trying to add new property 'add.edit'\n"
     "but the property already exists.\n"
     "<<<<<<< (local property value)\n"
-    "local.changed=======\n"
-    "repos>>>>>>> (incoming property value)\n",
+    "local.changed||||||| (incoming 'changed from' value)\n"
+    "=======\n"
+    "repos>>>>>>> (incoming 'changed to' value)\n",
   ]
 
   # Get the contents of mu.prej.  The error messages are in the prej file
@@ -2060,7 +2065,7 @@ def atomic_over_ra(sbox):
     expected_stderr = ".*doesn't advertise.*ATOMIC_REVPROP"
     svntest.actions.run_and_verify_atomic_ra_revprop_change(
        None, None, expected_stderr, 1, repo_url, 0, 'flower',
-       old_value, proposed_value)
+       old_value, proposed_value, True)
 
     # The original value is still there.
     svntest.actions.check_prop('flower', repo_url, [s1], 0)
@@ -2344,6 +2349,7 @@ def file_matching_dir_prop_reject(sbox):
   expected_status.tweak(wc_rev=2)
   expected_status.tweak('A', 'A/dir_conflicts', status=' C')
 
+  # Conflict: BASE=val2 WORKING=val3 INCOMING_OLD=val2 INCOMING_NEW=val1
   extra_files = ['dir_conflicts.prej', 'dir_conflicts.2.prej']
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2612,6 +2618,156 @@ def peg_rev_base_working(sbox):
                                      'propget', '--strict', 'ordinal',
                                      sbox.ospath('iota') + '@BASE')
 
+@Issue(4415)
+@XFail(svntest.main.is_ra_type_dav)
+def xml_unsafe_author(sbox):
+  "svn:author with XML unsafe chars"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # client sends svn:author (via PROPPATCH for DAV)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '1',
+                                     'svn:author', 'foo\bbar', wc_dir)
+
+  # mod_dav_svn sends svn:author (via REPORT for DAV)
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  expected_info = [{
+      'Path' : re.escape(wc_dir),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Last Changed Author' : 'foo\bbar',
+  }]
+  svntest.actions.run_and_verify_info(expected_info, wc_dir)
+
+  # mod_dav_svn sends svn:author (via PROPFIND for DAV)
+  # Since r1553367 this works correctly on ra_serf, since we now request
+  # a single property value which somehow triggers different behavior
+  svntest.actions.run_and_verify_svn(None, ['foo\bbar'], [],
+                                     'propget', '--revprop', '-r', '1',
+                                     'svn:author', '--strict', wc_dir)
+
+  # But a proplist of this property value still fails via DAV.
+  expected_output = [
+    'Unversioned properties on revision 1:\n',
+    '  svn:author\n',
+    '  svn:date\n',
+    '  svn:log\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '--revprop', '-r', '1',
+                                     wc_dir)
+
+def dir_prop_conflict_details(sbox):
+  "verify dir property conflict details"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Apply some changes
+  sbox.simple_propset('svn:mergeinfo', '/B:1', 'A')
+  sbox.simple_propset('my-prop', 'my-val', 'A')
+  sbox.simple_commit()
+
+  # Revert to r1
+  sbox.simple_update('', revision=1)
+
+  # Apply some incompatible changes
+  sbox.simple_propset('svn:mergeinfo', '/C:1', 'A')
+  sbox.simple_propset('my-prop', 'other-val', 'A')
+
+  # This should report out of date because there are incompatible property
+  # changes that can't be merged on the server
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        '.*[Oo]ut of date.*',
+                                        wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'                 : Item(status=' C'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A', status=' C')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        wc_dir)
+
+  # The conflict properties file line was shown for previous versions, but the
+  # conflict source urls are new since 1.8.
+  expected_info = {
+    'Conflict Properties File' : re.escape(os.path.abspath(
+                                           sbox.ospath('A/dir_conflicts.prej'))
+                                           + ' Source  left: (dir) ^/A@1'
+                                           + ' Source right: (dir) ^/A@2')
+  }
+  svntest.actions.run_and_verify_info([expected_info], sbox.path('A'))
+
+
+def iprops_list_abspath(sbox):
+  "test listing iprops via abspath"
+
+  sbox.build()
+
+  sbox.simple_propset('im', 'root', '')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '^/A/D', sbox.ospath(''),
+                                     '--ignore-ancestry')
+
+  sbox.simple_propset('im', 'GammA', 'gamma')
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % sbox.ospath(''),
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % sbox.ospath('gamma'),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     sbox.ospath(''))
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % os.path.abspath(sbox.ospath('')),
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % os.path.abspath(sbox.ospath('gamma')),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     os.path.abspath(sbox.ospath('')))
+
+def wc_propop_on_url(sbox):
+  "perform wc specific operations on url"
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pl', '-r', 'PREV',
+                                     sbox.repo_url)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pg', 'my:Q', '-r', 'PREV',
+                                     sbox.repo_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -2657,6 +2813,10 @@ test_list = [ None,
               inheritable_ignores,
               almost_known_prop_names,
               peg_rev_base_working,
+              xml_unsafe_author,
+              dir_prop_conflict_details,
+              iprops_list_abspath,
+              wc_propop_on_url,
              ]
 
 if __name__ == '__main__':

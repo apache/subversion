@@ -33,10 +33,9 @@ javahl                build javahl
 install-javahl        install javahl
 check-javahl          run javahl tests
 
-(In order to run check-javahl, you must have already installed JavaHL,
-and you must have specified a path to a JUnit jar file with
---with-junit when running configure; JUnit version 3.8.1 has been
-tested.  JUnit can be downloaded from http://junit.sf.net/ .)
+(In order to run check-javahl, you must have specified a path to a JUnit
+jar file with --with-junit when running configure; JUnit version 3.8.1
+has been tested.  JUnit can be downloaded from http://junit.org/ .)
 
 
 MacOS X:

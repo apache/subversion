@@ -267,7 +267,9 @@ export_node(void *baton,
                                                       scratch_pool));
     }
 
-  if (status->file_external)
+  /* Skip file externals if they are a descendant of the export,
+     BUT NOT if we are explictly exporting the file external. */
+  if (status->file_external && strcmp(eib->origin_abspath, local_abspath) != 0)
     return SVN_NO_ERROR;
 
   /* Produce overwrite errors for the export root */
@@ -1272,8 +1274,8 @@ export_file(const char *from_path_or_url,
    * with information. */
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn__apr_hash_index_key(hi);
-      const svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const char *propname = apr_hash_this_key(hi);
+      const svn_string_t *propval = apr_hash_this_val(hi);
 
       SVN_ERR(change_file_prop(fb, propname, propval, scratch_pool));
     }
@@ -1540,7 +1542,7 @@ svn_client_export5(svn_revnum_t *result_rev,
                hi;
                hi = apr_hash_next(hi))
             {
-              const char *external_abspath = svn__apr_hash_index_key(hi);
+              const char *external_abspath = apr_hash_this_key(hi);
               const char *relpath;
               const char *target_abspath;
 
@@ -1587,3 +1589,4 @@ svn_client_export5(svn_revnum_t *result_rev,
 
   return SVN_NO_ERROR;
 }
+

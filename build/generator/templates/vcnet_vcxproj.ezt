@@ -18,8 +18,7 @@
      under the License.
 -->
 ]<?xml version="1.0" encoding="utf-8"?>
-[format "xml"]
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+[format "xml"]<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
 [for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
       <Configuration>[configs.name]</Configuration>
@@ -33,9 +32,9 @@
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="Configuration">
     <ConfigurationType>[config_type]</ConfigurationType>
     <UseDebugLibraries>[is configs.name "Debug"]true[else]false[end]</UseDebugLibraries>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
 [is configs.name "Release"]    <WholeProgramOptimization>true</WholeProgramOptimization>
-[end]    <PlatformToolset>[toolset_version]</PlatformToolset>
-  </PropertyGroup>
+[end]  </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -43,44 +42,45 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\[target.output_dir]\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\obj\[target.intermediate_dir]\[target.proj_name]\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
-[is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
-[end][end][end][end]  </PropertyGroup>
-[for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
+[for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
+    <OutDir>$(SolutionDir)[configs.name]\[target.output_dir]\</OutDir>
+    <IntDir>$(SolutionDir)[configs.name]\obj\[target.intermediate_dir]\[target.proj_name]\</IntDir>
+    <TargetName>[target.output_name_without_ext]</TargetName>
+[is configs.name "Debug"]    <LinkIncremental>false</LinkIncremental>
+[end][is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
+[end][end]  </PropertyGroup>
+[end][end][for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <ClCompile>
 [is configs.name "Debug"]      <Optimization>Disabled</Optimization>
 [else]      <Optimization>Full</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+[end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
-[end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <BrowseInformation>true</BrowseInformation>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
-      <DisableSpecificWarnings>4100;4127;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4100;4127;4206;4512;4701;4706;4800;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4204;4715;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
-    </ClCompile>
+[if-any configs.forced_include_files]      <ForcedIncludeFiles>[for configs.forced_include_files][configs.forced_include_files];[end]%(ForcedIncludeFiles)</ForcedIncludeFiles>
+[end]    </ClCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <EnableUAC>true</EnableUAC>
-[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
-[else]      <OptimizeReferences>true</OptimizeReferences>
+      <OptimizeReferences>true</OptimizeReferences>
+[is configs.name "Debug"]      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
 [end]    </Link>
 [else][is config_type "DynamicLibrary"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
-[end][if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
+      <IgnoreSpecificDefaultLibraries>[is configs.name "Debug"]msvcrt.lib[end][is configs.name "Release"]msvcrtd.lib[end]</IgnoreSpecificDefaultLibraries>
+[if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>
       <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
@@ -89,25 +89,26 @@
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
     <ResourceCompile Include="..\svn.rc">
-[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
 [end][end]    </ResourceCompile>
   </ItemGroup>
 [end]  <ItemGroup>
-[for sources][is sources.extension ".h"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
+[for sources][is sources.extension ".h"][else][is sources.extension ".hpp"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Command Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_build]</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for sources.user_deps][sources.user_deps];[end]%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_target];%(Outputs)</Outputs>
 [if-any sources.custom_desc]<Message Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_desc]</Message>
 [end][end][end]    </CustomBuild>
-[else][is sources.extension ".c"]    <ClCompile Include="[sources.path]" />
-[else][is sources.extension ".cpp"]    <ClCompile Include="[sources.path]" />
+[else][is sources.extension ".c"][if-any sources.ignored]    <None Include="[sources.path]" />[else]    <ClCompile Include="[sources.path]" />[end]
+[else][is sources.extension ".cpp"][if-any sources.ignored]    <None Include="[sources.path]" />[else]    <ClCompile Include="[sources.path]" />[end]
 [else]    <None Include="[sources.path]" />
-[end][end][end][end][end]  </ItemGroup>
+[end][end][end][end][end][end]  </ItemGroup>
   <ItemGroup>
 [for sources][is sources.extension ".h"]    <ClInclude Include="[sources.path]" />
-[end][end]  </ItemGroup>
+[else][is sources.extension ".hpp"]    <ClInclude Include="[sources.path]" />
+[end][end][end]  </ItemGroup>
   <ItemGroup>
 [for depends]    <ProjectReference Include="[depends.path]">
       <Project>[depends.guid]</Project>

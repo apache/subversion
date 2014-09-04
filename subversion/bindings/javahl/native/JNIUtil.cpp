@@ -24,6 +24,13 @@
  * @brief Implementation of the class JNIUtil
  */
 
+/* Include apr.h first, or INT64_C won't be defined properly on some C99
+   compilers, when other headers include <stdint.h> before defining some
+   macros.
+
+   See apr.h for the ugly details */
+#include <apr.h>
+
 #include "JNIUtil.h"
 #include "Array.h"
 
@@ -35,8 +42,11 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_file_info.h>
+#include <apr_time.h>
 
 #include "svn_pools.h"
+#include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_ra.h"
 #include "svn_utf.h"
@@ -44,36 +54,37 @@
 #include "svn_dso.h"
 #include "svn_path.h"
 #include "svn_cache_config.h"
-#include <apr_file_info.h>
+#include "private/svn_atomic.h"
+#include "private/svn_utf_private.h"
 #include "svn_private_config.h"
-#ifdef WIN32
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-extern "C" {
-#include <arch/win32/apr_arch_utf8.h>
-};
-#endif
 
 #include "SVNBase.h"
 #include "JNIMutex.h"
 #include "JNICriticalSection.h"
-#include "JNIThreadData.h"
 #include "JNIStringHolder.h"
 #include "Pool.h"
+
+
+#include "jniwrapper/jni_env.hpp"
 
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
+JNIMutex *JNIUtil::g_configMutex = NULL;
 bool JNIUtil::g_initException;
-bool JNIUtil::g_inInit;
-JNIEnv *JNIUtil::g_initEnv;
-char JNIUtil::g_initFormatBuffer[formatBufferSize];
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
+
+/**
+ * Return the JNI environment to use
+ * @return the JNI environment
+ */
+JNIEnv *JNIUtil::getEnv()
+{
+  return Java::Env().get();
+}
 
 /**
  * Initialize the environment for all requests.
@@ -83,9 +94,6 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 {
   // Clear all standing exceptions.
   env->ExceptionClear();
-
-  // Remember the env parameter for the remainder of the request.
-  setEnv(env);
 
   // Lock the list of finalized objects.
   JNICriticalSection cs(*g_finalizedObjectsMutex) ;
@@ -104,49 +112,48 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   return true;
 }
 
+/* Forwarder for calling JNIGlobalInit from JNI_OnLoad(). */
+bool initialize_jni_util(JNIEnv *env)
+{
+  return JNIUtil::JNIGlobalInit(env);
+}
+
+namespace {
+
+volatile svn_atomic_t *gentle_crash_write_loc = NULL;
+
+svn_error_t *
+gently_crash_the_jvm(svn_boolean_t can_return,
+                     const char *file, int line, const char *expr)
+{
+  if (!can_return)
+    {
+      // Try not to abort; aborting prevents the JVM from creating
+      // a crash log, which is oh so useful for debugging.
+      // We can't just raise a SEGV signal, either, because it will
+      // be not be caught in the context that we're interested in
+      // getting the stack trace from.
+
+      // Try reading from and writing to the zero page
+      const svn_atomic_t zeropage = svn_atomic_read(gentle_crash_write_loc);
+      svn_atomic_set(gentle_crash_write_loc, zeropage);
+    }
+
+  // Forward to the standard malfunction handler, which does call
+  // abort when !can_return; this will only happen if the write to the
+  // zero page did not cause a SEGV.
+  return svn_error_raise_on_malfunction(can_return, file, line, expr);
+}
+} // Anonymous namespace
+
 /**
  * Initialize the environment for all requests.
+ * This method must be called in a single-threaded context.
  * @param env   the JNI environment for this request
  */
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
-  // This method has to be run only once during the run a program.
-  static bool run = false;
   svn_error_t *err;
-  if (run) // already run
-    return true;
-
-  run = true;
-
-  // Do not run this part more than one time.  This leaves a small
-  // time window when two threads create their first SVNClient and
-  // SVNAdmin at the same time, but I do not see a better option
-  // without APR already initialized
-  if (g_inInit)
-    return false;
-
-  g_inInit = true;
-  g_initEnv = env;
-
-  apr_status_t status;
-
-
-
-  /* Initialize the APR subsystem, and register an atexit() function
-   * to Uninitialize that subsystem at program exit. */
-  status = apr_initialize();
-  if (status)
-    {
-      if (stderr)
-        {
-          char buf[1024];
-          apr_strerror(status, buf, sizeof(buf) - 1);
-          fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
-        }
-      return FALSE;
-    }
 
   /* This has to happen before any pools are created. */
   if ((err = svn_dso_initialize2()))
@@ -158,16 +165,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
-  if (0 > atexit(apr_terminate))
-    {
-      if (stderr)
-        fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
-      return FALSE;
-    }
-
-  /* Create our top-level pool. */
+  /* Create our top-level pool.
+     N.B.: APR was initialized by JNI_OnLoad. */
   g_pool = svn_pool_create(NULL);
 
   apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);
@@ -180,15 +179,25 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 
   svn_utf_initialize2(FALSE, g_pool); /* Optimize character conversions */
-  svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
-  svn_ra_initialize(g_pool);
 
-  /* We shouldn't fill the JVMs memory with FS cache data unless explictly
-     requested. */
+  // Initialize the libraries we use
+  err = svn_fs_initialize(g_pool);
+  if (!err)
+    err = svn_ra_initialize(g_pool);
+  if (err)
+    {
+      if (stderr && err->message)
+        fprintf(stderr, "%s", err->message);
+
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  /* We shouldn't fill the JVMs memory with FS cache data unless
+     explicitly requested. And we don't either, because the caches get
+     allocated outside the JVM heap. Duh. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();
-    settings.cache_size = 0;
-    settings.file_handle_count = 0;
     settings.single_threaded = FALSE;
     svn_cache_config_set(&settings);
   }
@@ -197,32 +206,24 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #ifdef WIN32
   {
     WCHAR ucs2_path[MAX_PATH];
-    char *utf8_path;
+    const char *utf8_path;
     const char *internal_path;
-    apr_pool_t *pool;
-    apr_status_t apr_err;
-    apr_size_t inwords, outbytes;
-    unsigned int outlength;
+    svn_error_t *err;
+    apr_pool_t *pool = svn_pool_create(g_pool);
 
-    pool = svn_pool_create(g_pool);
     /* get dll name - our locale info will be in '../share/locale' */
-    inwords = sizeof(ucs2_path) / sizeof(ucs2_path[0]);
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
-    GetModuleFileNameW(moduleHandle, ucs2_path, inwords);
-    inwords = lstrlenW(ucs2_path);
-    outbytes = outlength = 3 * (inwords + 1);
-    utf8_path = reinterpret_cast<char *>(apr_palloc(pool, outlength));
-    apr_err = apr_conv_ucs2_to_utf8((const apr_wchar_t *) ucs2_path,
-                                    &inwords, utf8_path, &outbytes);
-    if (!apr_err && (inwords > 0 || outbytes == 0))
-      apr_err = APR_INCOMPLETE;
-    if (apr_err)
+    GetModuleFileNameW(moduleHandle, ucs2_path,
+                       sizeof(ucs2_path) / sizeof(ucs2_path[0]));
+    err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, NULL, pool);
+    if (err)
       {
         if (stderr)
-          fprintf(stderr, "Can't convert module path to UTF-8");
-        return FALSE;
+          svn_handle_error2(err, stderr, false, "svn: ");
+        svn_error_clear(err);
+        return false;
       }
-    utf8_path[outlength - outbytes] = '\0';
+
     internal_path = svn_dirent_internal_style(utf8_path, pool);
     /* get base path name */
     internal_path = svn_dirent_dirname(internal_path, pool);
@@ -268,16 +269,14 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  // initialized the thread local storage
-  if (!JNIThreadData::initThreadData())
-    return false;
-
-  setEnv(env);
+  g_configMutex = new JNIMutex(g_pool);
   if (isExceptionThrown())
     return false;
 
-  g_initEnv = NULL;
-  g_inInit = false;
+  // Set a malfunction handler that tries not to call abort, because
+  // that would prevent the JVM from creating a crash and stack log file.
+  svn_error_set_malfunction_handler(gently_crash_the_jvm);
+
   return true;
 }
 
@@ -304,18 +303,6 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
     return;
 
   env->ThrowNew(clazz, message);
-  setExceptionThrown();
-  env->DeleteLocalRef(clazz);
-}
-
-jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
-{
-  if (err == NULL)
-    return NULL;
-  std::string buffer;
-  assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
-  jstring jmessage = makeJString(buffer.c_str());
-  return jmessage;
 }
 
 void
@@ -418,10 +405,173 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   env->DeleteLocalRef(jfileName);
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+namespace {
+struct MessageStackItem
 {
-  std::string msg;
-  assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
+  apr_status_t m_code;
+  std::string m_message;
+  bool m_generic;
+
+  MessageStackItem(apr_status_t code, const char* message,
+                   bool generic = false)
+    : m_code(code),
+      m_message(message),
+      m_generic(generic)
+    {}
+};
+typedef std::vector<MessageStackItem> ErrorMessageStack;
+
+/*
+ * Build the error message from the svn error into buffer.  This
+ * method iterates through all the chained errors
+ *
+ * @param err               the subversion error
+ * @param buffer            the buffer where the formated error message will
+ *                          be stored
+ * @return An array of error codes and messages
+ */
+ErrorMessageStack assemble_error_message(
+    svn_error_t *err, std::string &result)
+{
+  // buffer for a single error message
+  char errbuf[1024];
+  apr_status_t parent_apr_err = 0;
+  ErrorMessageStack message_stack;
+
+  /* Pretty-print the error */
+  /* Note: we can also log errors here someday. */
+
+  for (int depth = 0; err;
+       ++depth, parent_apr_err = err->apr_err, err = err->child)
+    {
+      /* When we're recursing, don't repeat the top-level message if its
+       * the same as before. */
+      if (depth == 0 || err->apr_err != parent_apr_err)
+        {
+          const char *message;
+          /* Is this a Subversion-specific error code? */
+          if ((err->apr_err > APR_OS_START_USEERR)
+              && (err->apr_err <= APR_OS_START_CANONERR))
+            message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          /* Otherwise, this must be an APR error code. */
+          else
+            {
+              /* Messages coming from apr_strerror are in the native
+                 encoding, it's a good idea to convert them to UTF-8. */
+              apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+              svn_error_t* utf8_err =
+                svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
+              if (utf8_err)
+                {
+                  /* Use fuzzy transliteration instead. */
+                  svn_error_clear(utf8_err);
+                  message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+                }
+            }
+
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, message, true));
+        }
+      if (err->message)
+        {
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, err->message));
+        }
+    }
+
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
+       it != message_stack.end(); ++it)
+    {
+      if (!it->m_generic)
+        result += "svn: ";
+      result += it->m_message;
+      result += '\n';
+    }
+  return message_stack;
+}
+
+jobject construct_Jmessage_stack(const ErrorMessageStack& message_stack)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass list_clazz = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jmethodID mid = env->GetMethodID(list_clazz, "<init>", "(I)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jmethodID add_mid = env->GetMethodID(list_clazz, "add",
+                                       "(Ljava/lang/Object;)Z");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jobject jlist = env->NewObject(list_clazz, mid, jint(message_stack.size()));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException$ErrorMessage");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  mid = env->GetMethodID(clazz, "<init>",
+                         "(ILjava/lang/String;Z)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
+       it != message_stack.end(); ++it)
+    {
+      jobject jmessage = JNIUtil::makeJString(it->m_message.c_str());
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+      jobject jitem = env->NewObject(clazz, mid,
+                                     jint(it->m_code), jmessage,
+                                     jboolean(it->m_generic));
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+      env->CallBooleanMethod(jlist, add_mid, jitem);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(jmessage);
+      env->DeleteLocalRef(jitem);
+    }
+  return env->PopLocalFrame(jlist);
+}
+} // anonymous namespace
+
+std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack)
+{
+  if (jerror_message)
+    *jerror_message = NULL;
+  if (jmessage_stack)
+    *jmessage_stack = NULL;
+
+  std::string buffer;
+  err = svn_error_purge_tracing(err);
+  if (err == NULL || err->apr_err == 0
+      || !(jerror_message || jmessage_stack))
+  return buffer;
+
+  ErrorMessageStack message_stack = assemble_error_message(err, buffer);
+  if (jerror_message)
+    *jerror_message = makeJString(buffer.c_str());
+  if (jmessage_stack)
+    *jmessage_stack = construct_Jmessage_stack(message_stack);
+  return buffer;
+}
+
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
+{
+  jstring jmessage;
+  jobject jstack;
+  std::string msg = makeSVNErrorMessage(err, &jmessage, &jstack);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   const char *source = NULL;
 #ifdef SVN_DEBUG
 #ifndef SVN_ERR__TRACING
@@ -465,19 +615,20 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
-  jstring jmessage = makeJString(msg.c_str());
-  if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
-                                   "(Ljava/lang/String;Ljava/lang/String;I)V");
+                                   "(Ljava/lang/String;"
+                                   "Ljava/lang/Throwable;"
+                                   "Ljava/lang/String;I"
+                                   "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
-  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           static_cast<jint>(err->apr_err));
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jcause,
+                                           jsource, jint(err->apr_err),
+                                           jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -513,7 +664,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     POP_AND_RETURN_NOTHING();
 
   const jsize stSize = static_cast<jsize>(newStackTrace.size());
-  if (stSize != newStackTrace.size())
+  if (stSize < 0 || stSize != newStackTrace.size())
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C size_t to JNI jsize");
@@ -546,7 +697,16 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 #endif
 
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+}
 
+void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
+{
+  try {
+    wrappedHandleSVNError(err, jcause);
+  } catch (...) {
+    svn_error_clear(err);
+    throw;
+  }
   svn_error_clear(err);
 }
 
@@ -569,106 +729,82 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
  */
 void JNIUtil::handleAPRError(int error, const char *op)
 {
-  char *buffer = getFormatBuffer();
-  if (buffer == NULL)
-    return;
+  char buffer[2048];
 
-  apr_snprintf(buffer, formatBufferSize,
+  apr_snprintf(buffer, sizeof(buffer),
                _("an error occurred in function %s with return value %d"),
                op, error);
 
   throwError(buffer);
 }
 
-/**
- * Return if an exception has been detected.
- * @return a exception has been detected
- */
-bool JNIUtil::isExceptionThrown()
+namespace {
+const char* known_exception_to_cstring(apr_pool_t* pool)
 {
-  // During init -> look in the global member.
-  if (g_inInit)
-    return g_initException;
+  JNIEnv *env = JNIUtil::getEnv();
+  jthrowable t = env->ExceptionOccurred();
+  jclass cls = env->GetObjectClass(t);
 
-  // Look in the thread local storage.
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  return data == NULL || data->m_exceptionThrown;
-}
+  jstring jclass_name;
+  {
+    jmethodID mid = env->GetMethodID(cls, "getClass", "()Ljava/lang/Class;");
+    jobject clsobj = env->CallObjectMethod(t, mid);
+    jclass basecls = env->GetObjectClass(clsobj);
+    mid = env->GetMethodID(basecls, "getName", "()Ljava/lang/String;");
+    jclass_name = (jstring) env->CallObjectMethod(clsobj, mid);
+  }
 
-/**
- * Store the JNI environment for this request in the thread local
- * storage.
- * @param env   the JNI environment
- */
-void JNIUtil::setEnv(JNIEnv *env)
-{
-  JNIThreadData::pushNewThreadData();
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  data->m_env = env;
-  data->m_exceptionThrown = false;
-}
+  jstring jmessage;
+  {
+    jmethodID mid = env->GetMethodID(cls, "getMessage",
+                                     "()Ljava/lang/String;");
+    jmessage = (jstring) env->CallObjectMethod(t, mid);
+  }
 
-/**
- * Return the JNI environment to use
- * @return the JNI environment
- */
-JNIEnv *JNIUtil::getEnv()
-{
-  // During init -> look into the global variable.
-  if (g_inInit)
-    return g_initEnv;
-
-  // Look in the thread local storage.
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  return data->m_env;
-}
-
-/**
- * Check if a Java exception has been thrown.
- * @return is a Java exception has been thrown
- */
-bool JNIUtil::isJavaExceptionThrown()
-{
-  JNIEnv *env = getEnv();
-  if (env->ExceptionCheck())
+  JNIStringHolder class_name(jclass_name);
+  if (jmessage)
     {
-      // Retrieving the exception removes it so we rethrow it here.
-      jthrowable exp = env->ExceptionOccurred();
-      env->ExceptionDescribe();
-      env->Throw(exp);
-      env->DeleteLocalRef(exp);
-      setExceptionThrown();
-      return true;
+      JNIStringHolder message(jmessage);
+      return apr_pstrcat(pool, class_name.c_str(), ": ", message.c_str(), NULL);
     }
-  return false;
+  else
+    return class_name.pstrdup(pool);
+  // ### Conditionally add t.printStackTrace() to msg?
 }
 
-const char *
-JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
+const char* exception_to_cstring(apr_pool_t* pool)
 {
   const char *msg;
-  JNIEnv *env = getEnv();
-  if (env->ExceptionCheck())
+  if (JNIUtil::getEnv()->ExceptionCheck())
     {
-      jthrowable t = env->ExceptionOccurred();
-      static jmethodID getMessage = 0;
-      if (getMessage == 0)
-        {
-          jclass clazz = env->FindClass("java/lang/Throwable");
-          getMessage = env->GetMethodID(clazz, "getMessage",
-                                        "(V)Ljava/lang/String;");
-          env->DeleteLocalRef(clazz);
-        }
-      jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
-      JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(in_pool.getPool());
-      // ### Conditionally add t.printStackTrace() to msg?
+      msg = known_exception_to_cstring(pool);
     }
   else
     {
       msg = NULL;
     }
   return msg;
+}
+} // anonymous namespace
+
+const char *
+JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
+{
+  return exception_to_cstring(in_pool.getPool());
+}
+
+svn_error_t*
+JNIUtil::checkJavaException(apr_status_t errorcode)
+{
+  if (!getEnv()->ExceptionCheck())
+    return SVN_NO_ERROR;
+  svn_error_t* err = svn_error_create(errorcode, NULL, NULL);
+  const char* const msg = known_exception_to_cstring(err->pool);
+  if (msg)
+    err->message = apr_psprintf(err->pool, _("Java exception: %s"), msg);
+  else
+    err->message = _("Java exception");
+  return err;
 }
 
 /**
@@ -685,25 +821,6 @@ jstring JNIUtil::makeJString(const char *txt)
 
   JNIEnv *env = getEnv();
   return env->NewStringUTF(txt);
-}
-
-void
-JNIUtil::setExceptionThrown(bool flag)
-{
-  if (g_inInit)
-    {
-      // During global initialization, store any errors that occur
-      // in a global variable (since thread-local storage may not
-      // yet be available).
-      g_initException = flag;
-    }
-  else
-    {
-      // When global initialization is complete, thread-local
-      // storage should be available, so store the error there.
-      JNIThreadData *data = JNIThreadData::getThreadData();
-      data->m_exceptionThrown = flag;
-    }
 }
 
 /**
@@ -726,23 +843,6 @@ void JNIUtil::initLogFile(int level, jstring path)
       // open it
       g_logStream.open(myPath, std::ios::app);
     }
-}
-
-/**
- * Returns a buffer to format error messages.
- * @return a buffer for formating error messages
- */
-char *JNIUtil::getFormatBuffer()
-{
-  if (g_inInit) // during init -> use the global buffer
-    return g_initFormatBuffer;
-
-  // use the buffer in the thread local storage
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  if (data == NULL) // if that does not exists -> use the global buffer
-    return g_initFormatBuffer;
-
-  return data->m_formatBuffer;
 }
 
 /**
@@ -796,6 +896,31 @@ jobject JNIUtil::createDate(apr_time_t time)
   return ret;
 }
 
+apr_time_t
+JNIUtil::getDate(jobject jdate)
+{
+  JNIEnv *env = getEnv();
+  jclass clazz = env->FindClass("java/util/Date");
+  if (isJavaExceptionThrown())
+    return 0;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      mid = env->GetMethodID(clazz, "getTime", "()J");
+      if (isJavaExceptionThrown())
+        return 0;
+    }
+
+  jlong jmillis = env->CallLongMethod(jdate, mid);
+  if (isJavaExceptionThrown())
+    return 0;
+
+  env->DeleteLocalRef(clazz);
+
+  return jmillis * 1000;
+}
+
 /**
  * Create a Java byte array from an array of characters.
  * @param data      the character array
@@ -803,11 +928,9 @@ jobject JNIUtil::createDate(apr_time_t time)
  */
 jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
 {
-  if (data == NULL)
-    {
-      // a NULL will create no Java array
-      return NULL;
-    }
+  // a NULL will create no Java array
+  if (!data)
+    return NULL;
 
   JNIEnv *env = getEnv();
 
@@ -838,48 +961,11 @@ jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
  */
 jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
 {
+  // a NULL will create no Java array
+  if (!str)
+    return NULL;
+
   return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
-}
-
-/**
- * Build the error message from the svn error into buffer.  This
- * method calls itselft recursively for all the chained errors
- *
- * @param err               the subversion error
- * @param depth             the depth of the call, used for formating
- * @param parent_apr_err    the apr of the previous level, used for formating
- * @param buffer            the buffer where the formated error message will
- *                          be stored
- */
-void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer)
-{
-  // buffer for a single error message
-  char errbuf[256];
-
-  /* Pretty-print the error */
-  /* Note: we can also log errors here someday. */
-
-  /* When we're recursing, don't repeat the top-level message if its
-   * the same as before. */
-  if (depth == 0 || err->apr_err != parent_apr_err)
-    {
-      /* Is this a Subversion-specific error code? */
-      if ((err->apr_err > APR_OS_START_USEERR)
-          && (err->apr_err <= APR_OS_START_CANONERR))
-        buffer.append(svn_strerror(err->apr_err, errbuf, sizeof(errbuf)));
-      /* Otherwise, this must be an APR error code. */
-      else
-        buffer.append(apr_strerror(err->apr_err, errbuf, sizeof(errbuf)));
-      buffer.append("\n");
-    }
-  if (err->message)
-    buffer.append(_("svn: ")).append(err->message).append("\n");
-
-  if (err->child)
-    assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
-
 }
 
 /**
@@ -899,8 +985,6 @@ void JNIUtil::throwNullPointerException(const char *message)
     return;
 
   env->ThrowNew(clazz, message);
-  setExceptionThrown();
-  env->DeleteLocalRef(clazz);
 }
 
 svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)

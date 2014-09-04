@@ -28,37 +28,37 @@
 #ifndef SVN_CXXHL_TRISTATE_HPP
 #define SVN_CXXHL_TRISTATE_HPP
 
+namespace apache {
 namespace subversion {
 namespace cxxhl {
-namespace version_1_9_dev {
 
-class tristate
+class Tristate
 {
 public:
-  static const tristate TRUE;
-  static const tristate FALSE;
-  static const tristate UNKNOWN;
+  static const Tristate TRUE;
+  static const Tristate FALSE;
+  static const Tristate UNKNOWN;
 
-  tristate(const tristate& that) throw()
+  Tristate(const Tristate& that) throw()
     : m_value(that.m_value)
     {}
 
-  bool operator==(const tristate& that) const throw()
+  bool operator==(const Tristate& that) const throw()
     { return m_value == that.m_value; }
 
-  bool operator!=(const tristate& that) const throw()
+  bool operator!=(const Tristate& that) const throw()
     { return !(*this == that); }
 
   bool known() const throw()
     { return *this != UNKNOWN; }
 
 private:
-  explicit tristate(short int value) throw();
+  explicit Tristate(short int value) throw();
   short int m_value;
 };
 
-} // namespace version_1_9_dev
 } // namespace cxxhl
 } // namespace subversion
+} // namespace apache
 
 #endif  // SVN_CXXHL_TRISTATE_HPP

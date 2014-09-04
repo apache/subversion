@@ -87,7 +87,12 @@ tool_versions = {
   'trunk' : {
             'autoconf' : '2.69',
             'libtool'  : '2.4.2',
-            'swig'     : '2.0.9',
+            'swig'     : '3.0.0',
+  },
+  '1.9' : {
+            'autoconf' : '2.69',
+            'libtool'  : '2.4.2',
+            'swig'     : '3.0.0'
   },
   '1.8' : {
             'autoconf' : '2.69',
@@ -105,6 +110,9 @@ tool_versions = {
             'swig'     : '1.3.36',
   },
 }
+
+# The version that is our current recommended release
+recommended_release = '1.8'
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
@@ -155,6 +163,18 @@ class Version(object):
 
     def is_prerelease(self):
         return self.pre != None
+
+    def is_recommended(self):
+        return self.branch == recommended_release
+
+    def get_download_anchor(self):
+        if self.is_prerelease():
+            return 'pre-releases'
+        else:
+            if self.is_recommended():
+                return 'recommended-release'
+            else:
+                return 'supported-releases'
 
     def __lt__(self, that):
         if self.major < that.major: return True
@@ -664,9 +684,10 @@ def write_news(args):
     'Write text for the Subversion website.'
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
-             'major-minor' : '%d.%d' % (args.version.major, args.version.minor),
+             'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
+             'anchor': args.version.get_download_anchor(),
            }
 
     if args.version.is_prerelease():
@@ -713,9 +734,9 @@ def write_announcement(args):
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : siginfo,
-             'major-minor'          : '%d.%d' % (args.version.major,
-                                                 args.version.minor),
+             'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
+             'anchor'               : args.version.get_download_anchor(),
            }
 
     if args.version.is_prerelease():

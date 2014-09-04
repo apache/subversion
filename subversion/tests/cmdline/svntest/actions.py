@@ -76,46 +76,49 @@ def setup_pristine_greek_repository():
 
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_greek_repos_dir):
-    main.create_repos(main.pristine_greek_repos_dir)
+    if main.options.fsfs_version is not None:
+      main.unpack_greek_repos(main.pristine_greek_repos_dir)
+    else:
+      main.create_repos(main.pristine_greek_repos_dir)
 
-    # if this is dav, gives us access rights to import the greek tree.
-    if main.is_ra_type_dav():
-      authz_file = os.path.join(main.work_dir, "authz")
-      main.file_write(authz_file, "[/]\n* = rw\n")
+      # if this is dav, gives us access rights to import the greek tree.
+      if main.is_ra_type_dav():
+        authz_file = os.path.join(main.work_dir, "authz")
+        main.file_write(authz_file, "[/]\n* = rw\n")
 
-    # dump the greek tree to disk.
-    main.greek_state.write_to_disk(main.greek_dump_dir)
+      # dump the greek tree to disk.
+      main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    # import the greek tree, using l:foo/p:bar
-    ### todo: svn should not be prompting for auth info when using
-    ### repositories with no auth/auth requirements
-    _, output, _ = main.run_svn(None, 'import', '-m',
-                                'Log message for revision 1.',
-                                main.greek_dump_dir,
-                                main.pristine_greek_repos_url)
+      # import the greek tree, using l:foo/p:bar
+      ### todo: svn should not be prompting for auth info when using
+      ### repositories with no auth/auth requirements
+      _, output, _ = main.run_svn(None, 'import', '-m',
+                                  'Log message for revision 1.',
+                                  main.greek_dump_dir,
+                                  main.pristine_greek_repos_url)
 
-    # verify the printed output of 'svn import'.
-    lastline = output.pop().strip()
-    match = re.search("(Committed|Imported) revision [0-9]+.", lastline)
-    if not match:
-      logger.error("import did not succeed, while creating greek repos.")
-      logger.error("The final line from 'svn import' was:")
-      logger.error(lastline)
-      sys.exit(1)
-    output_tree = wc.State.from_commit(output)
+      # verify the printed output of 'svn import'.
+      lastline = output.pop().strip()
+      match = re.search("(Committed|Imported) revision [0-9]+.", lastline)
+      if not match:
+        logger.error("import did not succeed, while creating greek repos.")
+        logger.error("The final line from 'svn import' was:")
+        logger.error(lastline)
+        sys.exit(1)
+      output_tree = wc.State.from_commit(output)
 
-    expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
-    expected_output_tree.tweak(verb='Adding',
-                               contents=None)
+      expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
+      expected_output_tree.tweak(verb='Adding',
+                                 contents=None)
 
-    try:
-      expected_output_tree.compare_and_display('output', output_tree)
-    except tree.SVNTreeUnequal:
-      verify.display_trees("ERROR:  output of import command is unexpected.",
-                           "OUTPUT TREE",
-                           expected_output_tree.old_tree(),
-                           output_tree.old_tree())
-      sys.exit(1)
+      try:
+        expected_output_tree.compare_and_display('output', output_tree)
+      except tree.SVNTreeUnequal:
+        verify.display_trees("ERROR:  output of import command is unexpected.",
+                             "OUTPUT TREE",
+                             expected_output_tree.old_tree(),
+                             output_tree.old_tree())
+        sys.exit(1)
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
@@ -153,13 +156,20 @@ def guarantee_greek_repository(path, minor_version):
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_greek_repos_dir, path, 1, 1, minor_version):
+  if (main.options.fsfs_version is not None):
+    failed = main.unpack_greek_repos(path)
+  else:
+    failed = main.copy_repos(main.pristine_greek_repos_dir,
+                             path, 1, 1, minor_version)
+  if failed:
     logger.error("copying repository failed.")
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
+  # give the repository a unique UUID
+  run_and_verify_svnadmin("could not set uuid", [], [], 'setuuid', path)
 
 def run_and_verify_atomic_ra_revprop_change(message,
                                             expected_stdout,
@@ -561,8 +571,13 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
 # run_and_verify_log_xml
 
 class LogEntry:
-  def __init__(self, revision, changed_paths=None, revprops=None):
+  def __init__(self, revision, attributes=None,
+               changed_paths=None, revprops=None):
     self.revision = revision
+    if attributes == None:
+      self.attributes = {}
+    else:
+      self.attributes = attributes
     if changed_paths == None:
       self.changed_paths = {}
     else:
@@ -571,6 +586,15 @@ class LogEntry:
       self.revprops = {}
     else:
       self.revprops = revprops
+
+  def assert_log_attrs(self, attributes):
+    """Assert that attributes is the same as this entry's attributes
+    Raises svntest.Failure if not.
+    """
+    if self.attributes != attributes:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(attributes).splitlines(),
+            pprint.pformat(self.attributes).splitlines())))
 
   def assert_changed_paths(self, changed_paths):
     """Assert that changed_paths is the same as this entry's changed_paths
@@ -649,7 +673,7 @@ class LogParser:
 
   # element handlers
   def logentry_start(self, attrs):
-    self.entries.append(LogEntry(int(attrs['revision'])))
+    self.entries.append(LogEntry(int(attrs['revision']), attrs))
   def author_end(self):
     self.svn_prop('author')
   def msg_end(self):
@@ -669,15 +693,20 @@ class LogParser:
     self.entries[-1].changed_paths[self.use_cdata()] = [{'kind': self.kind,
                                                          'action': self.action}]
 
-def run_and_verify_log_xml(message=None, expected_paths=None,
-                           expected_revprops=None, expected_stdout=None,
-                           expected_stderr=None, args=[]):
+def run_and_verify_log_xml(message=None, expected_log_attrs=None,
+                           expected_paths=None, expected_revprops=None,
+                           expected_stdout=None, expected_stderr=None,
+                           args=[]):
   """Call run_and_verify_svn with log --xml and args (optional) as command
   arguments, and pass along message, expected_stdout, and expected_stderr.
 
   If message is None, pass the svn log command as message.
 
   expected_paths checking is not yet implemented.
+
+  expected_log_attrs is an optional list of dicts, compared to each revisions's
+  logentry attributes.  The list must be in the same order the log entries
+  come in.
 
   expected_revprops is an optional list of dicts, compared to each
   revision's revprops.  The list must be in the same order the log entries
@@ -717,6 +746,8 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
       entry.assert_revprops(expected_revprops[index])
     if expected_paths != None:
       entry.assert_changed_paths(expected_paths[index])
+    if expected_log_attrs != None:
+      entry.assert_log_attrs(expected_log_attrs[index])
 
 
 def verify_update(actual_output,
@@ -1916,11 +1947,11 @@ def get_virginal_state(wc_dir, rev):
   return state
 
 # Cheap administrative directory locking
-def lock_admin_dir(wc_dir, recursive=False):
+def lock_admin_dir(wc_dir, recursive=False, work_queue=False):
   "Lock a SVN administrative directory"
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
-  svntest.main.run_wc_lock_tester(recursive, wc_dir)
+  svntest.main.run_wc_lock_tester(recursive, wc_dir, work_queue)
 
 def set_incomplete(wc_dir, revision):
   "Make wc_dir incomplete at revision"
@@ -2122,7 +2153,7 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
   inject_conflict_into_expected_state(state_path,
                                       expected_disk, expected_status,
                                       conflicting_contents, contents,
-                                      merged_rev)
+                                      prev_rev, merged_rev)
   exit_code, output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
                                            file_path)
   if expected_status:
@@ -2130,26 +2161,28 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
 
 def inject_conflict_into_expected_state(state_path,
                                         expected_disk, expected_status,
-                                        wc_text, merged_text, merged_rev):
+                                        wc_text, merged_text, prev_rev,
+                                        merged_rev):
   """Update the EXPECTED_DISK and EXPECTED_STATUS trees for the
   conflict at STATE_PATH (ignored if None).  WC_TEXT, MERGED_TEXT, and
   MERGED_REV are used to determine the contents of the conflict (the
   text parameters should be newline-terminated)."""
   if expected_disk:
     conflict_marker = make_conflict_marker_text(wc_text, merged_text,
-                                                merged_rev)
+                                                prev_rev, merged_rev)
     existing_text = expected_disk.desc[state_path].contents or ""
     expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
 
   if expected_status:
     expected_status.tweak(state_path, status='C ')
 
-def make_conflict_marker_text(wc_text, merged_text, merged_rev):
+def make_conflict_marker_text(wc_text, merged_text, prev_rev, merged_rev):
   """Return the conflict marker text described by WC_TEXT (the current
   text in the working copy, MERGED_TEXT (the conflicting text merged
   in), and MERGED_REV (the revision from whence the conflicting text
   came)."""
-  return "<<<<<<< .working\n" + wc_text + "=======\n" + \
+  return "<<<<<<< .working\n" + wc_text + \
+         "||||||| .merge-left.r" + str(prev_rev) +  "\n=======\n" + \
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
 
 

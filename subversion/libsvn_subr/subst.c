@@ -128,7 +128,7 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
  *
  * Important API note: This function is the core of the implementation of
  * svn_subst_build_keywords (all versions), and as such must implement the
- * tolerance of NULL and zero inputs that that function's documention
+ * tolerance of NULL and zero inputs that that function's documentation
  * stipulates.
  *
  * The format codes:
@@ -1291,7 +1291,7 @@ translated_stream_read(void *baton,
 
           svn_stringbuf_setempty(b->readbuf);
           b->readbuf_off = 0;
-          SVN_ERR(svn_stream_read(b->stream, b->buf, &readlen));
+          SVN_ERR(svn_stream_read_full(b->stream, b->buf, &readlen));
           buf_stream = svn_stream_from_stringbuf(b->readbuf, b->iterpool);
 
           SVN_ERR(translate_chunk(buf_stream, b->in_baton, b->buf,
@@ -1542,7 +1542,8 @@ stream_translated(svn_stream_t *stream,
   baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
 
   /* Setup the stream methods */
-  svn_stream_set_read(s, translated_stream_read);
+  svn_stream_set_read2(s, NULL /* only full read support */,
+                       translated_stream_read);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
@@ -1712,14 +1713,24 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   /* If nothing else worked, write out the internal representation to
-     a file that can be edited by the user.
-
-     ### this only writes the first line!
-  */
+     a file that can be edited by the user. */
   if (create_using_internal_representation)
-    SVN_ERR(svn_io_write_unique(&dst_tmp, svn_dirent_dirname(dst, pool),
-                                contents->data, contents->len,
-                                svn_io_file_del_none, pool));
+    {
+      svn_stream_t *new_stream;
+      apr_size_t len;
+
+      SVN_ERR(svn_stream_open_unique(&new_stream, &dst_tmp,
+                                     svn_dirent_dirname(dst, pool),
+                                     svn_io_file_del_none,
+                                     pool, pool));
+
+      if (!eof)
+        svn_stringbuf_appendcstr(contents, "\n");
+      len = contents->len;
+      SVN_ERR(svn_stream_write(new_stream, contents->data, &len));
+      SVN_ERR(svn_stream_copy3(svn_stream_disown(source, pool), new_stream,
+                               NULL, NULL, pool));
+    }
 
   /* Do the atomic rename from our temporary location. */
   return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
@@ -1841,10 +1852,10 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
 
   if (btn->read_stream)
     /* We actually found a file to read from */
-    return svn_stream_read(btn->read_stream, buffer, len);
+    return svn_stream_read_full(btn->read_stream, buffer, len);
   else
     return svn_error_createf(APR_ENOENT, NULL,
-                             "Can't read special file: File '%s' not found",
+                             _("Can't read special file: File '%s' not found"),
                              svn_dirent_local_style(btn->path, btn->pool));
 }
 
@@ -1931,7 +1942,8 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content, pool);
 
   *stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(*stream, read_handler_special);
+  svn_stream_set_read2(*stream, NULL /* only full read support */,
+                       read_handler_special);
   svn_stream_set_write(*stream, write_handler_special);
   svn_stream_set_close(*stream, close_handler_special);
 
@@ -1960,7 +1972,11 @@ svn_subst_translate_string2(svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  if (encoding)
+  if (encoding && !strcmp(encoding, "UTF-8")) 
+    {
+      val_utf8 = value->data;
+    }
+  else if (encoding)
     {
       SVN_ERR(svn_utf_cstring_to_utf8_ex2(&val_utf8, value->data,
                                           encoding, scratch_pool));

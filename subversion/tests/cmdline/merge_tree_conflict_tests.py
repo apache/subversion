@@ -43,10 +43,10 @@ Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import svn_copy
-from merge_tests import svn_merge
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import svn_copy
+from svntest.mergetrees import svn_merge
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1456,10 +1456,10 @@ def merge_replace_setup(sbox):
 
   # make a branch of A
   # svn cp $URL/A $URL/branch
-  expected_stdout = verify.UnorderedOutput([
-    '\n',
+  expected_stdout = [
+    'Committing transaction...\n',
     'Committed revision 2.\n',
-  ])
+  ]
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', url_A,
     url_branch, '-m', 'copy log')

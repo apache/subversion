@@ -145,9 +145,8 @@ get_path_kind(svn_node_kind_t *kind,
 }
 
 
-/* Return an error if the work queue in SDB is non-empty. */
-static svn_error_t *
-verify_no_work(svn_sqlite__db_t *sdb)
+svn_error_t *
+svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -207,6 +206,7 @@ svn_wc__db_open(svn_wc__db_t **db,
     {
       svn_error_t *err;
       svn_boolean_t sqlite_exclusive = FALSE;
+      apr_int64_t timeout;
 
       err = svn_config_get_bool(config, &sqlite_exclusive,
                                 SVN_CONFIG_SECTION_WORKING_COPY,
@@ -218,6 +218,15 @@ svn_wc__db_open(svn_wc__db_t **db,
         }
       else
         (*db)->exclusive = sqlite_exclusive;
+
+      err = svn_config_get_int64(config, &timeout,
+                                 SVN_CONFIG_SECTION_WORKING_COPY,
+                                 SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT,
+                                 0);
+      if (err || timeout < 0 || timeout > APR_INT32_MAX)
+        svn_error_clear(err);
+      else
+        (*db)->timeout = (apr_int32_t)timeout;
     }
 
   return SVN_NO_ERROR;
@@ -236,8 +245,8 @@ svn_wc__db_close(svn_wc__db_t *db)
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
 
       if (wcroot->sdb)
         svn_hash_sets(roots, wcroot->abspath, wcroot);
@@ -258,7 +267,6 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -293,11 +301,11 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Verify that no work items exists. If they do, then our integrity is
-     suspect and, thus, we cannot use this database.  */
-  if (format >= SVN_WC__HAS_WORK_QUEUE
-      && (enforce_empty_wq || (format < SVN_WC__VERSION && verify_format)))
+     suspect and, thus, we cannot upgrade this database.  */
+  if (format >= SVN_WC__HAS_WORK_QUEUE &&
+      format < SVN_WC__VERSION && verify_format)
     {
-      svn_error_t *err = verify_no_work(sdb);
+      svn_error_t *err = svn_wc__db_verify_no_work(sdb);
       if (err)
         {
           /* Special message for attempts to upgrade a 1.7-dev wc with
@@ -354,7 +362,7 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -434,6 +442,8 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   svn_boolean_t always_check = FALSE;
   int wc_format = 0;
   const char *adm_relpath;
+  /* Non-NULL if WCROOT is found through a symlink: */
+  const char *symlink_wcroot_abspath = NULL;
 
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
@@ -542,7 +552,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
                                         svn_sqlite__mode_readwrite,
-                                        db->exclusive, NULL,
+                                        db->exclusive, db->timeout, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {
@@ -611,6 +621,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                   if (found_wcroot)
                     break;
 
+                  symlink_wcroot_abspath = local_abspath;
                   SVN_ERR(read_link_target(&local_abspath, local_abspath,
                                            scratch_pool));
 try_symlink_as_dir:
@@ -632,6 +643,7 @@ try_symlink_as_dir:
       local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
       moved_upwards = TRUE;
+      symlink_wcroot_abspath = NULL;
 
       /* Is the parent directory recorded in our hash?  */
       found_wcroot = svn_hash_gets(db->dir_data, local_abspath);
@@ -669,9 +681,12 @@ try_symlink_as_dir:
          (ie. where we found it).  */
 
       err = svn_wc__db_pdh_create_wcroot(wcroot,
-                            apr_pstrdup(db->state_pool, local_abspath),
+                            apr_pstrdup(db->state_pool,
+                                        symlink_wcroot_abspath
+                                          ? symlink_wcroot_abspath
+                                          : local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
-                            db->verify_format, db->enforce_empty_wq,
+                            db->verify_format,
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -683,8 +698,12 @@ try_symlink_as_dir:
           svn_error_clear(err);
           *wcroot = NULL;
         }
-      else
-        SVN_ERR(err);
+      else if (err)
+        {
+          /* Close handle if we are not going to use it to support
+             upgrading with exclusive wc locking. */
+          return svn_error_compose_create(err, svn_sqlite__close(sdb));
+        }
     }
   else
     {
@@ -737,15 +756,25 @@ try_symlink_as_dir:
         }
 
       SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
-                            apr_pstrdup(db->state_pool, local_abspath),
+                            apr_pstrdup(db->state_pool,
+                                        symlink_wcroot_abspath
+                                          ? symlink_wcroot_abspath
+                                          : local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
-                            db->verify_format, db->enforce_empty_wq,
+                            db->verify_format,
                             db->state_pool, scratch_pool));
     }
 
   if (*wcroot)
     {
       const char *dir_relpath;
+
+      if (symlink_wcroot_abspath)
+        {
+          /* The WCROOT was found through a symlink pointing at the root of
+           * the WC. Cache the WCROOT under the symlink's path. */
+          local_dir_abspath = symlink_wcroot_abspath;
+        }
 
       /* The subdirectory's relpath is easily computed relative to the
          wcroot that we just found.  */
@@ -809,6 +838,7 @@ try_symlink_as_dir:
                                              scratch_pool));
           if (resolved_kind == svn_node_dir)
             {
+              symlink_wcroot_abspath = original_abspath;
               SVN_ERR(read_link_target(&local_abspath, original_abspath,
                                        scratch_pool));
               /* This handle was opened in this function but is not going
@@ -886,10 +916,10 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
 
       if (wcroot == root_wcroot)
-        svn_hash_sets(db->dir_data, svn__apr_hash_index_key(hi), NULL);
+        svn_hash_sets(db->dir_data, apr_hash_this_key(hi), NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);

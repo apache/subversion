@@ -48,7 +48,7 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum merge_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MERGE_RESPONSE,
   UPDATED_SET,
   RESPONSE,
@@ -65,7 +65,7 @@ typedef enum merge_state_e {
   AUTHOR,
   POST_COMMIT_ERR,
 
-  PROP_VAL
+  STATUS
 } merge_state_e;
 
 
@@ -171,7 +171,12 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 
           rev_str = svn_hash_gets(attrs, "revision");
           if (rev_str)
-            merge_ctx->commit_info->revision = SVN_STR_TO_REV(rev_str);
+            {
+              apr_int64_t rev;
+
+              SVN_ERR(svn_cstring_atoi64(&rev, rev_str));
+              merge_ctx->commit_info->revision = (svn_revnum_t)rev;
+            }
           else
             merge_ctx->commit_info->revision = SVN_INVALID_REVNUM;
 
@@ -279,12 +284,12 @@ setup_merge_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
-void
-svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
-                                   const char *parent,
-                                   serf_bucket_t *body,
-                                   serf_bucket_alloc_t *alloc,
-                                   apr_pool_t *pool)
+static void
+merge_lock_token_list(apr_hash_t *lock_tokens,
+                      const char *parent,
+                      serf_bucket_t *body,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -294,7 +299,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_open_tag_buckets(body, alloc,
                                     "S:lock-token-list",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   for (hi = apr_hash_first(pool, lock_tokens);
        hi;
@@ -313,9 +318,9 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       if (parent && !svn_relpath_skip_ancestor(parent, key))
         continue;
 
-      svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);
+      svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", SVN_VA_NULL);
 
-      svn_ra_serf__add_open_tag_buckets(body, alloc, "lock-path", NULL);
+      svn_ra_serf__add_open_tag_buckets(body, alloc, "lock-path", SVN_VA_NULL);
       svn_ra_serf__add_cdata_len_buckets(body, alloc, path.data, path.len);
       svn_ra_serf__add_close_tag_buckets(body, alloc, "lock-path");
 
@@ -327,6 +332,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_close_tag_buckets(body, alloc, "S:lock-token-list");
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t*
 create_merge_body(serf_bucket_t **bkt,
                   void *baton,
@@ -341,9 +347,9 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:merge",
                                     "xmlns:D", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:source", NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:source", SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", SVN_VA_NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
                                      ctx->merge_resource_url,
@@ -355,7 +361,7 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:no-auto-merge", NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:no-checkout", NULL, alloc);
 
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:checked-in", NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:" SVN_DAV__VERSION_NAME, NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:resourcetype", NULL, alloc);
@@ -363,8 +369,7 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:creator-displayname", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
 
-  svn_ra_serf__merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc,
-                                     pool);
+  merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc, pool);
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:merge");
 
@@ -376,7 +381,6 @@ create_merge_body(serf_bucket_t **bkt,
 
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
-                       int *response_code,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
@@ -407,7 +411,7 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                                            NULL, merge_closed, NULL,
                                            merge_ctx,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
 
   handler->method = "MERGE";
   handler->path = merge_ctx->merge_url;
@@ -423,8 +427,10 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
   *commit_info = merge_ctx->commit_info;
-  *response_code = handler->sline.code;
 
   return SVN_NO_ERROR;
 }

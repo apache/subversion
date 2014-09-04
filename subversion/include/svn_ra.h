@@ -134,7 +134,10 @@ typedef svn_error_t *
                                  apr_pool_t *pool);
 
 
-/** A function type for retrieving the youngest revision from a repos. */
+/** A function type for retrieving the youngest revision from a repos.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+/* ### It seems this type was never used by the API, since 1.0.0. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
   void *session_baton,
   svn_revnum_t *latest_revnum);
@@ -266,6 +269,64 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
   void *edit_baton,
   apr_hash_t *rev_props,
   apr_pool_t *pool);
+
+
+/**
+ * Callback function that checks if an ra_svn tunnel called
+ * @a tunnel_name is handled by the callbakcs or the default
+ * implementation.
+ *
+ * @a tunnel_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
+    void *tunnel_baton, const char *tunnel_name);
+
+/**
+ * Callback function for closing a tunnel in ra_svn.
+ *
+ * This function will be called when the pool that owns the tunnel
+ * connection is cleared or destroyed.
+ *
+ * @a tunnel_context is the baton as returned from the 
+ * svn_ra_open_tunnel_func_t.
+ *
+ * @a tunnel_baton was returned by the open-tunnel callback.
+ *
+ * @since New in 1.9.
+ */
+typedef void (*svn_ra_close_tunnel_func_t)(
+    void *close_baton, void *tunnel_baton);
+
+/**
+ * Callback function for opening a tunnel in ra_svn.
+ *
+ * Given the @a tunnel_name, tunnel @a user and server @a hostname and
+ * @a port, open a tunnel to the server and return its file handles,
+ * which are owned by @a pool, in @a request and @a response.
+ *
+ * @a request and @a response represent the standard input and output,
+ * respectively, of the process on the other end of the tunnel.
+ *
+ * If @a *close_func is set it will be called with @a close_baton when
+ * the tunnel is closed.
+ *
+ * The optional @a cancel_func callback can be invoked as usual to allow
+ * the user to preempt potentially lengthy operations.
+ *
+ * @a tunnel_baton is the baton as set in the callbacks.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
+    svn_stream_t **request, svn_stream_t **response,
+    svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+    void *tunnel_baton,
+    const char *tunnel_name, const char *user,
+    const char *hostname, int port,
+    svn_cancel_func_t cancel_func, void *cancel_baton,
+    apr_pool_t *pool);
 
 
 /**
@@ -535,6 +596,31 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
 
+  /** Check-tunnel callback
+   *
+   * If not @c NULL, and open_tunnel_func is also not @c NULL, this
+   * callback will be invoked to check if open_tunnel_func should be
+   * used to create a specific tunnel, or if the default tunnel
+   * implementation (either built-in or configured in the client
+   * configuration file) should be used instead.
+   * @since New in 1.9.
+   */
+  svn_ra_check_tunnel_func_t check_tunnel_func;
+
+  /** Open-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked to create a tunnel
+   * for a ra_svn connection that needs one, overriding any tunnel
+   * definitions in the client config file. This callback is used only
+   * for ra_svn and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
+
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
@@ -698,6 +784,32 @@ svn_ra_open(svn_ra_session_t **session_p,
             void *callback_baton,
             apr_hash_t *config,
             apr_pool_t *pool);
+
+/**
+ * Open a new ra session @a *new_session to the same repository as an existing
+ * ra session @a old_session, copying the callbacks, auth baton, etc. from the
+ * old session. This essentially limits the lifetime of the new, duplicated
+ * session to the lifetime of the old session. If the new session should
+ * outlive the new session, creating a new session using svn_ra_open4() is
+ * recommended.
+ *
+ * If @a session_url is not NULL, parent the new session at session_url. Note
+ * that @a session_url MUST BE in the same repository as @a old_session or an
+ * error will be returned. When @a session_url NULL the same session root
+ * will be used.
+ *
+ * Allocate @a new_session in @a result_pool. Perform temporary allocations
+ * in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_ra_dup_session(svn_ra_session_t **new_session,
+                   svn_ra_session_t *old_session,
+                   const char *session_url,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
 
 /** Change the root URL of an open @a ra_session to point to a new path in the
  * same repository.  @a url is the new root URL.  Use @a pool for
@@ -1463,8 +1575,8 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * was added or deleted).  Each path is an <tt>const char *</tt>, relative
  * to the @a session's common parent.
  *
- * If @a limit is non-zero only invoke @a receiver on the first @a limit
- * logs.
+ * If @a limit is greater than zero only invoke @a receiver on the first
+ * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
@@ -1507,7 +1619,6 @@ svn_ra_do_diff(svn_ra_session_t *session,
  *
  * @since New in 1.5.
  */
-
 svn_error_t *
 svn_ra_get_log2(svn_ra_session_t *session,
                 const apr_array_header_t *paths,
@@ -1707,6 +1818,12 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * On subversion 1.8 and newer servers this function has been enabled
  * to support reversion of the revision range for @a include_merged_revision
  * @c FALSE reporting by switching  @a end with @a start.
+ *
+ * @note Prior to Subversion 1.9, this function may accept delta handlers
+ * from @a handler even for empty text deltas.  Starting with 1.9, the
+ * delta handler / baton return arguments passed to @a handler will be
+ * #NULL unless there is an actual difference in the file contents between
+ * the current and the previous call.
  *
  * @since New in 1.5.
  */

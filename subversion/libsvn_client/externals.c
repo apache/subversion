@@ -485,8 +485,6 @@ switch_file_external(const char *local_abspath,
                                              diff3_cmd, preserved_exts,
                                              def_dir_abspath,
                                              url, peg_revision, revision,
-                                             ctx->conflict_func2,
-                                             ctx->conflict_baton2,
                                              ctx->cancel_func,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
@@ -737,7 +735,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
   switch (ext_kind)
     {
       case svn_node_dir:
-        SVN_ERR(switch_dir_external(local_abspath, new_url,
+        SVN_ERR(switch_dir_external(local_abspath, new_loc->url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
@@ -959,8 +957,8 @@ svn_client__handle_externals(apr_hash_t *externals_new,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const char *desc_text = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      const char *desc_text = apr_hash_this_val(hi);
       svn_depth_t ambient_depth = svn_depth_infinity;
 
       svn_pool_clear(iterpool);
@@ -970,7 +968,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
           const char *ambient_depth_w;
 
           ambient_depth_w = apr_hash_get(ambient_depths, local_abspath,
-                                         svn__apr_hash_index_klen(hi));
+                                         apr_hash_this_key_len(hi));
 
           if (ambient_depth_w == NULL)
             {
@@ -997,8 +995,8 @@ svn_client__handle_externals(apr_hash_t *externals_new,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *item_abspath = svn__apr_hash_index_key(hi);
-      const char *defining_abspath = svn__apr_hash_index_val(hi);
+      const char *item_abspath = apr_hash_this_key(hi);
+      const char *defining_abspath = apr_hash_this_val(hi);
       const char *parent_abspath;
 
       svn_pool_clear(iterpool);
@@ -1017,19 +1015,30 @@ svn_client__handle_externals(apr_hash_t *externals_new,
 
         parent_abspath = svn_dirent_dirname(parent_abspath, iterpool);
         SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, parent_abspath,
-                                  TRUE, FALSE, iterpool));
+                                  FALSE /* show_deleted*/,
+                                  FALSE /* show_hidden */,
+                                  iterpool));
         if (kind == svn_node_none)
           {
             svn_error_t *err;
 
             err = svn_io_dir_remove_nonrecursive(parent_abspath, iterpool);
-            if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+            if (err)
               {
-                svn_error_clear(err);
-                break;
+                if (APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+                  {
+                    svn_error_clear(err);
+                    break; /* No parents to delete */
+                  }
+                else if (APR_STATUS_IS_ENOENT(err->apr_err)
+                         || APR_STATUS_IS_ENOTDIR(err->apr_err))
+                  {
+                    svn_error_clear(err);
+                    /* Fall through; parent dir might be unversioned */
+                  }
+                else
+                  return svn_error_trace(err);
               }
-            else
-              SVN_ERR(err);
           }
       } while (strcmp(parent_abspath, defining_abspath) != 0);
     }
@@ -1061,8 +1070,8 @@ svn_client__export_externals(apr_hash_t *externals,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const char *desc_text = svn__apr_hash_index_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
+      const char *desc_text = apr_hash_this_val(hi);
       const char *local_relpath;
       const char *dir_url;
       apr_array_header_t *items;

@@ -47,8 +47,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-enum {
-  INITIAL = 0,
+enum getlocks_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   LOCK,
   PATH,
@@ -116,6 +116,7 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
   if (leaving_state == LOCK)
     {
       const char *path = svn_hash_gets(attrs, "path");
+      const char *token = svn_hash_gets(attrs, "token");
       svn_boolean_t save_lock = FALSE;
 
       /* Filter out unwanted paths.  Since Subversion only allows
@@ -128,6 +129,12 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
          c) we've asked for depth=files or depth=immediates, and this
             lock is on an immediate child of our query path.
       */
+      if (! token)
+        {
+          /* A lock without a token is not a lock; just an answer that there
+             is no lock on the node. */
+          save_lock = FALSE;
+        }
       if (strcmp(lock_ctx->path, path) == 0
           || lock_ctx->requested_depth == svn_depth_infinity)
         {
@@ -154,7 +161,7 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
              them may have not been sent, so the value will be NULL.  */
 
           lock.path = path;
-          lock.token = svn_hash_gets(attrs, "token");
+          lock.token = token;
           lock.owner = svn_hash_gets(attrs, "owner");
           lock.comment = svn_hash_gets(attrs, "comment");
 
@@ -215,7 +222,7 @@ create_getlocks_body(serf_bucket_t **body_bkt,
 
   svn_ra_serf__add_open_tag_buckets(
     buckets, alloc, "S:get-locks-report", "xmlns:S", SVN_XML_NAMESPACE,
-    "depth", svn_depth_to_word(lock_ctx->requested_depth), NULL);
+    "depth", svn_depth_to_word(lock_ctx->requested_depth), SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
   *body_bkt = buckets;
@@ -234,6 +241,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url, *rel_path;
+  svn_error_t *err;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
@@ -241,7 +249,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;
-  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
+  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, SVN_VA_NULL);
   lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
 
@@ -249,7 +257,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                                            NULL, getlocks_closed, NULL,
                                            lock_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -260,15 +268,32 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
+
+  if (err)
+    {
+      if (svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE))
+        {
+          /* The server told us that it doesn't support this report type.
+             We return the documented error for svn_ra_get_locks(), but
+             with the original error report */
+          return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
+        }
+      else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          /* File doesn't exist in HEAD: Not an error */
+          svn_error_clear(err);
+        }
+      else
+        return svn_error_trace(err);
+    }
 
   /* We get a 404 when a path doesn't exist in HEAD, but it might
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
-  if (handler->sline.code != 404)
+  if (handler->sline.code != 200
+      && handler->sline.code != 404)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(handler->sline.code,
-                                           handler->path,
-                                           handler->location));
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   *locks = lock_ctx->hash;

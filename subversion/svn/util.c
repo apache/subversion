@@ -76,7 +76,7 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld%s.\n"),
                                commit_info->revision,
                                commit_info->revision == 42 &&
                                getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
@@ -164,9 +164,9 @@ svn_cl__merge_file_externally(const char *base_path,
      * is OK to continue with the merge.
      * Any other exit code means there was a real problem. */
     if (exitcode != 0 && exitcode != 1)
-      return svn_error_createf
-        (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-         _("The external merge tool exited with exit code %d"), exitcode);
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+        _("The external merge tool '%s' exited with exit code %d."),
+        merge_tool, exitcode);
     else if (remains_in_conflict)
       *remains_in_conflict = exitcode == 1;
   }
@@ -415,7 +415,7 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
 
-      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, NULL, NULL,
                                             log_msg_str, lmb->message_encoding,
                                             FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
@@ -696,7 +696,7 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
   if (string)
     {
       svn_xml_make_open_tag(sb, pool, svn_xml_protect_pcdata,
-                            tagname, NULL);
+                            tagname, SVN_VA_NULL);
       svn_xml_escape_cdata_cstring(sb, string, pool);
       svn_xml_make_close_tag(sb, pool, tagname);
     }
@@ -713,7 +713,7 @@ svn_cl__print_xml_commit(svn_stringbuf_t **sb,
   /* "<commit ...>" */
   svn_xml_make_open_tag(sb, pool, svn_xml_normal, "commit",
                         "revision",
-                        apr_psprintf(pool, "%ld", revision), NULL);
+                        apr_psprintf(pool, "%ld", revision), SVN_VA_NULL);
 
   /* "<author>xx</author>" */
   if (author)
@@ -734,7 +734,7 @@ svn_cl__print_xml_lock(svn_stringbuf_t **sb,
                        apr_pool_t *pool)
 {
   /* "<lock>" */
-  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", NULL);
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", SVN_VA_NULL);
 
   /* "<token>xx</token>" */
   svn_cl__xml_tagged_cdata(sb, pool, "token", lock->token);
@@ -769,7 +769,7 @@ svn_cl__xml_print_header(const char *tagname,
   svn_xml_make_header2(&sb, "UTF-8", pool);
 
   /* "<TAGNAME>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, SVN_VA_NULL);
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
@@ -1075,46 +1075,6 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
     relpath = svn_dirent_skip_ancestor(parent_path, path);
 
   return svn_dirent_local_style(relpath ? relpath : path, pool);
-}
-
-/* Return a string of the form "PATH_OR_URL@REVISION". */
-static const char *
-path_for_display(const char *path_or_url,
-                 const svn_opt_revision_t *revision,
-                 apr_pool_t *pool)
-{
-  const char *rev_str = svn_opt__revision_to_string(revision, pool);
-
-  if (! svn_path_is_url(path_or_url))
-    path_or_url = svn_dirent_local_style(path_or_url, pool);
-  return apr_psprintf(pool, "%s@%s", path_or_url, rev_str);
-}
-
-svn_error_t *
-svn_cl__check_related_source_and_target(const char *path_or_url1,
-                                        const svn_opt_revision_t *revision1,
-                                        const char *path_or_url2,
-                                        const svn_opt_revision_t *revision2,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool)
-{
-  const char *ancestor_url;
-  svn_revnum_t ancestor_rev;
-
-  SVN_ERR(svn_client__youngest_common_ancestor(
-            &ancestor_url, &ancestor_rev,
-            path_or_url1, revision1, path_or_url2, revision2,
-            ctx, pool, pool));
-
-  if (ancestor_url == NULL)
-    {
-      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("Source and target have no common ancestor: "
-                                 "'%s' and '%s'"),
-                               path_for_display(path_or_url1, revision1, pool),
-                               path_for_display(path_or_url2, revision2, pool));
-    }
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *

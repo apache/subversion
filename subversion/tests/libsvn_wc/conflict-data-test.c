@@ -134,7 +134,7 @@ compare_file_content(const char *file_abspath,
  * conflict, or are both NULL.  Return an error if not.
  *
  * Compare the property values found in files named by
- * ACTUAL->base_abspath, ACTUAL->my_abspath, ACTUAL->merged_abspath
+ * ACTUAL->base_abspath, ACTUAL->my_abspath, ACTUAL->merged_file
  * with EXPECTED_BASE_VAL, EXPECTED_MY_VAL, EXPECTED_THEIR_VAL
  * respectively, ignoring the corresponding fields in EXPECTED. */
 static svn_error_t *
@@ -236,8 +236,8 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
   SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, "", pool, pool));
 
   if ((conflict->node_kind != exp_conflict->node_kind) ||
-      (conflict->action    != exp_conflict->action) ||
-      (conflict->reason    != exp_conflict->reason) ||
+      (conflict->action != exp_conflict->action) ||
+      (conflict->reason != exp_conflict->reason) ||
       (conflict->operation != exp_conflict->operation) ||
       (strcmp(conflict->local_abspath, exp_conflict->local_abspath) != 0))
     return fail(pool, "Unexpected tree conflict");
@@ -289,10 +289,11 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__sandbox_create(&sbox, "read_write_tree_conflicts", opts, pool));
   parent_abspath = svn_dirent_join(sbox.wc_abspath, "A", pool);
-  SVN_ERR(svn_wc__db_op_add_directory(sbox.wc_ctx->db, parent_abspath,
-                                      NULL /*props*/, NULL, pool));
   child1_abspath = svn_dirent_join(parent_abspath, "foo", pool);
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
+  SVN_ERR(sbox_wc_mkdir(&sbox, "A"));
+  SVN_ERR(sbox_wc_mkdir(&sbox, "A/bar"));
+  sbox_file_write(&sbox, "A/foo", "");
 
   conflict1 = tree_conflict_create(child1_abspath, svn_node_file,
                                    svn_wc_operation_merge,
@@ -606,20 +607,20 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
-    svn_wc_conflict_reason_t local_change;
-    svn_wc_conflict_action_t incoming_change;
+    svn_wc_conflict_reason_t reason;
+    svn_wc_conflict_action_t action;
     const char *moved_away_op_root_abspath;
 
-    SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
-                                                &incoming_change,
+    SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason,
+                                                &action,
                                                 &moved_away_op_root_abspath,
                                                 sbox.wc_ctx->db,
                                                 sbox.wc_abspath,
                                                 conflict_skel,
                                                 pool, pool));
 
-    SVN_TEST_ASSERT(local_change == svn_wc_conflict_reason_moved_away);
-    SVN_TEST_ASSERT(incoming_change == svn_wc_conflict_action_delete);
+    SVN_TEST_ASSERT(reason == svn_wc_conflict_reason_moved_away);
+    SVN_TEST_ASSERT(action == svn_wc_conflict_action_delete);
     SVN_TEST_ASSERT(!strcmp(moved_away_op_root_abspath,
                             sbox_wc_path(&sbox, "A/B")));
   }
@@ -809,7 +810,9 @@ test_prop_conflicts(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_deserialize_tree_conflict,
@@ -829,3 +832,4 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL
   };
 
+SVN_TEST_MAIN

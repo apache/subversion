@@ -73,12 +73,18 @@ import svnpubsub.util
 
 assert hasattr(subprocess, 'check_call')
 def check_call(*args, **kwds):
-    """Wrapper around subprocess.check_call() that logs stderr upon failure."""
+    """Wrapper around subprocess.check_call() that logs stderr upon failure,
+    with an optional list of exit codes to consider non-failure."""
     assert 'stderr' not in kwds
+    if '__okayexits' in kwds:
+        __okayexits = kwds['__okayexits']
+        del kwds['__okayexits']
+    else:
+        __okayexits = set([0]) # EXIT_SUCCESS
     kwds.update(stderr=subprocess.PIPE)
     pipe = subprocess.Popen(*args, **kwds)
     output, errput = pipe.communicate()
-    if pipe.returncode:
+    if pipe.returncode not in __okayexits:
         cmd = args[0] if len(args) else kwds.get('args', '(no command)')
         # TODO: log stdout too?
         logging.error('Command failed: returncode=%d command=%r stderr=%r',
@@ -292,6 +298,21 @@ class BackgroundWorker(threading.Thread):
 
         logging.info("updating: %s", wc.path)
 
+        ## Run the hook
+        HEAD = svn_info(self.svnbin, self.env, wc.url)['Revision']
+        if self.hook:
+            hook_mode = ['pre-update', 'pre-boot'][boot]
+            logging.info('running hook: %s at %s',
+                         wc.path, hook_mode)
+            args = [self.hook, hook_mode, wc.path, HEAD, wc.url]
+            rc = check_call(args, env=self.env, __okayexits=[0, 1])
+            if rc == 1:
+                # TODO: log stderr
+                logging.warn('hook denied update of %s at %s',
+                             wc.path, hook_mode)
+                return
+            del rc
+
         ### we need to move some of these args into the config. these are
         ### still specific to the ASF setup.
         args = [self.svnbin, 'switch',
@@ -302,12 +323,13 @@ class BackgroundWorker(threading.Thread):
                 '--config-option',
                 'config:miscellany:use-commit-times=on',
                 '--',
-                wc.url,
+                wc.url + '@' + HEAD,
                 wc.path]
         check_call(args, env=self.env)
 
         ### check the loglevel before running 'svn info'?
         info = svn_info(self.svnbin, self.env, wc.path)
+        assert info['Revision'] == HEAD
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
 
         ## Run the hook
@@ -454,7 +476,15 @@ def handle_options(options):
     # Otherwise, we should write this (foreground) PID into the file.
     if options.pidfile and not options.daemon:
         pid = os.getpid()
-        open(options.pidfile, 'w').write('%s\n' % pid)
+        # Be wary of symlink attacks
+        try:
+            os.remove(options.pidfile)
+        except OSError:
+            pass
+        fd = os.open(options.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     0444)
+        os.write(fd, '%d\n' % pid)
+        os.close(fd)
         logging.info('pid %d written to %s', pid, options.pidfile)
 
     if options.gid:
@@ -514,7 +544,8 @@ def main(args):
 
     # We manage the logfile ourselves (along with possible rotation). The
     # daemon process can just drop stdout/stderr into /dev/null.
-    d = Daemon('/dev/null', options.pidfile, options.umask, bdec)
+    d = Daemon('/dev/null', os.path.abspath(options.pidfile),
+               options.umask, bdec)
     if options.daemon:
         # Daemonize the process and call sys.exit() with appropriate code
         d.daemonize_exit()

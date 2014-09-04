@@ -42,7 +42,7 @@ Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 from externals_tests import change_external
-from switch_tests import do_routine_switching
+from svntest.deeptrees import do_routine_switching
 
 #----------------------------------------------------------------------
 
@@ -208,16 +208,12 @@ def relocate_and_propset(sbox):
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
+  svntest.actions.guarantee_greek_repository(
+      sbox.repo_dir, svntest.main.options.server_minor_version)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
-  exit_code, output, errput = svntest.main.run_svn(
-    None, 'import', '-m', 'Log message for revision 1.',
-    svntest.main.greek_dump_dir, sbox.repo_url)
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
@@ -273,19 +269,15 @@ def single_file_relocate(sbox):
 
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
+  svntest.actions.guarantee_greek_repository(
+      sbox.repo_dir, svntest.main.options.server_minor_version)
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(sbox.wc_dir, 'iota')
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   iota_url = repo_url + '/iota'
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
-  exit_code, output, errput = svntest.main.run_svn(
-    None, 'import', '-m', 'Log message for revision 1.',
-    svntest.main.greek_dump_dir, sbox.repo_url)
+  greek_dump_dir = sbox.add_wc_path('greek-dump')
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)

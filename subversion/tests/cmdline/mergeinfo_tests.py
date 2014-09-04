@@ -44,10 +44,9 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 
-# Get a couple merge helpers from merge_tests.py
-import merge_tests
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+# Get a couple merge helpers
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 def adjust_error_for_server_version(expected_err):
   "Return the expected error regexp appropriate for the server version."
@@ -75,6 +74,7 @@ def no_mergeinfo(sbox):
                                            sbox.repo_url + '/A2',
                                            "--show-revs=merged")
 
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"
 
@@ -173,6 +173,7 @@ def mergeinfo_non_source(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3138
+@SkipUnless(server_has_mergeinfo)
 @Issue(3138)
 def mergeinfo_on_unknown_url(sbox):
   "mergeinfo of an unknown url should return error"
@@ -196,6 +197,7 @@ def mergeinfo_on_unknown_url(sbox):
 # Test for issue #3126 'svn mergeinfo shows too few or too many
 # eligible revisions'.  Specifically
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3126)
 def non_inheritable_mergeinfo(sbox):
   "non-inheritable mergeinfo shows as merged"
@@ -780,9 +782,25 @@ def noninheritable_mergeinfo_not_always_eligible(sbox):
     [], sbox.repo_url + '/A', sbox.repo_url + '/branch',
     '--show-revs', 'eligible', '-R')
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4301)
+def mergeinfo_local_move(sbox):
+  "'mergeinfo' on a locally moved path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move('A', 'A2')
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+
+
 ########################################################################
 # Run the tests
 
+# Note that mergeinfo --log is tested in log_tests.py
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -797,6 +815,7 @@ test_list = [ None,
               wc_target_inherits_mergeinfo_from_repos,
               natural_history_is_not_eligible_nor_merged,
               noninheritable_mergeinfo_not_always_eligible,
+              mergeinfo_local_move,
              ]
 
 if __name__ == '__main__':

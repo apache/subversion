@@ -53,9 +53,9 @@ membuf_create(void **data, apr_size_t *size,
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
    * smaller size. Note that this is safe even if apr_palloc would
-   * use some other aligment or none at all. */
+   * use some other alignment or none at all. */
   minimum_size = APR_ALIGN_DEFAULT(minimum_size);
-  *data = (!minimum_size ? NULL : apr_palloc(pool, minimum_size));
+  *data = apr_palloc(pool, minimum_size);
   *size = minimum_size;
 }
 
@@ -78,14 +78,10 @@ membuf_ensure(void **data, apr_size_t *size,
       apr_size_t new_size = *size;
 
       if (new_size == 0)
-        /* APR will increase odd allocation sizes to the next
-         * multiple for 8, for instance. Take advantage of that
-         * knowledge and allow for the extra size to be used. */
         new_size = minimum_size;
       else
         while (new_size < minimum_size)
           {
-            /* new_size is aligned; doubling it should keep it aligned */
             const apr_size_t prev_size = new_size;
             new_size *= 2;
 
@@ -121,7 +117,10 @@ svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
   const apr_size_t old_size = membuf->size;
 
   membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
-  if (membuf->data && old_data && old_data != membuf->data)
+
+  /* If we re-allocated MEMBUF->DATA, it cannot be NULL.
+   * Statically initialized membuffers (OLD_DATA) may be NULL, though. */
+  if (old_data && old_data != membuf->data)
     memcpy(membuf->data, old_data, old_size);
 }
 
@@ -151,7 +150,7 @@ string_compare(const char *str1,
   if (len1 != len2)
     return FALSE;
 
-  /* now the strings must have identical lenghths */
+  /* now the strings must have identical lengths */
 
   if ((memcmp(str1, str2, len1)) == 0)
     return TRUE;
@@ -418,6 +417,17 @@ svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool)
   return svn_stringbuf_ncreate(str->data, str->len, pool);
 }
 
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool)
+{
+  svn_stringbuf_t *result = apr_palloc(pool, sizeof(*result));
+  result->pool = pool;
+  result->data = str;
+  result->len = strlen(str);
+  result->blocksize = result->len + 1;
+
+  return result;
+}
 
 svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
@@ -593,6 +603,21 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   str->data[str->len] = '\0';  /* We don't know if this is binary
                                   data or not, but convention is
                                   to null-terminate. */
+}
+
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *str,
+                         char byte,
+                         apr_size_t count)
+{
+  apr_size_t new_len = str->len + count;
+  svn_stringbuf_ensure(str, new_len);
+
+  memset(str->data + str->len, byte, count);
+
+  /* update buffer length and always NUL-terminate it */
+  str->len = new_len;
+  str->data[new_len] = '\0';
 }
 
 
@@ -1014,21 +1039,8 @@ svn_cstring_atoi(int *n, const char *str)
   return SVN_NO_ERROR;
 }
 
-
-apr_status_t
-svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
-{
-#if !APR_VERSION_AT_LEAST(1,0,0)
-  errno = 0;
-  *offset = strtol(buf, end, base);
-  return APR_FROM_OS_ERROR(errno);
-#else
-  return apr_strtoff(offset, buf, end, base);
-#endif
-}
-
 unsigned long
-svn__strtoul(const char *buffer, char **end)
+svn__strtoul(const char* buffer, const char** end)
 {
   unsigned long result = 0;
 
@@ -1044,7 +1056,7 @@ svn__strtoul(const char *buffer, char **end)
    */
   while (1)
     {
-      unsigned long c = *buffer - '0';
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
       if (c > 9)
         break;
 
@@ -1052,10 +1064,9 @@ svn__strtoul(const char *buffer, char **end)
       ++buffer;
     }
 
-  *end = (char *)buffer;
+  *end = buffer;
   return result;
 }
-
 
 /* "Precalculated" itoa values for 2 places (including leading zeros).
  * For maximum performance, make sure all table entries are word-aligned.
@@ -1157,7 +1168,7 @@ svn__i64toa(char * dest, apr_int64_t number)
 }
 
 static void
-ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
+ui64toa_sep(apr_uint64_t number, char separator, char *buffer)
 {
   apr_size_t length = svn__ui64toa(buffer, number);
   apr_size_t i;
@@ -1165,7 +1176,7 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
   for (i = length; i > 3; i -= 3)
     {
       memmove(&buffer[i - 2], &buffer[i - 3], length - i + 3);
-      buffer[i-3] = seperator;
+      buffer[i-3] = separator;
       length++;
     }
 
@@ -1173,28 +1184,108 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
 }
 
 char *
-svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool)
+svn__ui64toa_sep(apr_uint64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
-  ui64toa_sep(number, seperator, buffer);
+  ui64toa_sep(number, separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }
 
 char *
-svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
+svn__i64toa_sep(apr_int64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
   if (number < 0)
     {
       buffer[0] = '-';
-      ui64toa_sep((apr_uint64_t)(-number), seperator, &buffer[1]);
+      ui64toa_sep((apr_uint64_t)(-number), separator, &buffer[1]);
     }
   else
-    ui64toa_sep((apr_uint64_t)(number), seperator, buffer);
+    ui64toa_sep((apr_uint64_t)(number), separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }
+
+apr_size_t
+svn__ui64tobase36(char *dest, apr_uint64_t value)
+{
+  char *dest_start = dest;
+  if (value < 10)
+    {
+      /* pretty frequent and trivial case. Make it fast. */
+      *(dest++) = (char)(value) + '0';
+    }
+  else
+    {
+      char buffer[SVN_INT64_BUFFER_SIZE];
+      char *p = buffer;
+
+      /* write result as little-endian to buffer */
+      while (value > 0)
+        {
+          char c = (char)(value % 36);
+          value /= 36;
+
+          *p = (c <= 9) ? (c + '0') : (c - 10 + 'a');
+          ++p;
+        }
+
+      /* copy as big-endian to DEST */
+      while (p > buffer)
+        *(dest++) = *(--p);
+    }
+
+  *dest = '\0';
+  return dest - dest_start;
+}
+
+apr_uint64_t
+svn__base36toui64(const char **next, const char *source)
+{
+  apr_uint64_t result = 0;
+  apr_uint64_t factor = 1;
+  int i  = 0;
+  char digits[SVN_INT64_BUFFER_SIZE];
+
+  /* convert digits to numerical values and count the number of places.
+   * Also, prevent buffer overflow. */
+  while (i < sizeof(digits))
+    {
+      char c = *source;
+      if (c < 'a')
+        {
+          /* includes detection of NUL terminator */
+          if (c < '0' || c > '9')
+            break;
+
+          c -= '0';
+        }
+      else
+        {
+          if (c < 'a' || c > 'z')
+            break;
+
+          c -= 'a' - 10;
+        }
+
+      digits[i++] = c;
+      source++;
+    }
+
+  /* fold digits into the result */
+  while (i > 0)
+    {
+      result += factor * (apr_uint64_t)digits[--i];
+      factor *= 36;
+    }
+
+  if (next)
+    *next = source;
+
+  return result;
+}
+
 
 unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
@@ -1300,4 +1391,81 @@ svn_string__similarity(const svn_string_t *stringa,
     return(unsigned int)((2000 * lcs + total/2) / total);
   else
     return 1000;
+}
+
+apr_size_t
+svn_cstring__match_length(const char *a,
+                          const char *b,
+                          apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
+      break;
+
+#endif
+
+  for (; pos < max_len; ++pos)
+    if (a[pos] != b[pos])
+      break;
+
+  return pos;
+}
+
+apr_size_t
+svn_cstring__reverse_match_length(const char *a,
+                                  const char *b,
+                                  apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
+      break;
+
+  pos -= sizeof(apr_size_t);
+
+#endif
+
+  /* If we find a mismatch at -pos, pos-1 characters matched.
+   */
+  while (++pos <= max_len)
+    if (a[0-pos] != b[0-pos])
+      return pos - 1;
+
+  /* No mismatch found -> at least MAX_LEN matching chars.
+   */
+  return max_len;
+}
+
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix)
+{
+  apr_size_t len = strlen(prefix);
+
+  if (strncmp(str, prefix, len) == 0)
+    {
+      return str + len;
+    }
+  else
+    {
+      return NULL;
+    }
 }

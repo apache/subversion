@@ -443,7 +443,7 @@ svn_wc__serialize_file_external(const char **str,
       SVN_ERR(opt_revision_to_string(&s1, path, peg_rev, pool));
       SVN_ERR(opt_revision_to_string(&s2, path, rev, pool));
 
-      s = apr_pstrcat(pool, s1, ":", s2, ":", path, (char *)NULL);
+      s = apr_pstrcat(pool, s1, ":", s2, ":", path, SVN_VA_NULL);
     }
   else
     s = NULL;
@@ -811,11 +811,15 @@ atts_to_entry(svn_wc_entry_t **new_entry,
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
   entry->url = extract_string(atts, ENTRIES_ATTR_URL, pool);
+  if (entry->url)
+    entry->url = svn_uri_canonicalize(entry->url, pool);
 
   /* Set up repository root.  Make sure it is a prefix of url.
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
   entry->repos = extract_string(atts, ENTRIES_ATTR_REPOS, pool);
+  if (entry->repos)
+    entry->repos = svn_uri_canonicalize(entry->repos, pool);
 
   if (entry->url && entry->repos
       && !svn_uri__is_ancestor(entry->repos, entry->url))
@@ -1150,7 +1154,7 @@ resolve_to_defaults(apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
+      svn_wc_entry_t *this_entry = apr_hash_this_val(hi);
 
       if (this_entry == default_entry)
         /* THIS_DIR already has all the information it can possibly

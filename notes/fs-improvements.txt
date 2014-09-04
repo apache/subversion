@@ -171,7 +171,7 @@ it's quite possible that a higher copyID will become visible in the
 revision history before a lower one.
 
 The one thing we can know is that a lower copyID can never be a
-branchwise descendent of a lower copyID, since the lower one must have
+branchwise descendant of a lower copyID, since the lower one must have
 been committed before any of its descendants txns were started, of
 course.  I'm not sure this minimal inference will ever be useful, but
 anyway it's all we've got.  Anyway, right now, we only ever need ask

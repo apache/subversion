@@ -90,7 +90,7 @@ class Txn(object):
 
         if kind == svn_node_none:
             if base_rev:
-                message = "'%s' not found in rev %d" % (path, base_rev)
+                message = "'%s' not found in r%d" % (path, base_rev)
             else:
                 message = "'%s' not found" % (path)
             raise SubversionException(SVN_ERR_BAD_URL, message)

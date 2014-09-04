@@ -44,8 +44,8 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 def run_reintegrate(src_url, tgt_path):
@@ -278,7 +278,8 @@ def basic_reintegrate(sbox):
   # mergeinfo and the A-->A_MOVED path difference.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 9.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 9.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED',
@@ -328,6 +329,7 @@ def basic_reintegrate(sbox):
                                        None, True, True)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_with_rename(sbox):
   "merge --reintegrate with renamed file on branch"
 
@@ -568,6 +570,7 @@ def reintegrate_with_rename(sbox):
                                         expected_status, None, wc_dir)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_branch_never_merged_to(sbox):
   "merge --reintegrate on a never-updated branch"
 
@@ -699,6 +702,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                         expected_status, None, wc_dir)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_modified_wc(sbox):
   "merge --reintegrate should fail in modified wc"
   sbox.build()
@@ -722,6 +726,7 @@ def reintegrate_fail_on_modified_wc(sbox):
     True, False)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_mixed_rev_wc(sbox):
   "merge --reintegrate should fail in mixed-rev wc"
   sbox.build()
@@ -745,6 +750,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
     True, False)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_switched_wc(sbox):
   "merge --reintegrate should fail in switched wc"
   sbox.build()
@@ -813,6 +819,7 @@ def reintegrate_fail_on_switched_wc(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
 # missing subtrees'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3603)
 def reintegrate_on_shallow_wc(sbox):
   "merge --reintegrate in shallow wc"
@@ -1003,6 +1010,7 @@ def reintegrate_fail_on_stale_source(sbox):
                                        [], True, True)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def merge_file_with_space_in_its_path(sbox):
   "merge a file with space in its path"
 
@@ -1325,7 +1333,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #
   #   D) Synch merge the changes in C) from 'trunk' to 'branch' and commit in
   #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
-  #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
+  #      mergeinfo describing the synch merge from trunk@N+1 to trunk@N+2.
   #
   #   E) Reintegrate 'branch' to 'trunk'.
   #
@@ -1716,6 +1724,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 #
 # Also tests Issue #3591 'reintegrate merges update subtree mergeinfo
 # unconditionally'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3591)
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
@@ -2002,6 +2011,7 @@ def reintegrate_with_subtree_merges(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3654)
 def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   "added subtrees with mergeinfo break reintegrate"
@@ -2195,6 +2205,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
 # for merge target'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3648)
 def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   "2-URL merge removes valid mergeinfo from target"
@@ -2355,6 +2366,7 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3867 'reintegrate merges create mergeinfo for
 # non-existent paths'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3867)
 def reintegrate_creates_bogus_mergeinfo(sbox):
   "reintegrate creates bogus mergeinfo"
@@ -2445,6 +2457,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
 # subtree mergeinfo is reintegrated into a target with subtree
 # mergeinfo.  Deliberately written in a style that works with the 1.6
 # testsuite.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3957)
 def no_source_subtree_mergeinfo(sbox):
   "source without subtree mergeinfo"
@@ -2516,7 +2529,9 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Verify that merge results in no subtree mergeinfo
-  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+  expected_stderr = '.*W200017: Property.*not found'
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/A/B2/E')
 
   # Merge trunk to branch-2
@@ -2525,7 +2540,8 @@ def no_source_subtree_mergeinfo(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Verify that there is still no subtree mergeinfo
-  svntest.actions.run_and_verify_svn(None, [], [], 'propget', 'svn:mergeinfo',
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/A/B2/E')
 
   # Reintegrate branch-2 to trunk, this fails in 1.6.x from 1.6.13.
@@ -2584,13 +2600,13 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r3 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r3 from A to A_COPY')
 
   # r8 - Merge r4 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c4')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r4 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r4 from A to A_COPY')
 
   # r9 - Merge r5 from A to A_COPY. Make an additional edit to
   # A_COPY/B/E/beta.
@@ -2598,7 +2614,7 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c5')
   svntest.main.file_write(beta_COPY_path, "Branch edit mistake.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r5 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r5 from A to A_COPY')
 
   # r10 - Delete A_COPY and replace it with A_COPY@8. This removes the edit
   # we made above in r9 to A_COPY/B/E/beta.
@@ -2606,19 +2622,17 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'delete', A_COPY_path)
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A_COPY@8',
                        A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Replace A_COPY with A_COPY@8',
-                       wc_dir)
+  sbox.simple_commit(message='Replace A_COPY with A_COPY@8')
 
   # r11 - Make an edit on A_COPY/mu.
   svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit',
-                       wc_dir)
+  sbox.simple_commit(message='Branch edit')
 
   # r12 - Do a final sync merge of A to A_COPY in preparation for
   # reintegration.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
+  sbox.simple_commit(message='Sync A_COPY with A')
 
   # Reintegrate A_COPY to A.  The resulting mergeinfo should be
   # '/A_COPY:2-8,10-12' because of the replacement which removed /A_COPY:9
@@ -2688,6 +2702,7 @@ def reintegrate_replaced_source(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
+@SkipUnless(server_has_mergeinfo)
 @Issue(4052)
 def reintegrate_symlink_deletion(sbox):
   "reintegrate symlink deletion"
@@ -2724,6 +2739,7 @@ def reintegrate_symlink_deletion(sbox):
   run_reintegrate(A_COPY_url, A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def no_op_reintegrate(sbox):
   """no-op reintegrate"""
 
@@ -2744,6 +2760,7 @@ def no_op_reintegrate(sbox):
   run_reintegrate(sbox.repo_url + '/A_COPY', A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def renamed_branch_reintegrate(sbox):
   """reintegrate a branch that has been renamed"""
 

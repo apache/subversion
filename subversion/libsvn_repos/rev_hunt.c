@@ -38,6 +38,8 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -229,7 +231,7 @@ svn_repos_history2(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
     }
 
-  SVN_ERR(svn_fs_node_history(&history, root, path, oldpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, oldpool, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
@@ -240,7 +242,8 @@ svn_repos_history2(svn_fs_t *fs,
       apr_pool_t *tmppool;
       svn_error_t *err;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, cross_copies, newpool,
+                                   oldpool));
 
       /* Only continue if there is further history to deal with. */
       if (! history)
@@ -308,11 +311,11 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  svn_fs_root_t *root, *copy_root;
+  svn_fs_root_t *start_root, *root, *copy_root;
   const char *copy_path;
   svn_revnum_t mid_rev;
-  const svn_fs_id_t *start_node_id, *curr_node_id;
-  svn_error_t *err;
+  svn_node_kind_t kind;
+  svn_fs_node_relation_t node_relation;
 
   /* Validate the revision range. */
   if (! SVN_IS_VALID_REVNUM(start))
@@ -333,32 +336,19 @@ svn_repos_deleted_rev(svn_fs_t *fs,
     }
 
   /* Ensure path exists in fs at start revision. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, start, pool));
-  err = svn_fs_node_id(&start_node_id, root, path, pool);
-  if (err)
+  SVN_ERR(svn_fs_revision_root(&start_root, fs, start, pool));
+  SVN_ERR(svn_fs_check_path(&kind, start_root, path, pool));
+  if (kind == svn_node_none)
     {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-        {
-          /* Path must exist in fs at start rev. */
-          *deleted = SVN_INVALID_REVNUM;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      return svn_error_trace(err);
+      /* Path must exist in fs at start rev. */
+      *deleted = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
     }
 
   /* Ensure path was deleted at or before end revision. */
   SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
-  err = svn_fs_node_id(&curr_node_id, root, path, pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      svn_error_clear(err);
-    }
-  else if (err)
-    {
-      return svn_error_trace(err);
-    }
-  else
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_none)
     {
       /* path exists in the end node and the end node is equivalent
          or otherwise equivalent to the start node.  This can mean
@@ -385,8 +375,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
            5) The start node was deleted and replaced by a node which
               it does not share any history with.
       */
-      SVN_ERR(svn_fs_node_id(&curr_node_id, root, path, pool));
-      if (svn_fs_compare_ids(start_node_id, curr_node_id) != -1)
+      SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
+                                   root, path, pool));
+      if (node_relation != svn_fs_node_unrelated)
         {
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, pool));
@@ -449,28 +440,23 @@ svn_repos_deleted_rev(svn_fs_t *fs,
 
       /* Get revision root and node id for mid_rev at that revision. */
       SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
-      err = svn_fs_node_id(&curr_node_id, root, path, subpool);
-
-      if (err)
+      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+      if (kind == svn_node_none)
         {
-          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              /* Case D: Look lower in the range. */
-              svn_error_clear(err);
-              end = mid_rev;
-              mid_rev = (start + mid_rev) / 2;
-            }
-          else
-            return svn_error_trace(err);
+          /* Case D: Look lower in the range. */
+          end = mid_rev;
+          mid_rev = (start + mid_rev) / 2;
         }
       else
         {
           /* Determine the relationship between the start node
              and the current node. */
-          int cmp = svn_fs_compare_ids(start_node_id, curr_node_id);
+          SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
+                                       root, path, pool));
+          if (node_relation != svn_fs_node_unrelated)
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, subpool));
-          if (cmp == -1 ||
+          if (node_relation == svn_fs_node_unrelated ||
               (copy_root &&
                (svn_fs_revision_root_revision(copy_root) > start)))
             {
@@ -538,7 +524,7 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, future_revision, pool));
 
-  SVN_ERR(svn_fs_node_history(&history, root, fs_path, lastpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, fs_path, lastpool, lastpool));
 
   /* Since paths that are different according to strcmp may still be
      equivalent (due to number of consecutive slashes and the fact that
@@ -551,7 +537,8 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
     {
       apr_pool_t *tmppool;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, currpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, currpool,
+                                   lastpool));
 
       if (!history)
         break;
@@ -653,14 +640,13 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   svn_revnum_t revision;
   svn_boolean_t is_ancestor;
   apr_pool_t *lastpool, *currpool;
-  const svn_fs_id_t *id;
 
   SVN_ERR_ASSERT(location_revisions_orig->elt_size == sizeof(svn_revnum_t));
 
   /* Ensure that FS_PATH is absolute, because our path-math below will
      depend on that being the case.  */
   if (*fs_path != '/')
-    fs_path = apr_pstrcat(pool, "/", fs_path, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", fs_path, SVN_VA_NULL);
 
   /* Another sanity check. */
   if (authz_read_func)
@@ -773,20 +759,22 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
      the node existing at the same path.  We will look up path@lrev
      for each remaining location-revision and make sure it is related
      to path@revision. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, revision, currpool));
-  SVN_ERR(svn_fs_node_id(&id, root, path, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, revision, lastpool));
   while (revision_ptr < revision_ptr_end)
     {
       svn_node_kind_t kind;
-      const svn_fs_id_t *lrev_id;
+      svn_fs_node_relation_t node_relation;
+      svn_fs_root_t *cur_rev_root;
 
       svn_pool_clear(currpool);
-      SVN_ERR(svn_fs_revision_root(&root, fs, *revision_ptr, currpool));
-      SVN_ERR(svn_fs_check_path(&kind, root, path, currpool));
+      SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs, *revision_ptr,
+                                   currpool));
+      SVN_ERR(svn_fs_check_path(&kind, cur_rev_root, path, currpool));
       if (kind == svn_node_none)
         break;
-      SVN_ERR(svn_fs_node_id(&lrev_id, root, path, currpool));
-      if (! svn_fs_check_related(id, lrev_id))
+      SVN_ERR(svn_fs_node_relation(&node_relation, root, path,
+                                   cur_rev_root, path, currpool));
+      if (node_relation == svn_fs_node_unrelated)
         break;
 
       /* The node exists at the same path; record that and advance. */
@@ -877,7 +865,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   /* Ensure that PATH is absolute, because our path-math will depend
      on that being the case.  */
   if (*path != '/')
-    path = apr_pstrcat(pool, "/", path, (char *)NULL);
+    path = apr_pstrcat(pool, "/", path, SVN_VA_NULL);
 
   /* Auth check. */
   if (authz_read_func)
@@ -941,7 +929,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 
           /* authz_read_func requires path to have a leading slash. */
           const char *abs_path = apr_pstrcat(subpool, "/", segment->path,
-                                             (char *)NULL);
+                                             SVN_VA_NULL);
 
           SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs,
                                        segment->range_end, subpool));
@@ -975,37 +963,6 @@ svn_repos_node_location_segments(svn_repos_t *repos,
         }
     }
   svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
-/* Get the mergeinfo for PATH in REPOS at REVNUM and store it in MERGEINFO. */
-static svn_error_t *
-get_path_mergeinfo(apr_hash_t **mergeinfo,
-                   svn_fs_t *fs,
-                   const char *path,
-                   svn_revnum_t revnum,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  svn_mergeinfo_catalog_t tmp_catalog;
-  svn_fs_root_t *root;
-  apr_array_header_t *paths = apr_array_make(scratch_pool, 1,
-                                             sizeof(const char *));
-
-  APR_ARRAY_PUSH(paths, const char *) = path;
-
-  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, scratch_pool));
-  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
-     because we will filter out unreadable revisions in
-     find_interesting_revision(), above */
-  SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root, paths,
-                                svn_mergeinfo_inherited, FALSE, TRUE,
-                                result_pool, scratch_pool));
-
-  *mergeinfo = svn_hash_gets(tmp_catalog, path);
-  if (!*mergeinfo)
-    *mergeinfo = apr_hash_make(result_pool);
-
   return SVN_NO_ERROR;
 }
 
@@ -1046,7 +1003,7 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
 {
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
-  svn_fs_root_t *root;
+  svn_fs_root_t *root, *prev_root;
   apr_hash_t *changed_paths;
   const char *path = old_path_rev->path;
 
@@ -1058,7 +1015,8 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   while (1)
     {
       svn_fs_path_change2_t *changed_path = svn_hash_gets(changed_paths, path);
-      if (changed_path && changed_path->prop_mod)
+      if (changed_path && changed_path->prop_mod
+          && changed_path->mergeinfo_mod != svn_tristate_false)
         break;
       if (svn_fspath__is_root(path, strlen(path)))
         {
@@ -1070,9 +1028,13 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
      old_path_rev->revnum - 1. */
-  err = get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum, scratch_pool,
-                           scratch_pool);
+  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
+     because we will filter out unreadable revisions in
+     find_interesting_revision() */
+  err = svn_fs__get_mergeinfo_for_path(&curr_mergeinfo,
+                                       root, old_path_rev->path,
+                                       svn_mergeinfo_inherited, TRUE,
+                                       scratch_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -1090,9 +1052,12 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
         }
     }
 
-  err = get_path_mergeinfo(&prev_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum - 1, scratch_pool,
-                           scratch_pool);
+  SVN_ERR(svn_fs_revision_root(&prev_root, repos->fs, old_path_rev->revnum - 1,
+                               scratch_pool));
+  err = svn_fs__get_mergeinfo_for_path(&prev_mergeinfo,
+                                       prev_root, old_path_rev->path,
+                                       svn_mergeinfo_inherited, TRUE,
+                                       scratch_pool, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND
               || err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
     {
@@ -1153,7 +1118,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
        path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool,
+                               scratch_pool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1164,7 +1130,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,
@@ -1286,15 +1253,13 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
           for (hi = apr_hash_first(iterpool, old_pr->merged_mergeinfo); hi;
                hi = apr_hash_next(hi))
             {
+              const char *path = apr_hash_this_key(hi);
+              svn_rangelist_t *rangelist = apr_hash_this_val(hi);
               apr_pool_t *iterpool3;
-              svn_rangelist_t *rangelist;
-              const char *path;
               int j;
 
               svn_pool_clear(iterpool2);
               iterpool3 = svn_pool_create(iterpool2);
-
-              apr_hash_this(hi, (void *) &path, NULL, (void *) &rangelist);
 
               for (j = 0; j < rangelist->nelts; j++)
                 {
@@ -1342,8 +1307,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
   while (new_merged_path_revs->nelts > 0);
 
   /* Sort MERGED_PATH_REVISIONS in increasing order by REVNUM. */
-  qsort(merged_path_revisions->elts, merged_path_revisions->nelts,
-        sizeof(struct path_revision *), compare_path_revisions);
+  svn_sort__array(merged_path_revisions, compare_path_revisions);
 
   /* Copy to the output array. */
   *merged_path_revisions_out = apr_array_copy(result_pool,
@@ -1399,12 +1363,13 @@ send_path_revision(struct path_revision *path_rev,
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
                          sb->iterpool));
 
-  /* Check if the contents changed. */
+  /* Check if the contents *may* have changed. (Allow false positives,
+     for now, as the blame implementation currently depends on them.) */
   /* Special case: In the first revision, we always provide a delta. */
   if (sb->last_root)
-    SVN_ERR(svn_fs_contents_changed(&contents_changed, sb->last_root,
-                                    sb->last_path, root, path_rev->path,
-                                    sb->iterpool));
+    SVN_ERR(svn_fs_contents_different(&contents_changed, sb->last_root,
+                                      sb->last_path, root, path_rev->path,
+                                      sb->iterpool));
   else
     contents_changed = TRUE;
 
@@ -1492,7 +1457,7 @@ get_file_revs_backwards(svn_repos_t *repos,
                              path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool, iterpool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1502,7 +1467,8 @@ get_file_revs_backwards(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,

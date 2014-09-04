@@ -157,6 +157,8 @@ extern "C" {
  * The bump to 31 added the inherited_props column in the NODES table.
  * Bumped in r1395109.
  *
+ * == 1.8.x shipped with format 31
+ * 
  * Please document any further format changes here.
  */
 
@@ -606,14 +608,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc__node_get_schedule(). */
-svn_error_t *
-svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
-                                   svn_boolean_t *copied,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *scratch_pool);
-
 /* Internal version of svn_wc__node_get_origin() */
 svn_error_t *
 svn_wc__internal_get_origin(svn_boolean_t *is_copy,
@@ -621,6 +615,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             const char **repos_relpath,
                             const char **repos_root_url,
                             const char **repos_uuid,
+                            svn_depth_t *depth,
                             const char **copy_root_abspath,
                             svn_wc__db_t *db,
                             const char *local_abspath,
@@ -778,19 +773,6 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
                                    apr_array_header_t *externals,
                                    apr_pool_t *pool,
                                    apr_pool_t *scratch_pool);
-
-/* Revert tree LOCAL_ABSPATH to depth DEPTH and notify for all
-   reverts. */
-svn_error_t *
-svn_wc__revert_internal(svn_wc__db_t *db,
-                        const char *local_abspath,
-                        svn_depth_t depth,
-                        svn_boolean_t use_commit_times,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__node_has_local_mods(svn_boolean_t *modified,

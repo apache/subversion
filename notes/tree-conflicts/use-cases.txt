@@ -4,10 +4,16 @@
 
 
 Issue reference:  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
+                  http://subversion.tigris.org/issues/show_bug.cgi?id=3630
 
-(These use cases are based on a scenario paper "SVN move/rename
+These use cases are based on a scenario paper "SVN move/rename
 problems & suggested improvements" submitted by a corporate Subversion
-user, which may be found attached to issue #2282.)
+user, which may be found attached to issue #2282.
+
+These notes were originally written during development of Subversion 1.6.
+The original version focussed on detection of tree conflicts. The notes
+have since been updated with behaviour changes up to Subversion 1.8.
+Any 'desired behaviour' mentioned here is yet to be implemented.
 
 --------------------------------------------------------------------------
 
@@ -19,7 +25,7 @@ Description
 
    During an update, a file modification is merged onto a file move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer A modifies Foo.c and commits it to the repository.
 
@@ -30,7 +36,7 @@ Current Behavior
    update'. The update will apply A's modifications to Foo.c in the
    repository to Foo.c in B's working copy.
 
-Problems With Current Behavior
+Problems With Behavior of Subversion <= 1.5
 
    First problem:
    
@@ -46,7 +52,7 @@ Problems With Current Behavior
    B's working copy because it has "local" modifications (which were in
    fact made by A). This will likely escape B's attention.
 
-Diagram of current behavior
+Diagram of behavior of Subversion <= 1.5
 
 
               (edit)
@@ -61,18 +67,23 @@ Diagram of current behavior
     wcB          -- +Bar.c ---------- +Bar.c ----  Bar.c --->
              (move) -Foo.c            -Foo.c'     ?Foo.c' (unversioned)
 
+Behaviour of Subversion >= 1.6
 
-Desired behavior
+   Foo.c will be deleted from B's working copy.
 
-   When user B updates, A's modifications to Foo.c should be merged into
-   Bar.c. Signal a text conflict if necessary.
+   A tree conflict is signalled to inform B of the new changes to Bar.c,
+   so that B can review the modified Bar.c before committing it.
+
+Behavior of Subversion >= 1.8
    
-   Foo.c should be deleted from B's working copy.
-   
-   A tree conflict should be signalled to inform B of the new changes
-   to Bar.c, so that B can review the modified Bar.c before committing it.
+   As above, a tree conflict is flagged on Foo.c.
 
-Diagram of desired behaviour
+   When user B resolves the tree conflict on Foo.c, A's modifications
+   to Foo.c will be merged into Bar.c.
+   
+   Text/Prop conflicts are signalled necessary.
+   
+Diagram of Behaviour of Subversion >= 1.8
 
 
               (edit)
@@ -101,7 +112,7 @@ Description
    This is essentially the same as Use Case 1, with the difference that
    this time, B does the edit and A does the move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer B modifies Foo.c in his working copy.
    
@@ -114,7 +125,7 @@ Current Behavior
    B's working copy. Since B made local modifications to Foo.c,
    it will not be deleted from disk but left behind unversioned.
 
-Problems with Current Behavior
+Problems with behavior of Subversion <= 1.5
 
    Developer B may not notice that Foo.c fell out of version control.
    B's source tree in the working copy likely builds fine because Foo.c
@@ -122,7 +133,7 @@ Problems with Current Behavior
    possibly breaking the tree.  Everybody will get angry with B if this
    happens.
 
-Diagram of Current Behaviour
+Diagram of Behaviour of Subversion <= 1.5
 
 
               (move)
@@ -137,6 +148,11 @@ Diagram of Current Behaviour
     wcB          -- Foo.c' ------------  Bar.c  ------->
              (edit)                     ?Foo.c' (unversioned)
 
+Behavior of Subversion >= 1.6
+
+   When B updates, Bar.c is added to B's working copy, and a tree conflict
+   is flagged on Foo.c. B is expected to figure out that A renamed Foo.c
+   to Bar.c, and must resolve the conflict in some way before committing.
 
 Desired Behavior
 
@@ -174,7 +190,7 @@ Description
 
    During an update, a file move is merged onto a conflicting file move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer A moves Foo.c to Bar.c and commits the move to the repository.
    
@@ -184,7 +200,7 @@ Current Behavior
    'svn update'. The update will add Bar.c to B's working copy and
    delete Foo.c from B's working copy (the latter is a no-op).
 
-Problems with Current Behavior
+Problems with behavior of Subversion <= 1.5
 
    After B's next commit, the content of the original Foo.c
    will exist twice in the source tree under two different paths,
@@ -192,7 +208,7 @@ Problems with Current Behavior
    
    This may not have been intended.
 
-Diagram of Current Behavior
+Diagram of behavior of Subversion <= 1.5
 
 
              (move)
@@ -208,12 +224,12 @@ Diagram of Current Behavior
              (move) -Foo.c             Bar.c
 
 
-Desired Behavior
+Behavior of Subversion >= 1.6
 
-   A tree conflict should be signaled to inform B of the conflicting rename
+   A tree conflict is signaled to inform B of the conflicting rename
    operation. B can now decide on deleting either file or committing both.
 
-Diagram of Desired Behavior
+Diagram of behavior of Subversion >= 1.6
 
 
              (move)
@@ -230,6 +246,13 @@ Diagram of Desired Behavior
                                                     |
                                                  resolved
 
+Problems with Behaviour of Subversion >= 1.6
+
+   The incoming move is labeled as 'incoming delete' in the tree
+   conflict description, rather than 'incoming move'. No assistance
+   is provided while resolving the tree conflict. Inexperienced users
+   are often unsure why the conflict occurred and don't know how to
+   proceed.
 
 ==========
 USE CASE 4
@@ -239,7 +262,7 @@ Description
 
    A file modification is merged onto the source of a file move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer A modifies Foo.c and commits it to the repository.
 
@@ -249,7 +272,7 @@ Current Behavior
    will apply A's modification to Foo.c to the Foo.c in B's working
    copy.
 
-Problems With Current Behavior
+Problems With behavior of Subversion <= 1.5
 
    First problem:
    
@@ -262,7 +285,7 @@ Problems With Current Behavior
    except for a "skipped" warning in the output of the merge command,
    which might not be noticed.
 
-Diagram of current behavior
+Diagram of behavior of Subversion <= 1.5
 
 
             (edit)
@@ -279,15 +302,12 @@ Diagram of current behavior
     wcB                      -- Bar.c -- Bar.c ------ -->
 
 
-Desired behavior
+Behavior of Subversion >= 1.6
 
-   When user B merges, A's modifications to Foo.c should be merged into
-   Bar.c. Signal a text conflict if necessary.
-   
-   A tree conflict should be signalled to inform B of the new changes
-   to Bar.c, so that B can review the modified Bar.c before committing it.
+   A tree conflict is signalled to inform B of the new changes to Bar.c,
+   so that B can review the modified Bar.c before committing it.
 
-Diagram of desired behaviour
+Diagram of Behaviour of Subversion >= 1.6
 
 
             (edit)
@@ -306,6 +326,17 @@ Diagram of desired behaviour
                                                          |
                                                       resolved
 
+Problems with Behaviour of Subversion >= 1.6
+
+   No assistance is provided while resolving the tree conflict.
+   Inexperienced users are often unsure why the conflict occurred
+   and don't know how to proceed.
+
+Desired Behaviour
+
+   When user B merges, A's modifications to Foo.c should be merged into
+   Bar.c. Signal a text conflict if necessary.
+   
 
 ==========
 USE CASE 5
@@ -318,7 +349,7 @@ Description
    This is essentially the same as Use Case 4, with the difference that
    this time, B does the edit and A does the move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer A moves Foo.c to Bar.c and commits it to the repository.
 
@@ -328,15 +359,13 @@ Current Behavior
    will add Bar.c (with the same content as the original Foo.c) and
    will delete B's Foo.c.
 
-Problems With Current Behavior
+Problems with behavior of Subversion <= 1.5
 
-   First problem:
-   
    B's has modified Foo.c in the past.  This modification will be lost
    unless B reviews the history of Foo.c and Bar.c at both URLs and
    corrects the problem (e.g., via 'svn copy').
 
-Diagram of current behavior
+Diagram of behavior of Subversion <= 1.5
 
 
             (move)
@@ -354,17 +383,31 @@ Diagram of current behavior
                                           -Foo.c'
 
 
+Behavior Subversion >= 1.6
+
+   A tree conflict is signaled on Foo.c to inform B that Foo.c has been
+   renamed to Bar.c
+
+Problems with Behaviour of Subversion >= 1.6
+
+   The incoming move is labeled as 'incoming delete' in the tree
+   conflict description, rather than 'incoming move'. No assistance
+   is provided while resolving the tree conflict. Inexperienced users
+   are often unsure why the conflict occurred and don't know how to
+   proceed.
+
+Behavior of Subversion <= 1.8
+
+    Same as 1.6, but also for directories instead of just files.
+
 Desired behavior
 
    In B's working copy, the update should add Bar.c and merge the local
    modifications to Foo.c into Bar.c. Signal a text conflict if necessary.
    
    Foo.c should be deleted from B's working copy.
-   
-   A tree conflict should be signaled to inform B that Foo.c has been
-   renamed to Bar.c
 
-Diagram of desired behaviour
+Diagram of Desired Behaviour
 
 
             (move)
@@ -383,7 +426,6 @@ Diagram of desired behaviour
                                                          |
                                                       resolved
 
-
 ==========
 USE CASE 6
 ==========
@@ -392,7 +434,7 @@ Description
 
    A file move is merged onto a conflicting file move.
 
-Current Behavior
+Behavior of Subversion <= 1.5
 
    Developer A moves Foo.c to Bar.c and commits it to the repository.
 
@@ -401,13 +443,13 @@ Current Behavior
    Developer B merges A's new revision into his working copy.  The merge
    will add Bar.c with history in B's working copy.
 
-Problems With Current Behavior
+Problems with behavior of Subversion <= 1.5
 
    After B's next commit, the content of the original Foo.c will exist
    twice in the source tree under two different paths (Bar.c and
    Bix.c).  This may not have been intended.
 
-Diagram of current behavior
+Diagram of Behavior of Subversion <= 1.5
 
 
             (move)
@@ -425,12 +467,24 @@ Diagram of current behavior
                                         +Bar.c
 
 
+Behavior of Subversion <= 1.6
+
+    A tree conflict is flagged on Foo.c in B's working copy.
+
+Problems with Behaviour of Subversion >= 1.6
+
+   The incoming move is labeled as 'incoming delete' in the tree
+   conflict description, rather than 'incoming move'. No assistance
+   is provided while resolving the tree conflict. Inexperienced users
+   are often unsure why the conflict occurred and don't know how to
+   proceed.
+
 Desired behavior
 
    A tree conflict should be signaled to inform B of the conflicting
    rename operation.  B can delete either file or commit both.
 
-Diagram of desired behaviour
+Diagram of Desired Behaviour
 
 
             (move)

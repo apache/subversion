@@ -761,6 +761,13 @@ close_edit(void *edit_baton,
 
   if (SVN_IS_VALID_REVNUM(new_revision))
     {
+      /* The actual commit succeeded, i.e. the transaction does no longer
+         exist and we can't use txn_root for conflict resolution etc.
+
+         Since close_edit is supposed to release resources, do it now. */
+      if (eb->txn_root)
+        svn_fs_close_root(eb->txn_root);
+
       if (err)
         {
           /* If the error was in post-commit, then the commit itself
@@ -820,6 +827,10 @@ abort_edit(void *edit_baton,
     return SVN_NO_ERROR;
 
   eb->txn_aborted = TRUE;
+
+  /* Since abort_edit is supposed to release resources, do it now. */
+  if (eb->txn_root)
+    svn_fs_close_root(eb->txn_root);
 
   return svn_error_trace(svn_fs_abort_txn(eb->txn, pool));
 }
@@ -1013,7 +1024,7 @@ ev2_check_authz(const struct ev2_baton *eb,
     return SVN_NO_ERROR;
 
   if (relpath)
-    fspath = apr_pstrcat(scratch_pool, "/", relpath, NULL);
+    fspath = apr_pstrcat(scratch_pool, "/", relpath, SVN_VA_NULL);
   else
     fspath = NULL;
 
@@ -1120,15 +1131,15 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
-                                checksum, contents));
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision,
+                                checksum, contents, props));
   return SVN_NO_ERROR;
 }
 
@@ -1138,14 +1149,14 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
-                                   target));
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision,
+                                   target, props));
   return SVN_NO_ERROR;
 }
 
@@ -1194,20 +1205,6 @@ move_cb(void *baton,
 
   SVN_ERR(svn_editor_move(eb->inner, src_relpath, src_revision, dst_relpath,
                           replaces_rev));
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  struct ev2_baton *eb = baton;
-
-  SVN_ERR(svn_editor_rotate(eb->inner, relpaths, revisions));
   return SVN_NO_ERROR;
 }
 
@@ -1333,7 +1330,6 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
     delete_cb,
     copy_cb,
     move_cb,
-    rotate_cb,
     complete_cb,
     abort_cb
   };

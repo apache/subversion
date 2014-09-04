@@ -23,10 +23,12 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.callback.ClientNotifyCallback;
+
+import java.util.List;
 import java.util.Map;
 import java.util.EventObject;
-import org.apache.subversion.javahl.callback.ClientNotifyCallback;
-import org.apache.subversion.javahl.types.*;
 
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
@@ -34,14 +36,18 @@ import org.apache.subversion.javahl.types.*;
  */
 public class ClientNotifyInformation extends EventObject
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+    private static final long serialVersionUID = 2L;
+
+    /**
+     * Path, either absolute or relative to the current working
+     * directory (i.e., not relative to an anchor). <code>path</code>
+     * is <code>null</vode> when the real target is an URL that is
+     * available in {@link #url}.
+     */
+    private String path;
 
     /**
      * The {@link Action} which triggered this event.
@@ -67,6 +73,12 @@ public class ClientNotifyInformation extends EventObject
      * Any error message for the item.
      */
     private String errMsg;
+
+    /**
+     * A detailed stack of error messages for the item.
+     * @see ClientException
+     */
+    private List<ClientException.ErrorMessage> errMsgStack;
 
     /**
      * The {@link Status} of the content of the item.
@@ -97,6 +109,12 @@ public class ClientNotifyInformation extends EventObject
      * The range of the merge just beginning to occur.
      */
     private RevisionRange mergeRange;
+
+    /**
+     * Similar to {@link #path}, but when not <code>null</code>, the
+     * notification is about a UR>.
+     */
+    private String url;
 
     /**
      * A common absolute path prefix that can be subtracted from .path.
@@ -139,30 +157,35 @@ public class ClientNotifyInformation extends EventObject
      * @param changelistName The name of the changelist.
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
+     * @since 1.9
      */
     public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
+                             List<ClientException.ErrorMessage> errMsgStack,
                              Status contentState, Status propState,
                              LockStatus lockState, long revision,
                              String changelistName, RevisionRange mergeRange,
-                             String pathPrefix, String propName,
+                             String url, String pathPrefix, String propName,
                              Map<String, String> revProps, long oldRevision,
                              long hunkOriginalStart, long hunkOriginalLength,
                              long hunkModifiedStart, long hunkModifiedLength,
                              long hunkMatchedLine, int hunkFuzz)
     {
-        super(path == null ? "" : path);
+        super(path != null ? path : (url != null ? url : ""));
+        this.path = path;
         this.action = action;
         this.kind = kind;
         this.mimeType = mimeType;
         this.lock = lock;
         this.errMsg = errMsg;
+        this.errMsgStack = errMsgStack;
         this.contentState = contentState;
         this.propState = propState;
         this.lockState = lockState;
         this.revision = revision;
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
+        this.url = url;
         this.pathPrefix = pathPrefix;
         this.propName = propName;
         this.revProps = revProps;
@@ -176,11 +199,46 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
+     * @deprecated Constructor compatible with teh 1.8 API; uses
+     * <code>null</code> URL and errMsgStack values.
+     */
+    @Deprecated
+    public ClientNotifyInformation(String path, Action action, NodeKind kind,
+                             String mimeType, Lock lock, String errMsg,
+                             Status contentState, Status propState,
+                             LockStatus lockState, long revision,
+                             String changelistName, RevisionRange mergeRange,
+                             String pathPrefix, String propName,
+                             Map<String, String> revProps, long oldRevision,
+                             long hunkOriginalStart, long hunkOriginalLength,
+                             long hunkModifiedStart, long hunkModifiedLength,
+                             long hunkMatchedLine, int hunkFuzz)
+    {
+        this(path, action, kind, mimeType, lock, errMsg, null,
+             contentState, propState, lockState, revision,
+             changelistName, mergeRange, null, pathPrefix,
+             propName, revProps, oldRevision,
+             hunkOriginalStart, hunkOriginalLength,
+             hunkModifiedStart, hunkModifiedLength,
+             hunkMatchedLine, hunkFuzz);
+    }
+
+    /**
      * @return The path of the item, which is the source of the event.
+     *         This may actually be a URL.
      */
     public String getPath()
     {
         return (String) super.source;
+    }
+
+    /**
+     * @return {@link #path}, which may be <code>null</code>.
+     * @since 1.9
+     */
+    public String getNotifiedPath()
+    {
+        return this.path;
     }
 
     /**
@@ -221,6 +279,14 @@ public class ClientNotifyInformation extends EventObject
     public String getErrMsg()
     {
         return errMsg;
+    }
+
+    /**
+     * @return Details about the error message for the item.
+     */
+    public List<ClientException.ErrorMessage> getErrMsgDetails()
+    {
+        return errMsgStack;
     }
 
     /**
@@ -269,6 +335,15 @@ public class ClientNotifyInformation extends EventObject
     public RevisionRange getMergeRange()
     {
         return mergeRange;
+    }
+
+    /**
+     * @return {@link #url}, which may be <code>null</code>
+     * @since 1.9
+     */
+    public String getUrl()
+    {
+        return this.url;
     }
 
     /**
@@ -567,7 +642,24 @@ public class ClientNotifyInformation extends EventObject
 
         /** A move in the working copy has been broken
          * @since New in 1.8. */
-        move_broken ("move broken");
+        move_broken ("move broken"),
+
+        /** Running cleanup on an external module.
+         * @since New in 1.9. */
+        cleanup_external ("cleanup external"),
+
+        /** The operation failed because the operation (E.g. commit)
+         * is only valid if the operation includes this path.
+         * @since New in 1.9. */
+        failed_requires_target ("failed requires target"),
+
+        /** Running info on an external module.
+         * @since New in 1.9. */
+        info_external ("info external"),
+
+        /** Finalizing commit.
+         * @since New in 1.9. */
+        commit_finalizing ("commit finalizing");
 
         /**
          * The description of the action.

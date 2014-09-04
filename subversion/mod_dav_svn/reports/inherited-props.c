@@ -66,12 +66,10 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   iterpool = svn_pool_create(resource->pool);
@@ -118,7 +116,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                           &arb, resource->pool, iterpool);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
@@ -130,7 +128,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
@@ -158,8 +156,8 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                hi;
                hi = apr_hash_next(hi))
             {
-              const char *propname = svn__apr_hash_index_key(hi);
-              svn_string_t *propval = svn__apr_hash_index_val(hi);
+              const char *propname = apr_hash_this_key(hi);
+              svn_string_t *propval = apr_hash_this_val(hi);
               const char *xml_safe;
 
               serr = dav_svn__brigade_printf(

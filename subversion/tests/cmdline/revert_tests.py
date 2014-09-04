@@ -1000,7 +1000,7 @@ def revert_add_over_not_present_dir(sbox):
   wc_dir = sbox.wc_dir
 
   main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
+  sbox.simple_commit(message='Deleted dir')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/C')
@@ -1300,6 +1300,7 @@ def create_superflous_actual_node(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3859)
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def revert_empty_actual(sbox):
   "revert with superfluous actual node"
 
@@ -1316,8 +1317,9 @@ def revert_empty_actual(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3859)
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def revert_empty_actual_recursive(sbox):
-  "recusive revert with superfluous actual node"
+  "recursive revert with superfluous actual node"
 
   create_superflous_actual_node(sbox)
   wc_dir = sbox.wc_dir
@@ -1638,10 +1640,12 @@ def revert_obstructing_wc(sbox):
                                         wc_dir, '--set-depth', 'infinity')
 
   # Revert should do nothing (no local changes), and report the obstruction
-  # (reporting the obstruction is nice for debuging, but not really required
+  # (reporting the obstruction is nice for debugging, but not really required
   #  in this specific case, as the node was not modified)
   svntest.actions.run_and_verify_svn(None, "Skipped '.*A' -- .*obstruct.*", [],
                                      'revert', '-R', wc_dir)
+
+
 
 
 ########################################################################
@@ -1683,7 +1687,7 @@ test_list = [ None,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
               revert_nonexistent,
-              revert_obstructing_wc
+              revert_obstructing_wc,
              ]
 
 if __name__ == '__main__':

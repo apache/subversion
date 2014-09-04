@@ -113,7 +113,7 @@ operation to the first class of operations.
 Lock Overlapping
 ----------------
 As in wc-1, locks may not overlap.  For instance, a process which acquires
-a depth-infinity lock for /A/B will encounter an error if it attemps to
+a depth-infinity lock for /A/B will encounter an error if it attempts to
 later acquire a lock for /A/B/C, even though it already owns the logical
 lock for that path.  In this way wc-ng can ensure the explicit lock for a
 given logical lock is stored in one location.  This location will be the

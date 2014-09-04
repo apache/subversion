@@ -45,6 +45,7 @@ class SVNRepos : public SVNBase
   void rmlocks(File &path, StringArray &locks);
   jobject lslocks(File &path, svn_depth_t depth);
   void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
+              bool keepGoing, bool checkNormalization, bool metadataOnly,
               ReposNotifyCallback *notifyCallback);
   void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
@@ -58,11 +59,13 @@ class SVNRepos : public SVNBase
             Revision &revsionStart, Revision &revisionEnd,
             bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,
+            bool validateProps, bool ignoreDates,
             const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(File &path, MessageReceiver &messageReceiver);
-  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental,
+               ReposNotifyCallback *notifyCallback);
   void dump(File &path, OutputStream &dataOut, Revision &revsionStart,
             Revision &RevisionEnd, bool incremental, bool useDeltas,
             ReposNotifyCallback *notifyCallback);

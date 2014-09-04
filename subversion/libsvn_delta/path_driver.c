@@ -32,6 +32,7 @@
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 
 
 /*** Helper functions. ***/
@@ -157,8 +158,7 @@ svn_delta_path_driver2(const svn_delta_editor_t *editor,
   if (sort_paths && paths->nelts > 1)
     {
       apr_array_header_t *sorted = apr_array_copy(subpool, paths);
-      qsort(sorted->elts, sorted->nelts, sorted->elt_size,
-            svn_sort_compare_paths);
+      svn_sort__array(sorted, svn_sort_compare_paths);
       paths = sorted;
     }
 

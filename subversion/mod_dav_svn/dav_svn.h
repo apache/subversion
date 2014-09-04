@@ -52,8 +52,11 @@ extern "C" {
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
 #define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
-/* Option values for SVNAllowBulkUpdates */
+/* Option values for SVNAllowBulkUpdates.  Note that
+   it's important that CONF_BULKUPD_DEFAULT is 0 to make
+   merge_dir_config in mod_dav_svn do the right thing. */
 typedef enum dav_svn__bulk_upd_conf {
+    CONF_BULKUPD_DEFAULT,
     CONF_BULKUPD_ON,
     CONF_BULKUPD_OFF,
     CONF_BULKUPD_PREFER
@@ -326,6 +329,10 @@ svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 /* for the repository referred to by this request, is revprop caching active? */
 svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
 
+/* has block read mode been enabled for the repository referred to by this
+ * request? */
+svn_boolean_t dav_svn__get_block_read_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */
@@ -479,6 +486,8 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 /* POST request handler.  (Used by HTTP protocol v2 clients only.)  */
 int dav_svn__method_post(request_rec *r);
 
+/* Request handler to GET Subversion internal status (FSFS cache). */
+int dav_svn__status(request_rec *r);
 
 /*** repos.c ***/
 
@@ -789,12 +798,10 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
    default value for the error code.
 */
 dav_error *
-dav_svn__new_error_tag(apr_pool_t *pool,
+dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
-                       const char *desc,
-                       const char *namespace,
-                       const char *tagname);
+                       const char *desc);
 
 
 /* A wrapper around mod_dav's dav_new_error, mod_dav_svn uses this
@@ -875,7 +882,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                    enum dav_svn__build_what what,
                    svn_revnum_t revision,
                    const char *path,
-                   int add_href,
+                   svn_boolean_t add_href,
                    apr_pool_t *pool);
 
 
@@ -899,6 +906,12 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           const dav_resource *relative,
                           const char *uri,
                           apr_pool_t *pool);
+
+/* Test the request R to determine if we should return the list of
+ * repositories at the parent path.  Only true if SVNListParentPath directive
+ * is 'on' and the request is for our configured root path. */
+svn_boolean_t
+dav_svn__is_parentpath_list(request_rec *r);
 
 
 int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);

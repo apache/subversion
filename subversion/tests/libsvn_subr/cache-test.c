@@ -157,7 +157,8 @@ test_memcache_basic(const svn_test_opts_t *opts,
     {
       SVN_ERR(svn_config_read3(&config, opts->config_file,
                                TRUE, FALSE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
+      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config,
+                                                   pool, pool));
     }
 
   if (! memcache)
@@ -193,8 +194,9 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
-                                            pool));
+                                            pool, pool));
 
   return basic_cache_test(cache, FALSE, pool);
 }
@@ -225,7 +227,8 @@ test_memcache_long_key(const svn_test_opts_t *opts,
     {
       SVN_ERR(svn_config_read3(&config, opts->config_file,
                                TRUE, FALSE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
+      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config,
+                                                   pool, pool));
     }
 
   if (! memcache)
@@ -258,7 +261,9 @@ test_memcache_long_key(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_inprocess_cache_basic,
@@ -271,3 +276,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "basic membuffer svn_cache test"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

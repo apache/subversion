@@ -49,22 +49,6 @@
 
 #define OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
-/** A statement macro, similar to @c SVN_INT_ERR, but issues a
- * message saying "svnraisetreeconflict:" instead of "svn:".
- *
- * Evaluate @a expr. If it yields an error, handle that error and
- * return @c EXIT_FAILURE.
- */
-#define SVNRAISETC_INT_ERR(expr)                                 \
-  do {                                                           \
-    svn_error_t *svn_err__temp = (expr);                         \
-    if (svn_err__temp) {                                         \
-      svn_handle_error2(svn_err__temp, stderr, FALSE,            \
-                        "svnraisetreeconflict: ");               \
-      svn_error_clear(svn_err__temp);                            \
-      return EXIT_FAILURE; }                                     \
-  } while (0)
-
 static svn_error_t *
 version(apr_pool_t *pool)
 {
@@ -78,7 +62,6 @@ usage(apr_pool_t *pool)
   svn_error_clear(svn_cmdline_fprintf
                   (stderr, pool,
                    _("Type 'svnraisetreeconflict --help' for usage.\n")));
-  exit(1);
 }
 
 /***************************************************************************
@@ -224,7 +207,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
   right = svn_wc_conflict_version_create2(repos_url2, NULL, path_in_repos2,
                                           peg_rev2, kind2, pool);
   c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
-                                              operation, left, right, pool);
+                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
   c->reason = (svn_wc_conflict_reason_t)reason;
 
@@ -295,7 +278,6 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
       get_enum_str(node_kind_map, svn_node_file),
       get_enum_str(node_kind_map, svn_node_none)
       ));
-  exit(0);
 }
 
 
@@ -311,14 +293,17 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
-  apr_pool_t *pool;
-  svn_error_t *err;
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
     {
@@ -329,33 +314,18 @@ main(int argc, const char *argv[])
     };
   apr_array_header_t *remaining_argv;
 
-  /* Initialize the app. */
-  if (svn_cmdline_init("svnraisetreeconflict", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
   /* Check library versions */
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnraisetreeconflict: ");
+  SVN_ERR(check_lib_versions());
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
   if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
-      err = svn_wc_set_adm_dir("_svn", pool);
-      if (err)
-        return svn_cmdline_handle_exit_error(err, pool, "svnraisetreeconflict: ");
+      SVN_ERR(svn_wc_set_adm_dir("_svn", pool));
     }
 #endif
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnraisetreeconflict: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
   while (1)
@@ -366,19 +336,24 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        usage(pool);  /* this will exit() */
+        {
+          usage(pool);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
+        }
 
       switch (opt)
         {
         case 'h':
           help(options, pool);
-          break;
+          return SVN_NO_ERROR;
         case OPT_VERSION:
-          SVNRAISETC_INT_ERR(version(pool));
-          exit(0);
-          break;
+          SVN_ERR(version(pool));
+          return SVN_NO_ERROR;
         default:
-          usage(pool);  /* this will exit() */
+          usage(pool);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -388,23 +363,53 @@ main(int argc, const char *argv[])
     {
       const char *s;
 
-      SVNRAISETC_INT_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++],
-                                                 pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&s, os->argv[os->ind++], pool));
       APR_ARRAY_PUSH(remaining_argv, const char *) = s;
     }
 
   if (remaining_argv->nelts < 1)
-    usage(pool);  /* this will exit() */
+    {
+      usage(pool);
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
+    }
 
   /* Do the main task */
-  SVNRAISETC_INT_ERR(raise_tree_conflict(remaining_argv->nelts,
-                                         (const char **)remaining_argv->elts,
-                                         pool));
+  SVN_ERR(raise_tree_conflict(remaining_argv->nelts,
+                              (const char **)remaining_argv->elts,
+                              pool));
+
+  return SVN_NO_ERROR;
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnraisetreeconflict", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnraisetreeconflict: ");
+    }
 
   svn_pool_destroy(pool);
-
-  /* Flush stdout to make sure that the user will see any printing errors. */
-  SVNRAISETC_INT_ERR(svn_cmdline_fflush(stdout));
-
-  return EXIT_SUCCESS;
+  return exit_code;
 }

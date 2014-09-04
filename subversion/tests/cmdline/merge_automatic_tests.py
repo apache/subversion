@@ -43,10 +43,10 @@ Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import local_path
-from merge_tests import expected_merge_output
-from merge_tests import svn_merge
-from merge_tests import set_up_branch
+from svntest.mergetrees import local_path
+from svntest.mergetrees import expected_merge_output
+from svntest.mergetrees import svn_merge
+from svntest.mergetrees import set_up_branch
 
 #----------------------------------------------------------------------
 
@@ -334,7 +334,6 @@ def three_way_merge_no_op(base_node, source_right_node):
 def cherry_pick(sbox, rev, source, target):
   """Cherry-pick merge revision REV from branch SOURCE to branch TARGET
   (both WC-relative paths), and commit."""
-  sbox.simple_update(target)
   svn_merge(rev, source, target)
   sbox.simple_commit()
 
@@ -691,6 +690,7 @@ def cherry1_fwd(sbox):
   #     2  34  5  67  8  9  0  1
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=False)
+  sbox.simple_update()
   modify_branch(sbox, 'A', 8)
   cherry_pick(sbox, 8, 'A', 'B')
   modify_branch(sbox, 'A', 10)
@@ -1202,6 +1202,132 @@ def effective_sync_results_in_reintegrate(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      sbox.repo_url + '/branch', A_path)
 
+@Issue(4481)
+def reintegrate_subtree_not_updated(sbox):
+  "reintegrate subtree not updated"
+
+  sbox.build()
+
+  # Create change on branch 'D_1'
+  sbox.simple_copy('A/D', 'D_1')
+  sbox.simple_commit()
+  sbox.simple_append('D_1/G/pi', "D_1/G pi edit\n")
+  sbox.simple_append('D_1/H/chi', "D_1/H chi edit\n")
+  sbox.simple_commit()
+
+  # Merge back to 'D' with two subtree merges
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/G',
+                                     sbox.ospath('A/D/G'))
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/H/chi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/H') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/H',
+                                     sbox.ospath('A/D/H'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create branch 'D_2'
+  sbox.simple_copy('A/D', 'D_2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D_2'
+  sbox.simple_append('D_2/G/pi', "D_2/G pi edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D'
+  sbox.simple_append('A/D/G/rho', "D/G rho edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Sync merge to 'D_2' (doesn't record mergeinfo on 'D_2/H' subtree)
+  expected_output = [
+    "--- Merging r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    "U    "
+    + sbox.ospath('D_2/G/rho') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2/G') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate 'D_2' to 'D'
+  expected_output = [
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    " U   "
+    + sbox.ospath('A/D') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_2',
+                                     sbox.ospath('A/D'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # merge to 'D_2'. This merge previously failed with this error:
+  #
+  # svn: E195016: Reintegrate can only be used if revisions 5 through 9 were
+  # previously merged from [URL]/D_2 to the reintegrate source, but this is
+  # not the case:
+  #   A/D/G
+  #       Missing ranges: /A/D/G:7
+  #
+  expected_output = [
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    " G   "
+    + sbox.ospath('D_2/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
 ########################################################################
 # Run the tests
 
@@ -1230,6 +1356,7 @@ test_list = [ None,
               merge_replacement,
               auto_merge_handles_replacements_in_merge_source,
               effective_sync_results_in_reintegrate,
+              reintegrate_subtree_not_updated,
              ]
 
 if __name__ == '__main__':

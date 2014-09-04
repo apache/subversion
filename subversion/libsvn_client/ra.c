@@ -42,6 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* This is the baton that we pass svn_ra_open3(), and is associated with
@@ -70,6 +71,8 @@ typedef struct callback_baton_t
   /* A client context. */
   svn_client_ctx_t *ctx;
 
+  /* Last progress reported by progress callback. */
+  apr_off_t last_progress;
 } callback_baton_t;
 
 
@@ -287,6 +290,28 @@ get_client_string(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_progress_notify_func_t. Accumulates progress information
+ * for different RA sessions and reports total progress to caller. */
+static void
+progress_func(apr_off_t progress,
+              apr_off_t total,
+              void *baton,
+              apr_pool_t *pool)
+{
+  callback_baton_t *b = baton;
+  svn_client_ctx_t *ctx = b->ctx;
+
+  ctx->progress += (progress - b->last_progress);
+  b->last_progress = progress;
+
+  if (ctx->progress_func)
+    {
+      /* All RA implementations currently provide -1 for total. So it doesn't
+         make sense to develop some complex logic to combine total across all
+         RA sessions. */
+      ctx->progress_func(ctx->progress, -1, ctx->progress_baton, pool);
+    }
+}
 
 #define SVN_CLIENT__MAX_REDIRECT_ATTEMPTS 3 /* ### TODO:  Make configurable. */
 
@@ -320,12 +345,15 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->invalidate_wc_props = (write_dav_props && read_dav_props)
                                   ? invalidate_wc_props : NULL;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
-  cbtable->progress_func = ctx->progress_func;
-  cbtable->progress_baton = ctx->progress_baton;
+  cbtable->progress_func = progress_func;
+  cbtable->progress_baton = cb;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
   if (base_dir_abspath)
     cbtable->get_wc_contents = get_wc_contents;
+  cbtable->check_tunnel_func = ctx->check_tunnel_func;
+  cbtable->open_tunnel_func = ctx->open_tunnel_func;
+  cbtable->tunnel_baton = ctx->tunnel_baton;
 
   cb->commit_items = commit_items;
   cb->ctx = ctx;
@@ -614,8 +642,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                      pool);
   SVN_ERR(svn_error_compose_create(
             err, svn_ra_reparent(ra_session, old_session_url, pool)));
-  qsort((*segments)->elts, (*segments)->nelts,
-        (*segments)->elt_size, compare_segments);
+  svn_sort__array(*segments, compare_segments);
   return SVN_NO_ERROR;
 }
 
@@ -627,6 +654,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
  * END_REVNUM must be valid revision numbers except that END_REVNUM may
  * be SVN_INVALID_REVNUM if END_URL is NULL.
  *
+ * YOUNGEST_REV is the already retrieved youngest revision of the ra session,
+ * but can be SVN_INVALID_REVNUM if the value is not already retrieved.
+ *
  * RA_SESSION is an open RA session parented at URL.
  */
 static svn_error_t *
@@ -637,6 +667,7 @@ repos_locations(const char **start_url,
                 svn_revnum_t peg_revnum,
                 svn_revnum_t start_revnum,
                 svn_revnum_t end_revnum,
+                svn_revnum_t youngest_rev,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -644,9 +675,9 @@ repos_locations(const char **start_url,
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
 
-  SVN_ERR_ASSERT(peg_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(start_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(end_revnum != SVN_INVALID_REVNUM || end_url == NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(end_revnum) || end_url == NULL);
 
   /* Avoid a network request in the common easy case. */
   if (start_revnum == peg_revnum
@@ -660,6 +691,27 @@ repos_locations(const char **start_url,
     }
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, scratch_pool));
+
+  /* Handle another common case: The repository root can't move */
+  if (! strcmp(repos_url, url))
+    {
+      if (! SVN_IS_VALID_REVNUM(youngest_rev))
+        SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest_rev,
+                                         scratch_pool));
+
+      if (start_revnum > youngest_rev
+          || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("No such revision %ld"),
+                                 (start_revnum > youngest_rev) 
+                                        ? start_revnum : end_revnum);
+
+      if (start_url)
+        *start_url = apr_pstrdup(result_pool, repos_url);
+      if (end_url)
+        *end_url = apr_pstrdup(result_pool, repos_url);
+      return SVN_NO_ERROR;
+    }
 
   revs = apr_array_make(scratch_pool, 2, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(revs, svn_revnum_t) = start_revnum;
@@ -716,7 +768,7 @@ svn_client__repos_location(svn_client__pathrev_t **op_loc_p,
                                             peg_loc->url, scratch_pool));
   err = repos_locations(&op_url, NULL, ra_session,
                         peg_loc->url, peg_loc->rev,
-                        op_revnum, SVN_INVALID_REVNUM,
+                        op_revnum, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                         result_pool, scratch_pool);
   SVN_ERR(svn_error_compose_create(
             err, svn_ra_reparent(ra_session, old_session_url, scratch_pool)));
@@ -776,7 +828,7 @@ svn_client__repos_locations(const char **start_url,
           svn_boolean_t is_copy;
 
           SVN_ERR(svn_wc__node_get_origin(&is_copy, &peg_revnum, &repos_relpath,
-                                          &repos_root_url, NULL, NULL,
+                                          &repos_root_url, NULL, NULL, NULL,
                                           ctx->wc_ctx, local_abspath_or_url,
                                           FALSE, subpool, subpool));
 
@@ -856,29 +908,26 @@ svn_client__repos_locations(const char **start_url,
 
   SVN_ERR(repos_locations(start_url, end_url,
                           ra_session, url, peg_revnum,
-                          start_revnum, end_revnum,
+                          start_revnum, end_revnum, youngest_rev,
                           pool, subpool));
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
-                                         const svn_client__pathrev_t *loc1,
-                                         const svn_client__pathrev_t *loc2,
-                                         svn_ra_session_t *session,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool)
+svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
+                                          const svn_client__pathrev_t *loc1,
+                                          apr_hash_t *history1,
+                                          svn_boolean_t has_rev_zero_history1,
+                                          const svn_client__pathrev_t *loc2,
+                                          apr_hash_t *history2,
+                                          svn_boolean_t has_rev_zero_history2,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sesspool = NULL;
-  apr_hash_t *history1, *history2;
   apr_hash_index_t *hi;
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
   const char *yc_relpath = NULL;
-  svn_boolean_t has_rev_zero_history1;
-  svn_boolean_t has_rev_zero_history2;
 
   if (strcmp(loc1->repos_root_url, loc2->repos_root_url) != 0)
     {
@@ -886,40 +935,14 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
       return SVN_NO_ERROR;
     }
 
-  /* Open an RA session for the two locations. */
-  if (session == NULL)
-    {
-      sesspool = svn_pool_create(scratch_pool);
-      SVN_ERR(svn_client_open_ra_session2(&session, loc1->url, NULL, ctx,
-                                          sesspool, sesspool));
-    }
-
-  /* We're going to cheat and use history-as-mergeinfo because it
-     saves us a bunch of annoying custom data comparisons and such. */
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
-                                               &has_rev_zero_history1,
-                                               loc1,
-                                               SVN_INVALID_REVNUM,
-                                               SVN_INVALID_REVNUM,
-                                               session, ctx, scratch_pool));
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
-                                               &has_rev_zero_history2,
-                                               loc2,
-                                               SVN_INVALID_REVNUM,
-                                               SVN_INVALID_REVNUM,
-                                               session, ctx, scratch_pool));
-  /* Close the ra session if we opened one. */
-  if (sesspool)
-    svn_pool_destroy(sesspool);
-
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and
      remembering the youngest matching location. */
   for (hi = apr_hash_first(scratch_pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t path_len = apr_hash_this_key_len(hi);
+      svn_rangelist_t *ranges1 = apr_hash_this_val(hi);
       svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);
@@ -965,46 +988,61 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
 }
 
 svn_error_t *
-svn_client__youngest_common_ancestor(const char **ancestor_url,
-                                     svn_revnum_t *ancestor_rev,
-                                     const char *path_or_url1,
-                                     const svn_opt_revision_t *revision1,
-                                     const char *path_or_url2,
-                                     const svn_opt_revision_t *revision2,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool)
+svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
+                                         const svn_client__pathrev_t *loc1,
+                                         const svn_client__pathrev_t *loc2,
+                                         svn_ra_session_t *session,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
-  svn_ra_session_t *session;
-  svn_client__pathrev_t *loc1, *loc2, *ancestor;
+  apr_pool_t *sesspool = NULL;
+  apr_hash_t *history1, *history2;
+  svn_boolean_t has_rev_zero_history1;
+  svn_boolean_t has_rev_zero_history2;
 
-  /* Resolve the two locations */
-  SVN_ERR(svn_client__ra_session_from_path2(&session, &loc1,
-                                            path_or_url1, NULL,
-                                            revision1, revision1,
-                                            ctx, sesspool));
-  SVN_ERR(svn_client__resolve_rev_and_url(&loc2, session,
-                                          path_or_url2, revision2, revision2,
-                                          ctx, scratch_pool));
-
-  SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &ancestor, loc1, loc2, session, ctx, result_pool, scratch_pool));
-
-  if (ancestor)
+  if (strcmp(loc1->repos_root_url, loc2->repos_root_url) != 0)
     {
-      *ancestor_url = ancestor->url;
-      *ancestor_rev = ancestor->rev;
+      *ancestor_p = NULL;
+      return SVN_NO_ERROR;
     }
-  else
+
+  /* Open an RA session for the two locations. */
+  if (session == NULL)
     {
-      *ancestor_url = NULL;
-      *ancestor_rev = SVN_INVALID_REVNUM;
+      sesspool = svn_pool_create(scratch_pool);
+      SVN_ERR(svn_client_open_ra_session2(&session, loc1->url, NULL, ctx,
+                                          sesspool, sesspool));
     }
-  svn_pool_destroy(sesspool);
+
+  /* We're going to cheat and use history-as-mergeinfo because it
+     saves us a bunch of annoying custom data comparisons and such. */
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
+                                               &has_rev_zero_history1,
+                                               loc1,
+                                               SVN_INVALID_REVNUM,
+                                               SVN_INVALID_REVNUM,
+                                               session, ctx, scratch_pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
+                                               &has_rev_zero_history2,
+                                               loc2,
+                                               SVN_INVALID_REVNUM,
+                                               SVN_INVALID_REVNUM,
+                                               session, ctx, scratch_pool));
+  /* Close the ra session if we opened one. */
+  if (sesspool)
+    svn_pool_destroy(sesspool);
+
+  SVN_ERR(svn_client__calc_youngest_common_ancestor(ancestor_p,
+                                                    loc1, history1,
+                                                    has_rev_zero_history1,
+                                                    loc2, history2,
+                                                    has_rev_zero_history2,
+                                                    result_pool,
+                                                    scratch_pool));
+
   return SVN_NO_ERROR;
 }
-
 
 struct ra_ev2_baton {
   /* The working copy context, from the client context.  */
@@ -1052,6 +1090,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
       /* The pristine contents refer to the BASE, or to the pristine of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }
@@ -1096,6 +1135,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
       /* The pristine props refer to the BASE, or to the pristine props of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }

@@ -31,6 +31,7 @@
 #include "svn_wc.h"
 #include "svn_repos.h"
 #include "svn_client.h"
+#include "svn_mergeinfo.h"
 
 #include <vector>
 
@@ -49,10 +50,17 @@ class CreateJ
   Checksum(const svn_checksum_t *checksum);
 
   static jobject
+  DirEntry(const char *path, const char *absPath,
+           const svn_dirent_t *dirent);
+
+  static jobject
   Info(const char *path, const svn_client_info2_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);
+
+  static jobject
+  LockMap(const apr_hash_t *locks, apr_pool_t *pool);
 
   static jobject
   ChangedPath(const char *path, svn_log_changed_path2_t *log_item);
@@ -74,16 +82,29 @@ class CreateJ
   CommitInfo(const svn_commit_info_t *info);
 
   static jobject
-  RevisionRangeList(svn_rangelist_t *ranges);
+  StringSet(const apr_array_header_t *strings);
 
   static jobject
-  StringSet(apr_array_header_t *strings);
+  PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool = NULL);
 
   static jobject
-  PropertyMap(apr_hash_t *prop_hash);
+  PropertyMap(apr_array_header_t* prop_diffs, apr_pool_t* scratch_pool = NULL);
+
+  static void
+  FillPropertyMap(jobject map, apr_hash_t* prop_hash,
+                  apr_pool_t* scratch_pool,
+                  jmethodID put_method_id = 0);
+
+  static void
+  FillPropertyMap(jobject map, apr_array_header_t* prop_diffs,
+                  apr_pool_t* scratch_pool,
+                  jmethodID put_method_id = 0);
 
   static jobject
   InheritedProps(apr_array_header_t *inherited_props);
+
+  static jobject
+  Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool);
 
   /* This creates a set of Objects.  It derefs the members of the vector
    * after putting them in the set, so they caller doesn't need to. */

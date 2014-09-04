@@ -28,17 +28,17 @@ PUSHD ..\deps
 ECHO Checking dependencies in %CD%
 
 IF NOT EXIST "imports\" (
-  svn co --username guest --password "" http://sharpsvn.open.collab.net/svn/sharpsvn/trunk/imports imports
+    svn co https://ctf.open.collab.net/svn/repos/sharpsvn/trunk/imports imports --username guest --password ""
 )
 IF NOT EXIST build\imports.done (
-  svn up imports
-  copy /y imports\dev-default.build default.build
-  nant prep-dev %NANTARGS%
-  IF ERRORLEVEL 1 (
-    exit /B 1
-  )
-  del release\bin\*svn* release\bin\_*.* 2>nul:
-  echo. > build\imports.done
+    svn up imports --username guest --password ""
+    copy /y imports\dev-default.build default.build
+    nant prep-dev %NANTARGS%
+    IF ERRORLEVEL 1 (
+        EXIT /B 1
+    )
+    del release\bin\*svn* release\bin\_*.* 2>nul:
+    ECHO. > build\imports.done
 )
 
 POPD
@@ -50,6 +50,7 @@ IF NOT ERRORLEVEL 1 (
 POPD
 
 
+taskkill /im msbuild.exe /f 2> nul:
 taskkill /im svn.exe /f 2> nul:
 taskkill /im svnlook.exe /f 2> nul:
 taskkill /im svnadmin.exe /f 2> nul:
@@ -57,19 +58,23 @@ taskkill /im svnserve.exe /f 2> nul:
 taskkill /im svnrdump.exe /f 2> nul:
 taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+taskkill /im client-test.exe /f 2> nul:
 taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
+taskkill /im atomic-ra-revprop-change.exe /f 2> nul:
 taskkill /im java.exe /f 2> nul:
 taskkill /im perl.exe /f 2> nul:
+taskkill /im ruby.exe /f 2> nul:
 taskkill /im mspdbsrv.exe /f 2> nul:
-IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
-  rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
-)
+
 IF EXIST "%TESTDIR%\swig\" (
-  rmdir /s /q  "%TESTDIR%\swig"
+    rmdir /s /q "%TESTDIR%\swig"
 )
 
-del "%TESTDIR%\tests\*.log" 2> nul:
-
+IF EXIST "%TESTDIR%\tests\" (
+    PUSHD "%TESTDIR%\tests\"
+    rmdir /s /q "%TESTDIR%\tests\" 2> nul:
+    POPD
+)
 
 exit /B 0

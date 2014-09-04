@@ -181,22 +181,12 @@ svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
 
 
 /* Set *WORK_ITEM to a new work item that will install a property reject
-   file for LOCAL_ABSPATH into the working copy. The property conflicts will
-   be taken from CONFLICT_SKEL.
-
-   ### Caution: Links CONFLICT_SKEL into the *WORK_ITEM, which involves
-       modifying *CONFLICT_SKEL.
-
-   ### TODO: Make CONFLICT_SKEL 'const' and dup it into RESULT_POOL.
-
-   ### TODO: If CONFLICT_SKEL is NULL, take property conflicts from wc_db
-       for the given DB/LOCAL_ABSPATH.
+   file for LOCAL_ABSPATH into the working copy.
  */
 svn_error_t *
 svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 

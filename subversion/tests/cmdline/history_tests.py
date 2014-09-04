@@ -189,20 +189,17 @@ def cat_avoids_false_identities(sbox):
   svntest.main.run_svn(None, 'del', iota_path)
   svntest.main.file_append(iota_path, "YOU SHOULD NOT SEE THIS\n")
   svntest.main.run_svn(None, 'add', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r3
   svntest.main.run_svn(None, 'del', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r4
   svntest.main.run_svn(None, 'cp', iota_url + '@1', wc_dir)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # 'svn cat -r2 iota' should error, because the line of history

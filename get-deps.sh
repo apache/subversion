@@ -33,11 +33,11 @@
 
 APR_VERSION=${APR_VERSION:-"1.4.6"}
 APU_VERSION=${APU_VERSION:-"1.5.1"}
-SERF_VERSION=${SERF_VERSION:-"1.2.0"}
+SERF_VERSION=${SERF_VERSION:-"1.3.4"}
 ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
 SQLITE_VERSION=${SQLITE_VERSION:-"3.7.15.1"}
-GTEST_VERSION=${GTEST_VERSION:-"1.6.0"}
-HTTPD_VERSION=${HTTPD_VERSION:-"2.4.3"}
+GMOCK_VERSION=${GMOCK_VERSION:-"1.6.0"}
+HTTPD_VERSION=${HTTPD_VERSION:-"2.4.10"}
 APR_ICONV_VERSION=${APR_ICONV_VERSION:-"1.2.1"}
 
 APR=apr-${APR_VERSION}
@@ -46,8 +46,8 @@ SERF=serf-${SERF_VERSION}
 ZLIB=zlib-${ZLIB_VERSION}
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
-GTEST=gtest-${GTEST_VERSION}
-GTEST_URL=http://googletest.googlecode.com/files/
+GMOCK=gmock-${GMOCK_VERSION}
+GMOCK_URL=https://googlemock.googlecode.com/files/
 
 HTTPD=httpd-${HTTPD_VERSION}
 APR_ICONV=apr-iconv-${APR_ICONV_VERSION}
@@ -57,7 +57,7 @@ TEMPDIR=$BASEDIR/temp
 
 HTTP_FETCH=
 [ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -q -nc"
-[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sO"
+[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sOL"
 [ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch -q"
 
 # Need this uncommented if any of the specific versions of the ASF tarballs to
@@ -67,7 +67,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite | gtest ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite | gmock ] ..."
     exit $1
 }
 
@@ -89,7 +89,7 @@ get_serf() {
     test -d $BASEDIR/serf && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
+    $HTTP_FETCH http://serf.googlecode.com/svn/src_releases/$SERF.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
@@ -101,7 +101,7 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.gz
+    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz
     cd $BASEDIR
 
     gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
@@ -122,23 +122,24 @@ get_sqlite() {
 
 }
 
-get_gtest() {
-    test -d $BASEDIR/gtest && return
+get_gmock() {
+    test -d $BASEDIR/gmock-fused && return
 
     cd $TEMPDIR
-    $HTTP_FETCH ${GTEST_URL}/${GTEST}.zip
+    $HTTP_FETCH ${GMOCK_URL}/${GMOCK}.zip
     cd $BASEDIR
 
-    unzip -q $TEMPDIR/$GTEST.zip
+    unzip -q $TEMPDIR/$GMOCK.zip
 
-    mv $GTEST gtest
+    mv $GMOCK/fused-src gmock-fused
+    rm -fr $GMOCK
 }
 
 # main()
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in zlib serf sqlite-amalgamation apr apr-util gtest; do
+    for i in zlib serf sqlite-amalgamation apr apr-util gmock-fused; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi

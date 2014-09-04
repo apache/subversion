@@ -87,7 +87,7 @@ check_root_url_of_target(const char **root_url,
       if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-          || (err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
+          || (err->apr_err == SVN_ERR_RA_CANNOT_CREATE_SESSION)
           || (err->apr_err == SVN_ERR_CLIENT_BAD_REVISION))
         {
           svn_error_clear(err);
@@ -278,7 +278,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
                 }
             }
 
-          target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
+          target = apr_pstrcat(pool, true_target, peg_rev, SVN_VA_NULL);
 
           if (rel_url_found)
             {
@@ -338,7 +338,7 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
               SVN_ERR(svn_opt__arg_canonicalize_url(&true_target, abs_target,
                                                     pool));
 
-              target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
+              target = apr_pstrcat(pool, true_target, peg_rev, SVN_VA_NULL);
             }
 
           APR_ARRAY_PUSH(*targets_p, const char *) = target;

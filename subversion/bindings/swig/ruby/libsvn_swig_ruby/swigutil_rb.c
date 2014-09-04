@@ -23,9 +23,16 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
+/* Windows hack: Allow overriding some <ruby.h> defaults */
+#include "swigutil_rb__pre_ruby.h"
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
+
+#ifdef HAVE_RUBY_ST_H
+#include <ruby/st.h>
+#else
 #include <st.h>
+#endif
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -1192,6 +1199,7 @@ DEFINE_DUP(auth_ssl_server_cert_info)
 DEFINE_DUP(wc_entry)
 DEFINE_DUP(client_diff_summarize)
 DEFINE_DUP(dirent)
+DEFINE_DUP(log_entry)
 DEFINE_DUP_NO_CONVENIENCE(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE(wc_external_item2)
@@ -1597,7 +1605,7 @@ typedef struct callback_handle_error_baton_t {
 } callback_handle_error_baton_t;
 
 static VALUE
-callback(VALUE baton)
+callback(VALUE baton, ...)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE result;
@@ -1609,7 +1617,7 @@ callback(VALUE baton)
 }
 
 static VALUE
-callback_rescue(VALUE baton)
+callback_rescue(VALUE baton, ...)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
@@ -1626,7 +1634,7 @@ callback_rescue(VALUE baton)
 }
 
 static VALUE
-callback_ensure(VALUE pool)
+callback_ensure(VALUE pool, ...)
 {
   svn_swig_rb_pop_pool(pool);
 
@@ -1637,17 +1645,17 @@ static VALUE
 invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
-  VALUE sub_pool;
+  VALUE subpool;
   VALUE argv[1];
 
   argv[0] = pool;
-  svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
-  cbb->pool = sub_pool;
-  return rb_ensure(callback, baton, callback_ensure, sub_pool);
+  svn_swig_rb_get_pool(1, argv, Qnil, &subpool, NULL);
+  cbb->pool = subpool;
+  return rb_ensure(callback, baton, callback_ensure, subpool);
 }
 
 static VALUE
-callback_handle_error(VALUE baton)
+callback_handle_error(VALUE baton, ...)
 {
   callback_handle_error_baton_t *handle_error_baton;
   handle_error_baton = (callback_handle_error_baton_t *)baton;
@@ -2155,9 +2163,7 @@ svn_swig_rb_log_entry_receiver(void *baton,
 
         cbb.receiver = proc;
         cbb.message = id_call;
-        cbb.args = rb_ary_new3(1,
-                               c2r_swig_type((void *)entry,
-                                             (void *)"svn_log_entry_t *"));
+        cbb.args = rb_ary_new3(1, c2r_log_entry__dup(entry));
         invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
     }
     return err;
@@ -3232,7 +3238,8 @@ svn_swig_rb_make_stream(VALUE io)
     pool_wrapper_p = &pool_wrapper;
     r2c_swig_type2(rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
     stream = svn_stream_create((void *)io, pool_wrapper->pool);
-    svn_stream_set_read(stream, read_handler_rbio);
+    svn_stream_set_read2(stream, NULL /* only full read support */,
+                         read_handler_rbio);
     svn_stream_set_write(stream, write_handler_rbio);
   }
 
@@ -4026,4 +4033,7 @@ static svn_ra_reporter3_t rb_ra_reporter3 = {
   svn_swig_rb_ra_reporter_abort_report
 };
 
-svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3()
+{
+  return &rb_ra_reporter3;
+}
