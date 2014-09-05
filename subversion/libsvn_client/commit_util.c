@@ -567,8 +567,9 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
       /* Embedded NUL characters in the log message template string
        * terminate the template regardless of the actual value of
        * propval->len. */
-      svn_hash_sets(*log_message_templates, defining_repos_relpath,
-                    apr_pstrdup(result_pool, propval->data));
+      if (!svn_hash_gets(*log_message_templates, defining_repos_relpath))
+        svn_hash_sets(*log_message_templates, defining_repos_relpath,
+                      apr_pstrdup(result_pool, propval->data));
     }
   svn_pool_destroy(iterpool);
 
