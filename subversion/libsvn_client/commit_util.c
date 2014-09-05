@@ -453,7 +453,7 @@ harvest_committables(const char *local_abspath,
 
 /* Obtain log message templates for svn_client_get_commit_log4_t. */
 static svn_error_t *
-get_log_message_templates(apr_hash_t **log_templates,
+get_log_message_templates(apr_hash_t **log_message_templates,
                           const apr_array_header_t *commit_items,
                           svn_wc_context_t *wc_ctx,
                           apr_pool_t *result_pool,
@@ -462,25 +462,33 @@ get_log_message_templates(apr_hash_t **log_templates,
   int i;
   apr_pool_t *iterpool;
 
-  *log_templates = apr_hash_make(result_pool);
+  *log_message_templates = apr_hash_make(result_pool);
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < commit_items->nelts; i++)
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
       const svn_string_t *propval = NULL;
-      apr_array_header_t *lmt_items;
       apr_hash_t *props;
+      const char *defining_repos_relpath = NULL;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, item->path,
-                                iterpool, iterpool));
+      /* Check if the commit item itself has an svn:log-template property. */
+      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, item->path, iterpool,
+                                iterpool));
       propval = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
-      if (propval == NULL)
+      if (propval)
+        {
+          SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
+                                              NULL, NULL, wc_ctx, item->path,
+                                              result_pool, iterpool));
+        }
+      else
         {
           apr_array_header_t *inherited_props;
           
+          /* Check if the commit item inherits an svn:log-template property. */
           SVN_ERR(svn_wc__get_iprops(&inherited_props, wc_ctx, item->path,
                                      SVN_PROP_INHERITABLE_LOG_TEMPLATE,
                                      scratch_pool, iterpool));
@@ -492,27 +500,41 @@ get_log_message_templates(apr_hash_t **log_templates,
                               svn_prop_inherited_item_t *);
               propval = svn_hash_gets(iprop->prop_hash,
                                       SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+
+              if (svn_path_is_url(iprop->path_or_url))
+                {
+                  const char *repos_root_url;
+
+                  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
+                                                      &repos_root_url, NULL,
+                                                      wc_ctx, item->path,
+                                                      iterpool, iterpool));
+                  defining_repos_relpath =
+                    svn_uri_skip_ancestor(repos_root_url, iprop->path_or_url,
+                                          result_pool);
+                }
+              else
+                SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
+                                                    NULL, NULL, wc_ctx,
+                                                    iprop->path_or_url,
+                                                    result_pool, iterpool));
             }
         }
-
-      if (propval == NULL)
+                                            
+      if (propval == NULL || defining_repos_relpath == NULL ||
+          svn_hash_gets(*log_message_templates, defining_repos_relpath))
         continue;
 
       /* Embedded NUL characters in the log message template string
        * terminate the template regardless of the actual value of
        * propval->len. */
-      lmt_items = svn_hash_gets(*log_templates, propval->data);
-      if (lmt_items == NULL)
-        {
-          lmt_items = apr_array_make(scratch_pool, 4,
-                                     sizeof(svn_client_commit_item3_t *));
-          svn_hash_sets(*log_templates,
-                        apr_pstrdup(result_pool, propval->data), lmt_items);
-        }
-      APR_ARRAY_PUSH(lmt_items, svn_client_commit_item3_t *) = item;
+      svn_hash_sets(*log_message_templates, defining_repos_relpath,
+                    apr_pstrdup(result_pool, propval->data));
     }
-
   svn_pool_destroy(iterpool);
+
+  if (apr_hash_count(*log_message_templates) == 0)
+    *log_message_templates = NULL;
 
   return SVN_NO_ERROR;
 }

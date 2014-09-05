@@ -656,9 +656,9 @@ svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
  * @a log_message_templates is a hash table containing one or more log
  * message templates obtained from svn:log-message properties applicable
  * to @a commit_items. It is @c NULL if no log message template is defined.
- * The table is keyed by 'const char *' log templates. Its values are
- * apr_array_header_t * arrays which contain pointers to those commit
- * items (from @a commit_items) which the log template applies to.
+ * The hash table is keyed by paths relative to the repository root.
+ * Each path in this list of keys contributes a log message template.
+ * The value for each key in the table is a 'const char *' log template.
  *
  * @a baton is provided along with the callback for use by the handler.
  *

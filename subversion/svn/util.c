@@ -340,24 +340,32 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_stringbuf_t *template_text;
       apr_hash_index_t *hi;
+      apr_pool_t *iterpool;
 
       template_text = svn_stringbuf_create_empty(pool);
-      if (apr_hash_count(log_message_templates) > 1)
-          svn_stringbuf_appendcstr(template_text,
-             _("Multiple log message templates found:"));
+      iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(NULL, log_message_templates);
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *this_template = apr_hash_this_key(hi);
+          const char *repos_relpath = apr_hash_this_key(hi);
+          const char *this_template = apr_hash_this_val(hi);
 
+          svn_pool_clear(iterpool);
+                                                    
           if (apr_hash_count(log_message_templates) > 1)
-              svn_stringbuf_appendcstr(template_text, "\n{{{\n");
+            {
+              const char *sep;
+
+              sep = apr_psprintf(iterpool,
+                                 _("\n--Log message template from '%s'--\n"),
+                                 repos_relpath);
+              svn_stringbuf_appendcstr(template_text, sep);
+            }
           svn_stringbuf_appendcstr(template_text, this_template);
           svn_stringbuf_strip_whitespace(template_text);
-          if (apr_hash_count(log_message_templates) > 1)
-            svn_stringbuf_appendcstr(template_text, "\n}}}\n");
         }
+      svn_pool_destroy(iterpool);
       default_msg = template_text;
     }
   else
