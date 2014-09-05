@@ -2307,10 +2307,10 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/* Given a list of absolute paths for nodes in one or more working copies,
- * set @a *log_message_templates to a hash table containing one or more log
- * message templates obtained from svn:log-message properties applicable to
- * the working copy nodes. Set it to @c NULL if no log message template found.
+/* Given a list of absolute paths or URLs, set @a *log_message_templates to
+ * a hash table containing one or more log message templates obtained from
+ * svn:log-message properties applicable to these paths or URLs.
+ * Set it to @c NULL if no log message template found.
  * The hash table is keyed by paths relative to the repository root.
  * Each path in this list of keys contributes a log message template.
  * The value for each key in the table is a 'const char *' log template.
@@ -2322,7 +2322,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  */
 svn_error_t *
 svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
-                                     const apr_array_header_t *local_abspaths,
+                                     const apr_array_header_t *paths_or_urls,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);

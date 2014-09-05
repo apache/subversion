@@ -454,7 +454,7 @@ harvest_committables(const char *local_abspath,
 /* Obtain log message templates for svn_client_get_commit_log4_t. */
 svn_error_t *
 svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
-                                     const apr_array_header_t *local_abspaths,
+                                     const apr_array_header_t *paths_or_urls,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
@@ -464,69 +464,105 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
 
   *log_message_templates = apr_hash_make(result_pool);
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < local_abspaths->nelts; i++)
+  for (i = 0; i < paths_or_urls->nelts; i++)
     {
-      const char *local_abspath =
-        APR_ARRAY_IDX(local_abspaths, i, const char *);
-      const svn_string_t *propval = NULL;
+      const char *path_or_url =
+        APR_ARRAY_IDX(paths_or_urls, i, const char *);
       apr_hash_t *props;
-      const char *defining_repos_relpath = NULL;
-
+      apr_array_header_t *inherited_props;
+      const svn_string_t *propval = NULL;
+      const char *defining_path_or_url = NULL;
+      const char *defining_repos_relpath;
+      svn_opt_revision_t unspecified_rev;
+      
       svn_pool_clear(iterpool);
 
-      /* Check if the node itself has an svn:log-template property. */
-      SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, local_abspath, iterpool,
-                                iterpool));
-      propval = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
-      if (propval)
+      unspecified_rev.kind = svn_opt_revision_unspecified;
+      while (TRUE)
         {
-          SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
-                                              NULL, NULL, ctx->wc_ctx,
-                                              local_abspath,
-                                              result_pool, iterpool));
-        }
-      else
-        {
-          apr_array_header_t *inherited_props;
-          
-          /* Check if the node inherits an svn:log-template property. */
-          SVN_ERR(svn_wc__get_iprops(&inherited_props, ctx->wc_ctx,
-                                     local_abspath,
-                                     SVN_PROP_INHERITABLE_LOG_TEMPLATE,
-                                     scratch_pool, iterpool));
-          if (inherited_props && inherited_props->nelts)
+          svn_error_t *err;
+
+          err = svn_client_propget5(&props, &inherited_props,
+                                    SVN_PROP_INHERITABLE_LOG_TEMPLATE,
+                                    path_or_url,
+                                    &unspecified_rev, /* peg_revision */
+                                    &unspecified_rev, /* revision */
+                                    NULL, /* actual_revnum */
+                                    svn_depth_empty,
+                                    NULL, /* changelists */
+                                    ctx,
+                                    iterpool, iterpool);
+
+          /* When adding new URLs we must query their nearest
+           * existing parent for log templates. */
+          if (err && svn_path_is_url(path_or_url) &&
+              err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
             {
-              svn_prop_inherited_item_t *iprop =
-                APR_ARRAY_IDX(inherited_props,
-                              inherited_props->nelts - 1,
-                              svn_prop_inherited_item_t *);
-              propval = svn_hash_gets(iprop->prop_hash,
-                                      SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+              const char *repos_root_url;
+              const char *child_relpath;
 
-              if (svn_path_is_url(iprop->path_or_url))
+              SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL,
+                                                path_or_url, ctx,
+                                                iterpool, iterpool));
+
+              /* Check if we've already reached the repository root. */
+              child_relpath = svn_uri_skip_ancestor(repos_root_url,
+                                                    path_or_url,
+                                                    iterpool);
+              if (child_relpath && child_relpath[0] != '\0')
                 {
-                  const char *repos_root_url;
-
-                  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
-                                                      &repos_root_url, NULL,
-                                                      ctx->wc_ctx,
-                                                      local_abspath,
-                                                      iterpool, iterpool));
-                  defining_repos_relpath =
-                    svn_uri_skip_ancestor(repos_root_url, iprop->path_or_url,
-                                          result_pool);
+                  /* We didn't reach the root yet, so step up. */
+                  path_or_url = svn_uri_dirname(path_or_url, scratch_pool);
+                  svn_error_clear(err);
+                  continue;
                 }
               else
-                SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
-                                                    NULL, NULL, ctx->wc_ctx,
-                                                    iprop->path_or_url,
-                                                    result_pool, iterpool));
+                return svn_error_trace(err);
             }
+          else
+            SVN_ERR(err);
+
+          /* We've got properties for PATH_OR_URL. */
+          break;
         }
-                                            
-      if (propval == NULL || defining_repos_relpath == NULL ||
-          svn_hash_gets(*log_message_templates, defining_repos_relpath))
+
+      /* Check if the node itself has an svn:log-template property. */
+      propval = svn_hash_gets(props, path_or_url);
+      if (propval)
+        {
+          defining_path_or_url = path_or_url;
+        }
+      else if (inherited_props && inherited_props->nelts)
+        {
+          /* Check if the node inherits an svn:log-template property. */
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props,
+                          inherited_props->nelts - 1,
+                          svn_prop_inherited_item_t *);
+          propval = svn_hash_gets(iprop->prop_hash,
+                                  SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+          defining_path_or_url = iprop->path_or_url;
+        }
+
+      if (propval == NULL || defining_path_or_url == NULL)
         continue;
+
+      if (svn_path_is_url(defining_path_or_url))
+        {
+          const char *repos_root_url;
+
+          SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL,
+                                            defining_path_or_url, ctx,
+                                            iterpool, iterpool));
+          defining_repos_relpath =
+            svn_uri_skip_ancestor(repos_root_url, defining_path_or_url,
+                                  result_pool);
+        }
+      else
+        SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
+                                            NULL, NULL, ctx->wc_ctx,
+                                            defining_path_or_url,
+                                            result_pool, iterpool));
 
       /* Embedded NUL characters in the log message template string
        * terminate the template regardless of the actual value of
@@ -2053,22 +2089,36 @@ svn_client__get_log_msg(const char **log_msg,
 {
   if (ctx->log_msg_func4)
     {
-      apr_array_header_t *local_abspaths;
+      apr_array_header_t *paths_or_urls;
       apr_hash_t *log_message_templates;
       int i;
 
-      local_abspaths = apr_array_make(pool, commit_items->nelts,
-                                      sizeof (const char *));
+      paths_or_urls = apr_array_make(pool, commit_items->nelts,
+                                     sizeof (const char *));
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item;
 
           item = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-          APR_ARRAY_PUSH(local_abspaths, const char *) = item->path;
+          if (item->path)
+            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->path;
+          else
+            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->url;
+#if 0
+          /* ### If the item is being copied, we should also consider log
+           * ### message templates from the copy source. However, URL-URL
+           * ### copy commit items don't carry copyfrom info at present,
+           * ### so ignore copyfrom until this inconsistency is fixed.
+           *
+           * Using outdated log templates is not useful so look in the HEAD
+           * revision and ignore item->copyfrom_rev. */
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->copyfrom_url;
+#endif
         }
 
       SVN_ERR(svn_client_get_log_message_templates(&log_message_templates,
-                                                   local_abspaths, ctx,
+                                                   paths_or_urls, ctx,
                                                    pool, pool));
       return svn_error_trace((*ctx->log_msg_func4)(log_msg, tmp_file,
                                                    commit_items,
