@@ -155,7 +155,7 @@ svn_cl__copy(apr_getopt_t *os,
 
   if (! dst_is_url)
     {
-      ctx->log_msg_func3 = NULL;
+      ctx->log_msg_func4 = NULL;
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
         return svn_error_create
           (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
@@ -163,7 +163,7 @@ svn_cl__copy(apr_getopt_t *os,
              "or revision properties"));
     }
 
-  if (ctx->log_msg_func3)
+  if (ctx->log_msg_func4)
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4), opt_state,
                                        NULL, ctx->config, pool));
 
