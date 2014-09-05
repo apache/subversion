@@ -2826,8 +2826,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton3. */
-  ctx->log_msg_func3 = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton4. */
+  ctx->log_msg_func4 = svn_cl__get_log_message;
 
   /* Set up the notifier.
 

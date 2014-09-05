@@ -628,11 +628,12 @@ svn_cl__make_log_msg_baton(void **baton,
                            apr_hash_t *config,
                            apr_pool_t *pool);
 
-/* A function of type svn_client_get_commit_log3_t. */
+/* A function of type svn_client_get_commit_log4_t. */
 svn_error_t *
 svn_cl__get_log_message(const char **log_msg,
                         const char **tmp_file,
                         const apr_array_header_t *commit_items,
+                        apr_hash_t *log_message_templates,
                         void *baton,
                         apr_pool_t *pool);
 

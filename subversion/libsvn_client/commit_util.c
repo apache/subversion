@@ -200,7 +200,6 @@ add_committable(svn_client__committables_t *committables,
                 const char *copyfrom_relpath,
                 svn_revnum_t copyfrom_rev,
                 const char *moved_from_abspath,
-                const svn_string_t *log_msg_template,
                 apr_byte_t state_flags,
                 apr_hash_t *lock_tokens,
                 const svn_lock_t *lock,
@@ -250,10 +249,6 @@ add_committable(svn_client__committables_t *committables,
   if (moved_from_abspath)
     new_item->moved_from_abspath = apr_pstrdup(result_pool,
                                                moved_from_abspath);
-  if (log_msg_template)
-    new_item->log_msg_template = svn_string_dup(log_msg_template,
-                                                result_pool);
-
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
 
@@ -456,36 +451,69 @@ harvest_committables(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Set *LOG_MSG_TEMPLATE to the log message template associated with
-   LOCAL_ABSPATH (or NULL if there is none). */
+/* Obtain log message templates for svn_client_get_commit_log4_t. */
 static svn_error_t *
-get_log_msg_template(const svn_string_t **log_msg_template,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool)
+get_log_message_templates(apr_hash_t **log_templates,
+                          const apr_array_header_t *commit_items,
+                          svn_wc_context_t *wc_ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props;
+  int i;
+  apr_pool_t *iterpool;
 
-  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
-                            result_pool, result_pool));
-  *log_msg_template = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
-  if (! *log_msg_template)
+  *log_templates = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < commit_items->nelts; i++)
     {
-      apr_array_header_t *inherited_lmt;
-      
-      SVN_ERR(svn_wc__get_iprops(&inherited_lmt, wc_ctx, local_abspath,
-                                 SVN_PROP_INHERITABLE_LOG_TEMPLATE,
-                                 result_pool, result_pool));
-      if (inherited_lmt && inherited_lmt->nelts)
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      const svn_string_t *propval = NULL;
+      apr_array_header_t *lmt_items;
+      apr_hash_t *props;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, item->path,
+                                iterpool, iterpool));
+      propval = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+      if (propval == NULL)
         {
-          svn_prop_inherited_item_t *iprop =
-            APR_ARRAY_IDX(inherited_lmt,
-                          inherited_lmt->nelts - 1,
-                          svn_prop_inherited_item_t *);
-          *log_msg_template = svn_hash_gets(iprop->prop_hash,
-                                            SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+          apr_array_header_t *inherited_props;
+          
+          SVN_ERR(svn_wc__get_iprops(&inherited_props, wc_ctx, item->path,
+                                     SVN_PROP_INHERITABLE_LOG_TEMPLATE,
+                                     scratch_pool, iterpool));
+          if (inherited_props && inherited_props->nelts)
+            {
+              svn_prop_inherited_item_t *iprop =
+                APR_ARRAY_IDX(inherited_props,
+                              inherited_props->nelts - 1,
+                              svn_prop_inherited_item_t *);
+              propval = svn_hash_gets(iprop->prop_hash,
+                                      SVN_PROP_INHERITABLE_LOG_TEMPLATE);
+            }
         }
+
+      if (propval == NULL)
+        continue;
+
+      /* Embedded NUL characters in the log message template string
+       * terminate the template regardless of the actual value of
+       * propval->len. */
+      lmt_items = svn_hash_gets(*log_templates, propval->data);
+      if (lmt_items == NULL)
+        {
+          lmt_items = apr_array_make(scratch_pool, 4,
+                                     sizeof(svn_client_commit_item3_t *));
+          svn_hash_sets(*log_templates,
+                        apr_pstrdup(result_pool, propval->data), lmt_items);
+        }
+      APR_ARRAY_PUSH(lmt_items, svn_client_commit_item3_t *) = item;
     }
+
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -516,7 +544,6 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       const char *this_commit_relpath;
       svn_boolean_t not_present;
       svn_node_kind_t kind;
-      const svn_string_t *log_msg_template;
 
       svn_pool_clear(iterpool);
 
@@ -566,8 +593,6 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, this_abspath,
                                   TRUE, TRUE, scratch_pool));
 
-      SVN_ERR(get_log_msg_template(&log_msg_template, wc_ctx,
-                                   this_abspath, scratch_pool));
       SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,
                               this_commit_relpath,
@@ -575,7 +600,6 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
                               NULL /* moved_from_abspath */,
-                              log_msg_template,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
                               NULL, NULL,
                               result_pool, scratch_pool));
@@ -902,11 +926,6 @@ harvest_status_callback(void *status_baton,
   if (matches_changelists
       && state_flags)
     {
-      const svn_string_t *log_msg_template;
-
-      SVN_ERR(get_log_msg_template(&log_msg_template, wc_ctx,
-                                   local_abspath, scratch_pool));
-
       /* Finally, add the committable item. */
       SVN_ERR(add_committable(committables, local_abspath,
                               status->kind,
@@ -920,7 +939,6 @@ harvest_status_callback(void *status_baton,
                               cf_relpath,
                               cf_rev,
                               moved_from_abspath,
-                              log_msg_template,
                               state_flags,
                               baton->lock_tokens, status->lock,
                               result_pool, scratch_pool));
@@ -1081,7 +1099,6 @@ handle_descendants(void *baton,
                                               const char *);
           const char *local_abspath = svn_dirent_join(item->path, relpath,
                                                       iterpool);
-          const svn_string_t *log_msg_template;
 
           /* ### Need a sub-iterpool? */
 
@@ -1160,10 +1177,6 @@ handle_descendants(void *baton,
 
           /* Add a new commit item that describes the delete */
 
-          SVN_ERR(get_log_msg_template(&log_msg_template, hdb->wc_ctx,
-                                       svn_dirent_join(item->path, relpath,
-                                                       iterpool),
-                                       iterpool));
           SVN_ERR(add_committable(hdb->committables,
                                   svn_dirent_join(item->path, relpath,
                                                   iterpool),
@@ -1179,7 +1192,6 @@ handle_descendants(void *baton,
                                   NULL /* copyfrom_relpath */,
                                   SVN_INVALID_REVNUM,
                                   NULL /* moved_from_abspath */,
-                                  log_msg_template,
                                   SVN_CLIENT_COMMIT_ITEM_DELETE,
                                   NULL /* lock tokens */,
                                   NULL /* lock */,
@@ -2014,9 +2026,22 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  if (ctx->log_msg_func3)
+  if (ctx->log_msg_func4)
     {
-      /* The client provided a callback function for the current API.
+      apr_hash_t *log_message_templates;
+
+      SVN_ERR(get_log_message_templates(&log_message_templates,
+                                        commit_items, ctx->wc_ctx,
+                                        pool, pool));
+      return svn_error_trace((*ctx->log_msg_func4)(log_msg, tmp_file,
+                                                   commit_items,
+                                                   log_message_templates,
+                                                   ctx->log_msg_baton4,
+                                                   pool));
+    }
+  else if (ctx->log_msg_func3)
+    {
+      /* The client provided a callback function for the 1.8 API.
          Forward the call to it directly. */
       return (*ctx->log_msg_func3)(log_msg, tmp_file, commit_items,
                                    ctx->log_msg_baton3, pool);

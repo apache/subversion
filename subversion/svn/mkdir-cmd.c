@@ -71,7 +71,7 @@ svn_cl__mkdir(apr_getopt_t *os,
     }
   else
     {
-      SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
+      SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4), opt_state,
                                          NULL, ctx->config, pool));
     }
 
@@ -83,7 +83,7 @@ svn_cl__mkdir(apr_getopt_t *os,
                           NULL, ctx, pool);
 
   if (ctx->log_msg_func3)
-    err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool);
+    err = svn_cl__cleanup_log_msg(ctx->log_msg_baton4, err, pool);
 
   if (err)
     {

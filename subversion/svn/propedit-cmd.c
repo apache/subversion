@@ -299,7 +299,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                              subpool);
 
               if (ctx->log_msg_func3)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
+                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
               if (svn_path_is_url(target))
@@ -328,7 +328,7 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               if (ctx->log_msg_func3)
-                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
+                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton4,
                                                 err, pool));
               else if (err)
                 return svn_error_trace(err);

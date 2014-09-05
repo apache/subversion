@@ -164,7 +164,7 @@ svn_cl__copy(apr_getopt_t *os,
     }
 
   if (ctx->log_msg_func3)
-    SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
+    SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4), opt_state,
                                        NULL, ctx->config, pool));
 
   err = svn_client_copy6(sources, dst_path, TRUE,
@@ -175,7 +175,7 @@ svn_cl__copy(apr_getopt_t *os,
                          ctx, pool);
 
   if (ctx->log_msg_func3)
-    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
+    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton4, err, pool));
   else if (err)
     return svn_error_trace(err);
 

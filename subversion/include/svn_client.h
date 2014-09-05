@@ -528,13 +528,6 @@ typedef struct svn_client_commit_item3_t
    */
   const char *moved_from_abspath;
 
-  /** Log message template associated with this item (if any; NULL
-   * otherwise).
-   *
-   * @since New in 1.9.
-   */
-  const svn_string_t *log_msg_template;
-
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -660,11 +653,31 @@ svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
  * structures, which may be fully or only partially filled-in,
  * depending on the type of commit operation.
  *
+ * @a log_message_templates is a hash table containing one or more log
+ * message templates obtained from svn:log-message properties applicable
+ * to @a commit_items. It is @c NULL if no log message template is defined.
+ * The table is keyed by 'const char *' log templates. Its values are
+ * apr_array_header_t * arrays which contain pointers to those commit
+ * items (from @a commit_items) which the log template applies to.
+ *
  * @a baton is provided along with the callback for use by the handler.
  *
  * All allocations should be performed in @a pool.
  *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_client_get_commit_log4_t)(
+  const char **log_msg,
+  const char **tmp_file,
+  const apr_array_header_t *commit_items,
+  const apr_hash_t *log_message_templates,
+  void *baton,
+  apr_pool_t *pool);
+
+/* Like svn_client_get_commit_log3_t but without log message template support.
+ *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 typedef svn_error_t *(*svn_client_get_commit_log3_t)(
   const char **log_msg,
@@ -988,6 +1001,8 @@ typedef struct svn_client_ctx_t
 
   /** Log message callback function. NULL means that Subversion
    *   should try @c log_msg_func2, then @c log_msg_func.
+    * @deprecated Provided for backward compatibility with the 1.8 API.
+    * Use @c log_msg_func4 instead.
    * @since New in 1.5. */
   svn_client_get_commit_log3_t log_msg_func3;
 
@@ -1051,6 +1066,15 @@ typedef struct svn_client_ctx_t
    * @since New in 1.9.
    */
   void *tunnel_baton;
+
+  /** Log message callback function. NULL means that Subversion should
+   * try @c log_msgs_func3, @c log_msg_func2, then @c log_msg_func.
+   * @since New in 1.9. */
+  svn_client_get_commit_log4_t log_msg_func4;
+
+  /** The callback baton for @c log_msg_func4.
+   * @since New in 1.9. */
+  void *log_msg_baton4;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
