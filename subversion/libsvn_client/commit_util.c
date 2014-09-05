@@ -452,44 +452,46 @@ harvest_committables(const char *local_abspath,
 }
 
 /* Obtain log message templates for svn_client_get_commit_log4_t. */
-static svn_error_t *
-get_log_message_templates(apr_hash_t **log_message_templates,
-                          const apr_array_header_t *commit_items,
-                          svn_wc_context_t *wc_ctx,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
+                                     const apr_array_header_t *local_abspaths,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
 {
   int i;
   apr_pool_t *iterpool;
 
   *log_message_templates = apr_hash_make(result_pool);
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < commit_items->nelts; i++)
+  for (i = 0; i < local_abspaths->nelts; i++)
     {
-      svn_client_commit_item3_t *item =
-        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      const char *local_abspath =
+        APR_ARRAY_IDX(local_abspaths, i, const char *);
       const svn_string_t *propval = NULL;
       apr_hash_t *props;
       const char *defining_repos_relpath = NULL;
 
       svn_pool_clear(iterpool);
 
-      /* Check if the commit item itself has an svn:log-template property. */
-      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, item->path, iterpool,
+      /* Check if the node itself has an svn:log-template property. */
+      SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, local_abspath, iterpool,
                                 iterpool));
       propval = svn_hash_gets(props, SVN_PROP_INHERITABLE_LOG_TEMPLATE);
       if (propval)
         {
           SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
-                                              NULL, NULL, wc_ctx, item->path,
+                                              NULL, NULL, ctx->wc_ctx,
+                                              local_abspath,
                                               result_pool, iterpool));
         }
       else
         {
           apr_array_header_t *inherited_props;
           
-          /* Check if the commit item inherits an svn:log-template property. */
-          SVN_ERR(svn_wc__get_iprops(&inherited_props, wc_ctx, item->path,
+          /* Check if the node inherits an svn:log-template property. */
+          SVN_ERR(svn_wc__get_iprops(&inherited_props, ctx->wc_ctx,
+                                     local_abspath,
                                      SVN_PROP_INHERITABLE_LOG_TEMPLATE,
                                      scratch_pool, iterpool));
           if (inherited_props && inherited_props->nelts)
@@ -507,7 +509,8 @@ get_log_message_templates(apr_hash_t **log_message_templates,
 
                   SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
                                                       &repos_root_url, NULL,
-                                                      wc_ctx, item->path,
+                                                      ctx->wc_ctx,
+                                                      local_abspath,
                                                       iterpool, iterpool));
                   defining_repos_relpath =
                     svn_uri_skip_ancestor(repos_root_url, iprop->path_or_url,
@@ -515,7 +518,7 @@ get_log_message_templates(apr_hash_t **log_message_templates,
                 }
               else
                 SVN_ERR(svn_wc__node_get_repos_info(NULL, &defining_repos_relpath,
-                                                    NULL, NULL, wc_ctx,
+                                                    NULL, NULL, ctx->wc_ctx,
                                                     iprop->path_or_url,
                                                     result_pool, iterpool));
             }
@@ -2050,11 +2053,23 @@ svn_client__get_log_msg(const char **log_msg,
 {
   if (ctx->log_msg_func4)
     {
+      apr_array_header_t *local_abspaths;
       apr_hash_t *log_message_templates;
+      int i;
 
-      SVN_ERR(get_log_message_templates(&log_message_templates,
-                                        commit_items, ctx->wc_ctx,
-                                        pool, pool));
+      local_abspaths = apr_array_make(pool, commit_items->nelts,
+                                      sizeof (const char *));
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item;
+
+          item = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+          APR_ARRAY_PUSH(local_abspaths, const char *) = item->path;
+        }
+
+      SVN_ERR(svn_client_get_log_message_templates(&log_message_templates,
+                                                   local_abspaths, ctx,
+                                                   pool, pool));
       return svn_error_trace((*ctx->log_msg_func4)(log_msg, tmp_file,
                                                    commit_items,
                                                    log_message_templates,
