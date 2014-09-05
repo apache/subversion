@@ -1001,8 +1001,8 @@ typedef struct svn_client_ctx_t
 
   /** Log message callback function. NULL means that Subversion
    *   should try @c log_msg_func2, then @c log_msg_func.
-    * @deprecated Provided for backward compatibility with the 1.8 API.
-    * Use @c log_msg_func4 instead.
+   * @deprecated Provided for backward compatibility with the 1.8 API.
+   * Use @c log_msg_func4 instead.
    * @since New in 1.5. */
   svn_client_get_commit_log3_t log_msg_func3;
 
