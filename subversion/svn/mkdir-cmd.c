@@ -60,7 +60,7 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
-      ctx->log_msg_func3 = NULL;
+      ctx->log_msg_func4 = NULL;
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
         {
           return svn_error_create
@@ -82,7 +82,7 @@ svn_cl__mkdir(apr_getopt_t *os,
                           (opt_state->quiet ? NULL : svn_cl__print_commit_info),
                           NULL, ctx, pool);
 
-  if (ctx->log_msg_func3)
+  if (ctx->log_msg_func4)
     err = svn_cl__cleanup_log_msg(ctx->log_msg_baton4, err, pool);
 
   if (err)
