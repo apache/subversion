@@ -766,17 +766,37 @@ get_l2p_header_body(l2p_header_t **header,
   SVN_ERR(auto_open_l2p_index(rev_file, fs, revision));
   packed_stream_seek(rev_file->l2p_stream, 0);
 
-  /* read the table sizes */
+  /* Read the table sizes.  Check the data for plausibility and
+   * consistency with other bits. */
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->first_revision = (svn_revnum_t)value;
+  if (result->first_revision != rev_file->start_revision)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                  _("Index rev / pack file revision numbers do not match"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->page_size = (apr_uint32_t)value;
+  if (!result->page_size)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("L2P page size must not be 0"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->revision_count = (int)value;
+  if (   result->revision_count != 1
+      && result->revision_count != ffd->max_files_per_dir)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("Invalid number of revisions in L2P index"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   page_count = (apr_size_t)value;
+  if (page_count < result->revision_count)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("Fewer L2P index pages than revisions"));
+  if (page_count > (rev_file->p2l_offset - rev_file->l2p_offset) / 2)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("L2P index page count implausibly large"));
 
-  if (result->first_revision > revision
+  if (   result->first_revision > revision
       || result->first_revision + result->revision_count <= revision)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
@@ -797,16 +817,36 @@ get_l2p_header_body(l2p_header_t **header,
   for (i = 0; i < result->revision_count; ++i)
     {
       SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+      if (value == 0)
+        return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                                _("Revision with no L2P index pages"));
+
       page_table_index += (apr_size_t)value;
+      if (page_table_index > page_count)
+        return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                                _("L2P page table exceeded"));
+
       result->page_table_index[i+1] = page_table_index;
     }
+
+  if (page_table_index != page_count)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                 _("Revisions do not cover the full L2P index page table"));
 
   /* read actual page tables */
   for (page = 0; page < page_count; ++page)
     {
       SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+      if (value == 0)
+        return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                                _("Empty L2P index page"));
+
       result->page_table[page].size = (apr_uint32_t)value;
       SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+      if (value > result->page_size)
+        return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                                _("Page exceeds L2P index page size"));
+
       result->page_table[page].entry_count = (apr_uint32_t)value;
     }
 
@@ -1818,15 +1858,31 @@ get_p2l_header(p2l_header_t **header,
   /* allocate result data structure */
   result = apr_pcalloc(pool, sizeof(*result));
   
-  /* read table sizes and allocate page array */
+  /* Read table sizes, check them for plausibility and allocate page array. */
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->first_revision = (svn_revnum_t)value;
+  if (result->first_revision != rev_file->start_revision)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                  _("Index rev / pack file revision numbers do not match"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->file_size = value;
+  if (result->file_size != rev_file->l2p_offset)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                   _("Index offset and rev / pack file size do not match"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->page_size = value;
+  if (!result->page_size || (result->page_size & (result->page_size - 1)))
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("P2L index page size is not a power of two"));
+
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->page_count = (apr_size_t)value;
+  if (result->page_count != (result->file_size - 1) / result->page_size + 1)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                   _("P2L page count does not match rev / pack file size"));
+
   result->offsets
     = apr_pcalloc(pool, (result->page_count + 1) * sizeof(*result->offsets));
 
