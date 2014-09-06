@@ -776,9 +776,9 @@ get_l2p_header_body(l2p_header_t **header,
 
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->page_size = (apr_uint32_t)value;
-  if (!result->page_size)
+  if (!result->page_size || (result->page_size & (result->page_size - 1)))
     return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
-                            _("L2P page size must not be 0"));
+                            _("L2P index page size is not a power of two"));
 
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->revision_count = (int)value;

@@ -949,19 +949,14 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 "###"                                                                        NL
 "### The log-to-phys index maps data item numbers to offsets within the"     NL
-"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
-"### per changed path.  For each revision, at least one page is being"       NL
-"### allocated in the l2p index with unused parts resulting in no wasted"    NL
-"### space."                                                                 NL
-"### Changing this parameter only affects larger revisions with thousands"   NL
-"### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions, increasing the size of the page table"    NL
-"### meaning it takes longer to read that table (once).  Access to each"     NL
-"### page is then faster because less data has to read.  So, if you have"    NL
-"### several extremely large revisions (approaching 1 mio changes),  think"  NL
+"### rev or pack file.  This index is organized in pages of a fixed maximum" NL
+"### capacity.  To access an item, the page table and the respective page"   NL
+"### must be read."                                                          NL
+"### This parameter only affects revisions with thousands of changed paths." NL
+"### If you have several extremely large revisions (~1 mio changes), think"  NL
 "### about increasing this setting.  Reducing the value will rarely result"  NL
 "### in a net speedup."                                                      NL
-"### This is an expert setting.  Any non-zero value is possible."            NL
+"### This is an expert setting.  Must be a power of 2."                      NL
 "### l2p-page-size is 8192 entries by default."                              NL
 "# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
 "###"                                                                        NL
