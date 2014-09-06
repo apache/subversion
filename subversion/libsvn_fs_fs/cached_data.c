@@ -2393,7 +2393,7 @@ read_dir_entries(apr_array_header_t *entries,
                            _("Directory entry corrupt in '%s'"),
                            svn_fs_fs__id_unparse(id, scratch_pool)->data);
 
-      dirent->id = svn_fs_fs__id_parse(str, result_pool);
+      SVN_ERR(svn_fs_fs__id_parse(&dirent->id, str, result_pool));
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array.  Be sure to use hash keys that survive this iteration.

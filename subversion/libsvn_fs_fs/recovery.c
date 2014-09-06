@@ -216,7 +216,7 @@ recover_find_max_ids(svn_fs_t *fs,
       char *str_val;
       char *str;
       svn_node_kind_t kind;
-      svn_fs_id_t *id;
+      const svn_fs_id_t *id;
       const svn_fs_fs__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
@@ -246,7 +246,7 @@ recover_find_max_ids(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, iterpool);
+      SVN_ERR(svn_fs_fs__id_parse(&id, str, iterpool));
 
       rev_item = svn_fs_fs__id_rev_item(id);
       if (rev_item->revision != rev)
