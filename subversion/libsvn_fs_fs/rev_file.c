@@ -176,6 +176,9 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
 
               /* We failed for the first time. Refresh cache & retry. */
               SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
+              file->start_revision = rev < ffd->min_unpacked_rev
+                                    ? rev - (rev % ffd->max_files_per_dir)
+                                    : rev;
 
               retry = TRUE;
             }
