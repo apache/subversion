@@ -69,6 +69,36 @@
  * various flags. */
 #define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
 
+/* Convert the C string in *TEXT to a revision number and return it in *REV.
+ * Overflows, negative values other than -1 and terminating characters other
+ * than 0x20 or 0x0 will cause an error.  Set *TEXT to the first char after
+ * the initial separator or to EOS.
+ */
+static svn_error_t *
+parse_revnum(svn_revnum_t *rev,
+             const char **text)
+{
+  const char *string = *text;
+  if ((string[0] == '-') && (string[1] == '1'))
+    {
+      *rev = SVN_INVALID_REVNUM;
+      string += 2;
+    }
+  else
+    {
+      SVN_ERR(svn_revnum_parse(rev, string, &string));
+    }
+
+  if (*string == ' ')
+    ++string;
+  else if (*string != '\0')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid character in revision number"));
+
+  *text = string;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
                                   apr_off_t *changes_offset,
@@ -362,11 +392,7 @@ read_change(change_t **change_p,
   else
     {
       last_str = line->data;
-      str = svn_cstring_tokenize(" ", &last_str);
-      if (! str)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-      info->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&info->copyfrom_rev, (const char **)&last_str));
 
       if (! last_str)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -649,12 +675,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   rep = apr_pcalloc(result_pool, sizeof(*rep));
   *rep_p = rep;
 
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
-
-  rep->revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&rep->revision, (const char **)&string));
 
   /* initialize transaction info (never stored) */
   svn_fs_fs__id_txn_reset(&rep->txn_id);
@@ -865,15 +886,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str;
-
-      str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyroot line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyroot_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&noderev->copyroot_rev, (const char **)&value));
 
       if (*value == '\0')
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -891,13 +904,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyfrom line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&noderev->copyfrom_rev, (const char **)&value));
 
       if (*value == 0)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -1088,10 +1095,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   if (! str || (strcmp(str, REP_DELTA) != 0))
     goto error;
 
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (! str)
-    goto error;
-  (*header)->base_revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&(*header)->base_revision, (const char **)&last_str));
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
