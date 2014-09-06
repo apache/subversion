@@ -21,6 +21,7 @@
  */
 
 #include "svn_private_config.h"
+#include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
@@ -376,8 +377,12 @@ read_change(change_t **change_p,
                               _("Invalid mergeinfo-mod flag in rev-file"));
         }
     }
-  
+
   /* Get the changed path. */
+  if (*last_str != '/' || !svn_dirent_is_canonical(last_str, scratch_pool))
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid path in changes line"));
+
   change->path.len = strlen(last_str);
   change->path.data = apr_pstrdup(result_pool, last_str);
 
@@ -394,9 +399,10 @@ read_change(change_t **change_p,
       last_str = line->data;
       SVN_ERR(parse_revnum(&info->copyfrom_rev, (const char **)&last_str));
 
-      if (! last_str)
+      if (   *last_str != '/'
+          || !svn_dirent_is_canonical(last_str, scratch_pool))
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
+                                _("Invalid copy-from path in changes line"));
 
       info->copyfrom_path = apr_pstrdup(result_pool, last_str);
     }
@@ -869,6 +875,11 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
+      if (*value != '/' || !svn_dirent_is_canonical(value, scratch_pool))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Non-canonical cpath field in node-rev '%s'"),
+                            noderev_id);
+
       noderev->created_path = apr_pstrdup(result_pool, value);
     }
 
@@ -888,7 +899,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     {
       SVN_ERR(parse_revnum(&noderev->copyroot_rev, (const char **)&value));
 
-      if (*value == '\0')
+      if (*value != '/' || !svn_dirent_is_canonical(value, scratch_pool))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
