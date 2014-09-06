@@ -1,4 +1,4 @@
-/* fs-fs-fuzzy-test.c --- fuzzying tests for the FSFS filesystem
+/* fs-fs-fuzzy-test.c --- fuzzing tests for the FSFS filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -55,10 +55,10 @@ dont_filter_warnings(void *baton, svn_error_t *err)
 /* Create a greek repo with OPTS at REPO_NAME.  Verify that a modification
  * of any single byte using MODIFIER will be detected. */
 static svn_error_t *
-currying_1_byte_test(const svn_test_opts_t *opts,
-                     const char *repo_name,
-                     unsigned char (* modifier)(unsigned char c),
-                     apr_pool_t *pool)
+fuzzing_1_byte_test(const svn_test_opts_t *opts,
+                    const char *repo_name,
+                    unsigned char (* modifier)(unsigned char c),
+                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -169,11 +169,11 @@ invert_byte(unsigned char c)
 }
 
 static svn_error_t *
-currying_invert_byte_test(const svn_test_opts_t *opts,
-                          apr_pool_t *pool)
+fuzzing_invert_byte_test(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
 {
-  SVN_ERR(currying_1_byte_test(opts, "currying_invert_byte", invert_byte,
-                               pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_invert_byte", invert_byte,
+                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -187,11 +187,11 @@ increment_byte(unsigned char c)
 }
 
 static svn_error_t *
-currying_increment_byte_test(const svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+fuzzing_increment_byte_test(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
 {
-  SVN_ERR(currying_1_byte_test(opts, "currying_increment_byte",
-                               increment_byte, pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_increment_byte",
+                              increment_byte, pool));
 
   return SVN_NO_ERROR;
 }
@@ -205,11 +205,11 @@ decrement_byte(unsigned char c)
 }
 
 static svn_error_t *
-currying_decrement_byte_test(const svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+fuzzing_decrement_byte_test(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
 {
-  SVN_ERR(currying_1_byte_test(opts, "currying_decrement_byte",
-                               decrement_byte, pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_decrement_byte",
+                              decrement_byte, pool));
 
   return SVN_NO_ERROR;
 }
@@ -223,11 +223,10 @@ null_byte(unsigned char c)
 }
 
 static svn_error_t *
-currying_null_byte_test(const svn_test_opts_t *opts,
-                        apr_pool_t *pool)
+fuzzing_null_byte_test(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
 {
-  SVN_ERR(currying_1_byte_test(opts, "currying_null_byte", null_byte,
-                               pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_null_byte", null_byte, pool));
 
   return SVN_NO_ERROR;
 }
@@ -240,14 +239,14 @@ static int max_threads = 4;
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(currying_invert_byte_test,
-                       "currying: invert any byte"),
-    SVN_TEST_OPTS_PASS(currying_increment_byte_test,
-                       "currying: increment any byte"),
-    SVN_TEST_OPTS_PASS(currying_decrement_byte_test,
-                       "currying: decrement any byte"),
-    SVN_TEST_OPTS_PASS(currying_null_byte_test,
-                       "currying: set any byte to 0"),
+    SVN_TEST_OPTS_PASS(fuzzing_invert_byte_test,
+                       "fuzzing: invert any byte"),
+    SVN_TEST_OPTS_PASS(fuzzing_increment_byte_test,
+                       "fuzzing: increment any byte"),
+    SVN_TEST_OPTS_PASS(fuzzing_decrement_byte_test,
+                       "fuzzing: decrement any byte"),
+    SVN_TEST_OPTS_PASS(fuzzing_null_byte_test,
+                       "fuzzing: set any byte to 0"),
     SVN_TEST_NULL
   };
 
