@@ -1,4 +1,4 @@
-/* fs-pack-test.c --- tests for the filesystem
+/* fs-fs-pack-test.c --- tests for the FSFS filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
