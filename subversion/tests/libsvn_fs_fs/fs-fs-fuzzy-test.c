@@ -138,7 +138,8 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
       /* Log changes that don't get detected.
          In f7, this can only bits in the indexes. */
       if (!err)
-        printf("Undetected mod at offset %lx (%ld): 0x%02x -> 0x%02x\n",
+        printf("Undetected mod at offset %"APR_UINT64_T_HEX_FMT
+               " (%"APR_OFF_T_FMT"): 0x%02x -> 0x%02x\n",
                i, i, c_old, c_new);
 
       /* Once we catch all changes, . */
