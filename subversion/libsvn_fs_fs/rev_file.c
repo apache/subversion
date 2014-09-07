@@ -31,6 +31,8 @@
 #include "private/svn_io_private.h"
 #include "svn_private_config.h"
 
+/* Initialize the *FILE structure for REVISION in filesystem FS.  Set its
+ * pool member to the provided POOL. */
 static void
 init_revision_file(svn_fs_fs__revision_file_t *file,
                    svn_fs_t *fs,
