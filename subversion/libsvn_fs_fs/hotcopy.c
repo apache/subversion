@@ -1175,8 +1175,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_write_lock(dst_fs, hotcopy_locking_src_body, &hbb,
-                                     pool));
+  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
+                                    pool));
 
   return SVN_NO_ERROR;
 }
