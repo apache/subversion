@@ -347,7 +347,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
-                                   ":", ffd->instance_id,
                                    "/", normalize_key_part(fs->path, pool),
                                    ":",
                                    SVN_VA_NULL);
@@ -774,7 +773,6 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
      Therefore, throw in a uuid as well - just to be sure. */
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", fs->uuid,
-                                   ":", ffd->instance_id,
                                    "/", fs->path,
                                    ":", txn_id,
                                    ":", svn_uuid_generate(pool), ":",
