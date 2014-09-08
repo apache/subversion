@@ -2080,6 +2080,48 @@ svn_client__do_commit(const char *base_url,
   return svn_error_trace(editor->close_edit(edit_baton, scratch_pool));
 }
 
+svn_error_t *
+svn_client_get_log_message_templates_for_commit_items(
+  apr_hash_t **log_message_templates,
+  const apr_array_header_t *commit_items,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *paths_or_urls;
+  int i;
+
+  paths_or_urls = apr_array_make(scratch_pool, commit_items->nelts,
+                                 sizeof (const char *));
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item;
+
+      item = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      if (item->path)
+        APR_ARRAY_PUSH(paths_or_urls, const char *) = item->path;
+      else
+        APR_ARRAY_PUSH(paths_or_urls, const char *) = item->url;
+#if 0
+      /* ### If the item is being copied, we should also consider log
+       * ### message templates from the copy source. However, URL-URL
+       * ### copy commit items don't carry copyfrom info at present,
+       * ### so ignore copyfrom until this inconsistency is fixed.
+       *
+       * Using outdated log templates is not useful so look in the HEAD
+       * revision and ignore item->copyfrom_rev. */
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+        APR_ARRAY_PUSH(paths_or_urls, const char *) = item->copyfrom_url;
+#endif
+    }
+
+  SVN_ERR(svn_client_get_log_message_templates(log_message_templates,
+                                               paths_or_urls, ctx,
+                                               result_pool,
+                                               scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__get_log_msg(const char **log_msg,
@@ -2090,37 +2132,10 @@ svn_client__get_log_msg(const char **log_msg,
 {
   if (ctx->log_msg_func4)
     {
-      apr_array_header_t *paths_or_urls;
       apr_hash_t *log_message_templates;
-      int i;
 
-      paths_or_urls = apr_array_make(pool, commit_items->nelts,
-                                     sizeof (const char *));
-      for (i = 0; i < commit_items->nelts; i++)
-        {
-          svn_client_commit_item3_t *item;
-
-          item = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-          if (item->path)
-            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->path;
-          else
-            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->url;
-#if 0
-          /* ### If the item is being copied, we should also consider log
-           * ### message templates from the copy source. However, URL-URL
-           * ### copy commit items don't carry copyfrom info at present,
-           * ### so ignore copyfrom until this inconsistency is fixed.
-           *
-           * Using outdated log templates is not useful so look in the HEAD
-           * revision and ignore item->copyfrom_rev. */
-          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            APR_ARRAY_PUSH(paths_or_urls, const char *) = item->copyfrom_url;
-#endif
-        }
-
-      SVN_ERR(svn_client_get_log_message_templates(&log_message_templates,
-                                                   paths_or_urls, ctx,
-                                                   pool, pool));
+      SVN_ERR(svn_client_get_log_message_templates_for_commit_items(
+                &log_message_templates, commit_items, ctx, pool, pool));
       return svn_error_trace((*ctx->log_msg_func4)(log_msg, tmp_file,
                                                    commit_items,
                                                    log_message_templates,

@@ -2327,6 +2327,20 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
+
+/* Like svn_client_get_log_message_templates(), but accepts an array of
+ * commit items instead of an array of paths or URLs.
+ *
+ * @ since New in 1.9.
+ */
+svn_error_t *
+svn_client_get_log_message_templates_for_commit_items(
+  apr_hash_t **log_message_templates,
+  const apr_array_header_t *commit_items,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /** @} */
 
 /**
