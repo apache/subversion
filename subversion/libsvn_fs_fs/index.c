@@ -1933,7 +1933,7 @@ typedef struct p2l_page_info_baton_t
   /* offset within the p2l index file describing the following page */
   apr_off_t next_offset;
 
-  /* PAGE_NO * PAGE_SIZE (is <= OFFSET) */
+  /* PAGE_NO * PAGE_SIZE (if <= OFFSET) */
   apr_off_t page_start;
 
   /* total number of pages indexed */
@@ -2051,7 +2051,7 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
 
   SVN_ERR(packed_stream_get(&value, stream));
   *last_compound += decode_int(value);
-  
+
   entry.type = (int)(*last_compound & 7);
   entry.item.number = *last_compound / 8;
 
@@ -2089,9 +2089,9 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
 /* Read the phys-to-log mappings for the cluster beginning at rev file
  * offset PAGE_START from the index for START_REVISION in FS.  The data
  * can be found in the index page beginning at START_OFFSET with the next
- * page beginning at NEXT_OFFSET.  Return the relevant index entries in
- * *ENTRIES.  Use REV_FILE to access on-disk data.
- * Use POOL for other allocations.
+ * page beginning at NEXT_OFFSET.  PAGE_SIZE is the L2P index page size.
+ * Return the relevant index entries in *ENTRIES.  Use REV_FILE to access
+ * on-disk data. Use POOL for other allocations.
  */
 static svn_error_t *
 get_p2l_page(apr_array_header_t **entries,
