@@ -100,15 +100,10 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "0");
 
-  /* Re-open the repo with known config hash and without swallowing any
-     caching related errors. */
-  SVN_ERR(svn_repos_open3(&repos, repo_name, fs_config, pool, iterpool));
-  svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
-
   /* Manipulate all bytes one at a time. */
   for (i = 0; i < filesize; ++i)
     {
-      svn_error_t *err;
+      svn_error_t *err = SVN_NO_ERROR;
 
       /* Read byte */
       unsigned char c_old, c_new;
@@ -129,7 +124,8 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
          this iteration. */
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
                                svn_uuid_generate(iterpool));
-      SVN_ERR(svn_fs_fs__initialize_caches(svn_repos_fs(repos), iterpool));
+      SVN_ERR(svn_repos_open3(&repos, repo_name, fs_config, iterpool, iterpool));
+      svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
 
       /* This shall detect the corruption and return an error. */
       err = svn_repos_verify_fs3(repos, rev, rev, TRUE, FALSE, FALSE,
