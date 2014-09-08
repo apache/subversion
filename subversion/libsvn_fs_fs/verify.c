@@ -592,16 +592,6 @@ compare_p2l_to_rev(svn_fs_t *fs,
 }
 
 static svn_revnum_t
-packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return rev < ffd->min_unpacked_rev
-       ? rev - (rev % ffd->max_files_per_dir)
-       : rev;
-}
-
-static svn_revnum_t
 pack_size(svn_fs_t *fs, svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -635,7 +625,7 @@ verify_index_consistency(svn_fs_t *fs,
       svn_error_t *err = SVN_NO_ERROR;
 
       svn_revnum_t count = pack_size(fs, revision);
-      svn_revnum_t pack_start = packed_base_rev(fs, revision);
+      svn_revnum_t pack_start = svn_fs_fs__packed_base_rev(fs, revision);
       svn_revnum_t pack_end = pack_start + count;
 
       svn_pool_clear(iterpool);
@@ -668,7 +658,7 @@ verify_index_consistency(svn_fs_t *fs,
 
           /* We could simply assign revision here but the code below is
              more intuitive to maintainers. */
-          next_revision = packed_base_rev(fs, revision);
+          next_revision = svn_fs_fs__packed_base_rev(fs, revision);
         }
       else
         {

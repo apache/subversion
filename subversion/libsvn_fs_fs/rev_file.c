@@ -42,9 +42,7 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   file->is_packed = svn_fs_fs__is_packed_rev(fs, revision);
-  file->start_revision = revision < ffd->min_unpacked_rev
-                       ? revision - (revision % ffd->max_files_per_dir)
-                       : revision;
+  file->start_revision = svn_fs_fs__packed_base_rev(fs, revision);
 
   file->file = NULL;
   file->stream = NULL;
@@ -178,9 +176,7 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
 
               /* We failed for the first time. Refresh cache & retry. */
               SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
-              file->start_revision = rev < ffd->min_unpacked_rev
-                                    ? rev - (rev % ffd->max_files_per_dir)
-                                    : rev;
+              file->start_revision = svn_fs_fs__packed_base_rev(fs, rev);
 
               retry = TRUE;
             }
