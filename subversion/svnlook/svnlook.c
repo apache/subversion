@@ -1706,9 +1706,14 @@ do_pget(svnlook_ctxt_t *c,
        if (path == NULL)
          {
            /* We're operating on a revprop (e.g. c->is_revision). */
-           err_msg = apr_psprintf(pool,
-                                  _("Property '%s' not found on revision %ld"),
-                                  propname, c->rev_id);
+           if (SVN_IS_VALID_REVNUM(c->rev_id))
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on revision %ld"),
+                                    propname, c->rev_id);
+           else
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on transaction %s"),
+                                    propname, c->txn_name);
          }
        else
          {
