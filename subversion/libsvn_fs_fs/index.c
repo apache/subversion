@@ -2055,12 +2055,30 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
   entry.type = (int)(*last_compound & 7);
   entry.item.number = *last_compound / 8;
 
+  /* Verify item type. */
+  if (entry.type > SVN_FS_FS__ITEM_TYPE_CHANGES)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("Invalid item type in P2L index"));
+  if (   entry.type == SVN_FS_FS__ITEM_TYPE_CHANGES
+      && entry.item.number != SVN_FS_FS__ITEM_INDEX_CHANGES)
+    return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                            _("Changed path list must have item number 1"));
+
   SVN_ERR(packed_stream_get(&value, stream));
   *last_revision += (svn_revnum_t)decode_int(value);
   entry.item.revision = *last_revision;
 
   SVN_ERR(packed_stream_get(&value, stream));
   entry.fnv1_checksum = (apr_uint32_t)value;
+
+  /* Some of the index data for empty rev / pack file sections will not be
+   * used during normal operation.  Thus, we have strict rules for the
+   * contents of those unused fields. */
+  if (entry.type == SVN_FS_FS__ITEM_TYPE_UNUSED)
+    if (   entry.item.number != SVN_FS_FS__ITEM_INDEX_UNUSED
+        || entry.fnv1_checksum != 0)
+      return svn_error_create(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                 _("Empty regions must have item number 0 and checksum 0"));
 
   APR_ARRAY_PUSH(result, svn_fs_fs__p2l_entry_t) = entry;
   *item_offset += entry.size;
