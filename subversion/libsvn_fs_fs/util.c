@@ -55,6 +55,16 @@ svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
       && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
 }
 
+svn_revnum_t
+svn_fs_fs__packed_base_rev(svn_fs_t *fs,
+                           svn_revnum_t revision)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return (revision < ffd->min_unpacked_rev)
+       ? (revision - (revision % ffd->max_files_per_dir))
+       : revision;
+}
+
 const char *
 svn_fs_fs__path_txn_current(svn_fs_t *fs,
                             apr_pool_t *pool)
