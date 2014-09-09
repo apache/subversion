@@ -34,6 +34,7 @@
 #include "svn_delta.h"
 #include "svn_editor.h"
 #include "svn_io.h"
+#include "private/svn_editor3.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -279,6 +280,16 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_boolean_t send_deltas,
                    svn_editor_t *editor,
                    apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
+                             svn_editor3_t **editor,
+                             apr_hash_t *revprop_table,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
+                             apr_hash_t *lock_tokens,
+                             svn_boolean_t keep_locks,
+                             apr_pool_t *pool);
 
 
 #ifdef __cplusplus

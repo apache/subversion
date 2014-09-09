@@ -808,6 +808,52 @@ fetch(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
+                                          svn_editor3_t **editor,
+                                          apr_hash_t *revprop_table,
+                                          svn_commit_callback2_t commit_callback,
+                                          void *commit_baton,
+                                          apr_hash_t *lock_tokens,
+                                          svn_boolean_t keep_locks,
+                                          apr_pool_t *pool)
+{
+  const svn_delta_editor_t *deditor;
+  void *dedit_baton;
+  svn_editor3__shim_connector_t *shim_connector;
+
+  remap_commit_callback(&commit_callback, &commit_baton,
+                        session, commit_callback, commit_baton,
+                        pool);
+
+  SVN_ERR(session->vtable->get_commit_editor(session, &deditor, &dedit_baton,
+                                             revprop_table,
+                                             commit_callback, commit_baton,
+                                             lock_tokens, keep_locks, pool));
+
+  /* Convert to Ev3 */
+  {
+    const char *repos_root_url, *session_url, *base_relpath;
+    struct fb_baton *fbb = apr_palloc(pool, sizeof(*fbb));
+
+    SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
+    SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+    base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, pool);
+    SVN_ERR(svn_ra_dup_session(&fbb->session, session, repos_root_url, pool, pool));
+    fbb->session_path = base_relpath;
+    fbb->repos_root_url = repos_root_url;
+    SVN_ERR(svn_delta__ev3_from_delta_for_commit(
+                        editor,
+                        &shim_connector,
+                        deditor, dedit_baton,
+                        repos_root_url, base_relpath,
+                        fetch, fbb,
+                        NULL, NULL /*cancel*/,
+                        pool, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
