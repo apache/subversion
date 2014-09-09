@@ -98,6 +98,8 @@ Commit access for specific areas:
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
+        stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
+                                                             svn-vendor.py)
 
   Packages:
 

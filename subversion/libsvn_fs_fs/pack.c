@@ -1165,7 +1165,6 @@ copy_reps_from_temp(pack_context_t *context,
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *path_order = context->path_order;
-  apr_array_header_t *parts = apr_array_make(pool, 16, sizeof(void*));
   int i;
 
   /* copy items in path order. */
@@ -1185,9 +1184,6 @@ copy_reps_from_temp(pack_context_t *context,
         SVN_ERR(store_item(context, temp_file, node_part, iterpool));
       if (rep_part)
         SVN_ERR(store_item(context, temp_file, rep_part, iterpool));
-
-      /* processed all items */
-      apr_array_clear(parts);
     }
 
   svn_pool_destroy(iterpool);
