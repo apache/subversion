@@ -550,7 +550,8 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
         continue;
 
       /* Check if the node itself has an svn:log-template property. */
-      propval = svn_hash_gets(props, path_or_url);
+      if (props)
+        propval = svn_hash_gets(props, path_or_url);
       if (propval)
         {
           defining_path_or_url = path_or_url;
