@@ -42,6 +42,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "client.h"
 
 #include "private/svn_sorts_private.h"
@@ -291,6 +292,68 @@ inner_dir_diff(const char *left_abspath,
 
   return SVN_NO_ERROR;
 }
+
+/* Translates *LEFT_ABSPATH to a temporary file if PROPS specify that the
+   file needs translation. *LEFT_ABSPATH is updated to point to a file that
+   lives at least as long as RESULT_POOL when translation is necessary.
+   Otherwise the value is not updated */
+static svn_error_t *
+translate_if_necessary(const char **local_abspath,
+                       apr_hash_t *props,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const svn_string_t *eol_style_val;
+  const svn_string_t *keywords_val;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_stream_t *contents;
+  svn_stream_t *dst;
+
+  /* if (svn_hash_gets(props, SVN_PROP_SPECIAL))
+      ### TODO: Implement */
+
+  eol_style_val = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+
+  if (eol_style_val)
+    svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
+  else
+    {
+      eol = NULL;
+      eol_style = svn_subst_eol_style_none;
+    }
+
+  if (keywords_val)
+    SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_val->data,
+                                      APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                      "", "", 0, "", scratch_pool));
+  else
+    keywords = NULL;
+
+  if (!svn_subst_translation_required(eol_style, eol, keywords, FALSE, FALSE))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_open_readonly(&contents, *local_abspath,
+                                    scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_stream_open_unique(&dst, local_abspath, NULL,
+                                  svn_io_file_del_on_pool_cleanup,
+                                  result_pool, scratch_pool));
+
+  dst = svn_subst_stream_translated(dst, eol, TRUE /* repair */,
+                                    keywords, FALSE /* expand */,
+                                    scratch_pool);
+
+  SVN_ERR(svn_stream_copy3(contents, dst, cancel_func, cancel_baton,
+                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Handles reporting of a file for inner_dir_diff */
 static svn_error_t *
 do_file_diff(const char *left_abspath,
@@ -356,6 +419,10 @@ do_file_diff(const char *left_abspath,
             svn_hash_sets(left_props, SVN_PROP_MIME_TYPE,
                           svn_string_create(mime_type, scratch_pool));
         }
+
+      SVN_ERR(translate_if_necessary(&left_abspath, left_props,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     scratch_pool, scratch_pool));
     }
   else
     left_props = NULL;
@@ -379,6 +446,11 @@ do_file_diff(const char *left_abspath,
             svn_hash_sets(right_props, SVN_PROP_MIME_TYPE,
                           svn_string_create(mime_type, scratch_pool));
         }
+
+      SVN_ERR(translate_if_necessary(&right_abspath, right_props,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     scratch_pool, scratch_pool));
+
     }
   else
     right_props = NULL;
