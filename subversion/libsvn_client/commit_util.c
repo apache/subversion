@@ -468,8 +468,8 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
     {
       const char *path_or_url =
         APR_ARRAY_IDX(paths_or_urls, i, const char *);
-      apr_hash_t *props;
-      apr_array_header_t *inherited_props;
+      apr_hash_t *props = NULL;
+      apr_array_header_t *inherited_props = NULL;
       const svn_string_t *propval = NULL;
       const char *defining_path_or_url = NULL;
       const char *defining_repos_relpath;
@@ -482,6 +482,10 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
         {
           svn_error_t *err;
 
+          if (!svn_path_is_url(path_or_url))
+            SVN_ERR(svn_dirent_get_absolute(&path_or_url,
+                                            path_or_url,
+                                            iterpool));
           err = svn_client_propget5(&props, &inherited_props,
                                     SVN_PROP_INHERITABLE_LOG_TEMPLATE,
                                     path_or_url,
@@ -493,28 +497,44 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
                                     ctx,
                                     iterpool, iterpool);
 
-          /* When adding new URLs we must query their nearest
-           * existing parent for log templates. */
-          if (err && svn_path_is_url(path_or_url) &&
-              err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
             {
-              const char *repos_root_url;
-              const char *child_relpath;
-
-              SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL,
-                                                path_or_url, ctx,
-                                                iterpool, iterpool));
-
-              /* Check if we've already reached the repository root. */
-              child_relpath = svn_uri_skip_ancestor(repos_root_url,
-                                                    path_or_url,
-                                                    iterpool);
-              if (child_relpath && child_relpath[0] != '\0')
+              if (svn_path_is_url(path_or_url))
                 {
-                  /* We didn't reach the root yet, so step up. */
-                  path_or_url = svn_uri_dirname(path_or_url, scratch_pool);
-                  svn_error_clear(err);
-                  continue;
+                  /* When adding new URLs we must query their nearest
+                   * existing parent for log templates. */
+                  const char *repos_root_url;
+                  const char *child_relpath;
+
+                  SVN_ERR(svn_client_get_repos_root(&repos_root_url, NULL,
+                                                    path_or_url, ctx,
+                                                    iterpool, iterpool));
+
+                  /* Check if we've already reached the repository root. */
+                  child_relpath = svn_uri_skip_ancestor(repos_root_url,
+                                                        path_or_url,
+                                                        iterpool);
+                  if (child_relpath && child_relpath[0] != '\0')
+                    {
+                      /* We didn't reach the root yet, so step up. */
+                      path_or_url = svn_uri_dirname(path_or_url, scratch_pool);
+                      svn_error_clear(err);
+                      continue;
+                    }
+                  else
+                    return svn_error_trace(err);
+                }
+              else
+                return svn_error_trace(err);
+            }
+          else if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+            {
+              if (!svn_path_is_url(path_or_url))
+                {
+                  /* Unversioned paths in the commit target list are
+                   * possible during 'svn import'. Ignore them. */
+                   svn_error_clear(err);
+                   break;
                 }
               else
                 return svn_error_trace(err);
@@ -525,6 +545,9 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
           /* We've got properties for PATH_OR_URL. */
           break;
         }
+
+      if (props == NULL && inherited_props == NULL)
+        continue;
 
       /* Check if the node itself has an svn:log-template property. */
       propval = svn_hash_gets(props, path_or_url);
