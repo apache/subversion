@@ -2287,7 +2287,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * Allocate @a *log_message_templates in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
  *
- * @ since New in 1.9.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
@@ -2300,7 +2300,7 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
 /* Like svn_client_get_log_message_templates(), but accepts an array of
  * commit items instead of an array of paths or URLs.
  *
- * @ since New in 1.9.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_client_get_log_message_templates_for_commit_items(
