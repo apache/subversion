@@ -2183,7 +2183,7 @@ def automatic_conflict_resolution(sbox):
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
-  # Make a couple of local mods to files which ndll be committed
+  # Make a couple of local mods to files which will be committed
   mu_path = sbox.ospath('A/mu')
   lambda_path = sbox.ospath('A/B/lambda')
   rho_path = sbox.ospath('A/D/G/rho')
