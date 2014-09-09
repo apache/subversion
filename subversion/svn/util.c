@@ -322,6 +322,7 @@ truncate_buffer_at_prefix(apr_size_t *new_len,
   /* NOTREACHED */
 }
 
+
 #define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
 svn_error_t *

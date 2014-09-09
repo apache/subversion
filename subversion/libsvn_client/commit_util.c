@@ -249,6 +249,7 @@ add_committable(svn_client__committables_t *committables,
   if (moved_from_abspath)
     new_item->moved_from_abspath = apr_pstrdup(result_pool,
                                                moved_from_abspath);
+
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
 
@@ -1160,6 +1161,7 @@ handle_descendants(void *baton,
                                               const char *);
           const char *local_abspath = svn_dirent_join(item->path, relpath,
                                                       iterpool);
+
           /* ### Need a sub-iterpool? */
 
 
@@ -1236,6 +1238,7 @@ handle_descendants(void *baton,
             }
 
           /* Add a new commit item that describes the delete */
+
           SVN_ERR(add_committable(hdb->committables,
                                   svn_dirent_join(item->path, relpath,
                                                   iterpool),
