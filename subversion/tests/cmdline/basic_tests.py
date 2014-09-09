@@ -2003,7 +2003,6 @@ def delete_keep_local_twice(sbox):
     logger.warn('Directory was really deleted')
     raise svntest.Failure
 
-@Wimp("Fails with recent httpd", cond_func=svntest.main.is_ra_type_dav)
 def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
@@ -2011,16 +2010,21 @@ def special_paths_in_repos(sbox):
   test_file_source = os.path.join(sbox.repo_dir, 'format')
   repo_url       = sbox.repo_url
 
-  for test_url in [ sbox.repo_url + '/c:hi',
-                    sbox.repo_url + '/C:',
-                    sbox.repo_url + '/C&',
-                    sbox.repo_url + '/C<',
-                    sbox.repo_url + '/C# hi',
-                    sbox.repo_url + '/C\\ri',
-                    sbox.repo_url + '/C?',
-                    sbox.repo_url + '/C+',
-                    sbox.repo_url + '/C%']:
+  test_urls = [ sbox.repo_url + '/c:hi',
+                sbox.repo_url + '/C:',
+                sbox.repo_url + '/C&',
+                sbox.repo_url + '/C<',
+                sbox.repo_url + '/C# hi',
+                sbox.repo_url + '/C?',
+                sbox.repo_url + '/C+',
+                sbox.repo_url + '/C%']
 
+  # On Windows Apache HTTPD breaks '\' for us :(
+  if not (svntest.main.is_os_windows() and
+          svntest.main.is_ra_type_dav()):
+    test_urls += [ sbox.repo_url + '/C\\ri' ]
+
+  for test_url in test_urls:
     test_file_url = test_url + '/' + test_url[test_url.rindex('/')+1:]
 
     # do some manipulations on a folder which problematic names
@@ -2179,7 +2183,7 @@ def automatic_conflict_resolution(sbox):
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
-  # Make a couple of local mods to files which will be committed
+  # Make a couple of local mods to files which ndll be committed
   mu_path = sbox.ospath('A/mu')
   lambda_path = sbox.ospath('A/B/lambda')
   rho_path = sbox.ospath('A/D/G/rho')
