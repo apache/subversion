@@ -290,8 +290,7 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
 
 /* CTX is of type "svn_client_ctx_t *". */
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
-        ((ctx)->log_msg_func4 || (ctx)->log_msg_func3 || (ctx)->log_msg_func2 \
-         || (ctx)->log_msg_func)
+        ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
 /* Open an RA session, returning it in *RA_SESSION or a corrected URL
    in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which

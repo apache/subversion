@@ -616,8 +616,8 @@ svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
    on Unix and C:\Windows\Temp on Win32 or something), and use it.
    But APR doesn't yet have that capability.
 
-   CONFIG is a client configuration hash of svn_config_t * items keyed
-   on config categories, and may be NULL.
+   CTX->CONFIG is a client configuration hash of svn_config_t * items
+   keyed on config categories, and may be NULL.
 
    NOTE: While the baton itself will be allocated from POOL, the items
    add to it are added by reference, not duped into POOL!*/
@@ -625,15 +625,14 @@ svn_error_t *
 svn_cl__make_log_msg_baton(void **baton,
                            svn_cl__opt_state_t *opt_state,
                            const char *base_dir,
-                           apr_hash_t *config,
+                           svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
 
-/* A function of type svn_client_get_commit_log4_t. */
+/* A function of type svn_client_get_commit_log3_t. */
 svn_error_t *
 svn_cl__get_log_message(const char **log_msg,
                         const char **tmp_file,
                         const apr_array_header_t *commit_items,
-                        apr_hash_t *log_message_templates,
                         void *baton,
                         apr_pool_t *pool);
 

@@ -298,9 +298,9 @@ svn_cl__propedit(apr_getopt_t *os,
               svn_cl__check_boolean_prop_val(pname_utf8, edited_propval->data,
                                              subpool);
 
-              if (ctx->log_msg_func4)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4),
-                                                   opt_state, NULL, ctx->config,
+              if (ctx->log_msg_func3)
+                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
+                                                   opt_state, NULL, ctx,
                                                    subpool));
               if (svn_path_is_url(target))
                 {
@@ -327,8 +327,8 @@ svn_cl__propedit(apr_getopt_t *os,
                                                  ctx, subpool);
                 }
 
-              if (ctx->log_msg_func4)
-                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton4,
+              if (ctx->log_msg_func3)
+                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));
               else if (err)
                 return svn_error_trace(err);

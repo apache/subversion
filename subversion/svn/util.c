@@ -174,7 +174,7 @@ svn_cl__merge_file_externally(const char *base_path,
 }
 
 
-/* A svn_client_ctx_t's log_msg_baton4, for use with
+/* A svn_client_ctx_t's log_msg_baton3, for use with
    svn_cl__make_log_msg_baton(). */
 struct log_msg_baton
 {
@@ -184,7 +184,7 @@ struct log_msg_baton
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
   svn_boolean_t non_interactive; /* if true, don't pop up an editor */
-  apr_hash_t *config; /* client configuration hash */
+  svn_client_ctx_t *ctx; /* client context */
   svn_boolean_t keep_locks; /* Keep repository locks? */
   apr_pool_t *pool; /* a pool. */
 };
@@ -194,7 +194,7 @@ svn_error_t *
 svn_cl__make_log_msg_baton(void **baton,
                            svn_cl__opt_state_t *opt_state,
                            const char *base_dir /* UTF-8! */,
-                           apr_hash_t *config,
+                           svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   struct log_msg_baton *lmb = apr_palloc(pool, sizeof(*lmb));
@@ -222,9 +222,10 @@ svn_cl__make_log_msg_baton(void **baton,
     {
       lmb->message_encoding = opt_state->encoding;
     }
-  else if (config)
+  else if (ctx->config)
     {
-      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
+      svn_config_t *cfg = svn_hash_gets(ctx->config,
+                                        SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &(lmb->message_encoding),
                      SVN_CONFIG_SECTION_MISCELLANY,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
@@ -233,7 +234,7 @@ svn_cl__make_log_msg_baton(void **baton,
 
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
-  lmb->config = config;
+  lmb->ctx = ctx;
   lmb->keep_locks = opt_state->no_unlock;
   lmb->non_interactive = opt_state->non_interactive;
   lmb->pool = pool;
@@ -327,15 +328,17 @@ svn_error_t *
 svn_cl__get_log_message(const char **log_msg,
                         const char **tmp_file,
                         const apr_array_header_t *commit_items,
-                        apr_hash_t *log_message_templates,
                         void *baton,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *default_msg = NULL;
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
+  apr_hash_t *log_message_templates;
 
   /* Set default message.  */
+  SVN_ERR(svn_client_get_log_message_templates_for_commit_items(
+            &log_message_templates, commit_items, lmb->ctx, pool, pool));
   if (log_message_templates)
     {
       svn_stringbuf_t *template_text;
@@ -466,7 +469,7 @@ svn_cl__get_log_message(const char **log_msg,
           err = svn_cmdline__edit_string_externally(&msg_string, &lmb->tmpfile_left,
                                                     lmb->editor_cmd, lmb->base_dir,
                                                     msg_string, "svn-commit",
-                                                    lmb->config, TRUE,
+                                                    lmb->ctx->config, TRUE,
                                                     lmb->message_encoding,
                                                     pool);
         }

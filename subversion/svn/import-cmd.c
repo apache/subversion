@@ -109,11 +109,11 @@ svn_cl__import(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
-  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton4), opt_state,
-                                     NULL, ctx->config, pool));
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
+                                     NULL, ctx, pool));
 
   SVN_ERR(svn_cl__cleanup_log_msg
-          (ctx->log_msg_baton4,
+          (ctx->log_msg_baton3,
            svn_client_import5(path,
                               url,
                               opt_state->depth,

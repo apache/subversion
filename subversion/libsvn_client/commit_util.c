@@ -451,7 +451,6 @@ harvest_committables(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Obtain log message templates for svn_client_get_commit_log4_t. */
 svn_error_t *
 svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
                                      const apr_array_header_t *paths_or_urls,
@@ -1161,7 +1160,6 @@ handle_descendants(void *baton,
                                               const char *);
           const char *local_abspath = svn_dirent_join(item->path, relpath,
                                                       iterpool);
-
           /* ### Need a sub-iterpool? */
 
 
@@ -1238,7 +1236,6 @@ handle_descendants(void *baton,
             }
 
           /* Add a new commit item that describes the delete */
-
           SVN_ERR(add_committable(hdb->committables,
                                   svn_dirent_join(item->path, relpath,
                                                   iterpool),
@@ -2130,21 +2127,9 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  if (ctx->log_msg_func4)
+  if (ctx->log_msg_func3)
     {
-      apr_hash_t *log_message_templates;
-
-      SVN_ERR(svn_client_get_log_message_templates_for_commit_items(
-                &log_message_templates, commit_items, ctx, pool, pool));
-      return svn_error_trace((*ctx->log_msg_func4)(log_msg, tmp_file,
-                                                   commit_items,
-                                                   log_message_templates,
-                                                   ctx->log_msg_baton4,
-                                                   pool));
-    }
-  else if (ctx->log_msg_func3)
-    {
-      /* The client provided a callback function for the 1.8 API.
+      /* The client provided a callback function for the current API.
          Forward the call to it directly. */
       return (*ctx->log_msg_func3)(log_msg, tmp_file, commit_items,
                                    ctx->log_msg_baton3, pool);
