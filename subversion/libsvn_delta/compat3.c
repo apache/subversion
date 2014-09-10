@@ -88,7 +88,7 @@ struct svn_editor3__shim_connector_t
    * Otherwise, default calls will be used.
    *
    * (Possibly more useful for update editors than for commit editors?) */
-  svn_delta__target_revision_func_t target_revision_func;
+  svn_editor3__set_target_revision_func_t target_revision_func;
 
   /* If not null, a callback that the Ev3 driver may call to
    * provide the "base revision" of the root directory, even if it is not
@@ -1594,6 +1594,41 @@ svn_delta__delta_from_ev3_for_commit(
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_delta__delta_from_ev3_for_update(
+                        const svn_delta_editor_t **deditor,
+                        void **dedit_baton,
+                        svn_update_editor3_t *update_editor,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_editor3__shim_connector_t *shim_connector
+    = apr_pcalloc(result_pool, sizeof(*shim_connector));
+
+  shim_connector->target_revision_func = update_editor->set_target_revision_func;
+  shim_connector->baton = update_editor->set_target_revision_baton;
+#ifdef SHIM_WITH_ABS_PATHS
+  shim_connector->ev1_absolute_paths /*...*/;
+#endif
+
+  SVN_ERR(svn_delta__delta_from_ev3_for_commit(
+                        deditor, dedit_baton,
+                        update_editor->editor,
+                        repos_root_url, base_repos_relpath,
+                        fetch_func, fetch_baton,
+                        shim_connector,
+                        result_pool, scratch_pool));
+  SVN_ERR(svn_delta__get_debug_editor(deditor, dedit_baton,
+                                      *deditor, *dedit_baton,
+                                      "[UP>1] ", result_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*
  * ===================================================================
@@ -2533,3 +2568,49 @@ svn_delta__ev3_from_delta_for_commit(
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_delta__ev3_from_delta_for_update(
+                        svn_update_editor3_t **update_editor_p,
+                        const svn_delta_editor_t *deditor,
+                        void *dedit_baton,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_update_editor3_t *update_editor
+    = apr_pcalloc(result_pool, sizeof(*update_editor));
+  svn_editor3__shim_connector_t *shim_connector;
+
+  SVN_DBG(("svn_delta__ev3_from_delta_for_update(base='%s')...",
+           base_repos_relpath));
+
+  SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
+                                      deditor, dedit_baton,
+                                      "[1>UP] ", result_pool));
+  SVN_ERR(svn_delta__ev3_from_delta_for_commit(
+                        &update_editor->editor,
+                        &shim_connector,
+                        deditor, dedit_baton,
+                        repos_root_url, base_repos_relpath,
+                        fetch_func, fetch_baton,
+                        cancel_func, cancel_baton,
+                        result_pool, scratch_pool));
+
+  update_editor->set_target_revision_func = shim_connector->target_revision_func;
+  update_editor->set_target_revision_baton = shim_connector->baton;
+  /* shim_connector->start_edit_func = open_root_ev3; */
+#ifdef SHIM_WITH_ABS_PATHS
+  update_editor->ev1_absolute_paths /*...*/;
+#endif
+#ifdef SHIM_WITH_UNLOCK
+  update_editor->unlock_func = do_unlock;
+#endif
+
+  *update_editor_p = update_editor;
+  return SVN_NO_ERROR;
+}

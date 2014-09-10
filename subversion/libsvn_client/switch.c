@@ -39,6 +39,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 
 
 /*** Code. ***/
@@ -109,8 +110,12 @@ switch_internal(svn_revnum_t *result_rev,
   apr_hash_t *wcroot_iprops;
   apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
+#if 0
+  svn_update_editor3_t *switch_editor;
+#else
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
+#endif
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
@@ -306,6 +311,42 @@ switch_internal(svn_revnum_t *result_rev,
   dfb.anchor_url = anchor_url;
   dfb.target_revision = switch_loc->rev;
 
+#if 0
+  /* Fetch the update editor.  If REVISION is invalid, that's okay;
+     the RA driver will call editor->set_target_revision later on. */
+  SVN_ERR(svn_wc__get_switch_editor_ev3(&switch_editor, &revnum,
+                                        ctx->wc_ctx, anchor_abspath, target,
+                                        switch_loc->url,
+                                        wcroot_iprops, use_commit_times,
+                                        depth, depth_is_sticky,
+                                        allow_unver_obstructions,
+                                        server_supports_depth,
+                                        diff3_cmd, preserved_exts,
+                                        svn_client__dirent_fetcher, &dfb,
+                                        conflicted_paths ? record_conflict : NULL,
+                                        conflicted_paths,
+                                        NULL, NULL,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        pool, pool));
+  SVN_ERR(svn_editor3__get_debug_editor(&switch_editor->editor,
+                                        switch_editor->editor,
+                                        pool));
+
+  /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
+     invalid revnum, that means RA will use the latest revision.  */
+  SVN_ERR(svn_ra_do_switch4(ra_session, &reporter, &report_baton,
+                            switch_loc->rev,
+                            target,
+                            (!server_supports_depth || depth_is_sticky
+                             ? depth
+                             : svn_depth_unknown),
+                            switch_loc->url,
+                            FALSE /* send_copyfrom_args */,
+                            ignore_ancestry,
+                            switch_editor,
+                            pool, pool));
+#else
   SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_loc->url, wcroot_iprops,
@@ -332,6 +373,7 @@ switch_internal(svn_revnum_t *result_rev,
                             ignore_ancestry,
                             switch_editor, switch_edit_baton,
                             pool, pool));
+#endif
 
   /* Past this point, we assume the WC is going to be modified so we will
    * need to sleep for timestamps. */

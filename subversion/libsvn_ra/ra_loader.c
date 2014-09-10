@@ -951,6 +951,30 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra_do_update4(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_update_to,
+                  const char *update_target,
+                  svn_depth_t depth,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  svn_update_editor3_t *update_editor,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_path_is_empty(update_target)
+                 || svn_path_is_single_path_component(update_target));
+  return session->vtable->do_update3(session,
+                                     reporter, report_baton,
+                                     revision_to_update_to, update_target,
+                                     depth, send_copyfrom_args,
+                                     ignore_ancestry,
+                                     update_editor,
+                                     result_pool, scratch_pool);
+}
+
+svn_error_t *
 svn_ra_do_update3(svn_ra_session_t *session,
                   const svn_ra_reporter3_t **reporter,
                   void **report_baton,
@@ -973,6 +997,33 @@ svn_ra_do_update3(svn_ra_session_t *session,
                                     ignore_ancestry,
                                     update_editor, update_baton,
                                     result_pool, scratch_pool);
+}
+
+svn_error_t *
+svn_ra_do_switch4(svn_ra_session_t *session,
+                  const svn_ra_reporter3_t **reporter,
+                  void **report_baton,
+                  svn_revnum_t revision_to_switch_to,
+                  const char *switch_target,
+                  svn_depth_t depth,
+                  const char *switch_url,
+                  svn_boolean_t send_copyfrom_args,
+                  svn_boolean_t ignore_ancestry,
+                  svn_update_editor3_t *switch_editor,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
+                 || svn_path_is_single_path_component(switch_target));
+  SVN_ERR_ASSERT(svn_path_is_url(switch_url));
+  return session->vtable->do_switch3(session,
+                                     reporter, report_baton,
+                                     revision_to_switch_to, switch_target,
+                                     depth, switch_url,
+                                     send_copyfrom_args,
+                                     ignore_ancestry,
+                                     switch_editor,
+                                     result_pool, scratch_pool);
 }
 
 svn_error_t *

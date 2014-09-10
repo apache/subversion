@@ -40,6 +40,7 @@
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "private/svn_diff_tree.h"
+#include "private/svn_editor3.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1439,6 +1440,34 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * @since New in 1.8.
  */
 svn_error_t *
+svn_wc__get_update_editor_ev3(svn_update_editor3_t **update_editor,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+svn_error_t *
 svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
@@ -1481,6 +1510,33 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
  *
  * @since New in 1.8.
  */
+svn_error_t *
+svn_wc__get_switch_editor_ev3(svn_update_editor3_t **update_editor,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t server_performs_filtering,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 svn_error_t *
 svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,

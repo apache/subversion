@@ -877,6 +877,150 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
 
 
 static svn_error_t *
+svn_ra_local__do_check_path(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            svn_node_kind_t *kind,
+                            apr_pool_t *pool);
+
+static svn_error_t *
+svn_ra_local__get_file(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t revision,
+                       svn_stream_t *stream,
+                       svn_revnum_t *fetched_rev,
+                       apr_hash_t **props,
+                       apr_pool_t *pool);
+
+static svn_error_t *
+svn_ra_local__get_dir(svn_ra_session_t *session,
+                      apr_hash_t **dirents,
+                      svn_revnum_t *fetched_rev,
+                      apr_hash_t **props,
+                      const char *path,
+                      svn_revnum_t revision,
+                      apr_uint32_t dirent_fields,
+                      apr_pool_t *pool);
+
+/* A baton for fetch_func(). */
+typedef struct fetch_baton_t
+{
+  svn_ra_session_t *session;
+} fetch_baton_t;
+
+/* Fetch kind/props/text for REPOS_RELPATH@REVISION.
+ *
+ * In contrast to an update editor, here we can assume that REPOS_RELPATH
+ * will be within the session root path, as there should never be 'copy'
+ * instructions in an update.  ### Is that really right?
+ */
+static svn_error_t *
+fetch_func(svn_node_kind_t *kind_p,
+           apr_hash_t **props_p,
+           const char **filename_p,
+           void *baton,
+           const char *repos_relpath,
+           svn_revnum_t revision,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
+{
+  fetch_baton_t *fb = baton;
+  svn_ra_local__session_baton_t *sess = fb->session->priv;
+  const char *session_root_path = sess->fs_path->data + 1;
+  const char *session_relpath = svn_relpath_skip_ancestor(session_root_path,
+                                                          repos_relpath);
+  svn_node_kind_t kind;
+
+  SVN_ERR_ASSERT(session_relpath);
+  SVN_ERR(svn_ra_local__do_check_path(fb->session, session_relpath, revision, &kind,
+                                      scratch_pool));
+  if (kind_p)
+    {
+      *kind_p = kind;
+    }
+
+  if (props_p || filename_p)
+    {
+      if (kind == svn_node_file)
+        {
+          svn_stream_t *fstream = NULL;
+          svn_error_t *err;
+
+          if (filename_p)
+            {
+              SVN_ERR(svn_stream_open_unique(&fstream, filename_p, NULL,
+                                             svn_io_file_del_on_pool_cleanup,
+                                             result_pool, scratch_pool));
+            }
+          err = svn_ra_local__get_file(fb->session, session_relpath, revision,
+                                       fstream, NULL /*fetched_rev*/,
+                                       props_p, result_pool);
+          /* ### Do we want to catch SVN_ERR_FS_NOT_FOUND and set props and
+                 text to null in that case instead of erroring? For now,
+                 we assume the caller will only request a node that exists. */
+          if (fstream)
+            {
+              err = svn_error_compose_create(err,
+                                             svn_stream_close(fstream));
+            }
+          SVN_ERR(err);
+        }
+      else if (kind == svn_node_dir && props_p)
+        {
+          SVN_ERR(svn_ra_local__get_dir(fb->session,
+                                        NULL /*dirents*/, NULL /*fetched_rev*/,
+                                        props_p, session_relpath, revision,
+                                        0 /*dirent_fields*/, result_pool));
+        }
+    }
+  if (props_p)
+    SVN_DBG(("ra-local-fetch-func(%s@%ld): fetched %d props",
+             session_relpath, revision, apr_hash_count(*props_p)));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__do_update_ev3(svn_ra_session_t *session,
+                        const svn_ra_reporter3_t **reporter,
+                        void **report_baton,
+                        svn_revnum_t update_revision,
+                        const char *update_target,
+                        svn_depth_t depth,
+                        svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
+                        svn_update_editor3_t *update_editor3,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  fetch_baton_t *fb = apr_palloc(result_pool, sizeof(*fb));
+  const svn_delta_editor_t *update_editor;
+  void *update_baton;
+
+  fb->session = session;
+  SVN_ERR(svn_delta__delta_from_ev3_for_update(
+                        &update_editor, &update_baton,
+                        update_editor3,
+                        sess->repos_url, sess->fs_path->data + 1,
+                        fetch_func, fb,
+                        result_pool, scratch_pool));
+  SVN_ERR(make_reporter(session,
+                       reporter,
+                       report_baton,
+                       update_revision,
+                       update_target,
+                       NULL,
+                       TRUE,
+                       depth,
+                       send_copyfrom_args,
+                       ignore_ancestry,
+                       update_editor,
+                       update_baton,
+                       result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_local__do_update(svn_ra_session_t *session,
                         const svn_ra_reporter3_t **reporter,
                         void **report_baton,
@@ -905,6 +1049,48 @@ svn_ra_local__do_update(svn_ra_session_t *session,
                        result_pool, scratch_pool);
 }
 
+
+static svn_error_t *
+svn_ra_local__do_switch_ev3(svn_ra_session_t *session,
+                        const svn_ra_reporter3_t **reporter,
+                        void **report_baton,
+                        svn_revnum_t update_revision,
+                        const char *update_target,
+                        svn_depth_t depth,
+                        const char *switch_url,
+                        svn_boolean_t send_copyfrom_args,
+                        svn_boolean_t ignore_ancestry,
+                        svn_update_editor3_t *switch_editor,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  fetch_baton_t *fb = apr_palloc(result_pool, sizeof(*fb));
+  const svn_delta_editor_t *update_editor;
+  void *update_baton;
+
+  fb->session = session;
+  SVN_ERR(svn_delta__delta_from_ev3_for_update(
+                        &update_editor, &update_baton,
+                        switch_editor,
+                        sess->repos_url, sess->fs_path->data + 1,
+                        fetch_func, fb,
+                        result_pool, scratch_pool));
+  SVN_ERR(make_reporter(session,
+                       reporter,
+                       report_baton,
+                       update_revision,
+                       update_target,
+                       switch_url,
+                       TRUE /* text_deltas */,
+                       depth,
+                       send_copyfrom_args,
+                       ignore_ancestry,
+                       update_editor,
+                       update_baton,
+                       result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 svn_ra_local__do_switch(svn_ra_session_t *session,
@@ -1757,7 +1943,9 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
   svn_ra_local__get_mergeinfo,
+  svn_ra_local__do_update_ev3,
   svn_ra_local__do_update,
+  svn_ra_local__do_switch_ev3,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,
   svn_ra_local__do_diff,
