@@ -4921,6 +4921,398 @@ close_edit(void *edit_baton,
 
 /* Helper for the three public editor-supplying functions. */
 static svn_error_t *
+make_editor3(svn_revnum_t *target_revision,
+            svn_wc__db_t *db,
+            const char *anchor_abspath,
+            const char *target_basename,
+            apr_hash_t *wcroot_iprops,
+            svn_boolean_t use_commit_times,
+            const char *switch_url,
+            svn_depth_t depth,
+            svn_boolean_t depth_is_sticky,
+            svn_boolean_t allow_unver_obstructions,
+            svn_boolean_t adds_as_modification,
+            svn_boolean_t server_performs_filtering,
+            svn_boolean_t clean_checkout,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_dirents_func_t fetch_dirents_func,
+            void *fetch_dirents_baton,
+            svn_wc_conflict_resolver_func2_t conflict_func,
+            void *conflict_baton,
+            svn_wc_external_update_t external_func,
+            void *external_baton,
+            const char *diff3_cmd,
+            const apr_array_header_t *preserved_exts,
+            svn_update_editor3_t **editor,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb;
+  void *inner_baton;
+  apr_pool_t *edit_pool = svn_pool_create(result_pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
+  const svn_delta_editor_t *inner_editor;
+  const char *repos_root, *repos_uuid;
+
+  /* An unknown depth can't be sticky. */
+  if (depth == svn_depth_unknown)
+    depth_is_sticky = FALSE;
+
+  /* Get the anchor's repository root and uuid. The anchor must already exist
+     in BASE. */
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, &repos_root,
+                                   &repos_uuid, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, anchor_abspath,
+                                   result_pool, scratch_pool));
+
+  /* With WC-NG we need a valid repository root */
+  SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);
+
+  /* Disallow a switch operation to change the repository root of the target,
+     if that is known. */
+  if (switch_url && !svn_uri__is_ancestor(repos_root, switch_url))
+    return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
+                             _("'%s'\nis not the same repository as\n'%s'"),
+                             switch_url, repos_root);
+
+  /* Construct an edit baton. */
+  eb = apr_pcalloc(edit_pool, sizeof(*eb));
+  eb->pool                     = edit_pool;
+  eb->use_commit_times         = use_commit_times;
+  eb->target_revision          = target_revision;
+  eb->repos_root               = repos_root;
+  eb->repos_uuid               = repos_uuid;
+  eb->db                       = db;
+  eb->target_basename          = target_basename;
+  eb->anchor_abspath           = anchor_abspath;
+  eb->wcroot_iprops            = wcroot_iprops;
+
+  SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath, db, anchor_abspath,
+                                edit_pool, scratch_pool));
+
+  if (switch_url)
+    eb->switch_repos_relpath =
+      svn_uri_skip_ancestor(repos_root, switch_url, scratch_pool);
+  else
+    eb->switch_repos_relpath = NULL;
+
+  if (svn_path_is_empty(target_basename))
+    eb->target_abspath = eb->anchor_abspath;
+  else
+    eb->target_abspath = svn_dirent_join(eb->anchor_abspath, target_basename,
+                                         edit_pool);
+
+  eb->requested_depth          = depth;
+  eb->depth_is_sticky          = depth_is_sticky;
+  eb->notify_func              = notify_func;
+  eb->notify_baton             = notify_baton;
+  eb->external_func            = external_func;
+  eb->external_baton           = external_baton;
+  eb->diff3_cmd                = diff3_cmd;
+  eb->cancel_func              = cancel_func;
+  eb->cancel_baton             = cancel_baton;
+  eb->conflict_func            = conflict_func;
+  eb->conflict_baton           = conflict_baton;
+  eb->allow_unver_obstructions = allow_unver_obstructions;
+  eb->adds_as_modification     = adds_as_modification;
+  eb->clean_checkout           = clean_checkout;
+  eb->skipped_trees            = apr_hash_make(edit_pool);
+  eb->dir_dirents              = apr_hash_make(edit_pool);
+  eb->ext_patterns             = preserved_exts;
+
+  apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
+                            apr_pool_cleanup_null);
+
+  /* Construct an editor. */
+  tree_editor->set_target_revision = set_target_revision;
+  tree_editor->open_root = open_root;
+  tree_editor->delete_entry = delete_entry;
+  tree_editor->add_directory = add_directory;
+  tree_editor->open_directory = open_directory;
+  tree_editor->change_dir_prop = change_dir_prop;
+  tree_editor->close_directory = close_directory;
+  tree_editor->absent_directory = absent_directory;
+  tree_editor->add_file = add_file;
+  tree_editor->open_file = open_file;
+  tree_editor->apply_textdelta = apply_textdelta;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->close_file = close_file;
+  tree_editor->absent_file = absent_file;
+  tree_editor->close_edit = close_edit;
+
+  /* Fiddle with the type system. */
+  inner_editor = tree_editor;
+  inner_baton = eb;
+
+  if (!depth_is_sticky
+      && depth != svn_depth_unknown
+      && svn_depth_empty <= depth && depth < svn_depth_infinity
+      && fetch_dirents_func)
+    {
+      /* We are asked to perform an update at a depth less than the ambient
+         depth. In this case the update won't describe additions that would
+         have been reported if we updated at the ambient depth. */
+      svn_error_t *err;
+      svn_node_kind_t dir_kind;
+      svn_wc__db_status_t dir_status;
+      const char *dir_repos_relpath;
+      svn_depth_t dir_depth;
+
+      /* we have to do this on the target of the update, not the anchor */
+      err = svn_wc__db_base_get_info(&dir_status, &dir_kind, NULL,
+                                     &dir_repos_relpath, NULL, NULL, NULL,
+                                     NULL, NULL, &dir_depth, NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     db, eb->target_abspath,
+                                     scratch_pool, scratch_pool);
+
+      if (!err
+          && dir_kind == svn_node_dir
+          && dir_status == svn_wc__db_status_normal)
+        {
+          if (dir_depth > depth)
+            {
+              apr_hash_t *dirents;
+
+              /* If we switch, we should look at the new relpath */
+              if (eb->switch_repos_relpath)
+                dir_repos_relpath = eb->switch_repos_relpath;
+
+              SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,
+                                         repos_root, dir_repos_relpath,
+                                         edit_pool, scratch_pool));
+
+              if (dirents != NULL && apr_hash_count(dirents))
+                svn_hash_sets(eb->dir_dirents,
+                              apr_pstrdup(edit_pool, dir_repos_relpath),
+                              dirents);
+            }
+
+          if (depth == svn_depth_immediates)
+            {
+              /* Worst case scenario of issue #3569 fix: We have to do the
+                 same for all existing subdirs, but then we check for
+                 svn_depth_empty. */
+              const apr_array_header_t *children;
+              apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+              int i;
+              SVN_ERR(svn_wc__db_base_get_children(&children, db,
+                                                   eb->target_abspath,
+                                                   scratch_pool,
+                                                   iterpool));
+
+              for (i = 0; i < children->nelts; i++)
+                {
+                  const char *child_abspath;
+                  const char *child_name;
+
+                  svn_pool_clear(iterpool);
+
+                  child_name = APR_ARRAY_IDX(children, i, const char *);
+
+                  child_abspath = svn_dirent_join(eb->target_abspath,
+                                                  child_name, iterpool);
+
+                  SVN_ERR(svn_wc__db_base_get_info(&dir_status, &dir_kind,
+                                                   NULL, &dir_repos_relpath,
+                                                   NULL, NULL, NULL, NULL,
+                                                   NULL, &dir_depth, NULL,
+                                                   NULL, NULL, NULL, NULL,
+                                                   NULL,
+                                                   db, child_abspath,
+                                                   iterpool, iterpool));
+
+                  if (dir_kind == svn_node_dir
+                      && dir_status == svn_wc__db_status_normal
+                      && dir_depth > svn_depth_empty)
+                    {
+                      apr_hash_t *dirents;
+
+                      /* If we switch, we should look at the new relpath */
+                      if (eb->switch_repos_relpath)
+                        dir_repos_relpath = svn_relpath_join(
+                                                eb->switch_repos_relpath,
+                                                child_name, iterpool);
+
+                      SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,
+                                                 repos_root, dir_repos_relpath,
+                                                 edit_pool, iterpool));
+
+                      if (dirents != NULL && apr_hash_count(dirents))
+                        svn_hash_sets(eb->dir_dirents,
+                                      apr_pstrdup(edit_pool,
+                                                  dir_repos_relpath),
+                                      dirents);
+                    }
+                }
+            }
+        }
+      else if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+    }
+
+  /* We need to limit the scope of our operation to the ambient depths
+     present in the working copy already, but only if the requested
+     depth is not sticky. If a depth was explicitly requested,
+     libsvn_delta/depth_filter_editor.c will ensure that we never see
+     editor calls that extend beyond the scope of the requested depth.
+     But even what we do so might extend beyond the scope of our
+     ambient depth.  So we use another filtering editor to avoid
+     modifying the ambient working copy depth when not asked to do so.
+     (This can also be skipped if the server understands depth.) */
+  if (!server_performs_filtering
+      && !depth_is_sticky)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                db,
+                                                anchor_abspath,
+                                                target_basename,
+                                                inner_editor,
+                                                inner_baton,
+                                                result_pool));
+
+  /* Convert Ev1 to Ev3 */
+  {
+    const char *anchor_repos_relpath;
+    struct svn_wc__shim_fetch_baton_t *sfb;
+
+    SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                     &anchor_repos_relpath, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     db, eb->anchor_abspath,
+                                     scratch_pool, scratch_pool));
+    /* If we switch, we should look at the new relpath */
+/*    if (eb->switch_repos_relpath)
+      anchor_repos_relpath = eb->switch_repos_relpath;*/
+      /* ### Should that be an 'anchor' directory instead, when switching to a file? */
+      /* ### Should that be the common ancestor of source and target repos-paths? */
+
+    sfb = apr_palloc(result_pool, sizeof(*sfb));
+    sfb->db = db;
+    sfb->base_abspath = eb->anchor_abspath;
+    sfb->base_rrpath = anchor_repos_relpath;
+    sfb->fetch_base = TRUE;
+    SVN_DBG(("wc make up/sw editor: base_rrpath='%s'; base_abspath=%s",
+             sfb->base_rrpath, sfb->base_abspath));
+
+    SVN_ERR(svn_delta__ev3_from_delta_for_update(
+                        editor,
+                        inner_editor, inner_baton,
+                        repos_root, anchor_repos_relpath,
+                        svn_wc__fetch_func, sfb,
+                        cancel_func, cancel_baton,
+                        result_pool, scratch_pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This returns an editor that should then be driven. Also requires the
+   target revision to be supplied *by the edit driver*, later than now but
+   before the edit is driven. This editor will then also store that target
+   revision into @a *target_revision.
+ */
+svn_error_t *
+svn_wc__get_update_editor_ev3(svn_update_editor3_t **update_editor,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          apr_hash_t *wcroot_iprops,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(make_editor3(target_revision, wc_ctx->db, anchor_abspath,
+                     target_basename, wcroot_iprops, use_commit_times,
+                     NULL, depth, depth_is_sticky, allow_unver_obstructions,
+                     adds_as_modification, server_performs_filtering,
+                     clean_checkout,
+                     notify_func, notify_baton,
+                     cancel_func, cancel_baton,
+                     fetch_dirents_func, fetch_dirents_baton,
+                     conflict_func, conflict_baton,
+                     external_func, external_baton,
+                     diff3_cmd, preserved_exts,
+                     update_editor,
+                     result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_switch_editor_ev3(svn_update_editor3_t **update_editor,
+                          svn_revnum_t *target_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *anchor_abspath,
+                          const char *target_basename,
+                          const char *switch_url,
+                          apr_hash_t *wcroot_iprops,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t server_performs_filtering,
+                          const char *diff3_cmd,
+                          const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_external_update_t external_func,
+                          void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(make_editor3(target_revision, wc_ctx->db, anchor_abspath,
+                     target_basename, wcroot_iprops, use_commit_times,
+                     switch_url,
+                     depth, depth_is_sticky, allow_unver_obstructions,
+                     FALSE /* adds_as_modification */,
+                     server_performs_filtering,
+                     FALSE /* clean_checkout */,
+                     notify_func, notify_baton,
+                     cancel_func, cancel_baton,
+                     fetch_dirents_func, fetch_dirents_baton,
+                     conflict_func, conflict_baton,
+                     external_func, external_baton,
+                     diff3_cmd, preserved_exts,
+                     update_editor,
+                     result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Helper for the three public editor-supplying functions. */
+static svn_error_t *
 make_editor(svn_revnum_t *target_revision,
             svn_wc__db_t *db,
             const char *anchor_abspath,
@@ -5280,6 +5672,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+#if 1
   SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
 
   return make_editor(target_revision, wc_ctx->db, anchor_abspath,
@@ -5297,6 +5690,57 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                      diff3_cmd, preserved_exts,
                      editor, edit_baton,
                      result_pool, scratch_pool);
+#else
+  svn_update_editor3_t *editor3;
+  const char *repos_root;
+  const char *anchor_repos_relpath;
+  struct svn_wc__shim_fetch_baton_t *sfb;
+
+  SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
+
+  SVN_ERR(make_editor3(target_revision, wc_ctx->db, anchor_abspath,
+                       target_basename, wcroot_iprops, use_commit_times,
+                       switch_url,
+                       depth, depth_is_sticky, allow_unver_obstructions,
+                       FALSE /* adds_as_modification */,
+                       server_performs_filtering,
+                       FALSE /* clean_checkout */,
+                       notify_func, notify_baton,
+                       cancel_func, cancel_baton,
+                       fetch_dirents_func, fetch_dirents_baton,
+                       conflict_func, conflict_baton,
+                       external_func, external_baton,
+                       diff3_cmd, preserved_exts,
+                       &editor3,
+                       result_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                   &anchor_repos_relpath, &repos_root, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   wc_ctx->db, anchor_abspath,
+                                   scratch_pool, scratch_pool));
+  /* If we switch, we should look at the new relpath */
+  if (switch_url)
+    anchor_repos_relpath = svn_uri_skip_ancestor(repos_root, switch_url,
+                                                 scratch_pool);
+    /* ### should that be an 'anchor' directory instead, when switching to a file? */
+
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = wc_ctx->db;
+  sfb->base_abspath = anchor_abspath;
+  sfb->base_rrpath = anchor_repos_relpath;
+  sfb->fetch_base = TRUE;
+
+  SVN_ERR(svn_delta__delta_from_ev3_for_update(
+                      editor, edit_baton,
+                      editor3,
+                      repos_root, anchor_repos_relpath,
+                      svn_wc__fetch_func, sfb,
+                      result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+#endif
 }
 
 

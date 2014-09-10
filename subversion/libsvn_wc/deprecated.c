@@ -3535,26 +3535,52 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(
-    svn_wc__get_update_editor(editor, edit_baton,
-                              target_revision,
-                              wc_ctx,
-                              anchor_abspath,
-                              target_basename, NULL,
-                              use_commit_times,
-                              depth, depth_is_sticky,
-                              allow_unver_obstructions,
-                              adds_as_modification,
-                              server_performs_filtering,
-                              clean_checkout,
-                              diff3_cmd,
-                              preserved_exts,
-                              fetch_dirents_func, fetch_dirents_baton,
-                              conflict_func, conflict_baton,
-                              external_func, external_baton,
-                              cancel_func, cancel_baton,
-                              notify_func, notify_baton,
-                              result_pool, scratch_pool));
+  svn_update_editor3_t *editor3;
+  const char *repos_root_url;
+  const char *anchor_repos_relpath;
+  struct svn_wc__shim_fetch_baton_t *sfb;
+
+  SVN_ERR(svn_wc__get_update_editor_ev3(&editor3,
+                                    target_revision,
+                                    wc_ctx,
+                                    anchor_abspath,
+                                    target_basename, NULL,
+                                    use_commit_times,
+                                    depth, depth_is_sticky,
+                                    allow_unver_obstructions,
+                                    adds_as_modification,
+                                    server_performs_filtering,
+                                    clean_checkout,
+                                    diff3_cmd,
+                                    preserved_exts,
+                                    fetch_dirents_func, fetch_dirents_baton,
+                                    conflict_func, conflict_baton,
+                                    external_func, external_baton,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
+                                    result_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                   &anchor_repos_relpath, &repos_root_url, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, anchor_abspath,
+                                   scratch_pool, scratch_pool));
+
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = wc_ctx->db;
+  sfb->base_abspath = anchor_abspath;
+  sfb->base_rrpath = anchor_repos_relpath;
+  sfb->fetch_base = TRUE;
+
+  SVN_ERR(svn_delta__delta_from_ev3_for_update(
+                      editor, edit_baton,
+                      editor3,
+                      repos_root_url, anchor_repos_relpath,
+                      svn_wc__fetch_func, sfb,
+                      result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 

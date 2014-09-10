@@ -734,9 +734,26 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
 struct svn_wc__shim_fetch_baton_t
 {
   svn_wc__db_t *db;
+  /* WC local abspath of base of the edit */
   const char *base_abspath;
+  /* Repository-root-relative path of base of the edit */
+  const char *base_rrpath;
   svn_boolean_t fetch_base;
 };
+
+/* Using a BATON of struct svn_wc__shim_fetch_baton_t, return
+ * KIND/PROPS/FILENAME for REPOS_RELPATH. REVISION is unused.
+ *
+ * Implements svn_editor3__shim_fetch_func_t. */
+svn_error_t *
+svn_wc__fetch_func(svn_node_kind_t *kind,
+                   apr_hash_t **props,
+                   const char **filename,
+                   void *baton,
+                   const char *repos_relpath,
+                   svn_revnum_t revision,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 /* Using a BATON of struct shim_fetch_baton, return KIND for PATH. */
 svn_error_t *

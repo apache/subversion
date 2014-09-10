@@ -418,6 +418,83 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
 
 svn_error_t *
+svn_wc__fetch_func(svn_node_kind_t *kind,
+                   apr_hash_t **props,
+                   const char **filename,
+                   void *baton,
+                   const char *repos_relpath,
+                   svn_revnum_t revision,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  struct svn_wc__shim_fetch_baton_t *sfb = baton;
+  const char *path_rel_to_edit = svn_relpath_skip_ancestor(sfb->base_rrpath,
+                                                           repos_relpath);
+  const char *local_abspath = svn_dirent_join(sfb->base_abspath,
+                                              path_rel_to_edit, scratch_pool);
+  svn_error_t *err;
+
+  if (kind)
+    {
+      /* ### should get working kind or base kind depending on SFB->fetch_base */
+      SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath,
+                                   FALSE /* allow_missing */,
+                                   TRUE /* show_deleted */,
+                                   FALSE /* show_hidden */,
+                                   scratch_pool));
+    }
+
+  if (props)
+    {
+      if (sfb->fetch_base)
+        err = svn_wc__db_base_get_props(props, sfb->db, local_abspath, result_pool,
+                                        scratch_pool);
+      else
+        err = svn_wc__db_read_props(props, sfb->db, local_abspath,
+                                    result_pool, scratch_pool);
+
+      /* If the path doesn't exist, just return an empty set of props. */
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *props = apr_hash_make(result_pool);
+        }
+      else if (err)
+        return svn_error_trace(err);
+    }
+
+  if (filename)
+    {
+      const svn_checksum_t *checksum;
+
+      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, &checksum,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     sfb->db, local_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *filename = NULL;
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+
+      if (checksum == NULL)
+        {
+          *filename = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_wc__db_pristine_get_path(filename, sfb->db, local_abspath,
+                                           checksum, scratch_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__fetch_kind_func(svn_node_kind_t *kind,
                         void *baton,
                         const char *path,

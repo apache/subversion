@@ -1571,6 +1571,60 @@ svn_editor3__insert_shims(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* A callback for declaring the target revision of an update or switch.
+ */
+typedef svn_error_t *(*svn_editor3__set_target_revision_func_t)(
+  void *baton,
+  svn_revnum_t target_revision,
+  apr_pool_t *scratch_pool);
+
+/* An update (or switch) editor.
+ *
+ * This consists of a plain Ev3 editor and the additional methods or
+ * resources needed for use as an update or switch editor.
+ */
+typedef struct svn_update_editor3_t {
+  /* The basic editor. */
+  svn_editor3_t *editor;
+
+  /* A method to communicate the target revision of the update (or switch),
+   * to be called before driving the editor. It has its own baton, rather
+   * than using the editor's baton, so that the editor can be replaced (by
+   * a wrapper editor, typically) without having to wrap this callback. */
+  svn_editor3__set_target_revision_func_t set_target_revision_func;
+  void *set_target_revision_baton;
+} svn_update_editor3_t;
+
+/* Like svn_delta__ev3_from_delta_for_commit() but for an update editor.
+ */
+svn_error_t *
+svn_delta__ev3_from_delta_for_update(
+                        svn_update_editor3_t **editor_p,
+                        const svn_delta_editor_t *deditor,
+                        void *dedit_baton,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Like svn_delta__delta_from_ev3_for_commit() but for an update editor.
+ */
+svn_error_t *
+svn_delta__delta_from_ev3_for_update(
+                        const svn_delta_editor_t **deditor,
+                        void **dedit_baton,
+                        svn_update_editor3_t *update_editor,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
