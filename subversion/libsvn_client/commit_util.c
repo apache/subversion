@@ -483,9 +483,7 @@ svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
           svn_error_t *err;
 
           if (!svn_path_is_url(path_or_url))
-            SVN_ERR(svn_dirent_get_absolute(&path_or_url,
-                                            path_or_url,
-                                            iterpool));
+            SVN_ERR_ASSERT(svn_dirent_is_absolute(path_or_url));
           err = svn_client_propget5(&props, &inherited_props,
                                     SVN_PROP_INHERITABLE_LOG_TEMPLATE,
                                     path_or_url,
