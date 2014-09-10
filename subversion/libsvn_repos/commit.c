@@ -842,8 +842,8 @@ fetch_func(svn_node_kind_t *kind,
            apr_hash_t **props,
            const char **filename,
            void *baton,
-           const char *path,
-           svn_revnum_t base_revision,
+           const char *repos_relpath,
+           svn_revnum_t revision,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -851,19 +851,19 @@ fetch_func(svn_node_kind_t *kind,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = svn_fs_txn_base_revision(eb->txn);
+  if (!SVN_IS_VALID_REVNUM(revision))
+    revision = svn_fs_txn_base_revision(eb->txn);
 
-  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, revision, scratch_pool));
 
   if (kind)
     {
-      SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
+      SVN_ERR(svn_fs_check_path(kind, fs_root, repos_relpath, scratch_pool));
     }
 
   if (props)
         {
-      err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+      err = svn_fs_node_proplist(props, fs_root, repos_relpath, result_pool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);
@@ -880,7 +880,7 @@ fetch_func(svn_node_kind_t *kind,
       svn_stream_t *file_stream;
       const char *tmp_filename;
 
-      err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+      err = svn_fs_file_contents(&contents, fs_root, repos_relpath, scratch_pool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);

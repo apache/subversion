@@ -620,7 +620,7 @@ struct ev3_edit_baton
 #endif
 
   /* Repository root URL. */
-  const char *repos_root;
+  const char *repos_root_url;
   /* Base directory of the edit, relative to the repository root. */
   const char *base_relpath;
 
@@ -890,7 +890,7 @@ map_to_repos_relpath(struct ev3_edit_baton *eb,
 {
   if (svn_path_is_url(path_or_url))
     {
-      return svn_uri_skip_ancestor(eb->repos_root, path_or_url, result_pool);
+      return svn_uri_skip_ancestor(eb->repos_root_url, path_or_url, result_pool);
     }
   else
     {
@@ -1538,7 +1538,7 @@ svn_delta__delta_from_ev3_for_commit(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
                         svn_editor3_t *editor,
-                        const char *repos_root,
+                        const char *repos_root_url,
                         const char *base_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
@@ -1582,7 +1582,7 @@ svn_delta__delta_from_ev3_for_commit(
       *eb->shim_connector->ev1_absolute_paths = FALSE;
 #endif
     }
-  eb->repos_root = apr_pstrdup(result_pool, repos_root);
+  eb->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
   eb->base_relpath = apr_pstrdup(result_pool, base_relpath);
 
   eb->fetch_func = fetch_func;
