@@ -2928,6 +2928,20 @@ def freeze_same_uuid(sbox):
                                           sys.executable, '-c', 'True')
 
 
+@Skip(svntest.main.is_fs_type_fsx)
+def upgrade(sbox):
+  "upgrade --compatible-version=1.3"
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "upgrade",
+                                          sbox.repo_dir)
+  # Does the repository work after upgrade?
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                     'Committed revision 2.\n'], [], 'mkdir',
+                                     '-m', svntest.main.make_log_msg(),
+                                     sbox.repo_url + '/dir')
+
+
 ########################################################################
 # Run the tests
 
@@ -2980,6 +2994,7 @@ test_list = [ None,
               fsfs_hotcopy_progress_with_revprop_changes,
               fsfs_hotcopy_progress_old,
               freeze_same_uuid,
+              upgrade,
              ]
 
 if __name__ == '__main__':
