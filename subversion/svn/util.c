@@ -340,7 +340,7 @@ svn_cl__get_log_message(const char **log_msg,
   /* Set default message.  */
   SVN_ERR(svn_client_get_log_message_templates_for_commit_items(
             &log_message_templates, commit_items, lmb->ctx, pool, pool));
-  if (log_message_templates)
+  if (apr_hash_count(log_message_templates) > 0)
     {
       svn_stringbuf_t *template_text;
       apr_hash_index_t *hi;

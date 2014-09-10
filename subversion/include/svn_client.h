@@ -2276,29 +2276,55 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/* Given a list of absolute paths or URLs, set @a *log_message_templates to
- * a hash table containing one or more log message templates obtained from
- * svn:log-message properties applicable to these paths or URLs.
- * Set it to @c NULL if no log message template found.
- * The hash table is keyed by paths relative to the repository root.
- * Each path in this list of keys contributes a log message template.
- * The value for each key in the table is a 'const char *' log template.
+/* Given an absolute path or a URL, set @a *log_message_template to
+ * a log message template applicable to the path or URL.
  * 
- * Allocate @a *log_message_templates in @a result_pool.
- * Use @a scratch_pool for temporary allocations.
+ * Set @a *defining_repos_relpath to the path (relative to the repository
+ * root) on which the svn:log-message property which defines the log
+ * message template is set.
+ *
+ * If no log message templates is found, both @a *log_message_template
+ * and @a *defining_repos_relpath will be set to @c NULL.
+ *
+ * If @a revision->kind is #svn_opt_revision_unspecified, then: get
+ * properties from the working copy if @a path_or_url is a working copy
+ * path, or from the repository head if @a path_or_url is a URL. Else get
+ * the log message templates as of @a revision. The actual node revision
+ * selected is determined by the path as it exists in @a peg_revision.
+ * If @a peg_revision->kind is #svn_opt_revision_unspecified, then
+ * it defaults to #svn_opt_revision_head for URLs or
+ * #svn_opt_revision_working for WC paths. Use the authentication
+ * baton in @a ctx for authentication if contacting the repository.
+ * If @a actual_revnum is not @c NULL, the actual revision number used
+ * for the fetch is stored in @a *actual_revnum.
+ * 
+ * Allocate @a *log_message_template and @a *defining_repos_relpath
+ * in @a result_pool. Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_get_log_message_templates(apr_hash_t **log_message_templates,
-                                     const apr_array_header_t *paths_or_urls,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
+svn_client_get_log_message_template(const char **log_message_template,
+                                    const char **defining_repos_relpath,
+                                    const char *path_or_url,
+                                    svn_opt_revision_t *peg_revision,
+                                    svn_opt_revision_t *revision,
+                                    svn_revnum_t *actual_revnum,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 
-/* Like svn_client_get_log_message_templates(), but accepts an array of
- * commit items instead of an array of paths or URLs.
+/* Like svn_client_get_log_message_template(), but accepts an array of
+ * commit items as input and returns multiple log message templates.
+ *
+ * Set @a *log_message_templates to a hash table containing log message
+ * templates obtained from svn:log-message properties applicable to the
+ * commit items. The hash table is keyed by paths relative to the repository
+ * root. Each path in this list of keys contributes a log message template.
+ * The value for each key in the table is a 'const char *' log template.
+ *
+ * If no log message templates are found, the hash table will be empty. 
  *
  * @since New in 1.9.
  */
