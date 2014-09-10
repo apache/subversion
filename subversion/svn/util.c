@@ -363,7 +363,9 @@ svn_cl__get_log_message(const char **log_msg,
 
               sep = apr_psprintf(iterpool,
                                  _("\n--Log message template from '%s'--\n"),
-                                 repos_relpath);
+                                 repos_relpath[0] == '\0'
+                                   ? "/"
+                                   : repos_relpath);
               svn_stringbuf_appendcstr(template_text, sep);
             }
           svn_stringbuf_appendcstr(template_text, this_template);
