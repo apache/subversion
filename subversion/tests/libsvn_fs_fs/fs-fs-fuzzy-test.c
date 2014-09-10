@@ -28,6 +28,7 @@
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
 #include "../../libsvn_fs_fs/rev_file.h"
+#include "../../libsvn_fs_fs/util.h"
 
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -66,7 +67,7 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root;
   svn_revnum_t rev;
   apr_hash_t *fs_config;
-  svn_fs_fs__revision_file_t *rev_file;
+  apr_file_t *file;
   apr_off_t filesize = 0;
   apr_off_t i;
 
@@ -88,9 +89,12 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(rev));
 
   /* Open the revision 1 file for modification. */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs, rev,
-                                                    pool, iterpool));
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &filesize, iterpool));
+  SVN_ERR(svn_io_file_open(&file,
+                           svn_fs_fs__path_rev_absolute(fs, rev, iterpool),
+                           APR_READ | APR_WRITE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_io_file_seek(file, APR_END, &filesize, iterpool));
 
   /* We want all the caching we can get.  More importantly, we want to
      change the cache namespace before each test iteration. */
@@ -98,7 +102,6 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "0");
 
   /* Manipulate all bytes one at a time. */
   for (i = 0; i < filesize; ++i)
@@ -107,8 +110,8 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
 
       /* Read byte */
       unsigned char c_old, c_new;
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_getc((char *)&c_old, rev_file->file, iterpool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_getc((char *)&c_old, file, iterpool));
 
       /* What to replace it with. Skip if there is no change. */
       c_new = modifier(c_old);
@@ -116,9 +119,9 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
         continue;
 
       /* Modify / corrupt the data. */
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_putc((char)c_new, rev_file->file, iterpool));
-      SVN_ERR(svn_io_file_flush(rev_file->file, iterpool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_putc((char)c_new, file, iterpool));
+      SVN_ERR(svn_io_file_flush(file, iterpool));
 
       /* Make sure we use a different namespace for the caches during
          this iteration. */
@@ -143,8 +146,8 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
       svn_error_clear(err);
 
       /* Undo the corruption. */
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_putc((char)c_old, rev_file->file, iterpool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_putc((char)c_old, file, iterpool));
 
       svn_pool_clear(iterpool);
     }
