@@ -279,7 +279,6 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
               enum restructure_action_t action)
 {
   apr_pool_t *changes_pool = apr_hash_pool_get(changes);
-  apr_pool_t *scratch_pool = changes_pool;
   change_node_t *change = svn_hash_gets(changes, relpath);
 
   /* Check whether this op is allowed. */
@@ -311,34 +310,7 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
 #endif
 
     case RESTRUCTURE_DELETE:
-      /* In Ev3 (incremental), delete is allowed after add (only if that
-       * was a move and this is a move), but not after delete or modify.
-       * Delete is not allowed if any child paths have been modified or
-       * created, but is allowed when child paths have been moved away or
-       * deleted. */
-      if (change)
-        {
-          VERIFY(change->action == RESTRUCTURE_ADD && change->copyfrom_path);
-        }
-      /* Validate that all child ops are deletes, and elide them. */
-      {
-        apr_hash_index_t *hi;
-
-        for (hi = apr_hash_first(scratch_pool, changes);
-             hi; hi = apr_hash_next(hi))
-          {
-            const char *this_relpath = apr_hash_this_key(hi);
-            change_node_t *this_change = apr_hash_this_val(hi);
-            const char *r = svn_relpath_skip_ancestor(relpath, this_relpath);
-
-            if (r && r[0])
-              {
-                VERIFY(this_change->action == RESTRUCTURE_DELETE);
-                svn_hash_sets(changes, this_relpath, NULL);
-              }
-          }
-      }
-      break;
+      SVN_ERR_MALFUNCTION();
     }
 
   if (change)
@@ -359,6 +331,75 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
     }
 
   *change_p = change;
+  return SVN_NO_ERROR;
+}
+
+/* Modify CHANGES so as to delete the subtree at RELPATH.
+ *
+ * Insert a new Ev1-style change record for RELPATH (or perhaps remove
+ * the existing record if this would have the same effect), and remove
+ * any change records for sub-paths under RELPATH.
+ *
+ * Follow Ev3 rules, although without knowing whether this delete is
+ * part of a move. Ev3 (incremental) "rm" operation says each node to
+ * be removed "MAY be a child of a copy but otherwise SHOULD NOT have
+ * been created or modified in this edit". "mv" operation says ...
+ */
+static svn_error_t *
+delete_subtree(apr_hash_t *changes,
+               const char *relpath,
+               svn_revnum_t deleting_rev)
+{
+  apr_pool_t *changes_pool = apr_hash_pool_get(changes);
+  apr_pool_t *scratch_pool = changes_pool;
+  change_node_t *change = svn_hash_gets(changes, relpath);
+
+  if (change)
+    {
+      /* If this previous change was a non-replacing addition, there
+         is no longer any change to be made at this path. If it was
+         a replacement or a modification, it now becomes a delete. (If it was a delete,
+         this attempt to delete is an error.) */
+       VERIFY(change->action != RESTRUCTURE_DELETE);
+       if (change->action == RESTRUCTURE_ADD && !change->deleting)
+         {
+           svn_hash_sets(changes, relpath, NULL);
+           change = NULL;
+         }
+       else
+         {
+           change->action = RESTRUCTURE_DELETE;
+         }
+    }
+  else
+    {
+      /* There was no change recorded at this path. Record a delete. */
+      change = apr_pcalloc(changes_pool, sizeof(*change));
+      change->action = RESTRUCTURE_DELETE;
+      change->changing_rev = SVN_INVALID_REVNUM;
+      change->deleting = TRUE;
+      change->deleting_rev = deleting_rev;
+
+      svn_hash_sets(changes, apr_pstrdup(changes_pool, relpath), change);
+    }
+
+  /* Elide all child ops. */
+  {
+    apr_hash_index_t *hi;
+
+    for (hi = apr_hash_first(scratch_pool, changes);
+         hi; hi = apr_hash_next(hi))
+      {
+        const char *this_relpath = apr_hash_this_key(hi);
+        const char *r = svn_relpath_skip_ancestor(relpath, this_relpath);
+
+        if (r && r[0])
+          {
+            svn_hash_sets(changes, this_relpath, NULL);
+          }
+      }
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -2265,9 +2306,7 @@ editor3_mv(void *baton,
                                   scratch_pool));
 
   /* delete subtree (from_loc in shadow txn) */
-  SVN_ERR(insert_change(&change, eb->changes, from_txnpath, RESTRUCTURE_DELETE));
-  change->deleting = TRUE;
-  change->deleting_rev = from_loc.rev;
+  SVN_ERR(delete_subtree(eb->changes, from_txnpath, from_loc.rev));
 
   /* Record the move. If we're moving something again that we already moved
      before, just overwrite the previous entry. */
@@ -2298,7 +2337,6 @@ editor3_rm(void *baton,
            apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  change_node_t *change;
 
   /* look up old path in shadow txn */
   const char *txnpath
@@ -2308,11 +2346,10 @@ editor3_rm(void *baton,
      a copy. This is checked by insert_change(). */
 
   /* delete subtree (from_loc in shadow txn) */
-  SVN_ERR(insert_change(&change, eb->changes, txnpath, RESTRUCTURE_DELETE));
   /* if we're deleting a pre-existing node (as opposed to a child of a
      copy that we made), give its rev num for out-of-date checking */
-  change->deleting = TRUE;
-  change->deleting_rev = (loc.relpath[0] ? SVN_INVALID_REVNUM : loc.peg.rev);
+  SVN_ERR(delete_subtree(eb->changes, txnpath,
+                         loc.relpath[0] ? SVN_INVALID_REVNUM : loc.peg.rev));
 
   return SVN_NO_ERROR;
 }
