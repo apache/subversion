@@ -52,9 +52,9 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
   svn_error_t *err = SVN_NO_ERROR;
   if (txn_id)
     {
-        /* for data in txns, item_index *is* the offset */
-        *absolute_position = item_index;
-    }
+          /* for data in txns, item_index *is* the offset */
+          *absolute_position = item_index;
+        }
   else if (rev_file->is_packed)
     {
       /* pack file with physical addressing */

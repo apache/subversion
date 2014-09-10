@@ -33,6 +33,7 @@
 #include "../libsvn_fs_fs/pack.h"
 #include "../libsvn_fs_fs/rev_file.h"
 #include "../libsvn_fs_fs/util.h"
+#include "../libsvn_fs_fs/fs_fs.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -224,6 +225,15 @@ typedef struct fs_t
 {
   /* FS API object*/
   svn_fs_t *fs;
+
+  /* The HEAD revision. */
+  svn_revnum_t head;
+
+  /* Number of revs per shard; 0 for non-sharded repos. */
+  int shard_size;
+
+  /* First non-packed revision. */
+  svn_revnum_t min_unpacked_rev;
 
   /* all revisions */
   apr_array_header_t *revisions;
@@ -603,17 +613,16 @@ read_revision_header(apr_size_t *changes,
 static svn_error_t *
 fs_open(fs_t **fs, const char *path, apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd;
-
   *fs = apr_pcalloc(pool, sizeof(**fs));
 
   /* Check repository type and open it. */
   SVN_ERR(open_fs(&(*fs)->fs, path, pool));
 
-  /* Check the FS format number. */
-  ffd = (*fs)->fs->fsap_data;
-  if ((ffd->format != 4) && (ffd->format != 6) && (ffd->format != 7))
-    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
+  /* Read repository dimensions. */
+  (*fs)->shard_size = svn_fs_fs__shard_size((*fs)->fs);
+  SVN_ERR(svn_fs_fs__youngest_rev(&(*fs)->head, (*fs)->fs, pool));
+  SVN_ERR(svn_fs_fs__min_unpacked_rev(&(*fs)->min_unpacked_rev, (*fs)->fs,
+                                      pool));
 
   return SVN_NO_ERROR;
 }
@@ -798,13 +807,13 @@ parse_representation(rep_stats_t **representation,
       result->offset = (apr_size_t)offset;
       result->size = (apr_size_t)size;
 
-      SVN_ERR(read_rep_base(&result->delta_base, &header_size,
-                            &is_plain, fs, file_content,
-                            (apr_size_t)offset,
-                            pool, scratch_pool));
+          SVN_ERR(read_rep_base(&result->delta_base, &header_size,
+                                &is_plain, fs, file_content,
+                                (apr_size_t)offset,
+                                pool, scratch_pool));
 
-      result->header_size = header_size;
-      result->is_plain = is_plain;
+          result->header_size = header_size;
+          result->is_plain = is_plain;
 
       svn_sort__array_insert(revision_info->representations, &result, idx);
     }
@@ -1228,13 +1237,12 @@ read_phys_pack_file(fs_t *fs,
   int i;
   apr_off_t file_size = 0;
   apr_file_t *file;
-  fs_fs_data_t *ffd = fs->fs->fsap_data;
 
   SVN_ERR(open_rev_or_pack_file(&file, fs, base, local_pool));
   SVN_ERR(get_file_size(&file_size, file, local_pool));
 
   /* process each revision in the pack file */
-  for (i = 0; i < ffd->max_files_per_dir; ++i)
+  for (i = 0; i < fs->shard_size; ++i)
     {
       apr_size_t root_node_offset;
       svn_stringbuf_t *rev_content;
@@ -1246,7 +1254,7 @@ read_phys_pack_file(fs_t *fs,
       info->revision = base + i;
       SVN_ERR(svn_fs_fs__get_packed_offset(&info->offset, fs->fs, base + i,
                                            iter_pool));
-      if (i + 1 == ffd->max_files_per_dir)
+      if (i + 1 == fs->shard_size)
         SVN_ERR(svn_io_file_seek(file, APR_END, &info->end, iter_pool));
       else
         SVN_ERR(svn_fs_fs__get_packed_offset(&info->end, fs->fs,
@@ -1297,7 +1305,6 @@ read_phys_revision_file(fs_t *fs,
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
   apr_off_t file_size = 0;
   apr_file_t *file;
-  fs_fs_data_t *ffd = fs->fs->fsap_data;
 
   /* read the whole pack file into memory */
   SVN_ERR(open_rev_or_pack_file(&file, fs, revision, local_pool));
@@ -1332,7 +1339,9 @@ read_phys_revision_file(fs_t *fs,
                        pool, local_pool));
 
   /* show progress every 1000 revs or so */
-  if (revision % ffd->max_files_per_dir == 0)
+  if (fs->shard_size && (revision % fs->shard_size == 0))
+    print_progress(revision);
+  if (!fs->shard_size && (revision % 1000 == 0))
     print_progress(revision);
 
   svn_pool_destroy(local_pool);
@@ -1349,11 +1358,9 @@ read_revisions(fs_t **fs,
                apr_pool_t *pool)
 {
   svn_revnum_t revision;
-  fs_fs_data_t *ffd;
 
   /* determine cache sizes */
   SVN_ERR(fs_open(fs, path, pool));
-  ffd = (*fs)->fs->fsap_data;
 
   /* create data containers and caches
    * Note: this assumes that int is at least 32-bits and that we only support
@@ -1361,8 +1368,7 @@ read_revisions(fs_t **fs,
    * of both the nelts field of the array and our revision numbers). This
    * means this code will fail on platforms where int is less than 32-bits
    * and the repository has more revisions than int can hold. */
-  (*fs)->revisions = apr_array_make(pool,
-                                    (int) ffd->youngest_rev_cache + 1,
+  (*fs)->revisions = apr_array_make(pool, (int) (*fs)->head + 1,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
   initialize_largest_changes(*fs, 64, pool);
@@ -1377,14 +1383,14 @@ read_revisions(fs_t **fs,
                                             FALSE, pool, pool));
 
   /* read all packed revs */
-  for ( revision = 0
-      ; revision < ffd->min_unpacked_rev
-      ; revision += ffd->max_files_per_dir)
+ for ( revision = 0
+      ; revision < (*fs)->min_unpacked_rev
+      ; revision += (*fs)->shard_size)
     {
       SVN_ERR(read_phys_pack_file(*fs, revision, pool));
     }
   /* read non-packed revs */
-  for ( ; revision <= ffd->youngest_rev_cache; ++revision)
+  for ( ; revision <= (*fs)->head; ++revision)
     {
       SVN_ERR(read_phys_revision_file(*fs, revision, pool));
     }

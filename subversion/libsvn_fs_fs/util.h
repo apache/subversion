@@ -76,6 +76,12 @@ svn_boolean_t
 svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
                              svn_revnum_t rev);
 
+/* Return the first revision in the pack / rev file containing REVISION in
+ * filesystem FS.  For non-packed revs, this will simply be REVISION. */
+svn_revnum_t
+svn_fs_fs__packed_base_rev(svn_fs_t *fs,
+                           svn_revnum_t revision);
+
 /* Return the full path of the rev shard directory that will contain
  * revision REV in FS.  Allocate the result in POOL.
  */

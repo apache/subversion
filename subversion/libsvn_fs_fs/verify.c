@@ -159,16 +159,6 @@ verify_rep_cache(svn_fs_t *fs,
 }
 
 static svn_revnum_t
-packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return rev < ffd->min_unpacked_rev
-       ? rev - (rev % ffd->max_files_per_dir)
-       : rev;
-}
-
-static svn_revnum_t
 pack_size(svn_fs_t *fs, svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;

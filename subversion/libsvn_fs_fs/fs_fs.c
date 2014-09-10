@@ -682,7 +682,7 @@ read_config(fs_fs_data_t *ffd,
       ffd->compress_packed_revprops = FALSE;
     }
 
-  /* should be irrelevant but we initialize them anyway */
+      /* should be irrelevant but we initialize them anyway */
   ffd->block_size = 0x1000;
 
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -891,7 +891,7 @@ read_global_config(svn_fs_t *fs)
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
      older formats. */
-  ffd->block_size = MIN(0x1000, ffd->block_size);
+    ffd->block_size = MIN(0x1000, ffd->block_size);
 
   return SVN_NO_ERROR;
 }
@@ -1159,6 +1159,27 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+int
+svn_fs_fs__shard_size(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->max_files_per_dir;
+}
+
+svn_error_t *
+svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+  *min_unpacked = ffd->min_unpacked_rev;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,
@@ -1382,14 +1403,14 @@ write_revision_zero(svn_fs_t *fs,
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(path_revision_zero,
-                              "PLAIN\nEND\nENDREP\n"
-                              "id: 0.0.r0/17\n"
-                              "type: dir\n"
-                              "count: 0\n"
-                              "text: 0 0 4 4 "
-                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                              "cpath: /\n"
+    SVN_ERR(svn_io_file_create(path_revision_zero,
+                               "PLAIN\nEND\nENDREP\n"
+                               "id: 0.0.r0/17\n"
+                               "type: dir\n"
+                               "count: 0\n"
+                               "text: 0 0 4 4 "
+                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                               "cpath: /\n"
                               "\n\n17 107\n", scratch_pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, scratch_pool));
@@ -1643,9 +1664,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
         = apr_hash_get(node_origins, node_id_ptr, len);
 
       if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(apr_pstrdup(pool,
-                                                     origin_id_str->data),
-                                         pool);
+        SVN_ERR(svn_fs_fs__id_parse(origin_id,
+                                    apr_pstrdup(pool, origin_id_str->data),
+                                    pool));
     }
   return SVN_NO_ERROR;
 }

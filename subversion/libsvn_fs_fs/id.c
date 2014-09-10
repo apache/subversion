@@ -147,8 +147,8 @@ txn_id_parse(svn_fs_fs__id_part_t *txn_id,
   if (!locale_independent_strtol(&txn_id->revision, data, &end))
     return FALSE;
 
-  data = strchr(end, '-');
-  if (data == NULL)
+  data = end;
+  if (*data != '-')
     return FALSE;
 
   ++data;
@@ -344,8 +344,14 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->private_id, &id_b->private_id,
-                sizeof(id_a->private_id)) == 0;
+  return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
+                               &id_b->private_id.node_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.copy_id,
+                               &id_b->private_id.copy_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                               &id_b->private_id.txn_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.rev_item,
+                               &id_b->private_id.rev_item);
 }
 
 
@@ -488,10 +494,11 @@ svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
   return (svn_fs_id_t *)new_id;
 }
 
-
-svn_fs_id_t *
-svn_fs_fs__id_parse(char *data,
-                    apr_pool_t *pool)
+/* Return an ID resulting from parsing the string DATA, or NULL if DATA is
+   an invalid ID string. *DATA will be modified / invalidated by this call. */
+static svn_fs_id_t *
+id_parse(char *data,
+         apr_pool_t *pool)
 {
   fs_fs__id_t *id;
   char *str;
@@ -565,6 +572,21 @@ svn_fs_fs__id_parse(char *data,
     return NULL;
 
   return (svn_fs_id_t *)id;
+}
+
+svn_error_t *
+svn_fs_fs__id_parse(const svn_fs_id_t **id_p,
+                    char *data,
+                    apr_pool_t *pool)
+{
+  svn_fs_id_t *id = id_parse(data, pool);
+  if (id == NULL)
+    return svn_error_createf(SVN_ERR_FS_MALFORMED_NODEREV_ID, NULL,
+                             "Malformed node revision ID string");
+
+  *id_p = id;
+
+  return SVN_NO_ERROR;
 }
 
 /* (de-)serialization support */

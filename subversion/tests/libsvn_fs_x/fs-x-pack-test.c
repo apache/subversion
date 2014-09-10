@@ -1,4 +1,4 @@
-/* fs-pack-test.c --- tests for the filesystem
+/* fs-x-pack-test.c --- tests for the FSX filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
