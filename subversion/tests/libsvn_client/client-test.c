@@ -35,6 +35,8 @@
 #include "svn_repos.h"
 #include "svn_subst.h"
 #include "private/svn_wc_private.h"
+#include "svn_props.h"
+#include "svn_hash.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -1055,6 +1057,180 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_log_message_templates(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  const char *repos_url;
+  const char *wc_path;
+  svn_client_ctx_t *ctx;
+  static const struct log_message_template
+  {
+    const char *repos_relpath;
+    const char *template;
+  } templates[] = {
+    { "iota",   "iota template\n" },
+    { "A",      "A template\n" },
+    { "A/B",    "A/B template\n" },
+    { "A/D/G",  "A/D/G template\n" },
+  };
+  int i;
+  svn_revnum_t revnum;
+  svn_opt_revision_t rev;
+  apr_hash_t *returned_templates;
+  apr_array_header_t *paths_or_urls = apr_array_make(pool, 4,
+                                                     sizeof (const char *));
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-log-message-templates",
+                             opts, pool));
+  revnum = 1;
+
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Create svn:log-template properties. */
+  for (i = 0; i < sizeof(templates) / sizeof(templates[0]); i++)
+    SVN_ERR(svn_client_propset_remote(SVN_PROP_INHERITABLE_LOG_TEMPLATE,
+                                      svn_string_create(templates[i].template,
+                                                        pool),
+                                      apr_pstrcat(pool, repos_url, "/",
+                                                  templates[i].repos_relpath,
+                                                  SVN_VA_NULL),
+                                      FALSE, /* skip_checks */
+                                      revnum++, /* base_revision_for_url */
+                                      NULL, /* revprop_table */
+                                      NULL, NULL, /* commit callback/baton */
+                                      ctx, pool));
+
+  /* Check out a working copy. */
+  wc_path = svn_test_data_path("test-log-message-templates-wc", pool);
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  rev.kind = svn_opt_revision_number;
+  rev.value.number = revnum;
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &rev, &rev,
+                               svn_depth_infinity,
+                               FALSE, FALSE, ctx, pool));
+
+  /* None of the templates apply to the repository root. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = repos_url;
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates == NULL);
+
+  /* Likewise, none of templates apply to the working copy root. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = wc_path;
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates == NULL);
+
+  /* Find the iota template via an absolute path. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = svn_dirent_join(wc_path,
+                                                                "iota",
+                                                                pool);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 1);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "iota"),
+                         templates[0].template);
+
+  /* Find the iota template via a URL. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/", "iota",
+                                                            SVN_VA_NULL);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 1);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "iota"),
+                         templates[0].template);
+
+  /* Find the iota template via both an absolute path and URL. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = svn_dirent_join(wc_path,
+                                                                "iota",
+                                                                pool);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/", "iota",
+                                                            SVN_VA_NULL);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 1);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "iota"),
+                         templates[0].template);
+
+  /* Gather all templates using a mix of URLs and paths. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = svn_dirent_join(wc_path,
+                                                                "iota",
+                                                                pool);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/A",
+                                                            SVN_VA_NULL);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = svn_dirent_join_many(
+                                                  pool, wc_path, "A", "B",
+                                                  SVN_VA_NULL);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/A/D/G",
+                                                            SVN_VA_NULL);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 4);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "iota"),
+                         templates[0].template);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A"),
+                         templates[1].template);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A/B"),
+                         templates[2].template);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A/D/G"),
+                         templates[3].template);
+
+  /* A/D/G/pi inherits a log template from A/D/G */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/A/D/G/pi",
+                                                            SVN_VA_NULL);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 1);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A/D/G"),
+                         templates[3].template);
+
+  /* A/B has its own log template, A/D inherits a log template from A. */
+  apr_array_clear(paths_or_urls);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/A/B",
+                                                            SVN_VA_NULL);
+  APR_ARRAY_PUSH(paths_or_urls, const char *) = apr_pstrcat(pool, repos_url,
+                                                            "/A/D",
+                                                            SVN_VA_NULL);
+  SVN_ERR(svn_client_get_log_message_templates(&returned_templates,
+                                               paths_or_urls,
+                                               ctx, pool, pool));
+  SVN_TEST_ASSERT(returned_templates);
+  SVN_TEST_ASSERT(apr_hash_count(returned_templates) == 2);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A"),
+                         templates[1].template);
+  SVN_TEST_STRING_ASSERT(svn_hash_gets(returned_templates, "A/B"),
+                         templates[2].template);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -1079,6 +1255,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_client_suggest_merge_sources"),
     SVN_TEST_OPTS_PASS(test_remote_only_status,
                        "test svn_client_status6 with ignore_local_mods"),
+    SVN_TEST_OPTS_PASS(test_log_message_templates,
+                       "test svn_client_get_log_message_templates"),
     SVN_TEST_NULL
   };
 
