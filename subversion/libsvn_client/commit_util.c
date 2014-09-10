@@ -2125,7 +2125,9 @@ svn_client_get_log_message_templates_for_commit_items(
                                                   path_or_url, &peg_revision,
                                                   &revision, NULL, ctx,
                                                   iterpool, iterpool));
-      if (log_message_template)
+      if (log_message_template &&
+          svn_hash_gets(*log_message_templates,
+                        defining_repos_relpath) == NULL)
         svn_hash_sets(*log_message_templates,
                       apr_pstrdup(result_pool, defining_repos_relpath),
                       apr_pstrdup(result_pool, log_message_template));
