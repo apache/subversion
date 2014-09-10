@@ -770,14 +770,14 @@ fetch(svn_node_kind_t *kind_p,
       const char **filename_p,
       void *baton,
       const char *repos_relpath,
-      svn_revnum_t base_revision,
+      svn_revnum_t revision,
       apr_pool_t *result_pool,
       apr_pool_t *scratch_pool)
 {
   struct fb_baton *fbb = baton;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_ra_check_path(fbb->session, repos_relpath, base_revision,
+  SVN_ERR(svn_ra_check_path(fbb->session, repos_relpath, revision,
                             &kind, scratch_pool));
   if (kind_p)
     *kind_p = kind;
@@ -792,7 +792,7 @@ fetch(svn_node_kind_t *kind_p,
                                          svn_io_file_del_none,
                                          scratch_pool, scratch_pool));
         }
-      SVN_ERR(svn_ra_get_file(fbb->session, repos_relpath, base_revision,
+      SVN_ERR(svn_ra_get_file(fbb->session, repos_relpath, revision,
                               file_stream, NULL, props_p, result_pool));
       if (filename_p)
         {
@@ -802,7 +802,7 @@ fetch(svn_node_kind_t *kind_p,
     }
   else if (props_p)
     {
-      SVN_ERR(svn_ra_get_dir(fbb->session, repos_relpath, base_revision,
+      SVN_ERR(svn_ra_get_dir(fbb->session, repos_relpath, revision,
                              NULL /*dirents*/, NULL, props_p, result_pool));
     }
   return SVN_NO_ERROR;
