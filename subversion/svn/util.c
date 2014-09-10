@@ -66,6 +66,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_sorts_private.h"
 
 
 
@@ -343,17 +344,20 @@ svn_cl__get_log_message(const char **log_msg,
   if (apr_hash_count(log_message_templates) > 0)
     {
       svn_stringbuf_t *template_text;
-      apr_hash_index_t *hi;
+      apr_array_header_t *sorted_keys;
+      int i;
       apr_pool_t *iterpool;
 
       template_text = svn_stringbuf_create_empty(pool);
       iterpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(NULL, log_message_templates);
-           hi;
-           hi = apr_hash_next(hi))
+      sorted_keys = svn_sort__hash(log_message_templates,
+                                   svn_sort_compare_items_as_paths, pool);
+      for (i = 0; i < sorted_keys->nelts; i++)
         {
-          const char *repos_relpath = apr_hash_this_key(hi);
-          const char *this_template = apr_hash_this_val(hi);
+          svn_sort__item_t sort_item = APR_ARRAY_IDX(sorted_keys, i,
+                                                      svn_sort__item_t);
+          const char *repos_relpath = sort_item.key;
+          const char *this_template = sort_item.value;
 
           svn_pool_clear(iterpool);
                                                     
