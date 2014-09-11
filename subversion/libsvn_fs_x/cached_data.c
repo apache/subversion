@@ -3116,7 +3116,7 @@ block_read(void **result,
               key.revision = svn_fs_x__get_revnum(entry->items[0].change_set);
               key.second = entry->items[0].number;
 
-              SVN_ERR(svn_io_file_seek(revision_file, SEEK_SET,
+              SVN_ERR(svn_io_file_seek(revision_file, APR_SET,
                                        &entry->offset, iterpool));
               switch (entry->type)
                 {

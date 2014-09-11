@@ -479,7 +479,7 @@ copy_item_to_temp(pack_context_t *context,
   svn_fs_fs__p2l_entry_t *new_entry
     = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   new_entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
+  SVN_ERR(svn_io_file_seek(temp_file, APR_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
   
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
@@ -567,7 +567,7 @@ copy_rep_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR, &entry->offset,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR, &entry->offset,
                            pool));
   add_item_rep_mapping(context, entry);
 
@@ -589,7 +589,7 @@ copy_rep_to_temp(pack_context_t *context,
     }
 
   /* copy the whole rep (including header!) to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -723,12 +723,12 @@ copy_node_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR,
                            &entry->offset, pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -1112,7 +1112,7 @@ store_item(pack_context_t *context,
 
   /* select the item in the source file and copy it into the target
     * pack file */
-  SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &item->offset, pool));
+  SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &item->offset, pool));
   SVN_ERR(copy_file_data(context, context->pack_file, temp_file,
                          item->size, pool));
 
@@ -1325,7 +1325,7 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < rev_file->l2p_offset)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file->file, SEEK_SET, &offset,
+                  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset,
                                            iterpool2));
 
                   if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
