@@ -1534,6 +1534,10 @@ typedef svn_error_t *
  * If the only "access" the returned stream gets is to close it
  * then @a open_func will only be called if @a open_on_close is TRUE.
  *
+ * Allocate the returned stream in @a result_pool. Also arrange for
+ * @a result_pool to be passed as the @c result_pool parameter to
+ * @a open_func when it is called.
+ *
  * @since New in 1.8.
  */
 svn_stream_t *
