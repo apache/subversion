@@ -96,8 +96,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1589360
    Votes:
-     +1: ivan
-     +1: rhuijben (without r1624267 on branch)
+     +1: ivan, rhuijben
      -0: stefan2 (compiler misses "private/svn_sorts_private.h",
                   before branch)
 
