@@ -1513,7 +1513,7 @@ allocate_item_index(apr_uint64_t *item_index,
   to_write = svn__ui64toa(buffer, *item_index + 1);
 
   /* write it back to disk */
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 

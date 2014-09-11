@@ -1697,7 +1697,7 @@ allocate_item_index(apr_uint64_t *item_index,
         *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
 
       to_write = svn__ui64toa(buffer, *item_index + 1);
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
       SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
       SVN_ERR(svn_io_file_close(file, pool));
 

@@ -3286,7 +3286,7 @@ block_read(void **result,
                             && entry->size < ffd->block_size))
             {
               void *item = NULL;
-              SVN_ERR(svn_io_file_seek(revision_file->file, SEEK_SET,
+              SVN_ERR(svn_io_file_seek(revision_file->file, APR_SET,
                                        &entry->offset, iterpool));
               switch (entry->type)
                 {
