@@ -333,10 +333,34 @@ svn_cl__get_log_message(const char **log_msg,
                         void *baton,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *default_msg = NULL;
+  svn_stringbuf_t *default_msg;
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
   apr_hash_t *log_message_templates;
+
+  *tmp_file = NULL;
+  if (lmb->message)
+    {
+      svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
+
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, NULL, NULL,
+                                            log_msg_str, lmb->message_encoding,
+                                            FALSE, pool, pool),
+                _("Error normalizing log message to internal format"));
+
+      /* Strip off the EOF marker text and the junk that follows it. */
+      truncate_buffer_at_prefix(&(log_msg_str->len), (char *)log_msg_str->data,
+                                EDITOR_EOF_PREFIX);
+
+      *log_msg = log_msg_str->data;
+      return SVN_NO_ERROR;
+    }
+
+  if (! commit_items->nelts)
+    {
+      *log_msg = "";
+      return SVN_NO_ERROR;
+    }
 
   /* Set default message.  */
   SVN_ERR(svn_client_get_log_message_templates_for_commit_items(
@@ -384,30 +408,6 @@ svn_cl__get_log_message(const char **log_msg,
   svn_stringbuf_appendcstr(default_msg, APR_EOL_STR);
   svn_stringbuf_appendcstr(default_msg, EDITOR_EOF_PREFIX);
   svn_stringbuf_appendcstr(default_msg, APR_EOL_STR APR_EOL_STR);
-
-  *tmp_file = NULL;
-  if (lmb->message)
-    {
-      svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
-
-      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, NULL, NULL,
-                                            log_msg_str, lmb->message_encoding,
-                                            FALSE, pool, pool),
-                _("Error normalizing log message to internal format"));
-
-      /* Strip off the EOF marker text and the junk that follows it. */
-      truncate_buffer_at_prefix(&(log_msg_str->len), (char *)log_msg_str->data,
-                                EDITOR_EOF_PREFIX);
-
-      *log_msg = log_msg_str->data;
-      return SVN_NO_ERROR;
-    }
-
-  if (! commit_items->nelts)
-    {
-      *log_msg = "";
-      return SVN_NO_ERROR;
-    }
 
   while (! message)
     {
