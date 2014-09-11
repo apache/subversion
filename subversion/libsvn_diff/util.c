@@ -487,7 +487,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   return SVN_NO_ERROR;
 }
 
-/* svn_sort__array callback handling svn_prop_t by name */
+/* qsort callback handling svn_prop_t by name */
 static int
 propchange_sort(const void *k1, const void *k2)
 {
@@ -510,7 +510,7 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
   apr_array_header_t *changes = apr_array_copy(scratch_pool, propchanges);
   int i;
 
-  svn_sort__array(changes, propchange_sort);
+  qsort(changes->elts, changes->nelts, changes->elt_size, propchange_sort);
 
   for (i = 0; i < changes->nelts; i++)
     {
