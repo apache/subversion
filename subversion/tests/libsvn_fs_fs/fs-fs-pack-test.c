@@ -51,65 +51,6 @@ ignore_fs_warnings(void *baton, svn_error_t *err)
   return;
 }
 
-/* Write the format number and maximum number of files per directory
-   to a new format file in PATH, overwriting a previously existing
-   file.  Use POOL for temporary allocation.
-
-   (This implementation is largely stolen from libsvn_fs_fs/fs_fs.c.) */
-static svn_error_t *
-write_format(const char *path,
-             int format,
-             int max_files_per_dir,
-             apr_pool_t *pool)
-{
-  const char *contents;
-
-  path = svn_dirent_join(path, "format", pool);
-
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    {
-      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n"
-                                    "addressing logical 0\n",
-                                    format, max_files_per_dir);
-          else
-            /* linear layouts never use logical addressing */
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n"
-                                    "addressing physical\n",
-                                    format);
-        }
-      else
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n",
-                                    format, max_files_per_dir);
-          else
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n",
-                                    format);
-        }
-    }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
-
-  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
-                              NULL /* copy perms */, pool));
-
-  /* And set the perms to make it read only */
-  return svn_io_set_file_read_only(path, FALSE, pool);
-}
-
 /* Return the expected contents of "iota" in revision REV. */
 static const char *
 get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
@@ -178,7 +119,7 @@ create_packed_filesystem(const char *dir,
   apr_pool_t *subpool = svn_pool_create(pool);
   struct pack_notify_baton pnb;
   apr_pool_t *iterpool;
-  int version;
+  apr_hash_t *fs_config;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -189,25 +130,12 @@ create_packed_filesystem(const char *dir,
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "pre-1.6 SVN doesn't support FSFS packing");
 
-  /* Create a filesystem, then close it */
-  SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
-  svn_pool_destroy(subpool);
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE,
+                apr_itoa(pool, shard_size));
 
-  subpool = svn_pool_create(pool);
-
-  /* Rewrite the format file.  (The rest of this function is backend-agnostic,
-     so we just avoid adding the FSFS-specific format information if we run on
-     some other backend.) */
-  if ((strcmp(opts->fs_type, "fsfs") == 0))
-    {
-      SVN_ERR(svn_io_read_version_file(&version,
-                                       svn_dirent_join(dir, "format", subpool),
-                                       subpool));
-      SVN_ERR(write_format(dir, version, shard_size, subpool));
-    }
-
-  /* Reopen the filesystem */
-  SVN_ERR(svn_fs_open2(&fs, dir, NULL, subpool, subpool));
+  /* Create a filesystem. */
+  SVN_ERR(svn_test__create_fs2(&fs, dir, opts, fs_config, subpool));
 
   /* Revision 1: the Greek tree */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));

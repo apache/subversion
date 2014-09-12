@@ -104,9 +104,13 @@ create_fs(svn_fs_t **fs_p,
           const char *name,
           const char *fs_type,
           int server_minor_version,
+          apr_hash_t *overlay_fs_config,
           apr_pool_t *pool)
 {
   apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
+
+  if (overlay_fs_config)
+    fs_config = apr_hash_overlay(pool, overlay_fs_config, fs_config);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -172,20 +176,21 @@ svn_test__create_bdb_fs(svn_fs_t **fs_p,
                         const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
-  return create_fs(fs_p, name, "bdb", opts->server_minor_version, pool);
+  return create_fs(fs_p, name, "bdb", opts->server_minor_version, NULL, pool);
 }
 
 
 svn_error_t *
-svn_test__create_fs(svn_fs_t **fs_p,
-                    const char *name,
-                    const svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+svn_test__create_fs2(svn_fs_t **fs_p,
+                     const char *name,
+                     const svn_test_opts_t *opts,
+                     apr_hash_t *fs_config,
+                     apr_pool_t *pool)
 {
   svn_boolean_t must_reopen;
 
-  SVN_ERR(create_fs(fs_p, name, opts->fs_type,
-                    opts->server_minor_version, pool));
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type, opts->server_minor_version,
+                    fs_config, pool));
 
   SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
@@ -197,6 +202,14 @@ svn_test__create_fs(svn_fs_t **fs_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_test__create_fs(svn_fs_t **fs_p,
+                    const char *name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  return svn_test__create_fs2(fs_p, name, opts, NULL, pool);
+}
 
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,

@@ -57,7 +57,16 @@ svn_test__create_bdb_fs(svn_fs_t **fs_p,
 
 
 /* Create a filesystem based on OPTS in a subdir NAME and return a new
-   FS object which points to it.  */
+   FS object which points to it.  Override the default test filesystem
+   config with values from FS_CONFIG. */
+svn_error_t *
+svn_test__create_fs2(svn_fs_t **fs_p,
+                     const char *name,
+                     const svn_test_opts_t *opts,
+                     apr_hash_t *fs_config,
+                     apr_pool_t *pool);
+
+/* The same as svn_test__create_fs2() but with FS_CONFIG set to NULL. */
 svn_error_t *
 svn_test__create_fs(svn_fs_t **fs_p,
                     const char *name,
