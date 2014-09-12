@@ -1612,12 +1612,14 @@ svn_fs_fs__create(svn_fs_t *fs,
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
+  int shard_size = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
 
   fs->path = apr_pstrdup(fs->pool, path);
-  /* See if compatibility with older versions was explicitly requested. */
+  /* Process the given filesystem config. */
   if (fs->config)
     {
       svn_version_t *compatible_version;
+      const char *shard_size_str;
       SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
                                          pool));
 
@@ -1647,12 +1649,22 @@ svn_fs_fs__create(svn_fs_t *fs,
 
           default:format = SVN_FS_FS__FORMAT_NUMBER;
         }
+
+      shard_size_str = svn_hash_gets(fs->config, SVN_FS_CONFIG_FSFS_SHARD_SIZE);
+      if (shard_size_str)
+        {
+          apr_int64_t val;
+          SVN_ERR(svn_cstring_strtoi64(&val, shard_size_str, 0,
+                                       APR_INT32_MAX, 10));
+
+          shard_size = (int) val;
+        }
     }
   ffd->format = format;
 
-  /* Override the default linear layout if this is a new-enough format. */
+  /* Use an appropriate sharding mode if supported by the format. */
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+    ffd->max_files_per_dir = shard_size;
 
   /* Select the addressing mode depending on the format. */
   if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
