@@ -40,8 +40,6 @@
 /* Verify EXPR is true; raise an error if not. */
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
-#define SVN_DBG(x)
-
 /*
  * ========================================================================
  * Configuration Options
@@ -803,6 +801,8 @@ process_actions(struct ev3_edit_baton *eb,
 
           if (change->contents_abspath)
             {
+              SVN_DBG(("contents_changed=%d, contents_abspath=%s",
+                       change->contents_changed, change->contents_abspath));
               /* ### The checksum might be in CHANGE->text_checksum. Should we
                  assume it's there? Should we use it, validate it, or ignore it? */
               /*if (change->text_checksum)
@@ -994,6 +994,9 @@ apply_propedit(struct ev3_edit_baton *eb,
                                  eb->fetch_baton,
                                  copyfrom_path, copyfrom_rev,
                                  eb->edit_pool, scratch_pool));
+          SVN_DBG(("apply_propedit('%s@%ld'): fetched %d copy-from props (from %s@%ld)",
+                   relpath, base_revision, apr_hash_count(change->props),
+                   copyfrom_path, copyfrom_rev));
         }
       else if (change->action == RESTRUCTURE_ADD)
         {
@@ -1002,11 +1005,14 @@ apply_propedit(struct ev3_edit_baton *eb,
       else
         {
           if (! SVN_IS_VALID_REVNUM(base_revision))
-            SVN_DBG(("apply_propedit: base_revision == -1"));
+            SVN_DBG(("apply_propedit('%s@%ld')  ### need to resolve to HEAD?",
+                     relpath, base_revision));
           SVN_ERR(eb->fetch_func(NULL, &change->props, NULL,
                                  eb->fetch_baton,
                                  relpath, base_revision,
                                  eb->edit_pool, scratch_pool));
+          SVN_DBG(("apply_propedit('%s@%ld'): fetched %d original props",
+                   relpath, base_revision, apr_hash_count(change->props)));
         }
     }
 
@@ -1016,6 +1022,8 @@ apply_propedit(struct ev3_edit_baton *eb,
     svn_hash_sets(change->props,
                   apr_pstrdup(eb->edit_pool, name),
                   svn_string_dup(value, eb->edit_pool));
+  SVN_DBG(("apply_propedit('%s@%ld'): set prop %s=%.50s",
+           relpath, base_revision, name, value ? value->data : "<nil>"));
 
   return SVN_NO_ERROR;
 }
@@ -1051,7 +1059,7 @@ ev3_delete_entry(const char *path,
   change->deleting = TRUE;
   change->deleting_rev = base_revision;
   if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_DBG(("ev3_delete_entry: deleting_rev = base_revision == -1"));
+    SVN_DBG(("ev3_delete_entry('%s'): deleting_rev = base_revision == -1", path));
 
   return SVN_NO_ERROR;
 }
@@ -1125,7 +1133,7 @@ ev3_open_directory(const char *path,
   db->path = apr_pstrdup(result_pool, relpath);
   db->base_revision = base_revision;
   if (! SVN_IS_VALID_REVNUM(base_revision))
-    SVN_DBG(("ev3_open_directory: base_revision == -1"));
+    SVN_DBG(("ev3_open_directory('%s', base_revision == -1)  ### need to resolve to HEAD?", path));
 
   if (pb->copyfrom_relpath)
     {
@@ -1237,11 +1245,14 @@ ev3_open_file(const char *path,
   struct ev3_dir_baton *pb = parent_baton;
   const char *relpath = map_to_repos_relpath(pb->eb, path, scratch_pool);
 
+  SVN_DBG(("ev3_open_file(%s@%ld)", path, base_revision));
+
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, relpath);
   fb->base_revision = base_revision;
   if (! SVN_IS_VALID_REVNUM(base_revision))
-    SVN_DBG(("ev3_open_file: base_revision == -1"));
+    SVN_DBG(("ev3_open_file(%s@%ld): base_revision == -1; should we resolve to head?",
+             path, base_revision));
 
   if (pb->copyfrom_relpath)
     {
@@ -1316,7 +1327,7 @@ ev3_open_delta_base(svn_stream_t **stream, void *file_baton,
 
   SVN_ERR(svn_stream_open_readonly(stream, fb->delta_base_abspath,
                                   result_pool, scratch_pool));
-  SVN_DBG(("lazy-opened delta-base file '%s'", fb->delta_base_abspath));
+  /*SVN_DBG(("lazy-opened delta-base file '%s' for read", fb->delta_base_abspath));*/
   return SVN_NO_ERROR;
 }
 
@@ -1330,7 +1341,7 @@ ev3_open_delta_target(svn_stream_t **stream, void *baton,
   SVN_ERR(svn_stream_open_unique(stream, delta_target, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  result_pool, scratch_pool));
-  SVN_DBG(("lazy-opened '%s' for fulltext write", *delta_target));
+  /*SVN_DBG(("lazy-opened delta target file '%s' for fulltext write", *delta_target));*/
   return SVN_NO_ERROR;
 }
 
@@ -1374,7 +1385,7 @@ ev3_apply_textdelta(void *file_baton,
   else
     {
       /*SVN_DBG(("apply_textdelta(%s): preparing lazy-open read of delta-base file '%s'",
-               fb->path, fb->delta_base));*/
+               fb->path, fb->delta_base_abspath));*/
       hb->source = svn_stream_lazyopen_create(ev3_open_delta_base, fb,
                                               FALSE, handler_pool);
     }
@@ -1445,8 +1456,8 @@ ev3_close_file(void *file_baton,
      The only exception is for a new, empty file, where we leave
      CONTENTS_CHANGED false for now (and CONTENTS_ABSPATH null), and
      generate an empty stream for it later. */
-  SVN_DBG(("close_file(%s): action=%d, contents_changed=%d, contents_abspath='%s'",
-           fb->path, change->action, change->contents_changed, change->contents_abspath));
+  /*SVN_DBG(("close_file(%s): action=%d, contents_changed=%d, contents_abspath='%s'",
+           fb->path, change->action, change->contents_changed, change->contents_abspath));*/
   if (! change->contents_changed
       && (change->action == RESTRUCTURE_NONE || change->copyfrom_path))
     {
