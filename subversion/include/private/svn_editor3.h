@@ -872,7 +872,7 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  *   - add       kind      new-parent-nb[2] new-name new-content  ->  new-nb
  *   - copy-one  nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
- *   - copy-tree nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
+ *   - copy-tree nb@rev[3] new-parent-nb[2] new-name              ->  new-nb
  *   - delete    nb[1]   since-rev
  *   - alter     nb[1,2] since-rev new-parent-nb[2] new-name new-content
  *
