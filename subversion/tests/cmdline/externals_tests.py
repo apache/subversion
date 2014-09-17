@@ -3444,6 +3444,42 @@ def update_deletes_file_external(sbox):
   sbox.simple_update()
   
 
+@Issue(4519)
+@XFail()
+def switch_relative_externals(sbox):
+  "switch relative externals"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', '1', 'A', 'trunk',
+                                         'cp', '1', 'A', 'branches/A',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'trunk/B',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'branches/A/B')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url + '/trunk', wc)
+
+  # This forgets to update some externals data
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', sbox.repo_url + '/branches/A', wc)
+
+  # This upgrade makes the following update fail
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', wc)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc)
+
+
 ########################################################################
 # Run the tests
 
@@ -3500,7 +3536,8 @@ test_list = [ None,
               file_external_unversioned_obstruction,
               file_external_versioned_obstruction,
               update_external_peg_rev,
-              update_deletes_file_external
+              update_deletes_file_external,
+              switch_relative_externals,
              ]
 
 if __name__ == '__main__':
