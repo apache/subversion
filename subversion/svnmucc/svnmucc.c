@@ -308,7 +308,7 @@ insufficient(void)
 }
 
 static svn_error_t *
-display_version(apr_getopt_t *os, apr_pool_t *pool)
+display_version(apr_pool_t *pool)
 {
   const char *ra_desc_start
     = "The following repository access (RA) modules are available:\n\n";
@@ -317,7 +317,7 @@ display_version(apr_getopt_t *os, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnmucc", TRUE, FALSE, FALSE,
+  SVN_ERR(svn_opt_print_help4(NULL, "svnmucc", TRUE, FALSE, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
@@ -582,7 +582,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_ERR(display_version(opts, pool));
+          SVN_ERR(display_version(pool));
           return SVN_NO_ERROR;
         case 'h':
         case '?':
