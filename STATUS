@@ -138,7 +138,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1619774
    Disable the revprop caching feature.
@@ -170,7 +170,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1621978
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1625533, r1625537
    Keep externals registrations on 'svn upgrade' (part of issue 4519)
