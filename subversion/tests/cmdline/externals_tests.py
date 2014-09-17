@@ -3228,7 +3228,6 @@ def update_dir_external_shallow(sbox):
                                         sbox.ospath('A/B/E'))
 
 @Issue(4411)
-@XFail()
 def switch_parent_relative_file_external(sbox):
   "switch parent-relative file external"
 
@@ -3445,7 +3444,6 @@ def update_deletes_file_external(sbox):
   
 
 @Issue(4519)
-@XFail()
 def switch_relative_externals(sbox):
   "switch relative externals"
 
