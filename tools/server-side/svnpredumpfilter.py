@@ -127,7 +127,7 @@ class DependencyTracker:
     return False
 
   def handle_changes(self, path_copies):
-    for path, copyfrom_path in path_copies.items():
+    for path, copyfrom_path in path_copies:
       if self.path_included(path) and copyfrom_path:
         if not self.path_included(copyfrom_path):
           self.dependent_paths.append(copyfrom_path)
@@ -151,7 +151,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
   line_buf = None
   last_revision = 0
   eof = False
-  path_copies = {}
+  path_copies = set()
   found_changed_path = False
 
   while not eof:
@@ -198,8 +198,8 @@ def svn_log_stream_get_dependencies(stream, included_paths):
         match = copy_action_re.search(line)
         if match:
           found_changed_path = True
-          path_copies[sanitize_path(match.group(1))] = \
-            sanitize_path(match.group(2))
+          path_copies.add((sanitize_path(match.group(1)),
+                           sanitize_path(match.group(2))))
         elif action_re.search(line):
           found_changed_path = True
         else:
