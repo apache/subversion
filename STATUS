@@ -172,6 +172,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1625533, r1625537
+   Keep externals registrations on 'svn upgrade' (part of issue 4519)
+   Justification:
+     'svn upgrade' shouldn't destroy valid information.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
