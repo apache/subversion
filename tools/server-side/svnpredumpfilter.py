@@ -204,7 +204,6 @@ def svn_log_stream_get_dependencies(stream, included_paths):
               sanitize_path(match.group(2))
         else:
           break
-      dt.handle_changes(path_copies)
 
     # Finally, skip any log message lines.  (If there are none,
     # remember the last line we read, because it probably has
@@ -221,6 +220,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
                          "'svn log' with the --verbose (-v) option when "
                          "generating the input to this script?")
 
+  dt.handle_changes(path_copies)
   return dt
 
 def analyze_logs(included_paths):
