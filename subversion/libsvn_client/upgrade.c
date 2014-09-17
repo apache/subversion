@@ -121,7 +121,7 @@ svn_client_upgrade(const char *path,
 
   if (apr_hash_count(externals) > 0)
     {
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       apr_hash_index_t *hi;
 
       /* We are upgrading from >= 1.7. No need to upgrade from
