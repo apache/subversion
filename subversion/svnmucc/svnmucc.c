@@ -251,14 +251,21 @@ sanitize_url(const char *url,
   return svn_uri_canonicalize(url, pool);
 }
 
+static void
+usage(apr_pool_t *pool)
+{
+  svn_error_clear(svn_cmdline_fprintf
+                  (stderr, pool, _("Type 'svnmucc --help' for usage.\n")));
+}
+
 /* Print a usage message on STREAM. */
 static void
-usage(FILE *stream, apr_pool_t *pool)
+help(FILE *stream, apr_pool_t *pool)
 {
   svn_error_clear(svn_cmdline_fputs(
     _("usage: svnmucc ACTION...\n"
       "Subversion multiple URL command client.\n"
-      "Type 'svnmucc --version' to see the program version.\n"
+      "Type 'svnmucc --version' to see the program version and RA modules.\n"
       "\n"
       "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
       "  the result as a (single) new revision.\n"
@@ -487,6 +494,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
+  svn_boolean_t show_version = FALSE;
+  svn_boolean_t show_help = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
@@ -514,7 +523,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        return svn_error_wrap_apr(status, "getopt failure");
+        {
+          usage(pool);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
+        }
       switch(opt)
         {
         case 'm':
@@ -582,13 +595,25 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_ERR(display_version(pool));
-          return SVN_NO_ERROR;
+          show_version = TRUE;
+          break;
         case 'h':
         case '?':
-          usage(stdout, pool);
-          return SVN_NO_ERROR;
+          show_help = TRUE;
+          break;
         }
+    }
+
+  if (show_help)
+    {
+      help(stdout, pool);
+      return SVN_NO_ERROR;
+    }
+
+  if (show_version)
+    {
+      SVN_ERR(display_version(pool));
+      return SVN_NO_ERROR;
     }
 
   if (non_interactive && force_interactive)
@@ -711,7 +736,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
                || ! strcmp(action_string, "help"))
         {
-          usage(stdout, pool);
+          help(stdout, pool);
           return SVN_NO_ERROR;
         }
       else
@@ -872,7 +897,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (! actions->nelts)
     {
       *exit_code = EXIT_FAILURE;
-      usage(stderr, pool);
+      help(stderr, pool);
       return SVN_NO_ERROR;
     }
 
