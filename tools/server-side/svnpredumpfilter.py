@@ -195,13 +195,13 @@ def svn_log_stream_get_dependencies(stream, included_paths):
         except EOFError:
           eof = True
           break
-        match = action_re.search(line)
+        match = copy_action_re.search(line)
         if match:
           found_changed_path = True
-          match = copy_action_re.search(line)
-          if match:
-            path_copies[sanitize_path(match.group(1))] = \
-              sanitize_path(match.group(2))
+          path_copies[sanitize_path(match.group(1))] = \
+            sanitize_path(match.group(2))
+        elif action_re.search(line):
+          found_changed_path = True
         else:
           break
 
