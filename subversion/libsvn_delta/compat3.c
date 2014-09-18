@@ -210,8 +210,7 @@ typedef struct change_node_t
 
   /* new fulltext; null => no change */
   svn_boolean_t contents_changed;
-  const char *contents_abspath;
-  const svn_checksum_t *text_checksum_md5;  /* checksum of new fulltext  */
+  svn_stringbuf_t *contents_text;
 
   /* If COPYFROM_PATH is not NULL, then copy PATH@REV to this node.
      RESTRUCTURE must be RESTRUCTURE_ADD.  */
@@ -668,7 +667,7 @@ struct ev3_file_baton
   svn_revnum_t copyfrom_rev;
 
   /* Path to a file containing the base text. */
-  const char *delta_base_abspath;
+  svn_stringbuf_t *delta_base_text;
 };
 
 /* Return the 'txn_path' that addresses the node that is currently at
@@ -799,19 +798,16 @@ process_actions(struct ev3_edit_baton *eb,
           svn_stream_t *contents;
           svn_checksum_t *checksum;
 
-          if (change->contents_abspath)
+          if (change->contents_text)
             {
-              SVN_DBG(("contents_changed=%d, contents_abspath=%s",
-                       change->contents_changed, change->contents_abspath));
-              /* ### The checksum might be in CHANGE->text_checksum. Should we
-                 assume it's there? Should we use it, validate it, or ignore it? */
-              /*if (change->text_checksum)
-                checksum = change->text_checksum;
-              else*/
-                SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
-                                              SVN_EDITOR3_CHECKSUM_KIND, scratch_pool));
-              SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
-                                               scratch_pool, scratch_pool));
+              /*SVN_DBG(("contents_changed=%d, contents_text='%.20s...'",
+                       change->contents_changed, change->contents_text->data));*/
+              SVN_ERR(svn_checksum(&checksum, SVN_EDITOR3_CHECKSUM_KIND,
+                                   change->contents_text->data,
+                                   change->contents_text->len,
+                                   scratch_pool));
+              contents = svn_stream_from_stringbuf(change->contents_text,
+                                                   scratch_pool);
             }
           else
             {
@@ -1207,7 +1203,7 @@ ev3_add_file(const char *path,
                                                    fb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
 
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
                                  fb->eb->fetch_baton,
                                  change->copyfrom_path,
                                  change->copyfrom_rev,
@@ -1218,7 +1214,7 @@ ev3_add_file(const char *path,
   else
     {
       /* It's a plain add -- we don't have a base. */
-      fb->delta_base_abspath = NULL;
+      fb->delta_base_text = NULL;
 
       if (pb->copyfrom_relpath)
         {
@@ -1263,14 +1259,14 @@ ev3_open_file(const char *path,
 
       fb->copyfrom_relpath = copyfrom_relpath;
       fb->copyfrom_rev = pb->copyfrom_rev;
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
                                  fb->eb->fetch_baton,
                                  copyfrom_relpath, pb->copyfrom_rev,
                                  result_pool, scratch_pool));
     }
   else
     {
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_abspath,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
                                  fb->eb->fetch_baton,
                                  relpath, base_revision,
                                  result_pool, scratch_pool));
@@ -1318,33 +1314,6 @@ ev3_window_handler(svn_txdelta_window_t *window, void *baton)
   return svn_error_trace(err);
 }
 
-/* Lazy-open handler for getting a read-only stream of the delta base. */
-static svn_error_t *
-ev3_open_delta_base(svn_stream_t **stream, void *file_baton,
-                    apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  struct ev3_file_baton *fb = file_baton;
-
-  SVN_ERR(svn_stream_open_readonly(stream, fb->delta_base_abspath,
-                                  result_pool, scratch_pool));
-  /*SVN_DBG(("lazy-opened delta-base file '%s' for read", fb->delta_base_abspath));*/
-  return SVN_NO_ERROR;
-}
-
-/* Lazy-open handler for opening a stream for the delta result. */
-static svn_error_t *
-ev3_open_delta_target(svn_stream_t **stream, void *baton,
-                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  const char **delta_target = baton;
-
-  SVN_ERR(svn_stream_open_unique(stream, delta_target, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 result_pool, scratch_pool));
-  /*SVN_DBG(("lazy-opened delta target file '%s' for fulltext write", *delta_target));*/
-  return SVN_NO_ERROR;
-}
-
 /* An svn_delta_editor_t method. */
 static svn_error_t *
 ev3_apply_textdelta(void *file_baton,
@@ -1376,7 +1345,7 @@ ev3_apply_textdelta(void *file_baton,
          || change->changing_rev == fb->base_revision);
   change->changing_rev = fb->base_revision;
 
-  if (! fb->delta_base_abspath)
+  if (! fb->delta_base_text)
     {
       /*SVN_DBG(("apply_textdelta(%s): preparing read from delta-base <empty stream>",
                fb->path));*/
@@ -1384,15 +1353,13 @@ ev3_apply_textdelta(void *file_baton,
     }
   else
     {
-      /*SVN_DBG(("apply_textdelta(%s): preparing lazy-open read of delta-base file '%s'",
-               fb->path, fb->delta_base_abspath));*/
-      hb->source = svn_stream_lazyopen_create(ev3_open_delta_base, fb,
-                                              FALSE, handler_pool);
+      /*SVN_DBG(("apply_textdelta(%s): preparing read of delta-base '%.20s...'",
+               fb->path, fb->delta_base_text));*/
+      hb->source = svn_stream_from_stringbuf(fb->delta_base_text, handler_pool);
     }
 
-  target = svn_stream_lazyopen_create(ev3_open_delta_target,
-                                      &change->contents_abspath,
-                                      FALSE, fb->eb->edit_pool);
+  change->contents_text = svn_stringbuf_create_empty(fb->eb->edit_pool);
+  target = svn_stream_from_stringbuf(change->contents_text, fb->eb->edit_pool);
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
@@ -1462,10 +1429,10 @@ ev3_close_file(void *file_baton,
       && (change->action == RESTRUCTURE_NONE || change->copyfrom_path))
     {
       change->contents_changed = TRUE;
-      change->contents_abspath = apr_pstrdup(fb->eb->edit_pool,
-                                             fb->delta_base_abspath);
-      SVN_DBG(("close_file(%s): unchanged => use base file '%s'",
-               fb->path, change->contents_abspath));
+      change->contents_text = svn_stringbuf_dup(fb->delta_base_text,
+                                                fb->eb->edit_pool);
+      SVN_DBG(("close_file(%s): unchanged => use base text '%.20s...'",
+               fb->path, change->contents_text->data));
     }
 
   return SVN_NO_ERROR;
@@ -2114,14 +2081,14 @@ apply_change(void **dir_baton,
                             eb->deditor, file_baton, scratch_pool));
 
   /* Send the text content delta, if new text content is provided. */
-  if (change->contents_abspath)
+  if (change->contents_text)
     {
       svn_stream_t *read_stream;
       svn_txdelta_window_handler_t handler;
       void *handler_baton;
 
-      SVN_ERR(svn_stream_open_readonly(&read_stream, change->contents_abspath,
-                                       scratch_pool, scratch_pool));
+      read_stream = svn_stream_from_stringbuf(change->contents_text,
+                                              scratch_pool);
       /* ### would be nice to have a BASE_CHECKSUM, but hey: this is the
          ### shim code...  */
       SVN_ERR(eb->deditor->apply_textdelta(file_baton, NULL, scratch_pool,
@@ -2130,16 +2097,11 @@ apply_change(void **dir_baton,
       SVN_ERR(svn_txdelta_send_stream(read_stream, handler, handler_baton,
                                       NULL, scratch_pool));
       SVN_ERR(svn_stream_close(read_stream));
-      SVN_ERR(svn_io_remove_file2(change->contents_abspath,
-                                  FALSE /*ignore_enoent*/, scratch_pool));
     }
 
   if (file_baton)
     {
-      const char *digest = svn_checksum_to_cstring(change->text_checksum_md5,
-                                                   scratch_pool);
-
-      SVN_ERR(eb->deditor->close_file(file_baton, digest, scratch_pool));
+      SVN_ERR(eb->deditor->close_file(file_baton, NULL, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2431,32 +2393,9 @@ editor3_put(void *baton,
 
   if (new_content->kind == svn_node_file)
     {
-      svn_stream_t *read_stream = new_content->stream;
-      svn_stream_t *write_stream;
-      const char *write_abspath;
-      svn_checksum_t *md5_checksum;
-
-      /* Re-checksum the text contents while reading, if necessary */
-      if (new_content->checksum
-          && new_content->checksum->kind == svn_checksum_md5)
-        {
-          md5_checksum = (svn_checksum_t *)new_content->checksum;
-        }
-      else
-        {
-          read_stream = svn_stream_checksummed2(read_stream, &md5_checksum,
-                                                NULL, svn_checksum_md5, TRUE,
-                                                scratch_pool);
-        }
-
-      /* Copy the content from the provided stream into a temporary file. */
-      SVN_ERR(svn_stream_open_unique(&write_stream, &write_abspath,
-                                     NULL, svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(read_stream, write_stream,
-                               NULL, NULL, scratch_pool));
-      change->contents_abspath = apr_pstrdup(changes_pool, write_abspath);
-      change->text_checksum_md5 = svn_checksum_dup(md5_checksum, changes_pool);
+      /* Copy the provided text into the change record. */
+      SVN_ERR(svn_stringbuf_from_stream(&change->contents_text,
+                                        new_content->stream, 0, changes_pool));
     }
 
   return SVN_NO_ERROR;

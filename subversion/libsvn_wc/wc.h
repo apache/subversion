@@ -742,13 +742,13 @@ struct svn_wc__shim_fetch_baton_t
 };
 
 /* Using a BATON of struct svn_wc__shim_fetch_baton_t, return
- * KIND/PROPS/FILENAME for REPOS_RELPATH. REVISION is unused.
+ * KIND/PROPS/FILE_TEXT for REPOS_RELPATH. REVISION is unused.
  *
  * Implements svn_editor3__shim_fetch_func_t. */
 svn_error_t *
 svn_wc__fetch_func(svn_node_kind_t *kind,
                    apr_hash_t **props,
-                   const char **filename,
+                   svn_stringbuf_t **file_text,
                    void *baton,
                    const char *repos_relpath,
                    svn_revnum_t revision,

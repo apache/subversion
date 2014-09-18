@@ -1455,7 +1455,7 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
 typedef svn_error_t *(*svn_editor3__shim_fetch_func_t)(
   svn_node_kind_t *kind,
   apr_hash_t **props,
-  const char **filename,
+  svn_stringbuf_t **file_text,
   void *baton,
   const char *repos_relpath,
   svn_revnum_t revision,
