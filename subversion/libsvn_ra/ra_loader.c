@@ -767,7 +767,7 @@ struct fb_baton {
 static svn_error_t *
 fetch(svn_node_kind_t *kind_p,
       apr_hash_t **props_p,
-      const char **filename_p,
+      svn_stringbuf_t **file_text,
       void *baton,
       const char *repos_relpath,
       svn_revnum_t revision,
@@ -782,23 +782,20 @@ fetch(svn_node_kind_t *kind_p,
                             &kind, scratch_pool));
   if (kind_p)
     *kind_p = kind;
-  if (kind == svn_node_file && (props_p || filename_p))
+  if (kind == svn_node_file && (props_p || file_text))
     {
       svn_stream_t *file_stream = NULL;
-      const char *tmp_filename;
 
-      if (filename_p)
+      if (file_text)
         {
-          SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
-                                         svn_io_file_del_none,
-                                         scratch_pool, scratch_pool));
+          *file_text = svn_stringbuf_create_empty(result_pool);
+          file_stream = svn_stream_from_stringbuf(*file_text, scratch_pool);
         }
       SVN_ERR(svn_ra_get_file(fbb->session, repos_relpath, revision,
                               file_stream, NULL, props_p, result_pool));
-      if (filename_p)
+      if (file_text)
         {
           SVN_ERR(svn_stream_close(file_stream));
-          *filename_p = apr_pstrdup(result_pool, tmp_filename);
         }
     }
   else if (props_p)

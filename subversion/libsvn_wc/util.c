@@ -420,7 +420,7 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 svn_error_t *
 svn_wc__fetch_func(svn_node_kind_t *kind,
                    apr_hash_t **props,
-                   const char **filename,
+                   svn_stringbuf_t **file_text,
                    void *baton,
                    const char *repos_relpath,
                    svn_revnum_t revision,
@@ -463,9 +463,10 @@ svn_wc__fetch_func(svn_node_kind_t *kind,
         return svn_error_trace(err);
     }
 
-  if (filename)
+  if (file_text)
     {
       const svn_checksum_t *checksum;
+      svn_stream_t *contents;
 
       err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, &checksum,
@@ -475,7 +476,7 @@ svn_wc__fetch_func(svn_node_kind_t *kind,
       if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           svn_error_clear(err);
-          *filename = NULL;
+          *file_text = NULL;
           return SVN_NO_ERROR;
         }
       else if (err)
@@ -483,12 +484,13 @@ svn_wc__fetch_func(svn_node_kind_t *kind,
 
       if (checksum == NULL)
         {
-          *filename = NULL;
+          *file_text = NULL;
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc__db_pristine_get_path(filename, sfb->db, local_abspath,
-                                           checksum, scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, sfb->db, local_abspath,
+                                       checksum, scratch_pool, scratch_pool));
+      SVN_ERR(svn_stringbuf_from_stream(file_text, contents, 0, result_pool));
     }
 
   return SVN_NO_ERROR;

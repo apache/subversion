@@ -840,7 +840,7 @@ abort_edit(void *edit_baton,
 static svn_error_t *
 fetch_func(svn_node_kind_t *kind,
            apr_hash_t **props,
-           const char **filename,
+           svn_stringbuf_t **file_text,
            void *baton,
            const char *repos_relpath,
            svn_revnum_t revision,
@@ -874,27 +874,21 @@ fetch_func(svn_node_kind_t *kind,
         return svn_error_trace(err);
     }
 
-  if (filename)
+  if (file_text)
     {
       svn_stream_t *contents;
-      svn_stream_t *file_stream;
-      const char *tmp_filename;
 
       err = svn_fs_file_contents(&contents, fs_root, repos_relpath, scratch_pool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);
-          *filename = NULL;
+          *file_text = NULL;
           return SVN_NO_ERROR;
         }
       else if (err)
         return svn_error_trace(err);
-      SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
-                                     svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
 
-      *filename = apr_pstrdup(result_pool, tmp_filename);
+      SVN_ERR(svn_stringbuf_from_stream(file_text, contents, 0, result_pool));
     }
 
   return SVN_NO_ERROR;
