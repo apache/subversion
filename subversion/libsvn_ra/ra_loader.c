@@ -776,6 +776,7 @@ fetch(svn_node_kind_t *kind_p,
 {
   struct fb_baton *fbb = baton;
   svn_node_kind_t kind;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_ra_check_path(fbb->session, repos_relpath, revision,
                             &kind, scratch_pool));
@@ -805,6 +806,19 @@ fetch(svn_node_kind_t *kind_p,
       SVN_ERR(svn_ra_get_dir(fbb->session, repos_relpath, revision,
                              NULL /*dirents*/, NULL, props_p, result_pool));
     }
+  /* Remove non-regular props */
+  if (props_p)
+    {
+      for (hi = apr_hash_first(scratch_pool, *props_p); hi; hi = apr_hash_next(hi))
+        {
+          const char *name = apr_hash_this_key(hi);
+
+          if (svn_property_kind2(name) != svn_prop_regular_kind)
+            svn_hash_sets(*props_p, name, NULL);
+
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 

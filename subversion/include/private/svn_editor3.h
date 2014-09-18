@@ -1436,7 +1436,8 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
  *
  * Implementations should set @a *props to the hash of properties
  * associated with @a repos_relpath in @a revision, allocating that hash
- * and its contents in @a result_pool.
+ * and its contents in @a result_pool. Only the 'regular' props should be
+ * included, not special props such as 'entry props'.
  *
  * Implementations should set @a *filename to the name of a file
  * suitable for use as a delta base for @a repos_relpath in @a revision
