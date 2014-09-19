@@ -1316,93 +1316,83 @@ svn_editor3_get_baton(const svn_editor3_t *editor);
 
 /** Versioned content of a node, excluding tree structure information.
  *
- * The @a kind field specifies the kind of content described. It must
- * match the kind of node it is being put into, as a node's kind cannot
- * be changed.
+ * Content is described by setting fields in one of the following ways.
+ * Other fields SHOULD be null (or equivalent).
  *
- * The @a ref field specifies a reference content: the content of an
- * existing committed node, or empty. The other fields are optional
- * overrides for parts of the content.
+ *   by reference:  (kind=unknown, ref)
+ *   dir:           (kind=dir, props)
+ *   file:          (kind=file, props, text)
+ *   symlink:       (kind=symlink, props, target)
  *
- * ### Specify content as deltas against the (optional) reference instead
- *     of as overrides?
+ * ### Idea for the future: Specify content as an (optional) reference
+ *     plus (optional) overrides or deltas against the reference?
  */
 struct svn_editor3_node_content_t
 {
-  /* The node kind: dir, file, symlink, or unknown.
-   * 
-   * MUST NOT be 'unknown' if the content is of a known kind, including
-   * if a kind-specific field (checksum, stream or target) is non-null.
-   * MAY be 'unknown' when only copying content from a reference node
-   * and/or only changing properties. */
+  /* The node kind for this content: dir, file, symlink, or unknown. */
   svn_node_kind_t kind;
 
-  /* Reference the content in an existing, committed node-rev.
-   *
-   * If this is (SVN_INVALID_REVNUM, NULL) then the reference content
-   * is empty.
-   *
-   * ### Reference a whole node-rev instead? (Don't need to reference a
-   *     specific rev.)
-   */
+  /* Reference existing, committed content at REF (for kind=unknown).
+   * The 'null' value is (SVN_INVALID_REVNUM, NULL). */
   svn_editor3_peg_path_t ref;
 
-  /* Properties (for all node kinds).
+  /* Properties (for kind != unknown).
    * Maps (const char *) name -> (svn_string_t) value.
-   * An empty hash means no properties. (SHOULD NOT be NULL.) */
+   * An empty hash means no properties. (SHOULD NOT be NULL.)
+   * ### Presently NULL means 'no change' in some contexts. */
   apr_hash_t *props;
 
-  /* Text checksum (only for a file; otherwise SHOULD be NULL). */
-  const svn_checksum_t *checksum;
+  /* File text (for kind=file; otherwise SHOULD be NULL). */
+  svn_stringbuf_t *text;
 
-  /* Text stream, readable (only for a file; otherwise SHOULD be NULL).
-   * ### May be null if we expect the receiver to retrieve the text by its
-   *     checksum? */
-  svn_stream_t *stream;
-
-  /* Symlink target (only for a symlink; otherwise SHOULD be NULL). */
+  /* Symlink target (for kind=symlink; otherwise SHOULD be NULL). */
   const char *target;
 
 };
 
-/* Duplicate a node-content into result_pool.
- * ### What about the stream though? Maybe we shouldn't have a _dup.
+/** Duplicate a node-content @a old into @a result_pool.
  */
 /* svn_editor3_node_content_t *
 svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
                              apr_pool_t *result_pool); */
 
-/* Create a new node-content object by reference to an existing node.
+/** Create a new node-content object by reference to an existing node.
  *
- * Allocate it in @a result_pool. */
+ * Set the node kind to 'unknown'.
+ *
+ * Allocate the result in @a result_pool, but only shallow-copy the
+ * given arguments.
+ */
 svn_editor3_node_content_t *
 svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
                                     apr_pool_t *result_pool);
 
-/* Create a new node-content object for a directory node.
+/** Create a new node-content object for a directory node.
  *
- * Allocate it in @a result_pool. */
+ * Allocate the result in @a result_pool, but only shallow-copy the
+ * given arguments.
+ */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
-                                    apr_hash_t *props,
+svn_editor3_node_content_create_dir(apr_hash_t *props,
                                     apr_pool_t *result_pool);
 
-/* Create a new node-content object for a file node.
+/** Create a new node-content object for a file node.
  *
- * Allocate it in @a result_pool. */
+ * Allocate the result in @a result_pool, but only shallow-copy the
+ * given arguments.
+ */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_file(svn_editor3_peg_path_t ref,
-                                     apr_hash_t *props,
-                                     const svn_checksum_t *checksum,
-                                     svn_stream_t *stream,
+svn_editor3_node_content_create_file(apr_hash_t *props,
+                                     svn_stringbuf_t *text,
                                      apr_pool_t *result_pool);
 
-/* Create a new node-content object for a symlink node.
+/** Create a new node-content object for a symlink node.
  *
- * Allocate it in @a result_pool. */
+ * Allocate the result in @a result_pool, but only shallow-copy the
+ * given arguments.
+ */
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
-                                        apr_hash_t *props,
+svn_editor3_node_content_create_symlink(apr_hash_t *props,
                                         const char *target,
                                         apr_pool_t *result_pool);
 

@@ -795,19 +795,13 @@ process_actions(struct ev3_edit_baton *eb,
 
       if (change->kind == svn_node_file)
         {
-          svn_stream_t *contents;
-          svn_checksum_t *checksum;
+          svn_stringbuf_t *text;
 
           if (change->contents_text)
             {
               /*SVN_DBG(("contents_changed=%d, contents_text='%.20s...'",
                        change->contents_changed, change->contents_text->data));*/
-              SVN_ERR(svn_checksum(&checksum, SVN_EDITOR3_CHECKSUM_KIND,
-                                   change->contents_text->data,
-                                   change->contents_text->len,
-                                   scratch_pool));
-              contents = svn_stream_from_stringbuf(change->contents_text,
-                                                   scratch_pool);
+              text = change->contents_text;
             }
           else
             {
@@ -817,19 +811,16 @@ process_actions(struct ev3_edit_baton *eb,
 
               /* If this file was added, but apply_txdelta() was not called (i.e.
                  CONTENTS_CHANGED is FALSE), we're adding an empty file. */
-              contents = svn_stream_empty(scratch_pool);
-              checksum = svn_checksum_empty_checksum(SVN_EDITOR3_CHECKSUM_KIND,
-                                                     scratch_pool);
+              text = svn_stringbuf_create_empty(scratch_pool);
             }
 
           new_content = svn_editor3_node_content_create_file(
-                          pathrev(NULL, -1),
-                          change->props, checksum, contents, scratch_pool);
+                          change->props, text, scratch_pool);
         }
       else if (change->kind == svn_node_dir)
         {
           new_content = svn_editor3_node_content_create_dir(
-                          pathrev(NULL, -1), change->props, scratch_pool);
+                          change->props, scratch_pool);
         }
       else
         SVN_ERR_MALFUNCTION();
@@ -2394,8 +2385,8 @@ editor3_put(void *baton,
   if (new_content->kind == svn_node_file)
     {
       /* Copy the provided text into the change record. */
-      SVN_ERR(svn_stringbuf_from_stream(&change->contents_text,
-                                        new_content->stream, 0, changes_pool));
+      change->contents_text = svn_stringbuf_dup(new_content->text,
+                                                changes_pool);
     }
 
   return SVN_NO_ERROR;
