@@ -503,48 +503,44 @@ svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_dir(svn_editor3_peg_path_t ref,
-                                    apr_hash_t *props,
+svn_editor3_node_content_create_dir(apr_hash_t *props,
                                     apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
     = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_dir;
-  new_content->ref = ref;
   new_content->props = props;
   return new_content;
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_file(svn_editor3_peg_path_t ref,
-                                     apr_hash_t *props,
-                                     const svn_checksum_t *checksum,
-                                     svn_stream_t *stream,
+svn_editor3_node_content_create_file(apr_hash_t *props,
+                                     svn_stringbuf_t *text,
                                      apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
     = apr_pcalloc(result_pool, sizeof(*new_content));
 
+  SVN_ERR_ASSERT_NO_RETURN(text);
+
   new_content->kind = svn_node_file;
-  new_content->ref = ref;
   new_content->props = props;
-  new_content->checksum = checksum;
-  new_content->stream = stream;
+  new_content->text = text;
   return new_content;
 }
 
 svn_editor3_node_content_t *
-svn_editor3_node_content_create_symlink(svn_editor3_peg_path_t ref,
-                                        apr_hash_t *props,
+svn_editor3_node_content_create_symlink(apr_hash_t *props,
                                         const char *target,
                                         apr_pool_t *result_pool)
 {
   svn_editor3_node_content_t *new_content
     = apr_pcalloc(result_pool, sizeof(*new_content));
 
+  SVN_ERR_ASSERT_NO_RETURN(target);
+
   new_content->kind = svn_node_symlink;
-  new_content->ref = ref;
   new_content->props = props;
   new_content->target = target;
   return new_content;

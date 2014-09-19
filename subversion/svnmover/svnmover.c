@@ -323,6 +323,7 @@ execute(const apr_array_header_t *actions,
              without overwriting anything. */
           {
             svn_stream_t *src;
+            svn_stringbuf_t *text;
             svn_editor3_node_content_t *new_content;
 
             if (strcmp(action->path[1], "-") != 0)
@@ -331,8 +332,9 @@ execute(const apr_array_header_t *actions,
             else
               SVN_ERR(svn_stream_for_stdin(&src, pool));
 
+            SVN_ERR(svn_stringbuf_from_stream(&text, src, 0, pool));
             new_content = svn_editor3_node_content_create_file(
-                            path1_loc, NULL, NULL/*checksum*/, src, iterpool);
+                            NULL, text, iterpool);
             SVN_ERR(svn_editor3_mk(editor, svn_node_file, path1_parent, path1_name));
             SVN_ERR(svn_editor3_put(editor, path1_txn_loc, new_content));
           }
