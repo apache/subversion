@@ -323,10 +323,10 @@ get_node_revision_body(node_revision_t **noderev_p,
 
       /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
       if (ffd->node_revision_cache)
-      SVN_ERR(svn_cache__set(ffd->node_revision_cache,
-                              &key,
-                              *noderev_p,
-                              scratch_pool));
+        SVN_ERR(svn_cache__set(ffd->node_revision_cache,
+                               &key,
+                               *noderev_p,
+                               scratch_pool));
 
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }

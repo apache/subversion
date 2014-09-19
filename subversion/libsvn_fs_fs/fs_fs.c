@@ -1403,15 +1403,15 @@ write_revision_zero(svn_fs_t *fs,
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-    SVN_ERR(svn_io_file_create(path_revision_zero,
-                               "PLAIN\nEND\nENDREP\n"
-                               "id: 0.0.r0/17\n"
-                               "type: dir\n"
-                               "count: 0\n"
-                               "text: 0 0 4 4 "
-                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: /\n"
-                              "\n\n17 107\n", scratch_pool));
+  SVN_ERR(svn_io_file_create(path_revision_zero,
+                             "PLAIN\nEND\nENDREP\n"
+                             "id: 0.0.r0/17\n"
+                             "type: dir\n"
+                             "count: 0\n"
+                             "text: 0 0 4 4 "
+                             "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                             "cpath: /\n"
+                             "\n\n17 107\n", scratch_pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, scratch_pool));
 

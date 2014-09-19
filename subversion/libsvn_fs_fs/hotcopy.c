@@ -711,7 +711,7 @@ hotcopy_revisions(svn_fs_t *src_fs,
             {
               SVN_ERR(svn_fs_fs__write_current(dst_fs, rev, 0, 0,
                                                iterpool));
-    }
+            }
         }
 
       if (notify_func && !skipped)
