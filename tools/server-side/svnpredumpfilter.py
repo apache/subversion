@@ -117,20 +117,55 @@ def log(msg, min_verbosity):
 
 class DependencyTracker:
   def __init__(self, include_paths):
-    self.include_paths = include_paths[:]
-    self.dependent_paths = []
+    self.include_paths = set(include_paths)
+    self.dependent_paths = set()
 
   def path_included(self, path):
-    for include_path in self.include_paths + self.dependent_paths:
+    for include_path in self.include_paths | self.dependent_paths:
       if subsumes(include_path, path):
         return True
     return False
 
-  def handle_changes(self, path_copies):
-    for path, copyfrom_path in path_copies:
-      if self.path_included(path) and copyfrom_path:
-        if not self.path_included(copyfrom_path):
-          self.dependent_paths.append(copyfrom_path)
+  def include_missing_copies(self, path_copies):
+    while True:
+      log("Cross-checking %d included paths with %d copies "
+          "for missing path dependencies..." % (
+            len(self.include_paths) + len(self.dependent_paths),
+            len(path_copies)),
+          1)
+      included_copies = []
+      for path, copyfrom_path in path_copies:
+        if self.path_included(path):
+          log("Adding copy '%s' -> '%s'" % (copyfrom_path, path), 1)
+          self.dependent_paths.add(copyfrom_path)
+          included_copies.append((path, copyfrom_path))
+      if not included_copies:
+        log("Found all missing path dependencies", 1)
+        break
+      for path, copyfrom_path in included_copies:
+        path_copies.remove((path, copyfrom_path))
+      log("Found %d new copy dependencies, need to re-check for more"
+        % len(included_copies), 1)
+    if self.dependent_paths:
+      log("Eliminating redundant copies of child paths...", 1)
+      common_parents = set([self.dependent_paths.pop()])
+      for path in self.dependent_paths:
+        subsumed_paths = set()
+        for maybe_parent in common_parents:
+          if subsumes(path, maybe_parent):
+            subsumed_paths.add(maybe_parent)
+        if subsumed_paths:
+          common_parents.add(path)
+          for subsumed_path in subsumed_paths:
+            common_parents.remove(subsumed_path)
+      subsumed_paths = set()
+      for path in self.include_paths:
+        for maybe_parent in common_parents:
+          if subsumes(path, maybe_parent):
+            subsumed_paths.add(maybe_parent)
+      for subsumed_path in subsumed_paths:
+        common_parents.remove(subsumed_path)
+      self.dependent_paths = common_parents
 
 def readline(stream):
   line = stream.readline()
@@ -220,7 +255,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
                          "'svn log' with the --verbose (-v) option when "
                          "generating the input to this script?")
 
-  dt.handle_changes(path_copies)
+  dt.include_missing_copies(path_copies)
   return dt
 
 def analyze_logs(included_paths):
