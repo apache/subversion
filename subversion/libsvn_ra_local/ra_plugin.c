@@ -930,6 +930,7 @@ fetch_func(svn_node_kind_t *kind_p,
   const char *session_relpath = svn_relpath_skip_ancestor(session_root_path,
                                                           repos_relpath);
   svn_node_kind_t kind;
+  apr_hash_index_t *hi;
 
   SVN_ERR_ASSERT(session_relpath);
   SVN_ERR(svn_ra_local__do_check_path(fb->session, session_relpath, revision, &kind,
@@ -970,6 +971,19 @@ fetch_func(svn_node_kind_t *kind_p,
                                         NULL /*dirents*/, NULL /*fetched_rev*/,
                                         props_p, session_relpath, revision,
                                         0 /*dirent_fields*/, result_pool));
+        }
+    }
+
+  /* Remove non-regular props */
+  if (props_p && *props_p)
+    {
+      for (hi = apr_hash_first(scratch_pool, *props_p); hi; hi = apr_hash_next(hi))
+        {
+          const char *name = apr_hash_this_key(hi);
+
+          if (svn_property_kind2(name) != svn_prop_regular_kind)
+            svn_hash_sets(*props_p, name, NULL);
+
         }
     }
   if (props_p)
