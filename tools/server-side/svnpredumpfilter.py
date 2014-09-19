@@ -150,26 +150,6 @@ class DependencyTracker:
         path_copies.remove((path, copyfrom_path))
       log("Found %d new copy dependencies, need to re-check for more"
         % len(included_copies), 1)
-    if self.dependent_paths:
-      log("Eliminating redundant copies of child paths...", 1)
-      common_parents = set([self.dependent_paths.pop()])
-      for path in self.dependent_paths:
-        subsumed_paths = set()
-        for maybe_parent in common_parents:
-          if subsumes(path, maybe_parent):
-            subsumed_paths.add(maybe_parent)
-        if subsumed_paths:
-          common_parents.add(path)
-          for subsumed_path in subsumed_paths:
-            common_parents.remove(subsumed_path)
-      subsumed_paths = set()
-      for path in self.include_paths:
-        for maybe_parent in common_parents:
-          if subsumes(path, maybe_parent):
-            subsumed_paths.add(maybe_parent)
-      for subsumed_path in subsumed_paths:
-        common_parents.remove(subsumed_path)
-      self.dependent_paths = common_parents
 
 def readline(stream):
   line = stream.readline()
