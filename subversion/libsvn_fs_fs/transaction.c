@@ -3083,10 +3083,10 @@ commit_body(void *baton, apr_pool_t *pool)
   trailer
     = svn_fs_fs__unparse_revision_trailer
               ((apr_off_t)svn_fs_fs__id_item(new_root_id),
-                changed_path_offset,
-                pool);
+               changed_path_offset,
+               pool);
   SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
-                                  NULL, pool));
+                                 NULL, pool));
 
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
