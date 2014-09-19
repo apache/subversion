@@ -68,7 +68,7 @@ def sanitize_path(path):
 def subsumes(path, maybe_child):
   if path == maybe_child:
     return True
-  if maybe_child.find(path + '/') == 0:
+  if maybe_child.startswith(path + '/'):
     return True
   return False
 
