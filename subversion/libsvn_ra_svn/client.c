@@ -368,15 +368,16 @@ ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
-/* (Note: *ARGV is an output parameter.) */
+/* (Note: *ARGV_P is an output parameter.) */
 static svn_error_t *find_tunnel_agent(const char *tunnel,
                                       const char *hostinfo,
-                                      const char ***argv,
+                                      const char ***argv_p,
                                       apr_hash_t *config, apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *val, *var, *cmd;
   char **cmd_argv;
+  const char **argv;
   apr_size_t len;
   apr_status_t status;
   int n;
@@ -430,16 +431,22 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't tokenize command '%s'"), cmd);
 
-  /* Append the fixed arguments to the result. */
+  /* Calc number of the fixed arguments. */
   for (n = 0; cmd_argv[n] != NULL; n++)
     ;
-  *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
-  memcpy(*argv, cmd_argv, n * sizeof(char *));
-  (*argv)[n++] = svn_path_uri_decode(hostinfo, pool);
-  (*argv)[n++] = "svnserve";
-  (*argv)[n++] = "-t";
-  (*argv)[n] = NULL;
 
+  argv = apr_palloc(pool, (n + 4) * sizeof(char *));
+
+  /* Append the fixed arguments to the result. */
+  for (n = 0; cmd_argv[n] != NULL; n++)
+    argv[n] = cmd_argv[n];
+
+  argv[n++] = svn_path_uri_decode(hostinfo, pool);
+  argv[n++] = "svnserve";
+  argv[n++] = "-t";
+  argv[n] = NULL;
+
+  *argv_p = argv;
   return SVN_NO_ERROR;
 }
 
