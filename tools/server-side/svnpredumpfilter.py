@@ -38,6 +38,10 @@ Use the default ordering of revisions (that is, '-r HEAD:0').
 Return errorcode 0 if there are no additional dependencies found, 1 if
 there were; any other errorcode indicates a fatal error.
 
+Paths in mergeinfo are not considered as additional dependencies so the
+--skip-missing-merge-sources option of 'svndumpfilter' may be required
+for successful filtering with the resulting path list.
+
 Options:
 
    --help (-h)           Show this usage message and exit.
