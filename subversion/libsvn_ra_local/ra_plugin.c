@@ -917,7 +917,7 @@ typedef struct fetch_baton_t
 static svn_error_t *
 fetch_func(svn_node_kind_t *kind_p,
            apr_hash_t **props_p,
-           const char **filename_p,
+           svn_stringbuf_t **file_text,
            void *baton,
            const char *repos_relpath,
            svn_revnum_t revision,
@@ -939,18 +939,17 @@ fetch_func(svn_node_kind_t *kind_p,
       *kind_p = kind;
     }
 
-  if (props_p || filename_p)
+  if (props_p || file_text)
     {
       if (kind == svn_node_file)
         {
           svn_stream_t *fstream = NULL;
           svn_error_t *err;
 
-          if (filename_p)
+          if (file_text)
             {
-              SVN_ERR(svn_stream_open_unique(&fstream, filename_p, NULL,
-                                             svn_io_file_del_on_pool_cleanup,
-                                             result_pool, scratch_pool));
+              *file_text = svn_stringbuf_create_empty(result_pool);
+              fstream = svn_stream_from_stringbuf(*file_text, scratch_pool);
             }
           err = svn_ra_local__get_file(fb->session, session_relpath, revision,
                                        fstream, NULL /*fetched_rev*/,
