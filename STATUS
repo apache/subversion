@@ -140,15 +140,23 @@ Candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1619774
+ * r1543594, r1619774, r1619105, r1619118, r1619153, r1619802
    Disable the revprop caching feature.
    Justification:
      The deployment restrictions that come with the 1.8 implementation
      of this feature make it hard to use correctly. See also
      http://svn.haxx.se/dev/archive-2014-08/0273.shtml
+   Notes:
+     r1619774 is the actual patch, r1543594 is a whitespace only change
+     that prevents a text conflict.  r1619105, r1619118, r1619153 and
+     r1619802 provide a new test case.  This required the backport branch
+     since the test file has been renamed on /trunk and used 1.9 APIs.
+   Branch:
+     ^/subversion/branches/1.8.x-r1619774
    Votes:
      +1: stefan2
-     -0: ivan (texts conflicts; misses relevant tests (r1619105 and
+     -0: (w/o the backport branch)
+         ivan (texts conflicts; misses relevant tests (r1619105 and
                follow-ups); But I agree with backport in general)
 
  * r1620332
