@@ -154,10 +154,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1619774
    Votes:
-     +1: stefan2
-     -0: (w/o the backport branch)
-         ivan (texts conflicts; misses relevant tests (r1619105 and
-               follow-ups); But I agree with backport in general)
+     +1: stefan2, ivan
 
  * r1620332
    Remove broken conflict resolver menu options.
