@@ -2041,15 +2041,14 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
 
 /* Read a mapping entry from the phys-to-log index STREAM and append it to
  * RESULT.  *ITEM_INDEX contains the phys offset for the entry and will
- * be moved forward by the size of entry.  Use POOL for allocations.
+ * be moved forward by the size of entry.
  */
 static svn_error_t *
 read_entry(svn_fs_fs__packed_number_stream_t *stream,
            apr_off_t *item_offset,
            svn_revnum_t *last_revision,
            apr_uint64_t *last_compound,
-           apr_array_header_t *result,
-           apr_pool_t *pool)
+           apr_array_header_t *result)
 {
   apr_uint64_t value;
 
@@ -2137,7 +2136,7 @@ get_p2l_page(apr_array_header_t **entries,
   do
     {
       SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, &last_revision,
-                         &last_compound, result, result_pool));
+                         &last_compound, result));
       offset = packed_stream_offset(rev_file->p2l_stream);
     }
   while (offset < next_offset);
@@ -2151,7 +2150,7 @@ get_p2l_page(apr_array_header_t **entries,
       last_revision = start_revision;
       last_compound = 0;
       SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, &last_revision,
-                         &last_compound, result, result_pool));
+                         &last_compound, result));
     }
 
   *entries = result;
