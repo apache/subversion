@@ -71,20 +71,21 @@ typedef struct svn_fs_fs__p2l_entry_t
 } svn_fs_fs__p2l_entry_t;
 
 /* Open / create a log-to-phys index file with the full file path name
- * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
- * allocations.
+ * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
+ * RESULT_POOL.
  */
 svn_error_t *
 svn_fs_fs__l2p_proto_index_open(apr_file_t **proto_index,
                                 const char *file_name,
-                                apr_pool_t *pool);
+                                apr_pool_t *result_pool);
 
 /* Call this function before adding entries for the next revision to the
- * log-to-phys index file in PROTO_INDEX.  Use POOL for allocations.
+ * log-to-phys index file in PROTO_INDEX.  Use SCRATCH_POOL for temporary
+ * allocations.
  */
 svn_error_t *
 svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *scratch_pool);
 
 /* Add a new mapping, ITEM_INDEX to the OFFSET, to log-to-phys index file
  * in PROTO_INDEX.  Please note that mappings may be added in any order
@@ -93,65 +94,65 @@ svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
  * mark 'invalid' item indexes but that is already implied for all item
  * indexes not explicitly given a mapping.
  * 
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                      apr_off_t offset,
                                      apr_uint64_t item_index,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *scratch_pool);
 
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  Use POOL for allocations.
+ * and so forth.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__l2p_index_append(svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /* Open / create a phys-to-log index file with the full file path name
- * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
- * allocations.
+ * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
+ * RESULT_POOL.
  */
 svn_error_t *
 svn_fs_fs__p2l_proto_index_open(apr_file_t **proto_index,
                                 const char *file_name,
-                                apr_pool_t *pool);
+                                apr_pool_t *result_pool);
 
 /* Add a new mapping ENTRY to the phys-to-log index file in PROTO_INDEX.
  * The entries must be added in ascending offset order and must not leave
  * intermittent ranges uncovered.  The revision value in ENTRY may be
- * SVN_INVALID_REVISION.  Use POOL for allocations.
+ * SVN_INVALID_REVISION.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
                                      svn_fs_fs__p2l_entry_t *entry,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *scratch_pool);
 
 /* Set *NEXT_OFFSET to the first offset behind the last entry in the
  * phys-to-log proto index file PROTO_INDEX.  This will be 0 for empty
- * index files.  Use POOL for temporary allocations.
+ * index files.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
                                        apr_file_t *proto_index,
-                                       apr_pool_t *pool);
+                                       apr_pool_t *scratch_pool);
 
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * phys-to-log index and append it to INDEX_FILE.  Entries without a valid
  * revision will be assigned to the REVISION given here.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_index_append(svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (at least partly) overlap with the range given by BLOCK_START
@@ -197,7 +198,7 @@ svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
  * If that is not available anymore (neither in cache nor on disk), re-open
  * the rev / pack file and retry to open the index file.  For anything but
  * committed log addressed revisions, REV_FILE may be NULL.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
@@ -206,7 +207,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 /* Use the log-to-phys indexes in FS to determine the maximum item indexes
  * assigned to revision START_REV to START_REV + COUNT - 1.  That is a
@@ -224,14 +225,14 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
  * REV_FILE determines whether to access single rev or pack file data.
  * If that is not available anymore (neither in cache nor on disk), re-open
  * the rev / pack file and retry to open the index file.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
                               svn_fs_t *fs,
                               svn_fs_fs__revision_file_t *rev_file,
                               svn_revnum_t revision,
-                              apr_pool_t *pool);
+                              apr_pool_t *scratch_pool);
 
 /* Index (re-)creation utilities.
  */
