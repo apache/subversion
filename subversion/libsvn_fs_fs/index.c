@@ -741,22 +741,23 @@ auto_open_l2p_index(svn_fs_fs__revision_file_t *rev_file,
 }
 
 /* Read the header data structure of the log-to-phys index for REVISION
- * in FS and return it in *HEADER.  Use REV_FILE to access on-disk data.
- * Use POOL for allocations.
+ * in FS and return it in *HEADER, allocated in RESULT_POOL.  Use REV_FILE
+ * to access on-disk data.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_l2p_header_body(l2p_header_t **header,
                     svn_fs_fs__revision_file_t *rev_file,
                     svn_fs_t *fs,
                     svn_revnum_t revision,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   int i;
   apr_size_t page, page_count;
   apr_off_t offset;
-  l2p_header_t *result = apr_pcalloc(pool, sizeof(*result));
+  l2p_header_t *result = apr_pcalloc(result_pool, sizeof(*result));
   apr_size_t page_table_index;
 
   pair_cache_key_t key;
@@ -805,10 +806,10 @@ get_l2p_header_body(l2p_header_t **header,
 
   /* allocate the page tables */
   result->page_table
-    = apr_pcalloc(pool, page_count * sizeof(*result->page_table));
+    = apr_pcalloc(result_pool, page_count * sizeof(*result->page_table));
   result->page_table_index
-    = apr_pcalloc(pool, (result->revision_count + 1)
-                      * sizeof(*result->page_table_index));
+    = apr_pcalloc(result_pool, (result->revision_count + 1)
+                             * sizeof(*result->page_table_index));
 
   /* read per-revision page table sizes (i.e. number of pages per rev) */
   page_table_index = 0;
@@ -860,7 +861,7 @@ get_l2p_header_body(l2p_header_t **header,
 
   /* return and cache the header */
   *header = result;
-  SVN_ERR(svn_cache__set(ffd->l2p_header_cache, &key, result, pool));
+  SVN_ERR(svn_cache__set(ffd->l2p_header_cache, &key, result, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1004,7 +1005,7 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
 
   /* read from disk, cache and copy the result */
   SVN_ERR(get_l2p_header_body(&result, rev_file, fs, baton->revision,
-                              scratch_pool));
+                              scratch_pool, scratch_pool));
   SVN_ERR(l2p_page_info_copy(baton, result, result->page_table,
                              result->page_table_index, scratch_pool));
 
@@ -1441,14 +1442,16 @@ l2p_proto_index_lookup(apr_off_t *offset,
 
 /* Read the log-to-phys header info of the index covering REVISION from FS
  * and return it in *HEADER.  REV_FILE provides the pack / rev status.
- * Allocate *HEADER in RESULT_POOL.
+ * Allocate *HEADER in RESULT_POOL, use SCRATCH_POOL for temporary
+ * allocations.
  */
 static svn_error_t *
 get_l2p_header(l2p_header_t **header,
                svn_fs_fs__revision_file_t *rev_file,
                svn_fs_t *fs,
                svn_revnum_t revision,
-               apr_pool_t *result_pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
@@ -1463,7 +1466,8 @@ get_l2p_header(l2p_header_t **header,
     return SVN_NO_ERROR;
 
   /* read from disk and cache the result */
-  SVN_ERR(get_l2p_header_body(header, rev_file, fs, revision, result_pool));
+  SVN_ERR(get_l2p_header_body(header, rev_file, fs, revision, result_pool,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1484,7 +1488,8 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
   /* read index master data structure for the index covering START_REV */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, start_rev,
                                            header_pool, header_pool));
-  SVN_ERR(get_l2p_header(&header, rev_file, fs, start_rev, header_pool));
+  SVN_ERR(get_l2p_header(&header, rev_file, fs, start_rev, header_pool,
+                         header_pool));
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
   /* Determine the length of the item index list for each rev.
@@ -1506,7 +1511,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
           SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
                                                   header_pool, header_pool));
           SVN_ERR(get_l2p_header(&header, rev_file, fs, revision,
-                                 header_pool));
+                                 header_pool, header_pool));
           SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
         }
 
@@ -1829,15 +1834,16 @@ auto_open_p2l_index(svn_fs_fs__revision_file_t *rev_file,
 
 
 /* Read the header data structure of the phys-to-log index for REVISION in
- * FS and return it in *HEADER. Use REV_FILE to access on-disk data.
- * Use POOL for allocations.
+ * FS and return it in *HEADER, allocated in RESULT_POOL. Use REV_FILE to
+ * access on-disk data.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_p2l_header(p2l_header_t **header,
                svn_fs_fs__revision_file_t *rev_file,
                svn_fs_t *fs,
                svn_revnum_t revision,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
@@ -1852,7 +1858,7 @@ get_p2l_header(p2l_header_t **header,
   key.second = rev_file->is_packed;
 
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->p2l_header_cache,
-                         &key, pool));
+                         &key, result_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
@@ -1864,7 +1870,7 @@ get_p2l_header(p2l_header_t **header,
     packed_stream_seek(rev_file->p2l_stream, 0);
 
   /* allocate result data structure */
-  result = apr_pcalloc(pool, sizeof(*result));
+  result = apr_pcalloc(result_pool, sizeof(*result));
   
   /* Read table sizes, check them for plausibility and allocate page array. */
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
@@ -1892,7 +1898,7 @@ get_p2l_header(p2l_header_t **header,
                    _("P2L page count does not match rev / pack file size"));
 
   result->offsets
-    = apr_pcalloc(pool, (result->page_count + 1) * sizeof(*result->offsets));
+    = apr_pcalloc(result_pool, (result->page_count + 1) * sizeof(*result->offsets));
 
   /* read page sizes and derive page description offsets from them */
   result->offsets[0] = 0;
@@ -1908,7 +1914,7 @@ get_p2l_header(p2l_header_t **header,
     result->offsets[i] += offset;
 
   /* cache the header data */
-  SVN_ERR(svn_cache__set(ffd->p2l_header_cache, &key, result, pool));
+  SVN_ERR(svn_cache__set(ffd->p2l_header_cache, &key, result, scratch_pool));
 
   /* return the result */
   *header = result;
@@ -2031,7 +2037,7 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
     return SVN_NO_ERROR;
 
   SVN_ERR(get_p2l_header(&header, rev_file, fs, baton->revision,
-                         scratch_pool));
+                         scratch_pool, scratch_pool));
 
   /* copy the requested info into *BATON */
   p2l_page_info_copy(baton, header, header->offsets);
@@ -2562,17 +2568,20 @@ compare_p2l_entry_offsets(const void *lhs, const void *rhs)
 }
 
 /* Cached data extraction utility.  DATA is a P2L index page, e.g. an APR
- * array of svn_fs_fs__p2l_entry_t elements.  Return the entry for the item
- * starting at OFFSET or NULL if that's not an the start offset of any item.
+ * array of svn_fs_fs__p2l_entry_t elements.  Return the entry for the item,
+ * allocated in RESULT_POOL, starting at OFFSET or NULL if that's not an
+ * the start offset of any item. Use SCRATCH_POOL for temporary allocations.
  */
 static svn_fs_fs__p2l_entry_t *
 get_p2l_entry_from_cached_page(const void *data,
                                apr_uint64_t offset,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   /* resolve all pointer values of in-cache data */
   const apr_array_header_t *page = data;
-  apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
+  apr_array_header_t *entries = apr_pmemdup(scratch_pool, page,
+                                            sizeof(*page));
   svn_fs_fs__p2l_entry_t *entry;
 
   entries->elts = (char *)svn_temp_deserializer__ptr(page,
@@ -2583,7 +2592,7 @@ get_p2l_entry_from_cached_page(const void *data,
       (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
   /* return it, if it is a perfect match */
-  return entry ? apr_pmemdup(pool, entry, sizeof(*entry)) : NULL;
+  return entry ? apr_pmemdup(result_pool, entry, sizeof(*entry)) : NULL;
 }
 
 /* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
@@ -2598,7 +2607,8 @@ p2l_entry_lookup_func(void **out,
                       apr_pool_t *result_pool)
 {
   svn_fs_fs__p2l_entry_t *entry
-    = get_p2l_entry_from_cached_page(data, *(apr_off_t *)baton, result_pool);
+    = get_p2l_entry_from_cached_page(data, *(apr_off_t *)baton, result_pool,
+                                     result_pool);
 
   *out = entry && entry->offset == *(apr_off_t *)baton
        ? apr_pmemdup(result_pool, entry, sizeof(*entry))
@@ -2690,7 +2700,8 @@ p2l_get_max_offset(apr_off_t *offset,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_p2l_header(&header, rev_file, fs, revision, scratch_pool));
+  SVN_ERR(get_p2l_header(&header, rev_file, fs, revision, scratch_pool,
+                         scratch_pool));
   *offset = header->file_size;
 
   return SVN_NO_ERROR;
