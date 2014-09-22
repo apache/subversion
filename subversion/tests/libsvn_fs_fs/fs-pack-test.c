@@ -888,9 +888,10 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
 
   fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, "1");
 
-  SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
+  SVN_ERR(svn_fs_open(&fs2, svn_fs_path(fs1, pool), fs_config, pool));
 
   /* With inefficient named atomics, the filesystem will output a warning
      and disable the revprop caching, but we still would like to test
