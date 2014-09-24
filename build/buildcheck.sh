@@ -97,6 +97,7 @@ else
   esac
 fi
 
+# Much like APR except we do not prefer libtool 1 over libtool 2.
 libtoolize=${LIBTOOLIZE:-`./build/PrintPath glibtoolize libtoolize glibtoolize1 libtoolize15 libtoolize14`}
 # Extract the libtool version number: everything from the first number in
 # the version text until a hyphen or space.
