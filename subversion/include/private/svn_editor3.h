@@ -1446,6 +1446,7 @@ typedef svn_error_t *(*svn_editor3__shim_fetch_func_t)(
   svn_node_kind_t *kind,
   apr_hash_t **props,
   svn_stringbuf_t **file_text,
+  apr_hash_t **children_names,
   void *baton,
   const char *repos_relpath,
   svn_revnum_t revision,

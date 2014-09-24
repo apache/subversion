@@ -768,6 +768,7 @@ static svn_error_t *
 fetch(svn_node_kind_t *kind_p,
       apr_hash_t **props_p,
       svn_stringbuf_t **file_text,
+      apr_hash_t **children_names,
       void *baton,
       const char *repos_relpath,
       svn_revnum_t revision,
@@ -777,6 +778,13 @@ fetch(svn_node_kind_t *kind_p,
   struct fb_baton *fbb = baton;
   svn_node_kind_t kind;
   apr_hash_index_t *hi;
+
+  if (props_p)
+    *props_p = NULL;
+  if (file_text)
+    *file_text = NULL;
+  if (children_names)
+    *children_names = NULL;
 
   SVN_ERR(svn_ra_check_path(fbb->session, repos_relpath, revision,
                             &kind, scratch_pool));
@@ -798,13 +806,17 @@ fetch(svn_node_kind_t *kind_p,
           SVN_ERR(svn_stream_close(file_stream));
         }
     }
-  else if (props_p)
+  else if (kind == svn_node_dir && (props_p || children_names))
     {
-      SVN_ERR(svn_ra_get_dir(fbb->session, repos_relpath, revision,
-                             NULL /*dirents*/, NULL, props_p, result_pool));
+      SVN_ERR(svn_ra_get_dir2(fbb->session,
+                              children_names, NULL, props_p,
+                              repos_relpath, revision,
+                              0 /*minimal child info*/,
+                              result_pool));
     }
+
   /* Remove non-regular props */
-  if (props_p)
+  if (props_p && *props_p)
     {
       for (hi = apr_hash_first(scratch_pool, *props_p); hi; hi = apr_hash_next(hi))
         {

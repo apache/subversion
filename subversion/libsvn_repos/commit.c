@@ -841,6 +841,7 @@ static svn_error_t *
 fetch_func(svn_node_kind_t *kind,
            apr_hash_t **props,
            svn_stringbuf_t **file_text,
+           apr_hash_t **children_names,
            void *baton,
            const char *repos_relpath,
            svn_revnum_t revision,
@@ -853,6 +854,13 @@ fetch_func(svn_node_kind_t *kind,
 
   if (!SVN_IS_VALID_REVNUM(revision))
     revision = svn_fs_txn_base_revision(eb->txn);
+
+  if (props)
+    *props = NULL;
+  if (file_text)
+    *file_text = NULL;
+  if (children_names)
+    *children_names = NULL;
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, revision, scratch_pool));
 
@@ -891,6 +899,18 @@ fetch_func(svn_node_kind_t *kind,
       SVN_ERR(svn_stringbuf_from_stream(file_text, contents, 0, result_pool));
     }
 
+  if (children_names)
+    {
+      err = svn_fs_dir_entries(children_names, fs_root, repos_relpath,
+                               scratch_pool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+    }
   return SVN_NO_ERROR;
 }
 
