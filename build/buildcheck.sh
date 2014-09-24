@@ -97,14 +97,14 @@ else
   esac
 fi
 
-libtool=${LIBTOOL:-`./build/PrintPath glibtool libtool libtool15`}
+libtoolize=${LIBTOOLIZE:-`./build/PrintPath glibtoolize libtoolize glibtoolize1 libtoolize15 libtoolize14`}
 # Extract the libtool version number: everything from the first number in
 # the version text until a hyphen or space.
-lt_pversion=`$libtool --version 2>/dev/null |
+lt_pversion=`$libtoolize --version 2>/dev/null |
   sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e '/^$/d' |
   sed -e 1q`
 if test -z "$lt_pversion"; then
-  echo "buildcheck: libtool not found."
+  echo "buildcheck: libtoolize not found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
   exit 1
 fi

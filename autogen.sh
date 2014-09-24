@@ -59,7 +59,7 @@ done
 # ### APR's libtool. deferring to a second round of change...
 #
 
-libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
+libtoolize="`./build/PrintPath glibtoolize libtoolize glibtoolize1 libtoolize15 libtoolize14`"
 lt_major_version=`$libtoolize --version 2>/dev/null | sed -e 's/^[^0-9]*//' -e 's/\..*//' -e '/^$/d' -e 1q`
 
 if [ "x$libtoolize" = "x" ]; then
