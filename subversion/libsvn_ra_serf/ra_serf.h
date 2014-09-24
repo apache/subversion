@@ -892,6 +892,16 @@ svn_ra_serf__add_close_tag_buckets(serf_bucket_t *agg_bucket,
                                    serf_bucket_alloc_t *bkt_alloc,
                                    const char *tag);
 
+/* Add the appropriate serf buckets to AGG_BUCKET representing the XML
+ * open tag with name TAG, and then immediately closes the tag using the />
+ * notation
+ */
+void
+svn_ra_serf__add_empty_tag_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *tag,
+                                   ...) SVN_NEEDS_SENTINEL_NULL;
+
 /*
  * Add the appropriate serf buckets to AGG_BUCKET with xml-escaped
  * version of DATA.

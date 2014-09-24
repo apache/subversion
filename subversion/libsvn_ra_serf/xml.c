@@ -324,6 +324,49 @@ svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
 }
 
 void
+svn_ra_serf__add_empty_tag_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *tag, ...)
+{
+  va_list ap;
+  const char *key;
+  serf_bucket_t *tmp;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<", 1, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING(tag, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+
+  va_start(ap, tag);
+  while ((key = va_arg(ap, char *)) != NULL)
+    {
+      const char *val = va_arg(ap, const char *);
+      if (val)
+        {
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" ", 1, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(key, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("=\"", 2, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(val, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", 1, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+        }
+    }
+  va_end(ap);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("/>", 2, bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+}
+
+void
 svn_ra_serf__add_close_tag_buckets(serf_bucket_t *agg_bucket,
                                    serf_bucket_alloc_t *bkt_alloc,
                                    const char *tag)
