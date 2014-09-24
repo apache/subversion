@@ -412,11 +412,11 @@ create_lock_body(serf_bucket_t **body_bkt,
                                     SVN_VA_NULL);
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "exclusive", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "write", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 
   if (ctx->lock->comment)
