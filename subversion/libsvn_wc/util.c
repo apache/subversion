@@ -421,6 +421,7 @@ svn_error_t *
 svn_wc__fetch_func(svn_node_kind_t *kind,
                    apr_hash_t **props,
                    svn_stringbuf_t **file_text,
+                   apr_hash_t **children_names,  /* ### unimplemented */
                    void *baton,
                    const char *repos_relpath,
                    svn_revnum_t revision,

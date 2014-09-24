@@ -918,6 +918,7 @@ static svn_error_t *
 fetch_func(svn_node_kind_t *kind_p,
            apr_hash_t **props_p,
            svn_stringbuf_t **file_text,
+           apr_hash_t **children_names,
            void *baton,
            const char *repos_relpath,
            svn_revnum_t revision,
@@ -968,7 +969,7 @@ fetch_func(svn_node_kind_t *kind_p,
       else if (kind == svn_node_dir && props_p)
         {
           SVN_ERR(svn_ra_local__get_dir(fb->session,
-                                        NULL /*dirents*/, NULL /*fetched_rev*/,
+                                        children_names, NULL /*fetched_rev*/,
                                         props_p, session_relpath, revision,
                                         0 /*dirent_fields*/, result_pool));
         }

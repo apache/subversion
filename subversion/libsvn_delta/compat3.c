@@ -977,7 +977,7 @@ apply_propedit(struct ev3_edit_baton *eb,
          Otherwise, we get the properties from BASE.  */
       if (copyfrom_path)
         {
-          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL,
+          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL, NULL,
                                  eb->fetch_baton,
                                  copyfrom_path, copyfrom_rev,
                                  eb->edit_pool, scratch_pool));
@@ -994,7 +994,7 @@ apply_propedit(struct ev3_edit_baton *eb,
           if (! SVN_IS_VALID_REVNUM(base_revision))
             SVN_DBG(("apply_propedit('%s@%ld')  ### need to resolve to HEAD?",
                      relpath, base_revision));
-          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL,
+          SVN_ERR(eb->fetch_func(NULL, &change->props, NULL, NULL,
                                  eb->fetch_baton,
                                  relpath, base_revision,
                                  eb->edit_pool, scratch_pool));
@@ -1194,7 +1194,7 @@ ev3_add_file(const char *path,
                                                    fb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
 
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text, NULL,
                                  fb->eb->fetch_baton,
                                  change->copyfrom_path,
                                  change->copyfrom_rev,
@@ -1250,14 +1250,14 @@ ev3_open_file(const char *path,
 
       fb->copyfrom_relpath = copyfrom_relpath;
       fb->copyfrom_rev = pb->copyfrom_rev;
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text, NULL,
                                  fb->eb->fetch_baton,
                                  copyfrom_relpath, pb->copyfrom_rev,
                                  result_pool, scratch_pool));
     }
   else
     {
-      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text,
+      SVN_ERR(fb->eb->fetch_func(NULL, NULL, &fb->delta_base_text, NULL,
                                  fb->eb->fetch_baton,
                                  relpath, base_revision,
                                  result_pool, scratch_pool));
@@ -1864,7 +1864,7 @@ fetch_base_props(apr_hash_t **base_props,
 
   if (source_path)
     {
-      SVN_ERR(fetch_func(NULL, base_props, NULL,
+      SVN_ERR(fetch_func(NULL, base_props, NULL, NULL,
                          fetch_baton, source_path, source_rev,
                          result_pool, scratch_pool));
     }
@@ -2257,7 +2257,7 @@ editor3_cp(void *baton,
   change->copyfrom_rev = from_peg_loc.rev;
   /* We need the source's kind to know whether to call add_directory()
      or add_file() later on.  */
-  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL,
+  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL, NULL,
                          eb->fetch_baton,
                          from_peg_loc.relpath, from_peg_loc.rev,
                          scratch_pool, scratch_pool));
@@ -2296,7 +2296,7 @@ editor3_mv(void *baton,
      already recorded a change -- an earlier move, I suppose -- then the
      'kind' has already been recorded there and we could potentially
      re-use it here. But we have no need yet to optimise that case.) */
-  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL, eb->fetch_baton,
+  SVN_ERR(eb->fetch_func(&change->kind, NULL, NULL, NULL, eb->fetch_baton,
                          from_loc.relpath, from_loc.rev,
                          scratch_pool, scratch_pool));
 
