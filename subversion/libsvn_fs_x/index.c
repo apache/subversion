@@ -1843,7 +1843,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
      = svn_spillbuf__create(0x10000, 0x1000000, local_pool);
 
   /* for loop temps ... */
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -1861,20 +1861,20 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       svn_revnum_t last_revision = revision;
       apr_uint64_t last_number = 0;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* (attempt to) read the next entry from the source */
       SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                     &read, &eof, iter_pool));
+                                     &read, &eof, iterpool));
       SVN_ERR_ASSERT(eof || read == sizeof(entry));
 
       if (entry.item_count && !eof)
         {
           to_read = entry.item_count * sizeof(*entry.items);
-          entry.items = apr_palloc(iter_pool, to_read);
+          entry.items = apr_palloc(iterpool, to_read);
 
           SVN_ERR(svn_io_file_read_full2(proto_index, entry.items, to_read,
-                                         &read, &eof, iter_pool));
+                                         &read, &eof, iterpool));
           SVN_ERR_ASSERT(eof || read == to_read);
         }
 
@@ -1884,7 +1884,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_size_t entry_size;
           to_read = sizeof(entry_size);
           SVN_ERR(svn_io_file_read_full2(proto_index, &entry_size, to_read,
-                                         &read, &eof, iter_pool));
+                                         &read, &eof, iterpool));
           SVN_ERR_ASSERT(eof || read == to_read);
         }
 
@@ -1925,20 +1925,20 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
         {
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_uint(encoded, entry.offset),
-                                      iter_pool));
+                                      iterpool));
           last_revision = revision;
         }
 
       /* write simple item / container entry */
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.size),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.type + entry.item_count * 16),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.fnv1_checksum),
-                                  iter_pool));
+                                  iterpool));
 
       /* container contents (only one for non-container items) */
       for (sub_item = 0; sub_item < entry.item_count; ++sub_item)
@@ -1948,7 +1948,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_int64_t diff = item_rev - last_revision;
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_int(encoded, diff),
-                                      iter_pool));
+                                      iterpool));
           last_revision = item_rev;
         }
 
@@ -1957,7 +1957,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_int64_t diff = entry.items[sub_item].number - last_number;
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_int(encoded, diff),
-                                      iter_pool));
+                                      iterpool));
           last_number = entry.items[sub_item].number;
         }
 
@@ -2007,7 +2007,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(index_file, local_pool));
   SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
