@@ -157,10 +157,11 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (at least partly) overlap with the range given by BLOCK_START
  * offset and BLOCK_SIZE in the rep / pack file containing REVISION.
- * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements.
- * REV_FILE determines whether to access single rev or pack file data.
- * If that is not available anymore (neither in cache nor on disk),
- * return an error.  Use POOL for allocations.
+ * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements,
+ * allocated in RESULT_POOL.  REV_FILE determines whether to access single
+ * rev or pack file data.  If that is not available anymore (neither in
+ * cache nor on disk), return an error.  Use SCRATCH_POOL for temporary
+ * allocations.
  *
  * Note that (only) the first and the last mapping may cross a cluster
  * boundary.
@@ -172,14 +173,16 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             svn_revnum_t revision,
                             apr_off_t block_start,
                             apr_off_t block_size,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to return the entry for the
  * item starting at global OFFSET in the rep file containing REVISION in
- * *ENTRY.  Sets *ENTRY to NULL if no item starts at exactly that offset.
- * REV_FILE determines whether to access single rev or pack file data.
- * If that is not available anymore (neither in cache nor on disk),
- * return an error.  Use POOL for allocations.
+ * *ENTRY, allocated in RESULT_POOL.  Sets *ENTRY to NULL if no item starts
+ * at exactly that offset.  REV_FILE determines whether to access single
+ * rev or pack file data.  If that is not available anymore (neither in
+ * cache nor on disk), return an error.  Use SCRATCH_POOL for temporary
+ * allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
@@ -187,7 +190,8 @@ svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
                             svn_fs_fs__revision_file_t *rev_file,
                             svn_revnum_t revision,
                             apr_off_t offset,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* For ITEM_INDEX within REV in FS, return the position in the respective
  * rev or pack file in *ABSOLUTE_POSITION.  If TXN_ID is not NULL, return
@@ -212,14 +216,16 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
 /* Use the log-to-phys indexes in FS to determine the maximum item indexes
  * assigned to revision START_REV to START_REV + COUNT - 1.  That is a
  * close upper limit to the actual number of items in the respective revs.
- * Return the results in *MAX_IDS,  allocated in POOL.
+ * Return the results in *MAX_IDS,  allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            svn_fs_t *fs,
                            svn_revnum_t start_rev,
                            apr_size_t count,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* In *OFFSET, return the last OFFSET in the pack / rev file containing.
  * REV_FILE determines whether to access single rev or pack file data.

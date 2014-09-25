@@ -93,7 +93,7 @@ dump_index(const char *path,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, rev_file, revision,
                                           offset, INDEX_BLOCK_SIZE,
-                                          iterpool));
+                                          iterpool, iterpool));
 
       /* Print entries for this block, one line per entry. */
       for (i = 0; i < entries->nelts && offset < max_offset; ++i)
