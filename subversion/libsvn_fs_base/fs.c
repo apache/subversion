@@ -1084,7 +1084,7 @@ svn_fs_base__clean_logs(const char *live_path,
 
   {  /* Process unused logs from live area */
     int idx;
-    apr_pool_t *sub_pool = svn_pool_create(pool);
+    apr_pool_t *subpool = svn_pool_create(pool);
 
     /* Process log files. */
     for (idx = 0; idx < logfiles->nelts; idx++)
@@ -1093,9 +1093,9 @@ svn_fs_base__clean_logs(const char *live_path,
         const char *live_log_path;
         const char *backup_log_path;
 
-        svn_pool_clear(sub_pool);
-        live_log_path = svn_dirent_join(live_path, log_file, sub_pool);
-        backup_log_path = svn_dirent_join(backup_path, log_file, sub_pool);
+        svn_pool_clear(subpool);
+        live_log_path = svn_dirent_join(live_path, log_file, subpool);
+        backup_log_path = svn_dirent_join(backup_path, log_file, subpool);
 
         { /* Compare files. No point in using MD5 and wasting CPU cycles as we
              got full copies of both logs */
@@ -1112,17 +1112,17 @@ svn_fs_base__clean_logs(const char *live_path,
             SVN_ERR(svn_io_files_contents_same_p(&files_match,
                                                  live_log_path,
                                                  backup_log_path,
-                                                 sub_pool));
+                                                 subpool));
 
           /* If log files do not match, go to the next log file. */
           if (!files_match)
             continue;
         }
 
-        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, sub_pool));
+        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, subpool));
       }
 
-    svn_pool_destroy(sub_pool);
+    svn_pool_destroy(subpool);
   }
 
   return SVN_NO_ERROR;

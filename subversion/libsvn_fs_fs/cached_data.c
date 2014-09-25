@@ -979,7 +979,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   svn_revnum_t shard_size = ffd->max_files_per_dir
                           ? ffd->max_files_per_dir
                           : 1;
-  apr_pool_t *sub_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t is_delta = FALSE;
   int count = 0;
@@ -1015,7 +1015,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                                     &file_hint,
                                     &base_rep,
                                     fs,
-                                    sub_pool,
+                                    subpool,
                                     iterpool));
 
       base_rep.revision = header->base_revision;
@@ -1028,14 +1028,14 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       if (count % 16 == 0)
         {
           file_hint = NULL;
-          svn_pool_clear(sub_pool);
+          svn_pool_clear(subpool);
         }
     }
   while (is_delta && base_rep.revision);
 
   *chain_length = count;
   *shard_count = shards;
-  svn_pool_destroy(sub_pool);
+  svn_pool_destroy(subpool);
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

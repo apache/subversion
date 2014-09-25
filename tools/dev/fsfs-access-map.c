@@ -168,7 +168,7 @@ open_file(const char *name, int handle)
   if (!file)
     {
       apr_pool_t *pool = apr_hash_pool_get(files);
-      apr_pool_t *sub_pool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       apr_file_t *apr_file = NULL;
       apr_finfo_t finfo = { 0 };
@@ -176,10 +176,10 @@ open_file(const char *name, int handle)
 
       /* determine file size (if file still exists) */
       apr_file_open(&apr_file, name,
-                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
+                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, subpool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      svn_pool_destroy(sub_pool);
+      svn_pool_destroy(subpool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
