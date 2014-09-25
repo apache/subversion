@@ -937,8 +937,9 @@ svn_fs_fs__check_rep(representation_t *rep,
 
       /* This may fail if there is a background pack operation (can't auto-
          retry because the item offset lookup has to be redone as well). */
-      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, rep->revision,
-                                          offset, scratch_pool));
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file,
+                                          rep->revision, offset,
+                                          scratch_pool, scratch_pool));
 
       if (   entry == NULL
           || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
@@ -3251,7 +3252,8 @@ block_read(void **result,
       block_start = offset - (offset % ffd->block_size);
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
                                           revision, block_start,
-                                          ffd->block_size, scratch_pool));
+                                          ffd->block_size, scratch_pool,
+                                          scratch_pool));
 
       SVN_ERR(aligned_seek(fs, revision_file->file, &block_start, offset,
                            iterpool));

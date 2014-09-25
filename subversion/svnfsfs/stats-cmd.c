@@ -1425,7 +1425,7 @@ read_log_rev_or_packfile(fs_t *fs,
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs->fs, rev_file, base,
                                           offset, INDEX_BLOCK_SIZE,
-                                          iterpool));
+                                          iterpool, iterpool));
 
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
