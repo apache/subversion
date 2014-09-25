@@ -1298,12 +1298,14 @@ svn_branch_mkdir(svn_branch_instance_t *branch,
                  const char *new_name,
                  apr_pool_t *scratch_pool)
 {
-  /* ### TODO: First check PARENT_LOC:NEW_NAME is within BRANCH. */
-
   svn_editor3_t *editor = branch->definition->family->repos->editor;
-  int eid = family_add_new_element(branch->definition->family);
   svn_editor3_txn_path_t loc = txn_path_join(parent_loc, new_name, scratch_pool);
   const char *loc_rrpath = txn_path_to_relpath(loc, scratch_pool);
+  int eid;
+
+  SVN_ERR(verify_target_in_branch(branch, parent_loc, scratch_pool));
+
+  eid = family_add_new_element(branch->definition->family);
 
   SVN_ERR(svn_editor3_mk(editor, svn_node_dir, parent_loc, new_name));
   branch_set_eid_to_path(branch, eid, loc_rrpath);
@@ -1311,6 +1313,8 @@ svn_branch_mkdir(svn_branch_instance_t *branch,
 }
 
 /* In BRANCH, move the subtree at FROM_LOC to PARENT_LOC:NEW_NAME.
+ *
+ * ### Needs to adjust any sub-branches within FROM_LOC.
  */
 static svn_error_t *
 svn_branch_mv(svn_branch_instance_t *branch,
