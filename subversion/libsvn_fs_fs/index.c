@@ -1675,7 +1675,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
      = svn_spillbuf__create(0x10000, 0x1000000, local_pool);
 
   /* for loop temps ... */
-  apr_pool_t *iter_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -1692,11 +1692,11 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
       apr_uint64_t compound;
       apr_int64_t rev_diff, compound_diff;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* (attempt to) read the next entry from the source */
       SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                     &read, &eof, iter_pool));
+                                     &read, &eof, iterpool));
       SVN_ERR_ASSERT(eof || read == sizeof(entry));
 
       /* "unused" (and usually non-existent) section to cover the offsets
@@ -1738,7 +1738,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
         {
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_uint(encoded, entry.offset),
-                                      iter_pool));
+                                      iterpool));
           last_revision = revision;
           last_compound = 0;
         }
@@ -1746,7 +1746,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
       /* write simple item entry */
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.size),
-                                  iter_pool));
+                                  iterpool));
 
       rev_diff = entry.item.revision - last_revision;
       last_revision = entry.item.revision;
@@ -1757,13 +1757,13 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
 
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_int(encoded, compound_diff),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_int(encoded, rev_diff),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.fnv1_checksum),
-                                  iter_pool));
+                                  iterpool));
 
       last_entry_end = entry_end;
     }
@@ -1804,7 +1804,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
                                                     local_pool),
                            NULL, NULL, local_pool));
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
