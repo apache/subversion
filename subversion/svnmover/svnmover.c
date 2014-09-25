@@ -463,6 +463,11 @@ svn_branch_definition_create(svn_branch_family_t *family,
 {
   svn_branch_definition_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
+  SVN_ERR_ASSERT_NO_RETURN(bid >= family->first_bid
+                           && bid < family->next_bid);
+  SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
+                           && root_eid < family->next_eid);
+
   b->family = family;
   b->bid = bid;
   b->root_eid = root_eid;
@@ -482,6 +487,9 @@ svn_branch_instance_create(svn_branch_definition_t *branch_definition,
   return b;
 }
 
+static const char *
+branch_get_root_path(const svn_branch_instance_t *branch);
+
 /*  */
 static void
 branch_set_eid_to_path(svn_branch_instance_t *branch,
@@ -490,6 +498,12 @@ branch_set_eid_to_path(svn_branch_instance_t *branch,
 {
   apr_pool_t *pool = apr_hash_pool_get(branch->eid_to_path);
   int *eid_stored = apr_pmemdup(pool, &eid, sizeof(eid));
+
+  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
+                           && eid < branch->definition->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(eid == branch->definition->root_eid
+                           || svn_relpath_skip_ancestor(
+                                branch_get_root_path(branch), path));
 
   path = apr_pstrdup(pool, path);
   apr_hash_set(branch->eid_to_path, eid_stored, sizeof(eid), path);
@@ -502,6 +516,12 @@ branch_mapping_remove(svn_branch_instance_t *branch,
                       int eid,
                       const char *path)
 {
+  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
+                           && eid < branch->definition->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(eid == branch->definition->root_eid
+                           || svn_relpath_skip_ancestor(
+                                branch_get_root_path(branch), path));
+
   apr_hash_set(branch->eid_to_path, &eid, sizeof(eid), NULL);
   svn_hash_sets(branch->path_to_eid, path, NULL);
 }
@@ -513,6 +533,9 @@ branch_get_eid_by_path(const svn_branch_instance_t *branch,
                        const char *path)
 {
   int *eid_p = svn_hash_gets(branch->path_to_eid, path);
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_skip_ancestor(
+                             branch_get_root_path(branch), path));
 
   if (! eid_p)
     return -1;
@@ -526,6 +549,9 @@ branch_get_path_by_eid(const svn_branch_instance_t *branch,
                        int eid)
 {
   const char *path = apr_hash_get(branch->eid_to_path, &eid, sizeof(eid));
+
+  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
+                           && eid < branch->definition->family->next_eid);
 
   return path;
 }
@@ -590,7 +616,7 @@ family_add_new_subfamily(svn_branch_family_t *outer_family)
 
 /* Create a new branch definition in FAMILY, with root EID ROOT_EID.
  * Create a new, empty branch instance in FAMILY, empty except for the
- * root element.
+ * root element which is at path ROOT_RRPATH.
  */
 static svn_branch_instance_t *
 family_add_new_branch(svn_branch_family_t *family,
@@ -602,6 +628,10 @@ family_add_new_branch(svn_branch_family_t *family,
     = svn_branch_definition_create(family, bid, root_eid, family->pool);
   svn_branch_instance_t *branch_instance
     = svn_branch_instance_create(branch_definition, family->pool);
+
+  SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
+                           && root_eid < family->next_eid);
+  /* ROOT_RRPATH must not be within another branch of the family. */
 
   /* Register the branch */
   APR_ARRAY_PUSH(family->branch_definitions, void *) = branch_definition;
@@ -634,6 +664,8 @@ family_get_subfamily_by_id(const svn_branch_family_t *family,
 {
   int i;
 
+  SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < family->repos->next_fid);
+
   for (i = 0; i < family->sub_families->nelts; i++)
     {
       svn_branch_family_t *f
@@ -658,6 +690,8 @@ repos_get_family_by_id(const svn_branch_repos_t *repos,
                        int fid)
 {
   svn_branch_family_t *f;
+
+  SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < repos->next_fid);
 
   if (repos->root_family->fid == fid)
     {
@@ -819,6 +853,11 @@ parse_repos_info(svn_branch_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+write_repos_info(svn_stream_t *stream,
+                 svn_branch_repos_t *repos,
+                 apr_pool_t *scratch_pool);
+
 /* Create a new repository object and read the move-tracking /
  * branch-tracking metadata from the repository into it.
  */
@@ -844,6 +883,18 @@ fetch_repos_info(svn_branch_repos_t **repos_p,
   stream = svn_stream_from_string(value, scratch_pool);
 
   SVN_ERR(parse_repos_info(repos, stream, scratch_pool));
+
+  /* Self-test: writing out the info should produce exactly the same string. */
+  {
+    svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
+
+    stream = svn_stream_from_stringbuf(buf, scratch_pool);
+    SVN_ERR(write_repos_info(stream, repos, scratch_pool));
+    SVN_ERR(svn_stream_close(stream));
+
+    SVN_ERR_ASSERT(svn_string_compare(value,
+                                      svn_stringbuf__morph_into_string(buf)));
+  }
 
   *repos_p = repos;
   return SVN_NO_ERROR;
