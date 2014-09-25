@@ -1345,8 +1345,8 @@ svn_branch_cp(svn_branch_instance_t *branch,
 /* In OUTER_BRANCH, branch the existing sub-branch at FROM_LOC to create
  * a new branch at PARENT_LOC:NEW_NAME.
  *
- * FROM_LOC must address a sub-branch root.
- * TODO: Allow branching from a non-root element of the sub-branch.
+ * FROM_LOC must be either the root path of an immediate sub-branch of
+ * OUTER_BRANCH, or a non-root path in such a sub-branch.
  *
  *   copy
  *   assign new eid (in outer branch) to root node
