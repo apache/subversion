@@ -865,11 +865,14 @@ fetch_repos_info(svn_branch_repos_t **repos_p,
 {
   svn_branch_repos_t *repos
     = svn_branch_repos_create(ra_session, editor, result_pool);
+  svn_revnum_t youngest_rev;
   svn_string_t *value;
   svn_stream_t *stream;
 
   /* Read initial state from repository */
-  SVN_ERR(svn_ra_rev_prop(ra_session, 0, "svn-br-info", &value, scratch_pool));
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest_rev, scratch_pool));
+  SVN_ERR(svn_ra_rev_prop(ra_session, youngest_rev, "svn-br-info", &value,
+                          scratch_pool));
   if (! value)
     {
       value = svn_string_create(default_repos_info, scratch_pool);
@@ -997,12 +1000,15 @@ store_repos_info(svn_branch_repos_t *repos,
 {
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
+  svn_revnum_t youngest_rev;
 
   SVN_ERR(write_repos_info(stream, repos, scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/
-  SVN_ERR(svn_ra_change_rev_prop2(repos->ra_session, 0, "svn-br-info",
+  SVN_ERR(svn_ra_get_latest_revnum(repos->ra_session, &youngest_rev,
+                                   scratch_pool));
+  SVN_ERR(svn_ra_change_rev_prop2(repos->ra_session, youngest_rev, "svn-br-info",
                                   NULL, svn_stringbuf__morph_into_string(buf),
                                   scratch_pool));
 
