@@ -1068,102 +1068,89 @@ branch_find_subbranch_element_by_location(svn_branch_instance_t **inner_branch_p
   return SVN_NO_ERROR;
 }
 
-/* Set *BRANCH_P to the branch of FAMILY that contains the path RRPATH.
- * (RRPATH might also be within a sub-branch of *BRANCH_P; we don't
- * check.) If an element of *BRANCH_P exists at RRPATH, then set *EID_P
- * to its element id in *BRANCH_P; otherwise set *EID_P to -1.
+/* Find the (deepest) branch of which the path RRPATH is either the root
+ * path or a normal, non-sub-branch path. An element need not exist at
+ * RRPATH.
  *
- * If RRPATH is not within any branch in FAMILY, set *BRANCH_P to NULL
- * and *EID_P to -1.
+ * Set *BRANCH_P to the deepest branch within ROOT_BRANCH (recursively,
+ * including itself) that contains the path RRPATH.
+ *
+ * If EID_P is not null then set *EID_P to the element id of RRPATH in
+ * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
+ *
+ * If RRPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
+ * NULL and (if EID_P is not null) *EID_P to -1.
  */
 static void
-family_find_element_by_path(svn_branch_instance_t **branch_p,
-                            int *eid_p,
-                            svn_branch_family_t *family,
-                            const char *rrpath,
-                            apr_pool_t *scratch_pool)
+branch_find_nested_branch_element_by_path(
+                                svn_branch_instance_t **branch_p,
+                                int *eid_p,
+                                svn_branch_instance_t *root_branch,
+                                const char *rrpath,
+                                apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *branch_instances = family->branch_instances;
+  const char *branch_root_path = branch_get_root_path(root_branch);
+  apr_array_header_t *branch_instances;
   int i;
 
-  /* Find the nearest branch-root */
+  if (! svn_relpath_skip_ancestor(branch_root_path, rrpath))
+    {
+      /* The path we're looking for is not (path-wise) in this branch. */
+      *branch_p = NULL;
+      if (eid_p)
+        *eid_p = -1;
+      return;
+    }
+
+  /* The path we're looking for is (path-wise) in this branch. See if it
+     is also in a sub-branch (recursively). */
+  branch_instances = branch_get_sub_branches(root_branch,
+                                             scratch_pool, scratch_pool);
   for (i = 0; i < branch_instances->nelts; i++)
     {
-      svn_branch_instance_t *branch
+      svn_branch_instance_t *this_branch
         = APR_ARRAY_IDX(branch_instances, i, void *);
-      const char *branch_root_path
-        = branch_get_root_path(branch);
+      svn_branch_instance_t *sub_branch;
+      int sub_branch_eid;
 
-      if (svn_relpath_skip_ancestor(branch_root_path, rrpath))
+      branch_find_nested_branch_element_by_path(&sub_branch, &sub_branch_eid,
+                                                this_branch, rrpath,
+                                                scratch_pool);
+      if (sub_branch)
         {
-          /* The path we're looking for is (path-wise) in this branch.
-             (It might be in a sub-branch -- we don't check.) */
-          *branch_p = branch;
-          *eid_p = branch_get_eid_by_path(branch, rrpath);
-          return;
-        }
+           *branch_p = sub_branch;
+           if (eid_p)
+             *eid_p = sub_branch_eid;
+           return;
+         }
     }
 
-  *branch_p = NULL;
-  *eid_p = -1;
-}
-
-/* Find the deepest branch in FAMILY (recursively) of which RRPATH is
- * either the root element or a normal, non-sub-branch element.
- *
- * An element need not exist at RRPATH.
- *
- * Return NULL if not found.
- */
-static svn_branch_instance_t *
-family_get_branch_by_path(svn_branch_family_t *family,
-                          const char *rrpath,
-                          apr_pool_t *scratch_pool)
-{
-  svn_branch_instance_t *branch;
-  int eid;
-
-  family_find_element_by_path(&branch, &eid, family, rrpath, scratch_pool);
-
-  if (! branch)
-    return NULL;
-
-  /* The path is within this branch, but perhaps in a sub-branch. */
-  if (family->sub_families)
-    {
-      int f;
-
-      for (f = 0; f < family->sub_families->nelts; f++)
-        {
-          svn_branch_family_t *sub_family
-            = APR_ARRAY_IDX(family->sub_families, f, svn_branch_family_t *);
-          svn_branch_instance_t *sub_branch
-            = family_get_branch_by_path(sub_family, rrpath, scratch_pool);
-
-          if (sub_branch)
-            {
-              return sub_branch;
-            }
-        }
-    }
-  return branch;
+  *branch_p = root_branch;
+  if (eid_p)
+    *eid_p = branch_get_eid_by_path(root_branch, rrpath);
 }
 
 /* Find the deepest branch in REPOS (recursively) of which RRPATH is
  * either the root element or a normal, non-sub-branch element.
+ * If EID_P is not null, set *EID_P to the EID of RRPATH in that branch.
  *
  * An element need not exist at RRPATH.
  *
  * The result will never be NULL.
  */
 static svn_branch_instance_t *
-repos_get_branch_by_path(svn_branch_repos_t *repos,
+repos_get_branch_by_path(int *eid_p,
+                         svn_branch_repos_t *repos,
                          const char *rrpath,
                          apr_pool_t *scratch_pool)
 {
   svn_branch_instance_t *branch
-    = family_get_branch_by_path(repos->root_family, rrpath, scratch_pool);
+    = APR_ARRAY_IDX(repos->root_family->branch_instances, 0, void *);
 
+  branch_find_nested_branch_element_by_path(&branch, eid_p,
+                                            branch, rrpath, scratch_pool);
+
+  /* Any path must at least be within the repository root branch */
   SVN_ERR_ASSERT_NO_RETURN(branch);
   return branch;
 }
@@ -1186,7 +1173,7 @@ verify_source_in_branch(const svn_branch_instance_t *branch,
 {
   const char *rrpath = txn_path_to_relpath(loc, scratch_pool);
   svn_branch_instance_t *target_branch
-    = repos_get_branch_by_path(branch->definition->family->repos, rrpath,
+    = repos_get_branch_by_path(NULL, branch->definition->family->repos, rrpath,
                                scratch_pool);
 
   if (! same_branch(target_branch, branch))
@@ -1209,7 +1196,7 @@ verify_target_in_branch(const svn_branch_instance_t *branch,
 {
   const char *rrpath = txn_path_to_relpath(tgt_parent_loc, scratch_pool);
   svn_branch_instance_t *target_branch
-    = repos_get_branch_by_path(branch->definition->family->repos, rrpath,
+    = repos_get_branch_by_path(NULL, branch->definition->family->repos, rrpath,
                                scratch_pool);
 
   if (! same_branch(target_branch, branch))
@@ -1602,7 +1589,7 @@ execute(const char *branch_rrpath,
   repos_root_url = mtcc->repos_root_url;
   base_revision = mtcc->base_revision;
   SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, editor, pool, pool));
-  branch = repos_get_branch_by_path(repos, branch_rrpath, pool);
+  branch = repos_get_branch_by_path(NULL, repos, branch_rrpath, pool);
   SVN_DBG(("look up path '%s': found branch f%db%de%d at path '%s'",
            branch_rrpath, branch->definition->family->fid,
            branch->definition->bid, branch->definition->root_eid,
