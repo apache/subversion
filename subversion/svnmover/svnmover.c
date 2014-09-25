@@ -757,11 +757,6 @@ parse_branch_info(svn_branch_instance_t **new_branch,
         {
           branch_set_eid_to_path(branch_instance, this_eid, this_path);
         }
-      else
-        {
-          SVN_DBG(("oops! path is 'null' in this line: '%s'", line->data));
-        }
-      
     }
 
   *new_branch = branch_instance;
