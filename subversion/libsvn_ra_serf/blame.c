@@ -303,7 +303,7 @@ create_file_revs_body(serf_bucket_t **body_bkt,
   if (blame_ctx->include_merged_revisions)
     {
       svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
-                                         "S:include-merged-revisions", NULL);
+                                         "S:include-merged-revisions", SVN_VA_NULL);
     }
 
   svn_ra_serf__add_tag_buckets(buckets,
