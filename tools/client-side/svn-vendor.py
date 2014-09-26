@@ -19,26 +19,28 @@
 #    under the License.
 # ====================================================================
 #
-#########################################################################################
-# svn-import.py
+##############################################################################
+# svn-vendor.py
 #
 # Overview
 # --------
-#   Replacement for svn_load_dirs.pl (included as a 'contributed utility' in Subversion
-#   sources). Main difference is some heuristics in detection of the renames.
-#   Note that this script does not attempt to automate remote SVN operations
-#   (check-out, check-in and tagging), so it is possible to review the state of sources
-#   that are about to be checked in. Another difference is an ability to save the
-#   detected renames, review/re-apply them.
+#   Replacement for svn_load_dirs.pl (included as a 'contributed utility' in
+#   Subversion sources). Main difference is some heuristics in detection of
+#   the renames. Note that this script does not attempt to automate remote
+#   SVN operations (check-out, check-in and tagging), so it is possible to
+#   review the state of sources that are about to be checked in. Another
+#   difference is an ability to save the detected renames, review/re-apply
+#   them.
 #
-#   This script requires Python 3.3.x or higher. Sorry, I was too lazy to write
-#   shell quoting routines that are already available in recent Python versions.
+#   This script requires Python 3.3.x or higher. Sorry, I was too lazy
+#   to write shell quoting routines that are already available in recent
+#   Python versions.
 #
 # Using this script
 # -----------------
-#   First, it is necessary to check out the working copy from the URL that will host
-#   the imported sources. E.g., if the versions of FOO are being imported into
-#   svn://example.com/vendor/FOO/current:
+#   First, it is necessary to check out the working copy from the URL that
+#   will host the imported sources. E.g., if the versions of FOO are being
+#   imported into svn://example.com/vendor/FOO/current:
 #
 #     svn co svn://example.com/vendor/FOO/current wc
 #
@@ -46,74 +48,77 @@
 #
 #     tar xzf foo-1.1.tar.gz
 #
-#   Examples below assume the command above created a `foo-1.1' directory. After that,
-#   there are three different modes of operation:
+#   Examples below assume the command above created a `foo-1.1' directory.
+#   After that, there are three different modes of operation:
 #
 #   1. Fully automatic
 #
-#     svn-import.py --auto wc foo-1.1
+#     svn-vendor.py --auto wc foo-1.1
 #     svn st wc
 #     svn ci wc
 #
-#   In this mode, the script fully relies on its heuristics in detection of renames.
-#   In many cases, it "just works". There can be spurios moves detected in this mode,
-#   though. For example, consider a deleted header that consists of 50 lines of GPL
-#   text,  1 line of copyright, and 3 lines of declarations, and a similar unrelated
-#   header in the imported sources. From the script's point of view, the files are
-#   nearly identical (4 lines removed, 4 lines added, 50 lines unchanged).
+#   In this mode, the script fully relies on its heuristics in detection of
+#   renames. In many cases, it "just works". There can be spurious moves
+#   detected in this mode, though. For example, consider a deleted header
+#   that consists of 50 lines of GPL text,  1 line of copyright, and
+#   3 lines of declarations, and a similar unrelated header in the imported
+#   sources. From the script's point of view, the files are nearly identical
+#   (4 lines removed, 4 lines added, 50 lines unchanged).
 #
-#   After the script completes, examine the working copy by doing 'svn diff' and/or
-#   'svn status', paying particular attention to renames. If all the moves are detected
-#   correctly, check in the changes in the working copy.
+#   After the script completes, examine the working copy by doing 'svn diff'
+#   and/or 'svn status', paying particular attention to renames. If all the
+#   moves are detected correctly, check in the changes in the working copy.
 #
 #   2. Semi-automatic
 #
-#     svn-import.py --detect moves-foo-1.1.txt wc foo-1.1
+#     svn-vendor.py --detect moves-foo-1.1.txt wc foo-1.1
 #     vi moves-foo-1.1.txt
-#     svn-import.py --apply moves-foo-1.1.txt wc foo-1.1
+#     svn-vendor.py --apply moves-foo-1.1.txt wc foo-1.1
 #     svn ci wc
 #
-#   If the fully automatic mode mis-detected some spurious moves, or did not detect
-#   some renames you want to be performed, it is still possible to leverage what the
-#   script has detected automatically. First command above does the automatic detection,
-#   just as it does in fully automatic mode, but stops short of performing any
-#   modification of the working copy. The list of detected copies and renames is saved
-#   into a text file, `moves-foo-1.1.txt'.
+#   If the fully automatic mode mis-detected some spurious moves, or did not
+#   detect some renames you want to be performed, it is still possible to
+#   leverage what the script has detected automatically. First command above
+#   does the automatic detection, just as it does in fully automatic mode,
+#   but stops short of performing any modification of the working copy.
+#   The list of detected copies and renames is saved into a text file,
+#   `moves-foo-1.1.txt'.
 #
-#   That file can be inspected after the script finishes. Spurious moves can be deleted
-#   from the file, and new copies/renames can be added. Then the changes can be applied
-#   to the working copy.
+#   That file can be inspected after the script finishes. Spurious moves can
+#   be deleted from the file, and new copies/renames can be added. Then the
+#   changes can be applied to the working copy.
 #
 #   3. Manual
 #
-#     svn-import.py wc foo-1.1
-#     (svn-import) detect
-#     (svn-import) move x.c y.c
-#     (svn-import) move include/1.h include/2.h
-#     (svn-import) copy include/3.h include/3-copy.h
-#     (svn-import) lsprep
-#     (svn-import) save /tmp/renames-to-be-applied.txt
-#     (svn-import) apply
+#     svn-vendor.py wc foo-1.1
+#     (svn-vendor) detect
+#     (svn-vendor) move x.c y.c
+#     (svn-vendor) move include/1.h include/2.h
+#     (svn-vendor) copy include/3.h include/3-copy.h
+#     (svn-vendor) lsprep
+#     (svn-vendor) save /tmp/renames-to-be-applied.txt
+#     (svn-vendor) apply
 #
-#   If the automatic detection does not help, it is possible to do the renames manually
-#   (similarly to svn_load_dirs.pl). Use the 'help' command to get the list of supported
-#   commands and their description. Feel free to play around - since the script does not
-#   perform any remote SVN operation, there is no chance to commit the changes
-#   accidentally.
+#   If the automatic detection does not help, it is possible to do the renames
+#   manually (similarly to svn_load_dirs.pl). Use the 'help' command to get
+#   the list of supported commands and their description. Feel free to play
+#   around - since the script does not perform any remote SVN operation,
+#   there is no chance to commit the changes accidentally.
 #
 # Notes
 # -----
-#   I. The time for rename detection O(Fs*Fd) + O(Ds*Dd), where Fs is the number of files
-#   removed from current directory, Fd is number of files added in imported sources, and
-#   Ds/Dd is the same for directories. That is, the running time may become an issue if
-#   the numbers of added/removed files go into a few thousands (e.g. if updating Linux
-#   kernel 2.6.35 to 3.10). As a workaround, import interim releases first so that the
-#   number of renames remains sane at each step. That makes reviewing the renames
+#   I. The time for rename detection O(Fs*Fd) + O(Ds*Dd), where Fs is
+#   the number of files removed from current directory, Fd is number of files
+#   added in imported sources, and Ds/Dd is the same for directories. That is,
+#   the running time may become an issue if the numbers of added/removed files
+#   go into a few thousands (e.g. if updating Linux kernel 2.6.35 to 3.10).
+#   As a workaround, import interim releases first so that the number of
+#   renames remains sane at each step. That makes reviewing the renames
 #   performed by the script much easier.
 #
 #   Enjoy!
 #
-#########################################################################################
+##############################################################################
 
 import argparse
 import cmd
@@ -136,8 +141,9 @@ def name_similarity(n1, n2):
 
 def filename_sort_key(s):
     '''
-    Function to sort filenames so that parent directory is always followed by its children.
-    Without it, [ "/a", "/a-b", "/a/b", "/a-b/c" ] would not be sorted correctly.
+    Function to sort filenames so that parent directory is always followed
+    by its children. Without it, [ "/a", "/a-b", "/a/b", "/a-b/c" ] would
+    not be sorted correctly.
     '''
     return s.replace('/', '\001')
 
@@ -150,12 +156,13 @@ def descendant_or_self(path, ancestor):
 
 def path_rebase(path, old_base, new_base):
     '''
-    Return a path name that has the same relative path to new_base as path had to old_base.
-    Assumes path is a descendant of old_base.
+    Return a path name that has the same relative path to new_base as path
+    had to old_base. Assumes path is a descendant of old_base.
     '''
     if path == old_base:
         return new_base
-    return os.path.normpath(os.path.join(new_base, os.path.relpath(path, old_base)))
+    return os.path.normpath(os.path.join(new_base,
+        os.path.relpath(path, old_base)))
 
 
 def for_all_parents(path, func):
@@ -193,7 +200,7 @@ class FSO(object):
     '''
     def __init__(self):
         self.wc_path = None
-        self.state = [ "-", "-" ] # '-' means absent, 'F' means file, 'D' means dir
+        self.state = [ "-", "-" ] # '-': absent, 'F': file, 'D': dir
 
     def status(self):
         return "[%s%s]" % (self.state[S_WC], self.state[S_IM])
@@ -213,7 +220,8 @@ class FSOCollection(dict):
         print(" |/ Status in imported sources (-:absent, F:file, D:dir)")
         for k in sorted(self.keys(), key=filename_sort_key):
             e = self[k]
-            print("%s %s%s" % (e.status(), shlex.quote(k), e.orig_reference(k)))
+            print("%s %s%s" % (e.status(), shlex.quote(k),
+                e.orig_reference(k)))
 
     def get(self, path):
         'Get existing FSO or create a new one'
@@ -242,7 +250,8 @@ class FSOCollection(dict):
                 kn = path_rebase(k, src, dst)
                 edst = self.get(kn)
                 if edst.state[S_WC] != "-":
-                    # Copying into existing destination. Caller should've checked this
+                    # Copying into existing destination.
+                    # Caller should've checked this.
                     raise NotImplementedException
                 edst.wc_path = esrc.wc_path
                 edst.state[S_WC] = esrc.state[S_WC]
@@ -289,7 +298,8 @@ class Config(dict):
 
     def set(self, name, value):
         if name not in self:
-            raise InvalidUsageException(None, "Unknown config variable '%s'" % name)
+            raise InvalidUsageException(None,
+                    "Unknown config variable '%s'" % name)
         self[name].set(value)
 
     def get(self, name):
@@ -309,8 +319,9 @@ class SvnVndImport(cmd.Cmd):
     '''
     Main driving class.
     '''
-    intro = "Welcome to SVN vendor import helper. Type help or ? to list commands.\n"
-    prompt = "(svn-import) "
+    intro = "Welcome to SVN vendor import helper. " + \
+            "Type help or ? to list commands.\n"
+    prompt = "(svn-vendor) "
     prepare_ops = []
 
     def __init__(self, wcdir, importdir, svninfo):
@@ -320,13 +331,18 @@ class SvnVndImport(cmd.Cmd):
         self.svninfo = svninfo
         self.config = Config()
         self.config.add_option('save-diff-copied',
-                ConfigOpt(None, "Save 'svn diff' output on the moved/copied files and directories to this file as part of 'apply'"))
+                ConfigOpt(None, "Save 'svn diff' output on the " +
+                    "moved/copied files and directories to this " +
+                    "file as part of 'apply'"))
         self.config.add_option('dir-similarity',
-                ConfigOptInt(600, "Similarity between dirs to assume a copy/move [0..1000]"))
+                ConfigOptInt(600, "Similarity between dirs to assume " +
+                    "a copy/move [0..1000]"))
         self.config.add_option('file-similarity',
-                ConfigOptInt(600, "Similarity between files to assume a copy/move [0..1000]"))
+                ConfigOptInt(600, "Similarity between files to assume a " +
+                    "copy/move [0..1000]"))
         self.config.add_option('file-min-lines',
-                ConfigOptInt(10, "Minimal number of lines in a file for meaningful comparison"))
+                ConfigOptInt(10, "Minimal number of lines in a file for " +
+                    "meaningful comparison"))
         self.config.add_option('verbose',
                 ConfigOptInt(3, "Verbosity of the output [0..5]"))
         try:
@@ -350,8 +366,8 @@ class SvnVndImport(cmd.Cmd):
     def get_lists(self, top, where):
         for d, dn, fn in os.walk(top, followlinks=True):
             dr = os.path.relpath(d, top)
-            # If under .svn directory at the top (SVN 1.7+) or has .svn in the path
-            # (older SVN), ignore
+            # If under .svn directory at the top (SVN 1.7+) or has .svn
+            # in the path (older SVN), ignore
             if descendant_or_self(dr, '.svn') or \
                     os.path.basename(dr) == '.svn' or \
                     (os.sep + '.svn' + os.sep) in dr:
@@ -391,10 +407,12 @@ class SvnVndImport(cmd.Cmd):
             svnargs = ['svn'] + args_fixed + args_split[pos : pos + atatime]
             pos += atatime
             self.info(5, "Running: " + " ".join(map(shlex.quote, svnargs)))
-            p = subprocess.Popen(args=svnargs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.wcdir)
+            p = subprocess.Popen(args=svnargs, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, cwd=self.wcdir)
             so, se = p.communicate()
             if p.returncode != 0:
-                print("`%s' exited with %d status:" % (" ".join(map(shlex.quote, svnargs)), p.returncode))
+                print("`%s' exited with %d status:" %
+                        (" ".join(map(shlex.quote, svnargs)), p.returncode))
                 print(se.decode())
                 rv = False
             else:
@@ -404,9 +422,11 @@ class SvnVndImport(cmd.Cmd):
     def copy_or_move(self, op, src, dst):
         'Handle copy or move operation'
         if src not in self.items or self.items[src].state[S_WC] == "-":
-            raise InvalidUsageException(None, "Nothing known about `%s'" % src)
+            raise InvalidUsageException(None,
+                    "Nothing known about `%s'" % src)
         if dst in self.items and self.items[dst].state[S_WC] != "-":
-            raise InvalidUsageException(None, "Destination path `%s' already exists" % dst)
+            raise InvalidUsageException(None,
+                    "Destination path `%s' already exists" % dst)
         # Check that we're not creating dst under a file (not a dir)
         new_dirs = []
         def check_parent(d):
@@ -414,7 +434,8 @@ class SvnVndImport(cmd.Cmd):
                 new_dirs.append(d)
             elif self.items[d].state[S_WC] == "F":
                 raise InvalidUsageException(None,
-                        "Destination path `%s' created under `%s' which is a file" % (dst, d))
+                        "Destination path `%s' created under `%s' " +
+                        "which is a file" % (dst, d))
         for_all_parents(dst, check_parent)
         # All ok, record new directories that may be created
         for d in new_dirs:
@@ -427,7 +448,8 @@ class SvnVndImport(cmd.Cmd):
 
     def remove(self, path):
         if path not in self.items or self.items[path].state[S_WC] == "-":
-            raise InvalidUsageException(None, "Nothing known about `%s'" % path)
+            raise InvalidUsageException(None,
+                    "Nothing known about `%s'" % path)
         self.prepare_ops.append(("rm", path))
         self.items.wc_remove(path)
 
@@ -435,8 +457,10 @@ class SvnVndImport(cmd.Cmd):
         'Compare two files, return similarity ratio on 0..1000 scale'
         if self.items[src].state[S_WC] != "F":
             return 0
-        fn1 = os.path.join(self.wcdir, self.items[src].wc_path)   # Source is in working copy
-        fn2 = os.path.join(self.importdir, dst) # Destination is in imported dir
+        # Source is in working copy
+        fn1 = os.path.join(self.wcdir, self.items[src].wc_path)
+        # Destination is in imported dir
+        fn2 = os.path.join(self.importdir, dst)
         minlines = self.config.get('file-min-lines')
         try:
             f1 = open(fn1, 'r')
@@ -452,20 +476,16 @@ class SvnVndImport(cmd.Cmd):
             sm = difflib.SequenceMatcher(a=l1, b=l2)
             return int(1000 * sm.quick_ratio())
         except UnicodeDecodeError:
-            # Oops, file seems to be binary. Fall back to comparing whole file contents.
+            # Oops, file seems to be binary. Fall back to comparing whole
+            # file contents.
             if filecmp.cmp(fn1, fn2, shallow=False):
                 return 1000
             return 0
 
     def _similarity_dir(self, src, dst, get_file_similarity, lst_removal):
-        'Helper function to iterate over FSOs, using callback to compare file entries'
+        'Iterate over FSOs, using callback to compare file entries'
         common = 0
         total = 0
-        # Quickly estimate upper boundary by comparing file names. Only concern ourselves with
-        # files in source directory. I.e., if files were added after the move in the destination
-        # directory, it's ok. If most of the files from the source directory were removed, the
-        # directory is not considered similar - instead, file move detection would move files one
-        # by one.
         for xsrc in self.items:
             if xsrc.startswith(src + os.sep):
                 esrc = self.items[xsrc]
@@ -483,7 +503,7 @@ class SvnVndImport(cmd.Cmd):
                 total += 1000
                 xdst = path_rebase(xsrc, src, dst)
                 if xdst not in self.items:
-                    # Destination not in imported sources - item considered non-similar
+                    # Destination not in imported sources - non-similar item
                     continue
                 edst = self.items[xdst]
                 if edst.state[S_IM] == esrc.state[S_WC]:
@@ -492,24 +512,32 @@ class SvnVndImport(cmd.Cmd):
                     else:
                         common += get_file_similarity(xsrc, xdst)
         if total == 0:
-            return 0 # No files/subdirs in source directory - avoid copying empty dirs
+            # No files/subdirs in source directory - avoid copying empty dirs
+            return 0
         return 1000 * common / total
 
     def similarity_dir(self, src, dst, threshold, lst_removal):
-        'Compare two dirs recursively, return similarity ratio on 0..1000 scale'
+        '''
+        Compare two dirs recursively, return similarity ratio on
+        0..1000 scale.
+        '''
         common = 0
         total = 0
-        # Quickly estimate upper boundary by comparing file names (assuming file with the same
-        # name are identical). Only concern ourselves with files in source directory. I.e., if
-        # files were added after the move in the destination directory, it's ok. If most of
-        # the files from the source directory were removed, the directory is not considered
-        # similar - instead, file move detection would move files one by one.
+        # Quickly estimate upper boundary by comparing file names. Only
+        # concern ourselves with files in source directory. I.e., if
+        # files were added after the move in the destination directory,
+        # it's ok. If most of the files from the source directory were
+        # removed, the directory is not considered similar - instead,
+        # file move detection would move files one by one.
         upper = self._similarity_dir(src, dst, lambda s, d: 1000, lst_removal)
         if upper <= threshold:
-            return 0 # Doesn't matter, even best estimate is worse than current cut-off
-        # Okay, looks roughly similar. Now redo the above procedure, but also compare the file content
+            # Even the best estimate is worse than current cut-off
+            return 0
+        # Okay, looks roughly similar. Now redo the above procedure, but also
+        # compare the file content.
         return self._similarity_dir(src, dst,
-                lambda s, d: self.similarity_file(s, d, 0, lst_removal), lst_removal)
+                lambda s, d: self.similarity_file(s, d, 0, lst_removal),
+                lst_removal)
 
     def similar(self, src, dst, threshold=0, lst_removal=None):
         'Compare two FSOs, source in WC and destination in imported dir'
@@ -573,16 +601,21 @@ class SvnVndImport(cmd.Cmd):
             if e.state[S_WC] != "-" and e.state[S_IM] == "-":
                 wlst[p] = [] # wlst hash stores copy destinations
             elif e.state[S_WC] == "-" and e.state[S_IM] != "-":
-                ilst.append((e.state[S_IM], p)) # ilst just lists destination paths as tuples with node kind
+                # ilst just lists destination paths as tuples with node kind
+                ilst.append((e.state[S_IM], p))
         iteration = 0
-        # Do not apply operations immediately - we'll need to post-process them
-        # to account for files/dirs moved inside a moved parent dir.
+        # Do not apply operations immediately - we'll need to post-process
+        # them to account for files/dirs moved inside a moved parent dir.
         ops = []
         to_be_removed = []
         def get_renamed_name(path, rename_ops):
-            'Check if path was renamed/removed in the recorded operations, return new name.'
+            '''
+            Check if path was renamed/removed in the recorded operations,
+            return new name.
+            '''
             for op_tuple in rename_ops:
-                # Since copies do not remove the source file, ignore them. We push no 'rm' ops in this function
+                # Since copies do not remove the source file, ignore them.
+                # We push no 'rm' ops in this function
                 if op_tuple[0] == "mv":
                     src = op_tuple[1]
                     dst = op_tuple[2]
@@ -592,10 +625,12 @@ class SvnVndImport(cmd.Cmd):
 
         while len(wlst):
             iteration += 1
-            self.info(2, "Iteration %d: Possible sources: %d, possible destinations: %d" %
+            self.info(2, ("Iteration %d: Possible sources: %d, " +
+                    "possible destinations: %d") %
                     (iteration, len(wlst), len(ilst)))
             ndst = len(ilst)
-            for idx, (nk, dst) in enumerate(sorted(ilst, key=lambda s: filename_sort_key(s[1]))):
+            for idx, (nk, dst) in enumerate(sorted(ilst,
+                    key=lambda s: filename_sort_key(s[1]))):
                 class SkipDestFile(Exception):
                     pass
                 # Check if moved as a part of a parent directory.
@@ -603,22 +638,30 @@ class SvnVndImport(cmd.Cmd):
                     if xdst in ilst_map:
                         src = path_rebase(dst, xdst, ilst_map[xdst])
                         # Did it exist in copied directory?
-                        if src in self.items and self.items[src].state[S_WC] == nk:
-                            sim = self.similar(src, dst, thresholds[nk], to_be_removed)
+                        if src in self.items and \
+                                self.items[src].state[S_WC] == nk:
+                            sim = self.similar(src, dst, thresholds[nk],
+                                    to_be_removed)
                             if sim > thresholds[nk]:
-                                self.info(2, "  [%04d/%04d] Skipping `%s' (copied as part of `%s')" % (idx, ndst, dst, xdst))
+                                self.info(2, ("  [%04d/%04d] Skipping `%s' " +
+                                        "(copied as part of `%s')") %
+                                        (idx, ndst, dst, xdst))
                                 raise SkipDestFile
-                            raise StopIteration # Copied, but not similar - search for other sources
+                            # Copied, not similar - search for other sources
+                            raise StopIteration
                 try:
                     for_all_parents(dst, check_moved_parent)
                 except SkipDestFile:
                     continue
                 except StopIteration:
                     pass
-                self.info(2, "  [%04d/%04d] Looking for possible source for `%s'" % (idx, ndst, dst))
+                self.info(2, ("  [%04d/%04d] Looking for possible source " +
+                        "for `%s'") % (idx, ndst, dst))
                 bestsrc = None
-                bestsim = thresholds[nk] # Won't even consider those lower than threshold
-                for src in sorted(wlst.keys(), key=lambda x: name_similarity(x, dst)):
+                # Won't even consider those lower than threshold
+                bestsim = thresholds[nk]
+                for src in sorted(wlst.keys(),
+                        key=lambda x: name_similarity(x, dst)):
                     sim = self.similar(src, dst, bestsim, to_be_removed)
                     if sim > bestsim:
                         self.info(3, "    [similarity %4d] %s" % (sim, src))
@@ -641,32 +684,37 @@ class SvnVndImport(cmd.Cmd):
                     ops.append(("mv", src, dlist[0]))
                     to_be_removed.append(src)
                 else:
-                    # We don't remove the source here, it will be done when the changes are applied
-                    # (it will remove all the WC files not found in imported sources). Avoiding removal
-                    # here simplifies operation sorting below, since we would not be concerned with
-                    # source file/dir disappearing before it is copied to its destination.
+                    # We don't remove the source here, it will be done when
+                    # the changes are applied (it will remove all the WC files
+                    # not found in imported sources). Avoiding removal here
+                    # simplifies operation sorting below, since we would not
+                    # be concerned with source file/dir disappearing before
+                    # it is copied to its destination.
                     to_be_removed.append(src)
                     for d in dlist:
                         ops.append(("cp", src, d))
-                # If we copied something - recheck parent source directories. Since some source file/dir
-                # was scheduled to be removed, this may have increased the similarity to some destination.
+                # If we copied something - recheck parent source directories.
+                # Since some source file/dir was scheduled to be removed,
+                # this may have increased the similarity to some destination.
                 def recheck_parent(x):
                     if x in wlst and len(wlst) == 0:
                         new_wlst[x] = []
                 for_all_parents(src, recheck_parent)
 
-            # At this point, if we're going to have the next iteration, we are only concerned about directories
-            # (by the way new_wlst is created above). So, filter out all files from ilst as well.
+            # At this point, if we're going to have the next iteration, we
+            # are only concerned about directories (by the way new_wlst is
+            # created above). So, filter out all files from ilst as well.
             wlst = new_wlst
             ilst = list(filter(lambda t: t[0] == 'D', ilst))
 
-        # Finished collecting the operations - now can post-process and apply them.
-        # First, sort: copies/moves by destination (so that parent directories are created before files/subdirs
-        # are copied/renamed inside)
+        # Finished collecting the operations - now can post-process and
+        # apply them. First, sort copies/moves by destination (so that
+        # parent directories are created before files/subdirs are
+        # copied/renamed inside)
         ops = sorted(ops, key=lambda op: filename_sort_key(op[2]))
         for i, op_tuple in enumerate(ops):
-            # For each operation, go over its precedents to see if the source has been renamed
-            # If it is, find out new name.
+            # For each operation, go over its precedents to see if the source
+            # has been renamed. If it is, find out new name.
             op = op_tuple[0]
             src = get_renamed_name(op_tuple[1], reversed(ops[:i]))
             if src != op_tuple[2]:
@@ -681,16 +729,19 @@ class SvnVndImport(cmd.Cmd):
 
     def do_detect(self, arg):
         '''
-        detect : auto-detect possible moves (where source/destination name is unique).
-                 If not all moves are applicable, save move list, edit and load.
+        detect : auto-detect possible moves (where source/destination name
+                 is unique). If not all moves are applicable, save move list,
+                 edit and load.
         '''
         self.parse_args(arg, 0, "detect")
-        self.detect({ "D": self.config.get('dir-similarity'), "F": self.config.get('file-similarity')})
+        self.detect({ "D": self.config.get('dir-similarity'),
+            "F": self.config.get('file-similarity')})
 
     def do_apply(self, arg):
         '''
-        apply : Perform copies/renames; then copy imported sources into the working copy.
-                Modifies working copy. Exits after completion.
+        apply : Perform copies/renames; then copy imported sources into
+                the working copy. Modifies working copy. Exits after
+                completion.
         '''
         self.info(1, "Copying imported sources into working copy...")
         # Perform the recorded copies/moves/removals
@@ -705,7 +756,8 @@ class SvnVndImport(cmd.Cmd):
                 self.run_svn(["cp", "--parents", o[1], o[2]])
                 to_be_diffed.append(o[2])
             elif op == "rm":
-                # --force, as the removed path is likely created as a result of previous copy/rename
+                # --force, as the removed path is likely created as a result
+                # of previous copy/rename
                 self.run_svn(["rm", "--force", o[1]])
         dirs_added = []
         dirs_removed = []
@@ -726,11 +778,13 @@ class SvnVndImport(cmd.Cmd):
                     flg = "(added dir)"
                 elif nk_im == "F":
                     # New file added
-                    shutil.copyfile(os.path.join(self.importdir, i), os.path.join(self.wcdir, i))
+                    shutil.copyfile(os.path.join(self.importdir, i),
+                            os.path.join(self.wcdir, i))
                     files_added.append(i)
                     flg = "(added file)"
                 else:
-                    # Not in imported sources, not in WC (moved away/removed) - nothing to do
+                    # Not in imported sources, not in WC (moved
+                    # away/removed) - nothing to do
                     pass
             elif nk_wc == "F":
                 # File in a working copy
@@ -742,7 +796,8 @@ class SvnVndImport(cmd.Cmd):
                     flg = "(replaced file with dir)"
                 elif nk_im == "F":
                     # Was a file, is a file - just copy contents
-                    shutil.copyfile(os.path.join(self.importdir, i), os.path.join(self.wcdir, i))
+                    shutil.copyfile(os.path.join(self.importdir, i),
+                            os.path.join(self.wcdir, i))
                     flg = "(copied)"
                 else:
                     # Was a file, removed
@@ -754,10 +809,12 @@ class SvnVndImport(cmd.Cmd):
                     # Was a directory, is a directory - nothing to do
                     pass
                 elif nk_im == "F":
-                    # Directory replaced with file. Need to remove dir immediately, as bulk removals/additions
-                    # assume new files and dirs already in place
+                    # Directory replaced with file. Need to remove dir
+                    # immediately, as bulk removals/additions assume new files
+                    # and dirs already in place.
                     self.run_svn(["rm", "--force", i])
-                    shutil.copyfile(os.path.join(self.importdir, i), os.path.join(self.wcdir, i))
+                    shutil.copyfile(os.path.join(self.importdir, i),
+                            os.path.join(self.wcdir, i))
                     files_added.append(i)
                     flg = "(replaced dir with file)"
                 else:
@@ -767,10 +824,14 @@ class SvnVndImport(cmd.Cmd):
             if flg is not None:
                 self.info(4, "    %s %s %s" % (e.status(), i, flg))
         # Filter files/directories removed as a part of parent directory
-        files_removed = list(filter(lambda x: os.path.dirname(x) not in dirs_removed, files_removed))
-        dirs_removed = list(filter(lambda x: os.path.dirname(x) not in dirs_removed, dirs_removed))
-        files_added = list(filter(lambda x: os.path.dirname(x) not in dirs_added, files_added))
-        dirs_added = list(filter(lambda x: os.path.dirname(x) not in dirs_added, dirs_added))
+        files_removed = list(filter(lambda x: os.path.dirname(x) not in
+                dirs_removed, files_removed))
+        dirs_removed = list(filter(lambda x: os.path.dirname(x) not in
+            dirs_removed, dirs_removed))
+        files_added = list(filter(lambda x: os.path.dirname(x) not in
+            dirs_added, files_added))
+        dirs_added = list(filter(lambda x: os.path.dirname(x) not in
+            dirs_added, dirs_added))
         self.info(2, "  Running SVN add/rm commands");
         if len(dirs_added):
             self.run_svn(["add"], dirs_added)
@@ -783,13 +844,16 @@ class SvnVndImport(cmd.Cmd):
         # Save the diff for the copied/moved items
         diff_save = self.config.get('save-diff-copied')
         if diff_save is not None:
-            self.info(2, "  Saving 'svn diff' on copied files/dirs to `%s'" % diff_save)
-            to_be_diffed = list(filter(lambda x: os.path.dirname(x) not in to_be_diffed, to_be_diffed))
+            self.info(2, "  Saving 'svn diff' on copied files/dirs to `%s'" %
+                    diff_save)
+            to_be_diffed = list(filter(lambda x: os.path.dirname(x) not in
+                to_be_diffed, to_be_diffed))
             if len(to_be_diffed):
                 try:
                     rv, out = self.run_svn(["diff"], to_be_diffed)
                 except UnicodeDecodeError:
-                    # Some binary files not marked with appropriate MIME type, or broken text files
+                    # Some binary files not marked with appropriate MIME type,
+                    # or broken text files
                     rv, out = (True, "WARNING: diff contained binary files\n")
             else:
                 rv, out = (True, "")
@@ -797,19 +861,22 @@ class SvnVndImport(cmd.Cmd):
                 f = open(diff_save, "w")
                 f.write(out)
                 f.close()
-        # Exiting, as the resulting working copy can no longer be used for move analysis
-        self.info(1, "Done. Exiting; please examine the working copy and commit.")
+        # Exiting, as the resulting working copy can no longer be used
+        # for move analysis
+        self.info(1, "Done. Exiting; please examine the working copy " +
+                "and commit.")
         return True
 
     def do_similarity(self, arg):
         '''
-        similarity SRD DST : estimate whether SRC could be potential source for DST
-                             (0=no match, 1000=perfect match)
+        similarity SRD DST : estimate whether SRC could be potential source
+                             for DST (0=no match, 1000=perfect match)
         '''
         src, dst = self.parse_args(arg, 2, "similarity")
         sim = self.similar(src, dst)
         if sim is not None:
-            print("Similarity between source `%s' and destination `%s': %4d" % (src, dst, sim))
+            print("Similarity between source `%s' and destination `%s': %4d" %
+                    (src, dst, sim))
 
     def do_set(self, arg):
         '''
@@ -852,12 +919,15 @@ class SvnVndImport(cmd.Cmd):
         if len(self.prepare_ops):
             print("Currently recorded preparatory operations:")
             print()
-            print("%5s  %s  %-*s  %-*s" % ("#", "Op", colsz, "Source", colsz, "Destination"))
+            print("%5s  %s  %-*s  %-*s" %
+                    ("#", "Op", colsz, "Source", colsz, "Destination"))
             for id, o in enumerate(self.prepare_ops):
                 if id % 10 == 0:
-                    print("%5s  %s  %*s  %*s" % ("-"*5, "--", colsz, "-"*colsz, colsz, "-"*colsz))
+                    print("%5s  %s  %*s  %*s" %
+                            ("-"*5, "--", colsz, "-"*colsz, colsz, "-"*colsz))
                 if len(o) == 3:
-                    print("%5d  %s  %-*s  %-*s" % (id, o[0], colsz, o[1], colsz, o[2]))
+                    print("%5d  %s  %-*s  %-*s" %
+                            (id, o[0], colsz, o[1], colsz, o[2]))
                 else:
                     print("%5d  %s  %-*s" % (id, o[0], colsz, o[1]))
             print()
@@ -879,9 +949,12 @@ class SvnVndImport(cmd.Cmd):
                 longestname = len(o[2])
         for o in self.prepare_ops:
             if len(o) == 2:
-                f.write("svn %s %-*s\n" % (o[0], longestname, shlex.quote(o[1])))
+                f.write("svn %s %-*s\n" %
+                        (o[0], longestname, shlex.quote(o[1])))
             else:
-                f.write("svn %s %-*s %-*s\n" % (o[0], longestname, shlex.quote(o[1]), longestname, shlex.quote(o[2])))
+                f.write("svn %s %-*s %-*s\n" %
+                        (o[0], longestname, shlex.quote(o[1]),
+                            longestname, shlex.quote(o[2])))
             pass
         f.close()
 
@@ -902,7 +975,8 @@ class SvnVndImport(cmd.Cmd):
                 self.handle_op(args[1:])
             except InvalidUsageException as e:
                 # Rethrow
-                raise InvalidUsageException(None, "Invalid line in file: %s(%s)" % (l, e))
+                raise InvalidUsageException(None,
+                        "Invalid line in file: %s(%s)" % (l, e))
         f.close()
 
     def do_svninfo(self, arg):
@@ -939,22 +1013,28 @@ class SvnVndImport(cmd.Cmd):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Prepare a working copy for SVN vendor import.")
-    parser.add_argument('wcdir', help="Path to working copy (destination of import)")
-    parser.add_argument('importdir', help="Path to imported sources (source of import)")
+    parser = argparse.ArgumentParser(
+            description="Prepare a working copy for SVN vendor import.")
+    parser.add_argument('wcdir',
+            help="Path to working copy (destination of import)")
+    parser.add_argument('importdir',
+            help="Path to imported sources (source of import)")
     grp = parser.add_mutually_exclusive_group()
     grp.add_argument('--auto', action='store_true',
             help="Automatic mode: detect moves, apply them and copy sources")
     grp.add_argument('--detect', metavar='FILE',
             help="Semi-automatic mode: detect moves and save them to FILE")
     grp.add_argument('--apply', metavar='FILE',
-            help="Semi-automatic mode: apply the moves from FILE and copy the sources")
+            help="Semi-automatic mode: apply the moves from FILE " +
+            "and copy the sources")
     parser.add_argument('--save', metavar='FILE',
-            help="Automatic mode: save moves to FILE after detection, then proceed to apply the changes")
-    parser.add_argument('--config', metavar=('OPT','VALUE'), action='append', nargs=2,
-            help="Set configuration option OPT to VALUE")
+            help="Automatic mode: save moves to FILE after detection, " +
+            "then proceed to apply the changes")
+    parser.add_argument('--config', metavar=('OPT','VALUE'), action='append',
+            nargs=2, help="Set configuration option OPT to VALUE")
     args = parser.parse_args()
-    p = subprocess.Popen(args=['svn', 'info', args.wcdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(args=['svn', 'info', args.wcdir],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     so, se = p.communicate()
     if p.returncode != 0:
         print("%s: does not appear to be SVN working copy." % args.wcdir)
