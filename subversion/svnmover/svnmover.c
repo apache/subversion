@@ -696,7 +696,7 @@ branch_is_root_path(const svn_branch_instance_t *branch,
 static svn_error_t *
 branch_mappings_delete(svn_branch_instance_t *branch,
                        const char *from_path,
-                       svn_boolean_t *include_self,
+                       svn_boolean_t include_self,
                        apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
@@ -772,7 +772,7 @@ branch_mappings_copy(svn_branch_instance_t *from_branch,
                      const char *from_path,
                      svn_branch_instance_t *to_branch,
                      const char *to_path,
-                     svn_boolean_t *include_self,
+                     svn_boolean_t include_self,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
