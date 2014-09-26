@@ -298,17 +298,6 @@ struct action {
 
 /* ====================================================================== */
 
-/* WITH_OVERLAPPING_EIDS means an outer branch maintains EIDs for all the
- * elements of the nested branches in it, rather than just for the root
- * element of each immediate child branch.
- *
- * The idea is that this may facilitate some sort of tracking of moves
- * into and out of subbranches, but the idea is not fully developed.
- *
- * This is only partially implemented, and may not be a useful idea.
- */
-/* #define WITH_OVERLAPPING_EIDS */
-
 /* ### */
 #define SVN_ERR_BRANCHING 123456
 
@@ -1686,9 +1675,6 @@ svn_branch_mkdir(svn_branch_instance_t *branch,
  * FROM_PATH MUST be the location of a non-root element of BRANCH.
  * If FROM_PATH is the root of a subbranch and/or contains nested
  * subbranches, also delete them.
- *
- * <ifdef WITH_OVERLAPPING_EIDS> Also delete from each nested subbranch
- *   that contains FROM_PATH.</>
  */
 static svn_error_t *
 branch_delete_subtree_r(svn_branch_instance_t *branch,
@@ -1710,8 +1696,7 @@ branch_delete_subtree_r(svn_branch_instance_t *branch,
                              _("in branch %d, can't delete '%s': is root of this branch"),
                              branch->definition->bid, from_path);
 
-  /* Delete any nested subbranches at or inside FROM_PATH.
-     (If overlapping EIDs supported: also delete overlapping parts.) */
+  /* Delete any nested subbranches at or inside FROM_PATH. */
   subbranches = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
   for (i = 0; i < subbranches->nelts; i++)
     {
@@ -1726,18 +1711,6 @@ branch_delete_subtree_r(svn_branch_instance_t *branch,
           /* Delete the whole subbranch (recursively) */
           SVN_ERR(branch_instance_delete_r(subbranch, scratch_pool));
         }
-
-#ifdef WITH_OVERLAPPING_EIDS
-      /* If FROM_PATH is inside (but not the root of) this subbranch,
-         delete it from this subbranch.
-         (It's not the root -- the first 'if' clause caught that.)
-       */
-      else if (svn_relpath_skip_ancestor(subbranch_root_path, from_path))
-        {
-          SVN_ERR(branch_delete_subtree_r(subbranch, from_path,
-                                          scratch_pool));
-        }
-#endif
     }
 
   /* update the path mappings in this branch */
@@ -1756,10 +1729,6 @@ branch_delete_subtree_r(svn_branch_instance_t *branch,
  *
  * TO_PATH must be a non-existing path in an existing parent directory in
  * BRANCH.
- *
- * <ifdef WITH_OVERLAPPING_EIDS> Also delete from / add to / move within
- *   each nested subbranch that contains FROM_PATH / TO_PATH / both
- *   (respectively). </>
  */
 static svn_error_t *
 branch_move_subtree_r(svn_branch_instance_t *branch,
@@ -1782,12 +1751,6 @@ branch_move_subtree_r(svn_branch_instance_t *branch,
       const char *subbranch_root_path = branch_get_root_path(subbranch);
       const char *subbranch_within_from_path
         = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-#ifdef WITH_OVERLAPPING_EIDS
-      const char *from_path_within_subbranch
-        = svn_relpath_skip_ancestor(subbranch_root_path, from_path);
-      const char *to_path_within_subbranch
-        = svn_relpath_skip_ancestor(subbranch_root_path, to_path);
-#endif
 
       if (subbranch_within_from_path)
         {
@@ -1801,30 +1764,6 @@ branch_move_subtree_r(svn_branch_instance_t *branch,
                                         subbranch_root_to_path,
                                         scratch_pool));
         }
-
-#ifdef WITH_OVERLAPPING_EIDS
-      /* If FROM_PATH or TO_PATH is inside (but not the root of) this
-         subbranch, move within or delete from or add to this subbranch.
-         (FROM_PATH is not the root -- the first 'if' clause caught that.)
-         (TO_PATH is not the root -- the root exists and TO_PATH doesn't.)
-       */
-      else if (from_path_within_subbranch && to_path_within_subbranch)
-        {
-          SVN_ERR(branch_move_subtree_r(subbranch, from_path, to_path,
-                                        scratch_pool));
-        }
-      else if (from_path_within_subbranch)
-        {
-          SVN_ERR(branch_delete_subtree_r(subbranch, from_path,
-                                          scratch_pool));
-        }
-      else if (to_path_within_subbranch)
-        {
-          /* ### Copy the external subtree at FROM_PATH (including nested
-                 branches? -- but they're overlapping anyway so no need)
-                 to SUBBRANCH:TO_PATH, as added or "copied"? elements. */
-        }
-#endif
     }
   return SVN_NO_ERROR;
 }
@@ -1841,8 +1780,6 @@ branch_move_subtree_r(svn_branch_instance_t *branch,
  *
  * TO_PATH must be a non-existing path in an existing parent directory in
  * OUTER_BRANCH.
- *
- * <ifdef WITH_OVERLAPPING_EIDS> ### ? </>
  */
 static svn_error_t *
 branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
@@ -1914,10 +1851,6 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
  *
  * TO_PATH must be a non-existing path in an existing parent directory in
  * BRANCH.
- *
- * <ifdef WITH_OVERLAPPING_EIDS> Also delete from / add to / copy within
- *   each nested subbranch that contains FROM_PATH / TO_PATH / both
- *   (respectively). </>
  */
 static svn_error_t *
 branch_copy_subtree_r(svn_branch_instance_t *branch,
@@ -1942,12 +1875,6 @@ branch_copy_subtree_r(svn_branch_instance_t *branch,
       const char *subbranch_root_path = branch_get_root_path(subbranch);
       const char *subbranch_within_from_path
         = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-#ifdef WITH_OVERLAPPING_EIDS
-      const char *from_path_within_subbranch
-        = svn_relpath_skip_ancestor(subbranch_root_path, from_path);
-      const char *to_path_within_subbranch
-        = svn_relpath_skip_ancestor(subbranch_root_path, to_path);
-#endif
 
       if (subbranch_within_from_path)
         {
@@ -1962,32 +1889,6 @@ branch_copy_subtree_r(svn_branch_instance_t *branch,
                                           subbranch_root_to_path,
                                           scratch_pool));
         }
-
-#ifdef WITH_OVERLAPPING_EIDS
-      /* If FROM_PATH or TO_PATH is inside (but not the root of) this
-         subbranch, copy within or branch from or add to this subbranch.
-         (FROM_PATH is not the root -- the first 'if' clause caught that.)
-         (TO_PATH is not the root -- the root exists and TO_PATH doesn't.)
-       */
-      else if (from_path_within_subbranch && to_path_within_subbranch)
-        {
-          SVN_ERR(branch_copy_subtree_r(subbranch, from_path, to_path,
-                                        scratch_pool));
-        }
-      else if (from_path_within_subbranch)
-        {
-          SVN_ERR(branch_branch_subtree_r(branch,
-                                          subbranch, from_path,
-                                          to_path,
-                                          scratch_pool));
-        }
-      else if (to_path_within_subbranch)
-        {
-          /* ### Copy the external subtree at FROM_PATH (including nested
-                 branches? -- but they're overlapping anyway so no need)
-                 to SUBBRANCH:TO_PATH, as added or "copied"? elements. */
-        }
-#endif
     }
   return SVN_NO_ERROR;
 }
@@ -1999,8 +1900,7 @@ branch_copy_subtree_r(svn_branch_instance_t *branch,
  * will also be moved.
  *
  * PARENT_LOC must be an existing directory element in BRANCH.
- * <ifdef WITH_OVERLAPPING_EIDS> PARENT_LOC may be a subbranch root or
- * inside a subbranch. <else> PARENT_LOC is not a subbranch root. </>.
+ * PARENT_LOC is not a subbranch root.
  */
 static svn_error_t *
 svn_branch_mv(svn_branch_instance_t *branch,
@@ -2030,8 +1930,7 @@ svn_branch_mv(svn_branch_instance_t *branch,
  * and must not be the root of a subbranch of BRANCH.
  *
  * PARENT_LOC must be an existing directory element in BRANCH.
- * <ifdef WITH_OVERLAPPING_EIDS> PARENT_LOC may be a subbranch root or
- * inside a subbranch. <else> PARENT_LOC is not a subbranch root. </>.
+ * PARENT_LOC is not a subbranch root.
  */
 static svn_error_t *
 svn_branch_cp(svn_branch_instance_t *branch,
@@ -2145,11 +2044,9 @@ svn_branch_branchify(svn_branch_instance_t *outer_branch,
                                new_branch, new_root_rrpath,
                                FALSE /*include_self*/, scratch_pool));
 
-#ifndef WITH_OVERLAPPING_EIDS
   /* remove old EIDs in outer branch */
   SVN_ERR(branch_mappings_delete(outer_branch, new_root_rrpath,
                                  FALSE /*include_self*/, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2157,8 +2054,6 @@ svn_branch_branchify(svn_branch_instance_t *outer_branch,
 /* In BRANCH, remove the subtree at LOC, including any nested branches.
  *
  * LOC MUST be the location of a non-root element of BRANCH.
- * <ifdef WITH_OVERLAPPING_EIDS>
- *   LOC may be both in BRANCH and in one or more nested subbranches.</>
  */
 static svn_error_t *
 svn_branch_rm(svn_branch_instance_t *branch,
