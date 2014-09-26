@@ -7,8 +7,31 @@ Merge policy:
   The work on this branch may or may not eventually be wanted on trunk. It
   is not intended to be kept in a state where it could be merged to trunk.
 
+  Please don't review for implementation issues, not even big-O
+  complexity concerns etc. at this time.
+
+  If you can get your head around how the logic works, I'd be
+  extremely glad of any discussion of that.
+
 
 Work on this branch:
+
+  * Develop a proof-of-concept utility for playing with scenarios so
+    as to check how the logic of move tracking and branches works in
+    practice.
+
+    It's a program called 'svnmover', a bit like 'svnmucc', so it
+    completely avoids any working copy considerations.
+
+    The implementation (which stores metadata in revprops) is just a hack.
+    The idea is to check the logic pans out usefully, without caring about
+    how the metadata is stored or what it looks like.
+
+    STATUS
+
+    This is my current focus. Implemented move/copy/delete and
+    branch/branchify/list-branches. The next big one to do is 'merge'.
+
 
   * Develop a 'commit editor' interface supporting moves.
 
