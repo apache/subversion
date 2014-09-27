@@ -1037,22 +1037,32 @@ read_uuid(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+svn_fs_fs__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
   svn_revnum_t min_log_addressing_rev;
 
-  fs->path = apr_pstrdup(fs->pool, path);
-
-  /* Read the FS format number. */
+  /* Read info from format file. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
-                      path_format(fs, pool), pool));
+                      path_format(fs, scratch_pool), scratch_pool));
 
-  /* Now we've got a format number no matter what. */
+  /* Now that we've got *all* info, store / update values in FFD. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
   ffd->min_log_addressing_rev = min_log_addressing_rev;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  /* Read the FS format file. */
+  SVN_ERR(svn_fs_fs__read_format_file(fs, pool));
 
   /* Read in and cache the repository uuid. */
   SVN_ERR(read_uuid(fs, pool));
