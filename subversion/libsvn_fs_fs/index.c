@@ -2068,7 +2068,7 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
   SVN_ERR(packed_stream_get(&value, stream));
   *last_compound += decode_int(value);
 
-  entry.type = (int)(*last_compound & 7);
+  entry.type = *last_compound & 7;
   entry.item.number = *last_compound / 8;
 
   /* Verify item type. */

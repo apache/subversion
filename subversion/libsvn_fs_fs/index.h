@@ -61,7 +61,7 @@ typedef struct svn_fs_fs__p2l_entry_t
   apr_off_t size;
 
   /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
-  unsigned type;
+  apr_uint32_t type;
 
   /* modified FNV-1a checksum.  0 if unknown checksum */
   apr_uint32_t fnv1_checksum;
