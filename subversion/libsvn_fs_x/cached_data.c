@@ -772,13 +772,18 @@ svn_fs_x__rep_chain_length(int *chain_length,
   svn_revnum_t shard_size = ffd->max_files_per_dir
                           ? ffd->max_files_per_dir
                           : 1;
-  apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t is_delta = FALSE;
   int count = 0;
   int shards = 1;
   svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
   svn_revnum_t last_shard = revision / shard_size;
-  
+
+  /* Note that this iteration pool will be used in a non-standard way.
+   * To reuse open file handles between iterations (e.g. while within the
+   * same pack file), we only clear this pool once in a while instead of
+   * at the start of each iteration. */
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
    * extreme cases. */
@@ -806,7 +811,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
                                     &file_hint,
                                     &base_rep,
                                     fs,
-                                    subpool));
+                                    iterpool));
 
       base_rep.id.change_set
         = svn_fs_x__change_set_by_rev(header->base_revision);
@@ -814,18 +819,21 @@ svn_fs_x__rep_chain_length(int *chain_length,
       base_rep.size = header->base_length;
       is_delta = header->type == svn_fs_x__rep_delta;
 
+      /* Clear it the ITERPOOL once in a while.  Doing it too frequently
+       * renders the FILE_HINT ineffective.  Doing too infrequently, may
+       * leave us with too many open file handles. */
       ++count;
       if (count % 16 == 0)
         {
           file_hint = NULL;
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
         }
     }
   while (is_delta && base_rep.id.change_set);
 
   *chain_length = count;
   *shard_count = shards;
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
