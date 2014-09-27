@@ -74,7 +74,7 @@ dbg_log_access(svn_fs_t *fs,
                svn_revnum_t revision,
                apr_uint64_t item_index,
                void *item,
-               int item_type,
+               apr_uint32_t item_type,
                apr_pool_t *scratch_pool)
 {
   /* no-op if this macro is not defined */
