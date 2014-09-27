@@ -5403,6 +5403,56 @@ reopen_modify(const svn_test_opts_t *opts,
 #endif
 }
 
+static svn_error_t *
+upgrade_while_committing(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t head_rev = 0;
+  svn_fs_root_t *root;
+  svn_fs_txn_t *txn;
+  const char *fs_path;
+  apr_hash_t *fs_config = apr_hash_make(pool);
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.6 SVN doesn't support FSFS packing");
+
+  /* Create test repository with greek tree. */
+  fs_path = "test-upgrade-while-committing";
+
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.7");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "2");
+  SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, fs_config, pool));
+
+  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(root, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Upgrade filesystem, but keep existing svn_fs_t object. */
+  SVN_ERR(svn_fs_upgrade(fs_path, pool));
+
+  /* Create txn with changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/foo", pool));
+
+  /* Commit txn. */
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Verify filesystem content. */
+  SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,
+                        NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -5501,6 +5551,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_WIMP(reopen_modify,
                        "test reopen and modify txn",
                        "txn_dir_cache fail in FSFS"),
+    SVN_TEST_OPTS_PASS(upgrade_while_committing,
+                       "upgrade while committing"),
     SVN_TEST_NULL
   };
 
