@@ -119,6 +119,9 @@ typedef struct svn_fs_t svn_fs_t;
 /** String with a decimal representation of the FSFS format shard size.
  * Zero ("0") means that a repository with linear layout should be created.
  *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
  * @since New in 1.9.
  */
 #define SVN_FS_CONFIG_FSFS_SHARD_SIZE           "fsfs-shard-size"
