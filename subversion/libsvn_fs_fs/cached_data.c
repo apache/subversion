@@ -1024,6 +1024,9 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       svn_fs_fs__id_txn_reset(&base_rep.txn_id);
       is_delta = header->type == svn_fs_fs__rep_delta;
 
+      /* Clear it the SUBPOOL once in a while.  Doing it too frequently
+       * renders the FILE_HINT ineffective.  Doing too infrequently, may
+       * leave us with too many open file handles. */
       ++count;
       if (count % 16 == 0)
         {
