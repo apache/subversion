@@ -1026,7 +1026,14 @@ svn_fs_fs__rep_chain_length(int *chain_length,
 
       /* Clear it the SUBPOOL once in a while.  Doing it too frequently
        * renders the FILE_HINT ineffective.  Doing too infrequently, may
-       * leave us with too many open file handles. */
+       * leave us with too many open file handles.
+       *
+       * Note that this is mostly about efficiency, with larger values
+       * being more efficient, and any non-zero value is legal here.  When
+       * reading deltified contents, we may keep 10s of rev files open at
+       * the same time and the system has to cope with that.  Thus, the
+       * limit of 16 chosen below is in the same ballpark.
+       */
       ++count;
       if (count % 16 == 0)
         {
