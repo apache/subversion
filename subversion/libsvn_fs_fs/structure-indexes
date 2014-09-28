@@ -80,6 +80,14 @@ Most data is unsigned by nature but will be stored differentially using
 signed integers.
 
 
+Encoding in proto-index files
+-----------------------------
+
+These have a much simpler encoding.  Throughout the files, all records have
+the same length (but different between L2P and P2L).  All records contain
+unsigned 64 bit integers only, stored in little endian byte order.
+
+
 Log-to-phys index
 =================
 
@@ -190,7 +198,7 @@ at the beginning of the file is optional and will be ignored.
   ...
   <eof>         /* end of file. */
 
-All entries are pairs of 64 bit unsigned integers in machine endianess.
+All entries are pairs of 64 bit unsigned integers in little endian order.
 
 
 Phys-to-log index
@@ -293,7 +301,18 @@ Proto index file format
 -----------------------
 
 The index will be created from a proto index file containing simple
-instances of the in-memory representation of svn_fs_fs__p2l_entry_t.
+instances of svn_fs_fs__p2l_entry_t with the following element order:
+
+  item offset               as uint64
+  item size                 as uint64
+  item type                 as uint64
+  modified FNV1a checksum   as uint64
+  revision                  as uint64, with SVN_INVALID_REVNUM mapped to 0
+                                       and revisions >= 0 stored as rev+1
+  item index                as uint64
+
+All values are stored in little endian order.
+
 Page table and header information, except start revision and page size,
 can easily be derived from that information.
 
