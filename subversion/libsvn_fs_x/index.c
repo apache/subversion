@@ -292,7 +292,7 @@ packed_stream_read(packed_number_stream_t *stream)
           /* let's catch corrupted data early.  It would surely cause
            * havoc further down the line. */
           if SVN__PREDICT_FALSE(shift > 8 * sizeof(value))
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+            return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                                      _("Corrupt index: number too large"));
        }
     }
@@ -718,7 +718,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                             _("L2P index page size  %s" 
                               " exceeds current limit of 2G entries"),
                             apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
@@ -781,7 +781,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
           l2p_page_entry_t page_entry = { 0 };
 
           if (proto_entry.item_index > APR_INT32_MAX)
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                     _("Item index %s too large "
                                       "in l2p proto index for revision %ld"),
                                     apr_psprintf(local_pool,
@@ -808,7 +808,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G pages per index. */
   if (page_counts->nelts > APR_INT32_MAX)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                             _("L2P index page count  %d"
                               " exceeds current limit of 2G pages"),
                             page_counts->nelts);
@@ -915,7 +915,7 @@ l2p_header_copy(l2p_page_info_baton_t *baton,
   /* revision offset within the index file */
   apr_size_t rel_revision = baton->revision - header->first_revision;
   if (rel_revision >= header->revision_count)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_REVISION , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_REVISION , NULL,
                              _("Revision %ld not covered by item index"),
                              baton->revision);
 
@@ -941,7 +941,7 @@ l2p_header_copy(l2p_page_info_baton_t *baton,
       max_item_index =   (apr_uint64_t)header->page_size
                        * (last_entry - first_entry);
       if (baton->item_index >= max_item_index)
-        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                 _("Item index %s exceeds l2p limit "
                                   "of %s for revision %ld"),
                                 apr_psprintf(scratch_pool,
@@ -1070,7 +1070,7 @@ get_l2p_header_body(l2p_header_t **header,
 
   if (result->first_revision > revision
       || result->first_revision + result->revision_count <= revision)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
                       revision, result->first_revision,
                       result->first_revision + result->revision_count);
@@ -1292,7 +1292,7 @@ l2p_page_get_offset(l2p_page_baton_t *baton,
 {
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                              _("Item index %s too large in"
                                " revision %ld"),
                              apr_psprintf(pool, "%" APR_UINT64_T_FMT,
@@ -2438,7 +2438,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
   if (page_info.page_count <= page_info.page_no)
     {
       SVN_ERR(packed_stream_close(*stream));
-      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+      return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                _("Offset %s too large in revision %ld"),
                                apr_off_t_toa(pool, offset), revision);
     }
