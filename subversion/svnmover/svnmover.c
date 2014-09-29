@@ -1191,19 +1191,23 @@ write_repos_info(svn_stream_t *stream,
 static svn_error_t *
 fetch_repos_info(svn_branch_repos_t **repos_p,
                  svn_ra_session_t *ra_session,
+                 svn_revnum_t base_revision,
                  svn_editor3_t *editor,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   svn_branch_repos_t *repos
     = svn_branch_repos_create(ra_session, editor, result_pool);
-  svn_revnum_t youngest_rev;
   svn_string_t *value;
   svn_stream_t *stream;
 
   /* Read initial state from repository */
-  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest_rev, scratch_pool));
-  SVN_ERR(svn_ra_rev_prop(ra_session, youngest_rev, "svn-br-info", &value,
+  if (base_revision == SVN_INVALID_REVNUM)
+    {
+      SVN_ERR(svn_ra_get_latest_revnum(ra_session, &base_revision,
+                                       scratch_pool));
+    }
+  SVN_ERR(svn_ra_rev_prop(ra_session, base_revision, "svn-br-info", &value,
                           scratch_pool));
   if (! value)
     {
@@ -1625,7 +1629,7 @@ family_list_branch_instances(svn_branch_family_t *family,
              branch_get_root_path(branch));
       for (eid = family->first_eid; eid < family->next_eid; eid++)
         {
-          printf("    e%d -> %s\n",
+              printf("    e%d -> %s\n",
                  eid,
                  (char *)apr_hash_get(branch->eid_to_path, &eid, sizeof(eid)));
         }
@@ -2105,7 +2109,7 @@ execute(const char *branch_rrpath,
   editor = mtcc->editor;
   repos_root_url = mtcc->repos_root_url;
   base_revision = mtcc->base_revision;
-  SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, editor, pool, pool));
+  SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, base_revision, editor, pool, pool));
   branch = repos_get_branch_by_path(NULL, repos, branch_rrpath, pool);
   SVN_DBG(("look up path '%s': found branch f%db%de%d at path '%s'",
            branch_rrpath, branch->definition->family->fid,
