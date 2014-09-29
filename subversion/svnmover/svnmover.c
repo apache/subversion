@@ -1624,14 +1624,23 @@ family_list_branch_instances(svn_branch_family_t *family,
         = APR_ARRAY_IDX(family->branch_instances, b, svn_branch_instance_t *);
       int eid;
 
-      printf("  branch %d (root element %d -> '%s')\n",
+      printf("  branch %d (root element %d -> '/%s')\n",
              branch->definition->bid, branch->definition->root_eid,
              branch_get_root_path(branch));
       for (eid = family->first_eid; eid < family->next_eid; eid++)
         {
+          const char *rrpath = apr_hash_get(branch->eid_to_path,
+                                            &eid, sizeof(eid));
+
+          if (rrpath)
+            {
+              const char *relpath
+                = svn_relpath_skip_ancestor(branch_get_root_path(branch),
+                                            rrpath);
+
               printf("    e%d -> %s\n",
-                 eid,
-                 (char *)apr_hash_get(branch->eid_to_path, &eid, sizeof(eid)));
+                     eid, relpath[0] ? relpath : ".");
+            }
         }
     }
 
