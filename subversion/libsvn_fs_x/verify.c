@@ -181,7 +181,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                             offset, sub_item, iterpool));
 
           if (p2l_item == NULL)
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+            return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                      NULL,
                                      _("p2l index entry not found for "
                                        "PHYS o%s:s%ld returned by "
@@ -190,7 +190,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                      (long)sub_item, revision, (long)k);
 
           if (!svn_fs_x__id_part_eq(&l2p_item, p2l_item))
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+            return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                      NULL,
                                      _("p2l index info LOG r%ld:i%ld"
                                        " does not match "
@@ -247,7 +247,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, start, offset,
                                          ffd->p2l_page_size, iterpool));
       if (entries->nelts == 0)
-        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+        return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
                                  NULL,
                                  _("p2l does not cover offset %s"
                                    " for revision %ld"),
@@ -277,7 +277,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                             p2l_item, iterpool));
 
               if (sub_item != k || l2p_offset != entry->offset)
-                return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+                return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                          NULL,
                                          _("l2p index entry PHYS o%s:s%ld "
                                            "does not match p2l index value "
@@ -478,7 +478,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, start, pool));
 
   if (offset != max_offset)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT, NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT, NULL,
                              _("File size of %s for revision r%ld does "
                                "not match p2l index size of %s"),
                              apr_off_t_toa(pool, offset), start,
@@ -515,7 +515,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
 
           /* p2l index must cover all rev / pack file offsets exactly once */
           if (entry->offset != offset)
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+            return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                      NULL,
                                      _("p2l index entry for revision r%ld"
                                        " is non-contiguous between offsets "

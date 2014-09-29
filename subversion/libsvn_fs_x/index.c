@@ -292,7 +292,7 @@ packed_stream_read(packed_number_stream_t *stream)
           /* let's catch corrupted data early.  It would surely cause
            * havoc further down the line. */
           if SVN__PREDICT_FALSE(shift > 8 * sizeof(value))
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+            return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                                      _("Corrupt index: number too large"));
        }
     }
@@ -718,7 +718,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                             _("L2P index page size  %s" 
                               " exceeds current limit of 2G entries"),
                             apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
@@ -781,7 +781,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
           l2p_page_entry_t page_entry = { 0 };
 
           if (proto_entry.item_index > APR_INT32_MAX)
-            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                     _("Item index %s too large "
                                       "in l2p proto index for revision %ld"),
                                     apr_psprintf(local_pool,
@@ -808,7 +808,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G pages per index. */
   if (page_counts->nelts > APR_INT32_MAX)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                             _("L2P index page count  %d"
                               " exceeds current limit of 2G pages"),
                             page_counts->nelts);
@@ -915,7 +915,7 @@ l2p_header_copy(l2p_page_info_baton_t *baton,
   /* revision offset within the index file */
   apr_size_t rel_revision = baton->revision - header->first_revision;
   if (rel_revision >= header->revision_count)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_REVISION , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_REVISION , NULL,
                              _("Revision %ld not covered by item index"),
                              baton->revision);
 
@@ -941,7 +941,7 @@ l2p_header_copy(l2p_page_info_baton_t *baton,
       max_item_index =   (apr_uint64_t)header->page_size
                        * (last_entry - first_entry);
       if (baton->item_index >= max_item_index)
-        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                 _("Item index %s exceeds l2p limit "
                                   "of %s for revision %ld"),
                                 apr_psprintf(scratch_pool,
@@ -1070,7 +1070,7 @@ get_l2p_header_body(l2p_header_t **header,
 
   if (result->first_revision > revision
       || result->first_revision + result->revision_count <= revision)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
                       revision, result->first_revision,
                       result->first_revision + result->revision_count);
@@ -1292,7 +1292,7 @@ l2p_page_get_offset(l2p_page_baton_t *baton,
 {
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
-    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                              _("Item index %s too large in"
                                " revision %ld"),
                              apr_psprintf(pool, "%" APR_UINT64_T_FMT,
@@ -1843,7 +1843,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
      = svn_spillbuf__create(0x10000, 0x1000000, local_pool);
 
   /* for loop temps ... */
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -1861,20 +1861,20 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       svn_revnum_t last_revision = revision;
       apr_uint64_t last_number = 0;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* (attempt to) read the next entry from the source */
       SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                     &read, &eof, iter_pool));
+                                     &read, &eof, iterpool));
       SVN_ERR_ASSERT(eof || read == sizeof(entry));
 
       if (entry.item_count && !eof)
         {
           to_read = entry.item_count * sizeof(*entry.items);
-          entry.items = apr_palloc(iter_pool, to_read);
+          entry.items = apr_palloc(iterpool, to_read);
 
           SVN_ERR(svn_io_file_read_full2(proto_index, entry.items, to_read,
-                                         &read, &eof, iter_pool));
+                                         &read, &eof, iterpool));
           SVN_ERR_ASSERT(eof || read == to_read);
         }
 
@@ -1884,7 +1884,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_size_t entry_size;
           to_read = sizeof(entry_size);
           SVN_ERR(svn_io_file_read_full2(proto_index, &entry_size, to_read,
-                                         &read, &eof, iter_pool));
+                                         &read, &eof, iterpool));
           SVN_ERR_ASSERT(eof || read == to_read);
         }
 
@@ -1925,20 +1925,20 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
         {
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_uint(encoded, entry.offset),
-                                      iter_pool));
+                                      iterpool));
           last_revision = revision;
         }
 
       /* write simple item / container entry */
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.size),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.type + entry.item_count * 16),
-                                  iter_pool));
+                                  iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.fnv1_checksum),
-                                  iter_pool));
+                                  iterpool));
 
       /* container contents (only one for non-container items) */
       for (sub_item = 0; sub_item < entry.item_count; ++sub_item)
@@ -1948,7 +1948,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_int64_t diff = item_rev - last_revision;
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_int(encoded, diff),
-                                      iter_pool));
+                                      iterpool));
           last_revision = item_rev;
         }
 
@@ -1957,7 +1957,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
           apr_int64_t diff = entry.items[sub_item].number - last_number;
           SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                       encode_int(encoded, diff),
-                                      iter_pool));
+                                      iterpool));
           last_number = entry.items[sub_item].number;
         }
 
@@ -2007,7 +2007,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(index_file, local_pool));
   SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
@@ -2438,7 +2438,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
   if (page_info.page_count <= page_info.page_no)
     {
       SVN_ERR(packed_stream_close(*stream));
-      return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+      return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                _("Offset %s too large in revision %ld"),
                                apr_off_t_toa(pool, offset), revision);
     }

@@ -47,7 +47,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   if (txn_id)
@@ -59,7 +59,8 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
     {
       /* pack file with physical addressing */
       apr_off_t rev_offset;
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision, pool));
+      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision,
+                                           scratch_pool));
       *absolute_position = rev_offset + item_index;
     }
   else

@@ -57,7 +57,7 @@
  * If that is not available anymore (neither in cache nor on disk), re-open
  * the rev / pack file and retry to open the index file.  For anything but
  * committed log addressed revisions, REV_FILE may be NULL.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
@@ -66,6 +66,6 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 #endif

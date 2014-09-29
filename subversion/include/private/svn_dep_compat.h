@@ -47,6 +47,19 @@ extern "C" {
 #endif
 
 /**
+ * We assume that 'char' is 8 bits wide.  The critical interfaces are
+ * our repository formats and RA encodings.  E.g. a 32 bit wide char may
+ * mess up UTF8 parsing, how we interpret size values etc.
+ *
+ * @since New in 1.9.
+ */
+#if    defined(CHAR_BIT) \
+    && !defined(SVN_ALLOW_NON_8_BIT_CHARS) \
+    && (CHAR_BIT != 8)
+#error char is not 8 bits and may break Subversion. Define SVN_ALLOW_NON_8_BIT_CHARS to skip this check.
+#endif
+
+/**
  * Work around a platform dependency issue. apr_thread_rwlock_trywrlock()
  * will make APR_STATUS_IS_EBUSY() return TRUE if the lock could not be
  * acquired under Unix. Under Windows, this will not work. So, provide

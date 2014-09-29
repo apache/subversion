@@ -2267,7 +2267,7 @@ write_container_rep(representation_t *rep,
                     collection_writer_t writer,
                     svn_fs_t *fs,
                     apr_hash_t *reps_hash,
-                    int item_type,
+                    apr_uint32_t item_type,
                     svn_revnum_t final_revision,
                     apr_pool_t *scratch_pool)
 {
@@ -2345,7 +2345,7 @@ write_container_delta_rep(representation_t *rep,
                           svn_fs_t *fs,
                           node_revision_t *noderev,
                           apr_hash_t *reps_hash,
-                          int item_type,
+                          apr_uint32_t item_type,
                           svn_revnum_t final_revision,
                           apr_pool_t *scratch_pool)
 {
@@ -2642,8 +2642,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           noderev->data_rep->revision = rev;
 
           /* See issue 3845.  Some unknown mechanism caused the
-              protorev file to get truncated, so check for that
-              here.  */
+             protorev file to get truncated, so check for that
+             here.  */
           if (noderev->data_rep->item_index + noderev->data_rep->size
               > initial_offset)
             return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2657,7 +2657,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep && is_txn_rep(noderev->prop_rep))
     {
       apr_hash_t *proplist;
-      int item_type = noderev->kind == svn_node_dir
+      apr_uint32_t item_type = noderev->kind == svn_node_dir
                     ? SVN_FS_FS__ITEM_TYPE_DIR_PROPS
                     : SVN_FS_FS__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
@@ -3033,6 +3033,22 @@ commit_body(void *baton, apr_pool_t *pool)
   const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
   svn_stringbuf_t *trailer;
+
+  /* Re-Read the current repository format.  All our repo upgrade and
+     config evaluation strategies are such that existing information in
+     FS and FFD remains valid.
+
+     Although we don't recommend upgrading hot repositories, people may
+     still do it and we must make sure to either handle them gracefully
+     or to error out.
+
+     Committing pre-format 3 txns will fail after upgrade to format 3+
+     because the proto-rev cannot be found; no further action needed.
+     Upgrades from pre-f7 to f7+ means a potential change in addressing
+     mode for the final rev.  We must be sure to detect that cause because
+     the failure would only manifest once the new revision got committed.
+   */
+  SVN_ERR(svn_fs_fs__read_format_file(cb->fs, pool));
 
   /* Read the current youngest revision and, possibly, the next available
      node id and copy id (for old format filesystems).  Update the cached

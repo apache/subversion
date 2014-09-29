@@ -63,7 +63,7 @@ dbg_log_access(svn_fs_t *fs,
                svn_revnum_t revision,
                apr_uint64_t item_index,
                void *item,
-               int item_type,
+               apr_uint32_t item_type,
                apr_pool_t *scratch_pool)
 {
   /* no-op if this macro is not defined */
@@ -869,7 +869,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   svn_revnum_t shard_size = ffd->max_files_per_dir
                           ? ffd->max_files_per_dir
                           : 1;
-  apr_pool_t *sub_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t is_delta = FALSE;
   int count = 0;
@@ -905,7 +905,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                                     &file_hint,
                                     &base_rep,
                                     fs,
-                                    sub_pool,
+                                    subpool,
                                     iterpool));
 
       base_rep.revision = header->base_revision;
@@ -914,18 +914,28 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       svn_fs_fs__id_txn_reset(&base_rep.txn_id);
       is_delta = header->type == svn_fs_fs__rep_delta;
 
+      /* Clear it the SUBPOOL once in a while.  Doing it too frequently
+       * renders the FILE_HINT ineffective.  Doing too infrequently, may
+       * leave us with too many open file handles.
+       *
+       * Note that this is mostly about efficiency, with larger values
+       * being more efficient, and any non-zero value is legal here.  When
+       * reading deltified contents, we may keep 10s of rev files open at
+       * the same time and the system has to cope with that.  Thus, the
+       * limit of 16 chosen below is in the same ballpark.
+       */
       ++count;
       if (count % 16 == 0)
         {
           file_hint = NULL;
-          svn_pool_clear(sub_pool);
+          svn_pool_clear(subpool);
         }
     }
   while (is_delta && base_rep.revision);
 
   *chain_length = count;
   *shard_count = shards;
-  svn_pool_destroy(sub_pool);
+  svn_pool_destroy(subpool);
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

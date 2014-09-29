@@ -1383,7 +1383,7 @@ read_revisions(fs_t **fs,
                                             FALSE, pool, pool));
 
   /* read all packed revs */
- for ( revision = 0
+  for ( revision = 0
       ; revision < (*fs)->min_unpacked_rev
       ; revision += (*fs)->shard_size)
     {
