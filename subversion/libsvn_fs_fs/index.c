@@ -548,15 +548,19 @@ read_uint32_from_proto_index(apr_file_t *proto_index,
   apr_uint64_t value;
   SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
                                        scratch_pool));
-  if (value > APR_UINT32_MAX)
-    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                             _("UINT32 0x%" APR_UINT64_T_HEX_FMT
-                               " too large, max = 0x%" APR_UINT64_T_HEX_FMT),
-                             value, (apr_uint64_t)APR_UINT32_MAX);
+  if (!eof || !*eof)
+    {
+      if (value > APR_UINT32_MAX)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                _("UINT32 0x%" APR_UINT64_T_HEX_FMT
+                                  " too large, max = 0x%"
+                                  APR_UINT64_T_HEX_FMT),
+                                value, (apr_uint64_t)APR_UINT32_MAX);
 
-  /* This conversion is not lossy because the value can be represented in
-   * the target type. */
-  *value_p = (apr_uint32_t)value;
+      /* This conversion is not lossy because the value can be represented
+       * in the target type. */
+      *value_p = (apr_uint32_t)value;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -573,16 +577,20 @@ read_off_t_from_proto_index(apr_file_t *proto_index,
   apr_uint64_t value;
   SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
                                        scratch_pool));
-  if (value > off_t_max)
-    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                             _("File offset 0x%" APR_UINT64_T_HEX_FMT
-                               " too large, max = 0x%" APR_UINT64_T_HEX_FMT),
-                             value, off_t_max);
+  if (!eof || !*eof)
+    {
+      if (value > off_t_max)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                _("File offset 0x%" APR_UINT64_T_HEX_FMT
+                                  " too large, max = 0x%"
+                                  APR_UINT64_T_HEX_FMT),
+                                value, off_t_max);
 
-  /* Shortening conversion from unsigned to signed int is well-defined and
-   * not lossy in C because the value can be represented in the target type.
-   */
-  *value_p = (apr_off_t)value;
+      /* Shortening conversion from unsigned to signed int is well-defined
+       * and not lossy in C because the value can be represented in the
+       * target type. */
+      *value_p = (apr_off_t)value;
+    }
 
   return SVN_NO_ERROR;
 }
