@@ -409,7 +409,7 @@ auto_truncate_proto_rev(svn_fs_t *fs,
       if (indexed_length < actual_length)
         SVN_ERR(svn_io_file_trunc(proto_rev, indexed_length, pool));
       else if (indexed_length > actual_length)
-        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+        return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                  NULL,
                                  _("p2l proto index offset %s beyond proto"
                                    "rev file size %s for TXN %s"),
