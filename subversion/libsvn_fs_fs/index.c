@@ -777,8 +777,11 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
           int entry_count = 0;
           for (i = 0; i < entries->nelts; i += entry_count)
             {
-              /* 1 page with up to 8k entries */
-              apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
+              /* 1 page with up to L2P_PAGE_SIZE entries.
+               * fsfs.conf settings validation guarantees this to fit into
+               * our address space. */
+              apr_size_t last_buffer_size
+                = (apr_size_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 
@@ -2078,7 +2081,8 @@ auto_open_p2l_index(svn_fs_fs__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->p2l_offset,
                                  rev_file->footer_offset,
-                                 ffd->block_size, rev_file->pool));
+                                 (apr_size_t)ffd->block_size,
+                                 rev_file->pool));
     }
 
   return SVN_NO_ERROR;
@@ -2117,7 +2121,7 @@ get_p2l_header(p2l_header_t **header,
   /* not found -> must read it from disk.
    * Open index file or position read pointer to the begin of the file */
   if (rev_file->p2l_stream == NULL)
-    SVN_ERR(auto_open_p2l_index(rev_file, fs, key.revision));
+    SVN_ERR(auto_open_p2l_index(rev_file, fs, rev_file->start_revision));
   else
     packed_stream_seek(rev_file->p2l_stream, 0);
 
@@ -2133,7 +2137,7 @@ get_p2l_header(p2l_header_t **header,
 
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->file_size = value;
-  if (result->file_size != rev_file->l2p_offset)
+  if (result->file_size != (apr_uint64_t)rev_file->l2p_offset)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                    _("Index offset and rev / pack file size do not match"));
 
@@ -2222,13 +2226,15 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
    */
   if (baton->offset / header->page_size < header->page_count)
     {
-      baton->page_no = baton->offset / header->page_size;
+      /* This cast is safe because the value is < header->page_count. */
+      baton->page_no = (apr_size_t)(baton->offset / header->page_size);
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no + 1];
       baton->page_size = header->page_size;
     }
   else
     {
+      /* Beyond the last page. */
       baton->page_no = header->page_count;
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no];
