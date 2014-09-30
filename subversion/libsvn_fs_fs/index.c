@@ -552,10 +552,13 @@ read_uint32_from_proto_index(apr_file_t *proto_index,
     {
       if (value > APR_UINT32_MAX)
         return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                _("UINT32 0x%" APR_UINT64_T_HEX_FMT
-                                  " too large, max = 0x%"
-                                  APR_UINT64_T_HEX_FMT),
-                                value, (apr_uint64_t)APR_UINT32_MAX);
+                                _("UINT32 0x%s too large, max = 0x%s"),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             value),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             (apr_uint64_t)APR_UINT32_MAX));
 
       /* This conversion is not lossy because the value can be represented
        * in the target type. */
@@ -581,10 +584,13 @@ read_off_t_from_proto_index(apr_file_t *proto_index,
     {
       if (value > off_t_max)
         return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                _("File offset 0x%" APR_UINT64_T_HEX_FMT
-                                  " too large, max = 0x%"
-                                  APR_UINT64_T_HEX_FMT),
-                                value, off_t_max);
+                                _("File offset 0x%s too large, max = 0x%s"),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             value),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             off_t_max));
 
       /* Shortening conversion from unsigned to signed int is well-defined
        * and not lossy in C because the value can be represented in the
@@ -1850,9 +1856,13 @@ read_p2l_entry_from_proto_index(apr_file_t *proto_index,
       /* Be careful with the arithmetics here (overflows and wrap-around): */
       if (revision > 0 && revision - 1 > LONG_MAX)
         return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                _("Revision 0x%" APR_UINT64_T_HEX_FMT
-                                " too large, max = 0x%" APR_UINT64_T_HEX_FMT),
-                                revision, (apr_uint64_t)LONG_MAX);
+                                _("Revision 0x%s too large, max = 0x%s"),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             revision),
+                                apr_psprintf(scratch_pool,
+                                             "%" APR_UINT64_T_HEX_FMT,
+                                             (apr_uint64_t)LONG_MAX));
 
       /* Shortening conversion from unsigned to signed int is well-defined
        * and not lossy in C because the value can be represented in the
