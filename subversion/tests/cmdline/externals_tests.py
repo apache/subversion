@@ -2812,8 +2812,7 @@ def shadowing(sbox):
   # Remove the shadowed directory to unblock the external
   svntest.main.run_svn(None, 'rm', sbox.repo_url + '/A/C', '-m', 'remove A/C')
 
-  # Another update should unwedge the working copy and fetch the external
-  # but this currently fails :-(  The user needs to get a new checkout...
+  # The next update should fetch the external and not error out
   sbox.simple_update()
 
 
