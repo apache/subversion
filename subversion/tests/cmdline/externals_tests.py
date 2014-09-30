@@ -2795,7 +2795,6 @@ def include_immediate_dir_externals(sbox):
 
 
 @Issue(4085)
-@XFail()
 def shadowing(sbox):
   "external shadows an existing dir"
 
