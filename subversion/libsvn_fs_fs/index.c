@@ -263,11 +263,11 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   read = sizeof(buffer);
   block_left = stream->block_size - (stream->next_offset - block_start);
   if (block_left >= 10 && block_left < read)
-    read = block_left;
+    read = (apr_size_t)block_left;
 
   /* Don't read beyond the end of the file section that belongs to this
    * index / stream. */
-  read = MIN(read, stream->stream_end - stream->next_offset);
+  read = (apr_size_t)MIN(read, stream->stream_end - stream->next_offset);
 
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
@@ -897,7 +897,7 @@ auto_open_l2p_index(svn_fs_fs__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->l2p_offset,
                                  rev_file->p2l_offset,
-                                 ffd->block_size,
+                                 (apr_size_t)ffd->block_size,
                                  rev_file->pool));
     }
 
@@ -918,11 +918,12 @@ get_l2p_header_body(l2p_header_t **header,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
-  int i;
+  apr_size_t i;
   apr_size_t page, page_count;
   apr_off_t offset;
   l2p_header_t *result = apr_pcalloc(result_pool, sizeof(*result));
   apr_size_t page_table_index;
+  svn_revnum_t next_rev;
 
   pair_cache_key_t key;
   key.revision = rev_file->start_revision;
@@ -948,7 +949,7 @@ get_l2p_header_body(l2p_header_t **header,
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->revision_count = (int)value;
   if (   result->revision_count != 1
-      && result->revision_count != ffd->max_files_per_dir)
+      && result->revision_count != (apr_uint64_t)ffd->max_files_per_dir)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                             _("Invalid number of revisions in L2P index"));
 
@@ -961,12 +962,11 @@ get_l2p_header_body(l2p_header_t **header,
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                             _("L2P index page count implausibly large"));
 
-  if (   result->first_revision > revision
-      || result->first_revision + result->revision_count <= revision)
+  next_rev = result->first_revision + (svn_revnum_t)result->revision_count;
+  if (result->first_revision > revision || next_rev <= revision)
     return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
-                      revision, result->first_revision,
-                      result->first_revision + result->revision_count);
+                      revision, result->first_revision, next_rev);
 
   /* allocate the page tables */
   result->page_table
@@ -1328,6 +1328,17 @@ prefetch_l2p_pages(svn_boolean_t *end,
   apr_pool_t *iterpool;
   svn_fs_fs__page_cache_key_t key = { 0 };
 
+  /* Parameter check. */
+  if (min_offset < 0)
+    min_offset = 0;
+
+  if (max_offset <= 0)
+    {
+      /* Nothing to do */
+      *end = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* get the page table for REVISION from cache */
   *end = FALSE;
   SVN_ERR(get_l2p_page_table(pages, fs, rev_file, revision, scratch_pool));
@@ -1357,8 +1368,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
         continue;
 
       /* skip pages outside the specified index file range */
-      if (   entry->offset < min_offset
-          || entry->offset + entry->size > max_offset)
+      if (   entry->offset < (apr_uint64_t)min_offset
+          || entry->offset + entry->size > (apr_uint64_t)max_offset)
         {
           *end = TRUE;
           continue;
