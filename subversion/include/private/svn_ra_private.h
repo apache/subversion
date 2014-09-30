@@ -321,6 +321,20 @@ svn_ra_do_switch4(svn_ra_session_t *session,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
+/* Fetch kind and/or props and/or text.
+ *
+ * Implements svn_editor3__shim_fetch_func_t. */
+svn_error_t *
+svn_ra_fetch(svn_node_kind_t *kind_p,
+      apr_hash_t **props_p,
+      svn_stringbuf_t **file_text,
+      apr_hash_t **children_names,
+      void *baton,
+      const char *repos_relpath,
+      svn_revnum_t revision,
+      apr_pool_t *result_pool,
+      apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

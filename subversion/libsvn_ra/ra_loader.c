@@ -763,9 +763,8 @@ struct fb_baton {
   const char *session_path;
 };
 
-/* Fetch kind and/or props and/or text */
-static svn_error_t *
-fetch(svn_node_kind_t *kind_p,
+svn_error_t *
+svn_ra_fetch(svn_node_kind_t *kind_p,
       apr_hash_t **props_p,
       svn_stringbuf_t **file_text,
       apr_hash_t **children_names,
@@ -869,7 +868,7 @@ svn_error_t *svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                         &shim_connector,
                         deditor, dedit_baton,
                         repos_root_url, base_relpath,
-                        fetch, fbb,
+                        svn_ra_fetch, fbb,
                         NULL, NULL /*cancel*/,
                         pool, pool));
   }
@@ -909,7 +908,7 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
     fbb->repos_root_url = repos_root_url;
     SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                       repos_root_url, base_relpath,
-                                      fetch, fbb, pool, pool));
+                                      svn_ra_fetch, fbb, pool, pool));
   }
 
   return SVN_NO_ERROR;
