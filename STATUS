@@ -184,6 +184,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1628536
+   Fix issue #4085, "external can shadow a versioned directory".
+   Justification:
+     Bug that can lead to a working copy which cannot be updated
+     until a directory shadowing an external, which was switched
+     to the external's location by the externals handling code,
+     is switched back to its original path.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
