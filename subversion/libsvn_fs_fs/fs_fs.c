@@ -647,34 +647,43 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
 /* Check that BLOCK_SIZE is a valid block / page size, i.e. it is within
  * the range of what the current system may address in RAM and it is a
  * power of 2.  Assume that the element size within the block is ITEM_SIZE.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 verify_block_size(apr_int64_t block_size,
                   apr_size_t item_size,
-                  const char *name)
+                  const char *name,
+                  apr_pool_t *scratch_pool
+                 )
 {
   /* Limit range. */
   if (block_size <= 0)
     return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                             _("%" APR_INT64_T_FMT " is too small for "
-                               "fsfs.conf setting '%s'."),
-                             block_size, name);
+                             _("%s is too small for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
 
   if (block_size > SVN_MAX_OBJECT_SIZE / item_size)
     return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                             _("%" APR_INT64_T_FMT " is too large for "
-                               "fsfs.conf setting '%s'."),
-                             block_size, name);
+                             _("%s is too large for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
 
   /* Ensure it is a power of two.
    * For positive X,  X & (X-1) will reset the lowest bit set.
    * If the result is 0, at most one bit has been set. */
   if (0 != (block_size & (block_size - 1)))
     return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                             _("%" APR_INT64_T_FMT " is invalid for "
-                               "fsfs.conf setting '%s' because it is "
-                               "not a power of 2."),
-                             block_size, name);
+                             _("%s is invalid for fsfs.conf setting '%s' "
+                               "because it is not a power of 2."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
 
   return SVN_NO_ERROR;
 }
@@ -782,11 +791,11 @@ read_config(fs_fs_data_t *ffd,
        * Block size and P2L page size are in kbytes;
        * L2P blocks are arrays of apr_off_t. */
       SVN_ERR(verify_block_size(ffd->block_size, 0x400,
-                                CONFIG_OPTION_BLOCK_SIZE));
+                                CONFIG_OPTION_BLOCK_SIZE, scratch_pool));
       SVN_ERR(verify_block_size(ffd->p2l_page_size, 0x400,
-                                CONFIG_OPTION_P2L_PAGE_SIZE));
+                                CONFIG_OPTION_P2L_PAGE_SIZE, scratch_pool));
       SVN_ERR(verify_block_size(ffd->l2p_page_size, sizeof(apr_off_t),
-                                CONFIG_OPTION_L2P_PAGE_SIZE));
+                                CONFIG_OPTION_L2P_PAGE_SIZE, scratch_pool));
 
       /* convert kBytes to bytes */
       ffd->block_size *= 0x400;
