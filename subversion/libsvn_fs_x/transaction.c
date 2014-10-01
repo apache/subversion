@@ -921,7 +921,7 @@ fold_change(apr_hash_t *changes,
            _("Invalid change ordering: new node revision ID "
              "without delete"));
 
-      /* Sanity check: an add, replacement, move, or reset must be the first
+      /* Sanity check: an add, replacement, or reset must be the first
          thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
           && (! ((info->change_kind == svn_fs_path_change_replace)
