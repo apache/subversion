@@ -355,7 +355,9 @@ read_change(change_t **change_p,
     }
 
   /* Get the mergeinfo-mod flag if given.  Otherwise, the next thing
-     is the path starting with a slash. */
+     is the path starting with a slash.  Also, we must initialize the
+     flag explicitly because 0 is not valid for a svn_tristate_t. */
+  info->mergeinfo_mod = svn_tristate_unknown;
   if (*last_str != '/')
     {
       str = svn_cstring_tokenize(" ", &last_str);
