@@ -629,8 +629,6 @@ replace_change(svn_fs_path_change2_t *old_change,
                const svn_fs_path_change2_t *new_change,
                apr_pool_t *pool)
 {
-  /* An add at this point must be following a previous delete,
-      so treat it just like a replace. */
   old_change->node_kind = new_change->node_kind;
   old_change->node_rev_id = svn_fs_fs__id_copy(new_change->node_rev_id,
                                                pool);
@@ -686,7 +684,7 @@ fold_change(apr_hash_t *changed_paths,
            _("Invalid change ordering: new node revision ID "
              "without delete"));
 
-      /* Sanity check: an add, replacement, move, or reset must be the first
+      /* Sanity check: an add, replacement, or reset must be the first
          thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
           && (! ((info->change_kind == svn_fs_path_change_replace)
