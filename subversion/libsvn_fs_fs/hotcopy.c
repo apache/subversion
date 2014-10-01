@@ -386,16 +386,15 @@ hotcopy_remove_file(const char *shard,
 
 
 /* Remove revision or revprop files between START_REV (inclusive) and
- * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Also,
- * remove index files if REMOVE_INDEXES is set.  Assume sharding as per
- * MAX_FILES_PER_DIR.  Use SCRATCH_POOL for temporary allocations. */
+ * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Assume
+ * sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_remove_files(svn_fs_t *dst_fs,
                      const char *dst_subdir,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      int max_files_per_dir,
-                     svn_boolean_t remove_indexes,
                      apr_pool_t *scratch_pool)
 {
   const char *shard;
@@ -423,15 +422,6 @@ hotcopy_remove_files(svn_fs_t *dst_fs,
       SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
                                   apr_psprintf(iterpool, "%ld", rev),
                                   iterpool));
-      if (remove_indexes && svn_fs_fs__use_log_addressing(dst_fs, rev))
-        {
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.p2l", rev),
-                                      iterpool));
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.l2p", rev),
-                                      iterpool));
-        }
     }
 
   svn_pool_destroy(iterpool);
@@ -455,7 +445,7 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
                                                PATH_REVS_DIR,
                                                scratch_pool),
                                start_rev, end_rev,
-                               max_files_per_dir, TRUE, scratch_pool));
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -479,7 +469,7 @@ hotcopy_remove_revprop_files(svn_fs_t *dst_fs,
                                                PATH_REVPROPS_DIR,
                                                scratch_pool),
                                start_rev ? start_rev : 1, end_rev,
-                               max_files_per_dir, FALSE, scratch_pool));
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
