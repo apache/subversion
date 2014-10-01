@@ -1537,7 +1537,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   const svn_fs_fs__id_part_t *txn_id;
-  svn_boolean_t modeinfo_mod = FALSE;
+  svn_boolean_t mergeinfo_mod = FALSE;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -1582,7 +1582,7 @@ fs_change_node_prop(svn_fs_root_t *root,
                                                    (value != NULL), pool));
         }
 
-      modeinfo_mod = TRUE;
+      mergeinfo_mod = TRUE;
     }
 
   /* Set the property. */
@@ -1595,7 +1595,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
                     svn_fs_fs__dag_get_id(parent_path->node),
-                    svn_fs_path_change_modify, FALSE, TRUE, modeinfo_mod,
+                    svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                     svn_fs_fs__dag_node_kind(parent_path->node),
                     SVN_INVALID_REVNUM, NULL, pool);
 }
