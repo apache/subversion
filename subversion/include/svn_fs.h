@@ -1430,6 +1430,11 @@ typedef enum svn_fs_path_change_kind_t
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
  *
+ * @note The @c text_mod, @c prop_mod and @c mergeinfo_mod flags mean the
+ * text, properties and mergeinfo property (respectively) were "touched"
+ * by the commit API; this does not mean the new value is different from
+ * the old value.
+ *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
 {
@@ -1439,10 +1444,23 @@ typedef struct svn_fs_path_change2_t
   /** kind of change */
   svn_fs_path_change_kind_t change_kind;
 
-  /** were there text mods? */
+  /** was the text touched?
+   * For node_kind=dir: always false. For node_kind=file:
+   *   modify:      true iff text touched.
+   *   add (copy):  true iff text touched.
+   *   add (plain): always true.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t text_mod;
 
-  /** were there property mods? */
+  /** were the properties touched?
+   *   modify:      true iff props touched.
+   *   add (copy):  true iff props touched.
+   *   add (plain): true iff props touched.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t prop_mod;
 
   /** what node kind is the path?
@@ -1455,7 +1473,12 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
-  /** were there mergeinfo mods?
+  /** was the mergeinfo property touched?
+   *   modify:      } true iff svn:mergeinfo property add/del/mod
+   *   add (copy):  }          and fs format supports this flag.
+   *   add (plain): }
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
    * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
    * @since New in 1.9. */
   svn_tristate_t mergeinfo_mod;
