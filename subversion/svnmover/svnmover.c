@@ -1011,21 +1011,15 @@ family_add_new_subfamily(svn_branch_family_t *outer_family)
   return family;
 }
 
-/* Create a new branch definition in FAMILY, with root element ROOT_EID at
- * ROOT_RRPATH.
- *
- * Create a new, empty branch instance in FAMILY.
+/* Create a new branch definition in FAMILY, with root element ROOT_EID.
  */
-static svn_branch_instance_t *
-family_add_new_branch(svn_branch_family_t *family,
-                      int root_eid,
-                      const char *root_rrpath)
+static svn_branch_definition_t *
+family_add_new_branch_definition(svn_branch_family_t *family,
+                                 int root_eid)
 {
   int bid = family->next_bid++;
   svn_branch_definition_t *branch_definition
     = svn_branch_definition_create(family, bid, root_eid, family->pool);
-  svn_branch_instance_t *branch_instance
-    = svn_branch_instance_create(branch_definition, family->pool);
 
   /* The root EID must be an existing EID. */
   SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
@@ -1034,11 +1028,26 @@ family_add_new_branch(svn_branch_family_t *family,
 
   /* Register the branch */
   APR_ARRAY_PUSH(family->branch_definitions, void *) = branch_definition;
-  /* ### Should create multiple instances, one per branch of parent family. */
+
+  return branch_definition;
+}
+
+/* Create a new branch instance of BRANCH_DEFINITION, with no path
+ * mappings except for its root element at ROOT_RRPATH.
+ */
+static svn_branch_instance_t *
+branch_add_new_branch_instance(svn_branch_definition_t *branch_definition,
+                               const char *root_rrpath)
+{
+  svn_branch_family_t *family = branch_definition->family;
+  svn_branch_instance_t *branch_instance
+    = svn_branch_instance_create(branch_definition, family->pool);
+
   APR_ARRAY_PUSH(family->branch_instances, void *) = branch_instance;
 
   /* Initialize the root element */
-  branch_mapping_update(branch_instance, root_eid, root_rrpath);
+  branch_mapping_update(branch_instance, branch_definition->root_eid,
+                        root_rrpath);
   return branch_instance;
 }
 
@@ -1948,6 +1957,7 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
 {
   int inner_eid = branch_get_eid_by_path(from_branch, from_path);
   int to_outer_eid;
+  svn_branch_definition_t *new_branch_def;
   svn_branch_instance_t *new_branch;
   apr_array_header_t *subbranches;
   int i;
@@ -1962,8 +1972,11 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   branch_mapping_update(outer_branch, to_outer_eid, to_path);
 
   /* create new inner branch definition & instance */
-  new_branch = family_add_new_branch(from_branch->definition->family,
-                                     inner_eid, to_path);
+  /* ### On sub-branches, should not add new branch definition, only instance. */
+  new_branch_def
+    = family_add_new_branch_definition(from_branch->definition->family,
+                                       inner_eid);
+  new_branch = branch_add_new_branch_instance(new_branch_def, to_path);
 
   /* populate new branch instance with path mappings */
   SVN_ERR(branch_mappings_branch(from_branch, from_path,
@@ -2758,8 +2771,10 @@ svn_branch_branchify(svn_branch_instance_t *outer_branch,
     = family_add_new_subfamily(outer_branch->definition->family);
   int new_root_eid = family_add_new_element(new_family);
   const char *new_root_rrpath = txn_path_to_relpath(new_root_loc, scratch_pool);
+  svn_branch_definition_t *new_branch_def
+    = family_add_new_branch_definition(new_family, new_root_eid);
   svn_branch_instance_t *new_branch
-    = family_add_new_branch(new_family, new_root_eid, new_root_rrpath);
+    = branch_add_new_branch_instance(new_branch_def, new_root_rrpath);
 
   SVN_DBG(("branchify(%s): new fid=%d, bid=%d",
            txn_path_str(new_root_loc, scratch_pool), new_family->fid, new_branch->definition->bid));
