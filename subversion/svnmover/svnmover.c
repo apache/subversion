@@ -322,6 +322,7 @@ struct action {
 #define SVN_ERR_BRANCHING 123456
 
 struct svn_branch_family_t;
+struct svn_branch_instance_t;
 
 /* Per-repository branching info.
  */
@@ -330,19 +331,29 @@ typedef struct svn_branch_repos_t
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
 
-  /* The root family in this repository. */
-  struct svn_branch_family_t *root_family;
-
   /* The range of family ids assigned within this repos (starts at 0). */
   int next_fid;
 
-  apr_array_header_t *rev_info;
+  /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
+  apr_array_header_t *rev_roots;
 
   /* The pool in which this object lives. */
   apr_pool_t *pool;
 } svn_branch_repos_t;
 
+/* Info about the branching in a specific revision (committed or uncommitted) */
+typedef struct svn_branch_revision_root_t
+{
+  /* The repository in which this revision exists. */
+  svn_branch_repos_t *repos;
+
+  /* The root branch instance. */
+  struct svn_branch_instance_t *root_branch;
+
+} svn_branch_revision_root_t;
+
 /* A branch family.
+ * ### Most of this is not per-revision data. Move it out of revision-root?
  */
 typedef struct svn_branch_family_t
 {
@@ -364,6 +375,7 @@ typedef struct svn_branch_family_t
   apr_array_header_t *branch_definitions;
 
   /* The branch instances in this family. */
+  /* ### This is per-revision data. Move to svn_branch_revision_root_t? */
   apr_array_header_t *branch_instances;
 
   /* The range of branch ids assigned within this family. */
@@ -442,6 +454,9 @@ typedef struct svn_branch_instance_t
 
   svn_branch_definition_t *definition;
 
+  /* The revision to which this branch-revision-instance belongs */
+  svn_branch_revision_root_t *rev_root;
+
   /* The branch (instance?), within the outer family, that contains the
      root element of this branch. */
   /*svn_branch_instance_t *outer_family_branch_instance;*/
@@ -493,9 +508,23 @@ svn_branch_repos_create(svn_ra_session_t *ra_session,
 
   repos->ra_session = ra_session;
   repos->editor = editor;
-  repos->rev_info = apr_array_make(result_pool, 1, sizeof(void *));
+  repos->rev_roots = apr_array_make(result_pool, 1, sizeof(void *));
   repos->pool = result_pool;
   return repos;
+}
+
+/* Create a new branching revision-info object */
+static svn_branch_revision_root_t *
+svn_branch_revision_root_create(svn_branch_repos_t *repos,
+                                struct svn_branch_instance_t *root_branch,
+                                apr_pool_t *result_pool)
+{
+  svn_branch_revision_root_t *rev_root
+    = apr_pcalloc(result_pool, sizeof(*rev_root));
+
+  rev_root->repos = repos;
+  rev_root->root_branch = root_branch;
+  return rev_root;
 }
 
 /* Create a new branch family object */
@@ -546,11 +575,13 @@ svn_branch_definition_create(svn_branch_family_t *family,
 /* Create a new branch instance object */
 static svn_branch_instance_t *
 svn_branch_instance_create(svn_branch_definition_t *branch_definition,
+                           svn_branch_revision_root_t *rev_root,
                            apr_pool_t *result_pool)
 {
   svn_branch_instance_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
   b->definition = branch_definition;
+  b->rev_root = rev_root;
   b->eid_to_path = apr_hash_make(result_pool);
   b->path_to_eid = apr_hash_make(result_pool);
   return b;
@@ -973,7 +1004,8 @@ branch_instance_copy_r(svn_branch_instance_t **new_branch_p,
   svn_branch_instance_t *new_branch;
 
   /* Duplicate this branch instance */
-  new_branch = svn_branch_instance_create(branch->definition, result_pool);
+  new_branch = svn_branch_instance_create(branch->definition, branch->rev_root,
+                                          result_pool);
   /* ### branch_mapping_dup(new_branch, branch) */
 
   /* Record this new branch instance in its family */
@@ -1037,11 +1069,12 @@ family_add_new_branch_definition(svn_branch_family_t *family,
  */
 static svn_branch_instance_t *
 branch_add_new_branch_instance(svn_branch_definition_t *branch_definition,
+                               svn_branch_revision_root_t *rev_root,
                                const char *root_rrpath)
 {
   svn_branch_family_t *family = branch_definition->family;
   svn_branch_instance_t *branch_instance
-    = svn_branch_instance_create(branch_definition, family->pool);
+    = svn_branch_instance_create(branch_definition, rev_root, family->pool);
 
   APR_ARRAY_PUSH(family->branch_instances, void *) = branch_instance;
 
@@ -1061,56 +1094,33 @@ family_add_new_element(svn_branch_family_t *family)
   return eid;
 }
 
-/* Find the existing family with id FID in FAMILY (recursively, excluding
- * FAMILY itself). Assume FID is unique among all sub-families.
+/* Find the existing family with id FID in FAMILY (recursively, including
+ * FAMILY itself). Assume FID is unique among all families.
  *
  * Return NULL if not found.
  */
 static svn_branch_family_t *
-family_get_subfamily_by_id(const svn_branch_family_t *family,
+family_get_subfamily_by_id(svn_branch_family_t *family,
                            int fid)
 {
   int i;
 
   SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < family->repos->next_fid);
 
+  if (family->fid == fid)
+    return family;
+
   for (i = 0; i < family->sub_families->nelts; i++)
     {
       svn_branch_family_t *f
         = APR_ARRAY_IDX(family->sub_families, i, svn_branch_family_t *);
 
-      if (f->fid == fid)
-        return f;
       f = family_get_subfamily_by_id(f, fid);
       if (f)
         return f;
     }
 
   return NULL;
-}
-
-/* Find the existing family with id FID in REPOS.
- *
- * Return NULL if not found.
- */
-static svn_branch_family_t *
-repos_get_family_by_id(const svn_branch_repos_t *repos,
-                       int fid)
-{
-  svn_branch_family_t *f;
-
-  SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < repos->next_fid);
-
-  if (repos->root_family->fid == fid)
-    {
-      f = repos->root_family;
-    }
-  else
-    {
-      f = family_get_subfamily_by_id(repos->root_family, fid);
-    }
-
-  return f;
 }
 
 /* The default branching metadata for a new repository. */
@@ -1126,6 +1136,7 @@ static const char *default_repos_info
 static svn_error_t *
 parse_branch_info(svn_branch_instance_t **new_branch,
                   svn_branch_family_t *family,
+                  svn_branch_revision_root_t *rev_root,
                   svn_stream_t *stream,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -1147,7 +1158,8 @@ parse_branch_info(svn_branch_instance_t **new_branch,
   SVN_ERR_ASSERT(fid == family->fid);
   branch_definition = svn_branch_definition_create(family, bid, root_eid,
                                                    result_pool);
-  branch_instance = svn_branch_instance_create(branch_definition, result_pool);
+  branch_instance = svn_branch_instance_create(branch_definition, rev_root,
+                                               result_pool);
 
   for (eid = family->first_eid; eid < family->next_eid; eid++)
     {
@@ -1203,41 +1215,49 @@ parse_family_info(svn_branch_family_t **new_family,
   return SVN_NO_ERROR;
 }
 
-/* Initialize REPOS with info parsed from STREAM, allocated in REPOS->pool.
+/* Create a new revision-root object *REV_ROOT_P, initialized with info
+ * parsed from STREAM, allocated in RESULT_POOL.
  */
 static svn_error_t *
-parse_repos_info(svn_branch_repos_t *repos,
-                 svn_stream_t *stream,
-                 apr_pool_t *scratch_pool)
+parse_revision_info(svn_branch_revision_root_t **rev_root_p,
+                    int *next_fid_p,
+                    svn_branch_repos_t *repos,
+                    svn_stream_t *stream,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
+  svn_branch_revision_root_t *rev_root = NULL;
   int root_fid;
   svn_stringbuf_t *line;
   svn_boolean_t eof;
   int n, i;
+  svn_branch_family_t *root_family = NULL;
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(! eof);
   n = sscanf(line->data, "r: fids %*d %d root-fid %d",
-             &repos->next_fid, &root_fid);
+             /* 0, */ next_fid_p, &root_fid);
   SVN_ERR_ASSERT(n == 2);
 
   /* parse the families */
-  for (i = 0; i < repos->next_fid; i++)
+  for (i = 0; i < *next_fid_p; i++)
     {
       svn_branch_family_t *family;
       int bid, parent_fid;
 
       SVN_ERR(parse_family_info(&family, &parent_fid, repos, stream,
-                                repos->pool, scratch_pool));
+                                result_pool, scratch_pool));
 
       if (family->fid == root_fid)
         {
-          repos->root_family = family;
+          rev_root = svn_branch_revision_root_create(repos, NULL /*root_branch*/,
+                                                     result_pool);
+          root_family = family;
         }
       else
         {
           svn_branch_family_t *parent_family
-            = repos_get_family_by_id(repos, parent_fid);
+            = family_get_subfamily_by_id(root_family, parent_fid);
 
           SVN_ERR_ASSERT(parent_family);
           APR_ARRAY_PUSH(parent_family->sub_families, void *) = family;
@@ -1248,60 +1268,73 @@ parse_repos_info(svn_branch_repos_t *repos,
         {
           svn_branch_instance_t *branch;
 
-          SVN_ERR(parse_branch_info(&branch, family, stream,
+          SVN_ERR(parse_branch_info(&branch, family, rev_root, stream,
                                     family->pool, scratch_pool));
           APR_ARRAY_PUSH(family->branch_instances, void *) = branch;
+          if (family->fid == root_fid)
+            {
+              branch->rev_root->root_branch = branch;
+            }
         }
     }
+
+  *rev_root_p = rev_root;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-write_repos_info(svn_stream_t *stream,
-                 svn_branch_repos_t *repos,
-                 apr_pool_t *scratch_pool);
+write_per_revision_info(svn_stream_t *stream,
+                        svn_branch_revision_root_t *rev_root,
+                        int next_fid,
+                        apr_pool_t *scratch_pool);
 
-/* Create a new repository object and read the move-tracking /
+/* Create a new revision-root object and read the move-tracking /
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-fetch_per_revision_info(svn_branch_repos_t **repos_p,
+fetch_per_revision_info(svn_branch_revision_root_t **rev_root_p,
+                        int *next_fid_p,
+                        svn_branch_repos_t *repos,
                         svn_ra_session_t *ra_session,
                         svn_revnum_t revision,
-                        svn_editor3_t *editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos
-    = svn_branch_repos_create(ra_session, editor, result_pool);
   svn_string_t *value;
   svn_stream_t *stream;
+  svn_branch_revision_root_t *rev_root;
 
   /* Read initial state from repository */
   SVN_ERR(svn_ra_rev_prop(ra_session, revision, "svn-br-info", &value,
                           scratch_pool));
-  if (! value)
+  if (! value && revision == 0)
     {
       value = svn_string_create(default_repos_info, scratch_pool);
-      SVN_DBG(("fetch_repos_info: LOADED DEFAULT INFO:\n%s", value->data));
+      SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
+               revision, value->data));
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, revision, "svn-br-info",
+                                      NULL, value, scratch_pool));
     }
+  SVN_ERR_ASSERT(value);
   stream = svn_stream_from_string(value, scratch_pool);
 
-  SVN_ERR(parse_repos_info(repos, stream, scratch_pool));
+  SVN_ERR(parse_revision_info(&rev_root, next_fid_p, repos, stream,
+                              result_pool, scratch_pool));
 
   /* Self-test: writing out the info should produce exactly the same string. */
   {
     svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
 
     stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(write_repos_info(stream, repos, scratch_pool));
+    SVN_ERR(write_per_revision_info(stream, rev_root, *next_fid_p,
+                                    scratch_pool));
     SVN_ERR(svn_stream_close(stream));
 
     SVN_ERR_ASSERT(svn_string_compare(value,
                                       svn_stringbuf__morph_into_string(buf)));
   }
 
-  *repos_p = repos;
+  *rev_root_p = rev_root;
   return SVN_NO_ERROR;
 }
 
@@ -1316,7 +1349,8 @@ fetch_repos_info(svn_branch_repos_t **repos_p,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos;
+  svn_branch_repos_t *repos
+    = svn_branch_repos_create(ra_session, editor, result_pool);
   svn_revnum_t r;
 
   if (base_revision == SVN_INVALID_REVNUM)
@@ -1325,20 +1359,37 @@ fetch_repos_info(svn_branch_repos_t **repos_p,
                                        scratch_pool));
     }
 
-  SVN_ERR(fetch_per_revision_info(&repos, ra_session, base_revision,
-                                  editor, result_pool, scratch_pool));
-
-  APR_ARRAY_PUSH(repos->rev_info, void *) = NULL; /* r0 */
-  for (r = 1; r <= base_revision; r++)
+  repos->next_fid = 0;
+  for (r = 0; r <= base_revision; r++)
     {
-      svn_branch_repos_t *rev_info;
+      svn_branch_revision_root_t *rev_root;
+      int next_fid;
 
-      SVN_ERR(fetch_per_revision_info(&rev_info, ra_session, r,
-                                      editor, result_pool, scratch_pool));
-      APR_ARRAY_PUSH(repos->rev_info, void *) = rev_info;
+      SVN_ERR(fetch_per_revision_info(&rev_root, &next_fid,
+                                      repos, ra_session, r,
+                                      result_pool, scratch_pool));
+      APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
+      repos->next_fid = MAX(repos->next_fid, next_fid);
     }
 
   *repos_p = repos;
+  return SVN_NO_ERROR;
+}
+
+/* Return a mutable state for the youngest revision in REPOS.
+ */
+static svn_error_t *
+get_mutable_state(svn_branch_revision_root_t **rev_root_p,
+                  svn_branch_repos_t *repos,
+                  svn_revnum_t base_revision,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  int next_fid;
+
+  SVN_ERR(fetch_per_revision_info(rev_root_p, &next_fid,
+                                  repos, repos->ra_session, base_revision,
+                                  result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1380,7 +1431,7 @@ write_branch_info(svn_stream_t *stream,
 }
 
 /* Write to STREAM a parseable representation of FAMILY whose parent
- * family id is PARENT_FID.
+ * family id is PARENT_FID. Recursively write all sub-families.
  */
 static svn_error_t *
 write_family_info(svn_stream_t *stream,
@@ -1418,35 +1469,39 @@ write_family_info(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Write to STREAM a parseable representation of REPOS.
+/* Write to STREAM a parseable representation of REV_ROOT.
  */
 static svn_error_t *
-write_repos_info(svn_stream_t *stream,
-                 svn_branch_repos_t *repos,
-                 apr_pool_t *scratch_pool)
+write_per_revision_info(svn_stream_t *stream,
+                        svn_branch_revision_root_t *rev_root,
+                        int next_fid,
+                        apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
                             "r: fids %d %d root-fid %d\n",
-                            0, repos->next_fid,
-                            repos->root_family->fid));
+                            0, next_fid,
+                            rev_root->root_branch->definition->family->fid));
 
-  SVN_ERR(write_family_info(stream, repos->root_family, 0, scratch_pool));
+  SVN_ERR(write_family_info(stream, rev_root->root_branch->definition->family,
+                            0 /*parent_fid*/, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Store the move-tracking / branch-tracking metadata from REPOS into the
+/* Store the move-tracking / branch-tracking metadata from REV_ROOT into the
  * repository.
  */
 static svn_error_t *
-store_repos_info(svn_branch_repos_t *repos,
+store_repos_info(svn_branch_revision_root_t *rev_root,
                  apr_pool_t *scratch_pool)
 {
+  svn_branch_repos_t *repos = rev_root->repos;
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
   svn_revnum_t youngest_rev;
 
-  SVN_ERR(write_repos_info(stream, repos, scratch_pool));
+  SVN_ERR(write_per_revision_info(stream, rev_root, repos->next_fid,
+                                  scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/
@@ -1593,25 +1648,22 @@ repos_get_el_rev_by_loc(svn_branch_el_rev_id_t **el_rev_p,
                         apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  svn_branch_instance_t *branch;
   const char *rrpath;
   svn_opt_revision_t rev;
-  const svn_branch_repos_t *rev_info;
+  const svn_branch_revision_root_t *rev_root;
 
   SVN_ERR(svn_opt_parse_path(&rev, &rrpath, rrpath_rev, scratch_pool));
   if (rev.kind == svn_opt_revision_number)
     {
       el_rev->rev = rev.value.number;
-      rev_info = APR_ARRAY_IDX(repos->rev_info, rev.value.number, void *);
     }
   else
     {
-      el_rev->rev = SVN_INVALID_REVNUM;
-      rev_info = repos;
+      el_rev->rev = repos->rev_roots->nelts - 1;
     }
-  branch = APR_ARRAY_IDX(rev_info->root_family->branch_instances, 0, void *);
+  rev_root = APR_ARRAY_IDX(repos->rev_roots, el_rev->rev, void *);
   branch_find_nested_branch_element_by_path(&el_rev->branch, &el_rev->eid,
-                                            branch, rrpath,
+                                            rev_root->root_branch, rrpath,
                                             scratch_pool);
 
   /* Any path must at least be within the repository root branch */
@@ -1620,7 +1672,7 @@ repos_get_el_rev_by_loc(svn_branch_el_rev_id_t **el_rev_p,
   return SVN_NO_ERROR;
 }
 
-/* Find the deepest branch in REPOS (recursively) of which RRPATH is
+/* Find the deepest branch in REV_ROOT of which RRPATH is
  * either the root element or a normal, non-sub-branch element.
  * If EID_P is not null, set *EID_P to the EID of RRPATH in that branch.
  *
@@ -1629,16 +1681,16 @@ repos_get_el_rev_by_loc(svn_branch_el_rev_id_t **el_rev_p,
  * The result will never be NULL.
  */
 static svn_branch_instance_t *
-repos_get_branch_by_path(int *eid_p,
-                         svn_branch_repos_t *repos,
-                         const char *rrpath,
-                         apr_pool_t *scratch_pool)
+revision_get_branch_by_path(int *eid_p,
+                            svn_branch_revision_root_t *rev_root,
+                            const char *rrpath,
+                            apr_pool_t *scratch_pool)
 {
-  svn_branch_instance_t *branch
-    = APR_ARRAY_IDX(repos->root_family->branch_instances, 0, void *);
+  svn_branch_instance_t *branch;
 
   branch_find_nested_branch_element_by_path(&branch, eid_p,
-                                            branch, rrpath, scratch_pool);
+                                            rev_root->root_branch, rrpath,
+                                            scratch_pool);
 
   /* Any path must at least be within the repository root branch */
   SVN_ERR_ASSERT_NO_RETURN(branch);
@@ -1662,8 +1714,7 @@ verify_path_in_branch(const svn_branch_instance_t *branch,
                       apr_pool_t *scratch_pool)
 {
   svn_branch_instance_t *target_branch
-    = repos_get_branch_by_path(NULL, branch->definition->family->repos, rrpath,
-                               scratch_pool);
+    = revision_get_branch_by_path(NULL, branch->rev_root, rrpath, scratch_pool);
 
   if (! same_branch(target_branch, branch))
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
@@ -1679,43 +1730,27 @@ verify_path_in_branch(const svn_branch_instance_t *branch,
  * throw an error (branch nesting violation).
  */
 static svn_error_t *
-verify_source_in_branch(const svn_branch_instance_t *branch,
-                        svn_editor3_txn_path_t loc,
-                        apr_pool_t *scratch_pool)
+verify_location_in_branch(const svn_branch_instance_t *branch,
+                          svn_editor3_txn_path_t loc,
+                          apr_pool_t *scratch_pool)
 {
+  svn_branch_repos_t *repos = branch->rev_root->repos;
   const char *rrpath = txn_path_to_relpath(loc, scratch_pool);
-  svn_branch_instance_t *target_branch
-    = repos_get_branch_by_path(NULL, branch->definition->family->repos, rrpath,
-                               scratch_pool);
+  svn_branch_revision_root_t *rev_root;
+  svn_branch_instance_t *target_branch;
+
+  if (SVN_IS_VALID_REVNUM(loc.peg.rev))
+    rev_root = APR_ARRAY_IDX(repos->rev_roots, loc.peg.rev, void *);
+  else
+    rev_root = branch->rev_root;
+  target_branch = revision_get_branch_by_path(NULL, rev_root, rrpath,
+                                              scratch_pool);
 
   if (! same_branch(target_branch, branch))
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("source path '%s' is in branch '%s', "
+                             _("location '%s' is in branch '%s', "
                                "not in this branch '%s'"),
                              txn_path_str(loc, scratch_pool),
-                             branch_get_root_path(target_branch),
-                             branch_get_root_path(branch));
-  return SVN_NO_ERROR;
-}
-
-/* If the location TGT_PARENT_LOC is not in the branch BRANCH,
- * throw an error (branch nesting violation).
- */
-static svn_error_t *
-verify_target_in_branch(const svn_branch_instance_t *branch,
-                        svn_editor3_txn_path_t tgt_parent_loc,
-                        apr_pool_t *scratch_pool)
-{
-  const char *rrpath = txn_path_to_relpath(tgt_parent_loc, scratch_pool);
-  svn_branch_instance_t *target_branch
-    = repos_get_branch_by_path(NULL, branch->definition->family->repos, rrpath,
-                               scratch_pool);
-
-  if (! same_branch(target_branch, branch))
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("target parent path '%s' is in branch '%s', "
-                               "not in this branch '%s'"),
-                             txn_path_str(tgt_parent_loc, scratch_pool),
                              branch_get_root_path(target_branch),
                              branch_get_root_path(branch));
   return SVN_NO_ERROR;
@@ -1826,7 +1861,7 @@ svn_branch_mkdir(svn_branch_instance_t *branch,
   const char *loc_rrpath = txn_path_to_relpath(loc, scratch_pool);
   int eid;
 
-  SVN_ERR(verify_target_in_branch(branch, parent_loc, scratch_pool));
+  SVN_ERR(verify_path_in_branch(branch, loc_rrpath, scratch_pool));
 
   eid = family_add_new_element(branch->definition->family);
 
@@ -1976,7 +2011,8 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   new_branch_def
     = family_add_new_branch_definition(from_branch->definition->family,
                                        inner_eid);
-  new_branch = branch_add_new_branch_instance(new_branch_def, to_path);
+  new_branch = branch_add_new_branch_instance(new_branch_def,
+                                              from_branch->rev_root, to_path);
 
   /* populate new branch instance with path mappings */
   SVN_ERR(branch_mappings_branch(from_branch, from_path,
@@ -2652,8 +2688,8 @@ svn_branch_mv(svn_branch_instance_t *branch,
   const char *from_path = txn_path_to_relpath(from_loc, scratch_pool);
   const char *to_path = txn_path_to_relpath(to_loc, scratch_pool);
 
-  SVN_ERR(verify_source_in_branch(branch, from_loc, scratch_pool));
-  SVN_ERR(verify_target_in_branch(branch, parent_loc, scratch_pool));
+  SVN_ERR(verify_path_in_branch(branch, from_path, scratch_pool));
+  SVN_ERR(verify_path_in_branch(branch, to_path, scratch_pool));
 
   SVN_ERR(svn_editor3_mv(editor, from_loc.peg, parent_loc, new_name));
 
@@ -2682,8 +2718,8 @@ svn_branch_cp(svn_branch_instance_t *branch,
   const char *from_path = txn_path_to_relpath(from_loc, scratch_pool);
   const char *to_path = txn_path_to_relpath(to_loc, scratch_pool);
 
-  SVN_ERR(verify_source_in_branch(branch, from_loc, scratch_pool));
-  SVN_ERR(verify_target_in_branch(branch, parent_loc, scratch_pool));
+  SVN_ERR(verify_location_in_branch(branch, from_loc, scratch_pool));
+  SVN_ERR(verify_path_in_branch(branch, to_path, scratch_pool));
 
   SVN_ERR(svn_editor3_cp(editor, from_loc.peg, parent_loc, new_name));
 
@@ -2731,7 +2767,7 @@ svn_branch_branch(svn_branch_instance_t *outer_branch,
                                txn_path_str(from_loc, scratch_pool));
     }
 
-  SVN_ERR(verify_target_in_branch(outer_branch, parent_loc, scratch_pool));
+  SVN_ERR(verify_path_in_branch(outer_branch, to_rrpath, scratch_pool));
 
   /* copy */
   SVN_ERR(svn_editor3_cp(editor, from_loc.peg, parent_loc, new_name));
@@ -2774,7 +2810,8 @@ svn_branch_branchify(svn_branch_instance_t *outer_branch,
   svn_branch_definition_t *new_branch_def
     = family_add_new_branch_definition(new_family, new_root_eid);
   svn_branch_instance_t *new_branch
-    = branch_add_new_branch_instance(new_branch_def, new_root_rrpath);
+    = branch_add_new_branch_instance(new_branch_def, outer_branch->rev_root,
+                                     new_root_rrpath);
 
   SVN_DBG(("branchify(%s): new fid=%d, bid=%d",
            txn_path_str(new_root_loc, scratch_pool), new_family->fid, new_branch->definition->bid));
@@ -2823,6 +2860,7 @@ execute(const char *branch_rrpath,
   svn_editor3_t *editor;
   const char *repos_root_url;
   svn_branch_repos_t *repos;
+  svn_branch_revision_root_t *new_rev_root;
   svn_branch_instance_t *branch;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t made_changes = FALSE;
@@ -2845,8 +2883,10 @@ execute(const char *branch_rrpath,
   editor = mtcc->editor;
   repos_root_url = mtcc->repos_root_url;
   base_revision = mtcc->base_revision;
-  SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, base_revision, editor, pool, pool));
-  branch = repos_get_branch_by_path(NULL, repos, branch_rrpath, pool);
+  SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, base_revision, editor,
+                           pool, pool));
+  SVN_ERR(get_mutable_state(&new_rev_root, repos, base_revision, pool, pool));
+  branch = revision_get_branch_by_path(NULL, new_rev_root, branch_rrpath, pool);
   SVN_DBG(("look up path '%s': found branch f%db%de%d at path '%s'",
            branch_rrpath, branch->definition->family->fid,
            branch->definition->bid, branch->definition->root_eid,
@@ -2960,7 +3000,7 @@ execute(const char *branch_rrpath,
     {
       err = mtcc_commit(mtcc, pool);
       if (!err)
-        err = store_repos_info(repos, pool);
+        err = store_repos_info(new_rev_root, pool);
     }
   else
     {
