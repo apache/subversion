@@ -376,8 +376,14 @@ fs_open_for_recovery(svn_fs_t *fs,
     {
       const char *file_path;
 
-      /* 'current' file is missing or contains garbage.
-       * Start with HEAD = 0 in that case. */
+      /* 'current' file is missing or contains garbage.  Since we are trying
+       * to recover from whatever problem there is, being picky about the
+       * error code here won't do us much good.  If there is a persistent
+       * problem that we can't fix, it will show up when we try rewrite the
+       * file a few lines further below and we will report the failure back
+       * to the caller.
+       *
+       * Start recovery with HEAD = 0. */
       svn_error_clear(err);
       file_path = svn_fs_fs__path_current(fs, subpool);
 
