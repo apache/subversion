@@ -1032,76 +1032,26 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                           apr_pool_t *pool)
 {
   fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
 
-  dst_fs->path = apr_pstrdup(pool, dst_path);
-
-  dst_ffd->max_files_per_dir = src_ffd->max_files_per_dir;
-  dst_ffd->min_log_addressing_rev = src_ffd->min_log_addressing_rev;
-  dst_ffd->format = src_ffd->format;
-
-  /* Create the revision data directories. */
-  if (dst_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(dst_fs,
-                                                                  0, pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_REVS_DIR, pool),
-                                        pool));
-
-  /* Create the revprops directory. */
-  if (src_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(
-                          svn_fs_fs__path_revprops_shard(dst_fs, 0, pool),
-                          pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path, PATH_TXNS_DIR,
-                                                      pool),
+  /* Create the DST_FS repository with the same layout as SRC_FS. */
+  SVN_ERR(svn_fs_fs__create_file_tree(dst_fs, dst_path, src_ffd->format,
+                                      src_ffd->max_files_per_dir,
+                                      src_ffd->min_log_addressing_rev,
                                       pool));
 
-  /* Create the protorevs directory. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                        PATH_TXN_PROTOS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(dst_fs, pool),
-                             (dst_ffd->format >=
-                                SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                                ? "0\n" : "0 1 1\n"),
-                             pool));
-
-  /* Create the lock and 'uuid' files.  Hotcopy destination receives a
-     new instance ID, but has the same filesystem UUID as the source. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(dst_fs, pool), pool));
+  /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
+   * has the same filesystem UUID as the source. */
   SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, NULL, pool));
 
-  /* Create the min unpacked rev file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(dst_fs, pool),
-                                                                "0\n", pool));
-  /* Create the txn-current file if the repository supports
-     the transaction sequence file. */
-  if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(dst_fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(
-                          svn_fs_fs__path_txn_current_lock(dst_fs, pool),
-                          pool));
-    }
+  /* Remove revision 0 contents.  Otherwise, it may not get overwritten
+   * due to having a newer timestamp. */
+  SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_rev(dst_fs, 0, pool), pool));
+  SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_revprops(dst_fs, 0, pool),
+                              pool));
 
-  /* FS creation is complete. Stamp it with a format file. */
-  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
+  /* This filesystem is ready.  Stamp it with a format number.  Fail if
+   * the 'format' file should already exist. */
+  SVN_ERR(svn_fs_fs__write_format(dst_fs, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

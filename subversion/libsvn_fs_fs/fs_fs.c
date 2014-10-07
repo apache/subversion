@@ -1664,69 +1664,27 @@ write_revision_zero(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__create(svn_fs_t *fs,
-                  const char *path,
-                  apr_pool_t *pool)
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            svn_revnum_t min_log_addressing_rev,
+                            apr_pool_t *pool)
 {
-  int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
-  int shard_size = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
 
   fs->path = apr_pstrdup(fs->pool, path);
-  /* Process the given filesystem config. */
-  if (fs->config)
-    {
-      svn_version_t *compatible_version;
-      const char *shard_size_str;
-      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
-                                         pool));
-
-      /* select format number */
-      switch(compatible_version->minor)
-        {
-          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                 _("FSFS is not compatible with Subversion prior to 1.1"));
-
-          case 1:
-          case 2:
-          case 3: format = 1;
-                  break;
-
-          case 4: format = 2;
-                  break;
-
-          case 5: format = 3;
-                  break;
-
-          case 6:
-          case 7: format = 4;
-                  break;
-
-          case 8: format = 6;
-                  break;
-
-          default:format = SVN_FS_FS__FORMAT_NUMBER;
-        }
-
-      shard_size_str = svn_hash_gets(fs->config, SVN_FS_CONFIG_FSFS_SHARD_SIZE);
-      if (shard_size_str)
-        {
-          apr_int64_t val;
-          SVN_ERR(svn_cstring_strtoi64(&val, shard_size_str, 0,
-                                       APR_INT32_MAX, 10));
-
-          shard_size = (int) val;
-        }
-    }
   ffd->format = format;
 
   /* Use an appropriate sharding mode if supported by the format. */
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     ffd->max_files_per_dir = shard_size;
+  else
+    ffd->max_files_per_dir = 0;
 
   /* Select the addressing mode depending on the format. */
   if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    ffd->min_log_addressing_rev = 0;
+    ffd->min_log_addressing_rev = min_log_addressing_rev;
   else
     ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
 
@@ -1801,10 +1759,69 @@ svn_fs_fs__create(svn_fs_t *fs,
                                  pool));
     }
 
+  ffd->youngest_rev_cache = 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__create(svn_fs_t *fs,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  int format = SVN_FS_FS__FORMAT_NUMBER;
+  int shard_size = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+
+  /* Process the given filesystem config. */
+  if (fs->config)
+    {
+      svn_version_t *compatible_version;
+      const char *shard_size_str;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                 _("FSFS is not compatible with Subversion prior to 1.1"));
+
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          case 6:
+          case 7: format = 4;
+                  break;
+
+          case 8: format = 6;
+                  break;
+
+          default:format = SVN_FS_FS__FORMAT_NUMBER;
+        }
+
+      shard_size_str = svn_hash_gets(fs->config, SVN_FS_CONFIG_FSFS_SHARD_SIZE);
+      if (shard_size_str)
+        {
+          apr_int64_t val;
+          SVN_ERR(svn_cstring_strtoi64(&val, shard_size_str, 0,
+                                       APR_INT32_MAX, 10));
+
+          shard_size = (int) val;
+        }
+    }
+
+  svn_fs_fs__create_file_tree(fs, path, format, shard_size, 0, pool);
+
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
 
-  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 

@@ -122,6 +122,25 @@ svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
 
+/* Under the repository db PATH, create a FSFS repository with FORMAT,
+ * the given SHARD_SIZE and start logical addressing at revision
+ * MIN_LOG_ADDRESSING_REV.  If not supported by the respective format,
+ * the latter two parameters will be ignored.  FS will be updated.
+ *
+ * The only file not being written is the 'format' file.  This allows
+ * callers such as hotcopy to modify the contents before turning the
+ * tree into an accessible repository.
+ *
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            svn_revnum_t min_log_addressing_rev,
+                            apr_pool_t *pool);
+
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.
 
