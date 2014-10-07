@@ -86,7 +86,7 @@ are likely some errors because of that.
 /* Declarations. */
 
 static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+get_youngest(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool);
 
 /* Pathname helper functions */
 
@@ -213,7 +213,7 @@ with_some_lock_file(with_lock_baton_t *baton)
           if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
             err = svn_fs_fs__update_min_unpacked_rev(fs, pool);
           if (!err)
-            err = get_youngest(&ffd->youngest_rev_cache, fs->path, pool);
+            err = get_youngest(&ffd->youngest_rev_cache, fs, pool);
         }
 
       if (!err)
@@ -1131,7 +1131,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
+  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1310,17 +1310,11 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
    POOL. */
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p,
-             const char *fs_path,
+             svn_fs_t *fs,
              apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_fs__read_content(&buf,
-                                  svn_dirent_join(fs_path, PATH_CURRENT,
-                                                  pool),
-                                  pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf->data);
-
+  apr_uint64_t dummy;
+  SVN_ERR(svn_fs_fs__read_current(youngest_p, &dummy, &dummy, fs, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1332,7 +1326,7 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  SVN_ERR(get_youngest(youngest_p, fs, pool));
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
@@ -1376,7 +1370,7 @@ svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
   if (rev <= ffd->youngest_rev_cache)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs, pool));
 
   /* Check again. */
   if (rev <= ffd->youngest_rev_cache)
