@@ -1041,8 +1041,14 @@ static svn_error_t *
 read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  ffd->use_block_read
-    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, FALSE);
+
+  /* Providing a config hash is optional. */
+  if (fs->config)
+    ffd->use_block_read = svn_hash__get_bool(fs->config,
+                                             SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                                             FALSE);
+  else
+    ffd->use_block_read = FALSE;
 
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
