@@ -369,17 +369,15 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
   return SVN_NO_ERROR;
 }
 
-/* Remove FILE in SHARD folder.  Use POOL for temporary allocations. */
+/* Remove file PATH, if it exists - even if it is read-only. 
+ * Use POOL for temporary allocations. */
 static svn_error_t *
-hotcopy_remove_file(const char *shard,
-                    const char *file,
+hotcopy_remove_file(const char *path,
                     apr_pool_t *pool)
 {
-  const char *rev_path = svn_dirent_join(shard, file, pool);
-
   /* Make the rev file writable and remove it. */
-  SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, pool));
-  SVN_ERR(svn_io_remove_file2(rev_path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -419,8 +417,10 @@ hotcopy_remove_files(svn_fs_t *dst_fs,
         }
 
       /* remove files for REV */
-      SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                  apr_psprintf(iterpool, "%ld", rev),
+      SVN_ERR(hotcopy_remove_file(svn_dirent_join(dst_subdir_shard,
+                                                  apr_psprintf(iterpool,
+                                                               "%ld", rev),
+                                                  iterpool),
                                   iterpool));
     }
 
