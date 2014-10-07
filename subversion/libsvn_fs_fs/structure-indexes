@@ -166,11 +166,13 @@ Index on-disk format
            u(<header>.<page table>[k].<entry count>),
            for k in 0 .. s(<header>.<page table>)-1
 
-  offsets := i(<header>.<page table>[k].<offsets>[0]) \
+  offsets := page(k),
+             for k in 0 .. s(<header>.<page table>)-1
+
+  page(k) := i(<header>.<page table>[k].<offsets>[0]) \
              i(  <header>.<page table>[k].<offsets>[l] \
                - <header>.<page table>[k].<offsets>[l - 1]),
-             for l in 1 .. s(<header>.<page table>[k].<entry count>)-1,
-             for k in 0 .. s(<header>.<page table>)-1
+             for l in 1 .. s(<header>.<page table>[k].<entry count>)-1
 
   u(x) ... unsigned int x in 7b/8b encoding
   i(x) ... signed int x in 7b/8b encoding
