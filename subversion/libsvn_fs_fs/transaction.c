@@ -1019,8 +1019,8 @@ create_txn_dir_pre_1_5(const char **id_p,
   const char *unique_path, *prefix;
 
   /* Try to create directories named "<txndir>/<rev>-<uniqueifier>.txn". */
-  prefix = svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                                apr_psprintf(pool, "%ld", rev), SVN_VA_NULL);
+  prefix = svn_dirent_join(svn_fs_fs__path_txns_dir(fs, pool),
+                           apr_psprintf(pool, "%ld", rev), pool);
 
   subpool = svn_pool_create(pool);
   for (i = 1; i <= 99999; i++)
@@ -3898,7 +3898,7 @@ svn_fs_fs__list_transactions(apr_array_header_t **names_p,
   names = apr_array_make(pool, 1, sizeof(const char *));
 
   /* Get the transactions directory. */
-  txn_dir = svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+  txn_dir = svn_fs_fs__path_txns_dir(fs, pool);
 
   /* Now find a listing of this directory. */
   SVN_ERR(svn_io_get_dirents3(&dirents, txn_dir, TRUE, pool, pool));
