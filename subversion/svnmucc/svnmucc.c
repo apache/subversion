@@ -295,9 +295,18 @@ help(FILE *stream, apr_pool_t *pool)
       "                           prompt only if standard input is a terminal)\n"
       "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
-      "  --trust-server-cert    : accept SSL server certificates from unknown\n"
-      "                           certificate authorities without prompting (but\n"
-      "                           only with '--non-interactive')\n"
+      "  --trust-server-cert    : deprecated; same as --trust-unknown-ca\n"
+      "  --trust-unknown-ca     : with --non-interactive, accept SSL server\n"
+      "                           certificates from unknown certificate authorities\n"
+      "  --trust-cn-mismatch    : with --non-interactive, accept SSL server\n"
+      "                           certificates even if the server hostname does not\n"
+      "                           match the certificate's common name attribute\n"
+      "  --trust-expired        : with --non-interactive, accept expired SSL server\n"
+      "                           certificates\n"
+      "  --trust-not-yet-valid  : with --non-interactive, accept SSL server\n"
+      "                           certificates from the future\n"
+      "  --trust-other-failure  : with --non-interactive, accept SSL server\n"
+      "                             certificates with failures other than the above\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                           use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
@@ -462,7 +471,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     with_revprop_opt,
     non_interactive_opt,
     force_interactive_opt,
-    trust_server_cert_opt
+    trust_server_cert_opt,
+    trust_server_cert_unknown_ca_opt,
+    trust_server_cert_cn_mismatch_opt,
+    trust_server_cert_expired_opt,
+    trust_server_cert_not_yet_valid_opt,
+    trust_server_cert_other_failure_opt,
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -478,6 +492,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
     {"trust-server-cert", trust_server_cert_opt, 0, ""},
+    {"trust-unknown-ca", trust_server_cert_unknown_ca_opt, 0, ""},
+    {"trust-cn-mismatch", trust_server_cert_cn_mismatch_opt, 0, ""},
+    {"trust-expired", trust_server_cert_expired_opt, 0, ""},
+    {"trust-not-yet-valid", trust_server_cert_not_yet_valid_opt, 0, ""},
+    {"trust-other-failure", trust_server_cert_other_failure_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -492,7 +511,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
-  svn_boolean_t trust_server_cert = FALSE;
+  svn_boolean_t trust_unknown_ca = FALSE;
+  svn_boolean_t trust_cn_mismatch = FALSE;
+  svn_boolean_t trust_expired = FALSE;
+  svn_boolean_t trust_not_yet_valid = FALSE;
+  svn_boolean_t trust_other_failure = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_boolean_t show_version = FALSE;
   svn_boolean_t show_help = FALSE;
@@ -580,8 +603,21 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         case force_interactive_opt:
           force_interactive = TRUE;
           break;
-        case trust_server_cert_opt:
-          trust_server_cert = TRUE;
+        case trust_server_cert_opt: /* backward compat */
+        case trust_server_cert_unknown_ca_opt:
+          trust_unknown_ca = TRUE;
+          break;
+        case trust_server_cert_cn_mismatch_opt:
+          trust_cn_mismatch = TRUE;
+          break;
+        case trust_server_cert_expired_opt:
+          trust_expired = TRUE;
+          break;
+        case trust_server_cert_not_yet_valid_opt:
+          trust_not_yet_valid = TRUE;
+          break;
+        case trust_server_cert_other_failure_opt:
+          trust_other_failure = TRUE;
           break;
         case config_dir_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
@@ -626,11 +662,28 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive = !svn_cmdline__be_interactive(non_interactive,
                                                    force_interactive);
 
-  if (trust_server_cert && !non_interactive)
+  if (!non_interactive)
     {
+      if (trust_unknown_ca)
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-server-cert requires "
+                              _("--trust-unknown-ca requires "
                                 "--non-interactive"));
+      if (trust_cn_mismatch)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-cn-mismatch requires "
+                                  "--non-interactive"));
+      if (trust_expired)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-expired requires "
+                                  "--non-interactive"));
+      if (trust_not_yet_valid)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-not-yet-valid requires "
+                                  "--non-interactive"));
+      if (trust_other_failure)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-other-failure requires "
+                                  "--non-interactive"));
     }
 
   /* Copy the rest of our command-line arguments to an array,
@@ -688,17 +741,22 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
 
   cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
-  SVN_ERR(svn_cmdline_create_auth_baton(&ctx->auth_baton,
-                                        non_interactive,
-                                        username,
-                                        password,
-                                        config_dir,
-                                        no_auth_cache,
-                                        trust_server_cert,
-                                        cfg_config,
-                                        ctx->cancel_func,
-                                        ctx->cancel_baton,
-                                        pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(
+            &ctx->auth_baton,
+            non_interactive,
+            username,
+            password,
+            config_dir,
+            no_auth_cache,
+            trust_unknown_ca,
+            trust_cn_mismatch,
+            trust_expired,
+            trust_not_yet_valid,
+            trust_other_failure,
+            cfg_config,
+            ctx->cancel_func,
+            ctx->cancel_baton,
+            pool));
 
   lmb.non_interactive = non_interactive;
   lmb.ctx = ctx;
