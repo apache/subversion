@@ -349,7 +349,7 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
  *
  * Use @a pool for all allocations.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
