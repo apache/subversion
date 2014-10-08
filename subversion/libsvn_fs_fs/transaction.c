@@ -996,12 +996,7 @@ create_txn_dir(const char **id_p,
   txn_id->number = cb.txn_number;
 
   *id_p = svn_fs_fs__id_txn_unparse(txn_id, pool);
-  txn_dir = svn_dirent_join_many(pool,
-                                 fs->path,
-                                 PATH_TXNS_DIR,
-                                 apr_pstrcat(pool, *id_p, PATH_EXT_TXN,
-                                             SVN_VA_NULL),
-                                 SVN_VA_NULL);
+  txn_dir = svn_fs_fs__path_txn_dir(fs, txn_id, pool);
 
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }
