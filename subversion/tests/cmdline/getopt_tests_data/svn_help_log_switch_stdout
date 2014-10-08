@@ -122,9 +122,18 @@ Global options:
                              only if standard input is a terminal device)
   --force-interactive      : do interactive prompting even if standard input
                              is not a terminal device
-  --trust-server-cert      : accept SSL server certificates from unknown
-                             certificate authorities without prompting (but only
-                             with '--non-interactive')
+  --trust-server-cert      : deprecated; same as --trust-unknown-ca
+  --trust-unknown-ca       : with --non-interactive, accept SSL server
+                             certificates from unknown certificate authorities
+  --trust-cn-mismatch      : with --non-interactive, accept SSL server
+                             certificates even if the server hostname does not
+                             match the certificate's common name attribute
+  --trust-expired          : with --non-interactive, accept expired SSL server
+                             certificates
+  --trust-not-yet-valid    : with --non-interactive, accept SSL server
+                             certificates from the future
+  --trust-other-failure    : with --non-interactive, accept SSL server
+                             certificates with failures other than the above
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
@@ -206,9 +215,18 @@ Global options:
                              only if standard input is a terminal device)
   --force-interactive      : do interactive prompting even if standard input
                              is not a terminal device
-  --trust-server-cert      : accept SSL server certificates from unknown
-                             certificate authorities without prompting (but only
-                             with '--non-interactive')
+  --trust-server-cert      : deprecated; same as --trust-unknown-ca
+  --trust-unknown-ca       : with --non-interactive, accept SSL server
+                             certificates from unknown certificate authorities
+  --trust-cn-mismatch      : with --non-interactive, accept SSL server
+                             certificates even if the server hostname does not
+                             match the certificate's common name attribute
+  --trust-expired          : with --non-interactive, accept expired SSL server
+                             certificates
+  --trust-not-yet-valid    : with --non-interactive, accept SSL server
+                             certificates from the future
+  --trust-other-failure    : with --non-interactive, accept SSL server
+                             certificates with failures other than the above
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
