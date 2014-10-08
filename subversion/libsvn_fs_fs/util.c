@@ -234,15 +234,21 @@ combine_txn_id_string(const svn_fs_fs__id_part_t *txn_id,
 }
 
 const char *
+svn_fs_fs__path_txns_dir(svn_fs_t *fs,
+                         apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                         const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool)
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
-  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              combine_txn_id_string(txn_id, PATH_EXT_TXN,
-                                                    pool),
-                              SVN_VA_NULL);
+  return svn_dirent_join(svn_fs_fs__path_txns_dir(fs, pool),
+                         combine_txn_id_string(txn_id, PATH_EXT_TXN, pool),
+                         pool);
 }
 
 const char*
@@ -273,16 +279,22 @@ svn_fs_fs__path_txn_item_index(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_proto_revs(svn_fs_t *fs,
+                               apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id, PATH_EXT_REV,
-                                                      pool),
-                                SVN_VA_NULL);
+    return svn_dirent_join(svn_fs_fs__path_txn_proto_revs(fs, pool),
+                           combine_txn_id_string(txn_id, PATH_EXT_REV, pool),
+                           pool);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV, pool);
@@ -296,11 +308,10 @@ svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id,
-                                                      PATH_EXT_REV_LOCK,
-                                                      pool),
-                                SVN_VA_NULL);
+    return svn_dirent_join(svn_fs_fs__path_txn_proto_revs(fs, pool),
+                           combine_txn_id_string(txn_id, PATH_EXT_REV_LOCK,
+                                                 pool),
+                           pool);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV_LOCK, pool);
