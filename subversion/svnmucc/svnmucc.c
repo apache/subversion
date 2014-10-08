@@ -306,7 +306,7 @@ help(FILE *stream, apr_pool_t *pool)
       "  --trust-not-yet-valid  : with --non-interactive, accept SSL server\n"
       "                           certificates from the future\n"
       "  --trust-other-failure  : with --non-interactive, accept SSL server\n"
-      "                             certificates with failures other than the above\n"
+      "                           certificates with failures other than the above\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                           use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
