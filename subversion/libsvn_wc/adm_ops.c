@@ -302,7 +302,7 @@ process_committed_internal(svn_wc__db_t *db,
                                  scratch_pool));
 
   /* Only check for recursion on nodes that have children */
-  if (kind != svn_node_file
+  if (kind != svn_node_dir
       || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_server_excluded
