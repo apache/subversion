@@ -65,6 +65,10 @@ struct svn_wc_committed_queue_t
   apr_pool_t *pool;
   /* Mapping (const char *) local_abspath to (committed_queue_item_t *). */
   apr_hash_t *queue;
+
+  /* Mapping (const char *) wcroot_abspath to an apr array of
+     committed_queue_item_t */
+  apr_hash_t *wc_queues;
   /* Is any item in the queue marked as 'recursive'? */
   svn_boolean_t have_recursive;
 };
@@ -389,6 +393,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
   q = apr_palloc(pool, sizeof(*q));
   q->pool = pool;
   q->queue = apr_hash_make(pool);
+  q->wc_queues = apr_hash_make(pool);
   q->have_recursive = FALSE;
 
   return q;
@@ -408,6 +413,8 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
                         apr_pool_t *scratch_pool)
 {
   committed_queue_item_t *cqi;
+  const char *wcroot_abspath;
+  apr_array_header_t *items;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -416,6 +423,19 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
   /* Use the same pool as the one QUEUE was allocated in,
      to prevent lifetime issues.  Intermediate operations
      should use SCRATCH_POOL. */
+
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath,
+                                wc_ctx->db, local_abspath,
+                                scratch_pool, scratch_pool));
+
+  items = svn_hash_gets(queue->wc_queues, wcroot_abspath);
+  if (! items)
+    {
+      wcroot_abspath = apr_pstrdup(queue->pool, wcroot_abspath);
+
+      items = apr_array_make(queue->pool, 32, sizeof(cqi));
+      svn_hash_sets(queue->wc_queues, wcroot_abspath, items);
+    }
 
   /* Add to the array with paths and options */
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
@@ -428,6 +448,7 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
   svn_hash_sets(queue->queue, local_abspath, cqi);
+  APR_ARRAY_PUSH(items, committed_queue_item_t*) = cqi;
 
   return SVN_NO_ERROR;
 }
@@ -462,6 +483,16 @@ have_recursive_parent(apr_hash_t *queue,
   return FALSE;
 }
 
+/* Compare function for svn_sort__array */
+static int
+compare_queue_items(const void *v1,
+                    const void *v2)
+{
+  const committed_queue_item_t *cqi1 = *(const committed_queue_item_t **)v1;
+  const committed_queue_item_t *cqi2 = *(const committed_queue_item_t **)v2;
+
+  return svn_path_compare_paths(cqi1->local_abspath, cqi2->local_abspath);
+}
 
 svn_error_t *
 svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
@@ -473,11 +504,10 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *sorted_queue;
+  apr_array_header_t *wcs;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_time_t new_date;
-  apr_hash_t *run_wqs = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
 
   if (rev_date)
@@ -485,88 +515,83 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
   else
     new_date = 0;
 
-  /* Process the queued items in order of their paths.  (The requirement is
-   * probably just that a directory must be processed before its children.) */
-  sorted_queue = svn_sort__hash(queue->queue, svn_sort_compare_items_as_paths,
-                                scratch_pool);
-  for (i = 0; i < sorted_queue->nelts; i++)
+  /* Process the wc's in order of their paths. */
+  wcs = svn_sort__hash(queue->wc_queues, svn_sort_compare_items_as_paths,
+                       scratch_pool);
+  for (i = 0; i < wcs->nelts; i++)
     {
       const svn_sort__item_t *sort_item
-        = &APR_ARRAY_IDX(sorted_queue, i, svn_sort__item_t);
-      const committed_queue_item_t *cqi = sort_item->value;
-      const char *wcroot_abspath;
+                                = &APR_ARRAY_IDX(wcs, i, svn_sort__item_t);
+      /*const char *wcroot_abspath = sort_item->key;*/
+      apr_array_header_t *items = sort_item->value;
+      int j;
 
-      svn_pool_clear(iterpool);
+      svn_sort__array(items, compare_queue_items);
 
-      /* Skip this item if it is a child of a recursive item, because it has
-         been (or will be) accounted for when that recursive item was (or
-         will be) processed. */
-      if (queue->have_recursive && have_recursive_parent(queue->queue, cqi,
-                                                         iterpool))
-        continue;
-
-      if (!cqi->committed)
+      for (j = 0; j < items->nelts; j++)
         {
-          if (cqi->no_unlock && cqi->keep_changelist)
-            continue; /* Nothing to do */
+          committed_queue_item_t *cqi
+            = APR_ARRAY_IDX(items, j, committed_queue_item_t *);
 
-          if (!cqi->no_unlock)
+          svn_pool_clear(iterpool);
+
+          /* Skip this item if it is a child of a recursive item, because it has
+             been (or will be) accounted for when that recursive item was (or
+             will be) processed. */
+          if (queue->have_recursive && have_recursive_parent(queue->queue, cqi,
+                                                             iterpool))
+            continue;
+
+          if (!cqi->committed)
             {
-              svn_skel_t *work_item;
+              if (cqi->no_unlock && cqi->keep_changelist)
+                continue; /* Nothing to do */
 
-              SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item,
-                                                       wc_ctx->db,
-                                                       cqi->local_abspath,
-                                                       iterpool, iterpool));
+              if (!cqi->no_unlock)
+                {
+                  svn_skel_t *work_item;
 
-              SVN_ERR(svn_wc__db_lock_remove(wc_ctx->db, cqi->local_abspath,
-                                             work_item, iterpool));
-            }
-          if (!cqi->keep_changelist)
-            SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db,
+                  SVN_ERR(svn_wc__wq_build_sync_file_flags(
+                                                        &work_item,
+                                                        wc_ctx->db,
+                                                        cqi->local_abspath,
+                                                        iterpool, iterpool));
+
+                  SVN_ERR(svn_wc__db_lock_remove(wc_ctx->db,
                                                  cqi->local_abspath,
-                                                 NULL, NULL,
-                                                 svn_depth_empty,
-                                                 NULL, NULL, /* notify */
-                                                 NULL, NULL, /* cancel */
-                                                 iterpool));
+                                                 work_item, iterpool));
+                }
+              if (!cqi->keep_changelist)
+                SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db,
+                                                     cqi->local_abspath,
+                                                     NULL, NULL,
+                                                     svn_depth_empty,
+                                                     NULL, NULL, /* notify */
+                                                     NULL, NULL, /* cancel */
+                                                     iterpool));
+            }
+          else
+            {
+              SVN_ERR(process_committed_internal(
+                                      wc_ctx->db, cqi->local_abspath,
+                                      cqi->recurse,
+                                      TRUE /* top_of_recurse */,
+                                      new_revnum, new_date, rev_author,
+                                      cqi->new_dav_cache,
+                                      cqi->no_unlock,
+                                      cqi->keep_changelist,
+                                      cqi->sha1_checksum, queue,
+                                      iterpool));
+            }
         }
-      else
-        {
-          SVN_ERR(process_committed_internal(
-                                  wc_ctx->db, cqi->local_abspath,
-                                  cqi->recurse,
-                                  TRUE /* top_of_recurse */,
-                                  new_revnum, new_date, rev_author,
-                                  cqi->new_dav_cache,
-                                  cqi->no_unlock,
-                                  cqi->keep_changelist,
-                                  cqi->sha1_checksum, queue,
-                                  iterpool));
-        }
-
-      /* Don't run the wq now, but remember that we must call it for this
-         working copy */
-      SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath,
-                                    wc_ctx->db, cqi->local_abspath,
-                                    iterpool, iterpool));
-
-      if (! svn_hash_gets(run_wqs, wcroot_abspath))
-        {
-          wcroot_abspath = apr_pstrdup(scratch_pool, wcroot_abspath);
-          svn_hash_sets(run_wqs, wcroot_abspath, wcroot_abspath);
-        }
+      items->nelts = 0; /* Everything is committed to the DB */
     }
 
-  /* Make sure nothing happens if this function is called again.  */
-  apr_hash_clear(queue->queue);
-
   /* Ok; everything is committed now. Now we can start calling callbacks */
-
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  for (hi = apr_hash_first(scratch_pool, run_wqs);
+  for (hi = apr_hash_first(scratch_pool, queue->wc_queues);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -580,6 +605,10 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
     }
 
   svn_pool_destroy(iterpool);
+
+  /* Make sure nothing happens if this function is called again.  */
+  apr_hash_clear(queue->queue);
+  apr_hash_clear(queue->wc_queues);
 
   return SVN_NO_ERROR;
 }
