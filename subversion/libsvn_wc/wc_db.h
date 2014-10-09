@@ -2633,10 +2633,12 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool);
 
 
-/* Remove any lock for LOCAL_ABSPATH in DB.  */
+/* Remove any lock for LOCAL_ABSPATH in DB and install WORK_ITEMS
+   (if not NULL) in DB */
 svn_error_t *
 svn_wc__db_lock_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 
