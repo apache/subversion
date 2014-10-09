@@ -5167,6 +5167,12 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  *   ### seems to be not a set of changes but rather the new complete set of
  *   ### props.  And it's renamed to 'new_dav_cache' inside; why?
  *
+ * If @a is_committed is @c TRUE, the node will be processed as committed. This
+ * turns the node and its implied descendants as the new unmodified state at
+ * the new specified revision. Unless @a recurse is TRUE, changes on
+ * descendants are not committed as changes directly. In this case they should
+ * be queueud as their own changes.
+ *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
