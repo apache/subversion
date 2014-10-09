@@ -5204,7 +5204,25 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * Temporary allocations will be performed in @a scratch_pool, and persistent
  * allocations will use the same pool as @a queue used when it was created.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t recurse,
+                        svn_boolean_t is_committed,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *sha1_checksum,
+                        apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_queue_committed4, but with is_committed always
+ * TRUE.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
