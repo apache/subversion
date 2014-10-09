@@ -1413,9 +1413,8 @@ get_node_changelist(const char *local_abspath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                b->db, local_abspath,
                                scratch_pool, scratch_pool));
-
-  if (svn_wc__internal_changelist_match(b->db, local_abspath, b->clhash,
-                                        scratch_pool))
+  if (!b->clhash
+      || (changelist && svn_hash_gets(b->clhash, changelist) != NULL))
     SVN_ERR(b->callback_func(b->callback_baton, local_abspath,
                              changelist, scratch_pool));
 
