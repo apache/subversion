@@ -23,6 +23,9 @@
 
 #include <apr_pools.h>
 #include <apr_general.h>
+#include <apr_md5.h>
+
+#define SVN_DEPRECATED
 
 #include "svn_types.h"
 #include "svn_io.h"
@@ -305,6 +308,79 @@ test_externals_parse_erratic(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_legacy_commit1(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_wc_adm_access_t *adm_access;
+  const char *lambda;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "legacy_commit1", opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_copy(&b, "A", "A_copied"));
+
+  lambda = sbox_wc_path(&b, "A_copied/B/lambda");
+
+
+  SVN_ERR(svn_io_remove_file2(lambda, FALSE, pool));
+  SVN_ERR(svn_io_copy_file(sbox_wc_path(&b, "iota"), lambda, FALSE, pool));
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, b.wc_abspath, TRUE, -1,
+                           NULL, NULL, pool));
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+    SVN_TEST_ASSERT(status->copied == TRUE);
+  }
+
+  /* Simulate a very old style svn ci . -m "QQQ" on the WC root */
+  SVN_ERR(svn_wc_process_committed4(sbox_wc_path(&b, "A_copied"), adm_access,
+                                    TRUE, 12, "2014-10-01T19:00:50.966679Z",
+                                    "me", NULL, TRUE, TRUE,
+                                    NULL, pool));
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    /* Node is still modified, as we didn't change the text base! */
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+    SVN_TEST_ASSERT(status->copied == FALSE);
+  }
+
+  {
+    unsigned char digest[APR_MD5_DIGESTSIZE];
+
+    /* Use the fact that iota has the same checksum to ease committing */
+
+    SVN_ERR(svn_io_file_checksum (digest, lambda, pool));
+
+    SVN_ERR(svn_wc_process_committed4(lambda, adm_access,
+                                      TRUE, 12, "2014-10-01T19:00:50.966679Z",
+                                      "me", NULL, TRUE, TRUE,
+                                      digest, pool));
+  }
+
+  {
+    svn_wc_status2_t *status;
+
+    SVN_ERR(svn_wc_status2(&status, lambda, adm_access, pool));
+
+    /* Node is still modified, as we didn't change the text base! */
+    SVN_TEST_ASSERT(status != NULL);
+    SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+    SVN_TEST_ASSERT(status->copied == FALSE);
+  }
+
+  return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -322,6 +398,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_wc_parse_externals_description3"),
     SVN_TEST_PASS2(test_externals_parse_erratic,
                    "parse erratic externals definition"),
+    SVN_TEST_OPTS_PASS(test_legacy_commit1,
+                       "test legacy commit1"),
     SVN_TEST_NULL
   };
 

@@ -777,15 +777,12 @@ svn_wc_process_committed4(const char *path,
   const char *local_abspath;
   const svn_checksum_t *md5_checksum;
   const svn_checksum_t *sha1_checksum = NULL;
-  apr_time_t new_date;
   apr_hash_t *wcprop_changes_hash;
+  svn_wc_context_t *wc_ctx;
+  svn_wc_committed_queue_t *queue;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (rev_date)
-    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
-  else
-    new_date = 0;
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
 
   if (digest)
     md5_checksum = svn_checksum__from_digest_md5(digest, pool);
@@ -809,14 +806,21 @@ svn_wc_process_committed4(const char *path,
     }
 
   wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
-  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse, TRUE,
-                                             new_revnum, new_date, rev_author,
-                                             wcprop_changes_hash,
-                                             !remove_lock, !remove_changelist,
-                                             sha1_checksum, NULL, pool));
 
-  /* Run the log file(s) we just created. */
-  return svn_error_trace(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
+  queue = svn_wc_committed_queue_create(pool);
+  SVN_ERR(svn_wc_queue_committed3(queue, wc_ctx, local_abspath, recurse,
+                                  wcprop_changes, remove_lock,
+                                  remove_changelist,
+                                  sha1_checksum /* or NULL if not modified
+                                                           or directory */,
+                                  pool));
+
+  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx,
+                                          new_revnum, rev_date, rev_author,
+                                          NULL, NULL /* cancel */,
+                                          pool));
+
+  return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
 
 
