@@ -76,15 +76,16 @@ struct svn_wc_committed_queue_t
 typedef struct committed_queue_item_t
 {
   const char *local_abspath;
-  svn_boolean_t recurse;
-  svn_boolean_t committed;
-  svn_boolean_t no_unlock;
-  svn_boolean_t keep_changelist;
+  svn_boolean_t recurse; /* Use legacy recursion */
+  svn_boolean_t committed; /* Process the node as committed */
+  svn_boolean_t remove_lock; /* Remove existing lock on node */
+  svn_boolean_t remove_changelist; /* Remove changelist on node */
 
-  /* The pristine text checksum. */
-  const svn_checksum_t *sha1_checksum;
+  /* The pristine text checksum. NULL if the old value should be kept
+     and for directories */
+  const svn_checksum_t *new_sha1_checksum;
 
-  apr_hash_t *new_dav_cache;
+  apr_hash_t *new_dav_cache; /* New DAV cache for the node */
 } committed_queue_item_t;
 
 
@@ -127,8 +128,8 @@ process_committed_leaf(svn_wc__db_t *db,
                        apr_time_t new_changed_date,
                        const char *new_changed_author,
                        apr_hash_t *new_dav_cache,
-                       svn_boolean_t no_unlock,
-                       svn_boolean_t keep_changelist,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
                        const svn_checksum_t *checksum,
                        apr_pool_t *scratch_pool)
 {
@@ -224,8 +225,8 @@ process_committed_leaf(svn_wc__db_t *db,
                                    checksum,
                                    NULL /* new_children */,
                                    new_dav_cache,
-                                   keep_changelist,
-                                   no_unlock,
+                                   !remove_changelist,
+                                   !remove_lock,
                                    work_item,
                                    scratch_pool));
 
@@ -271,8 +272,8 @@ process_committed_internal(svn_wc__db_t *db,
                            apr_time_t new_date,
                            const char *rev_author,
                            apr_hash_t *new_dav_cache,
-                           svn_boolean_t no_unlock,
-                           svn_boolean_t keep_changelist,
+                           svn_boolean_t remove_lock,
+                           svn_boolean_t remove_changelist,
                            const svn_checksum_t *sha1_checksum,
                            const svn_wc_committed_queue_t *queue,
                            apr_pool_t *scratch_pool)
@@ -296,7 +297,7 @@ process_committed_internal(svn_wc__db_t *db,
                                  status, kind, prop_mods, old_checksum,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
-                                 no_unlock, keep_changelist,
+                                 remove_lock, remove_changelist,
                                  sha1_checksum,
                                  scratch_pool));
 
@@ -336,7 +337,7 @@ process_committed_internal(svn_wc__db_t *db,
           cqi = svn_hash_gets(queue->queue, this_abspath);
 
           if (cqi != NULL)
-            sha1_checksum = cqi->sha1_checksum;
+            sha1_checksum = cqi->new_sha1_checksum;
 
           /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
@@ -348,8 +349,8 @@ process_committed_internal(svn_wc__db_t *db,
                     new_revnum, new_date,
                     rev_author,
                     NULL /* new_dav_cache */,
-                    TRUE /* no_unlock */,
-                    keep_changelist,
+                    FALSE /* remove_lock */,
+                    remove_changelist,
                     sha1_checksum,
                     queue,
                     iterpool));
@@ -442,9 +443,9 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
   cqi->local_abspath = local_abspath;
   cqi->recurse = recurse;
   cqi->committed = is_commited;
-  cqi->no_unlock = !remove_lock;
-  cqi->keep_changelist = !remove_changelist;
-  cqi->sha1_checksum = sha1_checksum;
+  cqi->remove_lock = remove_lock;
+  cqi->remove_changelist = remove_changelist;
+  cqi->new_sha1_checksum = sha1_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
   svn_hash_sets(queue->queue, local_abspath, cqi);
@@ -544,10 +545,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
           if (!cqi->committed)
             {
-              if (cqi->no_unlock && cqi->keep_changelist)
-                continue; /* Nothing to do */
-
-              if (!cqi->no_unlock)
+              if (cqi->remove_lock)
                 {
                   svn_skel_t *work_item;
 
@@ -561,7 +559,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                  cqi->local_abspath,
                                                  work_item, iterpool));
                 }
-              if (!cqi->keep_changelist)
+              if (cqi->remove_changelist)
                 SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db,
                                                      cqi->local_abspath,
                                                      NULL, NULL,
@@ -578,9 +576,9 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                       TRUE /* top_of_recurse */,
                                       new_revnum, new_date, rev_author,
                                       cqi->new_dav_cache,
-                                      cqi->no_unlock,
-                                      cqi->keep_changelist,
-                                      cqi->sha1_checksum, queue,
+                                      cqi->remove_lock,
+                                      cqi->remove_changelist,
+                                      cqi->new_sha1_checksum, queue,
                                       iterpool));
             }
         }
