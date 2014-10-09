@@ -63,9 +63,6 @@ struct svn_wc_committed_queue_t
 {
   /* The pool in which ->queue is allocated. */
   apr_pool_t *pool;
-  /* Mapping (const char *) local_abspath to (committed_queue_item_t *). */
-  apr_hash_t *queue;
-
   /* Mapping (const char *) wcroot_abspath to an apr array of
      committed_queue_item_t */
   apr_hash_t *wc_queues;
@@ -251,13 +248,13 @@ process_committed_leaf(svn_wc__db_t *db,
  *   ### [JAF]  Is it? See svn_wc_queue_committed3(). It ends up being
  *   ### assigned as a whole to wc.db:BASE_NODE:dav_cache.
  *
- * If @a no_unlock is set, don't release any user locks on @a
- * local_abspath; otherwise release them as part of this processing.
+ * If @a remove_lock is set, release any user locks on @a
+ * local_abspath; otherwise keep them during processing.
  *
- * If @a keep_changelist is set, don't remove any changeset assignments
- * from @a local_abspath; otherwise, clear it of such assignments.
+ * If @a remove_changelist is set, clear any changeset assignments
+ * from @a local_abspath; otherwise, keep such assignments.
  *
- * If @a sha1_checksum is non-NULL, use it to identify the node's pristine
+ * If @a new_sha1_checksum is non-NULL, use it to identify the node's pristine
  * text.
  *
  * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
@@ -274,8 +271,9 @@ process_committed_internal(svn_wc__db_t *db,
                            apr_hash_t *new_dav_cache,
                            svn_boolean_t remove_lock,
                            svn_boolean_t remove_changelist,
-                           const svn_checksum_t *sha1_checksum,
+                           const svn_checksum_t *new_sha1_checksum,
                            const svn_wc_committed_queue_t *queue,
+                           apr_hash_t *items_by_abspath,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
@@ -298,7 +296,7 @@ process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  remove_lock, remove_changelist,
-                                 sha1_checksum,
+                                 new_sha1_checksum,
                                  scratch_pool));
 
   /* Only check for recursion on nodes that have children */
@@ -333,11 +331,11 @@ process_committed_internal(svn_wc__db_t *db,
 
           this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          sha1_checksum = NULL;
-          cqi = svn_hash_gets(queue->queue, this_abspath);
+          new_sha1_checksum = NULL;
+          cqi = svn_hash_gets(items_by_abspath, this_abspath);
 
           if (cqi != NULL)
-            sha1_checksum = cqi->new_sha1_checksum;
+            new_sha1_checksum = cqi->new_sha1_checksum;
 
           /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
@@ -351,8 +349,9 @@ process_committed_internal(svn_wc__db_t *db,
                     NULL /* new_dav_cache */,
                     FALSE /* remove_lock */,
                     remove_changelist,
-                    sha1_checksum,
+                    new_sha1_checksum,
                     queue,
+                    items_by_abspath,
                     iterpool));
         }
 
@@ -393,7 +392,6 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 
   q = apr_palloc(pool, sizeof(*q));
   q->pool = pool;
-  q->queue = apr_hash_make(pool);
   q->wc_queues = apr_hash_make(pool);
   q->have_recursive = FALSE;
 
@@ -448,7 +446,6 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
   cqi->new_sha1_checksum = sha1_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
-  svn_hash_sets(queue->queue, local_abspath, cqi);
   APR_ARRAY_PUSH(items, committed_queue_item_t*) = cqi;
 
   return SVN_NO_ERROR;
@@ -509,7 +506,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_time_t new_date;
-  apr_hash_index_t *hi;
 
   if (rev_date)
     SVN_ERR(svn_time_from_cstring(&new_date, rev_date, iterpool));
@@ -525,9 +521,24 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 = &APR_ARRAY_IDX(wcs, i, svn_sort__item_t);
       /*const char *wcroot_abspath = sort_item->key;*/
       apr_array_header_t *items = sort_item->value;
+      apr_hash_t *items_by_abspath = NULL;
       int j;
 
       svn_sort__array(items, compare_queue_items);
+
+      if (queue->have_recursive)
+        {
+          items_by_abspath = apr_hash_make(scratch_pool);
+
+          for (j = 0; j < items->nelts; j++)
+            {
+              committed_queue_item_t *cqi
+                = APR_ARRAY_IDX(items, j, committed_queue_item_t *);
+
+              svn_hash_sets(items_by_abspath, cqi->local_abspath, cqi);
+            }
+        }
+
 
       for (j = 0; j < items->nelts; j++)
         {
@@ -539,7 +550,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
           /* Skip this item if it is a child of a recursive item, because it has
              been (or will be) accounted for when that recursive item was (or
              will be) processed. */
-          if (queue->have_recursive && have_recursive_parent(queue->queue, cqi,
+          if (queue->have_recursive && have_recursive_parent(items_by_abspath, cqi,
                                                              iterpool))
             continue;
 
@@ -578,22 +589,26 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                       cqi->new_dav_cache,
                                       cqi->remove_lock,
                                       cqi->remove_changelist,
-                                      cqi->new_sha1_checksum, queue,
+                                      cqi->new_sha1_checksum,
+                                      queue, items_by_abspath,
                                       iterpool));
             }
         }
       items->nelts = 0; /* Everything is committed to the DB */
     }
 
+  /* Make sure nothing happens if this function is called again.  */
+  apr_hash_clear(queue->wc_queues);
+
   /* Ok; everything is committed now. Now we can start calling callbacks */
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  for (hi = apr_hash_first(scratch_pool, queue->wc_queues);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < wcs->nelts; i++)
     {
-      const char *wcroot_abspath = apr_hash_this_key(hi);
+      const svn_sort__item_t *sort_item
+          = &APR_ARRAY_IDX(wcs, i, svn_sort__item_t);
+      const char *wcroot_abspath = sort_item->key;
 
       svn_pool_clear(iterpool);
 
@@ -603,10 +618,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
     }
 
   svn_pool_destroy(iterpool);
-
-  /* Make sure nothing happens if this function is called again.  */
-  apr_hash_clear(queue->queue);
-  apr_hash_clear(queue->wc_queues);
 
   return SVN_NO_ERROR;
 }
