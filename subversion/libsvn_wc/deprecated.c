@@ -652,6 +652,24 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
 
+svn_error_t *
+svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t recurse,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *sha1_checksum,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc_queue_committed4(queue, wc_ctx, local_abspath,
+                                    recurse, TRUE /* is_committed */,
+                                    wcprop_changes, remove_lock,
+                                    remove_changelist, sha1_checksum,
+                                    scratch_pool));
+}
 
 svn_error_t *
 svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,

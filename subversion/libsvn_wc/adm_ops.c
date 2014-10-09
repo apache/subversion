@@ -73,6 +73,7 @@ typedef struct committed_queue_item_t
 {
   const char *local_abspath;
   svn_boolean_t recurse;
+  svn_boolean_t committed;
   svn_boolean_t no_unlock;
   svn_boolean_t keep_changelist;
 
@@ -366,10 +367,11 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
+svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t recurse,
+                        svn_boolean_t is_commited,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
@@ -390,6 +392,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
   cqi->local_abspath = local_abspath;
   cqi->recurse = recurse;
+  cqi->committed = is_commited;
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
   cqi->sha1_checksum = sha1_checksum;
@@ -473,16 +476,45 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                          iterpool))
         continue;
 
-      SVN_ERR(svn_wc__process_committed_internal(
-                wc_ctx->db, cqi->local_abspath,
-                cqi->recurse,
-                TRUE /* top_of_recurse */,
-                new_revnum, new_date, rev_author,
-                cqi->new_dav_cache,
-                cqi->no_unlock,
-                cqi->keep_changelist,
-                cqi->sha1_checksum, queue,
-                iterpool));
+      if (!cqi->committed)
+        {
+          if (cqi->no_unlock && cqi->keep_changelist)
+            continue; /* Nothing to do */
+
+          if (!cqi->no_unlock)
+            {
+              svn_skel_t *work_item;
+
+              SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item,
+                                                       wc_ctx->db,
+                                                       cqi->local_abspath,
+                                                       iterpool, iterpool));
+
+              SVN_ERR(svn_wc__db_lock_remove(wc_ctx->db, cqi->local_abspath,
+                                             work_item, iterpool));
+            }
+          if (!cqi->keep_changelist)
+            SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db,
+                                                 cqi->local_abspath,
+                                                 NULL, NULL,
+                                                 svn_depth_empty,
+                                                 NULL, NULL, /* notify */
+                                                 NULL, NULL, /* cancel */
+                                                 iterpool));
+        }
+      else
+        {
+          SVN_ERR(svn_wc__process_committed_internal(
+                                  wc_ctx->db, cqi->local_abspath,
+                                  cqi->recurse,
+                                  TRUE /* top_of_recurse */,
+                                  new_revnum, new_date, rev_author,
+                                  cqi->new_dav_cache,
+                                  cqi->no_unlock,
+                                  cqi->keep_changelist,
+                                  cqi->sha1_checksum, queue,
+                                  iterpool));
+        }
 
       /* Don't run the wq now, but remember that we must call it for this
          working copy */
