@@ -11925,6 +11925,7 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
 static svn_error_t *
 lock_remove_txn(svn_wc__db_wcroot_t *wcroot,
                 const char *local_relpath,
+                svn_skel_t *work_items,
                 apr_pool_t *scratch_pool)
 {
   const char *repos_relpath;
@@ -11944,6 +11945,8 @@ lock_remove_txn(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -11951,6 +11954,7 @@ lock_remove_txn(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_lock_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -11963,7 +11967,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(
-    lock_remove_txn(wcroot, local_relpath, scratch_pool),
+    lock_remove_txn(wcroot, local_relpath, work_items, scratch_pool),
     wcroot);
 
   /* There may be some entries, and the lock info is now out of date.  */
