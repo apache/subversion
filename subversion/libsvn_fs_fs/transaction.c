@@ -1583,6 +1583,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                         ? svn_tristate_true
                         : svn_tristate_false;
   change->node_kind = node_kind;
+  change->copyfrom_known = TRUE;
   change->copyfrom_rev = copyfrom_rev;
   change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
 
