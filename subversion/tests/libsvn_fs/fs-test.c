@@ -5411,7 +5411,7 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   svn_revnum_t head_rev = 0;
   svn_fs_root_t *root;
-  svn_fs_txn_t *txn;
+  svn_fs_txn_t *txn1, *txn2;
   const char *fs_path;
   apr_hash_t *fs_config = apr_hash_make(pool);
 
@@ -5432,21 +5432,24 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, fs_config, pool));
 
   SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
-  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn1, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn1, pool));
   SVN_ERR(svn_test__create_greek_tree(root, pool));
-  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn1, NULL, pool));
+
+  /* Create txn with changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn1, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn1, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/foo", pool));
 
   /* Upgrade filesystem, but keep existing svn_fs_t object. */
   SVN_ERR(svn_fs_upgrade(fs_path, pool));
 
-  /* Create txn with changes. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
-  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
-  SVN_ERR(svn_fs_make_dir(root, "/foo", pool));
+  /* Creating a new txn for the old svn_fs_t object shall fail. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_begin_txn(&txn2, fs, head_rev, pool), ENOENT);
 
-  /* Commit txn. */
-  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+  /* Committing the already existing txn shall fail as well. */
+  SVN_TEST_ASSERT_ERROR(test_commit_txn(&head_rev, txn1, NULL, pool), ENOENT);
 
   /* Verify filesystem content. */
   SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,

@@ -44,7 +44,9 @@ repository) is:
       <rev>.<count>   Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
     revprops.db       SQLite database of the packed revision properties
-  transactions/       Subdirectory containing transactions
+  transactions/       Subdirectory containing transactions (format 1 to 6)
+    <txnid>.txn/      Directory containing transaction <txnid>
+  transactions-la/    Subdirectory containing transactions (format 7+)
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
     <txnid>.rev       Proto-revision file for transaction <txnid>
