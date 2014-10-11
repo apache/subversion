@@ -41,6 +41,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_fspath.h"
 
 #include "../svn_test_fs.h"
 
@@ -5454,6 +5455,147 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Utility method for test_paths_changed. Verify that REV in FS changes
+ * exactly one path and that that change is a property change.  Expect
+ * the MERGEINFO_MOD flag of the change to have the given value.
+ */
+static svn_error_t *
+verify_root_prop_change(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        svn_tristate_t mergeinfo_mod,
+                        apr_pool_t *pool)
+{
+  svn_fs_path_change2_t *change;
+  svn_fs_root_t *root;
+  apr_hash_t *changes;
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_TEST_ASSERT(apr_hash_count(changes) == 1);
+  change = svn_hash_gets(changes, "/");
+
+  SVN_TEST_ASSERT(change->node_rev_id);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_modify);
+  SVN_TEST_ASSERT(   change->node_kind == svn_node_dir
+                  || change->node_kind == svn_node_unknown);
+  SVN_TEST_ASSERT(change->text_mod == FALSE);
+  SVN_TEST_ASSERT(change->prop_mod == TRUE);
+
+  if (change->copyfrom_known)
+    {
+      SVN_TEST_ASSERT(change->copyfrom_rev == SVN_INVALID_REVNUM);
+      SVN_TEST_ASSERT(change->copyfrom_path == NULL);
+    }
+
+  SVN_TEST_ASSERT(change->mergeinfo_mod == mergeinfo_mod);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_paths_changed(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t head_rev = 0;
+  svn_fs_root_t *root;
+  svn_fs_txn_t *txn;
+  const char *fs_path;
+  apr_hash_t *changes;
+  svn_boolean_t has_mergeinfo_mod = FALSE;
+  apr_hash_index_t *hi;
+  int i;
+
+  /* The "mergeinfo_mod flag will say "unknown" until recently. */
+  if (   strcmp(opts->fs_type, "bdb") != 0
+      && (!opts->server_minor_version || (opts->server_minor_version >= 9)))
+    has_mergeinfo_mod = TRUE;
+
+  /* Create test repository with greek tree. */
+  fs_path = "test-paths-changed";
+
+  SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
+
+  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(root, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Create txns with various prop changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "propname",
+                                  svn_string_create("propval", pool), pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "svn:mergeinfo",
+                                  svn_string_create("/: 1\n", pool), pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Verify changed path lists. */
+
+  /* Greek tree creation rev. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, head_rev - 2, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+
+  /* Reports all paths? */
+  for (i = 0; svn_test__greek_tree_nodes[i].path; ++i)
+    {
+      const char *path
+        = svn_fspath__canonicalize(svn_test__greek_tree_nodes[i].path, pool);
+
+      SVN_TEST_ASSERT(svn_hash_gets(changes, path));
+    }
+
+  SVN_TEST_ASSERT(apr_hash_count(changes) == i);
+
+  /* Verify per-path info. */
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
+
+      SVN_TEST_ASSERT(change->node_rev_id);
+      SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_add);
+      SVN_TEST_ASSERT(   change->node_kind == svn_node_file
+                      || change->node_kind == svn_node_dir
+                      || change->node_kind == svn_node_unknown);
+
+      if (change->node_kind != svn_node_unknown)
+        SVN_TEST_ASSERT(change->text_mod == (   change->node_kind
+                                             == svn_node_file));
+
+      SVN_TEST_ASSERT(change->prop_mod == FALSE);
+
+      if (change->copyfrom_known)
+        {
+          SVN_TEST_ASSERT(change->copyfrom_rev == SVN_INVALID_REVNUM);
+          SVN_TEST_ASSERT(change->copyfrom_path == NULL);
+        }
+
+      if (has_mergeinfo_mod)
+        SVN_TEST_ASSERT(change->mergeinfo_mod == svn_tristate_false);
+      else
+        SVN_TEST_ASSERT(change->mergeinfo_mod == svn_tristate_unknown);
+    }
+
+  /* Propset rev. */
+  SVN_ERR(verify_root_prop_change(fs, head_rev - 1,
+                                  has_mergeinfo_mod ? svn_tristate_false
+                                                    : svn_tristate_unknown,
+                                  pool));
+
+  /* Mergeinfo set rev. */
+  SVN_ERR(verify_root_prop_change(fs, head_rev,
+                                  has_mergeinfo_mod ? svn_tristate_true
+                                                    : svn_tristate_unknown,
+                                  pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5553,6 +5695,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "txn_dir_cache fail in FSFS"),
     SVN_TEST_OPTS_PASS(upgrade_while_committing,
                        "upgrade while committing"),
+    SVN_TEST_OPTS_PASS(test_paths_changed,
+                       "test svn_fs_paths_changed"),
     SVN_TEST_NULL
   };
 
