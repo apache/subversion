@@ -470,11 +470,11 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  Only include the
-   mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
-   allocations are in SCRATCH_POOL. */
+/* Write a single change entry, path PATH, change CHANGE, to STREAM.
+
+   Only include the node kind field if INCLUDE_NODE_KIND is true.  Only
+   include the mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.
+   All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
