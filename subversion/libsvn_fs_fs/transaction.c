@@ -1585,7 +1585,8 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   change->node_kind = node_kind;
   change->copyfrom_known = TRUE;
   change->copyfrom_rev = copyfrom_rev;
-  change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
+  if (copyfrom_path)
+    change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
 
   svn_hash_sets(changes, path, change);
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
