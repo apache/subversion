@@ -112,8 +112,9 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
 
 /* Write the changed path info from CHANGES in filesystem FS to the
    output stream STREAM.  You may call this function multiple time on
-   the same stream but the last call should set TERMINATE_LIST to write
-   an extra empty line that marks the end of the changed paths list.
+   the same stream.  If you are writing to a (proto-)revision file,
+   the last call must set TERMINATE_LIST to write an extra empty line
+   that marks the end of the changed paths list.
    Perform temporary allocations in SCRATCH_POOL.
  */
 svn_error_t *
