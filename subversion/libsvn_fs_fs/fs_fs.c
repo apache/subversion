@@ -1177,6 +1177,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
+  svn_error_t* err;
+  const char *txns_dir;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
@@ -1203,6 +1205,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* If we're already up-to-date, there's nothing else to be done here. */
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
+
+  /* Remember the current 'transactions' dir path */
+  txns_dir = svn_fs_fs__path_txns_dir(fs, pool);
 
   /* If our filesystem predates the existence of the 'txn-current
      file', make that file and its corresponding lock file. */
@@ -1269,13 +1274,31 @@ upgrade_body(void *baton, apr_pool_t *pool)
      accidentally uses outdated information.  Keep the UUID. */
   SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
+  /* Rename the 'transactions' folder */
+  if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    SVN_ERR(svn_io_file_rename(txns_dir, svn_fs_fs__path_txns_dir(fs, pool),
+                               pool));
+
   /* Bump the format file. */
-  SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
-  if (upgrade_baton->notify_func)
-    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
-                                       SVN_FS_FS__FORMAT_NUMBER,
-                                       svn_fs_upgrade_format_bumped,
-                                       pool));
+  err = svn_fs_fs__write_format(fs, TRUE, pool);
+  if (err)
+    {
+      /* Something went wrong at the last minute.
+       * Undo the 'transactions' dir rename. */
+      if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        svn_error_compose(err,
+                          svn_io_file_rename(svn_fs_fs__path_txns_dir(fs,
+                                                                      pool),
+                                             txns_dir, pool));
+
+      SVN_ERR(err);
+    }
+  else
+    if (upgrade_baton->notify_func)
+      SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                        SVN_FS_FS__FORMAT_NUMBER,
+                                        svn_fs_upgrade_format_bumped,
+                                        pool));
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
