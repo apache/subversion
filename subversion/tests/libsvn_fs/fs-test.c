@@ -5612,11 +5612,6 @@ test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
   svn_fs_path_change2_t *change;
   const svn_fs_id_t *file_id;
 
-  /* This will fail for non-FSFS repositories, ATM. */
-  if (strcmp(opts->fs_type, "fsx") == 0)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
-
   /* Create test repository with greek tree. */
   fs_path = "test-delete-replace-paths-changed";
 
