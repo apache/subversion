@@ -52,12 +52,131 @@ dont_filter_warnings(void *baton, svn_error_t *err)
 
 /*** Test core code ***/
 
+/* Verify that a modification of any single byte in REVISION of FS at
+ * REPO_NAME using MODIFIER with BATON will be detected. */
+static svn_error_t *
+fuzzing_1_byte_1_rev(const char *repo_name,
+                     svn_fs_t *fs,
+                     svn_revnum_t revision,
+                     unsigned char (* modifier)(unsigned char c, void *baton),
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  apr_hash_t *fs_config;
+  svn_fs_fs__revision_file_t *rev_file;
+  apr_off_t filesize = 0, offset;
+  apr_off_t i;
+  unsigned char footer_len;
+
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Open the revision file for modification. */
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs, revision,
+                                                    pool, iterpool));
+  SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &filesize, iterpool));
+
+  offset = filesize - 1;
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, iterpool));
+  SVN_ERR(svn_io_file_getc((char *)&footer_len, rev_file->file, iterpool));
+
+  /* We want all the caching we can get.  More importantly, we want to
+     change the cache namespace before each test iteration. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "0");
+
+  /* Manipulate all bytes one at a time. */
+  for (i = 0; i < filesize; ++i)
+    {
+      svn_error_t *err = SVN_NO_ERROR;
+      svn_boolean_t is_legal = FALSE;
+
+      /* Read byte */
+      unsigned char c_old, c_new;
+      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_getc((char *)&c_old, rev_file->file, iterpool));
+
+      /* What to replace it with. Skip if there is no change. */
+      c_new = modifier(c_old, baton);
+      if (c_new == c_old)
+        continue;
+
+      /* Modify / corrupt the data. */
+      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_putc((char)c_new, rev_file->file, iterpool));
+      SVN_ERR(svn_io_file_flush(rev_file->file, iterpool));
+
+      /* Certain modifications will not be detected because the result is
+         legal and does not change the interpretation of any data. */
+
+      /* L2P index page sizes are just an upper limit to how many entries
+         a page may have our revs are too short to notice shorter page sizes
+         as long as it is a power of two and uses the same number of bytes. */
+      if (   i == rev_file->l2p_offset + 2         /* At the position of the
+                                                      L2P index page length */
+          && c_new && !(c_new & (c_new - 1))       /* Power of 2 */
+          && (c_new ^ c_old) < 0x80)  /* Don't modify the continuation bit. */
+        is_legal = TRUE;
+
+      /* The last P2L entry is a filler and defaults to rev 1 in our case.
+         However, a SVN_INVALID_REVNUM is also considered valid.
+         The following check catches this condition (values are correct as
+         given due to deltified storage of revision numbers). */
+      if (   i == filesize - footer_len - 3        /* At the position of the
+                                                      deltified rev number
+                                                      of last P2L entry */
+          && c_old == 0                            /* Expected content */
+          && (c_new == 1 + 2 * revision))          /* delta REVISION -> -1 */
+        is_legal = TRUE;
+
+      /* Make sure we use a different namespace for the caches during
+         this iteration. */
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                               svn_uuid_generate(iterpool));
+      SVN_ERR(svn_repos_open3(&repos, repo_name, fs_config, iterpool, iterpool));
+      svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
+
+      /* This shall detect the corruption and return an error. */
+      err = svn_repos_verify_fs3(repos, revision, revision, TRUE, FALSE, FALSE,
+                                 NULL, NULL, NULL, NULL, iterpool);
+
+      /* Benign changes may or may not be detected. */
+      if (!is_legal)
+        {
+          /* Let us know where we miss changes ... */
+          if (!err)
+            printf("Undetected mod at offset %"APR_UINT64_T_HEX_FMT
+                  " (%"APR_OFF_T_FMT") in r%ld: 0x%02x -> 0x%02x\n",
+                  i, i, revision, c_old, c_new);
+
+          SVN_TEST_ASSERT(err);
+        }
+
+      svn_error_clear(err);
+
+      /* Undo the corruption. */
+      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
+      SVN_ERR(svn_io_file_putc((char)c_old, rev_file->file, iterpool));
+
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Create a greek repo with OPTS at REPO_NAME.  Verify that a modification
- * of any single byte using MODIFIER will be detected. */
+ * of any single byte using MODIFIER with BATON will be detected. */
 static svn_error_t *
 fuzzing_1_byte_test(const svn_test_opts_t *opts,
                     const char *repo_name,
-                    unsigned char (* modifier)(unsigned char c),
+                    unsigned char (* modifier)(unsigned char c, void *baton),
+                    void *baton,
                     apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -65,10 +184,7 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_revnum_t rev;
-  apr_hash_t *fs_config;
-  svn_fs_fs__revision_file_t *rev_file;
-  apr_off_t filesize = 0;
-  apr_off_t i;
+  svn_revnum_t i;
 
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -87,66 +203,11 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(rev));
 
-  /* Open the revision 1 file for modification. */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs, rev,
-                                                    pool, iterpool));
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &filesize, iterpool));
-
-  /* We want all the caching we can get.  More importantly, we want to
-     change the cache namespace before each test iteration. */
-  fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "0");
-
-  /* Manipulate all bytes one at a time. */
-  for (i = 0; i < filesize; ++i)
+  for (i = 0; i <= rev; ++i)
     {
-      svn_error_t *err = SVN_NO_ERROR;
-
-      /* Read byte */
-      unsigned char c_old, c_new;
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_getc((char *)&c_old, rev_file->file, iterpool));
-
-      /* What to replace it with. Skip if there is no change. */
-      c_new = modifier(c_old);
-      if (c_new == c_old)
-        continue;
-
-      /* Modify / corrupt the data. */
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_putc((char)c_new, rev_file->file, iterpool));
-      SVN_ERR(svn_io_file_flush(rev_file->file, iterpool));
-
-      /* Make sure we use a different namespace for the caches during
-         this iteration. */
-      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
-                               svn_uuid_generate(iterpool));
-      SVN_ERR(svn_repos_open3(&repos, repo_name, fs_config, iterpool, iterpool));
-      svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
-
-      /* This shall detect the corruption and return an error. */
-      err = svn_repos_verify_fs3(repos, rev, rev, TRUE, FALSE, FALSE,
-                                 NULL, NULL, NULL, NULL, iterpool);
-
-      /* Log changes that don't get detected.
-         In f7, this can only be bits in the indexes. */
-      if (!err)
-        printf("Undetected mod at offset %"APR_UINT64_T_HEX_FMT
-               " (%"APR_OFF_T_FMT"): 0x%02x -> 0x%02x\n",
-               i, i, c_old, c_new);
-
-      /* Once we catch all changes, assert that we do. */
-/*      SVN_TEST_ASSERT(err); */
-      svn_error_clear(err);
-
-      /* Undo the corruption. */
-      SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &i, iterpool));
-      SVN_ERR(svn_io_file_putc((char)c_old, rev_file->file, iterpool));
-
       svn_pool_clear(iterpool);
+      SVN_ERR(fuzzing_1_byte_1_rev(repo_name, fs, i, modifier, baton,
+                                   iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -154,13 +215,46 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Modifier function to be used with fuzzing_set_byte_test.
+ * We return the fixed char value given as *BATON. */
+static unsigned char
+set_byte(unsigned char c, void *baton)
+{
+  return *(const unsigned char *)baton;
+}
+
+/* Run the fuzzing test setting any byte in the repo to all values MIN to
+ * MAX-1. */
+static svn_error_t *
+fuzzing_set_byte_test(const svn_test_opts_t *opts,
+                      int min,
+                      int max,
+                      apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  unsigned i = 0;
+  for (i = min; i < max; ++i)
+    {
+      unsigned char c = i;
+      const char *repo_name;
+      svn_pool_clear(iterpool);
+
+      repo_name = apr_psprintf(iterpool, "fuzzing_set_byte_%d_%d", min, max);
+      SVN_ERR(fuzzing_1_byte_test(opts, repo_name, set_byte, &c, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Tests ***/
 
 /* ------------------------------------------------------------------------ */
 
 static unsigned char
-invert_byte(unsigned char c)
+invert_byte(unsigned char c, void *baton)
 {
   return ~c;
 }
@@ -170,7 +264,7 @@ fuzzing_invert_byte_test(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_invert_byte", invert_byte,
-                              pool));
+                              NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -178,7 +272,7 @@ fuzzing_invert_byte_test(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 
 static unsigned char
-increment_byte(unsigned char c)
+increment_byte(unsigned char c, void *baton)
 {
   return c + 1;
 }
@@ -188,7 +282,7 @@ fuzzing_increment_byte_test(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_increment_byte",
-                              increment_byte, pool));
+                              increment_byte, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -196,7 +290,7 @@ fuzzing_increment_byte_test(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 
 static unsigned char
-decrement_byte(unsigned char c)
+decrement_byte(unsigned char c, void *baton)
 {
   return c - 1;
 }
@@ -206,7 +300,7 @@ fuzzing_decrement_byte_test(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_decrement_byte",
-                              decrement_byte, pool));
+                              decrement_byte, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -214,7 +308,7 @@ fuzzing_decrement_byte_test(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 
 static unsigned char
-null_byte(unsigned char c)
+null_byte(unsigned char c, void *baton)
 {
   return 0;
 }
@@ -223,15 +317,51 @@ static svn_error_t *
 fuzzing_null_byte_test(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
-  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_null_byte", null_byte, pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_null_byte", null_byte, NULL,
+                              pool));
 
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* Generator macro: define a test function covering byte values N to M-1 */
+#define FUZZING_SET_BYTE_TEST_N(N,M)\
+  static svn_error_t * \
+  fuzzing_set_byte_test_ ##N(const svn_test_opts_t *opts, \
+                             apr_pool_t *pool) \
+  { \
+    return svn_error_trace(fuzzing_set_byte_test(opts, N, M, pool)); \
+  } 
+
+/* Add the test function declared above to the test_funcs array. */
+#define TEST_FUZZING_SET_BYTE_TEST_N(N,M)\
+  SVN_TEST_OPTS_PASS(fuzzing_set_byte_test_ ##N, \
+                     "set any byte to any value between " #N " and " #M)
+
+/* Declare tests that will cover all possible byte values. */
+FUZZING_SET_BYTE_TEST_N(0,16)
+FUZZING_SET_BYTE_TEST_N(16,32)
+FUZZING_SET_BYTE_TEST_N(32,48)
+FUZZING_SET_BYTE_TEST_N(48,64)
+FUZZING_SET_BYTE_TEST_N(64,80)
+FUZZING_SET_BYTE_TEST_N(80,96)
+FUZZING_SET_BYTE_TEST_N(96,112)
+FUZZING_SET_BYTE_TEST_N(112,128)
+FUZZING_SET_BYTE_TEST_N(128,144)
+FUZZING_SET_BYTE_TEST_N(144,160)
+FUZZING_SET_BYTE_TEST_N(160,176)
+FUZZING_SET_BYTE_TEST_N(176,192)
+FUZZING_SET_BYTE_TEST_N(192,208)
+FUZZING_SET_BYTE_TEST_N(208,224)
+FUZZING_SET_BYTE_TEST_N(224,240)
+FUZZING_SET_BYTE_TEST_N(240,256)
+
 
 /* The test table.  */
 
-static int max_threads = 4;
+/* Allow for any number of tests to run in parallel. */
+static int max_threads = 0;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
@@ -244,6 +374,25 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "fuzzing: decrement any byte"),
     SVN_TEST_OPTS_PASS(fuzzing_null_byte_test,
                        "fuzzing: set any byte to 0"),
+
+    /* Register generated tests. */
+    TEST_FUZZING_SET_BYTE_TEST_N(0,16),
+    TEST_FUZZING_SET_BYTE_TEST_N(16,32),
+    TEST_FUZZING_SET_BYTE_TEST_N(32,48),
+    TEST_FUZZING_SET_BYTE_TEST_N(48,64),
+    TEST_FUZZING_SET_BYTE_TEST_N(64,80),
+    TEST_FUZZING_SET_BYTE_TEST_N(80,96),
+    TEST_FUZZING_SET_BYTE_TEST_N(96,112),
+    TEST_FUZZING_SET_BYTE_TEST_N(112,128),
+    TEST_FUZZING_SET_BYTE_TEST_N(128,144),
+    TEST_FUZZING_SET_BYTE_TEST_N(144,160),
+    TEST_FUZZING_SET_BYTE_TEST_N(160,176),
+    TEST_FUZZING_SET_BYTE_TEST_N(176,192),
+    TEST_FUZZING_SET_BYTE_TEST_N(192,208),
+    TEST_FUZZING_SET_BYTE_TEST_N(208,224),
+    TEST_FUZZING_SET_BYTE_TEST_N(224,240),
+    TEST_FUZZING_SET_BYTE_TEST_N(240,256),
+
     SVN_TEST_NULL
   };
 
