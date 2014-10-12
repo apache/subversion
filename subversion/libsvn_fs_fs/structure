@@ -43,7 +43,7 @@ repository) is:
     <shard>.pack/     Pack directory, if the repo has been packed (see below)
       <rev>.<count>   Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
-    revprops.db       SQLite database of the packed revision properties
+    revprops.db       SQLite database of the packed revprops (format 5 only)
   transactions/       Subdirectory containing transactions (format 1 to 6)
     <txnid>.txn/      Directory containing transaction <txnid>
   transactions-la/    Subdirectory containing transactions (format 7+)
@@ -66,7 +66,7 @@ repository) is:
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
-  min-unpacked-revprop File containing the oldest revision of unpacked revprop
+  min-unpacked-revprop Same for revision properties (format 5 only)
   rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
