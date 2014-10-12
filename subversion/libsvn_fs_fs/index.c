@@ -1306,6 +1306,13 @@ get_l2p_page(l2p_page_t **page,
       result->offsets[i] = last_value - 1;
     }
 
+  /* After reading all page entries, the read cursor must have moved by
+   * TABLE_ENTRY->SIZE bytes. */
+  if (   packed_stream_offset(rev_file->l2p_stream)
+      != table_entry->offset + table_entry->size)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                _("L2P actual page size does not match page table value."));
+
   *page = result;
 
   return SVN_NO_ERROR;
@@ -2354,6 +2361,13 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
   SVN_ERR(packed_stream_get(&value, stream));
   entry.fnv1_checksum = (apr_uint32_t)value;
 
+  /* Truncating the checksum to 32 bits may have hidden random data in the
+   * unused extra bits of the on-disk representation (7/8 bit representation
+   * uses 5 bytes on disk for the 32 bit value, leaving 3 bits unused). */
+  if (value > APR_UINT32_MAX)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Invalid FNV1 checksum in P2L index"));
+
   /* Some of the index data for empty rev / pack file sections will not be
    * used during normal operation.  Thus, we have strict rules for the
    * contents of those unused fields. */
@@ -2407,13 +2421,25 @@ get_p2l_page(apr_array_header_t **entries,
   /* read all entries of this page */
   last_revision = start_revision;
   last_compound = 0;
-  do
+
+  /* If the rev / pack file page contains a single item spreading over
+   * multiple pages, the current page description may be empty (the item
+   * description will be read from the first entry in next page). */
+  offset = start_offset;
+
+  /* Read page. */
+  while (offset < next_offset)
     {
       SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, &last_revision,
                          &last_compound, result));
       offset = packed_stream_offset(rev_file->p2l_stream);
     }
-  while (offset < next_offset);
+
+  /* We should now be exactly at the next offset, i.e. the numbers in the
+   * stream cannot overlap into the next page description. */
+  if (offset != next_offset)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+             _("P2L page description overlaps with next page description"));
 
   /* if we haven't covered the cluster end yet, we must read the first
    * entry of the next page */
@@ -2707,6 +2733,21 @@ p2l_index_lookup(apr_array_header_t *entries,
                            page_info.next_offset,
                            page_info.page_start,
                            page_info.page_size, iterpool));
+
+      /* The last cache entry must not end beyond the range covered by
+       * this index.  The same applies for any subset of entries. */
+      if (page_entries->nelts)
+        {
+          const svn_fs_fs__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(page_entries, page_entries->nelts - 1,
+                             svn_fs_fs__p2l_entry_t);
+          if (  entry->offset + entry->size
+              > page_info.page_size * page_info.page_count)
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                                     _("Last P2L index entry extends beyond "
+                                       "the last page in revision %ld."),
+                                     revision);
+        }
 
       SVN_ERR(svn_cache__set(ffd->p2l_page_cache, &key, page_entries,
                              iterpool));
