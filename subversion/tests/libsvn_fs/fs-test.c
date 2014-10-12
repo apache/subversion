@@ -5613,7 +5613,7 @@ test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
   const svn_fs_id_t *file_id;
 
   /* This will fail for non-FSFS repositories, ATM. */
-  if (strcmp(opts->fs_type, "fsfs") != 0)
+  if (strcmp(opts->fs_type, "fsx") == 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will test FSFS repositories only");
 
