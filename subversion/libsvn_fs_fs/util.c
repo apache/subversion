@@ -412,7 +412,7 @@ svn_fs_fs__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
+  SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
