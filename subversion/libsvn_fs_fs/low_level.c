@@ -573,7 +573,13 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
 
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
+     rest of the FSFS code doesn't require any particular order here.
+
+     Also, this sorting is only effective in writing all entries with
+     a single call as write_final_changed_path_info() does.  For the
+     list being written incrementally during transaction, we actually
+     *must not* change the order of entries from different calls.
+   */
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically,
                                         scratch_pool);
