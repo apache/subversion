@@ -741,6 +741,9 @@ fold_change(apr_hash_t *changed_paths,
 
         case svn_fs_path_change_modify:
         default:
+          /* If the new change modifies some attribute of the node, set
+             the corresponding flag, whether it already was set or not.
+             Note: We do not reset a flag to FALSE if a change is undone. */
           if (info->text_mod)
             old_change->text_mod = TRUE;
           if (info->prop_mod)
