@@ -180,7 +180,7 @@ extern "C" {
 #define SVN_FS_FS__MIN_PACK_LOCK_FORMAT 7
 
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
-#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
+#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT 7
 
 /* Minimum format number that supports per-instance filesystem IDs. */
 #define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7

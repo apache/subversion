@@ -567,7 +567,7 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
   svn_boolean_t include_mergeinfo_mods =
-      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT;
+      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
