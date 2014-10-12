@@ -5599,6 +5599,85 @@ test_paths_changed(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t head_rev = 0;
+  svn_fs_root_t *root;
+  svn_fs_txn_t *txn;
+  const char *fs_path;
+  apr_hash_t *changes;
+  svn_fs_path_change2_t *change;
+  const svn_fs_id_t *file_id;
+
+  /* This will fail for non-FSFS repositories, ATM. */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  /* Create test repository with greek tree. */
+  fs_path = "test-delete-replace-paths-changed";
+
+  SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
+
+  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(root, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Create that replaces a file with a folder and then deletes that
+   * replacement.  Start with the deletion. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_delete(root, "/iota", pool));
+
+  /* The change list should now report a deleted file. */
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  change = svn_hash_gets(changes, "/iota");
+  file_id = change->node_rev_id;
+  SVN_TEST_ASSERT(   change->node_kind == svn_node_file
+                  || change->node_kind == svn_node_unknown);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_delete);
+
+  /* Add a replacement. */
+  SVN_ERR(svn_fs_make_dir(root, "/iota", pool));
+
+  /* The change list now reports a replacement by a directory. */
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  change = svn_hash_gets(changes, "/iota");
+  SVN_TEST_ASSERT(   change->node_kind == svn_node_dir
+                  || change->node_kind == svn_node_unknown);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_replace);
+  SVN_TEST_ASSERT(svn_fs_compare_ids(change->node_rev_id, file_id) != 0);
+
+  /* Delete the replacement again. */
+  SVN_ERR(svn_fs_delete(root, "/iota", pool));
+
+  /* The change list should now be reported as a deleted file again. */
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  change = svn_hash_gets(changes, "/iota");
+  SVN_TEST_ASSERT(   change->node_kind == svn_node_file
+                  || change->node_kind == svn_node_unknown);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_delete);
+  SVN_TEST_ASSERT(svn_fs_compare_ids(change->node_rev_id, file_id) == 0);
+
+  /* Finally, commit the change. */
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* The committed revision should still report the same change. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, head_rev, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  change = svn_hash_gets(changes, "/iota");
+  SVN_TEST_ASSERT(   change->node_kind == svn_node_file
+                  || change->node_kind == svn_node_unknown);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_delete);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5700,6 +5779,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade while committing"),
     SVN_TEST_OPTS_PASS(test_paths_changed,
                        "test svn_fs_paths_changed"),
+    SVN_TEST_OPTS_PASS(test_delete_replaced_paths_changed,
+                       "test deletion after replace in changed paths list"),
     SVN_TEST_NULL
   };
 
