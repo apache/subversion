@@ -303,7 +303,24 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
             = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
 
           /* check all sub-items for consist entries in the L2P index */
-          if (entry->type != SVN_FS_FS__ITEM_TYPE_UNUSED)
+          if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
+            {
+              /* There is no L2P entry for unused rev file sections.
+               * And its P2L index data is hardly ever used.  But we
+               * should still check whether someone tempered with it. */
+              if (   entry->item.revision != SVN_INVALID_REVNUM
+                  && (   entry->item.revision < start
+                      || entry->item.revision >= start + count))
+                return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
+                                         NULL,
+                                         _("Empty P2L entry for PHYS %s "
+                                           "refers to revision %ld outside "
+                                           "the rev / pack file (%ld-%ld)"),
+                                         apr_off_t_toa(pool, entry->offset),
+                                         entry->item.number,
+                                         start, start + count - 1);
+            }
+          else
             {
               apr_off_t l2p_offset;
               SVN_ERR(svn_fs_fs__item_offset(&l2p_offset, fs, rev_file,
@@ -568,7 +585,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
               if (entry->offset != max_offset)
                 SVN_ERR(read_all_nul(rev_file->file, entry->size, pool));
             }
-          else if (entry->fnv1_checksum)
+          else
             {
               if (entry->size < STREAM_THRESHOLD)
                 SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
