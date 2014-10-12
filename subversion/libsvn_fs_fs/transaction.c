@@ -638,9 +638,12 @@ path_change_dup(const svn_fs_path_change2_t *source,
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change2_t CHANGED_PATHS, collapsing multiple changes into a
-   single summarical (is that real word?) change per path.  */
+   single summarical (is that real word?) change per path.  DELETIONS is
+   also a path->svn_fs_path_change2_t hash and contains all the deletions
+   that got turned into a replacement. */
 static svn_error_t *
 fold_change(apr_hash_t *changed_paths,
+            apr_hash_t *deletions,
             const change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get(changed_paths);
@@ -708,9 +711,16 @@ fold_change(apr_hash_t *changed_paths,
                  altogether.  (The caller will delete any child paths.) */
               apr_hash_set(changed_paths, path->data, path->len, NULL);
             }
+          else if (old_change->change_kind == svn_fs_path_change_replace)
+            {
+              /* A deleting a 'replace' restore the original deletion. */
+              new_change = apr_hash_get(deletions, path->data, path->len);
+              SVN_ERR_ASSERT(new_change);
+              apr_hash_set(changed_paths, path->data, path->len, new_change);
+            }
           else
             {
-              /* A deletion overrules all previous changes. */
+              /* A deletion overrules a previous change (modify). */
               new_change = path_change_dup(info, pool);
               apr_hash_set(changed_paths, path->data, path->len, new_change);
             }
@@ -719,10 +729,13 @@ fold_change(apr_hash_t *changed_paths,
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
           /* An add at this point must be following a previous delete,
-             so treat it just like a replace. */
+             so treat it just like a replace.  Remember the original
+             deletion such that we are able to delete this path again
+             (the replacement may have changed node kind and id). */
           new_change = path_change_dup(info, pool);
           new_change->change_kind = svn_fs_path_change_replace;
 
+          apr_hash_set(deletions, path->data, path->len, old_change);
           apr_hash_set(changed_paths, path->data, path->len, new_change);
           break;
 
@@ -750,18 +763,30 @@ fold_change(apr_hash_t *changed_paths,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with process_changes(). */
+typedef struct process_changes_baton_t
+{
+  /* Folded list of path changes. */
+  apr_hash_t *changed_paths;
+
+  /* Path changes that are deletions and have been turned into
+     replacements.  If those replacements get deleted again, this
+     container contains the record that we have to revert to. */
+  apr_hash_t *deletions;
+} process_changes_baton_t;
+
 /* An implementation of svn_fs_fs__change_receiver_t.
    Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
    data. Do all allocations in POOL. */
 static svn_error_t *
-process_changes(void *baton,
+process_changes(void *baton_p,
                 change_t *change,
                 apr_pool_t *scratch_pool)
 {
-  apr_hash_t *changed_paths = baton;
+  process_changes_baton_t *baton = baton_p;
 
-  SVN_ERR(fold_change(changed_paths, change));
+  SVN_ERR(fold_change(baton->changed_paths, baton->deletions, change));
 
   /* Now, if our change was a deletion or replacement, we have to
      blow away any changes thus far on paths that are (or, were)
@@ -792,14 +817,15 @@ process_changes(void *baton,
          The number of changes to process may be >> 1000.
          Therefore, keep the inner loop as tight as possible.
       */
-      for (hi = apr_hash_first(scratch_pool, changed_paths);
+      for (hi = apr_hash_first(scratch_pool, baton->changed_paths);
            hi;
            hi = apr_hash_next(hi))
         {
           /* KEY is the path. */
           const void *path;
           apr_ssize_t klen;
-          apr_hash_this(hi, &path, &klen, NULL);
+          svn_fs_path_change2_t *old_change;
+          apr_hash_this(hi, &path, &klen, (void**)&old_change);
 
           /* If we come across a child of our path, remove it.
              Call svn_fspath__skip_ancestor only if there is a chance that
@@ -811,7 +837,9 @@ process_changes(void *baton,
 
               child = svn_fspath__skip_ancestor(change->path.data, path);
               if (child && child[0] != '\0')
-                apr_hash_set(changed_paths, path, klen, NULL);
+                {
+                  apr_hash_set(baton->changed_paths, path, klen, NULL);
+                }
             }
         }
     }
@@ -828,6 +856,10 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   apr_file_t *file;
   apr_hash_t *changed_paths = apr_hash_make(pool);
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  process_changes_baton_t baton;
+
+  baton.changed_paths = changed_paths;
+  baton.deletions = apr_hash_make(scratch_pool);
 
   SVN_ERR(svn_io_file_open(&file,
                            path_txn_changes(fs, txn_id, scratch_pool),
@@ -837,7 +869,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   SVN_ERR(svn_fs_fs__read_changes_incrementally(
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
-                                  process_changes, changed_paths,
+                                  process_changes, &baton,
                                   scratch_pool));
   svn_pool_destroy(scratch_pool);
 
