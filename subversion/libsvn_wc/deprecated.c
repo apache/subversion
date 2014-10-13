@@ -686,7 +686,9 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   const char *local_abspath;
   const svn_checksum_t *sha1_checksum = NULL;
 
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   if (md5_checksum != NULL)
