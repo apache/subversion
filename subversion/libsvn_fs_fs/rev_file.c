@@ -50,7 +50,9 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   file->l2p_stream = NULL;
   file->block_size = ffd->block_size;
   file->l2p_offset = -1;
+  file->l2p_checksum = NULL;
   file->p2l_offset = -1;
+  file->p2l_checksum = NULL;
   file->footer_offset = -1;
   file->pool = pool;
 }
@@ -254,8 +256,10 @@ svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file)
       footer->data[footer->len] = '\0';
 
       /* Extract index locations. */
-      SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->p2l_offset,
-                                      footer, file->start_revision));
+      SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->l2p_checksum,
+                                      &file->p2l_offset, &file->p2l_checksum,
+                                      footer, file->start_revision,
+                                      file->pool));
       file->footer_offset = filesize - footer_length - 1;
     }
 

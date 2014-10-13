@@ -392,7 +392,9 @@ def set_changed_path_list(sbox, revision, changes):
     footer_length = ord(contents[length-1]);
     footer = contents[length - footer_length - 1:length-1]
     l2p_offset = long(footer.split(' ')[0])
-    p2l_offset = long(footer.split(' ')[1])
+    l2p_checksum = footer.split(' ')[1]
+    p2l_offset = long(footer.split(' ')[2])
+    p2l_checksum = footer.split(' ')[3]
 
     idx = FSFS_Index(sbox, revision)
     (offset, item_len, item_type) = idx.get_item(1)
@@ -405,7 +407,8 @@ def set_changed_path_list(sbox, revision, changes):
     file_len = body_len + len(changes) + 1
     p2l_offset += file_len - l2p_offset
 
-    header = str(file_len) + ' ' + str(p2l_offset)
+    header = str(file_len) + ' ' + l2p_checksum + ' ' \
+           + str(p2l_offset) + ' ' + p2l_checksum
     header += chr(len(header))
     header = '\n' + indexes + header
 

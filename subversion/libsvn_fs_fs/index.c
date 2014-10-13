@@ -762,10 +762,12 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
 }
 
 svn_error_t *
-svn_fs_fs__l2p_index_append(svn_fs_t *fs,
+svn_fs_fs__l2p_index_append(svn_checksum_t **checksum,
+                            svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
+                            apr_pool_t * result_pool,
                             apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -888,7 +890,11 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
                             page_counts->nelts);
 
   /* open target stream. */
-  stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
+
 
   /* write header info */
   SVN_ERR(svn_stream_puts(stream, L2P_STREAM_PREFIX));
@@ -913,7 +919,7 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
       SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
                            stream, NULL, NULL, local_pool));
 
@@ -1951,10 +1957,12 @@ svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
 }
 
 svn_error_t *
-svn_fs_fs__p2l_index_append(svn_fs_t *fs,
+svn_fs_fs__p2l_index_append(svn_checksum_t **checksum,
+                            svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
+                            apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2083,7 +2091,10 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
   /* Open target stream. */
-  stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
 
   /* write the start revision, file size and page size */
   SVN_ERR(svn_stream_puts(stream, P2L_STREAM_PREFIX));
@@ -2099,7 +2110,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
       SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
                            stream, NULL, NULL, local_pool));
 

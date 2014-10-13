@@ -105,13 +105,18 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  Use SCRATCH_POOL for temporary allocations.
+ * and so forth.  
+ *
+ * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
+ * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_fs__l2p_index_append(svn_fs_t *fs,
+svn_fs_fs__l2p_index_append(svn_checksum_t **checksum,
+                            svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
+                            apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
 /* Open / create a phys-to-log index file with the full file path name
@@ -145,13 +150,17 @@ svn_fs_fs__p2l_proto_index_next_offset(apr_off_t *next_offset,
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * phys-to-log index and append it to INDEX_FILE.  Entries without a valid
  * revision will be assigned to the REVISION given here.
- * Use SCRATCH_POOL for temporary allocations.
+ *
+ * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
+ * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_fs__p2l_index_append(svn_fs_t *fs,
+svn_fs_fs__p2l_index_append(svn_checksum_t **checksum,
+                            svn_fs_t *fs,
                             apr_file_t *index_file,
                             const char *proto_file_name,
                             svn_revnum_t revision,
+                            apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to build a list of entries
