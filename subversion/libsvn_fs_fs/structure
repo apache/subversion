@@ -615,11 +615,14 @@ lines containing "\n<root-offset> <cp-offset>\n", where <root-offset> is
 the offset of the root directory node revision and <cp-offset> is the
 offset of the changed-path data.
 
-In logical addressing mode, the revision footer is pair of offsets,
-separated by a space and the whole is terminated a single byte.  That
-byte contains the length (as plain 8 bit value) of the footer excluding
-the length byte.  The first offset is the start of the log-to-phys index,
-the other is the start offset of the phys-to-log index.
+In logical addressing mode, the revision footer has the form
+
+  <l2p offset> <l2p checksum> <p2l offset> <p2l checksum><terminal byte>
+
+The terminal byte contains the length (as plain 8 bit value) of the footer
+excluding that length byte.  The first offset is the start of the log-to-
+phys index, followed by the digest of the MD5 checksum over its content.
+The other pair gives the same of for the phys-to-log index.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.
