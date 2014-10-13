@@ -2245,16 +2245,26 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       found_corruption = TRUE;
       notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
                                 notify_baton, iterpool);
-      svn_error_clear(err);
 
+      /* If we already reported the error, reset it. */
+      if (notify_func)
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+
+      /* If we abort the verification now, combine yet unreported error
+         info with the generic one we return. */
       if (!keep_going)
         /* ### Jump to "We're done" and so send the final notification,
                for consistency? */
-        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, err,
                                 _("Repository '%s' failed to verify"),
                                 svn_dirent_local_style(svn_repos_path(repos,
                                                                       pool),
                                                         pool));
+
+      svn_error_clear(err);
     }
 
   if (!metadata_only)
