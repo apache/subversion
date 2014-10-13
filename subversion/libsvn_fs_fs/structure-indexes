@@ -151,7 +151,7 @@ page:
 Index on-disk format
 --------------------
 
-  index := header revisions pages offsets
+  index := "L2P-INDEX\n" header revisions pages offsets
 
   header := u(<header>.<first revision>) \
             u(<header>.<page size>) \
@@ -266,7 +266,7 @@ entry:
 Index on-disk format
 --------------------
 
-  index := header pages items
+  index := "P2L-INDEX\n" header pages items
 
   header := u(<header>.<first revision>) \
             u(<header>.<file size>) \
