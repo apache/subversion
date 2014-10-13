@@ -159,6 +159,93 @@ verify_rep_cache(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Verify that the MD5 checksum of the data between offsets START and END
+ * in FILE matches the EXPECTED checksum.  If there is a mismatch use the
+ * indedx NAME in the error message.  Supports cancellation with CANCEL_FUNC
+ * and CANCEL_BATON.  SCRATCH_POOL is for temporary allocations. */
+static svn_error_t *
+verify_index_checksum(apr_file_t *file,
+                      const char *name,
+                      apr_off_t start,
+                      apr_off_t end,
+                      svn_checksum_t *expected,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *scratch_pool)
+{
+  unsigned char buffer[SVN__STREAM_CHUNK_SIZE];
+  apr_off_t size = end - start;
+  svn_checksum_t *actual;
+  svn_checksum_ctx_t *context
+    = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+
+  /* Calculate the index checksum. */
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &start, scratch_pool));
+  while (size > 0)
+    {
+      apr_size_t to_read = size > sizeof(buffer)
+                         ? sizeof(buffer)
+                         : (apr_size_t)size;
+      SVN_ERR(svn_io_file_read_full2(file, buffer, to_read, NULL, NULL,
+                                     scratch_pool));
+      SVN_ERR(svn_checksum_update(context, buffer, to_read));
+      size -= to_read;
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  SVN_ERR(svn_checksum_final(&actual, context, scratch_pool));
+
+  /* Verify that it matches the expected checksum. */
+  if (!svn_checksum_match(expected, actual))
+    {
+      const char *file_name;
+
+      SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
+      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+                                        _("%s checksum mismatch in file %s"),
+                                        name, file_name));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify the MD5 checksums of the index data in the rev / pack file
+ * containing revision START in FS.  If given, invoke CANCEL_FUNC with
+ * CANCEL_BATON at regular intervals.  Use SCRATCH_POOL for temporary
+ * allocations.
+ */
+static svn_error_t *
+verify_index_checksums(svn_fs_t *fs,
+                       svn_revnum_t start,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool)
+{
+  svn_fs_fs__revision_file_t *rev_file;
+
+  /* Open the rev / pack file and read the footer */
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, start,
+                                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
+
+  /* Verify the index contents against the checksum from the footer. */
+  SVN_ERR(verify_index_checksum(rev_file->file, "L2P index",
+                                rev_file->l2p_offset, rev_file->p2l_offset,
+                                rev_file->l2p_checksum,
+                                cancel_func, cancel_baton, scratch_pool));
+  SVN_ERR(verify_index_checksum(rev_file->file, "P2L index",
+                                rev_file->p2l_offset, rev_file->footer_offset,
+                                rev_file->p2l_checksum,
+                                cancel_func, cancel_baton, scratch_pool));
+
+  /* Done. */
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
+
+  return SVN_NO_ERROR;
+}
+
 /* Verify that for all log-to-phys index entries for revisions START to
  * START + COUNT-1 in FS there is a consistent entry in the phys-to-log
  * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
@@ -657,9 +744,14 @@ verify_index_consistency(svn_fs_t *fs,
       if (notify_func && (pack_start % ffd->max_files_per_dir == 0))
         notify_func(pack_start, notify_baton, iterpool);
 
+      /* Check for external corruption to the indexes. */
+      err = verify_index_checksums(fs, pack_start, cancel_func,
+                                   cancel_baton, iterpool);
+ 
       /* two-way index check */
-      err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
-                                     cancel_func, cancel_baton, iterpool);
+      if (!err)
+        err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
+                                       cancel_func, cancel_baton, iterpool);
       if (!err)
         err = compare_p2l_to_l2p_index(fs, pack_start, pack_end - pack_start,
                                        cancel_func, cancel_baton, iterpool);

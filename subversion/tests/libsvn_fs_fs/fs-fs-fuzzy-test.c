@@ -93,7 +93,6 @@ fuzzing_1_byte_1_rev(const char *repo_name,
   for (i = 0; i < filesize; ++i)
     {
       svn_error_t *err = SVN_NO_ERROR;
-      svn_boolean_t is_legal = FALSE;
 
       /* Read byte */
       unsigned char c_old, c_new;
@@ -110,29 +109,6 @@ fuzzing_1_byte_1_rev(const char *repo_name,
       SVN_ERR(svn_io_file_putc((char)c_new, rev_file->file, iterpool));
       SVN_ERR(svn_io_file_flush(rev_file->file, iterpool));
 
-      /* Certain modifications will not be detected because the result is
-         legal and does not change the interpretation of any data. */
-
-      /* L2P index page sizes are just an upper limit to how many entries
-         a page may have our revs are too short to notice shorter page sizes
-         as long as it is a power of two and uses the same number of bytes. */
-      if (   i == rev_file->l2p_offset + 2         /* At the position of the
-                                                      L2P index page length */
-          && c_new && !(c_new & (c_new - 1))       /* Power of 2 */
-          && (c_new ^ c_old) < 0x80)  /* Don't modify the continuation bit. */
-        is_legal = TRUE;
-
-      /* The last P2L entry is a filler and defaults to rev 1 in our case.
-         However, a SVN_INVALID_REVNUM is also considered valid.
-         The following check catches this condition (values are correct as
-         given due to deltified storage of revision numbers). */
-      if (   i == filesize - footer_len - 3        /* At the position of the
-                                                      deltified rev number
-                                                      of last P2L entry */
-          && c_old == 0                            /* Expected content */
-          && (c_new == 1 + 2 * revision))          /* delta REVISION -> -1 */
-        is_legal = TRUE;
-
       /* Make sure we use a different namespace for the caches during
          this iteration. */
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
@@ -144,14 +120,30 @@ fuzzing_1_byte_1_rev(const char *repo_name,
       err = svn_repos_verify_fs3(repos, revision, revision, TRUE, FALSE, FALSE,
                                  NULL, NULL, NULL, NULL, iterpool);
 
-      /* Benign changes may or may not be detected. */
-      if (!is_legal)
+      /* Case-only changes in checksum digests are not an error.
+       * We allow upper case chars to be used in MD5 checksums in all other
+       * places, thus restricting them here would be inconsistent. */
+      if (   i >= filesize - footer_len         /* Within footer */
+          && c_old >= 'a' && c_old <= 'f'       /* 'a' to 'f', only appear
+                                                   in checksum digests */
+          && c_new == c_old - 'a' + 'A')        /* respective upper case */
+        {
+          if (err)
+            {
+              /* Let us know where we were too strict ... */
+              printf("Detected case change in checksum digest at offset 0x%"
+                     APR_UINT64_T_HEX_FMT " (%" APR_OFF_T_FMT ") in r%ld: "
+                     "%c -> %c\n", i, i, revision, c_old, c_new);
+
+              SVN_ERR(err);
+            }
+        }
+      else if (!err)
         {
           /* Let us know where we miss changes ... */
-          if (!err)
-            printf("Undetected mod at offset %"APR_UINT64_T_HEX_FMT
-                  " (%"APR_OFF_T_FMT") in r%ld: 0x%02x -> 0x%02x\n",
-                  i, i, revision, c_old, c_new);
+          printf("Undetected mod at offset 0x%"APR_UINT64_T_HEX_FMT
+                " (%"APR_OFF_T_FMT") in r%ld: 0x%02x -> 0x%02x\n",
+                i, i, revision, c_old, c_new);
 
           SVN_TEST_ASSERT(err);
         }
