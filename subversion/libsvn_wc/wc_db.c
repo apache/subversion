@@ -15525,3 +15525,511 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+/* Item queued with svn_wc__db_commit_queue_add */
+typedef struct commit_queue_item_t
+{
+  const char *local_relpath;
+  svn_boolean_t recurse; /* Use legacy recursion */
+  svn_boolean_t committed; /* Process the node as committed */
+  svn_boolean_t remove_lock; /* Remove existing lock on node */
+  svn_boolean_t remove_changelist; /* Remove changelist on node */
+
+  /* The pristine text checksum. NULL if the old value should be kept
+     and for directories */
+  const svn_checksum_t *new_sha1_checksum;
+
+  apr_hash_t *new_dav_cache; /* New DAV cache for the node */
+} commit_queue_item_t;
+
+/* The queue definition for vn_wc__db_create_commit_queue,
+   svn_wc__db_commit_queue_add and finally svn_wc__db_process_commit_queue */
+struct svn_wc__db_commit_queue_t
+{
+  svn_wc__db_wcroot_t *wcroot; /* Wcroot for ITEMS */
+  apr_array_header_t *items; /* List of commit_queue_item_t* */
+  svn_boolean_t have_recurse; /* Is one or more item[x]->recurse TRUE? */
+};
+
+/* Create a new svn_wc__db_commit_queue_t instance in RESULT_POOL for the
+   working copy specified with WRI_ABSPATH */
+svn_error_t *
+svn_wc__db_create_commit_queue(svn_wc__db_commit_queue_t **queue,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_wc__db_commit_queue_t *q;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, result_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  q = apr_pcalloc(result_pool, sizeof(*q));
+
+  SVN_ERR_ASSERT(wcroot->sdb);
+
+  q->wcroot = wcroot;
+  q->items = apr_array_make(result_pool, 64,
+                            sizeof(commit_queue_item_t*));
+  q->have_recurse = FALSE;
+
+  *queue = q;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_commit_queue_add(svn_wc__db_commit_queue_t *queue,
+                            const char *local_abspath,
+                            svn_boolean_t recurse,
+                            svn_boolean_t is_commited,
+                            svn_boolean_t remove_lock,
+                            svn_boolean_t remove_changelist,
+                            const svn_checksum_t *new_sha1_checksum,
+                            apr_hash_t *new_dav_cache,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  commit_queue_item_t *cqi;
+  const char *local_relpath;
+
+  local_relpath = svn_dirent_skip_ancestor(queue->wcroot->abspath,
+                                           local_abspath);
+
+  if (! local_relpath)
+    return svn_error_createf(
+                SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                _("The path '%s' is not in the working copy '%s'"),
+                svn_dirent_local_style(local_abspath, scratch_pool),
+                svn_dirent_local_style(queue->wcroot->abspath, scratch_pool));
+
+  cqi = apr_pcalloc(result_pool, sizeof(*cqi));
+  cqi->local_relpath = local_relpath;
+  cqi->recurse = recurse;
+  cqi->committed = is_commited;
+  cqi->remove_lock = remove_lock;
+  cqi->remove_changelist = remove_changelist;
+  cqi->new_sha1_checksum = new_sha1_checksum;
+  cqi->new_dav_cache = new_dav_cache;
+
+  queue->have_recurse |= recurse;
+
+  APR_ARRAY_PUSH(queue->items, commit_queue_item_t *) = cqi;
+  return SVN_NO_ERROR;
+}
+
+/*** Finishing updates and commits. ***/
+
+/* Post process an item that is committed in the repository. Collapse layers into
+ * BASE. Queue work items that will finish a commit of the file or directory
+ * LOCAL_ABSPATH in DB:
+ */
+static svn_error_t *
+process_committed_leaf(svn_wc__db_t *db,
+                       svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath,
+                       svn_boolean_t via_recurse,
+                       svn_wc__db_status_t status,
+                       svn_node_kind_t kind,
+                       svn_boolean_t prop_mods,
+                       const svn_checksum_t *old_checksum,
+                       svn_revnum_t new_revnum,
+                       apr_time_t new_changed_date,
+                       const char *new_changed_author,
+                       apr_hash_t *new_dav_cache,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const svn_checksum_t *checksum,
+                       apr_pool_t *scratch_pool)
+{
+  svn_revnum_t new_changed_rev = new_revnum;
+  svn_skel_t *work_item = NULL;
+
+  {
+    const char *lock_relpath;
+    svn_boolean_t locked;
+
+    if (kind == svn_node_dir)
+      lock_relpath = local_relpath;
+    else
+      lock_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
+
+    SVN_ERR(svn_wc__db_wclock_owns_lock_internal(&locked, wcroot,
+                                                 lock_relpath, FALSE,
+                                                 scratch_pool));
+
+    if (!locked)
+      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                             _("No write-lock in '%s'"),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
+  }
+
+  if (status == svn_wc__db_status_deleted)
+    {
+      return svn_error_trace(
+                 db_base_remove(wcroot, local_relpath, db,
+                                FALSE /* keep_as_working */,
+                                FALSE /* queue_deletes */,
+                                TRUE  /* remove_locks */,
+                                (! via_recurse)
+                                    ? new_revnum : SVN_INVALID_REVNUM,
+                                NULL, NULL,
+                                scratch_pool));
+    }
+  else if (status == svn_wc__db_status_not_present)
+    {
+      /* We are committing the leaf of a copy operation.
+         We leave the not-present marker to allow pulling in excluded
+         children of a copy.
+
+         The next update will remove the not-present marker. */
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR_ASSERT(status == svn_wc__db_status_normal
+                 || status == svn_wc__db_status_incomplete
+                 || status == svn_wc__db_status_added);
+
+  if (kind != svn_node_dir)
+    {
+      /* If we sent a delta (meaning: post-copy modification),
+         then this file will appear in the queue and so we should have
+         its checksum already. */
+      if (checksum == NULL)
+        {
+          /* It was copied and not modified. We must have a text
+             base for it. And the node should have a checksum. */
+          SVN_ERR_ASSERT(old_checksum != NULL);
+
+          checksum = old_checksum;
+
+          /* Is the node completely unmodified and are we recursing? */
+          if (via_recurse && !prop_mods)
+            {
+              /* If a copied node itself is not modified, but the op_root of
+                 the copy is committed we have to make sure that changed_rev,
+                 changed_date and changed_author don't change or the working
+                 copy used for committing will show different last modified
+                 information then a clean checkout of exactly the same
+                 revisions. (Issue #3676) */
+
+              SVN_ERR(svn_wc__db_read_info_internal(
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           &new_changed_rev,
+                                           &new_changed_date,
+                                           &new_changed_author, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL,
+                                           wcroot, local_relpath,
+                                           scratch_pool, scratch_pool));
+            }
+        }
+
+      SVN_ERR(svn_wc__wq_build_file_commit(&work_item,
+                                           db, svn_dirent_join(wcroot->abspath,
+                                                               local_relpath,
+                                                               scratch_pool),
+                                           prop_mods,
+                                           scratch_pool, scratch_pool));
+    }
+
+  /* The new text base will be found in the pristine store by its checksum. */
+  SVN_ERR(commit_node(wcroot, local_relpath,
+                      new_revnum, new_changed_rev,
+                      new_changed_date, new_changed_author,
+                      checksum,
+                      NULL /* new_children */,
+                      new_dav_cache,
+                      !remove_changelist,
+                      !remove_lock,
+                      work_item,
+                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/** Internal helper for svn_wc_process_committed_queue2().
+ * Bump a commit item, collapsing local changes with the new repository
+ * information to a new BASE node.
+ *
+ * @a new_date is the (server-side) date of the new revision, or 0.
+ *
+ * @a rev_author is the (server-side) author of the new
+ * revision; it may be @c NULL.
+ *
+ * @a new_dav_cache is a hash of all the new dav properties for LOCAL_RELPATH.
+ *
+ * If @a remove_lock is set, release any user locks on @a
+ * local_abspath; otherwise keep them during processing.
+ *
+ * If @a remove_changelist is set, clear any changeset assignments
+ * from @a local_abspath; otherwise, keep such assignments.
+ *
+ * If @a new_sha1_checksum is non-NULL, use it to identify the node's pristine
+ * text.
+ *
+ * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
+ * recursive commit operation. (Part of the legacy recurse handling)
+ */
+static svn_error_t *
+process_committed_internal(svn_wc__db_t *db,
+                           svn_wc__db_wcroot_t *wcroot,
+                           const char *local_relpath,
+                           svn_boolean_t recurse,
+                           svn_boolean_t top_of_recurse,
+                           svn_revnum_t new_revnum,
+                           apr_time_t new_date,
+                           const char *rev_author,
+                           apr_hash_t *new_dav_cache,
+                           svn_boolean_t remove_lock,
+                           svn_boolean_t remove_changelist,
+                           const svn_checksum_t *new_sha1_checksum,
+                           apr_hash_t *items_by_relpath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_node_kind_t kind;
+  const svn_checksum_t *old_checksum;
+  svn_boolean_t prop_mods;
+
+  SVN_ERR(svn_wc__db_read_info_internal(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, &old_checksum, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, &prop_mods, NULL, NULL, NULL,
+                                        wcroot, local_relpath,
+                                        scratch_pool, scratch_pool));
+
+  /* NOTE: be wary of making crazy semantic changes in this function, since
+     svn_wc_process_committed4() calls this.  */
+
+  SVN_ERR(process_committed_leaf(db, wcroot, local_relpath, !top_of_recurse,
+                                 status, kind, prop_mods, old_checksum,
+                                 new_revnum, new_date, rev_author,
+                                 new_dav_cache,
+                                 remove_lock, remove_changelist,
+                                 new_sha1_checksum,
+                                 scratch_pool));
+
+  /* Only check for recursion on nodes that have children */
+  if (kind != svn_node_dir
+      || status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_server_excluded
+      /* Node deleted -> then no longer a directory */
+      || status == svn_wc__db_status_deleted)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  if (recurse)
+    {
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      /* Read PATH's entries;  this is the absolute path. */
+      SVN_ERR(gather_children(&children, wcroot, local_relpath,
+                              scratch_pool, iterpool));
+
+      /* Recursively loop over all children. */
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
+          const char *this_relpath;
+          const commit_queue_item_t *cqi;
+
+          svn_pool_clear(iterpool);
+
+          this_relpath = svn_dirent_join(local_relpath, name, iterpool);
+
+          new_sha1_checksum = NULL;
+          cqi = svn_hash_gets(items_by_relpath, this_relpath);
+
+          if (cqi != NULL)
+            new_sha1_checksum = cqi->new_sha1_checksum;
+
+          /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
+             ones present in the current call are only applicable to
+             this one committed item. */
+          SVN_ERR(process_committed_internal(
+                    db, wcroot, this_relpath,
+                    TRUE /* recurse */,
+                    FALSE /* top_of_recurse */,
+                    new_revnum, new_date,
+                    rev_author,
+                    NULL /* new_dav_cache */,
+                    FALSE /* remove_lock */,
+                    remove_changelist,
+                    new_sha1_checksum,
+                    items_by_relpath,
+                    iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Return TRUE if any item of QUEUE is a parent of ITEM and will be
+   processed recursively, return FALSE otherwise.
+
+   The algorithmic complexity of this search implementation is O(queue
+   length), but it's quite quick.
+*/
+static svn_boolean_t
+have_recursive_parent(const apr_array_header_t *all_items,
+                      const commit_queue_item_t *item,
+                      apr_pool_t *scratch_pool)
+{
+  const char *local_relpath = item->local_relpath;
+  int i;
+
+  for (i = 0; i < all_items->nelts; i++)
+    {
+      const commit_queue_item_t *qi
+        = APR_ARRAY_IDX(all_items, i, const commit_queue_item_t *);
+
+      if (qi == item)
+        continue;
+
+      if (qi->recurse && svn_relpath_skip_ancestor(qi->local_relpath,
+                                                   local_relpath))
+        {
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
+/* Compare function for svn_sort__array */
+static int
+compare_queue_items(const void *v1,
+                    const void *v2)
+{
+  const commit_queue_item_t *cqi1 
+              = *(const commit_queue_item_t **)v1;
+  const commit_queue_item_t *cqi2
+              = *(const commit_queue_item_t **)v2;
+
+  return svn_path_compare_paths(cqi1->local_relpath, cqi2->local_relpath);
+}
+
+/* Internal, locked version of svn_wc__db_process_commit_queue */
+static svn_error_t *
+db_process_commit_queue(svn_wc__db_t *db,
+                        svn_wc__db_commit_queue_t *queue,
+                        svn_revnum_t new_revnum,
+                        apr_time_t new_date,
+                        const char *new_author,
+                        apr_pool_t *scratch_pool)
+{
+  apr_hash_t *items_by_relpath = NULL;
+  int j;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  svn_sort__array(queue->items, compare_queue_items);
+
+  if (queue->have_recurse)
+    {
+      items_by_relpath = apr_hash_make(scratch_pool);
+
+      for (j = 0; j < queue->items->nelts; j++)
+        {
+          commit_queue_item_t *cqi
+            = APR_ARRAY_IDX(queue->items, j, commit_queue_item_t *);
+
+          svn_hash_sets(items_by_relpath, cqi->local_relpath, cqi);
+        }
+    }
+
+  for (j = 0; j < queue->items->nelts; j++)
+    {
+      commit_queue_item_t *cqi
+        = APR_ARRAY_IDX(queue->items, j, commit_queue_item_t *);
+
+      svn_pool_clear(iterpool);
+
+      /* Skip this item if it is a child of a recursive item, because it has
+         been (or will be) accounted for when that recursive item was (or
+         will be) processed. */
+      if (queue->have_recurse && have_recursive_parent(queue->items, cqi,
+                                                       iterpool))
+        continue;
+
+      if (!cqi->committed)
+        {
+          if (cqi->remove_lock)
+            {
+              svn_skel_t *work_item;
+
+              SVN_ERR(svn_wc__wq_build_sync_file_flags(
+                                                    &work_item,
+                                                    db,
+                                                    svn_dirent_join(
+                                                        queue->wcroot->abspath,
+                                                        cqi->local_relpath,
+                                                        iterpool),
+                                                    iterpool, iterpool));
+
+              lock_remove_txn(queue->wcroot, cqi->local_relpath, work_item,
+                              iterpool);
+            }
+          if (cqi->remove_changelist)
+            SVN_ERR(svn_wc__db_op_set_changelist(db,
+                                                 svn_dirent_join(
+                                                        queue->wcroot->abspath,
+                                                        cqi->local_relpath,
+                                                        iterpool),
+                                                 NULL, NULL,
+                                                 svn_depth_empty,
+                                                 NULL, NULL, /* notify */
+                                                 NULL, NULL, /* cancel */
+                                                 iterpool));
+        }
+      else
+        {
+          SVN_ERR(process_committed_internal(
+                                  db, queue->wcroot, cqi->local_relpath,
+                                  cqi->recurse,
+                                  TRUE /* top_of_recurse */,
+                                  new_revnum, new_date, new_author,
+                                  cqi->new_dav_cache,
+                                  cqi->remove_lock,
+                                  cqi->remove_changelist,
+                                  cqi->new_sha1_checksum,
+                                  items_by_relpath,
+                                  iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_process_commit_queue(svn_wc__db_t *db,
+                                svn_wc__db_commit_queue_t *queue,
+                                svn_revnum_t new_revnum,
+                                apr_time_t new_date,
+                                const char *new_author,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_SQLITE__WITH_LOCK(db_process_commit_queue(db, queue,
+                                                new_revnum, new_date,
+                                                new_author, scratch_pool),
+                        queue->wcroot->sdb);
+
+  return SVN_NO_ERROR;
+}
