@@ -59,6 +59,16 @@ const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
  */
 #define P2L_PROTO_INDEX_ENTRY_SIZE (6 * sizeof(apr_uint64_t))
 
+/* We put this string in front of the L2P index header. */
+#define L2P_STREAM_PREFIX "L2P-INDEX\n"
+
+/* We put this string in front of the P2L index header. */
+#define P2L_STREAM_PREFIX "P2L-INDEX\n"
+
+/* Size of the buffer that will fit the index header prefixes. */
+#define STREAM_PREFIX_LEN MAX(sizeof(L2P_STREAM_PREFIX), \
+                              sizeof(P2L_STREAM_PREFIX))
+
 /* Page tables in the log-to-phys index file exclusively contain entries
  * of this type to describe position and size of a given page.
  */
@@ -331,22 +341,45 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
 
 /* Create and open a packed number stream reading from offsets START to
  * END in FILE and return it in *STREAM.  Access the file in chunks of
- * BLOCK_SIZE bytes.  Allocate *STREAM in RESULT_POOL.
+ * BLOCK_SIZE bytes.  Expect the stream to be prefixed by STREAM_PREFIX.
+ * Allocate *STREAM in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
 packed_stream_open(svn_fs_fs__packed_number_stream_t **stream,
                    apr_file_t *file,
                    apr_off_t start,
                    apr_off_t end,
+                   const char *stream_prefix,
                    apr_size_t block_size,
-                   apr_pool_t *result_pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  svn_fs_fs__packed_number_stream_t *result
-    = apr_palloc(result_pool, sizeof(*result));
+  char buffer[STREAM_PREFIX_LEN + 1] = { 0 };
+  apr_size_t len = strlen(stream_prefix);
+  svn_fs_fs__packed_number_stream_t *result;
+
+  /* If this is violated, we forgot to adjust STREAM_PREFIX_LEN after
+   * changing the index header prefixes. */
+  SVN_ERR_ASSERT(len < sizeof(buffer));
+
+  /* Read the header prefix and compare it with the expected prefix */
+  SVN_ERR(svn_io_file_aligned_seek(file, block_size, NULL, start,
+                                   scratch_pool));
+  SVN_ERR(svn_io_file_read_full2(file, buffer, len, NULL, NULL,
+                                 scratch_pool));
+
+  if (strncmp(buffer, stream_prefix, len))
+    return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                             _("Index stream header prefix mismatch.\n"
+                               "  expected: %s"
+                               "  found: %s"), stream_prefix, buffer);
+
+  /* Construct the actual stream object. */
+  result = apr_palloc(result_pool, sizeof(*result));
 
   result->pool = result_pool;
   result->file = file;
-  result->stream_start = start;
+  result->stream_start = start + len;
   result->stream_end = end;
 
   result->used = 0;
@@ -858,6 +891,7 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
   stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
 
   /* write header info */
+  SVN_ERR(svn_stream_puts(stream, L2P_STREAM_PREFIX));
   SVN_ERR(stream_write_encoded(stream, revision));
   SVN_ERR(stream_write_encoded(stream, ffd->l2p_page_size));
   SVN_ERR(stream_write_encoded(stream, page_counts->nelts));
@@ -905,7 +939,9 @@ auto_open_l2p_index(svn_fs_fs__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->l2p_offset,
                                  rev_file->p2l_offset,
+                                 L2P_STREAM_PREFIX,
                                  (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
                                  rev_file->pool));
     }
 
@@ -2050,6 +2086,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
   stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
 
   /* write the start revision, file size and page size */
+  SVN_ERR(svn_stream_puts(stream, P2L_STREAM_PREFIX));
   SVN_ERR(stream_write_encoded(stream, revision));
   SVN_ERR(stream_write_encoded(stream, file_size));
   SVN_ERR(stream_write_encoded(stream, page_size));
@@ -2089,7 +2126,9 @@ auto_open_p2l_index(svn_fs_fs__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->p2l_offset,
                                  rev_file->footer_offset,
+                                 P2L_STREAM_PREFIX,
                                  (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
                                  rev_file->pool));
     }
 
