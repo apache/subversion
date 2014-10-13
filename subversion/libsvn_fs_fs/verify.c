@@ -435,7 +435,7 @@ expected_checksum(apr_file_t *file,
 
       SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Checksum mismatch item at offset %s of "
+                               _("Checksum mismatch in item at offset %s of "
                                  "length %s bytes in file %s"),
                                apr_off_t_toa(pool, entry->offset),
                                apr_off_t_toa(pool, entry->size), file_name);
