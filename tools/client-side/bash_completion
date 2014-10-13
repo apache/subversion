@@ -1038,7 +1038,8 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create deltify dump freeze help hotcopy info list-dblogs \
+	cmds='crashtest create delrevprop deltify dump freeze help hotcopy \
+	      info list-dblogs \
 	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
@@ -1101,8 +1102,9 @@ _svnadmin ()
 	setlog)
 		cmdOpts="-r --revision --bypass-hooks"
 		;;
-	setrevprop)
-		cmdOpts="-r --revision --use-pre-revprop-change-hook \
+	setrevprop|delrevprop)
+		cmdOpts="-r --revision -t --transaction \
+		         --use-pre-revprop-change-hook \
 		         --use-post-revprop-change-hook"
 		;;
 	verify)
@@ -1134,6 +1136,8 @@ _svnadmin ()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-t)              cmdOpts=${cmdOpts/ --transaction / } ;;
+		--transaction)   cmdOpts=${cmdOpts/ -t / } ;;
 		-F)              cmdOpts=${cmdOpts/ --file / } ;;
 		--file)          cmdOpts=${cmdOpts/ -F / } ;;
 		-M)              cmdOpts=${cmdOpts/ --memory-cache-size / } ;;
