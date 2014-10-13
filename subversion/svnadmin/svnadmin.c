@@ -358,14 +358,16 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     } },
 
   {"delrevprop", subcommand_delrevprop, {0}, N_
-   ("usage: svnadmin delrevprop REPOS_PATH -r REVISION NAME\n\n"
-    "Delete the property NAME on revision REVISION. Use\n"
-    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
-    "the revision property-related hooks (for example, if you want an email\n"
-    "notification sent from your post-revprop-change hook).\n\n"
+   ("usage: 1. svnadmin delrevprop -r REVISION REPOS_PATH NAME\n"
+    "                   2. svnadmin delrevprop -t TXN REPOS_PATH NAME\n\n"
+    "1. Delete the property NAME on revision REVISION.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "irreversibly destroy the previous value of the property.\n"),
-   {'r', svnadmin__use_pre_revprop_change_hook,
+    "irreversibly destroy the previous value of the property.\n\n"
+    "2. Delete the property NAME on transaction TXN.\n"),
+   {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
   {"deltify", subcommand_deltify, {0}, N_
@@ -497,13 +499,15 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', svnadmin__bypass_hooks} },
 
   {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
-    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
-    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
-    "the revision property-related hooks (for example, if you want an email\n"
-    "notification sent from your post-revprop-change hook).\n\n"
+   ("usage: 1. svnadmin setrevprop -r REVISION REPOS_PATH FILE\n"
+    "                   2. svnadmin setrevprop -t TXN REPOS_PATH FILE\n\n"
+    "1. Set the property NAME on revision REVISION to the contents of FILE.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "overwrite the previous value of the property.\n"),
+    "overwrite the previous value of the property.\n\n"
+    "2. Set the property NAME on transaction TXN to the contents of FILE.\n"),
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
@@ -1685,7 +1689,7 @@ subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (opt_state->use_pre_revprop_change_hook
           || opt_state->use_post_revprop_change_hook)
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("calling hooks is incompatible with "
+                                 _("Calling hooks is incompatible with "
                                    "--transaction (-t)"));
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_number)
@@ -2369,7 +2373,21 @@ subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(parse_args(&args, os, 1, 1, pool));
   prop_name = APR_ARRAY_IDX(args, 0, const char *);
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
+  if (opt_state->txn_id)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--revision (-r) and --transaction (-t) "
+                                   "are mutually exclusive"));
+
+      if (opt_state->use_pre_revprop_change_hook
+          || opt_state->use_post_revprop_change_hook)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Calling hooks is incompatible with "
+                                   "--transaction (-t)"));
+    }
+  else if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Missing revision"));
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
