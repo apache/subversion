@@ -455,6 +455,18 @@ encode_int(unsigned char *p, apr_int64_t value)
   return encode_uint(p, (apr_uint64_t)(value < 0 ? -1 - 2*value : 2*value));
 }
 
+/* Append VALUE to STREAM in 7/8b encoding.
+ */
+static svn_error_t *
+stream_write_encoded(svn_stream_t *stream,
+                     apr_uint64_t value)
+{
+  unsigned char encoded[ENCODED_INT_LENGTH];
+ 
+  apr_size_t len = encode_uint(encoded, value);
+  return svn_error_trace(svn_stream_write(stream, (char *)encoded, &len));
+}
+
 /* Map unsigned VALUE back to signed integer.
  */
 static apr_int64_t
@@ -725,10 +737,10 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   apr_uint64_t entry;
   svn_boolean_t eof = FALSE;
-  unsigned char encoded[ENCODED_INT_LENGTH];
 
   int last_page_count = 0;          /* total page count at the start of
                                        the current revision */
@@ -842,47 +854,34 @@ svn_fs_fs__l2p_index_append(svn_fs_t *fs,
                               " exceeds current limit of 2G pages"),
                             page_counts->nelts);
 
+  /* open target stream. */
+  stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
+
   /* write header info */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, ffd->l2p_page_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_counts->nelts),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, ffd->l2p_page_size));
+  SVN_ERR(stream_write_encoded(stream, page_counts->nelts));
+  SVN_ERR(stream_write_encoded(stream, page_sizes->nelts));
 
   /* write the revision table */
   for (i = 0; i < page_counts->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
-    
+
   /* write the page table */
   for (i = 0; i < page_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
       value = APR_ARRAY_IDX(entry_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
   /* append page contents */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(local_pool);
 
@@ -1925,6 +1924,7 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_uint64_t page_size = ffd->p2l_page_size;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   svn_boolean_t eof = FALSE;
   unsigned char encoded[ENCODED_INT_LENGTH];
@@ -2046,34 +2046,25 @@ svn_fs_fs__p2l_index_append(svn_fs_t *fs,
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
+  /* Open target stream. */
+  stream = svn_stream_from_aprfile2(index_file, TRUE, local_pool);
+
   /* write the start revision, file size and page size */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, file_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_size),
-                                 NULL, local_pool));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, file_size));
+  SVN_ERR(stream_write_encoded(stream, page_size));
 
   /* write the page table (actually, the sizes of each page description) */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, table_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(stream_write_encoded(stream, table_sizes->nelts));
   for (i = 0; i < table_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(table_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
   /* append page contents */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
