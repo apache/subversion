@@ -553,6 +553,11 @@ compare_p2l_to_rev(svn_fs_t *fs,
                                           offset, ffd->p2l_page_size,
                                           iterpool, iterpool));
 
+      /* The above might have moved the file pointer.
+       * Ensure we actually start reading at OFFSET.  */
+      SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size,
+                                       NULL, offset, iterpool));
+
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
         {
