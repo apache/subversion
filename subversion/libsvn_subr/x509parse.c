@@ -158,13 +158,13 @@ oids_equal(x509_buf *left, x509_buf *right)
 
 static svn_boolean_t
 starts_with(const x509_buf *buf,
-            const char *starts_with,
+            const char *sw_buf,
             apr_size_t sw_len)
 {
   if (buf->len < sw_len)
     return FALSE;
 
-  return memcmp((const char *)buf->p, starts_with, sw_len) == 0;
+  return memcmp((const char *)buf->p, sw_buf, sw_len) == 0;
 }
 
 /*
