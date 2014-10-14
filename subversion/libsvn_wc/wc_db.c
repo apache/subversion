@@ -4700,25 +4700,23 @@ struct op_copy_baton
   const char *dst_op_root_relpath;
 };
 
-/* Helper for svn_wc__db_op_copy().
- *
- * Implements svn_sqlite__transaction_callback_t. */
+/* Helper for svn_wc__db_op_copy(). */
 static svn_error_t *
-op_copy_txn(void * baton,
-            svn_sqlite__db_t *sdb,
+op_copy_txn(svn_wc__db_wcroot_t *wcroot,
+            struct op_copy_baton *ocb,
             apr_pool_t *scratch_pool)
 {
-  struct op_copy_baton *ocb = baton;
   int move_op_depth;
 
-  if (sdb != ocb->dst_wcroot->sdb)
+  if (wcroot != ocb->dst_wcroot)
     {
        /* Source and destination databases differ; so also start a lock
-          in the destination database, by calling ourself in a lock. */
+          in the destination database, by calling ourself in an extra lock. */
 
-      return svn_error_trace(
-                        svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
-                                              op_copy_txn, ocb, scratch_pool));
+      SVN_WC__DB_WITH_TXN(op_copy_txn(ocb->dst_wcroot, ocb, scratch_pool),
+                          ocb->dst_wcroot);
+
+      return SVN_NO_ERROR;
     }
 
   /* From this point we can assume a lock in the src and dst databases */
@@ -4769,8 +4767,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 
   /* Call with the sdb in src_wcroot. It might call itself again to
      also obtain a lock in dst_wcroot */
-  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
-                                scratch_pool));
+  SVN_WC__DB_WITH_TXN(op_copy_txn(ocb.src_wcroot, &ocb, scratch_pool),
+                      ocb.src_wcroot);
 
   return SVN_NO_ERROR;
 }
@@ -5212,15 +5210,12 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_wc__db_op_copy_shadowed_layer().
- *
- * Implements  svn_sqlite__transaction_callback_t. */
+/* Helper for svn_wc__db_op_copy_shadowed_layer(). */
 static svn_error_t *
-op_copy_shadowed_layer_txn(void *baton,
-                           svn_sqlite__db_t *sdb,
+op_copy_shadowed_layer_txn(svn_wc__db_wcroot_t *wcroot,
+                           struct op_copy_baton *ocb,
                            apr_pool_t *scratch_pool)
 {
-  struct op_copy_baton *ocb = baton;
   const char *src_parent_relpath;
   const char *dst_parent_relpath;
   int src_op_depth;
@@ -5230,15 +5225,16 @@ op_copy_shadowed_layer_txn(void *baton,
   apr_int64_t repos_id = INVALID_REPOS_ID;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
 
-  if (sdb != ocb->dst_wcroot->sdb)
+  if (wcroot != ocb->dst_wcroot)
     {
-       /* Source and destination databases differ; so also start a lock
-          in the destination database, by calling ourself in a lock. */
+      /* Source and destination databases differ; so also start a lock
+         in the destination database, by calling ourself in an extra lock. */
 
-      return svn_error_trace(
-                        svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
-                                              op_copy_shadowed_layer_txn,
-                                              ocb, scratch_pool));
+      SVN_WC__DB_WITH_TXN(op_copy_shadowed_layer_txn(ocb->dst_wcroot, ocb,
+                                                     scratch_pool),
+                          ocb->dst_wcroot);
+
+      return SVN_NO_ERROR;
     }
 
   /* From this point we can assume a lock in the src and dst databases */
@@ -5320,9 +5316,9 @@ svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
 
   /* Call with the sdb in src_wcroot. It might call itself again to
      also obtain a lock in dst_wcroot */
-  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb,
-                                op_copy_shadowed_layer_txn,
-                                &ocb, scratch_pool));
+  SVN_WC__DB_WITH_TXN(op_copy_shadowed_layer_txn(ocb.src_wcroot, &ocb,
+                                                 scratch_pool),
+                      ocb.src_wcroot);
 
   return SVN_NO_ERROR;
 }
@@ -16029,10 +16025,10 @@ svn_wc__db_process_commit_queue(svn_wc__db_t *db,
                                 const char *new_author,
                                 apr_pool_t *scratch_pool)
 {
-  SVN_SQLITE__WITH_LOCK(db_process_commit_queue(db, queue,
-                                                new_revnum, new_date,
-                                                new_author, scratch_pool),
-                        queue->wcroot->sdb);
+  SVN_WC__DB_WITH_TXN(db_process_commit_queue(db, queue,
+                                              new_revnum, new_date,
+                                              new_author, scratch_pool),
+                        queue->wcroot);
 
   return SVN_NO_ERROR;
 }
