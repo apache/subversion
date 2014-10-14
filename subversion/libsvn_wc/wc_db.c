@@ -15668,6 +15668,9 @@ process_committed_leaf(svn_wc__db_t *db,
                              _("No write-lock in '%s'"),
                              path_for_error_message(wcroot, local_relpath,
                                                     scratch_pool));
+
+    SVN_ERR(flush_entries(wcroot, lock_relpath, svn_depth_empty,
+                          scratch_pool));
   }
 
   if (status == svn_wc__db_status_deleted)
