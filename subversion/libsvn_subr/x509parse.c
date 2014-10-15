@@ -126,12 +126,15 @@ asn1_get_int(const unsigned char **p, const unsigned char *end, int *val)
 
   SVN_ERR(asn1_get_tag(p, end, &len, ASN1_INTEGER));
 
+  /* Reject bit patterns that would overflow the output and those that
+     represent negative values. */
   if (len > (int)sizeof(int) || (**p & 0x80) != 0)
     return svn_error_create(SVN_ERR_ASN1_INVALID_LENGTH, NULL, NULL);
 
   *val = 0;
 
   while (len-- > 0) {
+    /* This would be undefined for bit-patterns of negative values. */
     *val = (*val << 8) | **p;
     (*p)++;
   }
