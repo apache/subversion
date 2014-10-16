@@ -779,7 +779,6 @@ svn_wc_process_committed4(const char *path,
   const char *local_abspath;
   const svn_checksum_t *md5_checksum;
   const svn_checksum_t *sha1_checksum = NULL;
-  apr_hash_t *wcprop_changes_hash;
   svn_wc_context_t *wc_ctx;
   svn_wc_committed_queue_t *queue;
 
@@ -806,8 +805,6 @@ svn_wc_process_committed4(const char *path,
       else
         SVN_ERR(err);
     }
-
-  wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
 
   queue = svn_wc_committed_queue_create(pool);
   SVN_ERR(svn_wc_queue_committed3(queue, wc_ctx, local_abspath, recurse,
