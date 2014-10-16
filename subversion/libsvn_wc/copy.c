@@ -304,10 +304,6 @@ copy_versioned_file(svn_wc__db_t *db,
                                scratch_pool);
       notify->kind = svn_node_file;
 
-      /* When we notify that we performed a copy, make sure we already did */
-      if (work_items != NULL)
-        SVN_ERR(svn_wc__wq_run(db, dst_abspath,
-                               cancel_func, cancel_baton, scratch_pool));
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
   return SVN_NO_ERROR;
