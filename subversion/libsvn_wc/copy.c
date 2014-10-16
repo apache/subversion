@@ -145,6 +145,15 @@ copy_to_tmpdir(svn_skel_t **work_item,
           return SVN_NO_ERROR;
         }
     }
+  else if (*kind == svn_node_dir && !file_copy)
+    {
+      /* Just build a new direcory from the workqueue */
+      SVN_ERR(svn_wc__wq_build_dir_install(work_item,
+                                           db, dst_abspath,
+                                           result_pool, scratch_pool));
+
+      return SVN_NO_ERROR;
+    }
 
   /* Set DST_TMP_ABSPATH to a temporary unique path.  If *KIND is file, leave
      a file there and then overwrite it; otherwise leave no node on disk at
@@ -317,6 +326,8 @@ copy_versioned_file(svn_wc__db_t *db,
    data in addition to copying the directory.
 
    WITHIN_ONE_WC is TRUE if the copy/move is within a single working copy (root)
+
+   If DIRENT is not NULL, it contains the on-disk information of SRC_ABSPATH.
  */
 static svn_error_t *
 copy_versioned_dir(svn_wc__db_t *db,
@@ -326,6 +337,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                    const char *tmpdir_abspath,
                    svn_boolean_t metadata_only,
                    svn_boolean_t is_move,
+                   const svn_io_dirent2_t *dirent,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    svn_wc_notify_func2_t notify_func,
@@ -349,7 +361,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                              tmpdir_abspath,
                              FALSE /* file_copy */,
                              FALSE /* unversioned */,
-                             NULL, SVN_INVALID_FILESIZE, 0,
+                             dirent, SVN_INVALID_FILESIZE, 0,
                              cancel_func, cancel_baton,
                              scratch_pool, scratch_pool));
     }
@@ -446,6 +458,10 @@ copy_versioned_dir(svn_wc__db_t *db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
                                        metadata_only, is_move,
+                                       disk_children
+                                              ? svn_hash_gets(disk_children,
+                                                              child_name)
+                                              : NULL,
                                        cancel_func, cancel_baton, NULL, NULL,
                                        iterpool));
           else
@@ -464,7 +480,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                                      child_dst_abspath, dst_op_root_abspath,
                                      is_move, NULL, iterpool));
 
-          /* Don't recurse on children while all we do is creating not-present
+          /* Don't recurse on children when all we do is creating not-present
              children */
         }
       else if (info->status == svn_wc__db_status_incomplete)
@@ -857,6 +873,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
 
       err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
                                tmpdir_abspath, metadata_only, is_move,
+                               NULL /* dirent */,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool);
