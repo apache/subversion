@@ -2860,6 +2860,49 @@ def switch_keywords(sbox):
                                         None, expected_disk, expected_status,
                                         None, None, None, None, None)
 
+@Issue(4524)
+def switch_moves(sbox):
+  "switch moves on wc checkpoint"
+
+  sbox.build()
+
+  sbox.simple_move('A/B', 'B')
+  sbox.simple_rm('A')
+
+  branch_url = sbox.repo_url + '/branch'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.wc_dir, branch_url,
+                                     '-m', '')
+
+  expected_disk = svntest.wc.State('', {
+    'B/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'B/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'iota'      : Item(contents="This is the file 'iota'.\n"),
+  })
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''          : Item(status='  ', wc_rev='2'),
+    'B'         : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
+    'B/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
+    'B/F'       : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E'       : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    'B/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A'         : Item(status='! ', treeconflict='C'),
+    'iota'      : Item(status='  ', wc_rev='2'),
+  })
+
+  # In Subversion 1.8 this scenario causes an Sqlite row not found error.
+  # It would be nice if we could handle the tree conflict more intelligent, as
+  # the working copy matches the incomming change.
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath(''), branch_url,
+                                        None, expected_disk, expected_status,
+                                        None, None, None, None, None)
+
+
 ########################################################################
 # Run the tests
 
@@ -2903,6 +2946,7 @@ test_list = [ None,
               switch_to_spaces,
               switch_across_replacement,
               switch_keywords,
+              switch_moves,
               ]
 
 if __name__ == '__main__':
