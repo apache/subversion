@@ -50,7 +50,14 @@
    TMPDIR_ABSPATH and return the absolute path of the copy in
    *DST_ABSPATH.  Return the node kind of SRC_ABSPATH in *KIND.  If
    SRC_ABSPATH doesn't exist then set *DST_ABSPATH to NULL to indicate
-   that no copy was made. */
+   that no copy was made.
+
+   If DIRENT is not NULL, it contains the on-disk information of SRC_ABSPATH.
+   RECORDED_SIZE (if not SVN_INVALID_FILESIZE) contains the recorded size of
+   SRC_ABSPATH, and RECORDED_TIME the recorded size or 0.
+
+   These values will be used to avoid unneeded work.
+ */
 static svn_error_t *
 copy_to_tmpdir(svn_skel_t **work_item,
                svn_node_kind_t *kind,
@@ -60,6 +67,9 @@ copy_to_tmpdir(svn_skel_t **work_item,
                const char *tmpdir_abspath,
                svn_boolean_t file_copy,
                svn_boolean_t unversioned,
+               const svn_io_dirent2_t *dirent,
+               svn_filesize_t recorded_size,
+               apr_time_t recorded_time,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *result_pool,
@@ -74,8 +84,14 @@ copy_to_tmpdir(svn_skel_t **work_item,
 
   *work_item = NULL;
 
-  SVN_ERR(svn_io_check_special_path(src_abspath, kind, &is_special,
-                                    scratch_pool));
+  if (dirent)
+    {
+      *kind = dirent->kind;
+      is_special = dirent->special;
+    }
+  else
+    SVN_ERR(svn_io_check_special_path(src_abspath, kind, &is_special,
+                                      scratch_pool));
   if (*kind == svn_node_none)
     {
       return SVN_NO_ERROR;
@@ -104,9 +120,21 @@ copy_to_tmpdir(svn_skel_t **work_item,
          the timestamp might match, than to examine the
          destination later as the destination timestamp will
          never match. */
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified,
-                                               db, src_abspath,
-                                               FALSE, scratch_pool));
+
+      if (dirent
+          && dirent->kind == svn_node_file
+          && recorded_size != SVN_INVALID_FILESIZE
+          && recorded_size == dirent->filesize
+          && recorded_time == dirent->mtime)
+        {
+          modified = FALSE; /* Recorded matches on-disk. Easy out */
+        }
+      else
+        {
+          SVN_ERR(svn_wc__internal_file_modified_p(&modified, db, src_abspath,
+                                                   FALSE, scratch_pool));
+        }
+
       if (!modified)
         {
           /* Why create a temp copy if we can just reinstall from pristine? */
@@ -172,7 +200,14 @@ copy_to_tmpdir(svn_skel_t **work_item,
    versioned file itself.
 
    This also works for versioned symlinks that are stored in the db as
-   svn_node_file with svn:special set. */
+   svn_node_file with svn:special set.
+
+   If DIRENT is not NULL, it contains the on-disk information of SRC_ABSPATH.
+   RECORDED_SIZE (if not SVN_INVALID_FILESIZE) contains the recorded size of
+   SRC_ABSPATH, and RECORDED_TIME the recorded size or 0.
+
+   These values will be used to avoid unneeded work.
+*/
 static svn_error_t *
 copy_versioned_file(svn_wc__db_t *db,
                     const char *src_abspath,
@@ -182,6 +217,9 @@ copy_versioned_file(svn_wc__db_t *db,
                     svn_boolean_t metadata_only,
                     svn_boolean_t conflicted,
                     svn_boolean_t is_move,
+                    const svn_io_dirent2_t *dirent,
+                    svn_filesize_t recorded_size,
+                    apr_time_t recorded_time,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     svn_wc_notify_func2_t notify_func,
@@ -248,6 +286,7 @@ copy_versioned_file(svn_wc__db_t *db,
                              dst_abspath, tmpdir_abspath,
                              TRUE /* file_copy */,
                              handle_as_unversioned /* unversioned */,
+                             dirent, recorded_size, recorded_time,
                              cancel_func, cancel_baton,
                              scratch_pool, scratch_pool));
     }
@@ -314,6 +353,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                              tmpdir_abspath,
                              FALSE /* file_copy */,
                              FALSE /* unversioned */,
+                             NULL, SVN_INVALID_FILESIZE, 0,
                              cancel_func, cancel_baton,
                              scratch_pool, scratch_pool));
     }
@@ -395,6 +435,12 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             tmpdir_abspath,
                                             metadata_only, info->conflicted,
                                             is_move,
+                                            disk_children
+                                              ? svn_hash_gets(disk_children,
+                                                              child_name)
+                                              : NULL,
+                                            info->recorded_size,
+                                            info->recorded_time,
                                             cancel_func, cancel_baton,
                                             NULL, NULL,
                                             iterpool));
@@ -489,6 +535,7 @@ copy_versioned_dir(svn_wc__db_t *db,
           SVN_ERR(copy_to_tmpdir(&work_item, NULL, db, unver_src_abspath,
                                  unver_dst_abspath, tmpdir_abspath,
                                  TRUE /* recursive */, TRUE /* unversioned */,
+                                 NULL, SVN_INVALID_FILESIZE, 0,
                                  cancel_func, cancel_baton,
                                  scratch_pool, iterpool));
 
@@ -534,6 +581,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   svn_boolean_t within_one_wc;
   svn_wc__db_status_t src_status;
   svn_error_t *err;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_time;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -551,7 +600,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
     err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL,
                                &src_repos_relpath, &src_repos_root_url,
                                &src_repos_uuid, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &recorded_size, &recorded_time,
                                NULL, &conflicted, NULL, NULL, NULL, NULL,
                                NULL, NULL,
                                db, src_abspath, scratch_pool, scratch_pool);
@@ -775,6 +825,7 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
       err = copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
                                 tmpdir_abspath,
                                 metadata_only, conflicted, is_move,
+                                NULL, recorded_size, recorded_time,
                                 cancel_func, cancel_baton,
                                 notify_func, notify_baton,
                                 scratch_pool);
