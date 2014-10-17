@@ -1168,7 +1168,7 @@ svn__i64toa(char * dest, apr_int64_t number)
     return svn__ui64toa(dest, (apr_uint64_t)number);
 
   *dest = '-';
-  return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
+  return svn__ui64toa(dest + 1, 0 - (apr_uint64_t)number) + 1;
 }
 
 static void
