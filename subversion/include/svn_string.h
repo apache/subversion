@@ -140,6 +140,8 @@ svn_string_create_empty(apr_pool_t *pool);
 /** Create a new string copied from a generic string of bytes, @a bytes, of
  * length @a size bytes.  @a bytes is NOT assumed to be null-terminated, but
  * the new string will be.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a size is zero.
  */
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
@@ -205,6 +207,8 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
 /** Create a new stringbuf copied from the generic string of bytes, @a bytes,
  * of length @a size bytes.  @a bytes is NOT assumed to be null-terminated,
  * but the new stringbuf will be.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a size is zero.
  */
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
@@ -351,6 +355,8 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
  * @note The inserted string may be a sub-range if @a str.
  *
  * @since New in 1.8.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a count is zero.
  */
 void
 svn_stringbuf_insert(svn_stringbuf_t *str,
@@ -382,6 +388,8 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
  * @endcode
  *
  * @since New in 1.8.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a new_count is zero.
  */
 void
 svn_stringbuf_replace(svn_stringbuf_t *str,
