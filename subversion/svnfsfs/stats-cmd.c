@@ -2055,7 +2055,7 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
 {
   query_t *query;
 
-  *stats = create_stats(stats, result_pool);
+  *stats = create_stats(result_pool);
   SVN_ERR(create_query(&query, fs, *stats, scratch_pool, scratch_pool));
   SVN_ERR(read_revisions(query, scratch_pool));
   aggregate_stats(query->revisions, *stats);
