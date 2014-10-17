@@ -386,6 +386,12 @@ typedef struct query_t
 
   /* collected statistics */
   svn_fs_fs__stats_t *stats;
+
+  /* Callback to call after each shard.  May be NULL. */
+  svn_fs_progress_notify_func_t progress_func;
+
+  /* Baton for PROGRESS_FUNC. */
+  void *progress_baton;
 } query_t;
 
 /* Open the file containing revision REV in QUERY and return it in *FILE.
@@ -1308,15 +1314,6 @@ get_change_count(const char *changes,
   return lines / 2;
 }
 
-/* Simple utility to print a REVISION number and make it appear immediately.
- */
-static void
-print_progress(svn_revnum_t revision)
-{
-  printf("%8ld", revision);
-  fflush(stdout);
-}
-
 /* Read the content of the pack file staring at revision BASE physical
  * addressing mode and store it in QUERY.  Use POOL for allocations.
  */
@@ -1378,7 +1375,9 @@ read_phys_pack_file(query_t *query,
     }
 
   /* one more pack file processed */
-  print_progress(base);
+  if (query->progress_func)
+    query->progress_func(base, query->progress_baton, local_pool);
+
   svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
@@ -1432,10 +1431,13 @@ read_phys_revision_file(query_t *query,
                        pool, local_pool));
 
   /* show progress every 1000 revs or so */
-  if (query->shard_size && (revision % query->shard_size == 0))
-    print_progress(revision);
-  if (!query->shard_size && (revision % 1000 == 0))
-    print_progress(revision);
+  if (query->progress_func)
+    {
+      if (query->shard_size && (revision % query->shard_size == 0))
+        query->progress_func(revision, query->progress_baton, local_pool);
+      if (!query->shard_size && (revision % 1000 == 0))
+        query->progress_func(revision, query->progress_baton, local_pool);
+    }
 
   svn_pool_destroy(local_pool);
 
@@ -1575,7 +1577,8 @@ read_log_pack_file(query_t *query,
   SVN_ERR(read_log_rev_or_packfile(query, base, query->shard_size, pool));
 
   /* one more pack file processed */
-  print_progress(base);
+  if (query->progress_func)
+    query->progress_func(base, query->progress_baton, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1591,10 +1594,13 @@ read_log_revision_file(query_t *query,
   SVN_ERR(read_log_rev_or_packfile(query, revision, 1, pool));
 
   /* show progress every 1000 revs or so */
-  if (query->shard_size && (revision % query->shard_size == 0))
-    print_progress(revision);
-  if (!query->shard_size && (revision % 1000 == 0))
-    print_progress(revision);
+  if (query->progress_func)
+    {
+      if (query->shard_size && (revision % query->shard_size == 0))
+        query->progress_func(revision, query->progress_baton, pool);
+      if (!query->shard_size && (revision % 1000 == 0))
+        query->progress_func(revision, query->progress_baton, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2004,12 +2010,16 @@ create_stats(apr_pool_t *result_pool)
 }
 
 /* Create a *QUERY, allocated in RESULT_POOL, reading filesystem FS and
- * collecting results in STATS.  Use SCRATCH_POOL for temporary allocations.
+ * collecting results in STATS.  Store the optional PROCESS_FUNC and
+ * PROGRESS_BATON in *QUERY, too.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 create_query(query_t **query,
              svn_fs_t *fs,
              svn_fs_fs__stats_t *stats,
+             svn_fs_progress_notify_func_t progress_func,
+             void *progress_baton,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
@@ -2031,7 +2041,12 @@ create_query(query_t **query,
                                        sizeof(revision_info_t *));
   (*query)->null_base = apr_pcalloc(result_pool,
                                     sizeof(*(*query)->null_base));
+
+  /* Store other parameters */
+  (*query)->fs = fs;
   (*query)->stats = stats;
+  (*query)->progress_func = progress_func;
+  (*query)->progress_baton = progress_baton;
 
   SVN_ERR(svn_cache__create_membuffer_cache(&(*query)->window_cache,
                                     svn_cache__get_global_membuffer_cache(),
@@ -2045,18 +2060,23 @@ create_query(query_t **query,
 }
 
 /* Scan all contents of the repository FS and return statistics in *STATS,
- * allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
+ * allocated in RESULT_POOL.  Report progress through PROGRESS_FUNC with
+ * PROGRESS_BATON, if PROGRESS_FUNC is not NULL.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
                      svn_fs_t *fs,
+                     svn_fs_progress_notify_func_t progress_func,
+                     void *progress_baton,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   query_t *query;
 
   *stats = create_stats(result_pool);
-  SVN_ERR(create_query(&query, fs, *stats, scratch_pool, scratch_pool));
+  SVN_ERR(create_query(&query, fs, *stats, progress_func, progress_func,
+                       scratch_pool, scratch_pool));
   SVN_ERR(read_revisions(query, scratch_pool));
   aggregate_stats(query->revisions, *stats);
 
@@ -2174,6 +2194,18 @@ print_stats(svn_fs_fs__stats_t *stats,
   print_histograms_by_extension(stats, pool);
 }
 
+/* Our progress function simply prints the REVISION number and makes it
+ * appear immediately.
+ */
+static void
+print_progress(svn_revnum_t revision,
+               void *baton,
+               apr_pool_t *pool)
+{
+  printf("%8ld", revision);
+  fflush(stdout);
+}
+
 /* This implements `svn_opt_subcommand_t'. */
 svn_error_t *
 subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -2184,7 +2216,7 @@ subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   printf("Reading revisions\n");
   SVN_ERR(open_fs(&fs, opt_state->repository_path, pool));
-  SVN_ERR(svn_fs_fs__get_stats(&stats, fs, pool, pool));
+  SVN_ERR(svn_fs_fs__get_stats(&stats, fs, print_progress, NULL, pool, pool));
 
   print_stats(stats, pool);
 
