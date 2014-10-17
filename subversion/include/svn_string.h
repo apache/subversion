@@ -307,6 +307,8 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
 /** Append an array of bytes onto @a targetstr.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
+ *
+ * @since 1.9 @a bytes can be NULL if @a count is zero.
  */
 void
 svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,

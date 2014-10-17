@@ -589,6 +589,10 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   apr_size_t total_len;
   void *start_address;
 
+  if (!count)
+    /* Allow BYTES to be NULL by avoiding passing it to memcpy. */
+    return;
+
   total_len = str->len + count;  /* total size needed */
 
   /* svn_stringbuf_ensure adds 1 for null terminator. */
