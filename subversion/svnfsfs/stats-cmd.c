@@ -153,7 +153,7 @@ typedef struct cache_key_t
 /* Description of one large representation.  It's content will be reused /
  * overwritten when it gets replaced by an even larger representation.
  */
-typedef struct large_change_info_t
+typedef struct svn_fs_fs__large_change_info_t
 {
   /* size of the (deltified) representation */
   apr_size_t size;
@@ -163,13 +163,13 @@ typedef struct large_change_info_t
 
   /* node path. "" for unused instances */
   svn_stringbuf_t *path;
-} large_change_info_t;
+} svn_fs_fs__large_change_info_t;
 
 /* Container for the largest representations found so far.  The capacity
  * is fixed and entries will be inserted by reusing the last one and
  * reshuffling the entry pointers.
  */
-typedef struct largest_changes_t
+typedef struct svn_fs_fs__largest_changes_t
 {
   /* number of entries allocated in CHANGES */
   apr_size_t count;
@@ -178,46 +178,183 @@ typedef struct largest_changes_t
   apr_size_t min_size;
 
   /* changes kept in this struct */
-  large_change_info_t **changes;
-} largest_changes_t;
+  svn_fs_fs__large_change_info_t **changes;
+} svn_fs_fs__largest_changes_t;
 
 /* Information we gather per size bracket.
  */
-typedef struct histogram_line_t
+typedef struct svn_fs_fs__histogram_line_t
 {
   /* number of item that fall into this bracket */
   apr_int64_t count;
 
   /* sum of values in this bracket */
   apr_int64_t sum;
-} histogram_line_t;
+} svn_fs_fs__histogram_line_t;
 
 /* A histogram of 64 bit integer values.
  */
-typedef struct histogram_t
+typedef struct svn_fs_fs__histogram_t
 {
   /* total sum over all brackets */
-  histogram_line_t total;
+  svn_fs_fs__histogram_line_t total;
 
   /* one bracket per binary step.
    * line[i] is the 2^(i-1) <= x < 2^i bracket */
-  histogram_line_t lines[64];
-} histogram_t;
+  svn_fs_fs__histogram_line_t lines[64];
+} svn_fs_fs__histogram_t;
 
 /* Information we collect per file ending.
  */
-typedef struct extension_info_t
+typedef struct svn_fs_fs__extension_info_t
 {
   /* file extension, including leading "."
    * "(none)" in the container for files w/o extension. */
   const char *extension;
 
   /* histogram of representation sizes */
-  histogram_t rep_histogram;
+  svn_fs_fs__histogram_t rep_histogram;
 
   /* histogram of sizes of changed files */
-  histogram_t node_histogram;
-} extension_info_t;
+  svn_fs_fs__histogram_t node_histogram;
+} svn_fs_fs__extension_info_t;
+
+/* Compression statistics we collect over a given set of representations.
+ */
+typedef struct svn_fs_fs__rep_pack_stats_t
+{
+  /* number of representations */
+  apr_int64_t count;
+
+  /* total size after deltification (i.e. on disk size) */
+  apr_int64_t packed_size;
+
+  /* total size after de-deltification (i.e. plain text size) */
+  apr_int64_t expanded_size;
+
+  /* total on-disk header size */
+  apr_int64_t overhead_size;
+} svn_fs_fs__rep_pack_stats_t;
+
+/* Statistics we collect over a given set of representations.
+ * We group them into shared and non-shared ("unique") reps.
+ */
+typedef struct svn_fs_fs__representation_stats_t
+{
+  /* stats over all representations */
+  svn_fs_fs__rep_pack_stats_t total;
+
+  /* stats over those representations with ref_count == 1 */
+  svn_fs_fs__rep_pack_stats_t uniques;
+
+  /* stats over those representations with ref_count > 1 */
+  svn_fs_fs__rep_pack_stats_t shared;
+
+  /* sum of all ref_counts */
+  apr_int64_t references;
+
+  /* sum of ref_count * expanded_size,
+   * i.e. total plaintext content if there was no rep sharing */
+  apr_int64_t expanded_size;
+} svn_fs_fs__representation_stats_t;
+
+/* Basic statistics we collect over a given set of noderevs.
+ */
+typedef struct svn_fs_fs__node_stats_t
+{
+  /* number of noderev structs */
+  apr_int64_t count;
+
+  /* their total size on disk (structs only) */
+  apr_int64_t size;
+} svn_fs_fs__node_stats_t;
+
+/* Comprises all the information needed to create the output of the
+ * 'svnfsfs stats' command.
+ */
+typedef struct svn_fs_fs__stats_t
+{
+  /* sum total of all rev / pack file sizes in bytes */
+  apr_int64_t total_size;
+
+  /* number of revisions in the repository */
+  apr_int64_t revision_count;
+
+  /* total number of changed paths */
+  apr_int64_t change_count;
+
+  /* sum of all changed path list sizes on disk in bytes */
+  apr_int64_t change_len;
+
+  /* stats on all representations */
+  svn_fs_fs__representation_stats_t total_rep_stats;
+
+  /* stats on all file text representations */
+  svn_fs_fs__representation_stats_t file_rep_stats;
+
+  /* stats on all directory text representations */
+  svn_fs_fs__representation_stats_t dir_rep_stats;
+
+  /* stats on all file prop representations */
+  svn_fs_fs__representation_stats_t file_prop_rep_stats;
+
+  /* stats on all directory prop representations */
+  svn_fs_fs__representation_stats_t dir_prop_rep_stats;
+
+  /* size and count summary over all noderevs */
+  svn_fs_fs__node_stats_t total_node_stats;
+
+  /* size and count summary over all file noderevs */
+  svn_fs_fs__node_stats_t file_node_stats;
+
+  /* size and count summary over all directory noderevs */
+  svn_fs_fs__node_stats_t dir_node_stats;
+
+  /* the biggest single contributors to repo size */
+  svn_fs_fs__largest_changes_t *largest_changes;
+
+  /* histogram of representation sizes */
+  svn_fs_fs__histogram_t rep_size_histogram;
+
+  /* histogram of sizes of changed nodes */
+  svn_fs_fs__histogram_t node_size_histogram;
+
+  /* histogram of representation sizes */
+  svn_fs_fs__histogram_t added_rep_size_histogram;
+
+  /* histogram of sizes of changed nodes */
+  svn_fs_fs__histogram_t added_node_size_histogram;
+
+  /* histogram of unused representations */
+  svn_fs_fs__histogram_t unused_rep_histogram;
+
+  /* histogram of sizes of changed files */
+  svn_fs_fs__histogram_t file_histogram;
+
+  /* histogram of sizes of file representations */
+  svn_fs_fs__histogram_t file_rep_histogram;
+
+  /* histogram of sizes of changed file property sets */
+  svn_fs_fs__histogram_t file_prop_histogram;
+
+  /* histogram of sizes of file property representations */
+  svn_fs_fs__histogram_t file_prop_rep_histogram;
+
+  /* histogram of sizes of changed directories (in bytes) */
+  svn_fs_fs__histogram_t dir_histogram;
+
+  /* histogram of sizes of directories representations */
+  svn_fs_fs__histogram_t dir_rep_histogram;
+
+  /* histogram of sizes of changed directories property sets */
+  svn_fs_fs__histogram_t dir_prop_histogram;
+
+  /* histogram of sizes of directories property representations */
+  svn_fs_fs__histogram_t dir_prop_rep_histogram;
+
+  /* extension -> extension_info_t* map */
+  apr_hash_t *by_extension;
+} svn_fs_fs__stats_t;
 
 /* Root data structure containing all information about a given repository.
  */
@@ -245,50 +382,8 @@ typedef struct fs_t
   /* undeltified txdelta window cache */
   svn_cache__t *window_cache;
 
-  /* track the biggest contributors to repo size */
-  largest_changes_t *largest_changes;
-
-  /* history of representation sizes */
-  histogram_t rep_size_histogram;
-
-  /* history of sizes of changed nodes */
-  histogram_t node_size_histogram;
-
-  /* history of representation sizes */
-  histogram_t added_rep_size_histogram;
-
-  /* history of sizes of changed nodes */
-  histogram_t added_node_size_histogram;
-
-  /* history of unused representations */
-  histogram_t unused_rep_histogram;
-
-  /* history of sizes of changed files */
-  histogram_t file_histogram;
-
-  /* history of sizes of file representations */
-  histogram_t file_rep_histogram;
-
-  /* history of sizes of changed file property sets */
-  histogram_t file_prop_histogram;
-
-  /* history of sizes of file property representations */
-  histogram_t file_prop_rep_histogram;
-
-  /* history of sizes of changed directories (in bytes) */
-  histogram_t dir_histogram;
-
-  /* history of sizes of directories representations */
-  histogram_t dir_rep_histogram;
-
-  /* history of sizes of changed directories property sets */
-  histogram_t dir_prop_histogram;
-
-  /* history of sizes of directories property representations */
-  histogram_t dir_prop_rep_histogram;
-
-  /* extension -> extension_info_t* map */
-  apr_hash_t *by_extension;
+  /* collected statistics */
+  svn_fs_fs__stats_t *stats;
 } fs_t;
 
 /* Open the file containing revision REV in FS and return it in *FILE.
@@ -400,34 +495,34 @@ set_cached_window(fs_t *fs,
                                         pool));
 }
 
-/* Initialize the LARGEST_CHANGES member in FS with a capacity of COUNT
+/* Initialize the LARGEST_CHANGES member in STATS with a capacity of COUNT
  * entries.  Use POOL for allocations.
  */
 static void
-initialize_largest_changes(fs_t *fs,
+initialize_largest_changes(svn_fs_fs__stats_t *stats,
                            apr_size_t count,
                            apr_pool_t *pool)
 {
   apr_size_t i;
 
-  fs->largest_changes = apr_pcalloc(pool, sizeof(*fs->largest_changes));
-  fs->largest_changes->count = count;
-  fs->largest_changes->min_size = 1;
-  fs->largest_changes->changes
-    = apr_palloc(pool, count * sizeof(*fs->largest_changes->changes));
+  stats->largest_changes = apr_pcalloc(pool, sizeof(*stats->largest_changes));
+  stats->largest_changes->count = count;
+  stats->largest_changes->min_size = 1;
+  stats->largest_changes->changes
+    = apr_palloc(pool, count * sizeof(*stats->largest_changes->changes));
 
   /* allocate *all* entries before the path stringbufs.  This increases
    * cache locality and enhances performance significantly. */
   for (i = 0; i < count; ++i)
-    fs->largest_changes->changes[i]
-      = apr_palloc(pool, sizeof(**fs->largest_changes->changes));
+    stats->largest_changes->changes[i]
+      = apr_palloc(pool, sizeof(**stats->largest_changes->changes));
 
   /* now initialize them and allocate the stringbufs */
   for (i = 0; i < count; ++i)
     {
-      fs->largest_changes->changes[i]->size = 0;
-      fs->largest_changes->changes[i]->revision = SVN_INVALID_REVNUM;
-      fs->largest_changes->changes[i]->path
+      stats->largest_changes->changes[i]->size = 0;
+      stats->largest_changes->changes[i]->revision = SVN_INVALID_REVNUM;
+      stats->largest_changes->changes[i]->path
         = svn_stringbuf_create_ensure(1024, pool);
     }
 }
@@ -435,7 +530,7 @@ initialize_largest_changes(fs_t *fs,
 /* Add entry for SIZE to HISTOGRAM.
  */
 static void
-add_to_histogram(histogram_t *histogram,
+add_to_histogram(svn_fs_fs__histogram_t *histogram,
                  apr_int64_t size)
 {
   apr_int64_t shift = 0;
@@ -449,12 +544,12 @@ add_to_histogram(histogram_t *histogram,
   histogram->lines[(apr_size_t)shift].sum += size;
 }
 
-/* Update data aggregators in FS with this representation of type KIND, on-
- * disk REP_SIZE and expanded node size EXPANDED_SIZE for PATH in REVSION.
+/* Update data aggregators in STATS with this representation of type KIND,
+ * on-disk REP_SIZE and expanded node size EXPANDED_SIZE for PATH in REVSION.
  * PLAIN_ADDED indicates whether the node has a deltification predecessor.
  */
 static void
-add_change(fs_t *fs,
+add_change(svn_fs_fs__stats_t *stats,
            apr_int64_t rep_size,
            apr_int64_t expanded_size,
            svn_revnum_t revision,
@@ -463,62 +558,63 @@ add_change(fs_t *fs,
            svn_boolean_t plain_added)
 {
   /* identify largest reps */
-  if (rep_size >= fs->largest_changes->min_size)
+  if (rep_size >= stats->largest_changes->min_size)
     {
       apr_size_t i;
-      large_change_info_t *info
-        = fs->largest_changes->changes[fs->largest_changes->count - 1];
+      svn_fs_fs__largest_changes_t *largest_changes = stats->largest_changes;
+      svn_fs_fs__large_change_info_t *info
+        = largest_changes->changes[largest_changes->count - 1];
       info->size = rep_size;
       info->revision = revision;
       svn_stringbuf_set(info->path, path);
 
       /* linear insertion but not too bad since count is low and insertions
        * near the end are more likely than close to front */
-      for (i = fs->largest_changes->count - 1; i > 0; --i)
-        if (fs->largest_changes->changes[i-1]->size >= rep_size)
+      for (i = largest_changes->count - 1; i > 0; --i)
+        if (largest_changes->changes[i-1]->size >= rep_size)
           break;
         else
-          fs->largest_changes->changes[i] = fs->largest_changes->changes[i-1];
+          largest_changes->changes[i] = largest_changes->changes[i-1];
 
-      fs->largest_changes->changes[i] = info;
-      fs->largest_changes->min_size
-        = fs->largest_changes->changes[fs->largest_changes->count-1]->size;
+      largest_changes->changes[i] = info;
+      largest_changes->min_size
+        = largest_changes->changes[largest_changes->count-1]->size;
     }
 
   /* global histograms */
-  add_to_histogram(&fs->rep_size_histogram, rep_size);
-  add_to_histogram(&fs->node_size_histogram, expanded_size);
+  add_to_histogram(&stats->rep_size_histogram, rep_size);
+  add_to_histogram(&stats->node_size_histogram, expanded_size);
 
   if (plain_added)
     {
-      add_to_histogram(&fs->added_rep_size_histogram, rep_size);
-      add_to_histogram(&fs->added_node_size_histogram, expanded_size);
+      add_to_histogram(&stats->added_rep_size_histogram, rep_size);
+      add_to_histogram(&stats->added_node_size_histogram, expanded_size);
     }
 
   /* specific histograms by type */
   switch (kind)
     {
-      case unused_rep:        add_to_histogram(&fs->unused_rep_histogram,
+      case unused_rep:        add_to_histogram(&stats->unused_rep_histogram,
                                                rep_size);
                               break;
-      case dir_property_rep:  add_to_histogram(&fs->dir_prop_rep_histogram,
+      case dir_property_rep:  add_to_histogram(&stats->dir_prop_rep_histogram,
                                                rep_size);
-                              add_to_histogram(&fs->dir_prop_histogram,
+                              add_to_histogram(&stats->dir_prop_histogram,
                                               expanded_size);
                               break;
-      case file_property_rep: add_to_histogram(&fs->file_prop_rep_histogram,
+      case file_property_rep: add_to_histogram(&stats->file_prop_rep_histogram,
                                                rep_size);
-                              add_to_histogram(&fs->file_prop_histogram,
+                              add_to_histogram(&stats->file_prop_histogram,
                                                expanded_size);
                               break;
-      case dir_rep:           add_to_histogram(&fs->dir_rep_histogram,
+      case dir_rep:           add_to_histogram(&stats->dir_rep_histogram,
                                                rep_size);
-                              add_to_histogram(&fs->dir_histogram,
+                              add_to_histogram(&stats->dir_histogram,
                                                expanded_size);
                               break;
-      case file_rep:          add_to_histogram(&fs->file_rep_histogram,
+      case file_rep:          add_to_histogram(&stats->file_rep_histogram,
                                                rep_size);
-                              add_to_histogram(&fs->file_histogram,
+                              add_to_histogram(&stats->file_histogram,
                                                expanded_size);
                               break;
     }
@@ -527,7 +623,7 @@ add_change(fs_t *fs,
   if (kind == file_rep)
     {
       /* determine extension */
-      extension_info_t *info;
+      svn_fs_fs__extension_info_t *info;
       const char * file_name = strrchr(path, '/');
       const char * extension = file_name ? strrchr(file_name, '.') : NULL;
 
@@ -535,14 +631,14 @@ add_change(fs_t *fs,
         extension = "(none)";
 
       /* get / auto-insert entry for this extension */
-      info = apr_hash_get(fs->by_extension, extension, APR_HASH_KEY_STRING);
+      info = apr_hash_get(stats->by_extension, extension, APR_HASH_KEY_STRING);
       if (info == NULL)
         {
-          apr_pool_t *pool = apr_hash_pool_get(fs->by_extension);
+          apr_pool_t *pool = apr_hash_pool_get(stats->by_extension);
           info = apr_pcalloc(pool, sizeof(*info));
           info->extension = apr_pstrdup(pool, extension);
 
-          apr_hash_set(fs->by_extension, info->extension,
+          apr_hash_set(stats->by_extension, info->extension,
                        APR_HASH_KEY_STRING, info);
         }
 
@@ -1171,11 +1267,13 @@ read_noderev(fs_t *fs,
 
   /* record largest changes */
   if (text && text->ref_count == 1)
-    add_change(fs, (apr_int64_t)text->size, (apr_int64_t)text->expanded_size,
-               text->revision, path, text->kind, !has_predecessor);
+    add_change(fs->stats, (apr_int64_t)text->size,
+               (apr_int64_t)text->expanded_size, text->revision, path,
+               text->kind, !has_predecessor);
   if (props && props->ref_count == 1)
-    add_change(fs, (apr_int64_t)props->size, (apr_int64_t)props->expanded_size,
-               props->revision, path, props->kind, !has_predecessor);
+    add_change(fs->stats, (apr_int64_t)props->size,
+               (apr_int64_t)props->expanded_size, props->revision, path,
+               props->kind, !has_predecessor);
 
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
@@ -1532,8 +1630,9 @@ read_revisions(fs_t **fs,
   (*fs)->revisions = apr_array_make(pool, (int) (*fs)->head + 1,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
-  initialize_largest_changes(*fs, 64, pool);
-  (*fs)->by_extension = apr_hash_make(pool);
+  initialize_largest_changes((*fs)->stats, 64, pool);
+  (*fs)->stats = apr_pcalloc(pool, sizeof(*(*fs)->stats));
+  (*fs)->stats->by_extension = apr_hash_make(pool);
 
   SVN_ERR(svn_cache__create_membuffer_cache(&(*fs)->window_cache,
                                             svn_cache__get_global_membuffer_cache(),
@@ -1562,60 +1661,10 @@ read_revisions(fs_t **fs,
   return SVN_NO_ERROR;
 }
 
-/* Compression statistics we collect over a given set of representations.
- */
-typedef struct rep_pack_stats_t
-{
-  /* number of representations */
-  apr_int64_t count;
-
-  /* total size after deltification (i.e. on disk size) */
-  apr_int64_t packed_size;
-
-  /* total size after de-deltification (i.e. plain text size) */
-  apr_int64_t expanded_size;
-
-  /* total on-disk header size */
-  apr_int64_t overhead_size;
-} rep_pack_stats_t;
-
-/* Statistics we collect over a given set of representations.
- * We group them into shared and non-shared ("unique") reps.
- */
-typedef struct representation_stats_t
-{
-  /* stats over all representations */
-  rep_pack_stats_t total;
-
-  /* stats over those representations with ref_count == 1 */
-  rep_pack_stats_t uniques;
-
-  /* stats over those representations with ref_count > 1 */
-  rep_pack_stats_t shared;
-
-  /* sum of all ref_counts */
-  apr_int64_t references;
-
-  /* sum of ref_count * expanded_size,
-   * i.e. total plaintext content if there was no rep sharing */
-  apr_int64_t expanded_size;
-} representation_stats_t;
-
-/* Basic statistics we collect over a given set of noderevs.
- */
-typedef struct node_stats_t
-{
-  /* number of noderev structs */
-  apr_int64_t count;
-
-  /* their total size on disk (structs only) */
-  apr_int64_t size;
-} node_stats_t;
-
 /* Accumulate stats of REP in STATS.
  */
 static void
-add_rep_pack_stats(rep_pack_stats_t *stats,
+add_rep_pack_stats(svn_fs_fs__rep_pack_stats_t *stats,
                    rep_stats_t *rep)
 {
   stats->count++;
@@ -1628,7 +1677,7 @@ add_rep_pack_stats(rep_pack_stats_t *stats,
 /* Accumulate stats of REP in STATS.
  */
 static void
-add_rep_stats(representation_stats_t *stats,
+add_rep_stats(svn_fs_fs__representation_stats_t *stats,
               rep_stats_t *rep)
 {
   add_rep_pack_stats(&stats->total, rep);
@@ -1645,7 +1694,7 @@ add_rep_stats(representation_stats_t *stats,
  * Use POOL for allocations.
  */
 static void
-print_rep_stats(representation_stats_t *stats,
+print_rep_stats(svn_fs_fs__representation_stats_t *stats,
                 apr_pool_t *pool)
 {
   printf(_("%20s bytes in %12s reps\n"
@@ -1667,7 +1716,7 @@ print_rep_stats(representation_stats_t *stats,
 /* Print the (used) contents of CHANGES.  Use POOL for allocations.
  */
 static void
-print_largest_reps(largest_changes_t *changes,
+print_largest_reps(svn_fs_fs__largest_changes_t *changes,
                    apr_pool_t *pool)
 {
   apr_size_t i;
@@ -1682,7 +1731,7 @@ print_largest_reps(largest_changes_t *changes,
  * Use POOL for allocations.
  */
 static void
-print_histogram(histogram_t *histogram,
+print_histogram(svn_fs_fs__histogram_t *histogram,
                 apr_pool_t *pool)
 {
   int first = 0;
@@ -1713,8 +1762,8 @@ static int
 compare_count(const svn_sort__item_t *a,
               const svn_sort__item_t *b)
 {
-  const extension_info_t *lhs = a->value;
-  const extension_info_t *rhs = b->value;
+  const svn_fs_fs__extension_info_t *lhs = a->value;
+  const svn_fs_fs__extension_info_t *rhs = b->value;
   apr_int64_t diff = lhs->node_histogram.total.count
                    - rhs->node_histogram.total.count;
 
@@ -1728,8 +1777,8 @@ static int
 compare_node_size(const svn_sort__item_t *a,
                   const svn_sort__item_t *b)
 {
-  const extension_info_t *lhs = a->value;
-  const extension_info_t *rhs = b->value;
+  const svn_fs_fs__extension_info_t *lhs = a->value;
+  const svn_fs_fs__extension_info_t *rhs = b->value;
   apr_int64_t diff = lhs->node_histogram.total.sum
                    - rhs->node_histogram.total.sum;
 
@@ -1743,8 +1792,8 @@ static int
 compare_rep_size(const svn_sort__item_t *a,
                  const svn_sort__item_t *b)
 {
-  const extension_info_t *lhs = a->value;
-  const extension_info_t *rhs = b->value;
+  const svn_fs_fs__extension_info_t *lhs = a->value;
+  const svn_fs_fs__extension_info_t *rhs = b->value;
   apr_int64_t diff = lhs->rep_histogram.total.sum
                    - rhs->rep_histogram.total.sum;
 
@@ -1752,27 +1801,27 @@ compare_rep_size(const svn_sort__item_t *a,
 }
 
 /* Return an array of extension_info_t* for the (up to) 16 most prominent
- * extensions in FS according to the sort criterion COMPARISON_FUNC.
+ * extensions in STATS according to the sort criterion COMPARISON_FUNC.
  * Allocate results in POOL.
  */
 static apr_array_header_t *
-get_by_extensions(fs_t *fs,
+get_by_extensions(svn_fs_fs__stats_t *stats,
                   int (*comparison_func)(const svn_sort__item_t *,
                                          const svn_sort__item_t *),
                   apr_pool_t *pool)
 {
   /* sort all data by extension */
   apr_array_header_t *sorted
-    = svn_sort__hash(fs->by_extension, comparison_func, pool);
+    = svn_sort__hash(stats->by_extension, comparison_func, pool);
 
   /* select the top (first) 16 entries */
   int count = MIN(sorted->nelts, 16);
   apr_array_header_t *result
-    = apr_array_make(pool, count, sizeof(extension_info_t*));
+    = apr_array_make(pool, count, sizeof(svn_fs_fs__extension_info_t*));
   int i;
 
   for (i = 0; i < count; ++i)
-    APR_ARRAY_PUSH(result, extension_info_t*)
+    APR_ARRAY_PUSH(result, svn_fs_fs__extension_info_t*)
      = APR_ARRAY_IDX(sorted, i, svn_sort__item_t).value;
 
   return result;
@@ -1790,118 +1839,123 @@ merge_by_extension(apr_array_header_t *target,
   count = target->nelts;
   for (i = 0; i < to_add->nelts; ++i)
     {
-      extension_info_t *info = APR_ARRAY_IDX(to_add, i, extension_info_t *);
+      svn_fs_fs__extension_info_t *info
+        = APR_ARRAY_IDX(to_add, i, svn_fs_fs__extension_info_t *);
       for (k = 0; k < count; ++k)
-        if (info == APR_ARRAY_IDX(target, k, extension_info_t *))
+        if (info == APR_ARRAY_IDX(target, k, svn_fs_fs__extension_info_t *))
           break;
 
       if (k == count)
-        APR_ARRAY_PUSH(target, extension_info_t*) = info;
+        APR_ARRAY_PUSH(target, svn_fs_fs__extension_info_t*) = info;
     }
 }
 
-/* Print the (up to) 16 extensions in FS with the most changes.
+/* Print the (up to) 16 extensions in STATS with the most changes.
  * Use POOL for allocations.
  */
 static void
-print_extensions_by_changes(fs_t *fs,
+print_extensions_by_changes(svn_fs_fs__stats_t *stats,
                             apr_pool_t *pool)
 {
-  apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
+  apr_array_header_t *data = get_by_extensions(stats, compare_count, pool);
   apr_int64_t sum = 0;
   int i;
 
   for (i = 0; i < data->nelts; ++i)
     {
-      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      svn_fs_fs__extension_info_t *info
+        = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
       sum += info->node_histogram.total.count;
       printf(_("%11s %20s (%2d%%) representations\n"),
              info->extension,
              svn__i64toa_sep(info->node_histogram.total.count, ',', pool),
              (int)(info->node_histogram.total.count * 100 /
-                   fs->file_histogram.total.count));
+                   stats->file_histogram.total.count));
     }
 
   printf(_("%11s %20s (%2d%%) representations\n"),
          "(others)",
-         svn__i64toa_sep(fs->file_histogram.total.count - sum, ',', pool),
-         (int)((fs->file_histogram.total.count - sum) * 100 /
-               fs->file_histogram.total.count));
+         svn__i64toa_sep(stats->file_histogram.total.count - sum, ',', pool),
+         (int)((stats->file_histogram.total.count - sum) * 100 /
+               stats->file_histogram.total.count));
 }
 
-/* Print the (up to) 16 extensions in FS with the largest total size of
+/* Print the (up to) 16 extensions in STATS with the largest total size of
  * changed file content.  Use POOL for allocations.
  */
 static void
-print_extensions_by_nodes(fs_t *fs,
+print_extensions_by_nodes(svn_fs_fs__stats_t *stats,
                           apr_pool_t *pool)
 {
-  apr_array_header_t *data = get_by_extensions(fs, compare_node_size, pool);
+  apr_array_header_t *data = get_by_extensions(stats, compare_node_size, pool);
   apr_int64_t sum = 0;
   int i;
 
   for (i = 0; i < data->nelts; ++i)
     {
-      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      svn_fs_fs__extension_info_t *info
+        = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
       sum += info->node_histogram.total.sum;
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__i64toa_sep(info->node_histogram.total.sum, ',', pool),
              (int)(info->node_histogram.total.sum * 100 /
-                   fs->file_histogram.total.sum));
+                   stats->file_histogram.total.sum));
     }
 
   printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
-         svn__i64toa_sep(fs->file_histogram.total.sum - sum, ',', pool),
-         (int)((fs->file_histogram.total.sum - sum) * 100 /
-               fs->file_histogram.total.sum));
+         svn__i64toa_sep(stats->file_histogram.total.sum - sum, ',', pool),
+         (int)((stats->file_histogram.total.sum - sum) * 100 /
+               stats->file_histogram.total.sum));
 }
 
-/* Print the (up to) 16 extensions in FS with the largest total size of
+/* Print the (up to) 16 extensions in STATS with the largest total size of
  * changed file content.  Use POOL for allocations.
  */
 static void
-print_extensions_by_reps(fs_t *fs,
+print_extensions_by_reps(svn_fs_fs__stats_t *stats,
                          apr_pool_t *pool)
 {
-  apr_array_header_t *data = get_by_extensions(fs, compare_rep_size, pool);
+  apr_array_header_t *data = get_by_extensions(stats, compare_rep_size, pool);
   apr_int64_t sum = 0;
   int i;
 
   for (i = 0; i < data->nelts; ++i)
     {
-      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      svn_fs_fs__extension_info_t *info
+        = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
       sum += info->rep_histogram.total.sum;
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__i64toa_sep(info->rep_histogram.total.sum, ',', pool),
              (int)(info->rep_histogram.total.sum * 100 /
-                   fs->rep_size_histogram.total.sum));
+                   stats->rep_size_histogram.total.sum));
     }
 
   printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
-         svn__i64toa_sep(fs->rep_size_histogram.total.sum - sum, ',', pool),
-         (int)((fs->rep_size_histogram.total.sum - sum) * 100 /
-               fs->rep_size_histogram.total.sum));
+         svn__i64toa_sep(stats->rep_size_histogram.total.sum - sum, ',', pool),
+         (int)((stats->rep_size_histogram.total.sum - sum) * 100 /
+               stats->rep_size_histogram.total.sum));
 }
 
-/* Print per-extension histograms for the most frequent extensions in FS.
+/* Print per-extension histograms for the most frequent extensions in STATS.
  * Use POOL for allocations. */
 static void
-print_histograms_by_extension(fs_t *fs,
+print_histograms_by_extension(svn_fs_fs__stats_t *stats,
                               apr_pool_t *pool)
 {
-  apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
+  apr_array_header_t *data = get_by_extensions(stats, compare_count, pool);
   int i;
 
-  merge_by_extension(data, get_by_extensions(fs, compare_node_size, pool));
-  merge_by_extension(data, get_by_extensions(fs, compare_rep_size, pool));
+  merge_by_extension(data, get_by_extensions(stats, compare_node_size, pool));
+  merge_by_extension(data, get_by_extensions(stats, compare_rep_size, pool));
 
   for (i = 0; i < data->nelts; ++i)
     {
-      extension_info_t *info = APR_ARRAY_IDX(data, i, extension_info_t *);
+      svn_fs_fs__extension_info_t *info
+        = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
       printf("\nHistogram of '%s' file sizes:\n", info->extension);
       print_histogram(&info->node_histogram, pool);
       printf("\nHistogram of '%s' file representation sizes:\n",
@@ -1910,79 +1964,73 @@ print_histograms_by_extension(fs_t *fs,
     }
 }
 
-/* Post-process stats for FS and print them to the console.
- * Use POOL for allocations.
+/* Aggregate the info the in revision_info_t * array REVISIONS into the
+ * respectve fields of STATS.
  */
 static void
-print_stats(fs_t *fs,
-            apr_pool_t *pool)
+aggregate_stats(const apr_array_header_t *revisions,
+                svn_fs_fs__stats_t *stats)
 {
   int i, k;
 
-  /* initialize stats to collect */
-  representation_stats_t file_rep_stats = { { 0 } };
-  representation_stats_t dir_rep_stats = { { 0 } };
-  representation_stats_t file_prop_rep_stats = { { 0 } };
-  representation_stats_t dir_prop_rep_stats = { { 0 } };
-  representation_stats_t total_rep_stats = { { 0 } };
-
-  node_stats_t dir_node_stats = { 0 };
-  node_stats_t file_node_stats = { 0 };
-  node_stats_t total_node_stats = { 0 };
-
-  apr_int64_t total_size = 0;
-  apr_int64_t change_count = 0;
-  apr_int64_t change_len = 0;
-
   /* aggregate info from all revisions */
-  for (i = 0; i < fs->revisions->nelts; ++i)
+  stats->revision_count = revisions->nelts;
+  for (i = 0; i < revisions->nelts; ++i)
     {
-      revision_info_t *revision = APR_ARRAY_IDX(fs->revisions, i,
+      revision_info_t *revision = APR_ARRAY_IDX(revisions, i,
                                                 revision_info_t *);
 
       /* data gathered on a revision level */
-      change_count += revision->change_count;
-      change_len += revision->changes_len;
-      total_size += revision->end - revision->offset;
+      stats->change_count += revision->change_count;
+      stats->change_len += revision->changes_len;
+      stats->total_size += revision->end - revision->offset;
 
-      dir_node_stats.count += revision->dir_noderev_count;
-      dir_node_stats.size += revision->dir_noderev_size;
-      file_node_stats.count += revision->file_noderev_count;
-      file_node_stats.size += revision->file_noderev_size;
-      total_node_stats.count += revision->dir_noderev_count
-                              + revision->file_noderev_count;
-      total_node_stats.size += revision->dir_noderev_size
-                             + revision->file_noderev_size;
+      stats->dir_node_stats.count += revision->dir_noderev_count;
+      stats->dir_node_stats.size += revision->dir_noderev_size;
+      stats->file_node_stats.count += revision->file_noderev_count;
+      stats->file_node_stats.size += revision->file_noderev_size;
+      stats->total_node_stats.count += revision->dir_noderev_count
+                                    + revision->file_noderev_count;
+      stats->total_node_stats.size += revision->dir_noderev_size
+                                   + revision->file_noderev_size;
 
       /* process representations */
       for (k = 0; k < revision->representations->nelts; ++k)
         {
-          rep_stats_t *rep = APR_ARRAY_IDX(revision->representations,
-                                                k, rep_stats_t *);
+          rep_stats_t *rep = APR_ARRAY_IDX(revision->representations, k,
+                                           rep_stats_t *);
 
           /* accumulate in the right bucket */
           switch(rep->kind)
             {
               case file_rep:
-                add_rep_stats(&file_rep_stats, rep);
+                add_rep_stats(&stats->file_rep_stats, rep);
                 break;
               case dir_rep:
-                add_rep_stats(&dir_rep_stats, rep);
+                add_rep_stats(&stats->dir_rep_stats, rep);
                 break;
               case file_property_rep:
-                add_rep_stats(&file_prop_rep_stats, rep);
+                add_rep_stats(&stats->file_prop_rep_stats, rep);
                 break;
               case dir_property_rep:
-                add_rep_stats(&dir_prop_rep_stats, rep);
+                add_rep_stats(&stats->dir_prop_rep_stats, rep);
                 break;
               default:
                 break;
             }
 
-          add_rep_stats(&total_rep_stats, rep);
+          add_rep_stats(&stats->total_rep_stats, rep);
         }
     }
+}
 
+/* Print the contents of STATS to the console.
+ * Use POOL for allocations.
+ */
+static void
+print_stats(svn_fs_fs__stats_t *stats,
+            apr_pool_t *pool)
+{
   /* print results */
   printf("\nGlobal statistics:\n");
   printf(_("%20s bytes in %12s revisions\n"
@@ -1991,27 +2039,29 @@ print_stats(fs_t *fs,
            "%20s bytes in %12s representations\n"
            "%20s bytes expanded representation size\n"
            "%20s bytes with rep-sharing off\n"),
-         svn__i64toa_sep(total_size, ',', pool),
-         svn__i64toa_sep(fs->revisions->nelts, ',', pool),
-         svn__i64toa_sep(change_len, ',', pool),
-         svn__i64toa_sep(change_count, ',', pool),
-         svn__i64toa_sep(total_node_stats.size, ',', pool),
-         svn__i64toa_sep(total_node_stats.count, ',', pool),
-         svn__i64toa_sep(total_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(total_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(total_rep_stats.total.expanded_size, ',', pool),
-         svn__i64toa_sep(total_rep_stats.expanded_size, ',', pool));
+         svn__i64toa_sep(stats->total_size, ',', pool),
+         svn__i64toa_sep(stats->revision_count, ',', pool),
+         svn__i64toa_sep(stats->change_len, ',', pool),
+         svn__i64toa_sep(stats->change_count, ',', pool),
+         svn__i64toa_sep(stats->total_node_stats.size, ',', pool),
+         svn__i64toa_sep(stats->total_node_stats.count, ',', pool),
+         svn__i64toa_sep(stats->total_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->total_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->total_rep_stats.total.expanded_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->total_rep_stats.expanded_size, ',', pool));
 
   printf("\nNoderev statistics:\n");
   printf(_("%20s bytes in %12s nodes total\n"
            "%20s bytes in %12s directory noderevs\n"
            "%20s bytes in %12s file noderevs\n"),
-         svn__i64toa_sep(total_node_stats.size, ',', pool),
-         svn__i64toa_sep(total_node_stats.count, ',', pool),
-         svn__i64toa_sep(dir_node_stats.size, ',', pool),
-         svn__i64toa_sep(dir_node_stats.count, ',', pool),
-         svn__i64toa_sep(file_node_stats.size, ',', pool),
-         svn__i64toa_sep(file_node_stats.count, ',', pool));
+         svn__i64toa_sep(stats->total_node_stats.size, ',', pool),
+         svn__i64toa_sep(stats->total_node_stats.count, ',', pool),
+         svn__i64toa_sep(stats->dir_node_stats.size, ',', pool),
+         svn__i64toa_sep(stats->dir_node_stats.count, ',', pool),
+         svn__i64toa_sep(stats->file_node_stats.size, ',', pool),
+         svn__i64toa_sep(stats->file_node_stats.count, ',', pool));
 
   printf("\nRepresentation statistics:\n");
   printf(_("%20s bytes in %12s representations total\n"
@@ -2021,60 +2071,68 @@ print_stats(fs_t *fs,
            "%20s bytes in %12s directory property representations\n"
            "%20s bytes in %12s file property representations\n"
            "%20s bytes in header & footer overhead\n"),
-         svn__i64toa_sep(total_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(total_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(dir_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(dir_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(file_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(file_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(fs->added_rep_size_histogram.total.sum, ',', pool),
-         svn__i64toa_sep(fs->added_rep_size_histogram.total.count, ',', pool),
-         svn__i64toa_sep(dir_prop_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(dir_prop_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(file_prop_rep_stats.total.packed_size, ',', pool),
-         svn__i64toa_sep(file_prop_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(total_rep_stats.total.overhead_size, ',', pool));
+         svn__i64toa_sep(stats->total_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->total_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->dir_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->dir_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->file_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->file_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->added_rep_size_histogram.total.sum, ',',
+                         pool),
+         svn__i64toa_sep(stats->added_rep_size_histogram.total.count, ',',
+                         pool),
+         svn__i64toa_sep(stats->dir_prop_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->dir_prop_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->file_prop_rep_stats.total.packed_size, ',',
+                         pool),
+         svn__i64toa_sep(stats->file_prop_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(stats->total_rep_stats.total.overhead_size, ',',
+                        pool));
 
   printf("\nDirectory representation statistics:\n");
-  print_rep_stats(&dir_rep_stats, pool);
+  print_rep_stats(&stats->dir_rep_stats, pool);
   printf("\nFile representation statistics:\n");
-  print_rep_stats(&file_rep_stats, pool);
+  print_rep_stats(&stats->file_rep_stats, pool);
   printf("\nDirectory property representation statistics:\n");
-  print_rep_stats(&dir_prop_rep_stats, pool);
+  print_rep_stats(&stats->dir_prop_rep_stats, pool);
   printf("\nFile property representation statistics:\n");
-  print_rep_stats(&file_prop_rep_stats, pool);
+  print_rep_stats(&stats->file_prop_rep_stats, pool);
 
   printf("\nLargest representations:\n");
-  print_largest_reps(fs->largest_changes, pool);
+  print_largest_reps(stats->largest_changes, pool);
   printf("\nExtensions by number of representations:\n");
-  print_extensions_by_changes(fs, pool);
+  print_extensions_by_changes(stats, pool);
   printf("\nExtensions by size of changed files:\n");
-  print_extensions_by_nodes(fs, pool);
+  print_extensions_by_nodes(stats, pool);
   printf("\nExtensions by size of representations:\n");
-  print_extensions_by_reps(fs, pool);
+  print_extensions_by_reps(stats, pool);
 
   printf("\nHistogram of expanded node sizes:\n");
-  print_histogram(&fs->node_size_histogram, pool);
+  print_histogram(&stats->node_size_histogram, pool);
   printf("\nHistogram of representation sizes:\n");
-  print_histogram(&fs->rep_size_histogram, pool);
+  print_histogram(&stats->rep_size_histogram, pool);
   printf("\nHistogram of file sizes:\n");
-  print_histogram(&fs->file_histogram, pool);
+  print_histogram(&stats->file_histogram, pool);
   printf("\nHistogram of file representation sizes:\n");
-  print_histogram(&fs->file_rep_histogram, pool);
+  print_histogram(&stats->file_rep_histogram, pool);
   printf("\nHistogram of file property sizes:\n");
-  print_histogram(&fs->file_prop_histogram, pool);
+  print_histogram(&stats->file_prop_histogram, pool);
   printf("\nHistogram of file property representation sizes:\n");
-  print_histogram(&fs->file_prop_rep_histogram, pool);
+  print_histogram(&stats->file_prop_rep_histogram, pool);
   printf("\nHistogram of directory sizes:\n");
-  print_histogram(&fs->dir_histogram, pool);
+  print_histogram(&stats->dir_histogram, pool);
   printf("\nHistogram of directory representation sizes:\n");
-  print_histogram(&fs->dir_rep_histogram, pool);
+  print_histogram(&stats->dir_rep_histogram, pool);
   printf("\nHistogram of directory property sizes:\n");
-  print_histogram(&fs->dir_prop_histogram, pool);
+  print_histogram(&stats->dir_prop_histogram, pool);
   printf("\nHistogram of directory property representation sizes:\n");
-  print_histogram(&fs->dir_prop_rep_histogram, pool);
+  print_histogram(&stats->dir_prop_rep_histogram, pool);
 
-  print_histograms_by_extension(fs, pool);
+  print_histograms_by_extension(stats, pool);
 }
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -2087,7 +2145,8 @@ subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   printf("Reading revisions\n");
   SVN_ERR(read_revisions(&fs, opt_state->repository_path, pool));
 
-  print_stats(fs, pool);
+  aggregate_stats(fs->revisions, fs->stats);
+  print_stats(fs->stats, pool);
 
   return SVN_NO_ERROR;
 }
