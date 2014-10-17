@@ -74,6 +74,10 @@ open_fs(svn_fs_t **fs,
         const char *path,
         apr_pool_t *pool);
 
+/* Our cancellation callback. */
+svn_error_t *
+check_cancel(void *baton);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
