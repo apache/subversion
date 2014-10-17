@@ -387,11 +387,17 @@ typedef struct query_t
   /* collected statistics */
   svn_fs_fs__stats_t *stats;
 
-  /* Callback to call after each shard.  May be NULL. */
+  /* Progress notification callback to call after each shard.  May be NULL. */
   svn_fs_progress_notify_func_t progress_func;
 
   /* Baton for PROGRESS_FUNC. */
   void *progress_baton;
+
+  /* Cancellation support callback to call once in a while.  May be NULL. */
+  svn_cancel_func_t cancel_func;
+
+  /* Baton for CANCEL_FUNC. */
+  void *cancel_baton;
 } query_t;
 
 /* Open the file containing revision REV in QUERY and return it in *FILE.
@@ -1336,9 +1342,14 @@ read_phys_pack_file(query_t *query,
     {
       apr_size_t root_node_offset;
       svn_stringbuf_t *rev_content;
+      revision_info_t *info;
+
+      /* cancellation support */
+      if (query->cancel_func)
+        SVN_ERR(query->cancel_func(query->cancel_baton));
 
       /* create the revision info for the current rev */
-      revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
+      info = apr_pcalloc(pool, sizeof(*info));
       info->representations = apr_array_make(iterpool, 4, sizeof(rep_stats_t*));
 
       info->revision = base + i;
@@ -1397,6 +1408,10 @@ read_phys_revision_file(query_t *query,
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
   apr_off_t file_size = 0;
   apr_file_t *file;
+
+  /* cancellation support */
+  if (query->cancel_func)
+    SVN_ERR(query->cancel_func(query->cancel_baton));
 
   /* read the whole pack file into memory */
   SVN_ERR(open_rev_or_pack_file(&file, query, revision, local_pool));
@@ -1512,6 +1527,10 @@ read_log_rev_or_packfile(query_t *query,
       apr_array_header_t *entries;
 
       svn_pool_clear(iterpool);
+
+      /* cancellation support */
+      if (query->cancel_func)
+        SVN_ERR(query->cancel_func(query->cancel_baton));
 
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, query->fs, rev_file, base,
@@ -2011,7 +2030,7 @@ create_stats(apr_pool_t *result_pool)
 
 /* Create a *QUERY, allocated in RESULT_POOL, reading filesystem FS and
  * collecting results in STATS.  Store the optional PROCESS_FUNC and
- * PROGRESS_BATON in *QUERY, too.
+ * PROGRESS_BATON as well as CANCEL_FUNC and CANCEL_BATON in *QUERY, too.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -2020,6 +2039,8 @@ create_query(query_t **query,
              svn_fs_fs__stats_t *stats,
              svn_fs_progress_notify_func_t progress_func,
              void *progress_baton,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
@@ -2047,6 +2068,8 @@ create_query(query_t **query,
   (*query)->stats = stats;
   (*query)->progress_func = progress_func;
   (*query)->progress_baton = progress_baton;
+  (*query)->cancel_func = cancel_func;
+  (*query)->cancel_baton = cancel_baton;
 
   SVN_ERR(svn_cache__create_membuffer_cache(&(*query)->window_cache,
                                     svn_cache__get_global_membuffer_cache(),
@@ -2069,6 +2092,8 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
                      svn_fs_t *fs,
                      svn_fs_progress_notify_func_t progress_func,
                      void *progress_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
@@ -2076,7 +2101,8 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
 
   *stats = create_stats(result_pool);
   SVN_ERR(create_query(&query, fs, *stats, progress_func, progress_func,
-                       scratch_pool, scratch_pool));
+                       cancel_func, cancel_baton, scratch_pool,
+                       scratch_pool));
   SVN_ERR(read_revisions(query, scratch_pool));
   aggregate_stats(query->revisions, *stats);
 
@@ -2216,7 +2242,8 @@ subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   printf("Reading revisions\n");
   SVN_ERR(open_fs(&fs, opt_state->repository_path, pool));
-  SVN_ERR(svn_fs_fs__get_stats(&stats, fs, print_progress, NULL, pool, pool));
+  SVN_ERR(svn_fs_fs__get_stats(&stats, fs, print_progress, NULL,
+                               check_cancel, NULL, pool, pool));
 
   print_stats(stats, pool);
 
