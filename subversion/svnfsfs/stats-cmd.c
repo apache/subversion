@@ -705,26 +705,6 @@ read_revision_header(apr_size_t *changes,
   return SVN_NO_ERROR;
 }
 
-/* Create *QUERY for the repository at PATH and read the format and size
- * info. Use POOL for temporary allocations.
- */
-static svn_error_t *
-fs_open(query_t **query, const char *path, apr_pool_t *pool)
-{
-  *query = apr_pcalloc(pool, sizeof(**query));
-
-  /* Check repository type and open it. */
-  SVN_ERR(open_fs(&(*query)->fs, path, pool));
-
-  /* Read repository dimensions. */
-  (*query)->shard_size = svn_fs_fs__shard_size((*query)->fs);
-  SVN_ERR(svn_fs_fs__youngest_rev(&(*query)->head, (*query)->fs, pool));
-  SVN_ERR(svn_fs_fs__min_unpacked_rev(&(*query)->min_unpacked_rev,
-                                      (*query)->fs, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Utility function that returns true if STRING->DATA matches KEY.
  */
 static svn_boolean_t
@@ -1619,55 +1599,30 @@ read_log_revision_file(query_t *query,
   return SVN_NO_ERROR;
 }
 
-/* Read the repository at PATH and return the result in *QUERY.
+/* Read the repository and collect the stats info in QUERY.
  * Use POOL for allocations.
  */
 static svn_error_t *
-read_revisions(query_t **query,
-               const char *path,
+read_revisions(query_t *query,
                apr_pool_t *pool)
 {
   svn_revnum_t revision;
 
-  /* determine cache sizes */
-  SVN_ERR(fs_open(query, path, pool));
-
-  /* create data containers and caches
-   * Note: this assumes that int is at least 32-bits and that we only support
-   * 32-bit wide revision numbers (actually 31-bits due to the signedness
-   * of both the nelts field of the array and our revision numbers). This
-   * means this code will fail on platforms where int is less than 32-bits
-   * and the repository has more revisions than int can hold. */
-  (*query)->revisions = apr_array_make(pool, (int) (*query)->head + 1,
-                                       sizeof(revision_info_t *));
-  (*query)->null_base = apr_pcalloc(pool, sizeof(*(*query)->null_base));
-  initialize_largest_changes((*query)->stats, 64, pool);
-  (*query)->stats = apr_pcalloc(pool, sizeof(*(*query)->stats));
-  (*query)->stats->by_extension = apr_hash_make(pool);
-
-  SVN_ERR(svn_cache__create_membuffer_cache(&(*query)->window_cache,
-                                    svn_cache__get_global_membuffer_cache(),
-                                    NULL, NULL,
-                                    sizeof(cache_key_t),
-                                    "",
-                                    SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                                    FALSE, pool, pool));
-
   /* read all packed revs */
   for ( revision = 0
-      ; revision < (*query)->min_unpacked_rev
-      ; revision += (*query)->shard_size)
-    if (svn_fs_fs__use_log_addressing((*query)->fs, revision))
-      SVN_ERR(read_log_pack_file(*query, revision, pool));
+      ; revision < query->min_unpacked_rev
+      ; revision += query->shard_size)
+    if (svn_fs_fs__use_log_addressing(query->fs, revision))
+      SVN_ERR(read_log_pack_file(query, revision, pool));
     else
-      SVN_ERR(read_phys_pack_file(*query, revision, pool));
+      SVN_ERR(read_phys_pack_file(query, revision, pool));
 
   /* read non-packed revs */
-  for ( ; revision <= (*query)->head; ++revision)
-    if (svn_fs_fs__use_log_addressing((*query)->fs, revision))
-      SVN_ERR(read_log_revision_file(*query, revision, pool));
+  for ( ; revision <= query->head; ++revision)
+    if (svn_fs_fs__use_log_addressing(query->fs, revision))
+      SVN_ERR(read_log_revision_file(query, revision, pool));
     else
-      SVN_ERR(read_phys_revision_file(*query, revision, pool));
+      SVN_ERR(read_phys_revision_file(query, revision, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2035,6 +1990,79 @@ aggregate_stats(const apr_array_header_t *revisions,
     }
 }
 
+/* Return a new svn_fs_fs__stats_t instance, allocated in RESULT_POOL.
+ */
+static svn_fs_fs__stats_t *
+create_stats(apr_pool_t *result_pool)
+{
+  svn_fs_fs__stats_t *stats = apr_pcalloc(result_pool, sizeof(*stats));
+
+  initialize_largest_changes(stats, 64, result_pool);
+  stats->by_extension = apr_hash_make(result_pool);
+
+  return stats;
+}
+
+/* Create a *QUERY, allocated in RESULT_POOL, reading filesystem FS and
+ * collecting results in STATS.  Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+create_query(query_t **query,
+             svn_fs_t *fs,
+             svn_fs_fs__stats_t *stats,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  *query = apr_pcalloc(result_pool, sizeof(**query));
+
+  /* Read repository dimensions. */
+  (*query)->shard_size = svn_fs_fs__shard_size(fs);
+  SVN_ERR(svn_fs_fs__youngest_rev(&(*query)->head, fs, scratch_pool));
+  SVN_ERR(svn_fs_fs__min_unpacked_rev(&(*query)->min_unpacked_rev, fs,
+                                      scratch_pool));
+
+  /* create data containers and caches
+   * Note: this assumes that int is at least 32-bits and that we only support
+   * 32-bit wide revision numbers (actually 31-bits due to the signedness
+   * of both the nelts field of the array and our revision numbers). This
+   * means this code will fail on platforms where int is less than 32-bits
+   * and the repository has more revisions than int can hold. */
+  (*query)->revisions = apr_array_make(result_pool, (int) (*query)->head + 1,
+                                       sizeof(revision_info_t *));
+  (*query)->null_base = apr_pcalloc(result_pool,
+                                    sizeof(*(*query)->null_base));
+  (*query)->stats = stats;
+
+  SVN_ERR(svn_cache__create_membuffer_cache(&(*query)->window_cache,
+                                    svn_cache__get_global_membuffer_cache(),
+                                    NULL, NULL,
+                                    sizeof(cache_key_t),
+                                    "",
+                                    SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                    FALSE, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Scan all contents of the repository FS and return statistics in *STATS,
+ * allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
+                     svn_fs_t *fs,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  query_t *query;
+
+  *stats = create_stats(stats, result_pool);
+  SVN_ERR(create_query(&query, fs, *stats, scratch_pool, scratch_pool));
+  SVN_ERR(read_revisions(query, scratch_pool));
+  aggregate_stats(query->revisions, *stats);
+
+  return SVN_NO_ERROR;
+}
+
 /* Print the contents of STATS to the console.
  * Use POOL for allocations.
  */
@@ -2151,13 +2179,14 @@ svn_error_t *
 subcommand__stats(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svnfsfs__opt_state *opt_state = baton;
-  query_t *query;
+  svn_fs_fs__stats_t *stats;
+  svn_fs_t *fs;
 
   printf("Reading revisions\n");
-  SVN_ERR(read_revisions(&query, opt_state->repository_path, pool));
+  SVN_ERR(open_fs(&fs, opt_state->repository_path, pool));
+  SVN_ERR(svn_fs_fs__get_stats(&stats, fs, pool, pool));
 
-  aggregate_stats(query->revisions, query->stats);
-  print_stats(query->stats, pool);
+  print_stats(stats, pool);
 
   return SVN_NO_ERROR;
 }
