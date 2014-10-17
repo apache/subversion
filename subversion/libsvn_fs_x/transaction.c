@@ -971,8 +971,14 @@ fold_change(apr_hash_t *changed_paths,
           new_change = path_change_dup(info, pool);
           new_change->change_kind = svn_fs_path_change_replace;
 
-          apr_hash_set(deletions, path->data, path->len, old_change);
           apr_hash_set(changed_paths, path->data, path->len, new_change);
+
+          /* Remember the original change.
+           * Make sure to allocate the hash key in a durable pool. */
+          apr_hash_set(deletions,
+                       apr_pstrmemdup(apr_hash_pool_get(deletions),
+                                      path->data, path->len),
+                       path->len, old_change);
           break;
 
         case svn_fs_path_change_modify:

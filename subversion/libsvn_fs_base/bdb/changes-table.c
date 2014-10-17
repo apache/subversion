@@ -240,8 +240,11 @@ fold_change(apr_hash_t *changes,
           new_change = change_to_fs_change(change, pool);
           new_change->change_kind = svn_fs_path_change_replace;
 
-          /* Remember the original deletion. */
-          svn_hash_sets(deletions, path, old_change);
+          /* Remember the original deletion.
+           * Make sure to allocate the hash key in a durable pool. */
+          svn_hash_sets(deletions,
+                        apr_pstrdup(apr_hash_pool_get(deletions), path),
+                        old_change);
           break;
 
         case svn_fs_path_change_modify:
