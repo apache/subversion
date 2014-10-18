@@ -42,18 +42,6 @@
 
 #include "svn_private_config.h"
 
-/* We read rev / pack files in blocks of this size.
- * Within reason, any positive value is possible with smaller values
- * increasing the OS chatter and larger values needlessly reading
- * file contents we won't need. */
-#define REV_FILE_BLOCK_SIZE 0x10000
-
-/* We request P2L index information (i.e. contents descriptions) for
- * rev / pack files blocks of this size.  Within reason, any positive
- * value is possible with smaller values increasing the cache lookup
- * overhead.  A good default is the fsfs.conf default of 1MB. */
-#define INDEX_BLOCK_SIZE 0x100000
-
 /* We group representations into 2x2 different kinds plus one default:
  * [dir / file] x [text / prop]. The assignment is done by the first node
  * that references the respective representation.
@@ -899,8 +887,8 @@ read_item(svn_stringbuf_t **contents,
   item->len = entry->size;
   item->data[item->len] = 0;
 
-  SVN_ERR(svn_io_file_aligned_seek(rev_file->file, REV_FILE_BLOCK_SIZE, NULL,
-                                   entry->offset, pool));
+  SVN_ERR(svn_io_file_aligned_seek(rev_file->file, rev_file->block_size,
+                                   NULL, entry->offset, pool));
   SVN_ERR(svn_io_file_read_full2(rev_file->file, item->data, item->len,
                                  NULL, NULL, pool));
 
@@ -918,6 +906,7 @@ read_log_rev_or_packfile(query_t *query,
                          int count,
                          apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = query->fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_pool_t *localpool = svn_pool_create(pool);
   apr_off_t max_offset;
@@ -960,7 +949,7 @@ read_log_rev_or_packfile(query_t *query,
 
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, query->fs, rev_file, base,
-                                          offset, INDEX_BLOCK_SIZE,
+                                          offset, ffd->p2l_page_size,
                                           iterpool, iterpool));
 
       /* process all entries (and later continue with the next block) */
