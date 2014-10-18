@@ -153,18 +153,6 @@ typedef struct revision_info_t
   apr_array_header_t *representations;
 } revision_info_t;
 
-/* Data type to identify a representation. It will be used to address
- * cached combined (un-deltified) windows.
- */
-typedef struct cache_key_t
-{
-  /* revision of the representation */
-  svn_revnum_t revision;
-
-  /* its offset */
-  apr_size_t offset;
-} cache_key_t;
-
 /* Root data structure containing all information about a given repository.
  * We use it as a wrapper around svn_fs_t and pass it around where we would
  * otherwise just use a svn_fs_t.
@@ -189,9 +177,6 @@ typedef struct query_t
   /* empty representation.
    * Used as a dummy base for DELTA reps without base. */
   rep_stats_t *null_base;
-
-  /* undeltified txdelta window cache */
-  svn_cache__t *window_cache;
 
   /* collected statistics */
   svn_fs_fs__stats_t *stats;
@@ -277,45 +262,6 @@ get_content(svn_stringbuf_t **content,
   svn_pool_destroy(file_pool);
 
   return SVN_NO_ERROR;
-}
-
-/* In *RESULT, return the cached txdelta window stored in REPRESENTATION
- * within QUERY.  If that has not been found in cache, return NULL.
- * Allocate the result in POOL.
- */
-static svn_error_t *
-get_cached_window(svn_stringbuf_t **result,
-                  query_t *query,
-                  rep_stats_t *representation,
-                  apr_pool_t *pool)
-{
-  svn_boolean_t found = FALSE;
-  cache_key_t key;
-  key.revision = representation->revision;
-  key.offset = representation->offset;
-
-  *result = NULL;
-  return svn_error_trace(svn_cache__get((void**)result, &found,
-                                        query->window_cache,
-                                        &key, pool));
-}
-
-/* Cache the undeltified txdelta WINDOW for REPRESENTATION within QUERY.
- * Use POOL for temporaries.
- */
-static svn_error_t *
-set_cached_window(query_t *query,
-                  rep_stats_t *representation,
-                  svn_stringbuf_t *window,
-                  apr_pool_t *pool)
-{
-  /* select entry */
-  cache_key_t key;
-  key.revision = representation->revision;
-  key.offset = representation->offset;
-
-  return svn_error_trace(svn_cache__set(query->window_cache, &key, window,
-                                        pool));
 }
 
 /* Initialize the LARGEST_CHANGES member in STATS with a capacity of COUNT
@@ -658,178 +604,6 @@ parse_representation(rep_stats_t **representation,
   return SVN_NO_ERROR;
 }
 
-/* Get the unprocessed (i.e. still deltified) content of REPRESENTATION in
- * QUERY and return it in *CONTENT.  If no NULL, FILE_CONTENT must contain
- * the contents of the revision that also contains the representation.
- * Use POOL for allocations.
- */
-static svn_error_t *
-get_rep_content(svn_stringbuf_t **content,
-                query_t *query,
-                rep_stats_t *representation,
-                svn_stringbuf_t *file_content,
-                apr_pool_t *pool)
-{
-  apr_off_t offset;
-  svn_revnum_t revision = representation->revision;
-  revision_info_t *revision_info = APR_ARRAY_IDX(query->revisions,
-                                                 revision,
-                                                 revision_info_t*);
-
-  /* not in cache. Is the revision valid at all? */
-  if (revision > query->revisions->nelts)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Unknown revision %ld"), revision);
-
-  if (file_content)
-    {
-      offset = representation->offset
-            +  representation->header_size;
-      *content = svn_stringbuf_ncreate(file_content->data + offset,
-                                       representation->size, pool);
-    }
-  else
-    {
-      offset = revision_info->offset
-             + representation->offset
-             + representation->header_size;
-      SVN_ERR(get_content(content, NULL, query, revision, offset,
-                          representation->size, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Read the delta window contents of all windows in REPRESENTATION in QUERY.
- * If no NULL, FILE_CONTENT must contain the contents of the revision that
- * also contains the representation.
- * Return the data as svn_txdelta_window_t* instances in *WINDOWS.
- * Use POOL for allocations.
- */
-static svn_error_t *
-read_windows(apr_array_header_t **windows,
-             query_t *query,
-             rep_stats_t *representation,
-             svn_stringbuf_t *file_content,
-             apr_pool_t *pool)
-{
-  svn_stringbuf_t *content;
-  svn_stream_t *stream;
-  char version;
-  apr_size_t len = sizeof(version);
-
-  *windows = apr_array_make(pool, 0, sizeof(svn_txdelta_window_t *));
-
-  /* get the whole revision content */
-  SVN_ERR(get_rep_content(&content, query, representation, file_content,
-                          pool));
-
-  /* create a read stream and position it directly after the rep header */
-  content->data += 3;
-  content->len -= 3;
-  stream = svn_stream_from_stringbuf(content, pool);
-  SVN_ERR(svn_stream_read_full(stream, &version, &len));
-
-  /* read the windows from that stream */
-  while (TRUE)
-    {
-      svn_txdelta_window_t *window;
-      svn_stream_mark_t *mark;
-      char dummy;
-
-      len = sizeof(dummy);
-      SVN_ERR(svn_stream_mark(stream, &mark, pool));
-      SVN_ERR(svn_stream_read_full(stream, &dummy, &len));
-      if (len == 0)
-        break;
-
-      SVN_ERR(svn_stream_seek(stream, mark));
-      SVN_ERR(svn_txdelta_read_svndiff_window(&window, stream, version,
-                                              pool));
-      APR_ARRAY_PUSH(*windows, svn_txdelta_window_t *) = window;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Get the undeltified representation that is a result of combining all
- * deltas from the current desired REPRESENTATION in QUERY with its base
- * representation.  If no NULL, FILE_CONTENT must contain the contents of
- * the revision that also contains the representation.  Store the result
- * in *CONTENT.  Use POOL for allocations.
- */
-static svn_error_t *
-get_combined_window(svn_stringbuf_t **content,
-                    query_t *query,
-                    rep_stats_t *representation,
-                    svn_stringbuf_t *file_content,
-                    apr_pool_t *pool)
-{
-  int i;
-  apr_array_header_t *windows;
-  svn_stringbuf_t *base_content, *result;
-  const char *source;
-  apr_pool_t *subpool;
-  apr_pool_t *iterpool;
-
-  /* special case: no un-deltification necessary */
-  if (representation->is_plain)
-    {
-      SVN_ERR(get_rep_content(content, query, representation, file_content,
-                              pool));
-      SVN_ERR(set_cached_window(query, representation, *content, pool));
-      return SVN_NO_ERROR;
-    }
-
-  /* special case: data already in cache */
-  SVN_ERR(get_cached_window(content, query, representation, pool));
-  if (*content)
-    return SVN_NO_ERROR;
-
-  /* read the delta windows for this representation */
-  subpool = svn_pool_create(pool);
-  iterpool = svn_pool_create(pool);
-  SVN_ERR(read_windows(&windows, query, representation, file_content,
-                       subpool));
-
-  /* fetch the / create a base content */
-  if (representation->delta_base && representation->delta_base->revision)
-    SVN_ERR(get_combined_window(&base_content, query,
-                                representation->delta_base, NULL, subpool));
-  else
-    base_content = svn_stringbuf_create_empty(subpool);
-
-  /* apply deltas */
-  result = svn_stringbuf_create_empty(pool);
-  source = base_content->data;
-
-  for (i = 0; i < windows->nelts; ++i)
-    {
-      svn_txdelta_window_t *window
-        = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
-      svn_stringbuf_t *buf
-        = svn_stringbuf_create_ensure(window->tview_len, iterpool);
-
-      buf->len = window->tview_len;
-      svn_txdelta_apply_instructions(window, window->src_ops ? source : NULL,
-                                     buf->data, &buf->len);
-
-      svn_stringbuf_appendbytes(result, buf->data, buf->len);
-      source += window->sview_len;
-
-      svn_pool_clear(iterpool);
-    }
-
-  /* cache result and return it */
-  SVN_ERR(set_cached_window(query, representation, result, subpool));
-  *content = result;
-
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
 
 /* forward declaration */
 static svn_error_t *
@@ -840,7 +614,7 @@ read_noderev(query_t *query,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool);
 
-/* Starting at the directory in REPRESENTATION in FILE_CONTENT, read all
+/* Starting at the directory in NODEREV's text in FILE_CONTENT, read all
  * DAG nodes, directories and representations linked in that tree structure.
  * Store them in QUERY and REVISION_INFO.  Also, read them only once.
  *
@@ -849,73 +623,35 @@ read_noderev(query_t *query,
 static svn_error_t *
 parse_dir(query_t *query,
           svn_stringbuf_t *file_content,
-          rep_stats_t *representation,
+          node_revision_t *noderev,
           revision_info_t *revision_info,
           apr_pool_t *pool,
           apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *text;
-  apr_pool_t *iterpool;
-  apr_pool_t *text_pool;
-  const char *current;
-  const char *revision_key;
-  apr_size_t key_len;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* special case: empty dir rep */
-  if (representation == NULL)
-    return SVN_NO_ERROR;
+  int i;
+  apr_array_header_t *entries;
+  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, query->fs, noderev,
+                                      subpool, subpool));
 
-  /* get the directory as unparsed string */
-  iterpool = svn_pool_create(scratch_pool);
-  text_pool = svn_pool_create(scratch_pool);
-
-  SVN_ERR(get_combined_window(&text, query, representation, file_content,
-                              text_pool));
-  current = text->data;
-
-  /* calculate some invariants */
-  revision_key = apr_psprintf(text_pool, "r%ld/", representation->revision);
-  key_len = strlen(revision_key);
-
-  /* Parse and process all directory entries. */
-  while (*current != 'E')
+  for (i = 0; i < entries->nelts; ++i)
     {
-      char *next;
+      svn_fs_dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
 
-      /* skip "K ???\n<name>\nV ???\n" lines*/
-      current = strchr(current, '\n');
-      if (current)
-        current = strchr(current+1, '\n');
-      if (current)
-        current = strchr(current+1, '\n');
-      next = current ? strchr(++current, '\n') : NULL;
-      if (next == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-           _("Corrupt directory representation in r%ld at offset %ld"),
-                                 representation->revision,
-                                 (long)representation->offset);
-
-      /* iff this entry refers to a node in the same revision as this dir,
-       * recurse into that node */
-      *next = 0;
-      current = strstr(current, revision_key);
-      if (current)
+      if (svn_fs_fs__id_rev(dirent->id) == revision_info->revision)
         {
-          /* recurse */
-          apr_uint64_t offset;
-
-          SVN_ERR(svn_cstring_strtoui64(&offset, current + key_len, 0,
-                                        APR_SIZE_MAX, 10));
-          SVN_ERR(read_noderev(query, file_content, (apr_size_t)offset,
-                               revision_info, pool, iterpool));
-
           svn_pool_clear(iterpool);
+          SVN_ERR(read_noderev(query, file_content,
+                               (apr_size_t)svn_fs_fs__id_item(dirent->id),
+                               revision_info, pool, iterpool));
         }
-      current = next+1;
     }
 
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(text_pool);
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -986,7 +722,7 @@ read_noderev(query_t *query,
    * process it recursively */
   if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
       && !svn_fs_fs__use_log_addressing(query->fs, revision_info->revision))
-    SVN_ERR(parse_dir(query, file_content, text, revision_info,
+    SVN_ERR(parse_dir(query, file_content, noderev, revision_info,
                       pool, subpool));
 
   /* update stats */
@@ -1499,14 +1235,6 @@ create_query(query_t **query,
   (*query)->progress_baton = progress_baton;
   (*query)->cancel_func = cancel_func;
   (*query)->cancel_baton = cancel_baton;
-
-  SVN_ERR(svn_cache__create_membuffer_cache(&(*query)->window_cache,
-                                    svn_cache__get_global_membuffer_cache(),
-                                    NULL, NULL,
-                                    sizeof(cache_key_t),
-                                    "",
-                                    SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                                    FALSE, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
