@@ -1459,12 +1459,11 @@ read_phys_revision_file(query_t *query,
   return SVN_NO_ERROR;
 }
 
-/* Read the item described by ENTRY from the REV_FILE of QUERY and return
+/* Read the item described by ENTRY from the REV_FILE and return
  * the respective byte sequence in *CONTENTS allocated in POOL.
  */
 static svn_error_t *
 read_item(svn_stringbuf_t **contents,
-          query_t *query,
           svn_fs_fs__revision_file_t *rev_file,
           svn_fs_fs__p2l_entry_t *entry,
           apr_pool_t *pool)
@@ -1558,7 +1557,7 @@ read_log_rev_or_packfile(query_t *query,
               revision_info_t *info = APR_ARRAY_IDX(query->revisions,
                                                     entry->item.revision,
                                                     revision_info_t*);
-              SVN_ERR(read_item(&item, query, rev_file, entry, iterpool));
+              SVN_ERR(read_item(&item, rev_file, entry, iterpool));
               SVN_ERR(read_noderev(query, item, 0, info, pool, iterpool));
             }
           else if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
@@ -1567,7 +1566,7 @@ read_log_rev_or_packfile(query_t *query,
               revision_info_t *info = APR_ARRAY_IDX(query->revisions,
                                                     entry->item.revision,
                                                     revision_info_t*);
-              SVN_ERR(read_item(&item, query, rev_file, entry, iterpool));
+              SVN_ERR(read_item(&item, rev_file, entry, iterpool));
               info->change_count
                 = get_change_count(item->data + 0, item->len);
               info->changes_len += entry->size;
