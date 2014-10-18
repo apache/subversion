@@ -266,6 +266,49 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Node-revision IDs in FSFS consist of 3 of sub-IDs ("parts") that consist
+ * of a creation REVISION number and some revision- / transaction-local
+ * counter value (NUMBER).  Old-style ID parts use global counter values.
+ *
+ * The parts are: node_id, copy_id and txn_id for in-txn IDs as well as
+ * node_id, copy_id and rev_offset for in-revision IDs.  This struct the
+ * data structure used for each of those parts.
+ */
+typedef struct svn_fs_fs__id_part_t
+{
+  /* SVN_INVALID_REVNUM for txns -> not a txn, COUNTER must be 0.
+     SVN_INVALID_REVNUM for others -> not assigned to a revision, yet.
+     0                  for others -> old-style ID or the root in rev 0. */
+  svn_revnum_t revision;
+
+  /* sub-id value relative to REVISION.  Its interpretation depends on
+     the part itself.  In rev_item, it is the index_index value, in others
+     it represents a unique counter value. */
+  apr_uint64_t number;
+} svn_fs_fs__id_part_t;
+
+/* (user visible) entry in the phys-to-log index.  It describes a section
+ * of some packed / non-packed rev file as containing a specific item.
+ * There must be no overlapping / conflicting entries.
+ */
+typedef struct svn_fs_fs__p2l_entry_t
+{
+  /* offset of the first byte that belongs to the item */
+  apr_off_t offset;
+  
+  /* length of the item in bytes */
+  apr_off_t size;
+
+  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
+  apr_uint32_t type;
+
+  /* modified FNV-1a checksum.  0 if unknown checksum */
+  apr_uint32_t fnv1_checksum;
+
+  /* item in that block */
+  svn_fs_fs__id_part_t item;
+} svn_fs_fs__p2l_entry_t;
+
 
 #ifdef __cplusplus
 }

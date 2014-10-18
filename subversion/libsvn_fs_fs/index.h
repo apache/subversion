@@ -48,28 +48,6 @@
 #define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
                                               Only used in pre-format7. */
 
-/* (user visible) entry in the phys-to-log index.  It describes a section
- * of some packed / non-packed rev file as containing a specific item.
- * There must be no overlapping / conflicting entries.
- */
-typedef struct svn_fs_fs__p2l_entry_t
-{
-  /* offset of the first byte that belongs to the item */
-  apr_off_t offset;
-  
-  /* length of the item in bytes */
-  apr_off_t size;
-
-  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
-  apr_uint32_t type;
-
-  /* modified FNV-1a checksum.  0 if unknown checksum */
-  apr_uint32_t fnv1_checksum;
-
-  /* item in that block */
-  svn_fs_fs__id_part_t item;
-} svn_fs_fs__p2l_entry_t;
-
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
  * RESULT_POOL.
