@@ -55,18 +55,6 @@ svn_opt_subcommand_t
   subcommand__stats;
 
 
-/* We read rev / pack files in blocks of this size.
- * Within reason, any positive value is possible with smaller values
- * increasing the OS chatter and larger values needlessly reading
- * file contents we won't need. */
-#define REV_FILE_BLOCK_SIZE 0x10000
-
-/* We request P2L index information (i.e. contents descriptions) for
- * rev / pack files blocks of this size.  Within reason, any positive
- * value is possible with smaller values increasing the cache lookup
- * overhead.  A good default is the fsfs.conf default of 1MB. */
-#define INDEX_BLOCK_SIZE 0x100000
-
 /* Check that the filesystem at PATH is an FSFS repository and then open it.
  * Return the filesystem in *FS, allocated in POOL. */
 svn_error_t *
