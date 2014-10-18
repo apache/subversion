@@ -91,9 +91,6 @@ typedef struct rep_stats_t
   /* item length after de-deltification */
   apr_size_t expanded_size;
 
-  /* deltification base, or NULL if there is none */
-  struct rep_stats_t *delta_base;
-
   /* revision that contains this representation
    * (may be referenced by other revisions, though) */
   svn_revnum_t revision;
@@ -106,10 +103,6 @@ typedef struct rep_stats_t
 
   /* classification of the representation. values of rep_kind_t */
   char kind;
-
-  /* the source content has a PLAIN header, so we may simply copy the
-   * source content into the target */
-  char is_plain;
 
 } rep_stats_t;
 
@@ -578,7 +571,6 @@ parse_representation(rep_stats_t **representation,
         {
           svn_fs_fs__rep_header_t *header;
           svn_stream_t *stream;
-          int idx2;
 
           svn_string_t content;
           content.data = file_content->data + (apr_size_t)rep->item_index;
@@ -589,11 +581,6 @@ parse_representation(rep_stats_t **representation,
                                              scratch_pool, scratch_pool));
 
           result->header_size = header->header_size;
-          result->is_plain = header->type == svn_fs_fs__rep_plain;
-          if (header->type == svn_fs_fs__rep_delta)
-            result->delta_base = find_representation(&idx2, query, NULL,
-                                                     header->base_revision,
-                                                     header->base_item_index);
         }
 
       svn_sort__array_insert(revision_info->representations, &result, idx);
