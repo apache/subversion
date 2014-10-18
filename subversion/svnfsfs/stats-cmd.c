@@ -45,9 +45,9 @@
  */
 typedef enum rep_kind_t
 {
-  /* The representation is _directly_ unused, i.e. not referenced by any
+  /* The representation is not used _directly_, i.e. not referenced by any
    * noderev. However, some other representation may use it as delta base.
-   * null value. Should not occur in real-word repositories. */
+   * Null value. Should not occur in real-word repositories. */
   unused_rep,
 
   /* a properties on directory rep  */
