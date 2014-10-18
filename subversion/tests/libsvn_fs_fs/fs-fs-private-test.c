@@ -32,6 +32,9 @@
 
 #include "private/svn_string_private.h"
 #include "private/svn_fs_fs_private.h"
+#include "private/svn_subr_private.h"
+
+#include "../../libsvn_fs_fs/index.h"
 
 #include "../svn_test_fs.h"
 
@@ -258,6 +261,92 @@ get_repo_stats(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "dump-index-test"
+
+typedef struct dump_baton_t
+{
+  /* Number of callback invocations so far */
+  int invocations;
+
+  /* Rev file location we expect to be reported next */
+  apr_off_t offset;
+
+  /* All items must be from this revision. */
+  svn_revnum_t revision;
+
+  /* Track the item numbers we have already seen. */
+  svn_bit_array__t *numbers_seen;
+} dump_baton_t;
+
+static svn_error_t *
+dump_index_entry(const svn_fs_fs__p2l_entry_t *entry,
+                 void *baton_p,
+                 apr_pool_t *scratch_pool)
+{
+  dump_baton_t *baton = baton_p;
+
+  /* Count invocations. */
+  baton->invocations++;
+
+  /* We expect a report of contiguous non-empty items. */
+  SVN_TEST_ASSERT(entry->offset == baton->offset);
+  SVN_TEST_ASSERT(entry->size > 0 && entry->size < 1000);
+  baton->offset += entry->size;
+
+  /* Type must be valid. */
+  SVN_TEST_ASSERT(   entry->type > SVN_FS_FS__ITEM_TYPE_UNUSED
+                  && entry->type <= SVN_FS_FS__ITEM_TYPE_CHANGES);
+
+  /* We expect all items to be from the specified revision. */
+  SVN_TEST_ASSERT(entry->item.revision == baton->revision);
+
+  /* Item numnber must be plausibly small and unique. */
+  SVN_TEST_ASSERT(entry->item.number < 100);
+  SVN_TEST_ASSERT(!svn_bit_array__get(baton->numbers_seen,
+                                      (apr_size_t)entry->item.number));
+  svn_bit_array__set(baton->numbers_seen, (apr_size_t)entry->item.number, 1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+dump_index(const svn_test_opts_t *opts,
+           apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_revnum_t rev;
+  dump_baton_t baton;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 9))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't have FSFS indexes");
+
+  /* Create a filesystem */
+  SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
+
+  /* Gather statistics info on that repo. */
+  baton.invocations = 0;
+  baton.offset = 0;
+  baton.revision = rev;
+  baton.numbers_seen = svn_bit_array__create(100, pool);
+  SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, dump_index_entry,
+                                &baton, NULL, NULL, pool));
+
+  /* Check that we've got all data (20 noderevs + 20 reps + 1 changes list). */
+  SVN_TEST_ASSERT(baton.invocations == 41);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -268,6 +357,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(get_repo_stats,
                        "get statistics on a FSFS filesystem"),
+    SVN_TEST_OPTS_PASS(dump_index,
+                       "dump the P2L index"),
     SVN_TEST_NULL
   };
 
