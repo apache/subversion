@@ -52,7 +52,7 @@ typedef struct svn_fs_fs__large_change_info_t
   /* size of the (deltified) representation */
   apr_size_t size;
 
-  /* revision of the representation */
+  /* Revision of the representation. SVN_INVALID_REVNUM for unused entries. */
   svn_revnum_t revision;
 
   /* node path. "" for unused instances */
@@ -246,7 +246,7 @@ typedef struct svn_fs_fs__stats_t
   /* histogram of sizes of directories property representations */
   svn_fs_fs__histogram_t dir_prop_rep_histogram;
 
-  /* extension -> extension_info_t* map */
+  /* extension -> svn_fs_fs__extension_info_t* map */
   apr_hash_t *by_extension;
 } svn_fs_fs__stats_t;
 
