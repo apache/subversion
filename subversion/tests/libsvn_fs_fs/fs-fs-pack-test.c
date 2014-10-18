@@ -33,7 +33,6 @@
 #include "svn_props.h"
 #include "svn_fs.h"
 #include "private/svn_string_private.h"
-#include "private/svn_string_private.h"
 
 #include "../svn_test_fs.h"
 
