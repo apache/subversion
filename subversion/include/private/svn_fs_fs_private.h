@@ -34,6 +34,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_fs.h"
 #include "svn_iter.h"
 #include "svn_config.h"
 #include "svn_string.h"
@@ -308,6 +309,30 @@ typedef struct svn_fs_fs__p2l_entry_t
   /* item in that block */
   svn_fs_fs__id_part_t item;
 } svn_fs_fs__p2l_entry_t;
+
+
+/* Callback function type receiving a single P2L index ENTRY, a user
+ * provided BATON and a SCRATCH_POOL for temporary allocations.
+ * ENTRY's lifetime may end when the callback returns.
+ */
+typedef svn_error_t *
+(*svn_fs_fs__dump_index_func_t)(const svn_fs_fs__p2l_entry_t *entry,
+                                void *baton,
+                                apr_pool_t *scratch_pool);
+
+/* Read the P2L index for the rev / pack file containing REVISION in FS.
+ * For each index entry, invoke CALLBACK_FUNC with CALLBACK_BATON.
+ * If not NULL, call CANCEL_FUNC with CANCEL_BATON from time to time.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__dump_index(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      svn_fs_fs__dump_index_func_t callback_func,
+                      void *callback_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
