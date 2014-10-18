@@ -134,6 +134,10 @@ svn_fs_fs__load_index(svn_fs_t *fs,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  /* Check the FS format number. */
+  if (! svn_fs_fs__use_log_addressing(fs, revision))
+    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
+
   /* Treat an empty array as a no-op instead error. */
   if (entries->nelts != 0)
     {
@@ -213,13 +217,7 @@ load_index(const char *path,
        * Get a revision from (probably inside) the respective shard. */
       if (   revision == SVN_INVALID_REVNUM
           && entry->item.revision != SVN_INVALID_REVNUM)
-        {
-          revision = entry->item.revision;
-
-          /* Check the FS format number. */
-          if (! svn_fs_fs__use_log_addressing(fs, revision))
-            return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
-        }
+        revision = entry->item.revision;
     }
 
   /* Rewrite the indexes. */
