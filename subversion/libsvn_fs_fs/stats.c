@@ -35,6 +35,8 @@
 #include "rev_file.h"
 #include "util.h"
 #include "fs_fs.h"
+#include "cached_data.h"
+#include "low_level.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -524,14 +526,6 @@ read_revision_header(apr_size_t *changes,
   return SVN_NO_ERROR;
 }
 
-/* Utility function that returns true if STRING->DATA matches KEY.
- */
-static svn_boolean_t
-key_matches(svn_string_t *string, const char *key)
-{
-  return strcmp(string->data, key) == 0;
-}
-
 /* Comparator used for binary search comparing the absolute file offset
  * of a representation to some other offset. DATA is a *rep_stats_t,
  * KEY is a pointer to an apr_size_t.
@@ -597,70 +591,9 @@ find_representation(int *idx,
   return NULL;
 }
 
-/* Read the representation header in FILE_CONTENT at OFFSET.  Return its
- * size in *HEADER_SIZE, set *IS_PLAIN if no deltification was used and
- * return the deltification base representation in *REPRESENTATION.  If
- * there is none, set it to NULL.  Use QUERY to it look up.
- *
- * Use POOL for allocations and SCRATCH_POOL for temporaries.
- */
-static svn_error_t *
-read_rep_base(rep_stats_t **representation,
-              apr_size_t *header_size,
-              svn_boolean_t *is_plain,
-              query_t *query,
-              svn_stringbuf_t *file_content,
-              apr_size_t offset,
-              apr_pool_t *pool,
-              apr_pool_t *scratch_pool)
-{
-  char *str, *last_str;
-  int idx;
-  svn_revnum_t revision;
-  apr_uint64_t temp;
-
-  /* identify representation header (1 line) */
-  const char *buffer = file_content->data + offset;
-  const char *line_end = strchr(buffer, '\n');
-  *header_size = line_end - buffer + 1;
-
-  /* check for PLAIN rep */
-  if (strncmp(buffer, "PLAIN\n", *header_size) == 0)
-    {
-      *is_plain = TRUE;
-      *representation = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  /* check for DELTA against empty rep */
-  *is_plain = FALSE;
-  if (strncmp(buffer, "DELTA\n", *header_size) == 0)
-    {
-      /* This is a delta against the empty stream. */
-      *representation = query->null_base;
-      return SVN_NO_ERROR;
-    }
-
-  str = apr_pstrndup(scratch_pool, buffer, line_end - buffer);
-  last_str = str;
-
-  /* parse it. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  str = svn_cstring_tokenize(" ", &last_str);
-  SVN_ERR(svn_revnum_parse(&revision, str, NULL));
-
-  str = svn_cstring_tokenize(" ", &last_str);
-  SVN_ERR(svn_cstring_strtoui64(&temp, str, 0, APR_SIZE_MAX, 10));
-
-  /* it should refer to a rep in an earlier revision.  Look it up */
-  *representation = find_representation(&idx, query, NULL, revision,
-                                        (apr_size_t)temp);
-  return SVN_NO_ERROR;
-}
-
-/* Parse the representation reference (text: or props:) in VALUE, look
- * it up in QUERY and return it in *REPRESENTATION.  To be able to parse
- * the base rep, we pass the FILE_CONTENT as well.
+/* Find / auto-construct the representation stats for REP in QUERY and
+ * return it in *REPRESENTATION.  To be able to parse the base rep, we
+ * pass the FILE_CONTENT as well.
  *
  * If necessary, allocate the result in POOL; use SCRATCH_POOL for temp.
  * allocations.
@@ -669,56 +602,52 @@ static svn_error_t *
 parse_representation(rep_stats_t **representation,
                      query_t *query,
                      svn_stringbuf_t *file_content,
-                     svn_string_t *value,
+                     representation_t *rep,
                      revision_info_t *revision_info,
                      apr_pool_t *pool,
                      apr_pool_t *scratch_pool)
 {
   rep_stats_t *result;
-  svn_revnum_t revision;
-
-  apr_uint64_t offset;
-  apr_uint64_t size;
-  apr_uint64_t expanded_size;
   int idx;
 
   /* read location (revision, offset) and size */
-  char *c = (char *)value->data;
-  SVN_ERR(svn_revnum_parse(&revision, svn_cstring_tokenize(" ", &c), NULL));
-  SVN_ERR(svn_cstring_strtoui64(&offset, svn_cstring_tokenize(" ", &c), 0,
-                                APR_SIZE_MAX, 10));
-  SVN_ERR(svn_cstring_strtoui64(&size, svn_cstring_tokenize(" ", &c), 0,
-                                APR_SIZE_MAX, 10));
-  SVN_ERR(svn_cstring_strtoui64(&expanded_size, svn_cstring_tokenize(" ", &c),
-                                0, APR_SIZE_MAX, 10));
 
   /* look it up */
-  result = find_representation(&idx, query, &revision_info, revision,
-                               (apr_size_t)offset);
+  result = find_representation(&idx, query, &revision_info, rep->revision,
+                               (apr_size_t)rep->item_index);
   if (!result)
     {
       /* not parsed, yet (probably a rep in the same revision).
        * Create a new rep object and determine its base rep as well.
        */
-      apr_size_t header_size;
-      svn_boolean_t is_plain;
-
       result = apr_pcalloc(pool, sizeof(*result));
-      result->revision = revision;
-      result->expanded_size = (apr_size_t)(expanded_size ? expanded_size
-                                                         : size);
-      result->offset = (apr_size_t)offset;
-      result->size = (apr_size_t)size;
+      result->revision = rep->revision;
+      result->expanded_size = (apr_size_t)(rep->expanded_size
+                                             ? rep->expanded_size
+                                             : rep->size);
+      result->offset = (apr_size_t)rep->item_index;
+      result->size = (apr_size_t)rep->size;
 
-      if (!svn_fs_fs__use_log_addressing(query->fs, revision))
+      if (!svn_fs_fs__use_log_addressing(query->fs, rep->revision))
         {
-          SVN_ERR(read_rep_base(&result->delta_base, &header_size,
-                                &is_plain, query, file_content,
-                                (apr_size_t)offset,
-                                pool, scratch_pool));
+          svn_fs_fs__rep_header_t *header;
+          svn_stream_t *stream;
+          int idx2;
 
-          result->header_size = header_size;
-          result->is_plain = is_plain;
+          svn_string_t content;
+          content.data = file_content->data + (apr_size_t)rep->item_index;
+          content.len = file_content->len - (apr_size_t)rep->item_index;
+
+          stream = svn_stream_from_string(&content, scratch_pool);
+          SVN_ERR(svn_fs_fs__read_rep_header(&header, stream,
+                                             scratch_pool, scratch_pool));
+
+          result->header_size = header->header_size;
+          result->is_plain = header->type == svn_fs_fs__rep_plain;
+          if (header->type == svn_fs_fs__rep_delta)
+            result->delta_base = find_representation(&idx2, query, NULL,
+                                                     header->base_revision,
+                                                     header->base_item_index);
         }
 
       svn_sort__array_insert(revision_info->representations, &result, idx);
@@ -1005,105 +934,73 @@ read_noderev(query_t *query,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool)
 {
-  svn_string_t *line;
+  const char *end_marker = "\n\n";
+  const char *noderev_end = strstr(file_content->data + offset, end_marker);
+  apr_size_t noderev_len = noderev_end ? (noderev_end - file_content->data -
+                                          offset + strlen(end_marker))
+                                       : (file_content->len - offset);
+
   rep_stats_t *text = NULL;
   rep_stats_t *props = NULL;
-  apr_size_t start_offset = offset;
-  svn_boolean_t is_dir = FALSE;
-  svn_boolean_t has_predecessor = FALSE;
-  const char *path = "???";
 
-  scratch_pool = svn_pool_create(scratch_pool);
+  node_revision_t *noderev;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* parse the noderev line-by-line until we find an empty line */
-  while (1)
+  svn_stream_t *stream = svn_stream_from_stringbuf(file_content, subpool);
+  svn_stream_skip(stream, offset);
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, subpool, subpool));
+
+  if (noderev->data_rep)
     {
-      /* for this line, extract key and value. Ignore invalid values */
-      svn_string_t key;
-      svn_string_t value;
-      char *sep;
-      const char *start = file_content->data + offset;
-      const char *end = strchr(start, '\n');
+      SVN_ERR(parse_representation(&text, query, file_content,
+                                   noderev->data_rep, revision_info,
+                                   pool, subpool));
 
-      line = svn_string_ncreate(start, end - start, scratch_pool);
-      offset += end - start + 1;
+      /* if we are the first to use this rep, mark it as "text rep" */
+      if (++text->ref_count == 1)
+        text->kind = noderev->kind == svn_node_dir ? dir_rep : file_rep;
+    }
 
-      /* empty line -> end of noderev data */
-      if (line->len == 0)
-        break;
+  if (noderev->prop_rep)
+    {
+      SVN_ERR(parse_representation(&props, query, file_content,
+                                   noderev->prop_rep, revision_info,
+                                   pool, subpool));
 
-      sep = strchr(line->data, ':');
-      if (sep == NULL)
-        continue;
-
-      key.data = line->data;
-      key.len = sep - key.data;
-      *sep = 0;
-
-      if (key.len + 2 > line->len)
-        continue;
-
-      value.data = sep + 2;
-      value.len = line->len - (key.len + 2);
-
-      /* translate (key, value) into noderev elements */
-      if (key_matches(&key, "type"))
-        is_dir = strcmp(value.data, "dir") == 0;
-      else if (key_matches(&key, "text"))
-        {
-          SVN_ERR(parse_representation(&text, query, file_content,
-                                       &value, revision_info,
-                                       pool, scratch_pool));
-
-          /* if we are the first to use this rep, mark it as "text rep" */
-          if (++text->ref_count == 1)
-            text->kind = is_dir ? dir_rep : file_rep;
-        }
-      else if (key_matches(&key, "props"))
-        {
-          SVN_ERR(parse_representation(&props, query, file_content,
-                                       &value, revision_info,
-                                       pool, scratch_pool));
-
-          /* if we are the first to use this rep, mark it as "prop rep" */
-          if (++props->ref_count == 1)
-            props->kind = is_dir ? dir_property_rep : file_property_rep;
-        }
-      else if (key_matches(&key, "cpath"))
-        path = value.data;
-      else if (key_matches(&key, "pred"))
-        has_predecessor = TRUE;
+      /* if we are the first to use this rep, mark it as "prop rep" */
+      if (++props->ref_count == 1)
+        props->kind = noderev->kind == svn_node_dir ? dir_rep : file_rep;
     }
 
   /* record largest changes */
   if (text && text->ref_count == 1)
     add_change(query->stats, (apr_int64_t)text->size,
-               (apr_int64_t)text->expanded_size, text->revision, path,
-               text->kind, !has_predecessor);
+               (apr_int64_t)text->expanded_size, text->revision,
+               noderev->created_path, text->kind, !noderev->predecessor_id);
   if (props && props->ref_count == 1)
     add_change(query->stats, (apr_int64_t)props->size,
-               (apr_int64_t)props->expanded_size, props->revision, path,
-               props->kind, !has_predecessor);
+               (apr_int64_t)props->expanded_size, props->revision,
+               noderev->created_path, props->kind, !noderev->predecessor_id);
 
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
-  if (   is_dir && text && text->ref_count == 1
+  if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
       && !svn_fs_fs__use_log_addressing(query->fs, revision_info->revision))
     SVN_ERR(parse_dir(query, file_content, text, revision_info,
-                      pool, scratch_pool));
+                      pool, subpool));
 
   /* update stats */
-  if (is_dir)
+  if (noderev->kind == svn_node_dir)
     {
-      revision_info->dir_noderev_size += offset - start_offset;
+      revision_info->dir_noderev_size += noderev_len;
       revision_info->dir_noderev_count++;
     }
   else
     {
-      revision_info->file_noderev_size += offset - start_offset;
+      revision_info->file_noderev_size += noderev_len;
       revision_info->file_noderev_count++;
     }
-  svn_pool_destroy(scratch_pool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
