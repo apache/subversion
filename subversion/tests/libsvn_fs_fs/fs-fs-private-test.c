@@ -347,6 +347,73 @@ dump_index(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "load-index-test"
+
+static svn_error_t *
+receive_index(const svn_fs_fs__p2l_entry_t *entry,
+              void *baton,
+              apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *entries = baton;
+  APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *)
+    = apr_pmemdup(entries->pool, entry, sizeof(*entry));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+load_index(const svn_test_opts_t *opts,
+           apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_revnum_t rev;
+  apr_array_header_t *entries = apr_array_make(pool, 41, sizeof(void *));
+  apr_array_header_t *alt_entries = apr_array_make(pool, 1, sizeof(void *));
+  svn_fs_fs__p2l_entry_t entry;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 9))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't have FSFS indexes");
+
+  /* Create a filesystem */
+  SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
+
+  /* Read the original index contents for REV in ENTRIES. */
+  SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, receive_index,
+                                entries, NULL, NULL, pool));
+
+  /* Replace it with an empty index.
+   * Note that the API requires at least one entry. Give it a dummy. */
+  entry.offset = 0;
+  entry.size = 0;
+  entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
+  entry.item.number = SVN_FS_FS__ITEM_INDEX_UNUSED;
+  entry.item.revision = SVN_INVALID_REVNUM;
+  APR_ARRAY_PUSH(alt_entries, svn_fs_fs__p2l_entry_t *) = &entry;
+
+  SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, alt_entries, pool));
+  SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev,
+                                             FALSE, FALSE, FALSE,
+                                             NULL, NULL, NULL, NULL, pool),
+                        SVN_ERR_REPOS_CORRUPTED);
+
+  /* Restore the original index. */
+  SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, entries, pool));
+  SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE, FALSE,
+                               NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -359,6 +426,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "get statistics on a FSFS filesystem"),
     SVN_TEST_OPTS_PASS(dump_index,
                        "dump the P2L index"),
+    SVN_TEST_OPTS_PASS(load_index,
+                       "load the P2L index"),
     SVN_TEST_NULL
   };
 
