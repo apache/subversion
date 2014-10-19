@@ -507,31 +507,50 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+struct trust_server_cert_non_interactive_baton {
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
+};
+
 /* This implements 'svn_auth_ssl_server_trust_prompt_func_t'.
 
    Don't actually prompt.  Instead, set *CRED_P to valid credentials
-   iff FAILURES is empty or is exactly SVN_AUTH_SSL_UNKNOWNCA.  If
-   there are any other failure bits, then set *CRED_P to null (that
-   is, reject the cert).
+   iff FAILURES is empty or may be accepted according to the flags
+   in BATON. If there are any other failure bits, then set *CRED_P
+   to null (that is, reject the cert).
 
    Ignore MAY_SAVE; we don't save certs we never prompted for.
 
-   Ignore BATON, REALM, and CERT_INFO,
+   Ignore REALM and CERT_INFO,
 
    Ignore any further films by George Lucas. */
 static svn_error_t *
-ssl_trust_unknown_server_cert
-  (svn_auth_cred_ssl_server_trust_t **cred_p,
-   void *baton,
-   const char *realm,
-   apr_uint32_t failures,
-   const svn_auth_ssl_server_cert_info_t *cert_info,
-   svn_boolean_t may_save,
-   apr_pool_t *pool)
+trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  apr_uint32_t failures,
+                                  const svn_auth_ssl_server_cert_info_t
+                                    *cert_info,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool)
 {
+  struct trust_server_cert_non_interactive_baton *b = baton;
   *cred_p = NULL;
 
-  if (failures == 0 || failures == SVN_AUTH_SSL_UNKNOWNCA)
+  if (failures == 0 ||
+      (b->trust_server_cert_unknown_ca &&
+       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
+      (b->trust_server_cert_cn_mismatch &&
+       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
+      (b->trust_server_cert_expired &&
+       (failures & SVN_AUTH_SSL_EXPIRED)) ||
+      (b->trust_server_cert_not_yet_valid &&
+        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
+      (b->trust_server_cert_other_failure &&
+        (failures & SVN_AUTH_SSL_OTHER)))
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
@@ -542,17 +561,22 @@ ssl_trust_unknown_server_cert
 }
 
 svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
+                               svn_boolean_t non_interactive,
+                               const char *auth_username,
+                               const char *auth_password,
+                               const char *config_dir,
+                               svn_boolean_t no_auth_cache,
+                               svn_boolean_t trust_server_cert_unknown_ca,
+                               svn_boolean_t trust_server_cert_cn_mismatch,
+                               svn_boolean_t trust_server_cert_expired,
+                               svn_boolean_t trust_server_cert_not_yet_valid,
+                               svn_boolean_t trust_server_cert_other_failure,
+                               svn_config_t *cfg,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
+
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -653,11 +677,22 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
         }
     }
-  else if (trust_server_cert)
+  else if (trust_server_cert_unknown_ca || trust_server_cert_cn_mismatch ||
+           trust_server_cert_expired || trust_server_cert_not_yet_valid ||
+           trust_server_cert_other_failure)
     {
+      struct trust_server_cert_non_interactive_baton *b;
+
+      b = apr_palloc(pool, sizeof(*b));
+      b->trust_server_cert_unknown_ca = trust_server_cert_unknown_ca;
+      b->trust_server_cert_cn_mismatch = trust_server_cert_cn_mismatch;
+      b->trust_server_cert_expired = trust_server_cert_expired;
+      b->trust_server_cert_not_yet_valid = trust_server_cert_not_yet_valid;
+      b->trust_server_cert_other_failure = trust_server_cert_other_failure;
+
       /* Remember, only register this provider if non_interactive. */
       svn_auth_get_ssl_server_trust_prompt_provider
-        (&provider, ssl_trust_unknown_server_cert, NULL, pool);
+        (&provider, trust_server_cert_non_interactive, b, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 

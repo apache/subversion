@@ -3662,7 +3662,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
          buffer and no I/O will actually happen in the FILL_BUFFER
          section below.
        */
-      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
                  || current <= aligned_offset;
     }
@@ -3673,7 +3673,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
       apr_status_t status;
 
       /* seek to the start of the block and cause APR to read 1 block */
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset, pool));
       status = apr_file_getc(&dummy, file);
 
       /* read may fail if we seek to or behind EOF.  That's ok then. */
@@ -3686,7 +3686,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
 
   /* finally, seek to the OFFSET the caller wants */
   desired_offset = offset;
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   if (desired_offset != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
                                       N_("Can't seek in file '%s'"),

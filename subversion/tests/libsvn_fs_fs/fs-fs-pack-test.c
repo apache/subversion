@@ -1,4 +1,4 @@
-/* fs-pack-test.c --- tests for the filesystem
+/* fs-fs-pack-test.c --- tests for the FSFS filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -33,7 +33,6 @@
 #include "svn_props.h"
 #include "svn_fs.h"
 #include "private/svn_string_private.h"
-#include "private/svn_string_private.h"
 
 #include "../svn_test_fs.h"
 
@@ -49,65 +48,6 @@ ignore_fs_warnings(void *baton, svn_error_t *err)
            svn_error_symbolic_name(err ? err->apr_err : 0)));
 #endif
   return;
-}
-
-/* Write the format number and maximum number of files per directory
-   to a new format file in PATH, overwriting a previously existing
-   file.  Use POOL for temporary allocation.
-
-   (This implementation is largely stolen from libsvn_fs_fs/fs_fs.c.) */
-static svn_error_t *
-write_format(const char *path,
-             int format,
-             int max_files_per_dir,
-             apr_pool_t *pool)
-{
-  const char *contents;
-
-  path = svn_dirent_join(path, "format", pool);
-
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    {
-      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n"
-                                    "addressing logical 0\n",
-                                    format, max_files_per_dir);
-          else
-            /* linear layouts never use logical addressing */
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n"
-                                    "addressing physical\n",
-                                    format);
-        }
-      else
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n",
-                                    format, max_files_per_dir);
-          else
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n",
-                                    format);
-        }
-    }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
-
-  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
-                              NULL /* copy perms */, pool));
-
-  /* And set the perms to make it read only */
-  return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
 /* Return the expected contents of "iota" in revision REV. */
@@ -178,7 +118,7 @@ create_packed_filesystem(const char *dir,
   apr_pool_t *subpool = svn_pool_create(pool);
   struct pack_notify_baton pnb;
   apr_pool_t *iterpool;
-  int version;
+  apr_hash_t *fs_config;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -189,25 +129,12 @@ create_packed_filesystem(const char *dir,
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "pre-1.6 SVN doesn't support FSFS packing");
 
-  /* Create a filesystem, then close it */
-  SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
-  svn_pool_destroy(subpool);
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE,
+                apr_itoa(pool, shard_size));
 
-  subpool = svn_pool_create(pool);
-
-  /* Rewrite the format file.  (The rest of this function is backend-agnostic,
-     so we just avoid adding the FSFS-specific format information if we run on
-     some other backend.) */
-  if ((strcmp(opts->fs_type, "fsfs") == 0))
-    {
-      SVN_ERR(svn_io_read_version_file(&version,
-                                       svn_dirent_join(dir, "format", subpool),
-                                       subpool));
-      SVN_ERR(write_format(dir, version, shard_size, subpool));
-    }
-
-  /* Reopen the filesystem */
-  SVN_ERR(svn_fs_open2(&fs, dir, NULL, subpool, subpool));
+  /* Create a filesystem. */
+  SVN_ERR(svn_test__create_fs2(&fs, dir, opts, fs_config, subpool));
 
   /* Revision 1: the Greek tree */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
@@ -1228,6 +1155,94 @@ revprop_caching_on_off(const svn_test_opts_t *opts,
 #undef REPO_NAME
 
 /* ------------------------------------------------------------------------ */
+
+static svn_error_t *
+id_parser_test(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+ #define LONG_MAX_STR #LONG_MAX
+  
+  /* Verify the revision number parser (e.g. first element of a txn ID) */
+  svn_fs_fs__id_part_t id_part;
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "0-0"));
+
+#if LONG_MAX == 2147483647L
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "2147483647-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2147483648-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836470-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836479-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967295-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967296-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967304-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967305-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672950-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672959-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x120000000 = 4831838208.
+   * 483183820 < 10*483183820 mod 2^32 = 536870904 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4831838208-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#else
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "9223372036854775807-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "9223372036854775808-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758070-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758079-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551615-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551616-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551624-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551625-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516150-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516159-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x12000000000000000 = 20752587082923245568.
+   * 2075258708292324556 < 10*2075258708292324556 mod 2^32 = 2305843009213693944 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "20752587082923245568-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#endif
+
+  /* Invalid characters */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2e4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2-4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1268,6 +1283,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "metadata checksums being checked"),
     SVN_TEST_OPTS_PASS(revprop_caching_on_off,
                        "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_PASS(id_parser_test,
+                       "id parser test"),
     SVN_TEST_NULL
   };
 

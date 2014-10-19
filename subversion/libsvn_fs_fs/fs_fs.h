@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Read the 'format' file of fsfs filesystem FS and store its info in FS.
+ * Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_fs_fs__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool);
+
 /* Open the fsfs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations.
 
@@ -50,6 +55,17 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
+
+/* Return the shard size of filesystem FS.  Return 0 for non-shared ones. */
+int
+svn_fs_fs__shard_size(svn_fs_t *fs);
+
+/* Set *MIN_UNPACKED to the oldest non-packed revision in filesystem FS.
+   Do any temporary allocation in POOL. */
+svn_error_t *
+svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool);
 
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
@@ -105,6 +121,25 @@ svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
+
+/* Under the repository db PATH, create a FSFS repository with FORMAT,
+ * the given SHARD_SIZE and start logical addressing at revision
+ * MIN_LOG_ADDRESSING_REV.  If not supported by the respective format,
+ * the latter two parameters will be ignored.  FS will be updated.
+ *
+ * The only file not being written is the 'format' file.  This allows
+ * callers such as hotcopy to modify the contents before turning the
+ * tree into an accessible repository.
+ *
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            svn_revnum_t min_log_addressing_rev,
+                            apr_pool_t *pool);
 
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.

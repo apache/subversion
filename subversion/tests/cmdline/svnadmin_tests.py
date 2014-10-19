@@ -386,7 +386,9 @@ def set_changed_path_list(sbox, revision, changes):
     footer_length = ord(contents[length-1]);
     footer = contents[length - footer_length - 1:length-1]
     l2p_offset = long(footer.split(' ')[0])
-    p2l_offset = long(footer.split(' ')[1])
+    l2p_checksum = footer.split(' ')[1]
+    p2l_offset = long(footer.split(' ')[2])
+    p2l_checksum = footer.split(' ')[3]
 
     idx = FSFS_Index(sbox, revision)
     (offset, item_len, item_type) = idx.get_item(1)
@@ -399,7 +401,8 @@ def set_changed_path_list(sbox, revision, changes):
     file_len = body_len + len(changes) + 1
     p2l_offset += file_len - l2p_offset
 
-    header = str(file_len) + ' ' + str(p2l_offset)
+    header = str(file_len) + ' ' + l2p_checksum + ' ' \
+           + str(p2l_offset) + ' ' + p2l_checksum
     header += chr(len(header))
     header = '\n' + indexes + header
 
@@ -2922,6 +2925,20 @@ def freeze_same_uuid(sbox):
                                           sys.executable, '-c', 'True')
 
 
+@Skip(svntest.main.is_fs_type_fsx)
+def upgrade(sbox):
+  "upgrade --compatible-version=1.3"
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "upgrade",
+                                          sbox.repo_dir)
+  # Does the repository work after upgrade?
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                     'Committed revision 2.\n'], [], 'mkdir',
+                                     '-m', svntest.main.make_log_msg(),
+                                     sbox.repo_url + '/dir')
+
+
 ########################################################################
 # Run the tests
 
@@ -2974,6 +2991,7 @@ test_list = [ None,
               fsfs_hotcopy_progress_with_revprop_changes,
               fsfs_hotcopy_progress_old,
               freeze_same_uuid,
+              upgrade,
              ]
 
 if __name__ == '__main__':

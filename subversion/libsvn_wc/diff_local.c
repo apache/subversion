@@ -89,9 +89,6 @@ struct diff_baton
   /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
 
-  /* Hash whose keys are const char * changelist names. */
-  apr_hash_t *changelist_hash;
-
   /* Cancel function/baton */
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
@@ -249,11 +246,6 @@ diff_status_callback(void *baton,
   if (eb->cur && eb->cur->skip_children)
     return SVN_NO_ERROR;
 
-  if (eb->changelist_hash != NULL
-      && (!status->changelist
-          || ! svn_hash_gets(eb->changelist_hash, status->changelist)))
-    return SVN_NO_ERROR; /* Filtered via changelist */
-
   /* This code does about the same thing as the inner body of
      walk_local_nodes_diff() in diff_editor.c, except that
      it is already filtered by the status walker, doesn't have to
@@ -358,7 +350,6 @@ diff_status_callback(void *baton,
             SVN_ERR(svn_wc__diff_base_working_diff(db, child_abspath,
                                                    child_relpath,
                                                    SVN_INVALID_REVNUM,
-                                                   eb->changelist_hash,
                                                    eb->processor,
                                                    eb->cur
                                                         ? eb->cur->baton
@@ -402,7 +393,6 @@ diff_status_callback(void *baton,
                                                child_relpath,
                                                eb->processor,
                                                eb->cur ? eb->cur->baton : NULL,
-                                               eb->changelist_hash,
                                                FALSE,
                                                eb->cancel_func,
                                                eb->cancel_baton,
@@ -412,7 +402,6 @@ diff_status_callback(void *baton,
                                               child_relpath, depth_below_here,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
-                                              eb->changelist_hash,
                                               FALSE,
                                               eb->cancel_func,
                                               eb->cancel_baton,
@@ -475,14 +464,22 @@ svn_wc__diff7(const char **root_relpath,
   if (root_is_dir)
     *root_is_dir = (kind == svn_node_dir);
 
+  /* Apply changelist filtering to the output */
+  if (changelist_filter && changelist_filter->nelts)
+    {
+      apr_hash_t *changelist_hash;
+
+      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
+                                         result_pool));
+      diff_processor = svn_wc__changelist_filter_tree_processor_create(
+                         diff_processor, wc_ctx, local_abspath,
+                         changelist_hash, result_pool);
+    }
+
   eb.db = wc_ctx->db;
   eb.processor = diff_processor;
   eb.ignore_ancestry = ignore_ancestry;
   eb.pool = scratch_pool;
-
-  if (changelist_filter && changelist_filter->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelist_filter,
-                                       scratch_pool));
 
   if (ignore_ancestry)
     get_all = TRUE; /* We need unmodified descendants of copies */

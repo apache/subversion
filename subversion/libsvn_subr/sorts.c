@@ -244,14 +244,48 @@ svn_sort__array_lookup(const apr_array_header_t *array,
    * hit location) first.  This speeds up linear scans. */
   if (hint)
     {
-      idx = *hint;
-      *hint = ++idx;
-      if (idx >= 0 && idx < array->nelts)
+      /* We intend to insert right behind *HINT.
+       * Exit this function early, if we actually can. */
+      idx = *hint + 1;
+      if (idx >= array->nelts)
         {
+          /* We intend to insert after the last entry.
+           * That is only allowed if that last entry is smaller than KEY.
+           * In that case, there will be no current entry, i.e. we must
+           * return NULL. */
+          apr_size_t offset;
+
+          *hint = array->nelts;
+          if (array->nelts == 0)
+            return NULL;
+
+          offset = (array->nelts - 1) * array->elt_size;
+          if (compare_func(array->elts + offset, key) < 0)
+            return NULL;
+        }
+      else if (idx > 0)
+        {
+          /* Intend to insert at a position inside the array, i.e. not
+           * at one of the boundaries.  The predecessor must be smaller
+           * and the current entry at IDX must be larger than KEY. */
+		  void *previous;
+
+          *hint = idx;
+		  previous = array->elts + (idx-1) * array->elt_size;
           result = array->elts + idx * array->elt_size;
-          if (!compare_func(result, key))
+          if (compare_func(previous, key) && !compare_func(result, key))
             return result;
         }
+      else if (idx <= 0)
+        {
+          /* Intend to insert at the beginning of an non-empty array.
+           * That requires the first entry to be larger than KEY. */
+          *hint = 0;
+          if (!compare_func(array->elts, key))
+            return array->elts;
+        }
+
+      /* The HINT did not help. */
     }
 
   idx = bsearch_lower_bound(key, array->elts, array->nelts, array->elt_size,

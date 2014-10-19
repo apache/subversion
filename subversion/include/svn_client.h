@@ -1081,20 +1081,15 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 /** @} end group: Client context management */
 
 /**
- * @name Authentication information file names
- *
- * Names of files that contain authentication information.
- *
- * These filenames are decided by libsvn_client, since this library
- * implements all the auth-protocols;  libsvn_wc does nothing but
- * blindly store and retrieve these files from protected areas.
- *
- * @defgroup clnt_auth_filenames Client authentication file names
- * @{
+ * @deprecated Provided for backward compatibility. This constant was never
+ * used in released versions.
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
+/**
+ * @deprecated Provided for backward compatibility. This constant was never
+ * used in released versions.
+ */
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
-/** @} group end: Authentication information file names */
 
 /** Client argument processing
  *

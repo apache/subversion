@@ -55,6 +55,7 @@ SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
 SVN_SERF_NO_LOGGING
 SVN_ALLOW_SHORT_INTS
+SVN_ALLOW_NON_8_BIT_CHARS
 
 2.3 Debugging Support
 
@@ -286,6 +287,18 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
              16 ints will break that assumption.  Defining this option will
              allow SVN to be compiled even if the size check would fail for
              some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
+4.12 SVN_ALLOW_NON_8_BIT_CHARS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'char' type.  We assume char
+             has exactly 8 bits.  Other values may break the code reading,
+             interpreting and writing repository files.  Defining this option
+             will allow SVN to be compiled even if the size check would fail
+             for some reason.
   Range:     definedness
   Default:   not defined
   Suggested: not defined (to ensure correct behaviour)

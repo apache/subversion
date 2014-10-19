@@ -1553,8 +1553,12 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
- * Normally, the difference from repository->working_copy is shown.
- * If @a reverse_order is TRUE, then show working_copy->repository diffs.
+ * Normally, the difference from repository->working_copy is shown. If
+ * @a reverse_order is TRUE, then we want to show working_copy->repository
+ * diffs. Most of the reversal is done by the caller; here we just swap the
+ * order of reporting a replacement so that the local addition is reported
+ * before the remote delete. (The caller's diff processor can then transform
+ * adds into deletes and deletes into adds, but it can't reorder the output.)
  *
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.

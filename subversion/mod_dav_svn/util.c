@@ -152,7 +152,7 @@ dav_svn__convert_err(svn_error_t *serr,
 
     derr = build_error_chain(pool, purged_serr, status);
     if (message != NULL
-        && purged_serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
+        && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
       /* Don't hide hook failures; we might hide the error text */
       derr = dav_push_error(pool, status, purged_serr->apr_err,
                             message, derr);

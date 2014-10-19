@@ -817,17 +817,17 @@ SVN_ERROR_START
              "Malformed transaction ID string.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+  SVN_ERRDEF(SVN_ERR_FS_INDEX_CORRUPTION,
              SVN_ERR_FS_CATEGORY_START + 54,
              "Corrupt index file.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
+  SVN_ERRDEF(SVN_ERR_FS_INDEX_REVISION,
              SVN_ERR_FS_CATEGORY_START + 55,
              "Revision not covered by index.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
+  SVN_ERRDEF(SVN_ERR_FS_INDEX_OVERFLOW,
              SVN_ERR_FS_CATEGORY_START + 56,
              "Item index too large for this revision.")
 
@@ -837,7 +837,7 @@ SVN_ERROR_START
              "Container index out of range.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+  SVN_ERRDEF(SVN_ERR_FS_INDEX_INCONSISTENT,
              SVN_ERR_FS_CATEGORY_START + 58,
              "Index files are inconsistent.")
 
@@ -857,8 +857,13 @@ SVN_ERROR_START
              "Container capacity exceeded.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_INVALID_GENERATION,
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_NODEREV_ID,
              SVN_ERR_FS_CATEGORY_START + 62,
+             "Malformed node revision ID string.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_INVALID_GENERATION,
+             SVN_ERR_FS_CATEGORY_START + 63,
              "Invalid generation number data.")
 
   /* repos errors */
