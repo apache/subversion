@@ -1843,7 +1843,8 @@ svn_fs_fs__create(svn_fs_t *fs,
         }
     }
 
-  svn_fs_fs__create_file_tree(fs, path, format, shard_size, 0, pool);
+  /* Actual FS creation. */
+  SVN_ERR(svn_fs_fs__create_file_tree(fs, path, format, shard_size, 0, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
