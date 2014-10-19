@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -358,18 +357,6 @@ typedef struct fs_fs_data_t
   /* Fulltext cache; currently only used with memcached.  Maps from
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
-
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
-  /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;

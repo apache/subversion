@@ -86,12 +86,6 @@ def check_hotcopy_fsfs_fsx(src, dst):
                                 "source" % src_dirent)
       # Compare all files in this directory
       for src_file in src_files:
-        # Exclude temporary files
-        if src_file == 'rev-prop-atomics.shm':
-          continue
-        if src_file == 'rev-prop-atomics.mutex':
-          continue
-
         # Ignore auto-created empty lock files as they may or may not
         # be present and are neither required by nor do they harm to
         # the destination repository.
