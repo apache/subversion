@@ -1042,16 +1042,16 @@ release_name_from_version(const char *osver)
   /* See http://en.wikipedia.org/wiki/History_of_OS_X#Release_timeline */
   switch(num)
     {
-    case 0: return "Cheetah";
-    case 1: return "Puma";
-    case 2: return "Jaguar";
-    case 3: return "Panther";
-    case 4: return "Tiger";
-    case 5: return "Leopard";
-    case 6: return "Snow Leopard";
-    case 7: return "Lion";
-    case 8: return "Mountain Lion";
-    case 9: return "Mavericks";
+    case  0: return "Cheetah";
+    case  1: return "Puma";
+    case  2: return "Jaguar";
+    case  3: return "Panther";
+    case  4: return "Tiger";
+    case  5: return "Leopard";
+    case  6: return "Snow Leopard";
+    case  7: return "Lion";
+    case  8: return "Mountain Lion";
+    case  9: return "Mavericks";
     case 10: return "Yosemite";
     }
 
