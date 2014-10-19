@@ -861,6 +861,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 62,
              "Malformed node revision ID string.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_INVALID_GENERATION,
+             SVN_ERR_FS_CATEGORY_START + 63,
+             "Invalid generation number data.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
