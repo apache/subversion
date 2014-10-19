@@ -664,7 +664,7 @@ svn_fs_x__revision_proplist(apr_hash_t **proplist_p,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, pool));
+  SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -959,6 +959,9 @@ svn_fs_x__create(svn_fs_t *fs,
                              "0\n", pool));
   SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs, pool),
                                    pool));
+
+  /* Initialize the revprop caching info. */
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_x__write_format(fs, FALSE, pool));

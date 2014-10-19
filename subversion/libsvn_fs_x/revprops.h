@@ -29,16 +29,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Write the CURRENT revprop generation to disk for repository FS.
+/* Auto-create / replace the revprop generation file in FS with its
+ * initial contents.  In any case, FS will not hold an open handle to
+ * it after this function succeeds.
  */
 svn_error_t *
-svn_fs_x__write_revprop_generation_file(svn_fs_t *fs,
-                                        apr_int64_t current,
+svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
                                         apr_pool_t *pool);
-
-/* Make sure the revprop_namespace member in FS is set. */
-svn_error_t *
-svn_fs_x__cleanup_revprop_namespace(svn_fs_t *fs);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
  * 
@@ -77,6 +74,7 @@ svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                         apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
  *
  * Allocations will be done in POOL.
  */
@@ -84,6 +82,7 @@ svn_error_t *
 svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
+                                svn_boolean_t bypass_cache,
                                 apr_pool_t *pool);
 
 /* Set the revision property list of revision REV in filesystem FS to
