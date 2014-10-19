@@ -335,6 +335,19 @@ svn_fs_fs__dump_index(svn_fs_t *fs,
                       apr_pool_t *scratch_pool);
 
 
+/* Rewrite the respective index information of the rev / pack file in FS
+ * containing REVISION and use the svn_fs_fs__p2l_entry_t * array ENTRIES
+ * as the new index contents.  Allocate temporaries from SCRATCH_POOL.
+ *
+ * Note that this becomes a no-op if ENTRIES is empty.  You may use a zero-
+ * sized empty entry instead.
+ */
+svn_error_t *
+svn_fs_fs__load_index(svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_array_header_t *entries,
+                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
