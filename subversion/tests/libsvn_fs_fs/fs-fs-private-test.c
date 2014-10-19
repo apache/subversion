@@ -331,7 +331,7 @@ dump_index(const svn_test_opts_t *opts,
   /* Create a filesystem */
   SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
 
-  /* Gather statistics info on that repo. */
+  /* Read the index data for REV from that repo. */
   baton.invocations = 0;
   baton.offset = 0;
   baton.revision = rev;
