@@ -993,17 +993,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
                                  PATH_TXN_CURRENT, pool));
 
-  /* If a revprop generation file exists in the source filesystem,
-   * reset it to zero (since this is on a different path, it will not
-   * overlap with data already in cache).  Also, clean up stale files
-   * used for the named atomics implementation. */
-  SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprop_generation(src_fs, pool),
-                            &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_fs_fs__write_revprop_generation_file(dst_fs, 0, pool));
-
-  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(dst_fs));
-
   return SVN_NO_ERROR;
 }
 

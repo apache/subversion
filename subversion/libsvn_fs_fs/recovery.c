@@ -345,9 +345,6 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(fs));
-
   /* The admin may have created a plain copy of this repo before attempting
      to recover it (hotcopy may or may not work with corrupted repos).
      Bump the instance ID. */
