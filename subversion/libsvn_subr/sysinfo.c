@@ -1052,6 +1052,7 @@ release_name_from_version(const char *osver)
     case 7: return "Lion";
     case 8: return "Mountain Lion";
     case 9: return "Mavericks";
+    case 10: return "Yosemite";
     }
 
   return NULL;
