@@ -231,7 +231,8 @@ fuzzing_set_byte_test(const svn_test_opts_t *opts,
       const char *repo_name;
       svn_pool_clear(iterpool);
 
-      repo_name = apr_psprintf(iterpool, "fuzzing_set_byte_%d_%d", min, max);
+      repo_name = apr_psprintf(iterpool, "test-repo-fuzzing_set_byte_%d_%d",
+                               min, max);
       SVN_ERR(fuzzing_1_byte_test(opts, repo_name, set_byte, &c, iterpool));
     }
 
@@ -255,8 +256,8 @@ static svn_error_t *
 fuzzing_invert_byte_test(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
-  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_invert_byte", invert_byte,
-                              NULL, pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "test-repo-fuzzing_invert_byte",
+                              invert_byte, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -273,7 +274,7 @@ static svn_error_t *
 fuzzing_increment_byte_test(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
-  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_increment_byte",
+  SVN_ERR(fuzzing_1_byte_test(opts, "test-repo-fuzzing_increment_byte",
                               increment_byte, NULL, pool));
 
   return SVN_NO_ERROR;
@@ -291,7 +292,7 @@ static svn_error_t *
 fuzzing_decrement_byte_test(const svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
-  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_decrement_byte",
+  SVN_ERR(fuzzing_1_byte_test(opts, "test-repo-fuzzing_decrement_byte",
                               decrement_byte, NULL, pool));
 
   return SVN_NO_ERROR;
@@ -309,8 +310,8 @@ static svn_error_t *
 fuzzing_null_byte_test(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
-  SVN_ERR(fuzzing_1_byte_test(opts, "fuzzing_null_byte", null_byte, NULL,
-                              pool));
+  SVN_ERR(fuzzing_1_byte_test(opts, "test-repo-fuzzing_null_byte",
+                              null_byte, NULL, pool));
 
   return SVN_NO_ERROR;
 }
