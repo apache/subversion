@@ -1471,10 +1471,15 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
     }
 
   /* Old repositories may not have the SHA1 checksum handy.
-     This check becomes expensive.  Skip it unless explicitly required. */
+     This check becomes expensive.  Skip it unless explicitly required.
+
+     We already have seen that the ID is different, so produce a likely
+     false negative as allowed by the API description - even though the
+     MD5 matched, there is an extremely slim chance that the SHA1 wouldn't.
+   */
   if (!strict)
     {
-      *equal = TRUE;
+      *equal = FALSE;
       return SVN_NO_ERROR;
     }
 
