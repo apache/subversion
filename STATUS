@@ -189,8 +189,7 @@ Candidate changes:
    Improve performance of recorded timestamp fixups in svn cleanup
    Justification:
      Fixing timestamps on a working copy with properly recorded timestamps
-     should not cost 10* times the time of walking the working copy for
-     status.
+     should not cost 10* the time of walking the working copy for status.
    Branch:
      ^/subversion/branches/1.8.x-r1633126
    Votes:
