@@ -783,7 +783,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "get_set_multiple_huge_revprops_packed_fs"
+#define REPO_NAME "test-repo-get_set_multiple_huge_revprops_packed_fs"
 #define SHARD_SIZE 4
 #define MAX_REV 9
 static svn_error_t *
@@ -1018,7 +1018,7 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
 }
 #undef SHARD_SIZE
 
-#define REPO_NAME "upgrade_new_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_new_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1033,7 +1033,7 @@ upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "upgrade_old_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_old_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1050,7 +1050,7 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "metadata_checksumming"
+#define REPO_NAME "test-repo-metadata_checksumming"
 static svn_error_t *
 metadata_checksumming(const svn_test_opts_t *opts,
                   apr_pool_t *pool)
@@ -1106,7 +1106,7 @@ metadata_checksumming(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "revprop_caching_on_off"
+#define REPO_NAME "test-repo-revprop_caching_on_off"
 static svn_error_t *
 revprop_caching_on_off(const svn_test_opts_t *opts,
                        apr_pool_t *pool)

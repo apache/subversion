@@ -75,7 +75,7 @@ create_greek_repo(svn_repos_t **repos,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "get-repo-stats-test"
+#define REPO_NAME "test-repo-get-repo-stats-test"
 
 static svn_error_t *
 verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
@@ -263,7 +263,7 @@ get_repo_stats(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "dump-index-test"
+#define REPO_NAME "test-repo-dump-index-test"
 
 typedef struct dump_baton_t
 {
@@ -349,7 +349,7 @@ dump_index(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "load-index-test"
+#define REPO_NAME "test-repo-load-index-test"
 
 static svn_error_t *
 receive_index(const svn_fs_fs__p2l_entry_t *entry,
