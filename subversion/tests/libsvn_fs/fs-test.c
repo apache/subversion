@@ -5519,7 +5519,6 @@ test_paths_changed(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
 
-  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(root, pool));
@@ -5617,7 +5616,6 @@ test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
 
-  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(root, pool));
