@@ -5431,7 +5431,6 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "2");
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, fs_config, pool));
 
-  SVN_ERR(svn_fs_open(&fs, fs_path, NULL, pool));
   SVN_ERR(svn_fs_begin_txn(&txn1, fs, head_rev, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn1, pool));
   SVN_ERR(svn_test__create_greek_tree(root, pool));
