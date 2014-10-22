@@ -680,7 +680,8 @@ read_noderev(query_t *query,
 
       /* if we are the first to use this rep, mark it as "prop rep" */
       if (++props->ref_count == 1)
-        props->kind = noderev->kind == svn_node_dir ? dir_rep : file_rep;
+        props->kind = noderev->kind == svn_node_dir ? dir_property_rep
+                                                    : file_property_rep;
     }
 
   /* record largest changes */
