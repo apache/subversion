@@ -296,7 +296,7 @@ Index on-disk format
   started after the begin of a given page and overlap with the next page
   will not be stored in the start page.  The runtime representation will
   duplicate items overlapping page boundaries; the on-disk representation
-  will not.
+  will not.  Thus, pages inside large items will have zero entries on disk.
 
 
 Proto index file format

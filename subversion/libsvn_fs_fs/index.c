@@ -2463,35 +2463,42 @@ get_p2l_page(apr_array_header_t **entries,
   last_revision = start_revision;
   last_compound = 0;
 
-  /* If the rev / pack file page contains a single item spreading over
-   * multiple pages, the current page description may be empty (the item
-   * description will be read from the first entry in next page). */
-  offset = start_offset;
-
-  /* Read page. */
-  while (offset < next_offset)
+  /* Special case: empty pages. */
+  if (start_offset == next_offset)
     {
-      SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, &last_revision,
-                         &last_compound, result));
-      offset = packed_stream_offset(rev_file->p2l_stream);
+      /* Empty page. This only happens if the first entry of the next page
+       * also covers this page (and possibly more) completely. */
+      SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset,
+                         &last_revision, &last_compound, result));
     }
+  else
+    {
+      /* Read non-empty page. */
+      do
+        {
+          SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset,
+                             &last_revision, &last_compound, result));
+          offset = packed_stream_offset(rev_file->p2l_stream);
+        }
+      while (offset < next_offset);
 
-  /* We should now be exactly at the next offset, i.e. the numbers in the
-   * stream cannot overlap into the next page description. */
-  if (offset != next_offset)
-    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+      /* We should now be exactly at the next offset, i.e. the numbers in
+       * the stream cannot overlap into the next page description. */
+      if (offset != next_offset)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
              _("P2L page description overlaps with next page description"));
 
-  /* if we haven't covered the cluster end yet, we must read the first
-   * entry of the next page */
-  if (item_offset < page_start + page_size)
-    {
-      SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
-      item_offset = (apr_off_t)value;
-      last_revision = start_revision;
-      last_compound = 0;
-      SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, &last_revision,
-                         &last_compound, result));
+      /* if we haven't covered the cluster end yet, we must read the first
+       * entry of the next page */
+      if (item_offset < page_start + page_size)
+        {
+          SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
+          item_offset = (apr_off_t)value;
+          last_revision = start_revision;
+          last_compound = 0;
+          SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset,
+                             &last_revision, &last_compound, result));
+        }
     }
 
   *entries = result;
