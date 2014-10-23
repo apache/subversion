@@ -208,23 +208,34 @@ reopen_trivial_transaction(const svn_test_opts_t *opts,
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
   const char *txn_name;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-reopen-trivial-txn",
                               opts, pool));
 
-  /* Begin a new transaction that is based on revision 0.  */
+  /* Create a first transaction - we don't want that one to reopen. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+
+  /* Begin a second transaction that is based on revision 0.  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
 
   /* Don't use the subpool, txn_name must persist beyond the current txn */
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+
+  /* Create a third transaction - we don't want that one to reopen. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
 
   /* Close the transaction. */
   svn_pool_clear(subpool);
 
   /* Reopen the transaction by name */
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, subpool));
+
+  /* Does it have the same name? */
+  SVN_ERR(svn_fs_txn_root(&root, txn, subpool));
+  SVN_TEST_STRING_ASSERT(svn_fs_txn_root_name(root, subpool), txn_name);
 
   /* Close the transaction ... again. */
   svn_pool_destroy(subpool);
