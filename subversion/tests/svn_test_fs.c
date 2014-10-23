@@ -371,10 +371,19 @@ validate_tree_entry(svn_fs_root_t *root,
 {
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
-  svn_boolean_t is_dir;
+  svn_node_kind_t kind;
+  svn_boolean_t is_dir, is_file;
+
+  /* Verify that node types are reported consistently. */
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  SVN_ERR(svn_fs_is_dir(&is_dir, root, path, pool));
+  SVN_ERR(svn_fs_is_file(&is_file, root, path, pool));
+
+  SVN_TEST_ASSERT(!is_dir || kind == svn_node_dir);
+  SVN_TEST_ASSERT(!is_file || kind == svn_node_file);
+  SVN_TEST_ASSERT(is_dir || is_file);
 
   /* Verify that this is the expected type of node */
-  SVN_ERR(svn_fs_is_dir(&is_dir, root, path, pool));
   if ((!is_dir && !contents) || (is_dir && contents))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -384,10 +393,17 @@ validate_tree_entry(svn_fs_root_t *root,
   /* Verify that the contents are as expected (files only) */
   if (! is_dir)
     {
+      svn_stringbuf_t *expected = svn_stringbuf_create(contents, pool);
+
+      /* File lengths. */
+      svn_filesize_t length;
+      SVN_ERR(svn_fs_file_length(&length, root, path, pool));
+      SVN_TEST_ASSERT(expected->len == length);
+
+      /* Text contents. */
       SVN_ERR(svn_fs_file_contents(&rstream, root, path, pool));
       SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
-      if (! svn_stringbuf_compare(rstring,
-                                  svn_stringbuf_create(contents, pool)))
+      if (! svn_stringbuf_compare(rstring, expected))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            "node '%s' in tree had unexpected contents",
@@ -416,6 +432,9 @@ svn_test__validate_tree(svn_fs_root_t *root,
   svn_stringbuf_t *corrupt_entries = NULL;
   apr_hash_index_t *hi;
   int i;
+
+  /* There should be no entry with this name. */
+  const char *na_name = "es-vee-en";
 
   /* Create a hash for storing our expected entries */
   expected_entries = apr_hash_make(subpool);
@@ -503,6 +522,23 @@ svn_test__validate_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(extra_entries, "   ");
       svn_stringbuf_appendbytes(extra_entries, (const char *)key, keylen);
       svn_stringbuf_appendcstr(extra_entries, "\n");
+    }
+
+  /* Test that non-exiting paths will not be found.
+   * Skip this test if somebody sneakily added NA_NAME. */
+  if (!svn_hash_gets(expected_entries, na_name))
+    {
+      svn_node_kind_t kind;
+      svn_boolean_t is_dir, is_file;
+
+      /* Verify that the node is reported as "n/a". */
+      SVN_ERR(svn_fs_check_path(&kind, root, na_name, subpool));
+      SVN_ERR(svn_fs_is_dir(&is_dir, root, na_name, subpool));
+      SVN_ERR(svn_fs_is_file(&is_file, root, na_name, subpool));
+
+      SVN_TEST_ASSERT(kind == svn_node_none);
+      SVN_TEST_ASSERT(!is_file);
+      SVN_TEST_ASSERT(!is_dir);
     }
 
   if (missing_entries || extra_entries || corrupt_entries)
