@@ -1157,6 +1157,8 @@ basic_commit(const svn_test_opts_t *opts,
 
   /* Create the greek tree. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_TEST_ASSERT(svn_fs_is_txn_root(txn_root));
+  SVN_TEST_ASSERT(!svn_fs_is_revision_root(txn_root));
 
   /* Commit it. */
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
@@ -1170,6 +1172,8 @@ basic_commit(const svn_test_opts_t *opts,
 
   /* Get root of the revision */
   SVN_ERR(svn_fs_revision_root(&revision_root, fs, after_rev, pool));
+  SVN_TEST_ASSERT(!svn_fs_is_txn_root(revision_root));
+  SVN_TEST_ASSERT(svn_fs_is_revision_root(revision_root));
 
   /* Check the tree. */
   SVN_ERR(svn_test__check_greek_tree(revision_root, pool));
