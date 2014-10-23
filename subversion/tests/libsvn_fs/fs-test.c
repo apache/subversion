@@ -4355,32 +4355,24 @@ branch_test(const svn_test_opts_t *opts,
 }
 
 
+/* Verify that file FILENAME under ROOT has the same contents checksum
+ * as CONTENTS when comparing the checksums of the given TYPE.
+ * Use POOL for temporary allocations. */
 static svn_error_t *
-verify_checksum(const svn_test_opts_t *opts,
-                apr_pool_t *pool)
+verify_file_checksum(svn_stringbuf_t *contents,
+                     svn_fs_root_t *root,
+                     const char *filename,
+                     svn_checksum_kind_t type,
+                     apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_stringbuf_t *str;
   svn_checksum_t *expected_checksum, *actual_checksum;
 
   /* Write a file, compare the repository's idea of its checksum
      against our idea of its checksum.  They should be the same. */
-
-  str = svn_stringbuf_create("My text editor charges me rent.", pool);
-  SVN_ERR(svn_checksum(&expected_checksum, svn_checksum_md5, str->data,
-                       str->len, pool));
-
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-verify-checksum",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "fact", pool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "fact", str->data, pool));
-  SVN_ERR(svn_fs_file_checksum(&actual_checksum, svn_checksum_md5, txn_root,
-                               "fact", TRUE, pool));
-
+  SVN_ERR(svn_checksum(&expected_checksum, type, contents->data,
+                       contents->len, pool));
+  SVN_ERR(svn_fs_file_checksum(&actual_checksum, type, root, filename, TRUE,
+                               pool));
   if (!svn_checksum_match(expected_checksum, actual_checksum))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -4389,6 +4381,44 @@ verify_checksum(const svn_test_opts_t *opts,
        "     actual:  %s\n",
        svn_checksum_to_cstring(expected_checksum, pool),
        svn_checksum_to_cstring(actual_checksum, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+verify_checksum(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_stringbuf_t *str;
+  svn_revnum_t rev;
+
+  /* Write a file, compare the repository's idea of its checksum
+     against our idea of its checksum.  They should be the same. */
+  str = svn_stringbuf_create("My text editor charges me rent.", pool);
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-verify-checksum",
+                              opts, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "fact", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "fact", str->data, pool));
+
+  /* Do it for the txn. */
+  SVN_ERR(verify_file_checksum(str, txn_root, "fact", svn_checksum_md5,
+                               pool));
+  SVN_ERR(verify_file_checksum(str, txn_root, "fact", svn_checksum_sha1,
+                               pool));
+
+  /* Do it again - this time for the revision. */
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, rev, pool));
+  SVN_ERR(verify_file_checksum(str, rev_root, "fact", svn_checksum_md5,
+                               pool));
+  SVN_ERR(verify_file_checksum(str, rev_root, "fact", svn_checksum_sha1,
+                               pool));
 
   return SVN_NO_ERROR;
 }
