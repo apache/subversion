@@ -319,6 +319,25 @@ verify_txn_list(const svn_test_opts_t *opts,
                           "Got a bogus txn list.");
  all_good:
 
+  /* Get rid of the txns one at a time. */
+  SVN_ERR(svn_fs_purge_txn(fs, name1, pool));
+
+  /* There should be exactly one left. */
+  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
+
+  /* Check the list. It should have *exactly* two entries. */
+  SVN_TEST_ASSERT(   txn_list->nelts == 1
+                  && !strcmp(name2, APR_ARRAY_IDX(txn_list, 0, const char *)));
+
+  /* Get rid of the other txn as well. */
+  SVN_ERR(svn_fs_purge_txn(fs, name2, pool));
+
+  /* There should be exactly one left. */
+  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
+
+  /* Check the list. It should have *exactly* two entries. */
+  SVN_TEST_ASSERT(txn_list->nelts == 0);
+
   return SVN_NO_ERROR;
 }
 
