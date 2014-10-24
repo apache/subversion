@@ -325,7 +325,7 @@ verify_txn_list(const svn_test_opts_t *opts,
   /* There should be exactly one left. */
   SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
 
-  /* Check the list. It should have *exactly* two entries. */
+  /* Check the list. It should have *exactly* one entry. */
   SVN_TEST_ASSERT(   txn_list->nelts == 1
                   && !strcmp(name2, APR_ARRAY_IDX(txn_list, 0, const char *)));
 
@@ -335,7 +335,7 @@ verify_txn_list(const svn_test_opts_t *opts,
   /* There should be exactly one left. */
   SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
 
-  /* Check the list. It should have *exactly* two entries. */
+  /* Check the list. It should have no entries. */
   SVN_TEST_ASSERT(txn_list->nelts == 0);
 
   return SVN_NO_ERROR;
