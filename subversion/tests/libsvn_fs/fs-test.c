@@ -4206,6 +4206,12 @@ check_related(const svn_test_opts_t *opts,
       { "E", 7 }, { "E", 8 }, { "F", 9 }, { "F", 10 }
     };
 
+    /* Latest revision that touched the respective path. */
+    struct path_rev_t latest_changes[6] = {
+      { "A", 4 }, { "B", 6 }, { "C", 6 },
+      { "D", 7 }, { "E", 8 }, { "F", 10 }
+    };
+
     int related_matrix[16][16] = {
       /* A1 ... F10 across the top here*/
       { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* A1 */
@@ -4235,14 +4241,16 @@ check_related(const svn_test_opts_t *opts,
             struct path_rev_t pr2 = path_revs[j];
             const svn_fs_id_t *id1, *id2;
             int related = 0;
+            svn_fs_node_relation_t relation;
+            svn_fs_root_t *rev_root1, *rev_root2;
 
             /* Get the ID for the first path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr1.rev, subpool));
-            SVN_ERR(svn_fs_node_id(&id1, rev_root, pr1.path, subpool));
+            SVN_ERR(svn_fs_revision_root(&rev_root1, fs, pr1.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id1, rev_root1, pr1.path, subpool));
 
             /* Get the ID for the second path/revision combination. */
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, pr2.rev, subpool));
-            SVN_ERR(svn_fs_node_id(&id2, rev_root, pr2.path, subpool));
+            SVN_ERR(svn_fs_revision_root(&rev_root2, fs, pr2.rev, subpool));
+            SVN_ERR(svn_fs_node_id(&id2, rev_root2, pr2.path, subpool));
 
             /* <exciting> Now, run the relationship check! </exciting> */
             related = svn_fs_check_related(id1, id2) ? 1 : 0;
@@ -4265,7 +4273,72 @@ check_related(const svn_test_opts_t *opts,
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
 
+            /* Asking directly, i.e. without involving the noderev IDs as
+             * an intermediate, should yield the same results. */
+            SVN_ERR(svn_fs_node_relation(&relation, rev_root1, pr1.path,
+                                         rev_root2, pr2.path, subpool));
+            if (i == j)
+              {
+                /* Identical note. */
+                if (!related || relation != svn_fs_node_same)
+                  {
+                    return svn_error_createf
+                      (SVN_ERR_TEST_FAILED, NULL,
+                      "expected '%s:%d' to be the same as '%s:%d';"
+                      " it was not",
+                      pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
+                  }
+              }
+            else if (related && relation != svn_fs_node_common_ancestor)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s:%d' to have a common ancestor with '%s:%d';"
+                   " it had not",
+                   pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
+              }
+            else if (!related && relation != svn_fs_node_unrelated)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s:%d' to not be related to '%s:%d'; it was",
+                   pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
+              }
+
             svn_pool_clear(subpool);
+          } /* for ... */
+      } /* for ... */
+
+    /* Verify that the noderevs stay the same after their last change. */
+    for (i = 0; i < 6; ++i)
+      {
+        const char *path = latest_changes[i].path;
+        svn_revnum_t latest = latest_changes[i].rev;
+        svn_fs_root_t *latest_root;
+        svn_revnum_t rev;
+        svn_fs_node_relation_t relation;
+
+        /* FS root of the latest change. */
+        svn_pool_clear(subpool);
+        SVN_ERR(svn_fs_revision_root(&latest_root, fs, latest, subpool));
+
+        /* All future revisions. */
+        for (rev = latest + 1; rev <= 10; ++rev)
+          {
+            /* Query their noderev relationship to the latest change. */
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, rev, subpool));
+            SVN_ERR(svn_fs_node_relation(&relation, latest_root, path,
+                                         rev_root, path, subpool));
+
+            /* They shall use the same noderevs */
+            if (relation != svn_fs_node_same)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                  "expected '%s:%d' to be the same as '%s:%d';"
+                  " it was not",
+                  path, (int)latest, path, (int)rev);
+              }
           } /* for ... */
       } /* for ... */
   }
