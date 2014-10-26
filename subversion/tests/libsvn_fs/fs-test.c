@@ -319,25 +319,6 @@ verify_txn_list(const svn_test_opts_t *opts,
                           "Got a bogus txn list.");
  all_good:
 
-  /* Get rid of the txns one at a time. */
-  SVN_ERR(svn_fs_purge_txn(fs, name1, pool));
-
-  /* There should be exactly one left. */
-  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
-
-  /* Check the list. It should have *exactly* one entry. */
-  SVN_TEST_ASSERT(   txn_list->nelts == 1
-                  && !strcmp(name2, APR_ARRAY_IDX(txn_list, 0, const char *)));
-
-  /* Get rid of the other txn as well. */
-  SVN_ERR(svn_fs_purge_txn(fs, name2, pool));
-
-  /* There should be exactly one left. */
-  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
-
-  /* Check the list. It should have no entries. */
-  SVN_TEST_ASSERT(txn_list->nelts == 0);
-
   return SVN_NO_ERROR;
 }
 
@@ -5807,6 +5788,81 @@ test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Get rid of transaction NAME in FS.  This function deals with backend-
+ * specific behavior as permitted by the API. */
+static svn_error_t *
+cleanup_txn(svn_fs_t *fs,
+            const char *name,
+            apr_pool_t *scratch_pool)
+{
+  /* Get rid of the txns one at a time. */
+  svn_error_t *err = svn_fs_purge_txn(fs, name, scratch_pool);
+
+  /* Some backends (BDB) don't support purging transactions that have never
+   * seen an abort or commit attempt.   Simply abort those txns. */
+  if (err && err->apr_err == SVN_ERR_FS_TRANSACTION_NOT_DEAD)
+    {
+      svn_fs_txn_t *txn;
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, name, scratch_pool));
+      SVN_ERR(svn_fs_abort_txn(txn, scratch_pool));
+
+      /* Should be gone now ... */
+      SVN_TEST_ASSERT_ERROR(svn_fs_open_txn(&txn, fs, name, scratch_pool),
+                            SVN_ERR_FS_NO_SUCH_TRANSACTION);
+    }
+
+  return svn_error_trace(err);
+}
+
+/* Make sure we get txn lists correctly. */
+static svn_error_t *
+purge_txn_test(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  const char *name1, *name2;
+  apr_array_header_t *txn_list;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-purge-txn",
+                              opts, pool));
+
+  /* Begin a new transaction, get its name (in the top pool), close it.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_name(&name1, txn, pool));
+
+  /* Begin *another* transaction, get its name (in the top pool), close it.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_name(&name2, txn, pool));
+  svn_pool_clear(subpool);
+
+  /* Get rid of the txns one at a time. */
+  SVN_ERR(cleanup_txn(fs, name1, pool));
+
+  /* There should be exactly one left. */
+  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
+
+  /* Check the list. It should have *exactly* one entry. */
+  SVN_TEST_ASSERT(   txn_list->nelts == 1
+                  && !strcmp(name2, APR_ARRAY_IDX(txn_list, 0, const char *)));
+
+  /* Get rid of the other txn as well. */
+  SVN_ERR(cleanup_txn(fs, name2, pool));
+
+  /* There should be exactly one left. */
+  SVN_ERR(svn_fs_list_transactions(&txn_list, fs, pool));
+
+  /* Check the list. It should have no entries. */
+  SVN_TEST_ASSERT(txn_list->nelts == 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5910,6 +5966,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_paths_changed"),
     SVN_TEST_OPTS_PASS(test_delete_replaced_paths_changed,
                        "test deletion after replace in changed paths list"),
+    SVN_TEST_OPTS_PASS(purge_txn_test,
+                       "test purging transactions"),
     SVN_TEST_NULL
   };
 
