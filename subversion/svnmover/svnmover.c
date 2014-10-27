@@ -529,16 +529,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         {
           SVN_DBG(("merged: e%d => <added>", eid));
 
-          /* In BRANCH, create an instance of the element EID with NEW_CONTENT.
+          /* In BRANCH, create an instance of the element EID with new content.
            *
            * Translated to old language, this means create a new node-copy
            * copied (branched) from the source-right version of the merge
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_editor3_instantiate(editor, eid, result->content->kind,
-                                  result->parent_eid, result->name,
-                                  result->content));
+          SVN_ERR(svn_editor3_instantiate(editor, eid,
+                                          result->parent_eid, result->name,
+                                          result->content));
         }
     }
 
