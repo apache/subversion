@@ -4342,7 +4342,7 @@ close_file(void *file_baton,
                 || strcmp(fb->new_repos_relpath, fb->old_repos_relpath) == 0)
               {
                 SVN_ERR_ASSERT(prop->value == NULL);
-                SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
+                SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath, NULL,
                                                scratch_pool));
 
                 lock_state = svn_wc_notify_lock_state_unlocked;

@@ -483,7 +483,7 @@ copy_item_to_temp(pack_context_t *context,
   svn_fs_x__p2l_entry_t *new_entry
     = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
   new_entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
+  SVN_ERR(svn_io_file_seek(temp_file, APR_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_x__p2l_entry_t *) = new_entry;
   
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
@@ -573,7 +573,7 @@ copy_rep_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR, &entry->offset,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR, &entry->offset,
                            pool));
   add_item_rep_mapping(context, entry);
 
@@ -596,7 +596,7 @@ copy_rep_to_temp(pack_context_t *context,
     }
 
   /* copy the whole rep (including header!) to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -699,12 +699,12 @@ copy_node_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR,
                            &entry->offset, pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -1245,7 +1245,7 @@ write_reps_container(pack_context_t *context,
 
   SVN_ERR(svn_fs_x__write_reps_container(pack_stream, container, pool));
   SVN_ERR(svn_stream_close(pack_stream));
-  SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_seek(context->pack_file, APR_CUR, &offset, pool));
 
   container_entry.offset = context->pack_offset;
   container_entry.size = offset - container_entry.offset;
@@ -1327,7 +1327,7 @@ write_reps_containers(pack_context_t *context,
 
       /* select the change list in the source file, parse it and add it to
        * the container */
-      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+      SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset,
                                iterpool));
       SVN_ERR(svn_fs_x__get_representation_length(&representation.size,
                                              &representation.expanded_size,
@@ -1414,7 +1414,7 @@ store_items(pack_context_t *context,
 
       /* select the item in the source file and copy it into the target
        * pack file */
-      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+      SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset,
                                iterpool));
       SVN_ERR(copy_file_data(context, context->pack_file, temp_file,
                              entry->size, iterpool));
@@ -1558,7 +1558,7 @@ write_changes_container(pack_context_t *context,
                                              container,
                                              pool));
   SVN_ERR(svn_stream_close(pack_stream));
-  SVN_ERR(svn_io_file_seek(context->pack_file, SEEK_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_seek(context->pack_file, APR_CUR, &offset, pool));
 
   container_entry.offset = context->pack_offset;
   container_entry.size = offset - container_entry.offset;
@@ -1654,7 +1654,7 @@ write_changes_containers(pack_context_t *context,
 
       /* select the change list in the source file, parse it and add it to
        * the container */
-      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+      SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset,
                                iterpool));
       SVN_ERR(svn_fs_x__read_changes(&changes, temp_stream, iterpool));
       SVN_ERR(svn_fs_x__changes_append_list(&list_index, container, changes));
@@ -1880,7 +1880,7 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < finfo.size)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &offset,
+                  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset,
                                            iterpool));
 
                   if (entry->type == SVN_FS_X__ITEM_TYPE_CHANGES)

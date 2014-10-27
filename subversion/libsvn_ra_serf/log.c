@@ -442,23 +442,22 @@ create_log_body(serf_bucket_t **body_bkt,
 
   if (log_ctx->changed_paths)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:discover-changed-paths", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:discover-changed-paths",
+                                         SVN_VA_NULL);
     }
 
   if (log_ctx->strict_node_history)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:strict-node-history", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:strict-node-history", SVN_VA_NULL);
     }
 
   if (log_ctx->include_merged_revisions)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:include-merged-revisions", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:include-merged-revisions",
+                                         SVN_VA_NULL);
     }
 
   if (log_ctx->revprops)
@@ -473,16 +472,14 @@ create_log_body(serf_bucket_t **body_bkt,
         }
       if (log_ctx->revprops->nelts == 0)
         {
-          svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:no-revprops", NULL,
-                                       alloc);
+          svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                             "S:no-revprops", SVN_VA_NULL);
         }
     }
   else
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:all-revprops", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:all-revprops", SVN_VA_NULL);
     }
 
   if (log_ctx->paths)
@@ -497,9 +494,8 @@ create_log_body(serf_bucket_t **body_bkt,
         }
     }
 
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:encode-binary-props", NULL,
-                               alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                     "S:encode-binary-props", SVN_VA_NULL);
 
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:log-report");

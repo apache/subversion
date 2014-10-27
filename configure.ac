@@ -319,18 +319,6 @@ case $host in
 esac
 AC_SUBST(LT_NO_UNDEFINED)
 
-AC_MSG_CHECKING([whether to avoid circular linkage at all costs])
-case $host in
-  *-*-cygwin*)
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK], 1,
-              [Define if circular linkage is not possible on this platform.])
-    ;;
-  *)
-    AC_MSG_RESULT([no])
-    ;;
-esac
-
 dnl Check for trang.
 trang=yes
 AC_ARG_WITH(trang,

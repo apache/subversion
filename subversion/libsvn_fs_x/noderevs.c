@@ -60,8 +60,6 @@ typedef struct binary_id_t
 } binary_id_t;
 
 /* Our internal representation of an representation.
- * We simply omit the uniquifier, which allows us to share instances of
- * binary_representation_t and uniquify them in a shared_representation_t.
  */
 typedef struct binary_representation_t
 {

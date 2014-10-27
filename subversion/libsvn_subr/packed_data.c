@@ -276,6 +276,33 @@ write_packed_uint_body(unsigned char *buffer, apr_uint64_t value)
   return buffer;
 }
 
+/* Return remapped VALUE.
+ *
+ * Due to sign conversion and diff underflow, values close to UINT64_MAX
+ * are almost as frequent as those close to 0.  Remap them such that the
+ * MSB is stored in the LSB and the remainder stores the absolute distance
+ * to 0.
+ *
+ * This minimizes the absolute value to store in many scenarios.
+ * Hence, the variable-length representation on disk is shorter, too.
+ */
+static apr_uint64_t
+remap_uint(apr_uint64_t value)
+{
+  return value & APR_UINT64_C(0x8000000000000000)
+       ? APR_UINT64_MAX - (2 * value)
+       : 2 * value;
+}
+
+/* Invert remap_uint. */
+static apr_uint64_t
+unmap_uint(apr_uint64_t value)
+{
+  return value & 1
+       ? (APR_UINT64_MAX - value / 2)
+       : value / 2;
+}
+
 /* Empty the unprocessed integer buffer in STREAM by either pushing the
  * data to the sub-streams or writing to the packed data (in case there
  * are no sub-streams).
@@ -313,8 +340,7 @@ svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
           for (i = 0; i < stream->buffer_used; ++i)
             {
               apr_uint64_t temp = stream->buffer[i];
-              apr_int64_t diff = (apr_int64_t)(temp - last_value);
-              stream->buffer[i] = diff < 0 ? -1 - 2 * diff : 2 * diff;
+              stream->buffer[i] = remap_uint(temp - last_value);
               last_value = temp;
             }
 
@@ -327,9 +353,7 @@ svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
          63 bits. */
       if (!private_data->diff && private_data->is_signed)
         for (i = 0; i < stream->buffer_used; ++i)
-          stream->buffer[i] = (apr_int64_t)stream->buffer[i] < 0
-                            ? -1 - 2 * stream->buffer[i]
-                            : 2 * stream->buffer[i];
+          stream->buffer[i] = remap_uint(stream->buffer[i]);
 
       /* auto-create packed data buffer.  Give it some reasonable initial
          size - just enough for a few tens of values. */
@@ -771,8 +795,8 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
   else
     {
       /* use this local buffer only if the packed data is shorter than this.
-         The goal is that we don't need to check for overflows that is not
-         detected by read_packed_uint_body. */
+         The goal is that read_packed_uint_body doesn't need check for
+         overflows. */
       unsigned char local_buffer[10 * SVN__PACKED_DATA_BUFFER_SIZE];
       unsigned char *p;
       unsigned char *start;
@@ -808,9 +832,7 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
           apr_uint64_t last_value = private_data->last_value;
           for (i = end; i > 0; --i)
             {
-              apr_uint64_t temp = stream->buffer[i-1];
-              temp = (temp % 2) ? -1 - temp / 2 : temp / 2;
-              last_value += temp;
+              last_value += unmap_uint(stream->buffer[i-1]);
               stream->buffer[i-1] = last_value;
             }
 
@@ -820,9 +842,7 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
       /* handle signed values, if configured and not handled already */
       if (!private_data->diff && private_data->is_signed)
         for (i = 0; i < end; ++i)
-          stream->buffer[i] = (stream->buffer[i] % 2)
-                            ? -1 - stream->buffer[i] / 2
-                            : stream->buffer[i] / 2;
+          stream->buffer[i] = unmap_uint(stream->buffer[i]);
     }
 
   stream->buffer_used = end;

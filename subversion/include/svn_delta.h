@@ -249,6 +249,7 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
  *
  * @since New in 1.4
  *
+ * @since Since 1.9, @a tbuf may be NULL if @a *tlen is 0.
  */
 void
 svn_txdelta_apply_instructions(svn_txdelta_window_t *window,

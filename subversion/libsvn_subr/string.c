@@ -26,6 +26,7 @@
 
 
 #include <apr.h>
+#include <assert.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_fnmatch.h>
@@ -239,7 +240,9 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
   new_string->data = data;
   new_string->len = size;
 
-  memcpy(data, bytes, size);
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -392,7 +395,10 @@ svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
-  memcpy(strbuf->data, bytes, size);
+
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -589,6 +595,10 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   apr_size_t total_len;
   void *start_address;
 
+  if (!count)
+    /* Allow BYTES to be NULL by avoiding passing it to memcpy. */
+    return;
+
   total_len = str->len + count;  /* total size needed */
 
   /* svn_stringbuf_ensure adds 1 for null terminator. */
@@ -641,6 +651,10 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
                      const char *bytes,
                      apr_size_t count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL. It's a no-op in that case. */
+  if (count == 0)
+    return;
+
   if (bytes + count > str->data && bytes < str->data + str->blocksize)
     {
       /* special case: BYTES overlaps with this string -> copy the source */
@@ -681,6 +695,14 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       const char *bytes,
                       apr_size_t new_count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL.
+   * In that case, this is just a substring removal. */
+  if (new_count == 0)
+    {
+      svn_stringbuf_remove(str, pos, old_count);
+      return;
+    }
+
   if (bytes + new_count > str->data && bytes < str->data + str->blocksize)
     {
       /* special case: BYTES overlaps with this string -> copy the source */
@@ -1164,7 +1186,7 @@ svn__i64toa(char * dest, apr_int64_t number)
     return svn__ui64toa(dest, (apr_uint64_t)number);
 
   *dest = '-';
-  return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
+  return svn__ui64toa(dest + 1, 0 - (apr_uint64_t)number) + 1;
 }
 
 static void

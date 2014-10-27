@@ -86,7 +86,7 @@ are likely some errors because of that.
 /* Declarations. */
 
 static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+get_youngest(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool);
 
 /* Pathname helper functions */
 
@@ -213,7 +213,7 @@ with_some_lock_file(with_lock_baton_t *baton)
           if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
             err = svn_fs_fs__update_min_unpacked_rev(fs, pool);
           if (!err)
-            err = get_youngest(&ffd->youngest_rev_cache, fs->path, pool);
+            err = get_youngest(&ffd->youngest_rev_cache, fs, pool);
         }
 
       if (!err)
@@ -644,6 +644,50 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
+/* Check that BLOCK_SIZE is a valid block / page size, i.e. it is within
+ * the range of what the current system may address in RAM and it is a
+ * power of 2.  Assume that the element size within the block is ITEM_SIZE.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+verify_block_size(apr_int64_t block_size,
+                  apr_size_t item_size,
+                  const char *name,
+                  apr_pool_t *scratch_pool
+                 )
+{
+  /* Limit range. */
+  if (block_size <= 0)
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is too small for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  if (block_size > SVN_MAX_OBJECT_SIZE / item_size)
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is too large for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  /* Ensure it is a power of two.
+   * For positive X,  X & (X-1) will reset the lowest bit set.
+   * If the result is 0, at most one bit has been set. */
+  if (0 != (block_size & (block_size - 1)))
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is invalid for fsfs.conf setting '%s' "
+                               "because it is not a power of 2."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  return SVN_NO_ERROR;
+}
+
 /* Read the configuration information of the file system at FS_PATH
  * and set the respective values in FFD.  Use pools as usual.
  */
@@ -742,6 +786,16 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_P2L_PAGE_SIZE,
                                    0x400));
+
+      /* Don't accept unreasonable or illegal values.
+       * Block size and P2L page size are in kbytes;
+       * L2P blocks are arrays of apr_off_t. */
+      SVN_ERR(verify_block_size(ffd->block_size, 0x400,
+                                CONFIG_OPTION_BLOCK_SIZE, scratch_pool));
+      SVN_ERR(verify_block_size(ffd->p2l_page_size, 0x400,
+                                CONFIG_OPTION_P2L_PAGE_SIZE, scratch_pool));
+      SVN_ERR(verify_block_size(ffd->l2p_page_size, sizeof(apr_off_t),
+                                CONFIG_OPTION_L2P_PAGE_SIZE, scratch_pool));
 
       /* convert kBytes to bytes */
       ffd->block_size *= 0x400;
@@ -949,19 +1003,14 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 "###"                                                                        NL
 "### The log-to-phys index maps data item numbers to offsets within the"     NL
-"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
-"### per changed path.  For each revision, at least one page is being"       NL
-"### allocated in the l2p index with unused parts resulting in no wasted"    NL
-"### space."                                                                 NL
-"### Changing this parameter only affects larger revisions with thousands"   NL
-"### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions, increasing the size of the page table"    NL
-"### meaning it takes longer to read that table (once).  Access to each"     NL
-"### page is then faster because less data has to read.  So, if you have"    NL
-"### several extremely large revisions (approaching 1 mio changes),  think"  NL
+"### rev or pack file.  This index is organized in pages of a fixed maximum" NL
+"### capacity.  To access an item, the page table and the respective page"   NL
+"### must be read."                                                          NL
+"### This parameter only affects revisions with thousands of changed paths." NL
+"### If you have several extremely large revisions (~1 mio changes), think"  NL
 "### about increasing this setting.  Reducing the value will rarely result"  NL
 "### in a net speedup."                                                      NL
-"### This is an expert setting.  Any non-zero value is possible."            NL
+"### This is an expert setting.  Must be a power of 2."                      NL
 "### l2p-page-size is 8192 entries by default."                              NL
 "# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
 "###"                                                                        NL
@@ -992,8 +1041,14 @@ static svn_error_t *
 read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  ffd->use_block_read
-    = svn_hash__get_bool(fs->config, SVN_FS_CONFIG_FSFS_BLOCK_READ, FALSE);
+
+  /* Providing a config hash is optional. */
+  if (fs->config)
+    ffd->use_block_read = svn_hash__get_bool(fs->config,
+                                             SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                                             FALSE);
+  else
+    ffd->use_block_read = FALSE;
 
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
@@ -1042,22 +1097,32 @@ read_uuid(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+svn_fs_fs__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
   svn_revnum_t min_log_addressing_rev;
 
-  fs->path = apr_pstrdup(fs->pool, path);
-
-  /* Read the FS format number. */
+  /* Read info from format file. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
-                      path_format(fs, pool), pool));
+                      path_format(fs, scratch_pool), scratch_pool));
 
-  /* Now we've got a format number no matter what. */
+  /* Now that we've got *all* info, store / update values in FFD. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
   ffd->min_log_addressing_rev = min_log_addressing_rev;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  /* Read the FS format file. */
+  SVN_ERR(svn_fs_fs__read_format_file(fs, pool));
 
   /* Read in and cache the repository uuid. */
   SVN_ERR(read_uuid(fs, pool));
@@ -1072,7 +1137,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
+  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1112,6 +1177,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
+  svn_error_t* err;
+  const char *txns_dir;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
@@ -1139,6 +1206,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
+  /* Remember the current 'transactions' dir path */
+  txns_dir = svn_fs_fs__path_txns_dir(fs, pool);
+
   /* If our filesystem predates the existence of the 'txn-current
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
@@ -1155,10 +1225,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
      dir, make that directory.  */
   if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     {
-      /* We don't use path_txn_proto_rev() here because it expects
-         we've already bumped our format. */
       SVN_ERR(svn_io_make_dir_recursively(
-          svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
+          svn_fs_fs__path_txn_proto_revs(fs, pool), pool));
     }
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
@@ -1206,13 +1274,31 @@ upgrade_body(void *baton, apr_pool_t *pool)
      accidentally uses outdated information.  Keep the UUID. */
   SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
+  /* Rename the 'transactions' folder */
+  if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    SVN_ERR(svn_io_file_rename(txns_dir, svn_fs_fs__path_txns_dir(fs, pool),
+                               pool));
+
   /* Bump the format file. */
-  SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
-  if (upgrade_baton->notify_func)
-    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
-                                       SVN_FS_FS__FORMAT_NUMBER,
-                                       svn_fs_upgrade_format_bumped,
-                                       pool));
+  err = svn_fs_fs__write_format(fs, TRUE, pool);
+  if (err)
+    {
+      /* Something went wrong at the last minute.
+       * Undo the 'transactions' dir rename. */
+      if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        svn_error_compose(err,
+                          svn_io_file_rename(svn_fs_fs__path_txns_dir(fs,
+                                                                      pool),
+                                             txns_dir, pool));
+
+      SVN_ERR(err);
+    }
+  else
+    if (upgrade_baton->notify_func)
+      SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                        SVN_FS_FS__FORMAT_NUMBER,
+                                        svn_fs_upgrade_format_bumped,
+                                        pool));
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
@@ -1251,17 +1337,11 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
    POOL. */
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p,
-             const char *fs_path,
+             svn_fs_t *fs,
              apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_fs__read_content(&buf,
-                                  svn_dirent_join(fs_path, PATH_CURRENT,
-                                                  pool),
-                                  pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf->data);
-
+  apr_uint64_t dummy;
+  SVN_ERR(svn_fs_fs__read_current(youngest_p, &dummy, &dummy, fs, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1273,7 +1353,7 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  SVN_ERR(get_youngest(youngest_p, fs, pool));
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
@@ -1317,7 +1397,7 @@ svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
   if (rev <= ffd->youngest_rev_cache)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs, pool));
 
   /* Check again. */
   if (rev <= ffd->youngest_rev_cache)
@@ -1391,10 +1471,15 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
     }
 
   /* Old repositories may not have the SHA1 checksum handy.
-     This check becomes expensive.  Skip it unless explicitly required. */
+     This check becomes expensive.  Skip it unless explicitly required.
+
+     We already have seen that the ID is different, so produce a likely
+     false negative as allowed by the API description - even though the
+     MD5 matched, there is an extremely slim chance that the SHA1 wouldn't.
+   */
   if (!strict)
     {
-      *equal = TRUE;
+      *equal = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1611,57 +1696,27 @@ write_revision_zero(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__create(svn_fs_t *fs,
-                  const char *path,
-                  apr_pool_t *pool)
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            svn_revnum_t min_log_addressing_rev,
+                            apr_pool_t *pool)
 {
-  int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(fs->pool, path);
-  /* See if compatibility with older versions was explicitly requested. */
-  if (fs->config)
-    {
-      svn_version_t *compatible_version;
-      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
-                                         pool));
-
-      /* select format number */
-      switch(compatible_version->minor)
-        {
-          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                 _("FSFS is not compatible with Subversion prior to 1.1"));
-
-          case 1:
-          case 2:
-          case 3: format = 1;
-                  break;
-
-          case 4: format = 2;
-                  break;
-
-          case 5: format = 3;
-                  break;
-
-          case 6:
-          case 7: format = 4;
-                  break;
-
-          case 8: format = 6;
-                  break;
-
-          default:format = SVN_FS_FS__FORMAT_NUMBER;
-        }
-    }
   ffd->format = format;
 
-  /* Override the default linear layout if this is a new-enough format. */
+  /* Use an appropriate sharding mode if supported by the format. */
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+    ffd->max_files_per_dir = shard_size;
+  else
+    ffd->max_files_per_dir = 0;
 
   /* Select the addressing mode depending on the format. */
   if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    ffd->min_log_addressing_rev = 0;
+    ffd->min_log_addressing_rev = min_log_addressing_rev;
   else
     ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
 
@@ -1687,21 +1742,20 @@ svn_fs_fs__create(svn_fs_t *fs,
                                         pool));
 
   /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
-                                                      pool),
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_txns_dir(fs, pool),
                                       pool));
 
   /* Create the protorevs directory. */
   if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
-                                                      pool),
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_txn_proto_revs(fs,
+                                                                       pool),
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                              ? "0\n" : "0 1 1\n"),
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(svn_fs_fs__write_current(fs, 0, 1, 1, pool));
+
+  /* Create the 'uuid' file. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, NULL, pool));
 
@@ -1736,10 +1790,70 @@ svn_fs_fs__create(svn_fs_t *fs,
                                  pool));
     }
 
+  ffd->youngest_rev_cache = 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__create(svn_fs_t *fs,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  int format = SVN_FS_FS__FORMAT_NUMBER;
+  int shard_size = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+
+  /* Process the given filesystem config. */
+  if (fs->config)
+    {
+      svn_version_t *compatible_version;
+      const char *shard_size_str;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                 _("FSFS is not compatible with Subversion prior to 1.1"));
+
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          case 6:
+          case 7: format = 4;
+                  break;
+
+          case 8: format = 6;
+                  break;
+
+          default:format = SVN_FS_FS__FORMAT_NUMBER;
+        }
+
+      shard_size_str = svn_hash_gets(fs->config, SVN_FS_CONFIG_FSFS_SHARD_SIZE);
+      if (shard_size_str)
+        {
+          apr_int64_t val;
+          SVN_ERR(svn_cstring_strtoi64(&val, shard_size_str, 0,
+                                       APR_INT32_MAX, 10));
+
+          shard_size = (int) val;
+        }
+    }
+
+  /* Actual FS creation. */
+  SVN_ERR(svn_fs_fs__create_file_tree(fs, path, format, shard_size, 0, pool));
+
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
 
-  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 
@@ -1855,9 +1969,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
         = apr_hash_get(node_origins, node_id_ptr, len);
 
       if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(apr_pstrdup(pool,
-                                                     origin_id_str->data),
-                                         pool);
+        SVN_ERR(svn_fs_fs__id_parse(origin_id,
+                                    apr_pstrdup(pool, origin_id_str->data),
+                                    pool));
     }
   return SVN_NO_ERROR;
 }

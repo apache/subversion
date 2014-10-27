@@ -1089,16 +1089,13 @@ svn_stream__aprfile(svn_stream_t *stream)
 struct zbaton {
   z_stream *in;                 /* compressed stream for reading */
   z_stream *out;                /* compressed stream for writing */
-  svn_read_fn_t read;           /* substream's read function */
-  svn_write_fn_t write;         /* substream's write function */
-  svn_close_fn_t close;         /* substream's close function */
+  void *substream;              /* The substream */
   void *read_buffer;            /* buffer   used   for  reading   from
                                    substream */
   int read_flush;               /* what flush mode to use while
                                    reading */
   apr_pool_t *pool;             /* The pool this baton is allocated
                                    on */
-  void *subbaton;               /* The substream's baton */
 };
 
 /* zlib alloc function. opaque is the pool we need. */
@@ -1119,8 +1116,7 @@ zfree(voidpf opaque, voidpf address)
 
 /* Helper function to figure out the sync mode */
 static svn_error_t *
-read_helper_gz(svn_read_fn_t read_fn,
-               void *baton,
+read_helper_gz(svn_stream_t *substream,
                char *buffer,
                uInt *len, int *zflush)
 {
@@ -1130,7 +1126,7 @@ read_helper_gz(svn_read_fn_t read_fn,
      uInt, but Subversion's API requires apr_size_t. */
   apr_size_t apr_len = (apr_size_t) *len;
 
-  SVN_ERR((*read_fn)(baton, buffer, &apr_len));
+  SVN_ERR(svn_stream_read2(substream, buffer, &apr_len));
 
   /* Type cast back to uInt type that zlib uses.  On LP64 platforms
      apr_size_t will be bigger than uInt. */
@@ -1160,7 +1156,7 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
       btn->in->next_in = btn->read_buffer;
       btn->in->avail_in = ZBUFFER_SIZE;
 
-      SVN_ERR(read_helper_gz(btn->read, btn->subbaton, btn->read_buffer,
+      SVN_ERR(read_helper_gz(btn->substream, btn->read_buffer,
                              &btn->in->avail_in, &btn->read_flush));
 
       zerr = inflateInit(btn->in);
@@ -1176,7 +1172,7 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
         {
           btn->in->avail_in = ZBUFFER_SIZE;
           btn->in->next_in = btn->read_buffer;
-          SVN_ERR(read_helper_gz(btn->read, btn->subbaton, btn->read_buffer,
+          SVN_ERR(read_helper_gz(btn->substream, btn->read_buffer,
                                  &btn->in->avail_in, &btn->read_flush));
         }
 
@@ -1238,7 +1234,7 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
       SVN_ERR(svn_error__wrap_zlib(zerr, "deflate", btn->out->msg));
       write_len = buf_size - btn->out->avail_out;
       if (write_len > 0)
-        SVN_ERR(btn->write(btn->subbaton, write_buf, &write_len));
+        SVN_ERR(svn_stream_write(btn->substream, write_buf, &write_len));
     }
 
   svn_pool_destroy(subpool);
@@ -1277,7 +1273,7 @@ close_handler_gz(void *baton)
                                                         btn->out->msg));
           write_len = ZBUFFER_SIZE - btn->out->avail_out;
           if (write_len > 0)
-            SVN_ERR(btn->write(btn->subbaton, buf, &write_len));
+            SVN_ERR(svn_stream_write(btn->substream, buf, &write_len));
           if (zerr == Z_STREAM_END)
             break;
         }
@@ -1286,10 +1282,7 @@ close_handler_gz(void *baton)
       SVN_ERR(svn_error__wrap_zlib(zerr, "deflateEnd", btn->out->msg));
     }
 
-  if (btn->close != NULL)
-    return svn_error_trace(btn->close(btn->subbaton));
-  else
-    return SVN_NO_ERROR;
+  return svn_error_trace(svn_stream_close(btn->substream));
 }
 
 
@@ -1303,10 +1296,7 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
 
   baton = apr_palloc(pool, sizeof(*baton));
   baton->in = baton->out = NULL;
-  baton->read = stream->read_fn;
-  baton->write = stream->write_fn;
-  baton->close = stream->close_fn;
-  baton->subbaton = stream->baton;
+  baton->substream = stream;
   baton->pool = pool;
   baton->read_buffer = NULL;
   baton->read_flush = Z_SYNC_FLUSH;

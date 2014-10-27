@@ -1250,6 +1250,7 @@ add_commit_items(mtcc_op_t *op,
                                                            op->src_relpath,
                                                            result_pool);
           item->copyfrom_rev = op->src_rev;
+          item->state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
         }
       else
         item->copyfrom_rev = SVN_INVALID_REVNUM;

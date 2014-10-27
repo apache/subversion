@@ -656,6 +656,11 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
   const svn_txdelta_op_t *op;
   apr_size_t tpos = 0;
 
+  /* Nothing to do for empty buffers.
+   * This check allows for NULL TBUF in that case. */
+  if (*tlen == 0)
+    return;
+
   for (op = window->ops; op < window->ops + window->num_ops; op++)
     {
       const apr_size_t buf_len = (op->length < *tlen - tpos
