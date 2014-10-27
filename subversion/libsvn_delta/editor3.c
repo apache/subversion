@@ -133,6 +133,37 @@ check_cancel(svn_editor3_t *editor)
   return svn_error_trace(err);
 }
 
+/* Do everything that is common to calling any callback.
+ *
+ * CB is the name of the callback method, e.g. "cb_add".
+ * ARG_LIST is the callback-specific arguments prefixed by the number of
+ * these arguments, in the form "3(arg1, arg2, arg3)".
+ */
+#define DO_CALLBACK(editor, cb, arg_list)                               \
+  {                                                                     \
+    SVN_ERR(check_cancel(editor));                                      \
+    if ((editor)->funcs.cb)                                             \
+      {                                                                 \
+        svn_error_t *_do_cb_err;                                        \
+        START_CALLBACK(editor);                                         \
+        _do_cb_err = (editor)->funcs.cb((editor)->baton,                \
+                                        ARGS ## arg_list                \
+                                        (editor)->scratch_pool);        \
+        END_CALLBACK(editor);                                           \
+        svn_pool_clear((editor)->scratch_pool);                         \
+        SVN_ERR(_do_cb_err);                                            \
+      }                                                                 \
+  }
+#define ARGS0()
+#define ARGS1(a1)                             a1,
+#define ARGS2(a1, a2)                         a1, a2,
+#define ARGS3(a1, a2, a3)                     a1, a2, a3,
+#define ARGS4(a1, a2, a3, a4)                 a1, a2, a3, a4,
+#define ARGS5(a1, a2, a3, a4, a5)             a1, a2, a3, a4, a5,
+#define ARGS6(a1, a2, a3, a4, a5, a6)         a1, a2, a3, a4, a5, a6,
+#define ARGS7(a1, a2, a3, a4, a5, a6, a7)     a1, a2, a3, a4, a5, a6, a7,
+#define ARGS8(a1, a2, a3, a4, a5, a6, a7, a8) a1, a2, a3, a4, a5, a6, a7, a8,
+
 
 /*
  * ===================================================================
@@ -146,23 +177,12 @@ svn_editor3_mk(svn_editor3_t *editor,
                svn_editor3_txn_path_t parent_loc,
                const char *new_name)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_mk,
+              3(new_kind, parent_loc, new_name));
 
-  if (editor->funcs.cb_mk)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_mk(editor->baton,
-                                new_kind, parent_loc, new_name,
-                                editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -175,23 +195,12 @@ svn_editor3_cp(svn_editor3_t *editor,
                svn_editor3_txn_path_t parent_loc,
                const char *new_name)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_cp,
+              3(from_loc, parent_loc, new_name));
 
-  if (editor->funcs.cb_cp)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_cp(editor->baton,
-                                from_loc, parent_loc, new_name,
-                                editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -200,23 +209,12 @@ svn_editor3_mv(svn_editor3_t *editor,
                svn_editor3_txn_path_t new_parent_loc,
                const char *new_name)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_mv,
+              3(from_loc, new_parent_loc, new_name));
 
-  if (editor->funcs.cb_mv)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_mv(editor->baton,
-                                from_loc, new_parent_loc, new_name,
-                                editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 #ifdef SVN_EDITOR3_WITH_RESURRECTION
@@ -226,23 +224,12 @@ svn_editor3_res(svn_editor3_t *editor,
                 svn_editor3_txn_path_t parent_loc,
                 const char *new_name)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_res,
+              3(from_loc, parent_loc, new_name));
 
-  if (editor->funcs.cb_res)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_res(editor->baton,
-                                 from_loc, parent_loc, new_name,
-                                 editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 #endif
 
@@ -250,23 +237,12 @@ svn_error_t *
 svn_editor3_rm(svn_editor3_t *editor,
                svn_editor3_txn_path_t loc)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_rm,
+              1(loc));
 
-  if (editor->funcs.cb_rm)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_rm(editor->baton,
-                                loc,
-                                editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -274,23 +250,12 @@ svn_editor3_put(svn_editor3_t *editor,
                 svn_editor3_txn_path_t loc,
                 const svn_editor3_node_content_t *new_content)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_put,
+              2(loc, new_content));
 
-  if (editor->funcs.cb_put)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_put(editor->baton,
-                                 loc, new_content,
-                                 editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 
@@ -308,27 +273,14 @@ svn_editor3_add(svn_editor3_t *editor,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_add,
+              5(local_nbid, new_kind,
+                new_parent_nbid, new_name,
+                new_content));
 
-  if (editor->funcs.cb_add)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_add(editor->baton,
-                                 local_nbid, new_kind,
-                                 new_parent_nbid, new_name,
-                                 new_content,
-                                 editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  /* MARK_...(editor, ...); */
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -340,28 +292,15 @@ svn_editor3_copy_one(svn_editor3_t *editor,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_copy_one,
+              6(local_nbid,
+                src_revision, src_nbid,
+                new_parent_nbid, new_name,
+                new_content));
 
-  if (editor->funcs.cb_copy_one)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_copy_one(editor->baton,
-                                      local_nbid,
-                                      src_revision, src_nbid,
-                                      new_parent_nbid, new_name,
-                                      new_content,
-                                      editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  /* MARK_...(editor, ...); */
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -371,26 +310,13 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_editor3_nbid_t new_parent_nbid,
                       const char *new_name)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_copy_tree,
+              4(src_revision, src_nbid,
+                new_parent_nbid, new_name));
 
-  if (editor->funcs.cb_copy_one)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_copy_tree(editor->baton,
-                                       src_revision, src_nbid,
-                                       new_parent_nbid, new_name,
-                                       editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  /* MARK_...(editor, ...); */
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -398,25 +324,12 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
                    svn_editor3_nbid_t nbid)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_delete,
+              2(since_rev, nbid));
 
-  if (editor->funcs.cb_delete)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_delete(editor->baton,
-                                    since_rev, nbid,
-                                    editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  /* MARK_...(editor, ...); */
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -427,68 +340,48 @@ svn_editor3_alter(svn_editor3_t *editor,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   /* SVN_ERR_ASSERT(...); */
 
-  SVN_ERR(check_cancel(editor));
+  DO_CALLBACK(editor, cb_alter,
+              5(since_rev, nbid,
+                new_parent_nbid, new_name,
+                new_content));
 
-  if (editor->funcs.cb_alter)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_alter(editor->baton,
-                                   since_rev, nbid,
-                                   new_parent_nbid, new_name,
-                                   new_content,
-                                   editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
-
-  /* MARK_...(editor, ...); */
-
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_complete(svn_editor3_t *editor)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   SHOULD_NOT_BE_FINISHED(editor);
 
-  if (editor->funcs.cb_complete)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
+  DO_CALLBACK(editor, cb_complete,
+              0());
 
   MARK_FINISHED(editor);
 
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_abort(svn_editor3_t *editor)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-
   SHOULD_NOT_BE_FINISHED(editor);
 
-  if (editor->funcs.cb_abort)
-    {
-      START_CALLBACK(editor);
-      err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
-      END_CALLBACK(editor);
-    }
+  DO_CALLBACK(editor, cb_abort,
+              0());
 
   MARK_FINISHED(editor);
 
-  svn_pool_clear(editor->scratch_pool);
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
+
+
+/*
+ * ===================================================================
+ * Node content
+ * ===================================================================
+ */
 
 svn_editor3_node_content_t *
 svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
