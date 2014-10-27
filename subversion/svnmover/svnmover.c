@@ -80,97 +80,6 @@ check_lib_versions(void)
 
 /* ====================================================================== */
 
-/* Construct a txn-path.
- */
-static svn_editor3_txn_path_t
-txn_path(const char *repos_relpath, svn_revnum_t revision,
-         const char *created_relpath)
-{
-  svn_editor3_txn_path_t p;
-
-  p.peg.rev = revision;
-  p.peg.relpath = repos_relpath;
-  p.relpath = created_relpath;
-  return p;
-}
-
-/* Return a txn-path constructed by extending TXN_PATH with RELPATH.
- */
-static svn_editor3_txn_path_t
-txn_path_join(svn_editor3_txn_path_t txn_path,
-              const char *relpath,
-              apr_pool_t *result_pool)
-{
-  svn_editor3_txn_path_t p = txn_path;
-
-  p.relpath = svn_relpath_join(p.relpath, relpath, result_pool);
-  return p;
-}
-
-/* Return a human-readable string representation of LOC.
- */
-static const char *
-txn_path_str(svn_editor3_txn_path_t loc,
-             apr_pool_t *result_pool)
-{
-  return apr_psprintf(result_pool, "%s@%ld//%s",
-                      loc.peg.relpath, loc.peg.rev, loc.relpath);
-}
-
-/* Return the full relpath of LOC,
- * ### assuming the peg-path part doesn't need translation between its
- *     peg-revision and the transaction in which we interpret it.
- */
-static const char *
-txn_path_to_relpath(svn_editor3_txn_path_t loc,
-                    apr_pool_t *result_pool)
-{
-  return svn_relpath_join(loc.peg.relpath, loc.relpath, result_pool);
-}
-
-/* Return the txn-path of the parent directory of LOC.
- */
-static svn_editor3_txn_path_t
-txn_path_dirname(svn_editor3_txn_path_t loc,
-                 apr_pool_t *result_pool)
-{
-  svn_editor3_txn_path_t parent_loc;
-
-  parent_loc.peg.rev = loc.peg.rev;
-  if (*loc.relpath)
-    {
-      parent_loc.peg.relpath = apr_pstrdup(result_pool, loc.peg.relpath);
-      parent_loc.relpath = svn_relpath_dirname(loc.relpath, result_pool);
-    }
-  else
-    {
-      parent_loc.peg.relpath = svn_relpath_dirname(loc.peg.relpath,
-                                                   result_pool);
-      parent_loc.relpath = apr_pstrdup(result_pool, loc.relpath);
-    }
-  return parent_loc;
-}
-
-/* Return the txn-path of the parent directory of LOC.
- */
-static const char *
-txn_path_basename(svn_editor3_txn_path_t loc)
-{
-  const char *base;
-
-  if (*loc.relpath)
-    {
-      base = svn_relpath_basename(loc.relpath, NULL);
-    }
-  else
-    {
-      base = svn_relpath_basename(loc.peg.relpath, NULL);
-    }
-  return base;
-}
-
-/* ====================================================================== */
-
 typedef struct mtcc_t
 {
   apr_pool_t *pool;
@@ -318,1474 +227,46 @@ struct action {
 
 /* ====================================================================== */
 
-/* ### */
-#define SVN_ERR_BRANCHING 123456
-
-struct svn_branch_family_t;
-struct svn_branch_instance_t;
-
-/* Per-repository branching info.
- */
-typedef struct svn_branch_repos_t
-{
-  svn_ra_session_t *ra_session;
-  svn_editor3_t *editor;
-
-  /* The range of family ids assigned within this repos (starts at 0). */
-  int next_fid;
-
-  /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
-  apr_array_header_t *rev_roots;
-
-  /* The pool in which this object lives. */
-  apr_pool_t *pool;
-} svn_branch_repos_t;
-
-/* Info about the branching in a specific revision (committed or uncommitted) */
-typedef struct svn_branch_revision_root_t
-{
-  /* The repository in which this revision exists. */
-  svn_branch_repos_t *repos;
-
-  /* The root branch instance. */
-  struct svn_branch_instance_t *root_branch;
-
-} svn_branch_revision_root_t;
-
-/* A branch family.
- * ### Most of this is not per-revision data. Move it out of revision-root?
- */
-typedef struct svn_branch_family_t
-{
-  /* --- Identity of this object --- */
-
-  /* The repository in which this family exists. */
-  svn_branch_repos_t *repos;
-
-  /* The outer family of which this is a sub-family. NULL if this is the
-     root family. */
-  /*struct svn_branch_family_t *outer_family;*/
-
-  /* The FID of this family within its repository. */
-  int fid;
-
-  /* --- Contents of this object --- */
-
-  /* The branch definitions in this family. */
-  apr_array_header_t *branch_definitions;
-
-  /* The branch instances in this family. */
-  /* ### This is per-revision data. Move to svn_branch_revision_root_t? */
-  apr_array_header_t *branch_instances;
-
-  /* The range of branch ids assigned within this family. */
-  int first_bid, next_bid;
-
-  /* The range of element ids assigned within this family. */
-  int first_eid, next_eid;
-
-  /* The immediate sub-families of this family. */
-  apr_array_header_t *sub_families;
-
-  /* The pool in which this object lives. */
-  apr_pool_t *pool;
-} svn_branch_family_t;
-
-/* A branch.
- *
- * A branch definition object describes the characteristics of a branch
- * in a given family with a given BID. This definition is common to each
- * branch that has this same family and BID: there can be one such instance
- * within each branch of its outer families.
- *
- * Often, all branches in a family have the same root element. For example,
- * branching /trunk to /branches/br1 results in:
- *
- *      family 1, branch 1, root-EID 100
- *          EID 100 => /trunk
- *          ...
- *      family 1, branch 2, root-EID 100
- *          EID 100 => /branches/br1
- *          ...
- *
- * However, the root element of one branch may correspond to a non-root
- * element of another branch; such a branch could be called a "subtree
- * branch". Using the same example, branching from the trunk subtree
- * /trunk/D (which is not itself a branch root) results in:
- *
- *      family 1, branch 3: root-EID = 104
- *          EID 100 => (nil)
- *          ...
- *          EID 104 => /branches/branch-of-trunk-subtree-D
- *          ...
- *
- * If family 1 were nested inside an outer family, then there could be
- * multiple branch-instances for each branch-definition. In the above
- * example, all instances of (family 1, branch 1) will have root-EID 100,
- * and all instances of (family 1, branch 3) will have root-EID 104.
- */
-typedef struct svn_branch_definition_t
-{
-  /* --- Identity of this object --- */
-
-  /* The family of which this branch is a member. */
-  svn_branch_family_t *family;
-
-  /* The BID of this branch within its family. */
-  int bid;
-
-  /* The EID, within the outer family, of the branch root element. */
-  /*int outer_family_eid_of_branch_root;*/
-
-  /* --- Contents of this object --- */
-
-  /* The EID within its family of its pathwise root element. */
-  int root_eid;
-} svn_branch_definition_t;
-
-/* A branch instance.
- *
- * A branch instance object describes one branch in this family. (There is
- * one instance of this branch within each branch of its outer families.)
- */
-typedef struct svn_branch_instance_t
-{
-  /* --- Identity of this object --- */
-
-  svn_branch_definition_t *definition;
-
-  /* The revision to which this branch-revision-instance belongs */
-  svn_branch_revision_root_t *rev_root;
-
-  /* The branch (instance?), within the outer family, that contains the
-     root element of this branch. */
-  /*svn_branch_instance_t *outer_family_branch_instance;*/
-
-  /* --- Contents of this object --- */
-
-  /* EID <-> path mapping in the current revision. Path is relative to
-     repos root. There is always an entry for root_eid. */
-  apr_hash_t *eid_to_path, *path_to_eid;
-} svn_branch_instance_t;
-
-/* element */
-/*
-typedef struct svn_branch_element_t
-{
-  int eid;
-  svn_branch_family_t *family;
-} svn_branch_element_t;
-*/
-
-/* Branch-Revision-Element */
-typedef struct svn_branch_el_rev_id_t
-{
-  /* The branch-instance that applies to REV. */
-  svn_branch_instance_t *branch;
-  /* Element. */
-  int eid;
-  /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'.
-     ### Do we need this if BRANCH refers to a particular branch-revision? */
-  svn_revnum_t rev;
-
-} svn_branch_el_rev_id_t;
-
-typedef struct svn_branch_el_rev_content_t
-{
-  int parent_eid;
-  const char *name;
-  svn_editor3_node_content_t *content;
-
-} svn_branch_el_rev_content_t;
-
-/* Create a new branching metadata object */
-static svn_branch_repos_t *
-svn_branch_repos_create(svn_ra_session_t *ra_session,
-                        svn_editor3_t *editor,
-                        apr_pool_t *result_pool)
-{
-  svn_branch_repos_t *repos = apr_pcalloc(result_pool, sizeof(*repos));
-
-  repos->ra_session = ra_session;
-  repos->editor = editor;
-  repos->rev_roots = apr_array_make(result_pool, 1, sizeof(void *));
-  repos->pool = result_pool;
-  return repos;
-}
-
-/* Create a new branching revision-info object */
-static svn_branch_revision_root_t *
-svn_branch_revision_root_create(svn_branch_repos_t *repos,
-                                struct svn_branch_instance_t *root_branch,
-                                apr_pool_t *result_pool)
-{
-  svn_branch_revision_root_t *rev_root
-    = apr_pcalloc(result_pool, sizeof(*rev_root));
-
-  rev_root->repos = repos;
-  rev_root->root_branch = root_branch;
-  return rev_root;
-}
-
-/* Create a new branch family object */
-static svn_branch_family_t *
-svn_branch_family_create(svn_branch_repos_t *repos,
-                         int fid,
-                         int first_bid,
-                         int next_bid,
-                         int first_eid,
-                         int next_eid,
-                         apr_pool_t *result_pool)
-{
-  svn_branch_family_t *f = apr_pcalloc(result_pool, sizeof(*f));
-
-  f->fid = fid;
-  f->repos = repos;
-  f->branch_definitions = apr_array_make(result_pool, 1, sizeof(void *));
-  f->branch_instances = apr_array_make(result_pool, 1, sizeof(void *));
-  f->sub_families = apr_array_make(result_pool, 1, sizeof(void *));
-  f->first_bid = first_bid;
-  f->next_bid = next_bid;
-  f->first_eid = first_eid;
-  f->next_eid = next_eid;
-  f->pool = result_pool;
-  return f;
-}
-
-/* Create a new branch definition object */
-static svn_branch_definition_t *
-svn_branch_definition_create(svn_branch_family_t *family,
-                             int bid,
-                             int root_eid,
-                             apr_pool_t *result_pool)
-{
-  svn_branch_definition_t *b = apr_pcalloc(result_pool, sizeof(*b));
-
-  SVN_ERR_ASSERT_NO_RETURN(bid >= family->first_bid
-                           && bid < family->next_bid);
-  SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
-                           && root_eid < family->next_eid);
-
-  b->family = family;
-  b->bid = bid;
-  b->root_eid = root_eid;
-  return b;
-}
-
-/* Create a new branch instance object */
-static svn_branch_instance_t *
-svn_branch_instance_create(svn_branch_definition_t *branch_definition,
-                           svn_branch_revision_root_t *rev_root,
-                           apr_pool_t *result_pool)
-{
-  svn_branch_instance_t *b = apr_pcalloc(result_pool, sizeof(*b));
-
-  b->definition = branch_definition;
-  b->rev_root = rev_root;
-  b->eid_to_path = apr_hash_make(result_pool);
-  b->path_to_eid = apr_hash_make(result_pool);
-  return b;
-}
-
-static const char *
-branch_get_root_path(const svn_branch_instance_t *branch);
-
-/* In BRANCH, set or change the path mapping for EID to point to PATH.
- *
- * Do not check for or remove any previous mappings; just overwrite
- * the mapping for EID to this new PATH and for PATH to this new EID.
- * EID MUST be a valid EID belonging to BRANCH's family.
- *
- * Duplicate EID and PATH into the mapping's pool.
- */
-static void
-branch_mapping_set(svn_branch_instance_t *branch,
-                   int eid,
-                   const char *path)
-{
-  apr_pool_t *pool = apr_hash_pool_get(branch->eid_to_path);
-  int *eid_stored = apr_pmemdup(pool, &eid, sizeof(eid));
-
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
-                           && eid < branch->definition->family->next_eid);
-
-  /* overwrite the EID-to-new-PATH and part of the mapping */
-  path = apr_pstrdup(pool, path);
-  apr_hash_set(branch->eid_to_path, eid_stored, sizeof(eid), path);
-  svn_hash_sets(branch->path_to_eid, path, eid_stored);
-}
-
-/* In BRANCH, remove the path mapping for EID if there is one.
- *
- * Do not check for any previous mappings, or for validity of EID or any
- * mappings.
- */
-static void
-branch_mapping_unset_by_eid(svn_branch_instance_t *branch,
-                            int eid)
-{
-  const char *path = apr_hash_get(branch->eid_to_path, &eid, sizeof(eid));
-
-  if (path)
-    {
-      apr_hash_set(branch->eid_to_path, &eid, sizeof(eid), NULL);
-      svn_hash_sets(branch->path_to_eid, path, NULL);
-    }
-}
-
-/* In BRANCH, set or change the path mapping for EID to point to PATH.
- *
- * If a mapping from EID to a different path already exists, update it
- * to map to PATH. PATH MUST NOT already be mapped to a different EID.
- * PATH MUST be pathwise within the root path of BRANCH.
- */
-static void
-branch_mapping_update(svn_branch_instance_t *branch,
-                      int eid,
-                      const char *path)
-{
-  int *old_eid_p = svn_hash_gets(branch->path_to_eid, path);
-
-  SVN_ERR_ASSERT_NO_RETURN(eid == branch->definition->root_eid
-                           || svn_relpath_skip_ancestor(
-                                branch_get_root_path(branch), path));
-  /* we don't allow mapping a new EID to an existing path */
-  SVN_ERR_ASSERT_NO_RETURN(! old_eid_p || *old_eid_p == eid);
-
-  /* Remove any mapping to an old path, as the path-to-EID part of such a
-     mapping would not be overwritten simply by setting the new mapping. */
-  branch_mapping_unset_by_eid(branch, eid);
-
-  branch_mapping_set(branch, eid, path);
-}
-
-/* In BRANCH, remove the path mapping for EID, so that the element EID
- * is considered as no longer existing in BRANCH.
- *
- * A mapping for EID MUST already exist in BRANCH.
- */
-static void
-branch_mapping_remove_by_eid(svn_branch_instance_t *branch,
-                             int eid)
-{
-  const char *path = apr_hash_get(branch->eid_to_path, &eid, sizeof(eid));
-
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
-                           && eid < branch->definition->family->next_eid);
-  SVN_ERR_ASSERT_NO_RETURN(path);
-
-  apr_hash_set(branch->eid_to_path, &eid, sizeof(eid), NULL);
-  svn_hash_sets(branch->path_to_eid, path, NULL);
-}
-
-/* In BRANCH, remove the path mapping for PATH, so that the element
- * at PATH is considered as no longer existing in BRANCH.
- *
- * A mapping for PATH MUST already exist in BRANCH.
- */
-static void
-branch_mapping_remove_by_path(svn_branch_instance_t *branch,
-                              const char *path)
-{
-  int *eid_p = svn_hash_gets(branch->path_to_eid, path);
-
-  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_skip_ancestor(
-                             branch_get_root_path(branch), path));
-  SVN_ERR_ASSERT_NO_RETURN(eid_p);
-
-  apr_hash_set(branch->eid_to_path, eid_p, sizeof(*eid_p), NULL);
-  svn_hash_sets(branch->path_to_eid, path, NULL);
-}
-
-/* Return the EID in BRANCH of the element at repos-relpath PATH,
- * or -1 if PATH is not currently present in BRANCH.
- *
- * PATH MUST be pathwise within BRANCH.
- */
-static int
-branch_get_eid_by_path(const svn_branch_instance_t *branch,
-                       const char *path)
-{
-  int *eid_p = svn_hash_gets(branch->path_to_eid, path);
-
-  /* If the branch knows its root path, PATH must be within that. */
-  SVN_ERR_ASSERT_NO_RETURN(! branch_get_root_path(branch)
-                           || svn_relpath_skip_ancestor(
-                                branch_get_root_path(branch), path));
-
-  if (! eid_p)
-    return -1;
-  return *eid_p;
-}
-
-/* Return the repos-relpath for element EID of BRANCH, or NULL if EID
- * is not currently present in BRANCH.
- *
- * EID MUST be a valid EID belonging to BRANCH's family, but the element
- * need not be present in any branch.
- */
-static const char *
-branch_get_path_by_eid(const svn_branch_instance_t *branch,
-                       int eid)
-{
-  const char *path = apr_hash_get(branch->eid_to_path, &eid, sizeof(eid));
-
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->definition->family->first_eid
-                           && eid < branch->definition->family->next_eid);
-
-  return path;
-}
-
-/* Return the root repos-relpath of BRANCH. This is always available. */
-static const char *
-branch_get_root_path(const svn_branch_instance_t *branch)
-{
-  return branch_get_path_by_eid(branch, branch->definition->root_eid);
-}
-
-/*  */
-static svn_boolean_t
-branch_is_root_path(const svn_branch_instance_t *branch,
-                    const char *rrpath)
-{
-  return branch_get_eid_by_path(branch, rrpath) == branch->definition->root_eid;
-}
-
-/* In BRANCH, update the path mappings to reflect a delete of a subtree
- * at FROM_PATH.
- *
- * FROM_PATH MUST be an existing path in BRANCH, and may be the root path
- * of BRANCH.
- *
- * If INCLUDE_SELF is true, include the element at FROM_PATH, otherwise
- * only act on children (recursively) of FROM_PATH.
- */
-static svn_error_t *
-branch_mappings_delete(svn_branch_instance_t *branch,
-                       const char *from_path,
-                       svn_boolean_t include_self,
-                       apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(scratch_pool, branch->eid_to_path);
-       hi; hi = apr_hash_next(hi))
-    {
-      const int *eid_p = apr_hash_this_key(hi);
-      const char *this_path = apr_hash_this_val(hi);
-      const char *remainder = svn_relpath_skip_ancestor(from_path, this_path);
-
-      if (remainder && (include_self || remainder[0]))
-        {
-          branch_mapping_unset_by_eid(branch, *eid_p);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* In BRANCH, update the path mappings to reflect a move of a subtree
- * from FROM_PATH to TO_PATH.
- *
- * FROM_PATH MUST be an existing path in BRANCH, and may be the root path
- * of BRANCH.
- *
- * TO_PATH MUST be a path in TO_BRANCH at which nothing currently exists.
- */
-static svn_error_t *
-branch_mappings_move(svn_branch_instance_t *branch,
-                     const char *from_path,
-                     const char *to_path,
-                     apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  SVN_ERR_ASSERT(branch_get_eid_by_path(branch, from_path) >= 0);
-  SVN_ERR_ASSERT(branch_get_eid_by_path(branch, to_path) == -1);
-
-  for (hi = apr_hash_first(scratch_pool, branch->eid_to_path);
-       hi; hi = apr_hash_next(hi))
-    {
-      const int *eid_p = apr_hash_this_key(hi);
-      const char *this_from_path = apr_hash_this_val(hi);
-      const char *remainder = svn_relpath_skip_ancestor(from_path, this_from_path);
-
-      if (remainder)
-        {
-          const char *this_to_path = svn_relpath_join(to_path, remainder,
-                                                      scratch_pool);
-
-          branch_mapping_unset_by_eid(branch, *eid_p);
-          branch_mapping_set(branch, *eid_p, this_to_path);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static int
-family_add_new_element(svn_branch_family_t *family);
-
-/* In TO_BRANCH, assign new EIDs and path mappings to reflect the copying
- * of a subtree from FROM_BRANCH:FROM_PATH to TO_BRANCH:TO_PATH. Assign
- * a new EID in TO_BRANCH's family for each copied element.
- *
- * FROM_BRANCH and TO_BRANCH may be the same or different branch instances
- * in the same or different branch families.
- *
- * FROM_PATH MUST be an existing path in FROM_BRANCH, and may be the
- * root path of FROM_BRANCH.
- *
- * TO_PATH MUST be a path in TO_BRANCH at which nothing currently exists
- * if INCLUDE_SELF, or an existing path if not INCLUDE_SELF.
- *
- * If INCLUDE_SELF is true, include the element at FROM_PATH, otherwise
- * only act on children (recursively) of FROM_PATH.
- */
-static svn_error_t *
-branch_mappings_copy(svn_branch_instance_t *from_branch,
-                     const char *from_path,
-                     svn_branch_instance_t *to_branch,
-                     const char *to_path,
-                     svn_boolean_t include_self,
-                     apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  SVN_ERR_ASSERT(branch_get_eid_by_path(from_branch, from_path) >= 0);
-  SVN_ERR_ASSERT((branch_get_eid_by_path(to_branch, to_path) >= 0) == (! include_self));
-
-  for (hi = apr_hash_first(scratch_pool, from_branch->eid_to_path);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *this_from_path = apr_hash_this_val(hi);
-      const char *remainder = svn_relpath_skip_ancestor(from_path, this_from_path);
-
-      if (remainder && (include_self || remainder[0]))
-        {
-          const char *this_to_path = svn_relpath_join(to_path, remainder,
-                                                      scratch_pool);
-          int new_eid = family_add_new_element(to_branch->definition->family);
-
-          branch_mapping_set(to_branch, new_eid, this_to_path);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* In TO_BRANCH, update the path mappings to reflect a branching of a
- * subtree from FROM_BRANCH:FROM_PATH to TO_BRANCH:TO_PATH.
- *
- * FROM_BRANCH and TO_BRANCH must be different branch instances in the
- * same branch family.
- *
- * FROM_PATH MUST be an existing path in FROM_BRANCH, and may be the
- * root path of FROM_BRANCH.
- *
- * TO_PATH MUST be a path in TO_BRANCH at which nothing currently exists
- * if INCLUDE_SELF, or an existing path if not INCLUDE_SELF.
- *
- * If INCLUDE_SELF is true, include the element at FROM_PATH, otherwise
- * only act on children (recursively) of FROM_PATH.
- */
-static svn_error_t *
-branch_mappings_branch(svn_branch_instance_t *from_branch,
-                       const char *from_path,
-                       svn_branch_instance_t *to_branch,
-                       const char *to_path,
-                       svn_boolean_t include_self,
-                       apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  SVN_ERR_ASSERT(from_branch->definition->family == to_branch->definition->family);
-  SVN_ERR_ASSERT(branch_get_eid_by_path(from_branch, from_path) >= 0);
-  SVN_ERR_ASSERT((branch_get_eid_by_path(to_branch, to_path) >= 0) == (! include_self));
-
-  for (hi = apr_hash_first(scratch_pool, from_branch->eid_to_path);
-       hi; hi = apr_hash_next(hi))
-    {
-      const int *eid_p = apr_hash_this_key(hi);
-      const char *this_from_path = apr_hash_this_val(hi);
-      const char *remainder = svn_relpath_skip_ancestor(from_path, this_from_path);
-
-      if (remainder && (include_self || remainder[0]))
-        {
-          const char *this_to_path = svn_relpath_join(to_path, remainder,
-                                                      scratch_pool);
-
-          branch_mapping_set(to_branch, *eid_p, this_to_path);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Return an array of pointers to the branch instances that are sub-branches
- * of BRANCH. */
-static apr_array_header_t *
-branch_get_sub_branches(const svn_branch_instance_t *branch,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  const char *branch_root_rrpath = branch_get_root_path(branch);
-  apr_array_header_t *sub_branches = apr_array_make(result_pool, 0, sizeof(void *));
-  int i;
-
-  for (i = 0; i < branch->definition->family->sub_families->nelts; i++)
-    {
-      svn_branch_family_t *family
-        = APR_ARRAY_IDX(branch->definition->family->sub_families, i, void *);
-      int b;
-
-      for (b = 0; b < family->branch_instances->nelts; b++)
-        {
-          svn_branch_instance_t *sub_branch
-            = APR_ARRAY_IDX(family->branch_instances, b, void *);
-          const char *sub_branch_root_rrpath = branch_get_root_path(sub_branch);
-
-          if (svn_relpath_skip_ancestor(branch_root_rrpath, sub_branch_root_rrpath))
-            {
-              APR_ARRAY_PUSH(sub_branches, void *) = sub_branch;
-            }
-        }
-    }
-  return sub_branches;
-}
-
-/* Delete the branch instance object BRANCH and any nested branch instances.
- */
-static svn_error_t *
-branch_instance_delete_r(svn_branch_instance_t *branch,
-                         apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches
-    = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
-  int i;
-
-  /* Delete nested branch instances, recursively */
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
-
-      branch_instance_delete_r(b, scratch_pool);
-    }
-
-  /* Remove the record of this branch instance */
-  for (i = 0; i < branch->definition->family->branch_instances->nelts; i++)
-    {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
-
-      if (b == branch)
-        {
-          svn_sort__array_delete(branch->definition->family->branch_instances,
-                                 i, 1);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Copy the branch instance object BRANCH and any nested branch instances.
- *
- * ### Currently, the mapping will be empty.
- *     TODO: Duplicate the mapping, based on a new path.
- */
-static svn_error_t *
-branch_instance_copy_r(svn_branch_instance_t **new_branch_p,
-                       svn_branch_instance_t *branch,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches
-    = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
-  int i;
-  svn_branch_instance_t *new_branch;
-
-  /* Duplicate this branch instance */
-  new_branch = svn_branch_instance_create(branch->definition, branch->rev_root,
-                                          result_pool);
-  /* ### branch_mapping_dup(new_branch, branch) */
-
-  /* Record this new branch instance in its family */
-  APR_ARRAY_PUSH(branch->definition->family->branch_instances, void *)
-    = new_branch;
-
-  /* Copy nested branch instances, recursively */
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
-
-      branch_instance_copy_r(&b, b, result_pool, scratch_pool);
-    }
-
-  *new_branch_p = new_branch;
-  return SVN_NO_ERROR;
-}
-
-/* Create a new, empty family in OUTER_FAMILY.
- */
-static svn_branch_family_t *
-family_add_new_subfamily(svn_branch_family_t *outer_family)
-{
-  svn_branch_repos_t *repos = outer_family->repos;
-  int fid = repos->next_fid++;
-  svn_branch_family_t *family
-    = svn_branch_family_create(repos, fid,
-                               fid * 10, fid * 10,
-                               fid * 100, fid * 100,
-                               outer_family->pool);
-
-  /* Register the family */
-  APR_ARRAY_PUSH(outer_family->sub_families, void *) = family;
-
-  return family;
-}
-
-/* Create a new branch definition in FAMILY, with root element ROOT_EID.
- */
-static svn_branch_definition_t *
-family_add_new_branch_definition(svn_branch_family_t *family,
-                                 int root_eid)
-{
-  int bid = family->next_bid++;
-  svn_branch_definition_t *branch_definition
-    = svn_branch_definition_create(family, bid, root_eid, family->pool);
-
-  /* The root EID must be an existing EID. */
-  SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
-                           /*&& root_eid < family->next_eid*/);
-  /* ROOT_RRPATH must not be within another branch of the family. */
-
-  /* Register the branch */
-  APR_ARRAY_PUSH(family->branch_definitions, void *) = branch_definition;
-
-  return branch_definition;
-}
-
-/* Create a new branch instance of BRANCH_DEFINITION, with no path
- * mappings except for its root element at ROOT_RRPATH.
- */
-static svn_branch_instance_t *
-branch_add_new_branch_instance(svn_branch_definition_t *branch_definition,
-                               svn_branch_revision_root_t *rev_root,
-                               const char *root_rrpath)
-{
-  svn_branch_family_t *family = branch_definition->family;
-  svn_branch_instance_t *branch_instance
-    = svn_branch_instance_create(branch_definition, rev_root, family->pool);
-
-  APR_ARRAY_PUSH(family->branch_instances, void *) = branch_instance;
-
-  /* Initialize the root element */
-  branch_mapping_update(branch_instance, branch_definition->root_eid,
-                        root_rrpath);
-  return branch_instance;
-}
-
-/* Assign a new element id in FAMILY.
- */
-static int
-family_add_new_element(svn_branch_family_t *family)
-{
-  int eid = family->next_eid++;
-
-  return eid;
-}
-
-/* Find the existing family with id FID in FAMILY (recursively, including
- * FAMILY itself). Assume FID is unique among all families.
- *
- * Return NULL if not found.
- */
-static svn_branch_family_t *
-family_get_subfamily_by_id(svn_branch_family_t *family,
-                           int fid)
-{
-  int i;
-
-  SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < family->repos->next_fid);
-
-  if (family->fid == fid)
-    return family;
-
-  for (i = 0; i < family->sub_families->nelts; i++)
-    {
-      svn_branch_family_t *f
-        = APR_ARRAY_IDX(family->sub_families, i, svn_branch_family_t *);
-
-      f = family_get_subfamily_by_id(f, fid);
-      if (f)
-        return f;
-    }
-
-  return NULL;
-}
-
-/* The default branching metadata for a new repository. */
-static const char *default_repos_info
-  = "r: fids 0 1 root-fid 0\n"
-    "f0: bids 0 1 eids 0 1 parent-fid 0\n"
-    "f0b0: root-eid 0\n"
-    "f0b0e0: \n";
-
-/* Create a new branch *NEW_BRANCH that belongs to FAMILY, initialized
- * with info parsed from STREAM, allocated in RESULT_POOL.
- */
-static svn_error_t *
-parse_branch_info(svn_branch_instance_t **new_branch,
-                  svn_branch_family_t *family,
-                  svn_branch_revision_root_t *rev_root,
-                  svn_stream_t *stream,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  svn_branch_definition_t *branch_definition;
-  svn_branch_instance_t *branch_instance;
-  svn_stringbuf_t *line;
-  svn_boolean_t eof;
-  int n;
-  int fid, bid, root_eid;
-  int eid;
-
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR_ASSERT(! eof);
-  n = sscanf(line->data, "f%db%d: root-eid %d\n",
-             &fid, &bid, &root_eid);
-  SVN_ERR_ASSERT(n == 3);
-
-  SVN_ERR_ASSERT(fid == family->fid);
-  branch_definition = svn_branch_definition_create(family, bid, root_eid,
-                                                   result_pool);
-  branch_instance = svn_branch_instance_create(branch_definition, rev_root,
-                                               result_pool);
-
-  for (eid = family->first_eid; eid < family->next_eid; eid++)
-    {
-      int this_fid, this_bid, this_eid;
-      int this_path_start_pos;
-      char *this_path;
-
-      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-      SVN_ERR_ASSERT(! eof);
-      n = sscanf(line->data, "f%db%de%d: %n\n",
-                 &this_fid, &this_bid, &this_eid, &this_path_start_pos);
-      SVN_ERR_ASSERT(n == 3);
-      this_path = line->data + this_path_start_pos;
-      if (strcmp(this_path, "(null)") != 0)
-        {
-          branch_mapping_update(branch_instance, this_eid, this_path);
-        }
-    }
-
-  *new_branch = branch_instance;
-  return SVN_NO_ERROR;
-}
-
-/* Create a new family *NEW_FAMILY as a sub-family of FAMILY, initialized
- * with info parsed from STREAM, allocated in RESULT_POOL.
- */
-static svn_error_t *
-parse_family_info(svn_branch_family_t **new_family,
-                  int *parent_fid,
-                  svn_branch_repos_t *repos,
-                  svn_stream_t *stream,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *line;
-  svn_boolean_t eof;
-  int n;
-  int fid, first_bid, next_bid, first_eid, next_eid;
-
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR_ASSERT(!eof);
-  n = sscanf(line->data, "f%d: bids %d %d eids %d %d parent-fid %d\n",
-             &fid,
-             &first_bid, &next_bid, &first_eid, &next_eid,
-             parent_fid);
-  SVN_ERR_ASSERT(n == 6);
-
-  *new_family = svn_branch_family_create(repos, fid,
-                                         first_bid, next_bid,
-                                         first_eid, next_eid,
-                                         result_pool);
-
-  return SVN_NO_ERROR;
-}
-
-/* Create a new revision-root object *REV_ROOT_P, initialized with info
- * parsed from STREAM, allocated in RESULT_POOL.
- */
-static svn_error_t *
-parse_revision_info(svn_branch_revision_root_t **rev_root_p,
-                    int *next_fid_p,
-                    svn_branch_repos_t *repos,
-                    svn_stream_t *stream,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  svn_branch_revision_root_t *rev_root = NULL;
-  int root_fid;
-  svn_stringbuf_t *line;
-  svn_boolean_t eof;
-  int n, i;
-  svn_branch_family_t *root_family = NULL;
-
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR_ASSERT(! eof);
-  n = sscanf(line->data, "r: fids %*d %d root-fid %d",
-             /* 0, */ next_fid_p, &root_fid);
-  SVN_ERR_ASSERT(n == 2);
-
-  /* parse the families */
-  for (i = 0; i < *next_fid_p; i++)
-    {
-      svn_branch_family_t *family;
-      int bid, parent_fid;
-
-      SVN_ERR(parse_family_info(&family, &parent_fid, repos, stream,
-                                result_pool, scratch_pool));
-
-      if (family->fid == root_fid)
-        {
-          rev_root = svn_branch_revision_root_create(repos, NULL /*root_branch*/,
-                                                     result_pool);
-          root_family = family;
-        }
-      else
-        {
-          svn_branch_family_t *parent_family
-            = family_get_subfamily_by_id(root_family, parent_fid);
-
-          SVN_ERR_ASSERT(parent_family);
-          APR_ARRAY_PUSH(parent_family->sub_families, void *) = family;
-        }
-
-      /* parse the branches */
-      for (bid = family->first_bid; bid < family->next_bid; ++bid)
-        {
-          svn_branch_instance_t *branch;
-
-          SVN_ERR(parse_branch_info(&branch, family, rev_root, stream,
-                                    family->pool, scratch_pool));
-          APR_ARRAY_PUSH(family->branch_instances, void *) = branch;
-          if (family->fid == root_fid)
-            {
-              branch->rev_root->root_branch = branch;
-            }
-        }
-    }
-
-  *rev_root_p = rev_root;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-write_per_revision_info(svn_stream_t *stream,
-                        svn_branch_revision_root_t *rev_root,
-                        int next_fid,
-                        apr_pool_t *scratch_pool);
-
-/* Create a new revision-root object and read the move-tracking /
- * branch-tracking metadata from the repository into it.
- */
-static svn_error_t *
-fetch_per_revision_info(svn_branch_revision_root_t **rev_root_p,
-                        int *next_fid_p,
-                        svn_branch_repos_t *repos,
-                        svn_ra_session_t *ra_session,
-                        svn_revnum_t revision,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  svn_string_t *value;
-  svn_stream_t *stream;
-  svn_branch_revision_root_t *rev_root;
-
-  /* Read initial state from repository */
-  SVN_ERR(svn_ra_rev_prop(ra_session, revision, "svn-br-info", &value,
-                          scratch_pool));
-  if (! value && revision == 0)
-    {
-      value = svn_string_create(default_repos_info, scratch_pool);
-      SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
-               revision, value->data));
-      SVN_ERR(svn_ra_change_rev_prop2(ra_session, revision, "svn-br-info",
-                                      NULL, value, scratch_pool));
-    }
-  SVN_ERR_ASSERT(value);
-  stream = svn_stream_from_string(value, scratch_pool);
-
-  SVN_ERR(parse_revision_info(&rev_root, next_fid_p, repos, stream,
-                              result_pool, scratch_pool));
-
-  /* Self-test: writing out the info should produce exactly the same string. */
-  {
-    svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
-
-    stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(write_per_revision_info(stream, rev_root, *next_fid_p,
-                                    scratch_pool));
-    SVN_ERR(svn_stream_close(stream));
-
-    SVN_ERR_ASSERT(svn_string_compare(value,
-                                      svn_stringbuf__morph_into_string(buf)));
-  }
-
-  *rev_root_p = rev_root;
-  return SVN_NO_ERROR;
-}
-
-/* Create a new repository object and read the move-tracking /
- * branch-tracking metadata from the repository into it.
- */
-static svn_error_t *
-fetch_repos_info(svn_branch_repos_t **repos_p,
-                 svn_ra_session_t *ra_session,
-                 svn_revnum_t base_revision,
-                 svn_editor3_t *editor,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  svn_branch_repos_t *repos
-    = svn_branch_repos_create(ra_session, editor, result_pool);
-  svn_revnum_t r;
-
-  if (base_revision == SVN_INVALID_REVNUM)
-    {
-      SVN_ERR(svn_ra_get_latest_revnum(ra_session, &base_revision,
-                                       scratch_pool));
-    }
-
-  repos->next_fid = 0;
-  for (r = 0; r <= base_revision; r++)
-    {
-      svn_branch_revision_root_t *rev_root;
-      int next_fid;
-
-      SVN_ERR(fetch_per_revision_info(&rev_root, &next_fid,
-                                      repos, ra_session, r,
-                                      result_pool, scratch_pool));
-      APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
-      repos->next_fid = MAX(repos->next_fid, next_fid);
-    }
-
-  *repos_p = repos;
-  return SVN_NO_ERROR;
-}
-
-/* Return a mutable state for the youngest revision in REPOS.
- */
-static svn_error_t *
-get_mutable_state(svn_branch_revision_root_t **rev_root_p,
-                  svn_branch_repos_t *repos,
-                  svn_revnum_t base_revision,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  int next_fid;
-
-  SVN_ERR(fetch_per_revision_info(rev_root_p, &next_fid,
-                                  repos, repos->ra_session, base_revision,
-                                  result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* Write to STREAM a parseable representation of BRANCH.
- */
-static svn_error_t *
-write_branch_info(svn_stream_t *stream,
-                  svn_branch_instance_t *branch,
-                  apr_pool_t *scratch_pool)
-{
-  svn_branch_family_t *family = branch->definition->family;
-  int eid;
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "f%db%d: root-eid %d\n",
-                            family->fid, branch->definition->bid,
-                            branch->definition->root_eid));
-  for (eid = family->first_eid; eid < family->next_eid; eid++)
-    {
-      const char *path = apr_hash_get(branch->eid_to_path, &eid, sizeof (eid));
-      if (path)
-        {
-          SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                                    "f%db%de%d: %s\n",
-                                    family->fid, branch->definition->bid, eid,
-                                    path));
-        }
-      else
-        {
-          /* ### TODO: instead of writing this out, write nothing; but the
-                 parser can't currently handle that. */
-          SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                                    "f%db%de%d: %s\n",
-                                    family->fid, branch->definition->bid, eid,
-                                    "(null)"));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Write to STREAM a parseable representation of FAMILY whose parent
- * family id is PARENT_FID. Recursively write all sub-families.
- */
-static svn_error_t *
-write_family_info(svn_stream_t *stream,
-                  svn_branch_family_t *family,
-                  int parent_fid,
-                  apr_pool_t *scratch_pool)
-{
-  int i;
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "f%d: bids %d %d eids %d %d parent-fid %d\n",
-                            family->fid,
-                            family->first_bid, family->next_bid,
-                            family->first_eid, family->next_eid,
-                            parent_fid));
-
-  for (i = 0; i < family->branch_instances->nelts; i++)
-    {
-      svn_branch_instance_t *branch
-        = APR_ARRAY_IDX(family->branch_instances, i, void *);
-
-      SVN_ERR(write_branch_info(stream, branch, scratch_pool));
-    }
-
-  if (family->sub_families)
-    {
-      for (i = 0; i < family->sub_families->nelts; i++)
-        {
-          svn_branch_family_t *f
-            = APR_ARRAY_IDX(family->sub_families, i, void *);
-
-          SVN_ERR(write_family_info(stream, f, family->fid, scratch_pool));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Write to STREAM a parseable representation of REV_ROOT.
- */
-static svn_error_t *
-write_per_revision_info(svn_stream_t *stream,
-                        svn_branch_revision_root_t *rev_root,
-                        int next_fid,
-                        apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "r: fids %d %d root-fid %d\n",
-                            0, next_fid,
-                            rev_root->root_branch->definition->family->fid));
-
-  SVN_ERR(write_family_info(stream, rev_root->root_branch->definition->family,
-                            0 /*parent_fid*/, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Store the move-tracking / branch-tracking metadata from REV_ROOT into the
- * repository.
- */
-static svn_error_t *
-store_repos_info(svn_branch_revision_root_t *rev_root,
-                 apr_pool_t *scratch_pool)
-{
-  svn_branch_repos_t *repos = rev_root->repos;
-  svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
-  svn_revnum_t youngest_rev;
-
-  SVN_ERR(write_per_revision_info(stream, rev_root, repos->next_fid,
-                                  scratch_pool));
-
-  SVN_ERR(svn_stream_close(stream));
-  /*SVN_DBG(("store_repos_info: %s", buf->data));*/
-  SVN_ERR(svn_ra_get_latest_revnum(repos->ra_session, &youngest_rev,
-                                   scratch_pool));
-  SVN_ERR(svn_ra_change_rev_prop2(repos->ra_session, youngest_rev, "svn-br-info",
-                                  NULL, svn_stringbuf__morph_into_string(buf),
-                                  scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Set *INNER_BRANCH_P and *INNER_EID_P to the branch and element located
- * at LOC.
- *
- * LOC should be a member of an immediate sub-branch of OUTER_BRANCH,
- * including the root of such a sub-branch, but not the root of a
- * sub-sub-branch.
- *
- * If not found, set *INNER_BRANCH_P and *INNER_EID_P respectively to NULL
- * and -1.
- */
-static svn_error_t *
-branch_find_subbranch_element_by_location(svn_branch_instance_t **inner_branch_p,
-                                          int *inner_eid_p,
-                                          svn_branch_instance_t *outer_branch,
-                                          svn_editor3_txn_path_t loc,
-                                          apr_pool_t *scratch_pool)
-{
-  const char *outer_branch_root_rrpath = branch_get_root_path(outer_branch);
-  const char *loc_rrpath = txn_path_to_relpath(loc, scratch_pool);
-  apr_array_header_t *branch_instances;
-  int i;
-
-  if (! svn_relpath_skip_ancestor(outer_branch_root_rrpath, loc_rrpath))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("location %s is not within branch %d (root path '%s')"),
-                               loc_rrpath, outer_branch->definition->bid,
-                               outer_branch_root_rrpath);
-    }
-
-  branch_instances = branch_get_sub_branches(outer_branch,
-                                             scratch_pool, scratch_pool);
-  /* Find the sub-branch that encloses LOC_RRPATH */
-  for (i = 0; i < branch_instances->nelts; i++)
-    {
-      svn_branch_instance_t *sub_branch
-        = APR_ARRAY_IDX(branch_instances, i, void *);
-      const char *sub_branch_root_path = branch_get_root_path(sub_branch);
-
-      if (svn_relpath_skip_ancestor(sub_branch_root_path, loc_rrpath))
-        {
-          /* The path we're looking for is path-wise in this sub-branch. */
-          /* ### TODO: Check it's not a sub-sub-branch. */
-          *inner_branch_p = sub_branch;
-          *inner_eid_p = branch_get_eid_by_path(sub_branch, loc_rrpath);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *inner_branch_p = NULL;
-  *inner_eid_p = -1;
-  return SVN_NO_ERROR;
-}
-
-/* Find the (deepest) branch of which the path RRPATH is either the root
- * path or a normal, non-sub-branch path. An element need not exist at
- * RRPATH.
- *
- * Set *BRANCH_P to the deepest branch within ROOT_BRANCH (recursively,
- * including itself) that contains the path RRPATH.
- *
- * If EID_P is not null then set *EID_P to the element id of RRPATH in
- * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
- *
- * If RRPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
- * NULL and (if EID_P is not null) *EID_P to -1.
- */
-static void
-branch_find_nested_branch_element_by_path(
-                                svn_branch_instance_t **branch_p,
-                                int *eid_p,
-                                svn_branch_instance_t *root_branch,
-                                const char *rrpath,
-                                apr_pool_t *scratch_pool)
-{
-  const char *branch_root_path = branch_get_root_path(root_branch);
-  apr_array_header_t *branch_instances;
-  int i;
-
-  if (! svn_relpath_skip_ancestor(branch_root_path, rrpath))
-    {
-      /* The path we're looking for is not (path-wise) in this branch. */
-      *branch_p = NULL;
-      if (eid_p)
-        *eid_p = -1;
-      return;
-    }
-
-  /* The path we're looking for is (path-wise) in this branch. See if it
-     is also in a sub-branch (recursively). */
-  branch_instances = branch_get_sub_branches(root_branch,
-                                             scratch_pool, scratch_pool);
-  for (i = 0; i < branch_instances->nelts; i++)
-    {
-      svn_branch_instance_t *this_branch
-        = APR_ARRAY_IDX(branch_instances, i, void *);
-      svn_branch_instance_t *sub_branch;
-      int sub_branch_eid;
-
-      branch_find_nested_branch_element_by_path(&sub_branch, &sub_branch_eid,
-                                                this_branch, rrpath,
-                                                scratch_pool);
-      if (sub_branch)
-        {
-           *branch_p = sub_branch;
-           if (eid_p)
-             *eid_p = sub_branch_eid;
-           return;
-         }
-    }
-
-  *branch_p = root_branch;
-  if (eid_p)
-    *eid_p = branch_get_eid_by_path(root_branch, rrpath);
-}
-
-/* Find the deepest branch in REPOS (recursively) of which RRPATH_REV is
+/* Find the deepest branch in the repository of which RRPATH_REV is
  * either the root element or a normal, non-sub-branch element.
  *
  * RRPATH_REV is a repository-relative path with an optional "@REV" suffix.
+ * When "@REV" is not present, find in the current txn.
  *
  * Return the location of the element at RRPATH_REV in that branch, or with
  * EID=-1 if no element exists there.
  *
- * The result will never be NULL.
+ * The result will never be NULL, as every path is within at least the root
+ * branch.
  */
 static svn_error_t *
-repos_get_el_rev_by_loc(svn_branch_el_rev_id_t **el_rev_p,
-                        const svn_branch_repos_t *repos,
-                        const char *rrpath_rev,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  const char *rrpath;
-  svn_opt_revision_t rev;
-  const svn_branch_revision_root_t *rev_root;
-
-  SVN_ERR(svn_opt_parse_path(&rev, &rrpath, rrpath_rev, scratch_pool));
-  if (rev.kind == svn_opt_revision_number)
-    {
-      el_rev->rev = rev.value.number;
-    }
-  else
-    {
-      el_rev->rev = repos->rev_roots->nelts - 1;
-    }
-  rev_root = APR_ARRAY_IDX(repos->rev_roots, el_rev->rev, void *);
-  branch_find_nested_branch_element_by_path(&el_rev->branch, &el_rev->eid,
-                                            rev_root->root_branch, rrpath,
-                                            scratch_pool);
-
-  /* Any path must at least be within the repository root branch */
-  SVN_ERR_ASSERT_NO_RETURN(el_rev->branch);
-  *el_rev_p = el_rev;
-  return SVN_NO_ERROR;
-}
-
-/* Find the deepest branch in REV_ROOT of which RRPATH is
- * either the root element or a normal, non-sub-branch element.
- * If EID_P is not null, set *EID_P to the EID of RRPATH in that branch.
- *
- * An element need not exist at RRPATH.
- *
- * The result will never be NULL.
- */
-static svn_branch_instance_t *
-revision_get_branch_by_path(int *eid_p,
-                            svn_branch_revision_root_t *rev_root,
-                            const char *rrpath,
-                            apr_pool_t *scratch_pool)
-{
-  svn_branch_instance_t *branch;
-
-  branch_find_nested_branch_element_by_path(&branch, eid_p,
-                                            rev_root->root_branch, rrpath,
-                                            scratch_pool);
-
-  /* Any path must at least be within the repository root branch */
-  SVN_ERR_ASSERT_NO_RETURN(branch);
-  return branch;
-}
-
-/*  */
-static svn_boolean_t
-same_branch(const svn_branch_instance_t *branch1,
-            const svn_branch_instance_t *branch2)
-{
-  return (branch1 == branch2);
-}
-
-/* If the location LOC is not in the branch BRANCH,
- * throw an error (branch nesting violation).
- */
-static svn_error_t *
-verify_path_in_branch(const svn_branch_instance_t *branch,
-                      const char *rrpath,
-                      apr_pool_t *scratch_pool)
-{
-  svn_branch_instance_t *target_branch
-    = revision_get_branch_by_path(NULL, branch->rev_root, rrpath, scratch_pool);
-
-  if (! same_branch(target_branch, branch))
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("path '%s' is in branch '%s', "
-                               "not in this branch '%s'"),
-                             rrpath,
-                             branch_get_root_path(target_branch),
-                             branch_get_root_path(branch));
-  return SVN_NO_ERROR;
-}
-
-/* If the location LOC is not in the branch BRANCH,
- * throw an error (branch nesting violation).
- */
-static svn_error_t *
-verify_location_in_branch(const svn_branch_instance_t *branch,
-                          svn_editor3_txn_path_t loc,
+find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
+                          svn_editor3_t *editor,
+                          const char *rrpath_rev,
+                          apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos = branch->rev_root->repos;
-  const char *rrpath = txn_path_to_relpath(loc, scratch_pool);
-  svn_branch_revision_root_t *rev_root;
-  svn_branch_instance_t *target_branch;
+  const char *rrpath;
+  svn_opt_revision_t rev_spec;
 
-  if (SVN_IS_VALID_REVNUM(loc.peg.rev))
-    rev_root = APR_ARRAY_IDX(repos->rev_roots, loc.peg.rev, void *);
-  else
-    rev_root = branch->rev_root;
-  target_branch = revision_get_branch_by_path(NULL, rev_root, rrpath,
-                                              scratch_pool);
-
-  if (! same_branch(target_branch, branch))
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("location '%s' is in branch '%s', "
-                               "not in this branch '%s'"),
-                             txn_path_str(loc, scratch_pool),
-                             branch_get_root_path(target_branch),
-                             branch_get_root_path(branch));
-  return SVN_NO_ERROR;
-}
-
-/* Set *PATHS_P to an array of (const char *) repos-relative paths of
- * all the child elements (recursively) of BRANCH:LOC_RRPATH, excluding
- * itself.
- *
- * LOC_RRPATH must be a path inside BRANCH. If no element of BRANCH
- * exists at LOC_RRPATH, return an empty list.
- */
-static svn_error_t *
-branch_get_subtree_paths(apr_array_header_t **paths_p,
-                         svn_branch_instance_t *branch,
-                         const char *loc_rrpath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  SVN_ERR_ASSERT(svn_relpath_skip_ancestor(branch_get_root_path(branch),
-                                           loc_rrpath) != NULL);
-
-  *paths_p = apr_array_make(result_pool, 0, sizeof(char *));
-  for (hi = apr_hash_first(scratch_pool, branch->eid_to_path);
-       hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_opt_parse_path(&rev_spec, &rrpath, rrpath_rev, scratch_pool));
+  if (rev_spec.kind == svn_opt_revision_number)
     {
-      const char *path = apr_hash_this_val(hi);
-      const char *remainder = svn_relpath_skip_ancestor(loc_rrpath, path);
+      svn_revnum_t revnum = rev_spec.value.number;
 
-      if (remainder && remainder[0])
-        {
-          APR_ARRAY_PUSH(*paths_p, const char *) = path;
-        }
+      SVN_ERR(svn_editor3_find_el_rev_by_path_rev(el_rev_p,
+                                                  editor, rrpath, revnum,
+                                                  result_pool, scratch_pool));
+    }
+  else
+    {
+      svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
+
+      svn_editor3_find_branch_element_by_rrpath(
+        &el_rev->branch, &el_rev->eid,
+        editor, rrpath, scratch_pool);
+      el_rev->rev = SVN_INVALID_REVNUM;
+      *el_rev_p = el_rev;
     }
   return SVN_NO_ERROR;
 }
@@ -1813,17 +294,17 @@ family_list_branch_instances(svn_branch_family_t *family,
       int eid;
 
       printf("  branch %d (root element %d -> '/%s')\n",
-             branch->definition->bid, branch->definition->root_eid,
-             branch_get_root_path(branch));
+             branch->sibling_defn->bid, branch->sibling_defn->root_eid,
+             svn_branch_get_root_rrpath(branch));
       for (eid = family->first_eid; eid < family->next_eid; eid++)
         {
-          const char *rrpath = apr_hash_get(branch->eid_to_path,
-                                            &eid, sizeof(eid));
+          const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
+                                                            scratch_pool);
 
           if (rrpath)
             {
               const char *relpath
-                = svn_relpath_skip_ancestor(branch_get_root_path(branch),
+                = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(branch),
                                             rrpath);
 
               printf("    e%d -> %s\n",
@@ -1849,558 +330,6 @@ family_list_branch_instances(svn_branch_family_t *family,
   return SVN_NO_ERROR;
 }
 
-/* In BRANCH, make a new directory at PARENT_LOC:NEW_NAME. */
-static svn_error_t *
-svn_branch_mkdir(svn_branch_instance_t *branch,
-                 svn_editor3_txn_path_t parent_loc,
-                 const char *new_name,
-                 apr_pool_t *scratch_pool)
-{
-  svn_editor3_t *editor = branch->definition->family->repos->editor;
-  svn_editor3_txn_path_t loc = txn_path_join(parent_loc, new_name, scratch_pool);
-  const char *loc_rrpath = txn_path_to_relpath(loc, scratch_pool);
-  int eid;
-
-  SVN_ERR(verify_path_in_branch(branch, loc_rrpath, scratch_pool));
-
-  eid = family_add_new_element(branch->definition->family);
-
-  SVN_ERR(svn_editor3_mk(editor, svn_node_dir, parent_loc, new_name));
-  branch_mapping_update(branch, eid, loc_rrpath);
-  return SVN_NO_ERROR;
-}
-
-/* Adjust BRANCH and its subbranches (recursively),
- * to reflect deletion of a subtree from FROM_PATH.
- *
- * FROM_PATH MUST be the location of a non-root element of BRANCH.
- * If FROM_PATH is the root of a subbranch and/or contains nested
- * subbranches, also delete them.
- */
-static svn_error_t *
-branch_delete_subtree_r(svn_branch_instance_t *branch,
-                        const char *from_path,
-                        apr_pool_t *scratch_pool)
-{
-  int eid;
-  apr_array_header_t *subbranches;
-  int i;
-
-  /* FROM_PATH MUST be the location of a non-root element of BRANCH. */
-  eid = branch_get_eid_by_path(branch, from_path);
-  if (eid < 0)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("in branch %d, can't delete '%s': not found"),
-                             branch->definition->bid, from_path);
-  if (eid == branch->definition->root_eid)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("in branch %d, can't delete '%s': is root of this branch"),
-                             branch->definition->bid, from_path);
-
-  /* Delete any nested subbranches at or inside FROM_PATH. */
-  subbranches = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch
-        = APR_ARRAY_IDX(subbranches, i, void *);
-      const char *subbranch_root_path = branch_get_root_path(subbranch);
-      const char *subbranch_within_from_path
-        = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-
-      if (subbranch_within_from_path)
-        {
-          /* Delete the whole subbranch (recursively) */
-          SVN_ERR(branch_instance_delete_r(subbranch, scratch_pool));
-        }
-    }
-
-  /* update the path mappings in this branch */
-  SVN_ERR(branch_mappings_delete(branch, from_path, TRUE /*include_self*/,
-                                 scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Adjust BRANCH and its subbranches (recursively),
- * to reflect a move of a subtree from FROM_PATH to TO_PATH.
- *
- * FROM_PATH must be an existing element of BRANCH. (It may be the root.)
- * If FROM_PATH is the root of a subbranch and/or contains nested
- * subbranches, also move them.
- *
- * TO_PATH must be a non-existing path in an existing parent directory in
- * BRANCH.
- */
-static svn_error_t *
-branch_move_subtree_r(svn_branch_instance_t *branch,
-                      const char *from_path,
-                      const char *to_path,
-                      apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches;
-  int i;
-
-  /* update the path mappings in this branch */
-  SVN_ERR(branch_mappings_move(branch, from_path, to_path, scratch_pool));
-
-  /* handle subbranches */
-  subbranches = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch
-        = APR_ARRAY_IDX(subbranches, i, void *);
-      const char *subbranch_root_path = branch_get_root_path(subbranch);
-      const char *subbranch_within_from_path
-        = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-
-      if (subbranch_within_from_path)
-        {
-          const char *subbranch_root_to_path
-            = svn_relpath_join(to_path, subbranch_within_from_path,
-                               scratch_pool);
-
-          /* Move the whole subbranch (recursively) */
-          SVN_ERR(branch_move_subtree_r(subbranch,
-                                        subbranch_root_path,
-                                        subbranch_root_to_path,
-                                        scratch_pool));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Adjust OUTER_BRANCH and its subbranches (recursively),
- * to reflect branching a subtree from FROM_BRANCH:FROM_PATH to
- * create a new subbranch of OUTER_BRANCH at TO_PATH.
- *
- * FROM_BRANCH must be an immediate child branch of OUTER_BRANCH.
- *
- * FROM_PATH must be an existing element of FROM_BRANCH. It may be the
- * root of FROM_BRANCH. It must not be the root of a subbranch of
- * FROM_BRANCH.
- *
- * TO_PATH must be a non-existing path in an existing parent directory in
- * OUTER_BRANCH.
- */
-static svn_error_t *
-branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
-                        svn_branch_instance_t *outer_branch,
-                        svn_branch_instance_t *from_branch,
-                        const char *from_path,
-                        const char *to_path,
-                        apr_pool_t *scratch_pool)
-{
-  int inner_eid = branch_get_eid_by_path(from_branch, from_path);
-  int to_outer_eid;
-  svn_branch_definition_t *new_branch_def;
-  svn_branch_instance_t *new_branch;
-  apr_array_header_t *subbranches;
-  int i;
-
-  /* FROM_BRANCH must be an immediate child branch of OUTER_BRANCH. */
-  /* SVN_ERR_ASSERT(...); */
-
-  /* SVN_ERR_ASSERT(...); */
-
-  /* assign new eid to root node (outer branch) */
-  to_outer_eid = family_add_new_element(outer_branch->definition->family);
-  branch_mapping_update(outer_branch, to_outer_eid, to_path);
-
-  /* create new inner branch definition & instance */
-  /* ### On sub-branches, should not add new branch definition, only instance. */
-  new_branch_def
-    = family_add_new_branch_definition(from_branch->definition->family,
-                                       inner_eid);
-  new_branch = branch_add_new_branch_instance(new_branch_def,
-                                              from_branch->rev_root, to_path);
-
-  /* populate new branch instance with path mappings */
-  SVN_ERR(branch_mappings_branch(from_branch, from_path,
-                                 new_branch, to_path,
-                                 FALSE /*include_self*/, scratch_pool));
-
-  /* branch any subbranches of FROM_BRANCH */
-  subbranches = branch_get_sub_branches(from_branch, scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch
-        = APR_ARRAY_IDX(subbranches, i, void *);
-      const char *subbranch_root_path = branch_get_root_path(subbranch);
-      const char *subbranch_within_from_path
-        = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-
-      if (subbranch_within_from_path)
-        {
-          const char *subbranch_root_to_path
-            = svn_relpath_join(to_path, subbranch_within_from_path,
-                               scratch_pool);
-
-          /* branch this subbranch into NEW_BRANCH (recursing) */
-          SVN_ERR(branch_branch_subtree_r(NULL,
-                                          new_branch,
-                                          subbranch, subbranch_root_path,
-                                          subbranch_root_to_path,
-                                          scratch_pool));
-        }
-    }
-
-  if (new_branch_p)
-    *new_branch_p = new_branch;
-  return SVN_NO_ERROR;
-}
-
-/* Adjust BRANCH and its subbranches (recursively),
- * to reflect a copy of a subtree from FROM_PATH to TO_PATH.
- *
- * FROM_PATH must be an existing element of BRANCH. (It may be the root.)
- * If FROM_PATH is the root of a subbranch and/or contains nested
- * subbranches, also copy them (by branching).
- *
- * TO_PATH must be a non-existing path in an existing parent directory in
- * BRANCH.
- */
-static svn_error_t *
-branch_copy_subtree_r(svn_branch_instance_t *branch,
-                      const char *from_path,
-                      const char *to_path,
-                      apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches;
-  int i;
-
-  /* assign new EIDs and update the path mappings in this branch */
-  SVN_ERR(branch_mappings_copy(branch, from_path,
-                               branch, to_path,
-                               TRUE /*include_self*/, scratch_pool));
-
-  /* handle subbranches */
-  subbranches = branch_get_sub_branches(branch, scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch
-        = APR_ARRAY_IDX(subbranches, i, void *);
-      const char *subbranch_root_path = branch_get_root_path(subbranch);
-      const char *subbranch_within_from_path
-        = svn_relpath_skip_ancestor(from_path, subbranch_root_path);
-
-      if (subbranch_within_from_path)
-        {
-          const char *subbranch_root_to_path
-            = svn_relpath_join(to_path, subbranch_within_from_path,
-                               scratch_pool);
-
-          /* branch the whole subbranch (recursively) */
-          SVN_ERR(branch_branch_subtree_r(NULL,
-                                          branch,
-                                          subbranch, subbranch_root_path,
-                                          subbranch_root_to_path,
-                                          scratch_pool));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Return TRUE iff EL_REV is the root element of its branch. */
-static svn_boolean_t
-svn_branch_el_rev_is_root(const svn_branch_el_rev_id_t *el_rev)
-{
-  return el_rev->eid == el_rev->branch->definition->root_eid;
-}
-
-/* Return the repos-relpath for element EL_REV, or NULL if EL_REV
- * is not currently present in BRANCH.
- *
- * EL_REV->EID MUST be a valid EID belonging to BRANCH's family, but the
- * element need not be present in any branch.
- */
-static const char *
-svn_branch_el_rev_get_rrpath(const svn_branch_el_rev_id_t *el_rev)
-{
-  /* EL_REV->BRANCH presently points to mappings for the specific rev. */
-  return branch_get_path_by_eid(el_rev->branch, el_rev->eid);
-}
-
-/*  */
-static int
-svn_branch_el_rev_get_parent_eid(const svn_branch_el_rev_id_t *el_rev,
-                                 apr_pool_t *scratch_pool)
-{
-  int parent_eid;
-
-  if (svn_branch_el_rev_is_root(el_rev))
-    {
-      parent_eid = -1;
-    }
-  else
-    {
-      const char *rrpath = svn_branch_el_rev_get_rrpath(el_rev);
-
-      rrpath = svn_relpath_dirname(rrpath, scratch_pool);
-      parent_eid = branch_get_eid_by_path(el_rev->branch, rrpath);
-    }
-
-  return parent_eid;
-}
-
-/*  */
-static const char *
-svn_branch_el_rev_get_basename(const svn_branch_el_rev_id_t *el_rev,
-                               apr_pool_t *result_pool)
-{
-  const char *name;
-
-  if (svn_branch_el_rev_is_root(el_rev))
-    {
-      name = "";
-    }
-  else
-    {
-      const char *rrpath = svn_branch_el_rev_get_rrpath(el_rev);
-
-      name = svn_relpath_basename(rrpath, result_pool);
-    }
-
-  return name;
-}
-
-/*  */
-static svn_error_t *
-svn_branch_el_rev_get_node_content(svn_editor3_node_content_t **content_p,
-                                   const svn_branch_el_rev_id_t *el_rev,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
-  const char *rrpath = svn_branch_el_rev_get_rrpath(el_rev);
-  svn_editor3_node_content_t *content = NULL;
-  struct fb_baton
-  {
-    svn_ra_session_t *session;
-  } fbb = { el_rev->branch->definition->family->repos->ra_session };
-
-  if (rrpath)
-    {
-      content = apr_palloc(result_pool, sizeof(*content));
-      SVN_ERR(svn_ra_fetch(&content->kind,
-                           &content->props,
-                           &content->text, NULL,
-                           &fbb, rrpath, el_rev->rev,
-                           result_pool, scratch_pool));
-    }
-
-  *content_p = content;
-  return SVN_NO_ERROR;
-}
-
-/*  */
-static svn_error_t *
-svn_branch_el_rev_get(svn_branch_el_rev_content_t **content_p,
-                      const svn_branch_el_rev_id_t *el_rev,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  const char *rrpath = svn_branch_el_rev_get_rrpath(el_rev);
-  svn_branch_el_rev_content_t *content = NULL;
-
-  if (rrpath)
-    {
-      content = apr_palloc(result_pool, sizeof(*content));
-      content->parent_eid = svn_branch_el_rev_get_parent_eid(el_rev,
-                                                             scratch_pool);
-      content->name = svn_branch_el_rev_get_basename(el_rev, result_pool);
-      SVN_ERR(svn_branch_el_rev_get_node_content(&content->content, el_rev,
-                                                 result_pool, scratch_pool));
-    }
-
-  *content_p = content;
-  return SVN_NO_ERROR;
-}
-
-/*  */
-static svn_boolean_t
-svn_editor3_node_content_equal(const svn_editor3_node_content_t *content_left,
-                               const svn_editor3_node_content_t *content_right,
-                               apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *prop_diffs;
-
-  if (content_left->kind != content_right->kind)
-    {
-      /*SVN_DBG(("node_content_equal: kind %d != %d", content_left->kind, content_right->kind));*/
-      return FALSE;
-    }
-  svn_error_clear(svn_prop_diffs(&prop_diffs,
-                                 content_left->props, content_right->props,
-                                 scratch_pool));
-  if (prop_diffs->nelts != 0)
-    {
-      /*SVN_DBG(("node_content_equal: props different"));*/
-      return FALSE;
-    }
-  switch (content_left->kind)
-    {
-    case svn_node_dir:
-      break;
-    case svn_node_file:
-      if (! svn_stringbuf_compare(content_left->text, content_right->text))
-        {
-          /*SVN_DBG(("node_content_equal: text different"));*/
-          return FALSE;
-        }
-      break;
-    case svn_node_symlink:
-      if (strcmp(content_left->target, content_right->target) != 0)
-        {
-          return FALSE;
-        }
-      break;
-    default:
-      break;
-    }
-
-  return TRUE;
-}
-
-/* Return the relative path to element EID within SUBTREE. */
-static const char *
-element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
-                           int eid)
-{
-  const char *subtree_path = branch_get_path_by_eid(subtree->branch, subtree->eid);
-  const char *element_path = branch_get_path_by_eid(subtree->branch, eid);
-  const char *relpath = NULL;
-
-  SVN_ERR_ASSERT_NO_RETURN(subtree_path);
-
-  if (element_path)
-    relpath = svn_relpath_skip_ancestor(subtree_path, element_path);
-
-  return relpath;
-}
-
-/*  */
-static svn_boolean_t
-svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
-                                const svn_branch_el_rev_content_t *content_right,
-                                apr_pool_t *scratch_pool)
-{
-  if (content_left->parent_eid != content_right->parent_eid)
-    {
-      /*SVN_DBG(("el_rev_content_equal: parent e%d != e%d", content_left->parent_eid, content_right->parent_eid));*/
-      return FALSE;
-    }
-  if (strcmp(content_left->name, content_right->name) != 0)
-    {
-      /*SVN_DBG(("el_rev_content_equal: name %s != %s", content_left->name, content_right->name));*/
-      return FALSE;
-    }
-  if (! svn_editor3_node_content_equal(content_left->content,
-                                       content_right->content,
-                                       scratch_pool))
-    {
-      /*SVN_DBG(("el_rev_content_equal: content differs"));*/
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-/*  */
-static svn_boolean_t
-branch_element_equal(int eid,
-                     const svn_branch_el_rev_content_t *content_left,
-                     const svn_branch_el_rev_content_t *content_right,
-                     apr_pool_t *scratch_pool)
-{
-  svn_boolean_t same;
-
-  if (!content_left && !content_right)
-    {
-      same = TRUE;
-    }
-  else if (!content_left || !content_right
-           || !svn_branch_el_rev_content_equal(content_left, content_right,
-                                               scratch_pool))
-    {
-      /*if (!content_right)
-        SVN_DBG(("  e%d left-only", eid));
-      else if (!content_left)
-        SVN_DBG(("  e%d right-only", eid));
-      else
-        SVN_DBG(("  e%d different: parent? %+d, name? %+d, content?",
-                 eid, content_right->parent_eid - content_left->parent_eid,
-                 strcmp(content_left->name, content_right->name)));*/
-      same = FALSE;
-    }
-  else
-    {
-      /*SVN_DBG(("  e%d same", eid));*/
-      same = TRUE;
-    }
-  return same;
-}
-
-/* Return (left, right) pairs of element content that differ between
- * subtrees LEFT and RIGHT.
- */
-static svn_error_t *
-branch_subtree_differences(apr_hash_t **h_left_p,
-                           const svn_branch_el_rev_id_t *left,
-                           const svn_branch_el_rev_id_t *right,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  apr_hash_t *h_left = apr_hash_make(result_pool);
-  int first_eid, next_eid;
-  int e;
-
-  /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
-           left->branch->definition->bid, left->rev,
-           right->branch->definition->bid, right->rev, right->eid));*/
-  SVN_ERR_ASSERT(left->branch->definition->family->fid
-                 == right->branch->definition->family->fid);
-
-  first_eid = left->branch->definition->family->first_eid;
-  next_eid = MAX(left->branch->definition->family->next_eid,
-                 right->branch->definition->family->next_eid);
-
-  for (e = first_eid; e < next_eid; e++)
-    {
-      svn_branch_el_rev_content_t *content_left = NULL;
-      svn_branch_el_rev_content_t *content_right = NULL;
-
-      if (e < left->branch->definition->family->next_eid
-          && element_relpath_in_subtree(left, e))
-        {
-          svn_branch_el_rev_id_t el_rev = *left;
-          el_rev.eid = e;
-          SVN_ERR(svn_branch_el_rev_get(&content_left, &el_rev,
-                                        result_pool, scratch_pool));
-        }
-      if (e < right->branch->definition->family->next_eid
-          && element_relpath_in_subtree(right, e))
-        {
-          svn_branch_el_rev_id_t el_rev = *right;
-          el_rev.eid = e;
-          SVN_ERR(svn_branch_el_rev_get(&content_right, &el_rev,
-                                        result_pool, scratch_pool));
-        }
-
-      if (! branch_element_equal(e, content_left, content_right, scratch_pool))
-        {
-          int *eid_stored = apr_pmemdup(result_pool, &e, sizeof(e));
-          svn_branch_el_rev_content_t **contents
-            = apr_palloc(result_pool, 2 * sizeof(void *));
-
-          contents[0] = content_left;
-          contents[1] = content_right;
-          apr_hash_set(h_left, eid_stored, sizeof(*eid_stored), contents);
-        }
-    }
-
-  *h_left_p = h_left;
-  return SVN_NO_ERROR;
-}
-
 /* Merge the content for one element.
  */
 static void
@@ -2413,8 +342,10 @@ element_merge(svn_branch_el_rev_content_t **result_p,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_boolean_t same1 = branch_element_equal(eid, yca, side1, scratch_pool);
-  svn_boolean_t same2 = branch_element_equal(eid, yca, side2, scratch_pool);
+  svn_boolean_t same1 = svn_branch_el_rev_content_equal(eid, yca, side1,
+                                                        scratch_pool);
+  svn_boolean_t same2 = svn_branch_el_rev_content_equal(eid, yca, side2,
+                                                        scratch_pool);
   svn_boolean_t conflict = FALSE;
   svn_branch_el_rev_content_t *result;
 
@@ -2498,32 +429,32 @@ element_merge(svn_branch_el_rev_content_t **result_p,
  * Merge any sub-branches in the same way, recursively.
  */
 static svn_error_t *
-branch_merge_subtree_r(const svn_branch_el_rev_id_t *src,
+branch_merge_subtree_r(svn_editor3_t *editor,
+                       const svn_branch_el_rev_id_t *src,
                        const svn_branch_el_rev_id_t *tgt,
                        const svn_branch_el_rev_id_t *yca,
                        apr_pool_t *scratch_pool)
 {
-  /*svn_editor3_t *editor = src->branch->definition->family->repos->editor;*/
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   svn_boolean_t had_conflict = FALSE;
   int first_eid, next_eid, eid;
 
-  SVN_ERR_ASSERT(src->branch->definition->family->fid
-                 == tgt->branch->definition->family->fid);
-  SVN_ERR_ASSERT(src->branch->definition->family->fid
-                 == yca->branch->definition->family->fid);
+  SVN_ERR_ASSERT(src->branch->sibling_defn->family->fid
+                 == tgt->branch->sibling_defn->family->fid);
+  SVN_ERR_ASSERT(src->branch->sibling_defn->family->fid
+                 == yca->branch->sibling_defn->family->fid);
   SVN_ERR_ASSERT(src->eid == tgt->eid);
   SVN_ERR_ASSERT(src->eid == yca->eid);
 
   SVN_DBG(("merge src: r%2ld f%d b%2d e%3d",
-           src->rev, src->branch->definition->family->fid,
-           src->branch->definition->bid, src->eid));
+           src->rev, src->branch->sibling_defn->family->fid,
+           src->branch->sibling_defn->bid, src->eid));
   SVN_DBG(("merge tgt: r%2ld f%d b%2d e%3d",
-           tgt->rev, tgt->branch->definition->family->fid,
-           tgt->branch->definition->bid, tgt->eid));
+           tgt->rev, tgt->branch->sibling_defn->family->fid,
+           tgt->branch->sibling_defn->bid, tgt->eid));
   SVN_DBG(("merge yca: r%2ld f%d b%2d e%3d",
-           yca->rev, yca->branch->definition->family->fid,
-           yca->branch->definition->bid, yca->eid));
+           yca->rev, yca->branch->sibling_defn->family->fid,
+           yca->branch->sibling_defn->bid, yca->eid));
 
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
@@ -2534,19 +465,19 @@ branch_merge_subtree_r(const svn_branch_el_rev_id_t *src,
           result := diff1.right
         # else no change
    */
-  SVN_ERR(branch_subtree_differences(&diff_yca_src,
-                                     yca, src,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_branch_subtree_differences(&diff_yca_src,
+                                         editor, yca, src,
+                                         scratch_pool, scratch_pool));
   /* ### We only need to query for YCA:TO differences in elements that are
          different in YCA:FROM, but right now we ask for all differences. */
-  SVN_ERR(branch_subtree_differences(&diff_yca_tgt,
-                                     yca, tgt,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
+                                         editor, yca, tgt,
+                                         scratch_pool, scratch_pool));
 
-  first_eid = yca->branch->definition->family->first_eid;
-  next_eid = yca->branch->definition->family->next_eid;
-  next_eid = MAX(next_eid, src->branch->definition->family->next_eid);
-  next_eid = MAX(next_eid, tgt->branch->definition->family->next_eid);
+  first_eid = yca->branch->sibling_defn->family->first_eid;
+  next_eid = yca->branch->sibling_defn->family->next_eid;
+  next_eid = MAX(next_eid, src->branch->sibling_defn->family->next_eid);
+  next_eid = MAX(next_eid, tgt->branch->sibling_defn->family->next_eid);
 
   for (eid = first_eid; eid < next_eid; eid++)
     {
@@ -2558,7 +489,7 @@ branch_merge_subtree_r(const svn_branch_el_rev_id_t *src,
       svn_branch_el_rev_content_t *e_src;
       svn_branch_el_rev_content_t *e_tgt;
       svn_branch_el_rev_content_t *result;
-      svn_boolean_t conflict = FALSE;
+      svn_boolean_t conflict;
 
       /* If an element hasn't changed in the source branch, there is
          no need to do anything with it in the target branch. */
@@ -2585,21 +516,29 @@ branch_merge_subtree_r(const svn_branch_el_rev_id_t *src,
           SVN_DBG(("merged: e%d => parent=e%d, name=%s, content=...",
                    eid, result->parent_eid, result->name));
 
-          /*SVN_ERR(svn_editor3_alter(editor, loc.peg.rev, nbid,
-                                    new_parent_nbid, result->name,
-                                    result->content));*/
+          SVN_ERR(svn_editor3_alter(editor, tgt->rev, eid,
+                                    result->parent_eid, result->name,
+                                    result->content));
         }
       else if (e_tgt)
         {
           SVN_DBG(("merged: e%d => <deleted>", eid));
-          /*SVN_ERR(svn_editor3_delete(editor, loc.peg.rev, nbid));*/
+          SVN_ERR(svn_editor3_delete(editor, tgt->rev, eid));
         }
       else if (result)
         {
           SVN_DBG(("merged: e%d => <added>", eid));
-          /*SVN_ERR(svn_editor3_add(editor, nbid, result->content->kind,
-                                  new_parent_nbid, result->name,
-                                  result->content));*/
+
+          /* In BRANCH, create an instance of the element EID with NEW_CONTENT.
+           *
+           * Translated to old language, this means create a new node-copy
+           * copied (branched) from the source-right version of the merge
+           * (which is not specified here, but will need to be),
+           * which may be in this branch or in another branch.
+           */
+          SVN_ERR(svn_editor3_instantiate(editor, eid, result->content->kind,
+                                  result->parent_eid, result->name,
+                                  result->content));
         }
     }
 
@@ -2636,19 +575,20 @@ branch_merge_subtree_r(const svn_branch_el_rev_id_t *src,
  *     If ... contains nested subbranches, these will also be merged.
  */
 static svn_error_t *
-svn_branch_merge(svn_branch_el_rev_id_t *src,
+svn_branch_merge(svn_editor3_t *editor,
+                 svn_branch_el_rev_id_t *src,
                  svn_branch_el_rev_id_t *tgt,
                  svn_branch_el_rev_id_t *yca,
                  apr_pool_t *scratch_pool)
 {
-  if (src->branch->definition->family->fid != tgt->branch->definition->family->fid
-      || src->branch->definition->family->fid != yca->branch->definition->family->fid)
+  if (src->branch->sibling_defn->family->fid != tgt->branch->sibling_defn->family->fid
+      || src->branch->sibling_defn->family->fid != yca->branch->sibling_defn->family->fid)
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                              _("Merge branches must all be in same family "
                                "(from: f%d, to: f%d, yca: f%d)"),
-                             src->branch->definition->family->fid,
-                             tgt->branch->definition->family->fid,
-                             yca->branch->definition->family->fid);
+                             src->branch->sibling_defn->family->fid,
+                             tgt->branch->sibling_defn->family->fid,
+                             yca->branch->sibling_defn->family->fid);
 
   /*SVN_ERR(verify_exists_in_branch(from, scratch_pool));*/
   /*SVN_ERR(verify_exists_in_branch(to, scratch_pool));*/
@@ -2662,193 +602,13 @@ svn_branch_merge(svn_branch_el_rev_id_t *src,
   /*SVN_ERR(verify_not_subbranch_root(to, scratch_pool));*/
   /*SVN_ERR(verify_not_subbranch_root(yca, scratch_pool));*/
 
-  SVN_ERR(branch_merge_subtree_r(src, tgt, yca, scratch_pool));
+  SVN_ERR(branch_merge_subtree_r(editor, src, tgt, yca, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* In BRANCH, move the subtree at FROM_LOC to PARENT_LOC:NEW_NAME.
- *
- * FROM_LOC must be an existing non-root element of BRANCH. It may also
- * be the root of a subbranch and/or contain nested subbranches; these
- * will also be moved.
- *
- * PARENT_LOC must be an existing directory element in BRANCH.
- * PARENT_LOC is not a subbranch root.
- */
 static svn_error_t *
-svn_branch_mv(svn_branch_instance_t *branch,
-              svn_editor3_txn_path_t from_loc,
-              svn_editor3_txn_path_t parent_loc,
-              const char *new_name,
-              apr_pool_t *scratch_pool)
-{
-  svn_editor3_t *editor = branch->definition->family->repos->editor;
-  svn_editor3_txn_path_t to_loc = txn_path_join(parent_loc, new_name, scratch_pool);
-  const char *from_path = txn_path_to_relpath(from_loc, scratch_pool);
-  const char *to_path = txn_path_to_relpath(to_loc, scratch_pool);
-
-  SVN_ERR(verify_path_in_branch(branch, from_path, scratch_pool));
-  SVN_ERR(verify_path_in_branch(branch, to_path, scratch_pool));
-
-  SVN_ERR(svn_editor3_mv(editor, from_loc.peg, parent_loc, new_name));
-
-  SVN_ERR(branch_move_subtree_r(branch, from_path, to_path, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* In BRANCH, copy the subtree at FROM_LOC to PARENT_LOC:NEW_NAME.
- * Any nested subbranches inside FROM_LOC will be copied by branching.
- *
- * FROM_LOC must be an existing (root or non-root) element of BRANCH,
- * and must not be the root of a subbranch of BRANCH.
- *
- * PARENT_LOC must be an existing directory element in BRANCH.
- * PARENT_LOC is not a subbranch root.
- */
-static svn_error_t *
-svn_branch_cp(svn_branch_instance_t *branch,
-              svn_editor3_txn_path_t from_loc,
-              svn_editor3_txn_path_t parent_loc,
-              const char *new_name,
-              apr_pool_t *scratch_pool)
-{
-  svn_editor3_t *editor = branch->definition->family->repos->editor;
-  svn_editor3_txn_path_t to_loc = txn_path_join(parent_loc, new_name, scratch_pool);
-  const char *from_path = txn_path_to_relpath(from_loc, scratch_pool);
-  const char *to_path = txn_path_to_relpath(to_loc, scratch_pool);
-
-  SVN_ERR(verify_location_in_branch(branch, from_loc, scratch_pool));
-  SVN_ERR(verify_path_in_branch(branch, to_path, scratch_pool));
-
-  SVN_ERR(svn_editor3_cp(editor, from_loc.peg, parent_loc, new_name));
-
-  SVN_ERR(branch_copy_subtree_r(branch, from_path, to_path, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* In OUTER_BRANCH, branch the existing sub-branch at FROM_LOC to create
- * a new branch at PARENT_LOC:NEW_NAME.
- *
- * FROM_LOC must be (root or non-root) path of an immediate sub-branch of
- * OUTER_BRANCH.
- */
-static svn_error_t *
-svn_branch_branch(svn_branch_instance_t *outer_branch,
-                  svn_editor3_txn_path_t from_loc,
-                  svn_editor3_txn_path_t parent_loc,
-                  const char *new_name,
-                  apr_pool_t *scratch_pool)
-{
-  svn_editor3_t *editor = outer_branch->definition->family->repos->editor;
-  const char *from_rrpath = txn_path_to_relpath(from_loc, scratch_pool);
-  svn_editor3_txn_path_t to_loc
-    = txn_path_join(parent_loc, new_name, scratch_pool);
-  const char *to_rrpath = txn_path_to_relpath(to_loc, scratch_pool);
-  svn_branch_instance_t *from_inner_branch;
-  int inner_eid;
-
-  SVN_ERR(branch_find_subbranch_element_by_location(
-            &from_inner_branch, &inner_eid,
-            outer_branch, from_loc, scratch_pool));
-  if (! from_inner_branch)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from '%s': "
-                                 "is not a sub-branch of '%s'"),
-                               txn_path_str(from_loc, scratch_pool),
-                               branch_get_root_path(outer_branch));
-    }
-  if (inner_eid < 0)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from '%s': "
-                                 "does not exist"),
-                               txn_path_str(from_loc, scratch_pool));
-    }
-
-  SVN_ERR(verify_path_in_branch(outer_branch, to_rrpath, scratch_pool));
-
-  /* copy */
-  SVN_ERR(svn_editor3_cp(editor, from_loc.peg, parent_loc, new_name));
-
-  SVN_ERR(branch_branch_subtree_r(NULL,
-                                  outer_branch,
-                                  from_inner_branch, from_rrpath,
-                                  to_rrpath,
-                                  scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Change the existing simple sub-tree at LOC into a sub-branch in a
- * new branch family.
- *
- * ### TODO: Also we must (in order to maintain correctness) branchify
- *     the corresponding subtrees in all other branches in this family.
- *
- * TODO: Allow adding to an existing family, by specifying a mapping.
- *
- *   create a new family
- *   create a new branch-def and branch-instance
- *   for each node in subtree:
- *     ?[unassign eid in outer branch (except root node)]
- *     assign a new eid in inner branch
- */
-static svn_error_t *
-svn_branch_branchify(svn_branch_instance_t *outer_branch,
-                     svn_editor3_txn_path_t new_root_loc,
-                     apr_pool_t *scratch_pool)
-{
-  /* ### TODO: First check ROOT_LOC is not already a branch root
-         and the subtree at ROOT_LOC does not contain any branch roots. */
-
-  svn_branch_family_t *new_family
-    = family_add_new_subfamily(outer_branch->definition->family);
-  int new_root_eid = family_add_new_element(new_family);
-  const char *new_root_rrpath = txn_path_to_relpath(new_root_loc, scratch_pool);
-  svn_branch_definition_t *new_branch_def
-    = family_add_new_branch_definition(new_family, new_root_eid);
-  svn_branch_instance_t *new_branch
-    = branch_add_new_branch_instance(new_branch_def, outer_branch->rev_root,
-                                     new_root_rrpath);
-
-  SVN_DBG(("branchify(%s): new fid=%d, bid=%d",
-           txn_path_str(new_root_loc, scratch_pool), new_family->fid, new_branch->definition->bid));
-
-  /* assign new EIDs and update the path mappings in this branch */
-  SVN_ERR(branch_mappings_copy(outer_branch, new_root_rrpath,
-                               new_branch, new_root_rrpath,
-                               FALSE /*include_self*/, scratch_pool));
-
-  /* remove old EIDs in outer branch */
-  SVN_ERR(branch_mappings_delete(outer_branch, new_root_rrpath,
-                                 FALSE /*include_self*/, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* In BRANCH, remove the subtree at LOC, including any nested branches.
- *
- * LOC MUST be the location of a non-root element of BRANCH.
- */
-static svn_error_t *
-svn_branch_rm(svn_branch_instance_t *branch,
-              svn_editor3_txn_path_t loc,
-              apr_pool_t *scratch_pool)
-{
-  svn_editor3_t *editor = branch->definition->family->repos->editor;
-  const char *rrpath = txn_path_to_relpath(loc, scratch_pool);
-
-  SVN_ERR(svn_editor3_rm(editor, loc));
-
-  SVN_ERR(branch_delete_subtree_r(branch, rrpath, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-execute(const char *branch_rrpath,
-        const apr_array_header_t *actions,
+execute(const apr_array_header_t *actions,
         const char *anchor_url,
         const char *log_msg,
         apr_hash_t *revprops,
@@ -2858,10 +618,7 @@ execute(const char *branch_rrpath,
 {
   mtcc_t *mtcc;
   svn_editor3_t *editor;
-  const char *repos_root_url;
-  svn_branch_repos_t *repos;
-  svn_branch_revision_root_t *new_rev_root;
-  svn_branch_instance_t *branch;
+  const char *base_relpath;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t made_changes = FALSE;
   int i;
@@ -2881,78 +638,63 @@ execute(const char *branch_rrpath,
                       commit_callback, NULL,
                       ctx, pool, iterpool));
   editor = mtcc->editor;
-  repos_root_url = mtcc->repos_root_url;
+  base_relpath = svn_uri_skip_ancestor(mtcc->repos_root_url, anchor_url, pool);
   base_revision = mtcc->base_revision;
-  SVN_ERR(fetch_repos_info(&repos, mtcc->ra_session, base_revision, editor,
-                           pool, pool));
-  SVN_ERR(get_mutable_state(&new_rev_root, repos, base_revision, pool, pool));
-  branch = revision_get_branch_by_path(NULL, new_rev_root, branch_rrpath, pool);
-  SVN_DBG(("look up path '%s': found branch f%db%de%d at path '%s'",
-           branch_rrpath, branch->definition->family->fid,
-           branch->definition->bid, branch->definition->root_eid,
-           branch_get_root_path(branch)));
 
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
-      svn_editor3_txn_path_t path1_txn_loc = {{0},0};
-      svn_editor3_txn_path_t path1_parent = {{0},0};
-      const char *path1_name = NULL;
-      svn_editor3_txn_path_t path2_parent = {{0},0};
-      const char *path2_name = NULL;
-      svn_branch_el_rev_id_t *el_rev1, *el_rev2, *el_rev3;
+      int j;
+      const char *path_name[3] = { NULL, NULL, NULL };
+      svn_branch_el_rev_id_t *el_rev[3], *parent_el_rev[3];
 
       svn_pool_clear(iterpool);
 
-      if (action->path[0])
+      for (j = 0; j < 3; j++)
         {
-          const char *rrpath1
-            = svn_uri_skip_ancestor(repos_root_url, action->path[0], pool);
+          if (action->path[j])
+            {
+              const char *rrpath = svn_relpath_join(base_relpath,
+                                                    action->path[j], pool);
+              const char *parent_rrpath = svn_relpath_dirname(rrpath, pool);
 
-          SVN_ERR(repos_get_el_rev_by_loc(&el_rev1, repos, rrpath1, pool, pool));
-          path1_txn_loc = txn_path(rrpath1, base_revision, ""); /* ### need to
-            find which part of given path was pre-existing and which was created */
-          path1_parent = txn_path(svn_relpath_dirname(rrpath1, pool), base_revision, ""); /* ### need to
-            find which part of given path was pre-existing and which was created */
-          path1_name = svn_relpath_basename(rrpath1, NULL);
-        }
-      if (action->path[1])
-        {
-          const char *rrpath2
-            = svn_uri_skip_ancestor(repos_root_url, action->path[1], pool);
-
-          SVN_ERR(repos_get_el_rev_by_loc(&el_rev2, repos, rrpath2, pool, pool));
-          path2_parent = txn_path(svn_relpath_dirname(rrpath2, pool), base_revision, ""); /* ### need to
-            find which part of given path was pre-existing and which was created */
-          path2_name = svn_relpath_basename(rrpath2, NULL);
-        }
-      if (action->path[2])
-        {
-          const char *rrpath_rev3
-            = svn_uri_skip_ancestor(repos_root_url, action->path[2], pool);
-
-          SVN_ERR(repos_get_el_rev_by_loc(&el_rev3, repos, rrpath_rev3,
-                                          pool, pool));
+              path_name[j] = svn_relpath_basename(rrpath, NULL);
+              SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev[j], editor, rrpath,
+                                                pool, pool));
+              SVN_ERR(find_el_rev_by_rrpath_rev(&parent_el_rev[j],
+                                                editor, parent_rrpath,
+                                                pool, pool));
+            }
         }
       switch (action->action)
         {
         case ACTION_LIST_BRANCHES:
-          SVN_ERR(family_list_branch_instances(branch->definition->family,
-                                               FALSE, iterpool));
+          {
+            svn_branch_family_t *family = svn_branch_get_family(editor);
+
+            SVN_ERR(family_list_branch_instances(family,
+                                                 FALSE, iterpool));
+          }
           break;
         case ACTION_LIST_BRANCHES_R:
-          SVN_ERR(family_list_branch_instances(branch->definition->family,
-                                               TRUE, iterpool));
+          {
+            svn_branch_family_t *family = svn_branch_get_family(editor);
+
+            SVN_ERR(family_list_branch_instances(family,
+                                                 TRUE, iterpool));
+          }
           break;
         case ACTION_BRANCH:
-          SVN_ERR(svn_branch_branch(branch,
-                                    path1_txn_loc, path2_parent, path2_name,
+          SVN_ERR(svn_branch_branch(editor,
+                                    el_rev[0]->branch, el_rev[0]->eid,
+                                    el_rev[1]->branch, parent_el_rev[1]->eid,
+                                    path_name[1],
                                     iterpool));
           made_changes = TRUE;
           break;
         case ACTION_BRANCHIFY:
-          SVN_ERR(svn_branch_branchify(branch,
-                                       path1_txn_loc,
+          SVN_ERR(svn_branch_branchify(editor,
+                                       el_rev[0]->eid,
                                        iterpool));
           made_changes = TRUE;
           break;
@@ -2962,33 +704,53 @@ execute(const char *branch_rrpath,
           made_changes = TRUE;
           break;
         case ACTION_MERGE:
-          SVN_ERR(svn_branch_merge(el_rev1 /*from*/, el_rev2 /*to*/,
-                                   el_rev3 /*yca*/, iterpool));
-          /*made_changes = TRUE;*/
+          {
+            /* Look up path[0] (FROM) and path[2] (YCA) relative to repo
+               root, unlike path[1] (TO) which is relative to anchor URL. */
+            SVN_ERR(find_el_rev_by_rrpath_rev(
+                      &el_rev[0], editor, action->path[0], pool, pool));
+            SVN_ERR(find_el_rev_by_rrpath_rev(
+                      &el_rev[2], editor, action->path[2], pool, pool));
+            SVN_ERR(svn_branch_merge(editor,
+                                     el_rev[0] /*from*/,
+                                     el_rev[1] /*to*/,
+                                     el_rev[2] /*yca*/,
+                                     iterpool));
+          }
+          made_changes = TRUE;
           break;
         case ACTION_MV:
-          SVN_ERR(svn_branch_mv(branch,
-                                path1_txn_loc, path2_parent, path2_name,
-                                iterpool));
+          {
+            svn_editor3_node_content_t *content = NULL; /* "no change" */
+
+            SVN_ERR(svn_editor3_alter(editor, el_rev[0]->rev,
+                                      el_rev[0]->eid,
+                                      parent_el_rev[1]->eid, path_name[1], content));
+          }
           made_changes = TRUE;
           break;
         case ACTION_CP:
-          path1_txn_loc.peg.rev = action->rev;
-          SVN_ERR(svn_branch_cp(branch,
-                                path1_txn_loc, path2_parent, path2_name,
-                                iterpool));
+          SVN_ERR(svn_editor3_copy_tree(editor,
+                                        el_rev[0]->rev, el_rev[0]->eid,
+                                        parent_el_rev[1]->eid, path_name[1]));
           made_changes = TRUE;
           break;
         case ACTION_RM:
-          SVN_ERR(svn_branch_rm(branch,
-                                path1_txn_loc,
-                                iterpool));
+          SVN_ERR_ASSERT(el_rev[0]->rev == SVN_INVALID_REVNUM);
+          SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
+                                     el_rev[0]->eid));
           made_changes = TRUE;
           break;
         case ACTION_MKDIR:
-          SVN_ERR(svn_branch_mkdir(branch,
-                                   path1_parent, path1_name,
-                                   iterpool));
+          {
+            apr_hash_t *props = apr_hash_make(iterpool);
+            svn_editor3_node_content_t *content
+              = svn_editor3_node_content_create_dir(props, iterpool);
+            int new_eid;
+
+            SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
+                                    parent_el_rev[0]->eid, path_name[0], content));
+          }
           made_changes = TRUE;
           break;
         default:
@@ -2999,8 +761,6 @@ execute(const char *branch_rrpath,
   if (made_changes)
     {
       err = mtcc_commit(mtcc, pool);
-      if (!err)
-        err = store_repos_info(new_rev_root, pool);
     }
   else
     {
@@ -3053,7 +813,6 @@ usage(FILE *stream, apr_pool_t *pool)
       "\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
-      "  -b [--branch] ARG      : work in branch of path ARG (default: root)\n"
       "  -m [--message] ARG     : use ARG as a log message\n"
       "  -F [--file] ARG        : read log message from file ARG\n"
       "  -u [--username] ARG    : commit the changes as username ARG\n"
@@ -3243,7 +1002,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"version", version_opt, 0, ""},
     {NULL, 0, 0, NULL}
   };
-  const char *branch_rrpath = "";
   const char *message = "";
   svn_stringbuf_t *filedata = NULL;
   const char *username = NULL, *password = NULL;
@@ -3284,9 +1042,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         return svn_error_wrap_apr(status, "getopt failure");
       switch(opt)
         {
-        case 'b':
-          SVN_ERR(svn_utf_cstring_to_utf8(&branch_rrpath, arg, pool));
-          break;
         case 'm':
           SVN_ERR(svn_utf_cstring_to_utf8(&message, arg, pool));
           break;
@@ -3542,35 +1297,34 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* Parse the required number of URLs. */
       for (j = 0; j < num_url_args; ++j)
         {
-          const char *url;
+          const char *path, *url;
 
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient());
-          url = APR_ARRAY_IDX(action_args, i, const char *);
+          path = APR_ARRAY_IDX(action_args, i, const char *);
 
           /* If there's a ROOT_URL, we expect URL to be a path
              relative to ROOT_URL (and we build a full url from the
              combination of the two).  Otherwise, it should be a full
              url. */
-          if (! svn_path_is_url(url))
+          if (svn_path_is_url(path))
+            {
+              url = path;
+              path = svn_uri_skip_ancestor(root_url, url, pool);
+            }
+          else
             {
               if (! root_url)
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s' is not a URL, and "
                                          "--root-url (-U) not provided\n",
-                                         url);
-              /* ### These relpaths are already URI-encoded. */
-              url = apr_pstrcat(pool, root_url, "/",
-                                svn_relpath_canonicalize(url, pool),
-                                SVN_VA_NULL);
+                                         path);
+              path = svn_path_internal_style(path, pool);
+              url = svn_path_url_add_component2(root_url, path, pool);
             }
           url = sanitize_url(url, pool);
-          action->path[j] = url;
+          action->path[j] = path;
 
-          /* The first URL argument to 'cp' could be the anchor,
-             but the other URLs should be children of the anchor. */
-          if (! (action->action == ACTION_CP && j == 0))
-            url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
           else
@@ -3593,7 +1347,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
 
-  if ((err = execute(branch_rrpath, actions, anchor, log_msg, revprops,
+  if ((err = execute(actions, anchor, log_msg, revprops,
                      base_revision, ctx, pool)))
     {
       if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)

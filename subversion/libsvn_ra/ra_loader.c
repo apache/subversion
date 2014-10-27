@@ -54,6 +54,8 @@
 
 #include "private/svn_ra_private.h"
 #include "private/svn_delta_private.h"
+#include "private/svn_string_private.h"
+#include "../libsvn_delta/debug_editor.h"
 #include "svn_private_config.h"
 
 
@@ -700,12 +702,152 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
+/* The default branching metadata for a new repository. */
+static const char *default_repos_info
+  = "r0: fids 0 1 root-fid 0\n"
+    "f0: bids 0 1 eids 0 1 parent-fid 0\n"
+    "f0b0: root-eid 0 at .\n"
+    "f0b0e0: -1 . .\n";
+
+/* Create a new revision-root object and read the move-tracking /
+ * branch-tracking metadata from the repository into it.
+ */
+static svn_error_t *
+svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
+                               int *next_fid_p,
+                               svn_branch_repos_t *repos,
+                               svn_ra_session_t *ra_session,
+                               svn_revnum_t revision,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_string_t *value;
+  svn_stream_t *stream;
+  svn_branch_revision_root_t *rev_root;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+
+  /* Read initial state from repository */
+  SVN_ERR(svn_ra_rev_prop(ra_session, revision, "svn-br-info", &value,
+                          scratch_pool));
+  if (! value && revision == 0)
+    {
+      value = svn_string_create(default_repos_info, scratch_pool);
+      SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
+               revision, value->data));
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, revision, "svn-br-info",
+                                      NULL, value, scratch_pool));
+    }
+  SVN_ERR_ASSERT(value);
+  stream = svn_stream_from_string(value, scratch_pool);
+
+  SVN_ERR(svn_branch_revision_root_parse(&rev_root, next_fid_p, repos, stream,
+                                         result_pool, scratch_pool));
+
+  /* Self-test: writing out the info should produce exactly the same string. */
+  {
+    svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
+
+    stream = svn_stream_from_stringbuf(buf, scratch_pool);
+    SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, *next_fid_p,
+                                               scratch_pool));
+    SVN_ERR(svn_stream_close(stream));
+
+    SVN_ERR_ASSERT(svn_string_compare(value,
+                                      svn_stringbuf__morph_into_string(buf)));
+  }
+
+  *rev_root_p = rev_root;
+  return SVN_NO_ERROR;
+}
+
+/* Create a new repository object and read the move-tracking /
+ * branch-tracking metadata from the repository into it.
+ */
+static svn_error_t *
+svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
+                            svn_ra_session_t *ra_session,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_branch_repos_t *repos
+    = svn_branch_repos_create(result_pool);
+  svn_revnum_t base_revision;
+  svn_revnum_t r;
+
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &base_revision, scratch_pool));
+
+  repos->next_fid = 0;
+  for (r = 0; r <= base_revision; r++)
+    {
+      svn_branch_revision_root_t *rev_root;
+      int next_fid;
+
+      SVN_ERR(svn_branch_revision_fetch_info(&rev_root, &next_fid,
+                                             repos, ra_session, r,
+                                             result_pool, scratch_pool));
+      APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
+      repos->next_fid = MAX(repos->next_fid, next_fid);
+    }
+
+  *repos_p = repos;
+  return SVN_NO_ERROR;
+}
+
+/* Return a mutable state for the youngest revision in REPOS.
+ */
+static svn_error_t *
+svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
+                             svn_branch_repos_t *repos,
+                             svn_ra_session_t *ra_session,
+                             svn_revnum_t base_revision,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  int next_fid;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(base_revision));
+
+  SVN_ERR(svn_branch_revision_fetch_info(rev_root_p, &next_fid,
+                                         repos, ra_session, base_revision,
+                                         result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Store the move-tracking / branch-tracking metadata from REV_ROOT into the
+ * repository.
+ */
+static svn_error_t *
+store_repos_info(svn_branch_revision_root_t *rev_root,
+                 svn_ra_session_t *ra_session,
+                 apr_pool_t *scratch_pool)
+{
+  svn_branch_repos_t *repos = rev_root->repos;
+  svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
+  svn_revnum_t youngest_rev;
+
+  SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, repos->next_fid,
+                                             scratch_pool));
+
+  SVN_ERR(svn_stream_close(stream));
+  /*SVN_DBG(("store_repos_info: %s", buf->data));*/
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest_rev,
+                                   scratch_pool));
+  SVN_ERR(svn_ra_change_rev_prop2(ra_session, youngest_rev, "svn-br-info",
+                                  NULL, svn_stringbuf__morph_into_string(buf),
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 struct ccw_baton
 {
   svn_commit_callback2_t original_callback;
   void *original_baton;
 
   svn_ra_session_t *session;
+  svn_branch_revision_root_t *branching_txn;
 };
 
 /* Wrapper which populates the repos_root field of the commit_info struct */
@@ -719,7 +861,16 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
 
   SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
 
-  return ccwb->original_callback(ci, ccwb->original_baton, pool);
+  SVN_ERR(ccwb->original_callback(ci, ccwb->original_baton, pool));
+
+  /* if this commit used element-branching info, store the new info */
+  if (ccwb->branching_txn)
+    {
+      ccwb->branching_txn->rev = commit_info->revision;
+      SVN_ERR(store_repos_info(ccwb->branching_txn, ccwb->session, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -730,6 +881,7 @@ static void
 remap_commit_callback(svn_commit_callback2_t *callback,
                       void **callback_baton,
                       svn_ra_session_t *session,
+                      svn_branch_revision_root_t *branching_txn,
                       svn_commit_callback2_t original_callback,
                       void *original_baton,
                       apr_pool_t *result_pool)
@@ -746,6 +898,7 @@ remap_commit_callback(svn_commit_callback2_t *callback,
       struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
 
       ccwb->session = session;
+      ccwb->branching_txn = branching_txn;
       ccwb->original_callback = original_callback;
       ccwb->original_baton = original_baton;
 
@@ -839,12 +992,24 @@ svn_error_t *svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                                           svn_boolean_t keep_locks,
                                           apr_pool_t *pool)
 {
+  svn_revnum_t base_revision;
+  svn_branch_repos_t *repos;
+  svn_branch_revision_root_t *branching_txn;
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
   svn_editor3__shim_connector_t *shim_connector;
 
+  /* ### for element-branching, currently need to start from a single base revision */
+  SVN_ERR(svn_ra_get_latest_revnum(session, &base_revision, pool));
+
+  /* load branching info */
+  SVN_ERR(svn_branch_repos_fetch_info(&repos, session, pool, pool));
+  SVN_ERR(svn_branch_get_mutable_state(&branching_txn, repos, session,
+                                       base_revision,
+                                       pool, pool));
+
   remap_commit_callback(&commit_callback, &commit_baton,
-                        session, commit_callback, commit_baton,
+                        session, branching_txn, commit_callback, commit_baton,
                         pool);
 
   SVN_ERR(session->vtable->get_commit_editor(session, &deditor, &dedit_baton,
@@ -863,10 +1028,13 @@ svn_error_t *svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
     SVN_ERR(svn_ra_dup_session(&fbb->session, session, repos_root_url, pool, pool));
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
-    SVN_ERR(svn_delta__ev3_from_delta_for_commit(
+
+    SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
+                                        deditor, dedit_baton, "", pool));
+    SVN_ERR(svn_delta__ev3_from_delta_for_commit2(
                         editor,
                         &shim_connector,
-                        deditor, dedit_baton,
+                        deditor, dedit_baton, branching_txn,
                         repos_root_url, base_relpath,
                         svn_ra_fetch, fbb,
                         NULL, NULL /*cancel*/,
@@ -887,7 +1055,8 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        apr_pool_t *pool)
 {
   remap_commit_callback(&commit_callback, &commit_baton,
-                        session, commit_callback, commit_baton,
+                        session, NULL /*branching_txn*/,
+                        commit_callback, commit_baton,
                         pool);
 
   SVN_ERR(session->vtable->get_commit_editor(session, editor, edit_baton,
@@ -1700,7 +1869,7 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
 
       /* Remap for RA layers exposing Ev1.  */
       remap_commit_callback(&commit_callback, &commit_baton,
-                            session, commit_callback, commit_baton,
+                            session, NULL, commit_callback, commit_baton,
                             result_pool);
 
       return svn_error_trace(svn_ra__use_commit_shim(
