@@ -638,6 +638,14 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	sed 's/^\(#if (OPENSSL_VERSION_NUMBER >= 0x00908000)\)$$/\1 \&\& !defined(OPENSSL_NO_COMP)/' \
 		< $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig \
 		> $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c
+	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_init.c \
+		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_init.c.orig
+	$(foreach f,  ssl_engine_init.c ssl_util_ssl.c ssl_util_ssl.h, \
+		cp $(HTTPD_SRCDIR)/modules/ssl/${f}  $(HTTPD_SRCDIR)/modules/ssl/${f}.orig; \
+		sed 's/SSL_CTX_use_certificate_chain/_SSL_CTX_use_certificate_chain/' \
+		< $(HTTPD_SRCDIR)/modules/ssl/${f}.orig \
+		> $(HTTPD_SRCDIR)/modules/ssl/${f};\
+	)
 	touch $@
 
 # configure httpd
