@@ -27,6 +27,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
+#include "svn_props.h"
 
 #include "private/svn_editor3.h"
 
@@ -112,7 +113,7 @@ svn_editor3_create(svn_editor3_t **editor,
 
 
 void *
-svn_editor3_get_baton(const svn_editor3_t *editor)
+svn_editor3__get_baton(const svn_editor3_t *editor)
 {
   return editor->baton;
 }
@@ -265,21 +266,61 @@ svn_editor3_put(svn_editor3_t *editor,
  * ========================================================================
  */
 
+#define VALID_NODE_KIND(kind) ((kind) != svn_node_unknown && (kind) != svn_node_none)
+#define VALID_EID(eid) ((eid) >= 0)
+#define VALID_NAME(name) ((name) && (name)[0] && svn_relpath_is_canonical(name))
+#define VALID_CONTENT(content) ((content) && VALID_NODE_KIND((content)->kind))
+
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_editor3_nbid_t local_nbid,
+                svn_editor3_nbid_t *local_nbid_p,
                 svn_node_kind_t new_kind,
                 svn_editor3_nbid_t new_parent_nbid,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content)
 {
-  /* SVN_ERR_ASSERT(...); */
+  int eid = -1;
+
+  SVN_ERR_ASSERT(VALID_NODE_KIND(new_kind));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(new_content->kind == new_kind);
 
   DO_CALLBACK(editor, cb_add,
-              5(local_nbid, new_kind,
+              5(&eid, new_kind,
                 new_parent_nbid, new_name,
                 new_content));
 
+  SVN_ERR_ASSERT(VALID_EID(eid));
+
+  /* We allow the output pointer to be null, here, so that implementations
+     may assume their output pointer is non-null. */
+  if (local_nbid_p)
+    *local_nbid_p = eid;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_editor3_instantiate(svn_editor3_t *editor,
+                        svn_editor3_nbid_t local_nbid,
+                        svn_node_kind_t new_kind,
+                        svn_editor3_nbid_t new_parent_nbid,
+                        const char *new_name,
+                        const svn_editor3_node_content_t *new_content)
+{
+  SVN_ERR_ASSERT(VALID_NODE_KIND(new_kind));
+  SVN_ERR_ASSERT(VALID_EID(local_nbid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(new_content->kind == new_kind);
+
+  DO_CALLBACK(editor, cb_instantiate,
+              5(local_nbid, new_kind,
+                new_parent_nbid, new_name,
+                new_content));
   return SVN_NO_ERROR;
 }
 
@@ -292,7 +333,12 @@ svn_editor3_copy_one(svn_editor3_t *editor,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content)
 {
-  /* SVN_ERR_ASSERT(...); */
+  SVN_ERR_ASSERT(VALID_EID(local_nbid));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
+  SVN_ERR_ASSERT(VALID_EID(src_nbid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
 
   DO_CALLBACK(editor, cb_copy_one,
               6(local_nbid,
@@ -310,7 +356,10 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_editor3_nbid_t new_parent_nbid,
                       const char *new_name)
 {
-  /* SVN_ERR_ASSERT(...); */
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
+  SVN_ERR_ASSERT(VALID_EID(src_nbid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_NAME(new_name));
 
   DO_CALLBACK(editor, cb_copy_tree,
               4(src_revision, src_nbid,
@@ -324,7 +373,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
                    svn_editor3_nbid_t nbid)
 {
-  /* SVN_ERR_ASSERT(...); */
+  SVN_ERR_ASSERT(VALID_EID(nbid));
 
   DO_CALLBACK(editor, cb_delete,
               2(since_rev, nbid));
@@ -340,7 +389,10 @@ svn_editor3_alter(svn_editor3_t *editor,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content)
 {
-  /* SVN_ERR_ASSERT(...); */
+  SVN_ERR_ASSERT(VALID_EID(nbid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
 
   DO_CALLBACK(editor, cb_alter,
               5(since_rev, nbid,
@@ -382,6 +434,73 @@ svn_editor3_abort(svn_editor3_t *editor)
  * Node content
  * ===================================================================
  */
+
+svn_editor3_node_content_t *
+svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
+                             apr_pool_t *result_pool)
+{
+  svn_editor3_node_content_t *new_content;
+
+  if (old == NULL)
+    return NULL;
+
+  new_content = apr_pmemdup(result_pool, old, sizeof(*new_content));
+  if (old->props)
+    new_content->props = svn_prop_hash_dup(old->props, result_pool);
+  if (old->kind == svn_node_file && old->text)
+    new_content->text = svn_stringbuf_dup(old->text, result_pool);
+  if (old->kind == svn_node_symlink && old->target)
+    new_content->target = apr_pstrdup(result_pool, old->target);
+  return new_content;
+}
+
+svn_boolean_t
+svn_editor3_node_content_equal(const svn_editor3_node_content_t *left,
+                               const svn_editor3_node_content_t *right,
+                               apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *prop_diffs;
+
+  /* references are not supported */
+  SVN_ERR_ASSERT_NO_RETURN(! left->ref.relpath && ! right->ref.relpath);
+  SVN_ERR_ASSERT_NO_RETURN(left->kind != svn_node_unknown
+                           && right->kind != svn_node_unknown);
+
+  if (left->kind != right->kind)
+    {
+      return FALSE;
+    }
+
+  svn_error_clear(svn_prop_diffs(&prop_diffs,
+                                 left->props, right->props,
+                                 scratch_pool));
+
+  if (prop_diffs->nelts != 0)
+    {
+      return FALSE;
+    }
+  switch (left->kind)
+    {
+    case svn_node_dir:
+      break;
+    case svn_node_file:
+      if (! svn_stringbuf_compare(left->text, right->text))
+        {
+          return FALSE;
+        }
+      break;
+    case svn_node_symlink:
+      if (strcmp(left->target, right->target) != 0)
+        {
+          return FALSE;
+        }
+      break;
+    default:
+      break;
+    }
+
+  return TRUE;
+}
 
 svn_editor3_node_content_t *
 svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
@@ -504,7 +623,7 @@ static const char *
 nbid_str(svn_editor3_nbid_t nbid,
          apr_pool_t *result_pool)
 {
-  return txn_path_str(nbid, result_pool);
+  return apr_psprintf(result_pool, "%d", nbid);
 }
 
 static svn_error_t *
@@ -612,6 +731,26 @@ wrap_put(void *baton,
 
 static svn_error_t *
 wrap_add(void *baton,
+         svn_editor3_nbid_t *local_nbid,
+         svn_node_kind_t new_kind,
+         svn_editor3_nbid_t new_parent_nbid,
+         const char *new_name,
+         const svn_editor3_node_content_t *new_content,
+         apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  dbg(eb, scratch_pool, "... : add(k=%s, p=%s, n=%s, c=...)",
+      svn_node_kind_to_word(new_kind),
+      nbid_str(new_parent_nbid, scratch_pool), new_name);
+  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
+                          local_nbid, new_kind,
+                          new_parent_nbid, new_name, new_content));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+wrap_instantiate(void *baton,
          svn_editor3_nbid_t local_nbid,
          svn_node_kind_t new_kind,
          svn_editor3_nbid_t new_parent_nbid,
@@ -621,12 +760,12 @@ wrap_add(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
-  dbg(eb, scratch_pool, "%s : add(k=%s, p=%s, n=%s, c=...)",
+  dbg(eb, scratch_pool, "%s : instantiate(k=%s, p=%s, n=%s, c=...)",
       nbid_str(local_nbid, scratch_pool), svn_node_kind_to_word(new_kind),
       nbid_str(new_parent_nbid, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          local_nbid, new_kind,
-                          new_parent_nbid, new_name, new_content));
+  SVN_ERR(svn_editor3_instantiate(eb->wrapped_editor,
+                                  local_nbid, new_kind,
+                                  new_parent_nbid, new_name, new_content));
   return SVN_NO_ERROR;
 }
 
@@ -743,6 +882,7 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
     wrap_rm,
     wrap_put,
     wrap_add,
+    wrap_instantiate,
     wrap_copy_one,
     wrap_copy_tree,
     wrap_delete,

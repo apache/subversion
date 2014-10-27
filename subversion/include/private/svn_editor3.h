@@ -548,15 +548,11 @@ typedef struct svn_editor3_txn_path_t
   const char *relpath;
 } svn_editor3_txn_path_t;
 
-/** Node-Branch Identifier -- functionally similar to the FSFS
- * <node-id>.<copy-id>, but the ids used within an editor drive may be
- * scoped locally to that editor drive rather than in-repository ids.
+/** Element Identifier within a branch family.
  *
- * We do not use the revision number component as an implied base
- * revision for out-of-date checking. A base revision should be
- * communicated separately when required.
+ * This does not contain an implied revision number or branch identifier.
  */
-typedef svn_editor3_txn_path_t svn_editor3_nbid_t;
+typedef int svn_editor3_nbid_t;
 
 /** Versioned content of a node, excluding tree structure information.
  *
@@ -868,13 +864,23 @@ svn_editor3_put(svn_editor3_t *editor,
  * Editor for Commit (independent per-node changes; node-id addressing)
  * ========================================================================
  *
+ * Scope of Edit:
+ *
+ * The edit may include changes to one or more branches.
+ *
  * Edit Operations:
  *
+ *   operations on elements of "this" branch
  *   - add       kind      new-parent-nb[2] new-name new-content  ->  new-nb
  *   - copy-one  nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
  *   - copy-tree nb@rev[3] new-parent-nb[2] new-name              ->  new-nb
  *   - delete    nb[1]   since-rev
  *   - alter     nb[1,2] since-rev new-parent-nb[2] new-name new-content
+ *
+ *   operations on sub-branches
+ *   - branch
+ *   - branchify
+ *   - unbranchify ("dissolve"?)
  *
  * Preconditions:
  *
@@ -919,28 +925,47 @@ svn_editor3_put(svn_editor3_t *editor,
  *     within the same edit, and so no id is provided.
  */
 
-/** Create a new versioned object of kind @a new_kind.
+/** Create a new element (versioned object) of kind @a new_kind.
  * 
- * Assign the new node a locally unique node-branch-id, @a local_nbid,
- * with which it can be referenced within this edit.
+ * Assign the new node a new element id; store this in @a *eid_p if
+ * @a eid_p is not null.
  *
  * Set the node's parent and name to @a new_parent_nbid and @a new_name.
  *
  * Set the content to @a new_content.
  *
- * @note The @a local_nbid has meaning only within this edit. The server
- * must create a new node, and MUST NOT match local_nbid with any other
- * node that may already exist or that may be created by another edit.
- *
  * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_editor3_nbid_t local_nbid,
+                svn_editor3_nbid_t *eid,
                 svn_node_kind_t new_kind,
-                svn_editor3_nbid_t new_parent_nbid,
+                svn_editor3_nbid_t new_parent_eid,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content);
+
+/* Make the existing element @a eid exist in this branch, assuming it was
+ * previously not existing in this branch.
+ *
+ * This can be used to "branch" the element from another branch during a
+ * merge, or to resurrect it.
+ *
+ * Set the node's parent and name to @a new_parent_nbid and @a new_name.
+ *
+ * Set the content to @a new_content.
+ *
+ * @see #svn_editor3_t
+ *
+ * ### Need to specify where the underlying FS node is to be "copied" from?
+ * ### NEW_KIND is redundant: the existing element cannot change its kind.
+ */
+svn_error_t *
+svn_editor3_instantiate(svn_editor3_t *editor,
+                        svn_editor3_nbid_t eid,
+                        svn_node_kind_t new_kind,
+                        svn_editor3_nbid_t new_parent_eid,
+                        const char *new_name,
+                        const svn_editor3_node_content_t *new_content);
 
 /** Create a new node-branch that is copied (branched) from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
@@ -957,7 +982,8 @@ svn_editor3_add(svn_editor3_t *editor,
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
  * Set the target node's parent and name to @a new_parent_nbid and
- * @a new_name. Set the target node's content to @a new_content.
+ * @a new_name. Set the target node's content to @a new_content, or make
+ * it the same as the source if @a new_content is null.
  *
  * @note This copy is not recursive. Children may be copied separately if
  * required.
@@ -1035,6 +1061,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  *          implies to the receiver what set of nodes is involved. How
  *          would the WC know whether its mixed-rev tree is "complete"?
  *          Would we need a non-recursive delete as well?
+ *      ### Deletes nested branches.
  *
  * @see #svn_editor3_t
  */
@@ -1053,7 +1080,8 @@ svn_editor3_delete(svn_editor3_t *editor,
  *
  * Set the node's parent and name to @a new_parent_nbid and @a new_name.
  *
- * Set the content to @a new_content.
+ * Set the content to @a new_content, or if null then leave the content
+ * unchanged.
  *
  * A no-op change MUST be accepted but, in the interest of efficiency,
  * SHOULD NOT be sent.
@@ -1175,9 +1203,20 @@ typedef svn_error_t *(*svn_editor3_cb_put_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
-  svn_editor3_nbid_t local_nbid,
+  svn_editor3_nbid_t *eid,
   svn_node_kind_t new_kind,
-  svn_editor3_nbid_t new_parent_nbid,
+  svn_editor3_nbid_t new_parent_eid,
+  const char *new_name,
+  const svn_editor3_node_content_t *new_content,
+  apr_pool_t *scratch_pool);
+
+/** @see svn_editor3_instantiate(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
+  void *baton,
+  svn_editor3_nbid_t eid,
+  svn_node_kind_t new_kind,
+  svn_editor3_nbid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
@@ -1262,6 +1301,7 @@ typedef struct svn_editor3_cb_funcs_t
   svn_editor3_cb_put_t cb_put;
 
   svn_editor3_cb_add_t cb_add;
+  svn_editor3_cb_instantiate_t cb_instantiate;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;
   svn_editor3_cb_delete_t cb_delete;
@@ -1297,10 +1337,14 @@ svn_editor3_create(svn_editor3_t **editor,
  * In some cases, the baton is required outside of the callbacks. This
  * function returns the private baton for use.
  *
+ * @note Not a good public API, as outside the callbacks one generally
+ * doesn't know whether the editor given is the interesting editor or a
+ * wrapper around it.
+ *
  * @see svn_editor3_create(), #svn_editor3_t
  */
 void *
-svn_editor3_get_baton(const svn_editor3_t *editor);
+svn_editor3__get_baton(const svn_editor3_t *editor);
 
 /** @} */
 
@@ -1352,9 +1396,17 @@ struct svn_editor3_node_content_t
 
 /** Duplicate a node-content @a old into @a result_pool.
  */
-/* svn_editor3_node_content_t *
+svn_editor3_node_content_t *
 svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
-                             apr_pool_t *result_pool); */
+                             apr_pool_t *result_pool);
+
+/* Return true iff the content of LEFT is identical to that of RIGHT.
+ * References are not supported. Node kind 'unknown' is not supported.
+ */
+svn_boolean_t
+svn_editor3_node_content_equal(const svn_editor3_node_content_t *left,
+                               const svn_editor3_node_content_t *right,
+                               apr_pool_t *scratch_pool);
 
 /** Create a new node-content object by reference to an existing node.
  *
@@ -1400,6 +1452,379 @@ svn_editor3_node_content_create_symlink(apr_hash_t *props,
 
 /** @} */
 
+
+/* ====================================================================== */
+
+/* ### */
+#define SVN_ERR_BRANCHING 123456
+
+struct svn_branch_instance_t;
+
+/* Per-repository branching info.
+ */
+typedef struct svn_branch_repos_t
+{
+  /* The range of family ids assigned within this repos (starts at 0). */
+  int next_fid;
+
+  /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
+  apr_array_header_t *rev_roots;
+
+  /* The pool in which this object lives. */
+  apr_pool_t *pool;
+} svn_branch_repos_t;
+
+/* Create a new branching metadata object */
+svn_branch_repos_t *
+svn_branch_repos_create(apr_pool_t *result_pool);
+
+/* Info about the branching in a specific revision (committed or uncommitted) */
+typedef struct svn_branch_revision_root_t
+{
+  /* The repository in which this revision exists. */
+  svn_branch_repos_t *repos;
+
+  /* If committed, the revision number; else SVN_INVALID_REVNUM. */
+  svn_revnum_t rev;
+
+  /* The root branch instance. */
+  struct svn_branch_instance_t *root_branch;
+
+} svn_branch_revision_root_t;
+
+/* Create a new branching revision-info object */
+svn_branch_revision_root_t *
+svn_branch_revision_root_create(svn_branch_repos_t *repos,
+                                svn_revnum_t rev,
+                                struct svn_branch_instance_t *root_branch,
+                                apr_pool_t *result_pool);
+
+/* A branch family.
+ * ### Most of this is not per-revision data. Move it out of revision-root?
+ */
+typedef struct svn_branch_family_t
+{
+  /* --- Identity of this object --- */
+
+  /* The repository in which this family exists. */
+  svn_branch_repos_t *repos;
+
+  /* The outer family of which this is a sub-family. NULL if this is the
+     root family. */
+  /*struct svn_branch_family_t *outer_family;*/
+
+  /* The FID of this family within its repository. */
+  int fid;
+
+  /* --- Contents of this object --- */
+
+  /* The branch siblings in this family. */
+  apr_array_header_t *branch_siblings;
+
+  /* The branch instances in this family. */
+  /* ### This is per-revision data. Move to svn_branch_revision_root_t? */
+  apr_array_header_t *branch_instances;
+
+  /* The range of branch ids assigned within this family. */
+  int first_bid, next_bid;
+
+  /* The range of element ids assigned within this family. */
+  int first_eid, next_eid;
+
+  /* The immediate sub-families of this family. */
+  apr_array_header_t *sub_families;
+
+  /* The pool in which this object lives. */
+  apr_pool_t *pool;
+} svn_branch_family_t;
+
+/* Create a new branch family object */
+svn_branch_family_t *
+svn_branch_family_create(svn_branch_repos_t *repos,
+                         int fid,
+                         int first_bid,
+                         int next_bid,
+                         int first_eid,
+                         int next_eid,
+                         apr_pool_t *result_pool);
+
+/* A branch.
+ *
+ * A branch sibling object describes the characteristics of a branch
+ * in a given family with a given BID. This sibling is common to each
+ * branch that has this same family and BID: there can be one such instance
+ * within each branch of its outer families.
+ *
+ * Often, all branches in a family have the same root element. For example,
+ * branching /trunk to /branches/br1 results in:
+ *
+ *      family 1, branch 1, root-EID 100
+ *          EID 100 => /trunk
+ *          ...
+ *      family 1, branch 2, root-EID 100
+ *          EID 100 => /branches/br1
+ *          ...
+ *
+ * However, the root element of one branch may correspond to a non-root
+ * element of another branch; such a branch could be called a "subtree
+ * branch". Using the same example, branching from the trunk subtree
+ * /trunk/D (which is not itself a branch root) results in:
+ *
+ *      family 1, branch 3: root-EID = 104
+ *          EID 100 => (nil)
+ *          ...
+ *          EID 104 => /branches/branch-of-trunk-subtree-D
+ *          ...
+ *
+ * If family 1 were nested inside an outer family, then there could be
+ * multiple branch-instances for each branch-sibling. In the above
+ * example, all instances of (family 1, branch 1) will have root-EID 100,
+ * and all instances of (family 1, branch 3) will have root-EID 104.
+ */
+typedef struct svn_branch_sibling_t
+{
+  /* --- Identity of this object --- */
+
+  /* The family of which this branch is a member. */
+  svn_branch_family_t *family;
+
+  /* The BID of this branch within its family. */
+  int bid;
+
+  /* The EID, within the outer family, of the branch root element. */
+  /*int outer_family_eid_of_branch_root;*/
+
+  /* --- Contents of this object --- */
+
+  /* The EID within its family of its pathwise root element. */
+  int root_eid;
+} svn_branch_sibling_t;
+
+/* Create a new branch sibling object */
+svn_branch_sibling_t *
+svn_branch_sibling_create(svn_branch_family_t *family,
+                          int bid,
+                          int root_eid,
+                          apr_pool_t *result_pool);
+
+/* A branch instance.
+ *
+ * A branch instance object describes one branch in this family. (There is
+ * one instance of this branch within each branch of its outer families.)
+ */
+typedef struct svn_branch_instance_t
+{
+  /* --- Identity of this object --- */
+
+  /* The branch-sibling class to which this branch belongs */
+  svn_branch_sibling_t *sibling_defn;
+
+  /* The revision to which this branch-revision-instance belongs */
+  svn_branch_revision_root_t *rev_root;
+
+  /* The branch (instance?), within the outer family, that contains the
+     root element of this branch. */
+  /*svn_branch_instance_t *outer_family_branch_instance;*/
+
+  /* --- Contents of this object --- */
+
+  /* EID -> svn_branch_el_rev_content_t mapping. */
+  apr_hash_t *e_map;
+
+  /* ### This need not be constant if a parent branch is updated, so should
+   * be calculated on demand not stored here. */
+  const char *branch_root_rrpath;
+
+} svn_branch_instance_t;
+
+/* Create a new branch instance object */
+svn_branch_instance_t *
+svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
+                           svn_branch_revision_root_t *rev_root,
+                           const char *branch_root_rrpath,
+                           apr_pool_t *result_pool);
+
+/* element */
+/*
+typedef struct svn_branch_element_t
+{
+  int eid;
+  svn_branch_family_t *family;
+  svn_node_kind_t node_kind;
+} svn_branch_element_t;
+*/
+
+/* Branch-Element-Revision */
+typedef struct svn_branch_el_rev_id_t
+{
+  /* The branch-instance that applies to REV. */
+  svn_branch_instance_t *branch;
+  /* Element. */
+  int eid;
+  /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'.
+     ### Do we need this if BRANCH refers to a particular branch-revision? */
+  svn_revnum_t rev;
+
+} svn_branch_el_rev_id_t;
+
+/* The content (parent, name and node-content) of an element-revision.
+ * In other words, an el-rev node in a (mixed-rev) directory-tree.
+ */
+typedef struct svn_branch_el_rev_content_t
+{
+  /* eid of the parent element, or -1 if this is the root element */
+  int parent_eid;
+  /* struct svn_branch_element_t *parent_element; */
+  /* node name, or "" for root node; never null */
+  const char *name;
+  /* content (kind, props, text, ...) */
+  svn_editor3_node_content_t *content;
+
+} svn_branch_el_rev_content_t;
+
+/*  */
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_create(svn_editor3_nbid_t parent_eid,
+                                 const char *name,
+                                 const svn_editor3_node_content_t *node_content,
+                                 apr_pool_t *result_pool);
+
+/*  */
+svn_boolean_t
+svn_branch_el_rev_content_equal(int eid,
+                                const svn_branch_el_rev_content_t *content_left,
+                                const svn_branch_el_rev_content_t *content_right,
+                                apr_pool_t *scratch_pool);
+
+
+/* Return the root repos-relpath of BRANCH.
+ *
+ * ### A branch root's rrpath can change during the edit.
+ */
+const char *
+svn_branch_get_root_rrpath(const svn_branch_instance_t *branch);
+
+/* Return the repos-relpath of element EID in BRANCH.
+ *
+ * ### A branch element's rrpath can change during the edit.
+ */
+const char *
+svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
+                             int eid,
+                             apr_pool_t *result_pool);
+
+/* Find the (deepest) branch in the state being edited by EDITOR, of which
+ * the path RRPATH is either the root path or a normal, non-sub-branch
+ * path. An element need not exist at RRPATH.
+ *
+ * Set *BRANCH_P to the deepest branch that contains the path RRPATH.
+ *
+ * If EID_P is not null then set *EID_P to the element id of RRPATH in
+ * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
+ */
+void
+svn_editor3_find_branch_element_by_rrpath(svn_branch_instance_t **branch_p,
+                                          int *eid_p,
+                                          svn_editor3_t *editor,
+                                          const char *rrpath,
+                                          apr_pool_t *scratch_pool);
+
+/* Find the deepest branch in the repository of which RRPATH @ REVNUM is
+ * either the root element or a normal, non-sub-branch element.
+ *
+ * Return the location of the element at RRPATH in that branch, or with
+ * EID=-1 if no element exists there.
+ *
+ * REVNUM must be the revision number of a committed revision.
+ *
+ * The result will never be NULL, as every path is within at least the root
+ * branch.
+ */
+svn_error_t *
+svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
+                                   svn_editor3_t *editor,
+                                   const char *rrpath,
+                                   svn_revnum_t revnum,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
+/* Create a new revision-root object *REV_ROOT_P, initialized with info
+ * parsed from STREAM, allocated in RESULT_POOL.
+ */
+svn_error_t *
+svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
+                               int *next_fid_p,
+                               svn_branch_repos_t *repos,
+                               svn_stream_t *stream,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Write to STREAM a parseable representation of REV_ROOT.
+ */
+svn_error_t *
+svn_branch_revision_root_serialize(svn_stream_t *stream,
+                                   svn_branch_revision_root_t *rev_root,
+                                   int next_fid,
+                                   apr_pool_t *scratch_pool);
+
+/* Return the branch family of the main branch of @a editor. */
+svn_branch_family_t *
+svn_branch_get_family(svn_editor3_t *editor);
+
+/* Return (left, right) pairs of element content that differ between
+ * subtrees LEFT and RIGHT.
+
+ * Set *DIFF_P to a hash of (eid -> (svn_branch_el_rev_content_t *)[2]).
+ */
+svn_error_t *
+svn_branch_subtree_differences(apr_hash_t **diff_p,
+                               svn_editor3_t *editor,
+                               const svn_branch_el_rev_id_t *left,
+                               const svn_branch_el_rev_id_t *right,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Branch the subtree of FROM_BRANCH found at FROM_EID, to create
+ * a new branch at TO_OUTER_BRANCH:TO_OUTER_PARENT_EID:NEW_NAME.
+ *
+ * FROM_BRANCH must be an immediate sub-branch of TO_OUTER_BRANCH.
+ */
+svn_error_t *
+svn_branch_branch(svn_editor3_t *editor,
+                  svn_branch_instance_t *from_branch,
+                  int from_eid,
+                  svn_branch_instance_t *to_outer_branch,
+                  svn_editor3_nbid_t to_outer_parent_eid,
+                  const char *new_name,
+                  apr_pool_t *scratch_pool);
+
+/* Change the existing simple sub-tree at OUTER_EID into a sub-branch in a
+ * new branch family.
+ *
+ * ### TODO: Also we must (in order to maintain correctness) branchify
+ *     the corresponding subtrees in all other branches in this family.
+ *
+ * TODO: Allow adding to an existing family, by specifying a mapping.
+ *
+ *   create a new family
+ *   create a new branch-def and branch-instance
+ *   for each node in subtree:
+ *     ?[unassign eid in outer branch (except root node)]
+ *     assign a new eid in inner branch
+ */
+/* The element-based version */
+/* ### Does this need to return the new branch? Certainly the caller needs
+ *     some way to find out what branch was created there. Probably better
+ *     to return it directly than have the caller use APIs that query the
+ *     overall branching "state".
+ */
+svn_error_t *
+svn_branch_branchify(svn_editor3_t *editor,
+                     svn_editor3_nbid_t outer_eid,
+                     apr_pool_t *scratch_pool);
+
+
+/* ====================================================================== */
 
 #ifdef SVN_DEBUG
 /** Return an editor in @a *editor_p which will forward all calls to the
@@ -1473,8 +1898,10 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  *     - Use 'entry-props'?
  *     - Send copy-and-delete with copy-from-rev = -1?
  *
- * This editor implements the "incremental changes" variant of the Ev3
+ * This editor implements the "independent per-node changes" variant of the Ev3
  * commit editor interface.
+ *
+ * Use *BRANCHING_TXN as the branching state info ...
  *
  * SHIM_CONNECTOR can be used to enable a more exact round-trip conversion
  * from an Ev1 drive to Ev3 and back to Ev1. The caller should pass the
@@ -1494,6 +1921,27 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  * Allocate the new editor in RESULT_POOL, which may become large and must
  * live for the lifetime of the edit. Use SCRATCH_POOL for temporary
  * allocations.
+ */
+svn_error_t *
+svn_delta__ev3_from_delta_for_commit2(
+                        svn_editor3_t **editor_p,
+                        svn_editor3__shim_connector_t **shim_connector,
+                        const svn_delta_editor_t *deditor,
+                        void *dedit_baton,
+                        svn_branch_revision_root_t *branching_txn,
+                        const char *repos_root_url,
+                        const char *base_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Like svn_delta__ev3_from_delta_for_commit2(), except:
+ *   - doesn't take the 'branching_txn' parameter;
+ *   - implements the "incremental changes" variant of the Ev3
+ *     commit editor interface.
  */
 svn_error_t *
 svn_delta__ev3_from_delta_for_commit(
