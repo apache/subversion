@@ -4021,7 +4021,6 @@ editor3_add(void *baton,
 static svn_error_t *
 editor3_instantiate(void *baton,
                     svn_editor3_nbid_t eid,
-                    svn_node_kind_t new_kind,
                     svn_editor3_nbid_t new_parent_eid,
                     const char *new_name,
                     const svn_editor3_node_content_t *new_content,

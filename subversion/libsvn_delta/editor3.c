@@ -305,20 +305,17 @@ svn_editor3_add(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
                         svn_editor3_nbid_t local_nbid,
-                        svn_node_kind_t new_kind,
                         svn_editor3_nbid_t new_parent_nbid,
                         const char *new_name,
                         const svn_editor3_node_content_t *new_content)
 {
-  SVN_ERR_ASSERT(VALID_NODE_KIND(new_kind));
   SVN_ERR_ASSERT(VALID_EID(local_nbid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(VALID_CONTENT(new_content));
-  SVN_ERR_ASSERT(new_content->kind == new_kind);
 
   DO_CALLBACK(editor, cb_instantiate,
-              5(local_nbid, new_kind,
+              4(local_nbid,
                 new_parent_nbid, new_name,
                 new_content));
   return SVN_NO_ERROR;
@@ -752,7 +749,6 @@ wrap_add(void *baton,
 static svn_error_t *
 wrap_instantiate(void *baton,
          svn_editor3_nbid_t local_nbid,
-         svn_node_kind_t new_kind,
          svn_editor3_nbid_t new_parent_nbid,
          const char *new_name,
          const svn_editor3_node_content_t *new_content,
@@ -760,11 +756,11 @@ wrap_instantiate(void *baton,
 {
   wrapper_baton_t *eb = baton;
 
-  dbg(eb, scratch_pool, "%s : instantiate(k=%s, p=%s, n=%s, c=...)",
-      nbid_str(local_nbid, scratch_pool), svn_node_kind_to_word(new_kind),
+  dbg(eb, scratch_pool, "%s : instantiate(p=%s, n=%s, c=...)",
+      nbid_str(local_nbid, scratch_pool),
       nbid_str(new_parent_nbid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_instantiate(eb->wrapped_editor,
-                                  local_nbid, new_kind,
+                                  local_nbid,
                                   new_parent_nbid, new_name, new_content));
   return SVN_NO_ERROR;
 }

@@ -957,12 +957,10 @@ svn_editor3_add(svn_editor3_t *editor,
  * @see #svn_editor3_t
  *
  * ### Need to specify where the underlying FS node is to be "copied" from?
- * ### NEW_KIND is redundant: the existing element cannot change its kind.
  */
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
                         svn_editor3_nbid_t eid,
-                        svn_node_kind_t new_kind,
                         svn_editor3_nbid_t new_parent_eid,
                         const char *new_name,
                         const svn_editor3_node_content_t *new_content);
@@ -1215,7 +1213,6 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
 typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
   void *baton,
   svn_editor3_nbid_t eid,
-  svn_node_kind_t new_kind,
   svn_editor3_nbid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
