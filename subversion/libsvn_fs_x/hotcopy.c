@@ -891,12 +891,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * reset it to zero (since this is on a different path, it will not
    * overlap with data already in cache).  Also, clean up stale files
    * used for the named atomics implementation. */
-  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprop_generation(src_fs, pool),
-                            &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_fs_x__write_revprop_generation_file(dst_fs, 0, pool));
-
-  SVN_ERR(svn_fs_x__cleanup_revprop_namespace(dst_fs));
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(dst_fs, pool));
 
   return SVN_NO_ERROR;
 }

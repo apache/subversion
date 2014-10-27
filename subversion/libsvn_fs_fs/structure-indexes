@@ -80,6 +80,14 @@ Most data is unsigned by nature but will be stored differentially using
 signed integers.
 
 
+Encoding in proto-index files
+-----------------------------
+
+These have a much simpler encoding.  Throughout the files, all records have
+the same length (but different between L2P and P2L).  All records contain
+unsigned 64 bit integers only, stored in little endian byte order.
+
+
 Log-to-phys index
 =================
 
@@ -143,7 +151,7 @@ page:
 Index on-disk format
 --------------------
 
-  index := header revisions pages offsets
+  index := "L2P-INDEX\n" header revisions pages offsets
 
   header := u(<header>.<first revision>) \
             u(<header>.<page size>) \
@@ -158,11 +166,13 @@ Index on-disk format
            u(<header>.<page table>[k].<entry count>),
            for k in 0 .. s(<header>.<page table>)-1
 
-  offsets := i(<header>.<page table>[k].<offsets>[0]) \
+  offsets := page(k),
+             for k in 0 .. s(<header>.<page table>)-1
+
+  page(k) := i(<header>.<page table>[k].<offsets>[0]) \
              i(  <header>.<page table>[k].<offsets>[l] \
                - <header>.<page table>[k].<offsets>[l - 1]),
-             for l in 1 .. s(<header>.<page table>[k].<entry count>)-1,
-             for k in 0 .. s(<header>.<page table>)-1
+             for l in 1 .. s(<header>.<page table>[k].<entry count>)-1
 
   u(x) ... unsigned int x in 7b/8b encoding
   i(x) ... signed int x in 7b/8b encoding
@@ -190,7 +200,7 @@ at the beginning of the file is optional and will be ignored.
   ...
   <eof>         /* end of file. */
 
-All entries are pairs of 64 bit unsigned integers in machine endianess.
+All entries are pairs of 64 bit unsigned integers in little endian order.
 
 
 Phys-to-log index
@@ -256,7 +266,7 @@ entry:
 Index on-disk format
 --------------------
 
-  index := header pages items
+  index := "P2L-INDEX\n" header pages items
 
   header := u(<header>.<first revision>) \
             u(<header>.<file size>) \
@@ -286,14 +296,25 @@ Index on-disk format
   started after the begin of a given page and overlap with the next page
   will not be stored in the start page.  The runtime representation will
   duplicate items overlapping page boundaries; the on-disk representation
-  will not.
+  will not.  Thus, pages inside large items will have zero entries on disk.
 
 
 Proto index file format
 -----------------------
 
 The index will be created from a proto index file containing simple
-instances of the in-memory representation of svn_fs_fs__p2l_entry_t.
+instances of svn_fs_fs__p2l_entry_t with the following element order:
+
+  item offset               as uint64
+  item size                 as uint64
+  item type                 as uint64
+  modified FNV1a checksum   as uint64
+  revision                  as uint64, with SVN_INVALID_REVNUM mapped to 0
+                                       and revisions >= 0 stored as rev+1
+  item index                as uint64
+
+All values are stored in little endian order.
+
 Page table and header information, except start revision and page size,
 can easily be derived from that information.
 

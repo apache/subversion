@@ -74,6 +74,23 @@ extern "C" {
     svn_error_clear(err__);                                               \
   } while (0)
 
+/** Handy macro for testing that an svn_error_t is returned.
+ * The result must be neither SVN_NO_ERROR nor SVN_ERR_ASSERTION_FAIL.
+ * The error returned by EXPR will be cleared.
+ */
+#define SVN_TEST_ASSERT_ANY_ERROR(expr)                                   \
+  do {                                                                    \
+    svn_error_t *err__ = (expr);                                          \
+    if (err__ == SVN_NO_ERROR || err__->apr_err == SVN_ERR_ASSERTION_FAIL)\
+      return err__ ? svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error but got %s",       \
+                                       "SVN_ERR_ASSERTION_FAIL")          \
+                   : svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error but got %s",       \
+                                       "SVN_NO_ERROR");                   \
+    svn_error_clear(err__);                                               \
+  } while (0)
+
 /** Handy macro for testing string equality.
  *
  * EXPR and/or EXPECTED_EXPR may be NULL which compares equal to NULL and

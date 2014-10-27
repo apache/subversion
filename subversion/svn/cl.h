@@ -227,8 +227,12 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
   svn_depth_t set_depth;           /* new sticky ambient depth value */
   svn_boolean_t reintegrate;      /* use "reintegrate" merge-source heuristic */
-  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
-                                      otherwise be rejected as "untrusted" */
+  /* trust server SSL certs that would otherwise be rejected as "untrusted" */
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
   int strip; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;   /* do not expand keywords */
   svn_boolean_t reverse_diff;      /* reverse a diff (e.g. when patching) */

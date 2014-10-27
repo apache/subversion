@@ -226,7 +226,8 @@ create_checkout_body(serf_bucket_t **bkt,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
-  svn_ra_serf__add_tag_buckets(body_bkt, "D:apply-to-version", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(body_bkt, alloc,
+                                     "D:apply-to-version", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:checkout");
 
   *bkt = body_bkt;

@@ -561,7 +561,7 @@ aligned_seek(apr_file_t *file,
 
   /* we must be at the desired offset */
   current = 0;
-  SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
   SVN_TEST_ASSERT(current == (apr_off_t)offset);
 
   return SVN_NO_ERROR;

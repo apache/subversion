@@ -844,7 +844,7 @@ svn_client_import5(const char *path,
         = apr_array_make(scratch_pool, 1, sizeof(item));
 
       item = svn_client_commit_item3_create(scratch_pool);
-      item->path = apr_pstrdup(scratch_pool, path);
+      item->path = local_abspath;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 

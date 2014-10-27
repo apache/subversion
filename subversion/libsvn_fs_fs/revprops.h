@@ -22,17 +22,6 @@
 
 #include "svn_fs.h"
 
-/* Write the CURRENT revprop generation to disk for repository FS.
- */
-svn_error_t *
-svn_fs_fs__write_revprop_generation_file(svn_fs_t *fs,
-                                         apr_int64_t current,
-                                         apr_pool_t *pool);
-
-/* Make sure the revprop_namespace member in FS is set. */
-svn_error_t *
-svn_fs_fs__cleanup_revprop_namespace(svn_fs_t *fs);
-
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
  * 
  * NOTE: Keep the old non-packed shards around until after the format bump.

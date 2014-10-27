@@ -27,6 +27,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_fspath.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -68,6 +69,36 @@
 /* The 256 is an arbitrary size large enough to hold the node id and the
  * various flags. */
 #define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
+
+/* Convert the C string in *TEXT to a revision number and return it in *REV.
+ * Overflows, negative values other than -1 and terminating characters other
+ * than 0x20 or 0x0 will cause an error.  Set *TEXT to the first char after
+ * the initial separator or to EOS.
+ */
+static svn_error_t *
+parse_revnum(svn_revnum_t *rev,
+             const char **text)
+{
+  const char *string = *text;
+  if ((string[0] == '-') && (string[1] == '1'))
+    {
+      *rev = SVN_INVALID_REVNUM;
+      string += 2;
+    }
+  else
+    {
+      SVN_ERR(svn_revnum_parse(rev, string, &string));
+    }
+
+  if (*string == ' ')
+    ++string;
+  else if (*string != '\0')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid character in revision number"));
+
+  *text = string;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__parse_revision_trailer(apr_off_t *root_offset,
@@ -160,38 +191,71 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
 
 svn_error_t *
 svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
+                        svn_checksum_t **l2p_checksum,
                         apr_off_t *p2l_offset,
+                        svn_checksum_t **p2l_checksum,
                         svn_stringbuf_t *footer,
-                        svn_revnum_t rev)
+                        svn_revnum_t rev,
+                        apr_pool_t *result_pool)
 {
   apr_int64_t val;
+  char *last_str = footer->data;
 
-  /* Split the footer into the 2 number strings. */
-  char *seperator = strchr(footer->data, ' ');
-  if (!seperator)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision file (r%ld) has corrupt footer"),
-                             rev);
-  *seperator = '\0';
+  /* Get the L2P offset. */
+  const char *str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
 
-  /* Convert offset values. */
-  SVN_ERR(svn_cstring_atoi64(&val, footer->data));
+  SVN_ERR(svn_cstring_atoi64(&val, str));
   *l2p_offset = (apr_off_t)val;
-  SVN_ERR(svn_cstring_atoi64(&val, seperator + 1));
+
+  /* Get the L2P checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_checksum_parse_hex(l2p_checksum, svn_checksum_md5, str,
+                                 result_pool));
+
+  /* Get the P2L offset. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_cstring_atoi64(&val, str));
   *p2l_offset = (apr_off_t)val;
+
+  /* Get the P2L checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_checksum_parse_hex(p2l_checksum, svn_checksum_md5, str,
+                                 result_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_stringbuf_t *
 svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
+                          svn_checksum_t *l2p_checksum,
                           apr_off_t p2l_offset,
-                          apr_pool_t *result_pool)
+                          svn_checksum_t *p2l_checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   return svn_stringbuf_createf(result_pool,
-                               "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
+                               "%" APR_OFF_T_FMT " %s %" APR_OFF_T_FMT " %s",
                                l2p_offset,
-                               p2l_offset);
+                               svn_checksum_to_cstring(l2p_checksum,
+                                                       scratch_pool),
+                               p2l_offset,
+                               svn_checksum_to_cstring(p2l_checksum,
+                                                       scratch_pool));
 }
 
 /* Read the next entry in the changes record from file FILE and store
@@ -228,7 +292,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  info->node_rev_id = svn_fs_fs__id_parse(str, result_pool);
+  SVN_ERR(svn_fs_fs__id_parse(&info->node_rev_id, str, result_pool));
   if (info->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
@@ -324,7 +388,9 @@ read_change(change_t **change_p,
     }
 
   /* Get the mergeinfo-mod flag if given.  Otherwise, the next thing
-     is the path starting with a slash. */
+     is the path starting with a slash.  Also, we must initialize the
+     flag explicitly because 0 is not valid for a svn_tristate_t. */
+  info->mergeinfo_mod = svn_tristate_unknown;
   if (*last_str != '/')
     {
       str = svn_cstring_tokenize(" ", &last_str);
@@ -346,8 +412,12 @@ read_change(change_t **change_p,
                               _("Invalid mergeinfo-mod flag in rev-file"));
         }
     }
-  
+
   /* Get the changed path. */
+  if (!svn_fspath__is_canonical(last_str))
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid path in changes line"));
+
   change->path.len = strlen(last_str);
   change->path.data = apr_pstrdup(result_pool, last_str);
 
@@ -362,15 +432,11 @@ read_change(change_t **change_p,
   else
     {
       last_str = line->data;
-      str = svn_cstring_tokenize(" ", &last_str);
-      if (! str)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-      info->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&info->copyfrom_rev, (const char **)&last_str));
 
-      if (! last_str)
+      if (!svn_fspath__is_canonical(last_str))
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
+                                _("Invalid copy-from path in changes line"));
 
       info->copyfrom_path = apr_pstrdup(result_pool, last_str);
     }
@@ -437,11 +503,11 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  Only include the
-   mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
-   allocations are in SCRATCH_POOL. */
+/* Write a single change entry, path PATH, change CHANGE, to STREAM.
+
+   Only include the node kind field if INCLUDE_NODE_KIND is true.  Only
+   include the mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.
+   All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
@@ -534,13 +600,19 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
   svn_boolean_t include_mergeinfo_mods =
-      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT;
+      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
+     rest of the FSFS code doesn't require any particular order here.
+
+     Also, this sorting is only effective in writing all entries with
+     a single call as write_final_changed_path_info() does.  For the
+     list being written incrementally during transaction, we actually
+     *must not* change the order of entries from different calls.
+   */
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically,
                                         scratch_pool);
@@ -584,8 +656,8 @@ read_header_block(apr_hash_t **headers,
     {
       svn_stringbuf_t *header_str;
       const char *name, *value;
-      apr_ssize_t i = 0;
-      apr_ssize_t name_len;
+      apr_size_t i = 0;
+      apr_size_t name_len;
       svn_boolean_t eof;
 
       SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof,
@@ -609,19 +681,19 @@ read_header_block(apr_hash_t **headers,
       name = header_str->data;
       name_len = i;
 
-      /* Skip over the NULL byte and the space following it. */
-      i += 2;
-
-      if (i > header_str->len)
+      /* Check if we have enough data to parse. */
+      if (i + 2 > header_str->len)
         {
           /* Restore the original line for the error. */
-          i -= 2;
           header_str->data[i] = ':';
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Found malformed header '%s' in "
                                      "revision file"),
                                    header_str->data);
         }
+
+      /* Skip over the NULL byte and the space following it. */
+      i += 2;
 
       value = header_str->data + i;
 
@@ -649,12 +721,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   rep = apr_pcalloc(result_pool, sizeof(*rep));
   *rep_p = rep;
 
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
-
-  rep->revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&rep->revision, (const char **)&string));
 
   /* initialize transaction info (never stored) */
   svn_fs_fs__id_txn_reset(&rep->txn_id);
@@ -797,7 +864,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_fs__id_parse(value, result_pool);
+  SVN_ERR(svn_fs_fs__id_parse(&noderev->id, value, result_pool));
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -848,13 +915,19 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
+      if (!svn_fspath__is_canonical(value))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Non-canonical cpath field in node-rev '%s'"),
+                            noderev_id);
+
       noderev->created_path = apr_pstrdup(result_pool, value);
     }
 
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    noderev->predecessor_id = svn_fs_fs__id_parse(value, result_pool);
+    SVN_ERR(svn_fs_fs__id_parse(&noderev->predecessor_id, value,
+                                result_pool));
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -865,17 +938,9 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str;
+      SVN_ERR(parse_revnum(&noderev->copyroot_rev, (const char **)&value));
 
-      str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyroot line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyroot_rev = SVN_STR_TO_REV(str);
-
-      if (*value == '\0')
+      if (!svn_fspath__is_canonical(value))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
@@ -891,13 +956,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      char *str = svn_cstring_tokenize(" ", &value);
-      if (str == NULL)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Malformed copyfrom line in node-rev '%s'"),
-                                 noderev_id);
-
-      noderev->copyfrom_rev = SVN_STR_TO_REV(str);
+      SVN_ERR(parse_revnum(&noderev->copyfrom_rev, (const char **)&value));
 
       if (*value == 0)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -1088,10 +1147,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   if (! str || (strcmp(str, REP_DELTA) != 0))
     goto error;
 
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (! str)
-    goto error;
-  (*header)->base_revision = SVN_STR_TO_REV(str);
+  SVN_ERR(parse_revnum(&(*header)->base_revision, (const char **)&last_str));
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)

@@ -479,7 +479,7 @@ copy_item_to_temp(pack_context_t *context,
   svn_fs_fs__p2l_entry_t *new_entry
     = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   new_entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
+  SVN_ERR(svn_io_file_seek(temp_file, APR_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
   
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
@@ -567,7 +567,7 @@ copy_rep_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR, &entry->offset,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR, &entry->offset,
                            pool));
   add_item_rep_mapping(context, entry);
 
@@ -589,7 +589,7 @@ copy_rep_to_temp(pack_context_t *context,
     }
 
   /* copy the whole rep (including header!) to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -723,12 +723,12 @@ copy_node_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
   entry->offset = 0;
-  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
+  SVN_ERR(svn_io_file_seek(context->reps_file, APR_CUR,
                            &entry->offset, pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
                          pool));
 
@@ -1112,7 +1112,7 @@ store_item(pack_context_t *context,
 
   /* select the item in the source file and copy it into the target
     * pack file */
-  SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &item->offset, pool));
+  SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &item->offset, pool));
   SVN_ERR(copy_file_data(context, context->pack_file, temp_file,
                          item->size, pool));
 
@@ -1165,7 +1165,6 @@ copy_reps_from_temp(pack_context_t *context,
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *path_order = context->path_order;
-  apr_array_header_t *parts = apr_array_make(pool, 16, sizeof(void*));
   int i;
 
   /* copy items in path order. */
@@ -1185,9 +1184,6 @@ copy_reps_from_temp(pack_context_t *context,
         SVN_ERR(store_item(context, temp_file, node_part, iterpool));
       if (rep_part)
         SVN_ERR(store_item(context, temp_file, rep_part, iterpool));
-
-      /* processed all items */
-      apr_array_clear(parts);
     }
 
   svn_pool_destroy(iterpool);
@@ -1311,7 +1307,8 @@ pack_range(pack_context_t *context,
 
           SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs,
                                               rev_file, revision, offset,
-                                              ffd->p2l_page_size, iterpool));
+                                              ffd->p2l_page_size, iterpool,
+                                              iterpool));
 
           for (i = 0; i < entries->nelts; ++i)
             {
@@ -1329,7 +1326,7 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < rev_file->l2p_offset)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file->file, SEEK_SET, &offset,
+                  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset,
                                            iterpool2));
 
                   if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
@@ -1445,7 +1442,8 @@ append_revision(pack_context_t *context,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs, rev_file,
                                           context->start_rev, offset,
-                                          ffd->p2l_page_size, iterpool));
+                                          ffd->p2l_page_size, iterpool,
+                                          iterpool));
 
       for (i = 0; i < entries->nelts; ++i)
         {
@@ -1531,7 +1529,7 @@ pack_log_addressed(svn_fs_t *fs,
   /* phase 1: determine the size of the revisions to pack */
   SVN_ERR(svn_fs_fs__l2p_get_max_ids(&max_ids, fs, shard_rev,
                                      context.shard_end_rev - shard_rev,
-                                     pool));
+                                     pool, pool));
 
   /* pack revisions in ranges that don't exceed MAX_MEM */
   for (i = 0; i < max_ids->nelts; ++i)

@@ -1706,9 +1706,14 @@ do_pget(svnlook_ctxt_t *c,
        if (path == NULL)
          {
            /* We're operating on a revprop (e.g. c->is_revision). */
-           err_msg = apr_psprintf(pool,
-                                  _("Property '%s' not found on revision %ld"),
-                                  propname, c->rev_id);
+           if (SVN_IS_VALID_REVNUM(c->rev_id))
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on revision %ld"),
+                                    propname, c->rev_id);
+           else
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on transaction %s"),
+                                    propname, c->txn_name);
          }
        else
          {
@@ -2013,10 +2018,11 @@ do_plist(svnlook_ctxt_t *c,
       /* "</properties>" */
       svn_xml_make_close_tag(&sb, pool, "properties");
 
+      errno = 0;
       if (fputs(sb->data, stdout) == EOF)
         {
-          if (errno)
-            return svn_error_wrap_apr(errno, _("Write error"));
+          if (apr_get_os_error()) /* is errno on POSIX */
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
           else
             return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
         }

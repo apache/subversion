@@ -104,9 +104,13 @@ create_fs(svn_fs_t **fs_p,
           const char *name,
           const char *fs_type,
           int server_minor_version,
+          apr_hash_t *overlay_fs_config,
           apr_pool_t *pool)
 {
   apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
+
+  if (overlay_fs_config)
+    fs_config = apr_hash_overlay(pool, overlay_fs_config, fs_config);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -172,20 +176,21 @@ svn_test__create_bdb_fs(svn_fs_t **fs_p,
                         const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
-  return create_fs(fs_p, name, "bdb", opts->server_minor_version, pool);
+  return create_fs(fs_p, name, "bdb", opts->server_minor_version, NULL, pool);
 }
 
 
 svn_error_t *
-svn_test__create_fs(svn_fs_t **fs_p,
-                    const char *name,
-                    const svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+svn_test__create_fs2(svn_fs_t **fs_p,
+                     const char *name,
+                     const svn_test_opts_t *opts,
+                     apr_hash_t *fs_config,
+                     apr_pool_t *pool)
 {
   svn_boolean_t must_reopen;
 
-  SVN_ERR(create_fs(fs_p, name, opts->fs_type,
-                    opts->server_minor_version, pool));
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type, opts->server_minor_version,
+                    fs_config, pool));
 
   SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
@@ -197,6 +202,14 @@ svn_test__create_fs(svn_fs_t **fs_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_test__create_fs(svn_fs_t **fs_p,
+                    const char *name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  return svn_test__create_fs2(fs_p, name, opts, NULL, pool);
+}
 
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
@@ -358,10 +371,19 @@ validate_tree_entry(svn_fs_root_t *root,
 {
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
-  svn_boolean_t is_dir;
+  svn_node_kind_t kind;
+  svn_boolean_t is_dir, is_file;
+
+  /* Verify that node types are reported consistently. */
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  SVN_ERR(svn_fs_is_dir(&is_dir, root, path, pool));
+  SVN_ERR(svn_fs_is_file(&is_file, root, path, pool));
+
+  SVN_TEST_ASSERT(!is_dir || kind == svn_node_dir);
+  SVN_TEST_ASSERT(!is_file || kind == svn_node_file);
+  SVN_TEST_ASSERT(is_dir || is_file);
 
   /* Verify that this is the expected type of node */
-  SVN_ERR(svn_fs_is_dir(&is_dir, root, path, pool));
   if ((!is_dir && !contents) || (is_dir && contents))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -371,10 +393,17 @@ validate_tree_entry(svn_fs_root_t *root,
   /* Verify that the contents are as expected (files only) */
   if (! is_dir)
     {
+      svn_stringbuf_t *expected = svn_stringbuf_create(contents, pool);
+
+      /* File lengths. */
+      svn_filesize_t length;
+      SVN_ERR(svn_fs_file_length(&length, root, path, pool));
+      SVN_TEST_ASSERT(expected->len == length);
+
+      /* Text contents. */
       SVN_ERR(svn_fs_file_contents(&rstream, root, path, pool));
       SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
-      if (! svn_stringbuf_compare(rstring,
-                                  svn_stringbuf_create(contents, pool)))
+      if (! svn_stringbuf_compare(rstring, expected))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            "node '%s' in tree had unexpected contents",
@@ -403,6 +432,9 @@ svn_test__validate_tree(svn_fs_root_t *root,
   svn_stringbuf_t *corrupt_entries = NULL;
   apr_hash_index_t *hi;
   int i;
+
+  /* There should be no entry with this name. */
+  const char *na_name = "es-vee-en";
 
   /* Create a hash for storing our expected entries */
   expected_entries = apr_hash_make(subpool);
@@ -490,6 +522,23 @@ svn_test__validate_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(extra_entries, "   ");
       svn_stringbuf_appendbytes(extra_entries, (const char *)key, keylen);
       svn_stringbuf_appendcstr(extra_entries, "\n");
+    }
+
+  /* Test that non-exiting paths will not be found.
+   * Skip this test if somebody sneakily added NA_NAME. */
+  if (!svn_hash_gets(expected_entries, na_name))
+    {
+      svn_node_kind_t kind;
+      svn_boolean_t is_dir, is_file;
+
+      /* Verify that the node is reported as "n/a". */
+      SVN_ERR(svn_fs_check_path(&kind, root, na_name, subpool));
+      SVN_ERR(svn_fs_is_dir(&is_dir, root, na_name, subpool));
+      SVN_ERR(svn_fs_is_file(&is_file, root, na_name, subpool));
+
+      SVN_TEST_ASSERT(kind == svn_node_none);
+      SVN_TEST_ASSERT(!is_file);
+      SVN_TEST_ASSERT(!is_dir);
     }
 
   if (missing_entries || extra_entries || corrupt_entries)
