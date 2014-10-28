@@ -330,7 +330,38 @@ family_list_branch_instances(svn_branch_family_t *family,
   return SVN_NO_ERROR;
 }
 
+/* Options to control how strict the merge is about detecting conflicts.
+ *
+ * The options affect cases that, depending on the user's preference, could
+ * either be considered a conflict or be merged to a deterministic result.
+ *
+ * The set of options is flexible and may be extended in future.
+ */
+typedef struct merge_conflict_policy_t
+{
+  /* Whether to merge delete-vs-delete */
+  svn_boolean_t merge_double_delete;
+  /* Whether to merge add-vs-add (with same parent/name/content) */
+  svn_boolean_t merge_double_add;
+  /* Whether to merge reparent-vs-reparent (with same parent) */
+  svn_boolean_t merge_double_reparent;
+  /* Whether to merge rename-vs-rename (with same name) */
+  svn_boolean_t merge_double_rename;
+  /* Whether to merge modify-vs-modify (with same content) */
+  svn_boolean_t merge_double_modify;
+  /* Possible additional controls: */
+  /* merge (parent, name, props, text) independently or as a group */
+  /* merge (parent, name) independently or as a group */
+  /* merge (props, text) independently or as a group */
+} merge_conflict_policy_t;
+
 /* Merge the content for one element.
+ *
+ * If there is no conflict, set *CONFLICT_P to FALSE and *RESULT_P to the
+ * merged element; otherwise set *CONFLICT_P to TRUE and *RESULT_P to NULL.
+ * Note that *RESULT_P can be null, indicating a deletion.
+ *
+ * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
  */
 static void
 element_merge(svn_branch_el_rev_content_t **result_p,
@@ -339,6 +370,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
               svn_branch_el_rev_content_t *side1,
               svn_branch_el_rev_content_t *side2,
               svn_branch_el_rev_content_t *yca,
+              const merge_conflict_policy_t *policy,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
@@ -347,7 +379,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
   svn_boolean_t same2 = svn_branch_el_rev_content_equal(eid, yca, side2,
                                                         scratch_pool);
   svn_boolean_t conflict = FALSE;
-  svn_branch_el_rev_content_t *result;
+  svn_branch_el_rev_content_t *result = NULL;
 
   if (same1)
     {
@@ -357,14 +389,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
     {
       result = side1;
     }
-  else if (! yca || ! side1 || ! side2)
-    {
-      /* Side 1 and side 2 both changed; not all of them exist */
-      /* ### Need not be a conflict if side1 == side2. */
-      result = yca;
-      conflict = TRUE;
-    }
-  else
+  else if (yca && side1 && side2)
     {
       /* All three sides are different, and all exist */
       result = apr_pmemdup(result_pool, yca, sizeof(*result));
@@ -378,8 +403,17 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         {
           result->parent_eid = side1->parent_eid;
         }
+      else if (policy->merge_double_reparent
+               && side1->parent_eid == side2->parent_eid)
+        {
+          SVN_DBG(("e%d double reparent: e%d -> { e%d | e%d }",
+                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));
+          result->parent_eid = side1->parent_eid;
+        }
       else
         {
+          SVN_DBG(("e%d conflict: parent: e%d -> { e%d | e%d }",
+                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));
           conflict = TRUE;
         }
 
@@ -392,8 +426,17 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         {
           result->name = side1->name;
         }
+      else if (policy->merge_double_rename
+               && strcmp(side1->name, side2->name) == 0)
+        {
+          SVN_DBG(("e%d double rename: %s -> { %s | %s }",
+                   eid, yca->name, side1->name, side2->name));
+          result->name = side1->name;
+        }
       else
         {
+          SVN_DBG(("e%d conflict: name: %s -> { %s | %s }",
+                   eid, yca->name, side1->name, side2->name));
           conflict = TRUE;
         }
 
@@ -408,16 +451,65 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         {
           result->content = side1->content;
         }
+      else if (policy->merge_double_modify
+               && svn_editor3_node_content_equal(side1->content, side2->content,
+                                                 scratch_pool))
+        {
+          SVN_DBG(("e%d double modify: ... -> { ... | ... }",
+                   eid));
+          result->content = side1->content;
+        }
       else
         {
           /* ### Need not conflict if can merge props and text separately. */
+
+          SVN_DBG(("e%d conflict: content: ... -> { ... | ... }",
+                   eid));
           conflict = TRUE;
         }
     }
-
-  if (conflict)
+  else if (! side1 && ! side2)
     {
-      /*SVN_DBG(("  e%d: conflict!", eid));*/
+      /* Double delete (as we assume at least one of YCA/SIDE1/SIDE2 exists) */
+      if (policy->merge_double_delete)
+        {
+          SVN_DBG(("e%d double delete",
+                   eid));
+          result = side1;
+        }
+      else
+        {
+          SVN_DBG(("e%d conflict: delete vs. delete",
+                   eid));
+          conflict = TRUE;
+        }
+    }
+  else if (side1 && side2)
+    {
+      /* Double add (as we already handled the case where YCA also exists) */
+      if (policy->merge_double_add
+          && svn_branch_el_rev_content_equal(eid, side1, side2, scratch_pool))
+        {
+          SVN_DBG(("e%d double add",
+                   eid));
+          result = side1;
+        }
+      else
+        {
+          SVN_DBG(("e%d conflict: add vs. add (%s)",
+                   eid,
+                   svn_branch_el_rev_content_equal(eid, side1, side2,
+                                                   scratch_pool)
+                     ? "same content" : "different content"));
+          conflict = TRUE;
+        }
+    }
+  else
+    {
+      /* The remaining cases must be delete vs. modify */
+      SVN_DBG(("e%d conflict: delete vs. modify: %d -> { %d | %d }",
+               eid, !!yca, !!side1, !!side2));
+      conflict = TRUE;
     }
 
   *result_p = result;
@@ -438,6 +530,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   svn_boolean_t had_conflict = FALSE;
   int first_eid, next_eid, eid;
+  const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
 
   SVN_ERR_ASSERT(src->branch->sibling_defn->family->fid
                  == tgt->branch->sibling_defn->family->fid);
@@ -492,7 +585,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       svn_boolean_t conflict;
 
       /* If an element hasn't changed in the source branch, there is
-         no need to do anything with it in the target branch. */
+         no need to do anything with it in the target branch. We could
+         use element_merge() for any case where at least one of (SRC,
+         TGT, YCA) exists, but we choose to skip it when SRC == YCA. */
       if (! e_yca_src)
         {
           continue;
@@ -504,6 +599,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
       element_merge(&result, &conflict,
                     eid, e_src, e_tgt, e_yca,
+                    &policy,
                     scratch_pool, scratch_pool);
 
       if (conflict)
