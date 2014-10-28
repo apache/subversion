@@ -50,6 +50,7 @@
  * We also assume that the type is always signed meaning we only have an
  * effective positive range of 63 or 31 bits, respectively.
  */
+static
 const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
                              ? APR_INT64_MAX
                              : APR_INT32_MAX;
