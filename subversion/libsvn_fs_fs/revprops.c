@@ -412,8 +412,9 @@ same_shard(svn_fs_t *fs,
 }
 
 /* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
- * fill the START_REVISION, SIZES, OFFSETS members. Also, make
- * PACKED_REVPROPS point to the first serialized revprop.
+ * fill the START_REVISION member, and make PACKED_REVPROPS point to the
+ * first serialized revprop.  If READ_ALL is set, initialize the SIZES
+ * and OFFSETS members as well.
  *
  * Parse the revprops for REVPROPS->REVISION and set the PROPERTIES as
  * well as the SERIALIZED_SIZE member.  If revprop caching has been
@@ -422,6 +423,7 @@ same_shard(svn_fs_t *fs,
 static svn_error_t *
 parse_packed_revprops(svn_fs_t *fs,
                       packed_revprops_t *revprops,
+                      svn_boolean_t read_all,
                       apr_pool_t *pool,
                       apr_pool_t *scratch_pool)
 {
@@ -478,11 +480,14 @@ parse_packed_revprops(svn_fs_t *fs,
   revprops->packed_revprops->len = (apr_size_t)(uncompressed->len - offset);
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
 
-  /* STREAM still points to the first entry in the sizes list.
-   * Init / construct REVPROPS members. */
+  /* STREAM still points to the first entry in the sizes list. */
   revprops->start_revision = (svn_revnum_t)first_rev;
-  revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
-  revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+  if (read_all)
+    {
+      /* Init / construct REVPROPS members. */
+      revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
+      revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+    }
 
   /* Now parse, revision by revision, the size and content of each
    * revisions' revprops. */
@@ -490,7 +495,6 @@ parse_packed_revprops(svn_fs_t *fs,
     {
       apr_int64_t size;
       svn_string_t serialized;
-      apr_hash_t *properties;
       svn_revnum_t revision = (svn_revnum_t)(first_rev + i);
       svn_pool_clear(iterpool);
 
@@ -511,6 +515,10 @@ parse_packed_revprops(svn_fs_t *fs,
                                 revprops->generation, &serialized,
                                 pool, iterpool));
           revprops->serialized_size = serialized.len;
+
+          /* If we only wanted the revprops for REVISION then we are done. */
+          if (!read_all)
+            break;
         }
       else
         {
@@ -522,9 +530,12 @@ parse_packed_revprops(svn_fs_t *fs,
                                   iterpool, iterpool));
         }
 
-      /* fill REVPROPS data structures */
-      APR_ARRAY_PUSH(revprops->sizes, apr_off_t) = serialized.len;
-      APR_ARRAY_PUSH(revprops->offsets, apr_off_t) = offset;
+      if (read_all)
+        {
+          /* fill REVPROPS data structures */
+          APR_ARRAY_PUSH(revprops->sizes, apr_off_t) = serialized.len;
+          APR_ARRAY_PUSH(revprops->offsets, apr_off_t) = offset;
+        }
       revprops->total_size += serialized.len;
 
       offset += serialized.len;
@@ -535,6 +546,8 @@ parse_packed_revprops(svn_fs_t *fs,
 
 /* In filesystem FS, read the packed revprops for revision REV into
  * *REVPROPS.  Use GENERATION to populate the revprop cache, if enabled.
+ * If you want to modify revprop contents / update REVPROPS, READ_ALL
+ * must be set.  Otherwise, only the properties of REV are being provided.
  * Allocate data in POOL.
  */
 static svn_error_t *
@@ -542,6 +555,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                   svn_fs_t *fs,
                   svn_revnum_t rev,
                   apr_int64_t generation,
+                  svn_boolean_t read_all,
                   apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -592,7 +606,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                   _("Failed to read revprop pack file for r%ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
-  err = parse_packed_revprops(fs, result, pool, iterpool);
+  err = parse_packed_revprops(fs, result, read_all, pool, iterpool);
   svn_pool_destroy(iterpool);
   if (err)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
@@ -646,7 +660,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
       packed_revprops_t *revprops;
-      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, FALSE, pool));
       *proplist_p = revprops->properties;
     }
 
@@ -927,7 +941,7 @@ write_packed_revprop(const char **final_path,
   int changed_index;
 
   /* read contents of the current pack file */
-  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, TRUE, pool));
 
   /* serialize the new revprops */
   serialized = svn_stringbuf_create_empty(pool);
