@@ -189,7 +189,7 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
     }
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"),
-                             svn_x509_certinfo_get_subject(certinfo)));
+                             svn_x509_certinfo_get_subject(certinfo, scratch_pool)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
                              svn_time_to_human_cstring(
                                  svn_x509_certinfo_get_valid_from(certinfo),
@@ -199,7 +199,7 @@ show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
                                  svn_x509_certinfo_get_valid_to(certinfo),
                                  scratch_pool)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
-                             svn_x509_certinfo_get_issuer(certinfo)));
+                             svn_x509_certinfo_get_issuer(certinfo, scratch_pool)));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
                              svn_checksum_to_cstring_display(
                                  svn_x509_certinfo_get_digest(certinfo),

@@ -38,6 +38,14 @@
 extern "C" {
 #endif
 
+#define SVN_X509_OID_COMMON_NAME  "2.5.4.3"
+#define SVN_X509_OID_COUNTRY      "2.5.4.6"
+#define SVN_X509_OID_LOCALITY     "2.5.4.7"
+#define SVN_X509_OID_STATE        "2.5.4.8"
+#define SVN_X509_OID_ORGANIZATION "2.5.4.10"
+#define SVN_X509_OID_ORG_UNIT     "2.5.4.11"
+#define SVN_X509_OID_EMAIL        "1.2.840.113549.1.9.1"
+
 /**
  * Representation of parsed certificate info.
  *
@@ -83,21 +91,58 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
  * @since New in 1.9.
  */
 const char *
-svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo);
+svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo,
+                              apr_pool_t *result_pool);
 
 /**
- * Returns the subject CN from @a certinfo.
+ * Returns a list of the the object IDs of the attributes available
+ * for the subject in the @a certinfo.  The oids in the list are C
+ * strings with dot separated integers.
+ *
+ * @since New in 1.9.
+ */
+const apr_array_header_t *
+svn_x509_certinfo_get_subject_oids(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the value of the attribute with the object ID specified in
+ * @a oid of the subject from @a certinfo.  @a oid is a string of dot
+ * separated integers.
+ *
  * @since New in 1.9.
  */
 const char *
-svn_x509_certinfo_get_subject_cn(const svn_x509_certinfo_t *certinfo);
+svn_x509_certinfo_get_subject_attr(const svn_x509_certinfo_t *certinfo,
+                                   const char *oid);
 
 /**
  * Returns the cerficiate issuer DN from @a certinfo.
  * @since New in 1.9.
  */
 const char *
-svn_x509_certinfo_get_issuer(const svn_x509_certinfo_t *certinfo);
+svn_x509_certinfo_get_issuer(const svn_x509_certinfo_t *certinfo,
+                             apr_pool_t *result_pool);
+
+/**
+ * Returns a list of the the object IDs of the attributes available
+ * for the issuer in the @a certinfo.  The oids in the list are C
+ * strings with dot separated integers.
+ *
+ * @since New in 1.9.
+ */
+const apr_array_header_t *
+svn_x509_certinfo_get_issuer_oids(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Returns the value of the attribute with the object ID specified in
+ * @a oid of the issuer from @a certinfo.  @a oid is a string of dot
+ * separated integers.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_certinfo_get_issuer_attr(const svn_x509_certinfo_t *certinfo,
+                                  const char *oid);
 
 /**
  * Returns the start of the certificate validity period from @a certinfo.
