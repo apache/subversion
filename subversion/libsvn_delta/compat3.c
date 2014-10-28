@@ -2067,6 +2067,39 @@ branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
   branch_map_set(branch, eid, node);
 }
 
+/* Remove from BRANCH's mapping any elements that do not have a complete
+ * line of parents to the branch root. In other words, remove elements
+ * that have been implicitly deleted.
+ */
+static void
+branch_map_purge_orphans(svn_branch_instance_t *branch,
+                         apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  svn_boolean_t changed;
+
+  do
+    {
+      changed = FALSE;
+
+      for (hi = apr_hash_first(scratch_pool, branch->e_map);
+           hi; hi = apr_hash_next(hi))
+        {
+          int this_eid = *(const int *)apr_hash_this_key(hi);
+          svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
+
+          if (this_node->parent_eid != -1
+              && ! branch_map_get(branch, this_node->parent_eid))
+            {
+              SVN_DBG(("purge orphan: e%d", this_eid));
+              branch_map_delete(branch, this_eid);
+              changed = TRUE;
+            }
+        }
+    }
+  while (changed);
+}
+
 /* If the mapping has a complete path from the root to element EID,
  * return this path, relative to the branch root.
  *
@@ -2642,6 +2675,8 @@ svn_branch_instance_serialize(svn_stream_t *stream,
                             branch->sibling_defn->root_eid,
                             svn_path_local_style(branch_root_rrpath,
                                                  scratch_pool)));
+
+  branch_map_purge_orphans(branch, scratch_pool);
   for (eid = family->first_eid; eid < family->next_eid; eid++)
     {
       svn_branch_el_rev_content_t *node = branch_map_get(branch, eid);
@@ -4172,6 +4207,7 @@ convert_branch_to_paths(apr_hash_t *paths,
 {
   apr_hash_index_t *hi;
 
+  branch_map_purge_orphans(branch, scratch_pool);
   for (hi = apr_hash_first(scratch_pool, branch->e_map);
        hi; hi = apr_hash_next(hi))
     {
