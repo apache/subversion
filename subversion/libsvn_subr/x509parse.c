@@ -53,7 +53,6 @@
 #include "svn_checksum.h"
 #include "svn_utf.h"
 #include "svn_ctype.h"
-#include "svn_x509.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_string_private.h"
 
@@ -157,17 +156,6 @@ oids_equal(x509_buf *left, x509_buf *right)
 {
   return equal(left->p, left->len,
                right->p, right->len);
-}
-
-static svn_boolean_t
-starts_with(const x509_buf *buf,
-            const char *sw_buf,
-            apr_size_t sw_len)
-{
-  if (buf->len < sw_len)
-    return FALSE;
-
-  return memcmp((const char *)buf->p, sw_buf, sw_len) == 0;
 }
 
 /*
@@ -887,108 +875,112 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
   return nul_escape(utf8_string, result_pool);
 }
 
-/*
- * Store the name from dn in printable form into buf,
- * using scratch_pool for any temporary allocations.
- * If CN is not NULL, return any common name in CN
- */
-static void
-x509parse_dn_gets(svn_stringbuf_t *buf, svn_stringbuf_t *cn,
-                  const x509_name * dn, apr_pool_t *scratch_pool)
+/* Given an OID return a string representation in RESULT.
+ * For example an OID with the bytes "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
+ * would be converted to the string "1.2.840.113549.1.9.1". */
+static svn_error_t *
+asn1_oid_to_string(svn_stringbuf_t **result, const x509_buf *oid,
+                   apr_pool_t *scratch_pool, apr_pool_t *result_pool)
 {
-  const x509_name *name;
+  svn_stringbuf_t *out = svn_stringbuf_create_empty(result_pool);
+  const unsigned char *p = oid->p;
+  const unsigned char *end = p + oid->len;
   const char *temp;
 
-  name = dn;
+  *result = NULL;
+
+  if (oid->tag != ASN1_OID)
+    return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, NULL, NULL);
+
+  if (oid->len <= 0)
+    return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
+
+  while (p != end) {
+    if (p == oid->p)
+      {
+        /* Handle decoding the first two values of the OID.  These values
+         * are encoded by taking the first value and adding 40 to it and
+         * adding the result to the second value, then placing this single
+         * value in the first byte of the output.  This is unambiguous since
+         * the first value is apparently limited to 0, 1 or 2 and the second
+         * is limited to 0 to 39. */
+        temp = apr_psprintf(scratch_pool, "%d.%d", *p / 40, *p % 40);
+        p++;
+      }
+    else if (*p < 128)
+      {
+        /* The remaining values if they're less than 128 are just 
+         * the number one to one encoded */
+        temp = apr_psprintf(scratch_pool, ".%d", *p);
+        p++;
+      }
+    else
+      {
+        /* Values greater than 128 are encoded as a series of 7 bit values
+         * with the left most bit set to indicate this encoding with the
+         * last octet missing the left most bit to finish out the series.. */
+        int collector = 0;
+
+        do {
+          collector = collector << 7 | (*(p++) & 0x7f);
+        } while (p != end && *p > 127);
+        collector = collector << 7 | *(p++);
+        temp = apr_psprintf(scratch_pool, ".%d", collector);
+      }
+    svn_stringbuf_appendcstr(out, temp);
+  }
+
+  *result = out;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+x509_name_to_certinfo(apr_array_header_t **oids,
+                      apr_hash_t **hash,
+                      const x509_name *dn,
+                      apr_pool_t *scratch_pool,
+                      apr_pool_t *result_pool)
+{
+  const x509_name *name = dn;
+
+  *oids = apr_array_make(result_pool, 6, sizeof(const char *));
+  *hash = apr_hash_make(result_pool);
 
   while (name != NULL) {
+    svn_stringbuf_t *oid_string;
     const svn_string_t *utf8_value;
-    svn_boolean_t return_cn = FALSE;
 
-    if (name != dn)
-      svn_stringbuf_appendcstr(buf, ", ");
-
-    if (starts_with(&name->oid, OID_X520, sizeof(OID_X520) - 1))
-      {
-        switch (name->oid.p[2]) {
-        case X520_COMMON_NAME:
-          svn_stringbuf_appendcstr(buf, "CN=");
-          if (cn)
-            return_cn = TRUE;
-          break;
-
-        case X520_COUNTRY:
-          svn_stringbuf_appendcstr(buf, "C=");
-          break;
-
-        case X520_LOCALITY:
-          svn_stringbuf_appendcstr(buf, "L=");
-          break;
-
-        case X520_STATE:
-          svn_stringbuf_appendcstr(buf, "ST=");
-          break;
-
-        case X520_ORGANIZATION:
-          svn_stringbuf_appendcstr(buf, "O=");
-          break;
-
-        case X520_ORG_UNIT:
-          svn_stringbuf_appendcstr(buf, "OU=");
-          break;
-
-        default:
-          temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[2]);
-          svn_stringbuf_appendcstr(buf, temp);
-          break;
-        }
-      }
-    else if (starts_with(&name->oid, OID_PKCS9, sizeof(OID_PKCS9) - 1))
-      {
-        switch (name->oid.p[8]) {
-        case PKCS9_EMAIL:
-          svn_stringbuf_appendcstr(buf, "emailAddress=");
-          break;
-
-        default:
-          temp = apr_psprintf(scratch_pool, "0x%02X=", name->oid.p[8]);
-          svn_stringbuf_appendcstr(buf, temp);
-          break;
-        }
-      }
-    else
-      svn_stringbuf_appendcstr(buf, "\?\?=");
-
-    utf8_value = x509name_to_utf8_string(name, scratch_pool);
+    SVN_ERR(asn1_oid_to_string(&oid_string, &name->oid,
+                               scratch_pool, result_pool));
+    APR_ARRAY_PUSH(*oids, const char *) = oid_string->data;
+    utf8_value = x509name_to_utf8_string(name, result_pool);
     if (utf8_value)
-      {
-        svn_stringbuf_appendbytes(buf, utf8_value->data, utf8_value->len);
-        if (return_cn)
-          svn_stringbuf_appendbytes(cn, utf8_value->data, utf8_value->len);
-      }
+      svn_hash_sets(*hash, oid_string->data, utf8_value->data);
     else
       /* this should never happen */
-      svn_stringbuf_appendfill(buf, '?', 2);
+      svn_hash_sets(*hash, oid_string->data, "??");
 
     name = name->next;
   }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_boolean_t
-is_hostname(const svn_string_t *str)
+is_hostname(const char *str)
 {
-  apr_size_t i;
+  apr_size_t i, len = strlen(str);
 
-  for (i = 0; i < str->len; i++)
+  for (i = 0; i < len; i++)
     {
-      char c = str->data[i];
+      char c = str[i];
 
       /* '-' is only legal when not at the start or end of a label */
       if (c == '-')
         {
-          if (i + 1 != str->len)
+          if (i + 1 != len)
             {
-              if (str->data[i + 1] == '.')
+              if (str[i + 1] == '.')
                 return FALSE; /* '-' preceeds a '.' */
             }
           else
@@ -998,7 +990,7 @@ is_hostname(const svn_string_t *str)
           if (i == 0)
             return FALSE; /* '-' is at start of string */
           else
-            if (str->data[i - 1] == '.')
+            if (str[i - 1] == '.')
               return FALSE; /* '-' follows a '.' */
         }
       else if (c != '*' && c != '.' && !svn_ctype_isalnum(c))
@@ -1009,15 +1001,17 @@ is_hostname(const svn_string_t *str)
 }
 
 static void
-x509parse_get_hostnames(apr_array_header_t **names, x509_cert *crt,
+x509parse_get_hostnames(svn_x509_certinfo_t *ci, x509_cert *crt,
                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  ci->hostnames = NULL;
+
   if (crt->dnsnames && crt->dnsnames->nelts > 0)
     {
       int i;
 
-      *names = apr_array_make(result_pool, crt->dnsnames->nelts,
-                             sizeof(const char*));
+      ci->hostnames = apr_array_make(result_pool, crt->dnsnames->nelts,
+                                     sizeof(const char*));
 
       /* Subject Alt Names take priority */
       for (i = 0; i < crt->dnsnames->nelts; i++)
@@ -1028,35 +1022,21 @@ x509parse_get_hostnames(apr_array_header_t **names, x509_cert *crt,
                                                         scratch_pool);
 
           temp = fuzzy_escape(temp, result_pool);
-          APR_ARRAY_PUSH(*names, const char*) = temp->data;
+          APR_ARRAY_PUSH(ci->hostnames, const char*) = temp->data;
         }
     }
   else
     {
-      const x509_name *name = &crt->subject;
-      const svn_string_t *utf8_value = NULL;
-
       /* no SAN then get the hostname from the CommonName on the cert */
-      while (name != NULL)
-        {
-          if (starts_with(&name->oid, OID_X520, sizeof(OID_X520) - 1))
-            {
-              if (name->oid.p[2] == X520_COMMON_NAME)
-                {
-                  utf8_value = x509name_to_utf8_string(name, scratch_pool);
-                  if (is_hostname(utf8_value))
-                    break;
-                  else
-                    utf8_value = NULL;
-                }
-            }
-          name = name->next;
-        }
+      const char *utf8_value;
 
-      if (utf8_value)
+      utf8_value = svn_x509_certinfo_get_subject_attr(ci,
+                      SVN_X509_OID_COMMON_NAME);
+
+      if (utf8_value && is_hostname(utf8_value))
         {
-          *names = apr_array_make(result_pool, 1, sizeof(const char*));
-          APR_ARRAY_PUSH(*names, const char*) = utf8_value->data;
+          ci->hostnames = apr_array_make(result_pool, 1, sizeof(const char*));
+          APR_ARRAY_PUSH(ci->hostnames, const char*) = utf8_value;
         }
     }
 }
@@ -1077,8 +1057,6 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
   const unsigned char *end;
   x509_cert *crt;
   svn_x509_certinfo_t *ci;
-  svn_stringbuf_t *namebuf;
-  svn_stringbuf_t *cnbuf;
 
   crt = apr_pcalloc(scratch_pool, sizeof(*crt));
   p = (const unsigned char *)buf;
@@ -1213,16 +1191,12 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
   ci = apr_pcalloc(result_pool, sizeof(*ci));
 
   /* Get the subject name */
-  namebuf = svn_stringbuf_create_empty(result_pool);
-  cnbuf = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(namebuf, cnbuf, &crt->subject, scratch_pool);
-  ci->subject = namebuf->data;
-  ci->subject_cn = (svn_stringbuf_isempty(cnbuf) ? NULL : cnbuf->data);
+  SVN_ERR(x509_name_to_certinfo(&ci->subject_oids, &ci->subject, &crt->subject,
+                                scratch_pool, result_pool));
 
   /* Get the issuer name */
-  namebuf = svn_stringbuf_create_empty(result_pool);
-  x509parse_dn_gets(namebuf, NULL, &crt->issuer, scratch_pool);
-  ci->issuer = namebuf->data;
+  SVN_ERR(x509_name_to_certinfo(&ci->issuer_oids, &ci->issuer, &crt->issuer,
+                                scratch_pool, result_pool));
 
   /* Copy the validity range */
   ci->valid_from = crt->valid_from;
@@ -1234,7 +1208,7 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
                        result_pool));
 
   /* Construct the array of host names */
-  x509parse_get_hostnames(&ci->hostnames, crt, result_pool, scratch_pool);
+  x509parse_get_hostnames(ci, crt, result_pool, scratch_pool);
 
   *certinfo = ci;
   return SVN_NO_ERROR;

@@ -38,6 +38,8 @@
 #include <stddef.h>
 #include <apr_time.h>
 
+#include "svn_x509.h"
+
 /*
  * DER constants
  */
@@ -64,16 +66,23 @@
 /*
  * various object identifiers
  */
-#define X520_COMMON_NAME                3
-#define X520_COUNTRY                    6
-#define X520_LOCALITY                   7
-#define X520_STATE                      8
-#define X520_ORGANIZATION              10
-#define X520_ORG_UNIT                  11
-#define PKCS9_EMAIL                     1
+typedef struct asn1_oid {
+  const char *oid_string;
+  const char *short_label;
+  const char *long_label;
+} asn1_oid;
 
-#define OID_X520                "\x55\x04"
-#define OID_PKCS9               "\x2A\x86\x48\x86\xF7\x0D\x01\x09"
+static asn1_oid asn1_oids[] = {
+  { SVN_X509_OID_COMMON_NAME,  "CN", "commonName" },
+  { SVN_X509_OID_COUNTRY,      "C",  "countryName" },
+  { SVN_X509_OID_LOCALITY,     "L",  "localityName" },
+  { SVN_X509_OID_STATE,        "ST", "stateOrProvinceName" },
+  { SVN_X509_OID_ORGANIZATION, "O",  "organizationName" },
+  { SVN_X509_OID_ORG_UNIT,     "OU", "organizationalUnitName"},
+  { SVN_X509_OID_EMAIL,        NULL, "emailAddress" },
+  { NULL },
+};
+
 #define OID_SUBJECT_ALT_NAME    "\x55\x1D\x11"
 
 #ifdef __cplusplus
@@ -121,9 +130,10 @@ typedef struct _x509_cert {
  */
 struct svn_x509_certinfo_t
 {
-  const char *subject;
-  const char *subject_cn;
-  const char *issuer;
+  apr_array_header_t *issuer_oids;
+  apr_hash_t *issuer;
+  apr_array_header_t *subject_oids;
+  apr_hash_t *subject;
   apr_time_t valid_from;
   apr_time_t valid_to;
   svn_checksum_t *digest;

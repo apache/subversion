@@ -32,8 +32,10 @@
 
 struct x509_test {
   const char *base64_cert; /* Base64 encoded DER X.509 cert */
-  const char *subject; /* Subject in the format that the parser returns */
-  const char *issuer; /* Issuer in the format that the parser returns */
+  const char *subject; /* Subject Distinguished Name */
+  const char *subject_oids; /* Space separated list of oids in Subject */
+  const char *issuer; /* Issuer Distinguished Name */
+  const char *issuer_oids; /* Space separated list of oids in Issuer */
 
   /* These timesamps are in the format that svn_time_to_cstring() produces.
    * This is not the same string as the parser returns since it returns
@@ -75,7 +77,9 @@ static struct x509_test cert_tests[] = {
     "hI5FdJWUWVSgnSw=",
     "C=US, ST=Maryland, L=Forest Hill, O=Apache Software Foundation, "
     "OU=Infrastructure, CN=*.apache.org",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.11 2.5.4.3",
     "C=US, O=Thawte, Inc., CN=Thawte SSL CA",
+    "2.5.4.6 2.5.4.10 2.5.4.3",
     "2014-04-11T00:00:00.000000Z",
     "2016-04-07T23:59:59.000000Z",
     "*.apache.org",
@@ -105,7 +109,9 @@ static struct x509_test cert_tests[] = {
     "/rgsCJgFsBDPBYR3ju0Ahqg7v6kwg9O2PJzyb4ljsw8oI0sCwHTZW5I5FMq2D9g6"
     "hj80N2fhS9QWoLyeKoMTNB2Do6VaNrLrCJiscZWrsnM1f+XBqV8hMuHX8A==",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-06-27T17:31:51.000000Z",
     "2114-06-03T17:31:51.000000Z",
     NULL,
@@ -136,7 +142,9 @@ static struct x509_test cert_tests[] = {
     "L=\xce\x91\xce\xb8\xce\xae\xce\xbd\xce\xb1, "
     "O=\xcf\x80\xce\xb1\xcf\x81\xce\xac\xce\xb4\xce\xb5\xce\xb9\xce\xb3"
     "\xce\xbc\xce\xb1, CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-07-02T18:36:10.000000Z",
     "2015-07-02T18:36:10.000000Z",
     "www.example.com",
@@ -185,7 +193,9 @@ static struct x509_test cert_tests[] = {
     "\xf0\x9d\x9f\xba\xf0\x9d\x9f\xbb\xf0\x9d\x9f\xbc\xf0\x9d\x9f\xbd"
     "\xf0\x9d\x9f\xbe\xf0\x9d\x9f\xbf, "
     "CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.11 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-07-22T22:37:30.000000Z",
     "2015-07-22T22:37:30.000000Z",
     "www.example.com",
@@ -219,7 +229,9 @@ static struct x509_test cert_tests[] = {
     "L=\xce\x91\xce\xb8\xce\xae\xce\xbd\xce\xb1, "
     "O=\xcf\x80\xce\xb1\xcf\x81\xce\xac\xce\xb4\xce\xb5\xce\xb9\xce\xb3"
     "\xce\xbc\xce\xb1, CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-07-22T23:02:09.000000Z",
     "2015-07-22T23:02:09.000000Z",
     "www.example.com",
@@ -255,7 +267,9 @@ static struct x509_test cert_tests[] = {
     "Bcwx241dxeGSYFHerqrTJIU=",
     "C=NO, ST=M\xc3\xb8re og Romsdal, L=\xc3\x85lesund, O=d\xc3\xb8me, "
     "CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-07-22T23:44:18.000000Z",
     "2015-07-22T23:44:18.000000Z",
     "www.example.com",
@@ -290,7 +304,9 @@ static struct x509_test cert_tests[] = {
     "GSq5Dk8dnTdL2otToll+r4IqFLlp",
     "C=US, ST=Washington, L=North Bend, O=Internet Widgits Pty Ltd, "
     "CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2.5.4.6 2.5.4.8 2.5.4.10 2.5.4.3",
     "2014-07-25T17:41:04.000000Z",
     "2015-07-25T17:41:04.000000Z",
     "*.example.com, *.foo.example.com, *.bar.example.com, zig-zag.example.com",
@@ -321,7 +337,9 @@ static struct x509_test cert_tests[] = {
     "+Glctn9tyke4b1VZ2Yr+R4OktrId44ZQcRD44+88v5ThP8DQsvkXcjREMFAIPkvG"
     "CEDOIem4l9KFfnsHn8/4KvoBRkmCkGaSwOwUdUG+jIjBpY/82kM=",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2.5.4.6 2.5.4.8 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2.5.4.6 2.5.4.8 2.5.4.10 2.5.4.3",
     "2014-07-25T17:41:03.000000Z",
     "2024-07-22T17:41:03.000000Z",
     NULL,
@@ -353,7 +371,9 @@ static struct x509_test cert_tests[] = {
     "BKe64WsF6ZxTq3zLVGy5I8LpbtlvSmAaBp4=",
     "C=US, ST=Washington, L=North Bend, O=Internet Widgits Pty Ltd, "
     "CN=ip.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=Internet Widgits CA",
+    "2.5.4.6 2.5.4.8 2.5.4.10 2.5.4.3",
     "2014-07-25T18:43:28.000000Z",
     "2015-07-25T18:43:28.000000Z",
     "*.example.com, *.foo.example.com, *.bar.example.com, zig-zag.example.com",
@@ -382,7 +402,9 @@ static struct x509_test cert_tests[] = {
     "NpUcv4H9Tgdl6KgrfsbQtAeouWCgoiNzrul8FOaQTdJLZfCsjuE+IkGpM+DX8PiF"
     "5M41EqkSKia8sChFIln+lkRY41OWP9uQ1VXCfdRIzOnXWh9U",
     "C=UK, ST=England, L=Sheffield, CN=www.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.3",
     "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
     "2014-08-18T09:59:45.000000Z",
     "2015-08-18T09:59:45.000000Z",
     "www.example.com",
@@ -460,13 +482,51 @@ compare_hostnames(const char *expected,
 }
 
 static svn_error_t *
+compare_oids(const char *expected,
+             const apr_array_header_t *actual,
+             const char *subject,
+             apr_pool_t *pool)
+{
+  int i;
+  svn_stringbuf_t *buf;
+
+  if (!actual)
+    {
+      if (expected)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "The oids didn't match expected '%s',"
+                                 " got NULL for cert '%s'",
+                                 expected, subject);
+      return SVN_NO_ERROR;
+    }
+
+  buf = svn_stringbuf_create_empty(pool);
+  for (i = 0; i < actual->nelts; ++i)
+    {
+      const char *oid = APR_ARRAY_IDX(actual, i, const char*);
+      if (i > 0)
+        svn_stringbuf_appendbyte(buf, ' ');
+      svn_stringbuf_appendcstr(buf, oid);
+    }
+
+  if (strcmp(expected, buf->data))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "The oids didn't match expected '%s',"
+                             " got '%s' for cert '%s'",
+                             expected, buf->data, subject);
+  return SVN_NO_ERROR;
+
+}
+
+
+static svn_error_t *
 compare_results(struct x509_test *xt,
                 svn_x509_certinfo_t *certinfo,
                 apr_pool_t *pool)
 {
   const char *v;
 
-  v = svn_x509_certinfo_get_subject(certinfo);
+  v = svn_x509_certinfo_get_subject(certinfo, pool);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No subject for cert '%s'", xt->subject);
@@ -476,7 +536,10 @@ compare_results(struct x509_test *xt,
                              "expected '%s', got '%s'", xt->subject,
                              xt->subject, v);
 
-  v = svn_x509_certinfo_get_issuer(certinfo);
+  SVN_ERR(compare_oids(xt->subject_oids, svn_x509_certinfo_get_subject_oids(certinfo),
+                       xt->subject, pool));
+
+  v = svn_x509_certinfo_get_issuer(certinfo, pool);
   if (!v)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "No issuer for cert '%s'", xt->subject);
@@ -485,6 +548,9 @@ compare_results(struct x509_test *xt,
                              "Issuer didn't match for cert '%s', "
                              "expected '%s', got '%s'", xt->subject,
                              xt->issuer, v);
+
+  SVN_ERR(compare_oids(xt->issuer_oids, svn_x509_certinfo_get_issuer_oids(certinfo),
+                       xt->subject, pool));
 
   SVN_ERR(compare_dates(xt->valid_from,
                         svn_x509_certinfo_get_valid_from(certinfo),
