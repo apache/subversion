@@ -520,15 +520,6 @@ parse_packed_revprops(svn_fs_t *fs,
           if (!read_all)
             break;
         }
-      else
-        {
-          /* If revprop caching is enabled, parse any revprops.
-           * They will get cached as a side-effect of this. */
-          if (has_revprop_cache(fs, pool))
-            SVN_ERR(parse_revprop(&properties, fs, revision,
-                                  revprops->generation, &serialized,
-                                  iterpool, iterpool));
-        }
 
       if (read_all)
         {
