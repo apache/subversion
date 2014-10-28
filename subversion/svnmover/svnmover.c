@@ -192,6 +192,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 }
 
 typedef enum action_code_t {
+  ACTION_DIFF,
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
   ACTION_BRANCH,
@@ -703,6 +704,75 @@ svn_branch_merge(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static svn_error_t *
+svn_branch_diff(svn_editor3_t *editor,
+                svn_branch_el_rev_id_t *left,
+                svn_branch_el_rev_id_t *right,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *diff_yca_tgt;
+  int first_eid, next_eid, eid;
+
+  if (left->branch->sibling_defn->family->fid
+      != right->branch->sibling_defn->family->fid)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Left and right side of an element-based diff "
+                                 "must be in the same branch family "
+                                 "(left: f%d, right: f%d)"),
+                               left->branch->sibling_defn->family->fid,
+                               right->branch->sibling_defn->family->fid);
+    }
+  SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
+
+  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
+                                         editor, left, right,
+                                         scratch_pool, scratch_pool));
+
+  first_eid = left->branch->sibling_defn->family->first_eid;
+  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
+                 right->branch->sibling_defn->family->next_eid);
+
+  for (eid = first_eid; eid < next_eid; eid++)
+    {
+      svn_branch_el_rev_content_t **e_pair
+        = apr_hash_get(diff_yca_tgt, &eid, sizeof(eid));
+      svn_branch_el_rev_content_t *e0, *e1;
+
+      if (! e_pair)
+        continue;
+
+      e0 = e_pair[0];
+      e1 = e_pair[1];
+
+      if (e0 || e1)
+        {
+          char status_mod = ' ', status_reparent = ' ', status_rename = ' ';
+
+          if (e0 && e1)
+            {
+              status_mod = 'M';
+              status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
+              status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
+            }
+          else
+            {
+              status_mod = e0 ? 'D' : 'A';
+            }
+          printf("%c%c%c e%d (%s -> %s)\n",
+                 status_mod, status_reparent, status_rename,
+                 eid,
+                 e0 ? apr_psprintf(scratch_pool, "<e%d/%s>",
+                                   e0->parent_eid, e0->name) : "<nil>",
+                 e1 ? apr_psprintf(scratch_pool, "<e%d/%s>",
+                                   e1->parent_eid, e1->name) : "<nil>");
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor_url,
@@ -764,6 +834,26 @@ execute(const apr_array_header_t *actions,
         }
       switch (action->action)
         {
+        case ACTION_DIFF:
+          {
+            if (el_rev[0]->eid < 0)
+              {
+                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                         _("Element not found: '%s'"),
+                                         action->path[0]);
+              }
+            if (el_rev[1]->eid < 0)
+              {
+                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                         _("Element not found: '%s'"),
+                                         action->path[1]);
+              }
+            SVN_ERR(svn_branch_diff(editor,
+                                    el_rev[0] /*from*/,
+                                    el_rev[1] /*to*/,
+                                    iterpool));
+          }
+          break;
         case ACTION_LIST_BRANCHES:
           {
             svn_branch_family_t *family = svn_branch_get_family(editor);
@@ -901,6 +991,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "                           a sub-branch (presently, in a new branch family)\n"
       "  dissolve BR-ROOT       : change the existing sub-branch at SRC into a\n"
       "                           simple sub-tree of its parent branch\n"
+      "  diff LEFT RIGHT        : diff LEFT to RIGHT\n"
       "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
       "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
       "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
@@ -1314,7 +1405,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       struct action *action = apr_pcalloc(pool, sizeof(*action));
 
       /* First, parse the action. */
-      if (! strcmp(action_string, "ls-br"))
+      if (! strcmp(action_string, "diff"))
+        action->action = ACTION_DIFF;
+      else if (! strcmp(action_string, "ls-br"))
         action->action = ACTION_LIST_BRANCHES;
       else if (! strcmp(action_string, "ls-br-r"))
         action->action = ACTION_LIST_BRANCHES_R;
