@@ -51,15 +51,6 @@ svn_error_t *svn_fs_x__youngest_rev(svn_revnum_t *youngest,
                                     svn_fs_t *fs,
                                     apr_pool_t *pool);
 
-/* For revision REV in fileysystem FS, open the revision (or packed rev)
-   file and seek to the start of the revision.  Return it in *FILE, and
-   use POOL for allocations. */
-svn_error_t *
-svn_fs_x__open_pack_or_rev_file(apr_file_t **file,
-                                svn_fs_t *fs,
-                                svn_revnum_t rev,
-                                apr_pool_t *pool);
-
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
    revision number, else return success. */

@@ -150,6 +150,9 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *max_ids;
 
+  svn_fs_x__revision_file_t *rev_file;
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool));
+
   /* determine the range of items to check for each revision */
   SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, pool));
 
@@ -171,13 +174,13 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
           l2p_item.number = k;
 
           /* get L2P entry.  Ignore unused entries. */
-          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, &l2p_item,
-                                        iterpool));
+          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file,
+                                        &l2p_item, iterpool));
           if (offset == -1)
             continue;
 
           /* find the corresponding P2L entry */
-          SVN_ERR(svn_fs_x__p2l_item_lookup(&p2l_item, fs, start,
+          SVN_ERR(svn_fs_x__p2l_item_lookup(&p2l_item, fs, rev_file, start,
                                             offset, sub_item, iterpool));
 
           if (p2l_item == NULL)
@@ -232,8 +235,13 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
   apr_off_t max_offset;
   apr_off_t offset = 0;
 
+  /* common file access structure */
+  svn_fs_x__revision_file_t *rev_file;
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool));
+
   /* get the size of the rev / pack file as covered by the P2L index */
-  SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, start, pool));
+  SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
+                                       pool));
 
   /* for all offsets in the file, get the P2L index entries and check
      them against the L2P index */
@@ -244,8 +252,9 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       int i;
 
       /* get all entries for the current block */
-      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, start, offset,
-                                         ffd->p2l_page_size, iterpool));
+      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, rev_file, start,
+                                         offset, ffd->p2l_page_size,
+                                         iterpool));
       if (entries->nelts == 0)
         return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
                                  NULL,
@@ -257,7 +266,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       last_entry
         = &APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_x__p2l_entry_t);
       offset = last_entry->offset + last_entry->size;
-      
+
       for (i = 0; i < entries->nelts; ++i)
         {
           apr_uint32_t k;
@@ -274,7 +283,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                 = svn_fs_x__get_revnum(p2l_item->change_set);
 
               SVN_ERR(svn_fs_x__item_offset(&l2p_offset, &sub_item, fs,
-                                            p2l_item, iterpool));
+                                            rev_file, p2l_item, iterpool));
 
               if (sub_item != k || l2p_offset != entry->offset)
                 return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
@@ -468,14 +477,15 @@ compare_p2l_to_rev(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
-  apr_file_t *rev_file;
+  svn_fs_x__revision_file_t *rev_file;
 
   /* open the pack / rev file that is covered by the p2l index */
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool));
 
   /* check file size vs. range covered by index */
-  SVN_ERR(svn_io_file_seek(rev_file, APR_END, &offset, pool));
-  SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, start, pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &offset, pool));
+  SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
+                                       pool));
 
   if (offset != max_offset)
     return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT, NULL,
@@ -484,7 +494,8 @@ compare_p2l_to_rev(svn_fs_t *fs,
                              apr_off_t_toa(pool, offset), start,
                              apr_off_t_toa(pool, max_offset));
 
-  SVN_ERR(svn_io_file_aligned_seek(rev_file, ffd->block_size, NULL, 0, pool));
+  SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,
+                                   pool));
 
   /* for all offsets in the file, get the P2L index entries and check
      them against the L2P index */
@@ -496,8 +507,9 @@ compare_p2l_to_rev(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       /* get all entries for the current block */
-      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, start, offset,
-                                         ffd->p2l_page_size, iterpool));
+      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, rev_file, start,
+                                         offset, ffd->p2l_page_size,
+                                         iterpool));
 
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
@@ -529,14 +541,16 @@ compare_p2l_to_rev(svn_fs_t *fs,
             {
               /* skip filler entry at the end of the p2l index */
               if (entry->offset != max_offset)
-                SVN_ERR(read_all_nul(rev_file, entry->size, pool));
+                SVN_ERR(read_all_nul(rev_file->file, entry->size, pool));
             }
           else if (entry->fnv1_checksum)
             {
               if (entry->size < STREAM_THRESHOLD)
-                SVN_ERR(expected_buffered_checksum(rev_file, entry, pool));
+                SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
+                                                   pool));
               else
-                SVN_ERR(expected_streamed_checksum(rev_file, entry, pool));
+                SVN_ERR(expected_streamed_checksum(rev_file->file, entry,
+                                                   pool));
             }
 
           /* advance offset */

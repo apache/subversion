@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS__INDEX_H
 
 #include "fs.h"
+#include "rev_file.h"
 
 /* Per-defined item index values.  They are used to identify empty or
  * mandatory items.
@@ -84,6 +85,10 @@ typedef struct svn_fs_x__p2l_entry_t
 svn_fs_x__p2l_entry_t *
 svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
                         apr_pool_t *pool);
+
+/* Close the index file STREAM and underlying file handle. */
+svn_error_t *
+svn_fs_x__packed_stream_close(svn_fs_x__packed_number_stream_t *stream);
 
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
@@ -182,6 +187,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t block_start,
                            apr_off_t block_size,
@@ -195,6 +201,7 @@ svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
 svn_error_t *
 svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t offset,
                            apr_pool_t *pool);
@@ -208,6 +215,7 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
 svn_error_t *
 svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
                           svn_fs_t *fs,
+                          svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
                           apr_off_t offset,
                           apr_uint32_t sub_item,
@@ -221,6 +229,7 @@ svn_error_t *
 svn_fs_x__item_offset(apr_off_t *offset,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
+                      svn_fs_x__revision_file_t *rev_file,
                       const svn_fs_x__id_part_t *item_id,
                       apr_pool_t *pool);
 
@@ -243,6 +252,7 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
 svn_error_t *
 svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
                              svn_fs_t *fs,
+                             svn_fs_x__revision_file_t *rev_file,
                              svn_revnum_t revision,
                              apr_pool_t *pool);
 

@@ -476,7 +476,7 @@ static svn_error_t *
 copy_item_to_temp(pack_context_t *context,
                   apr_array_header_t *entries,
                   apr_file_t *temp_file,
-                  apr_file_t *rev_file,
+                  svn_fs_x__revision_file_t *rev_file,
                   svn_fs_x__p2l_entry_t *entry,
                   apr_pool_t *pool)
 {
@@ -486,7 +486,8 @@ copy_item_to_temp(pack_context_t *context,
   SVN_ERR(svn_io_file_seek(temp_file, APR_CUR, &new_entry->offset, pool));
   APR_ARRAY_PUSH(entries, svn_fs_x__p2l_entry_t *) = new_entry;
   
-  SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
+  SVN_ERR(copy_file_data(context, temp_file, rev_file->file, entry->size,
+                         pool));
   
   return SVN_NO_ERROR;
 }
@@ -561,12 +562,11 @@ get_item(pack_context_t *context,
  */
 static svn_error_t *
 copy_rep_to_temp(pack_context_t *context,
-                 apr_file_t *rev_file,
+                 svn_fs_x__revision_file_t *rev_file,
                  svn_fs_x__p2l_entry_t *entry,
                  apr_pool_t *pool)
 {
   svn_fs_x__rep_header_t *rep_header;
-  svn_stream_t *stream;
   apr_off_t source_offset = entry->offset;
 
   /* create a copy of ENTRY, make it point to the copy destination and
@@ -578,9 +578,7 @@ copy_rep_to_temp(pack_context_t *context,
   add_item_rep_mapping(context, entry);
 
   /* read & parse the representation header */
-  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, stream, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, rev_file->stream, pool));
 
   /* if the representation is a delta against some other rep, link the two */
   if (   rep_header->type == svn_fs_x__rep_delta
@@ -596,9 +594,9 @@ copy_rep_to_temp(pack_context_t *context,
     }
 
   /* copy the whole rep (including header!) to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
-  SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
-                         pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &source_offset, pool));
+  SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
+                         entry->size, pool));
 
   return SVN_NO_ERROR;
 }
@@ -679,7 +677,7 @@ tweak_path_for_ordering(const char *original,
  */
 static svn_error_t *
 copy_node_to_temp(pack_context_t *context,
-                  apr_file_t *rev_file,
+                  svn_fs_x__revision_file_t *rev_file,
                   svn_fs_x__p2l_entry_t *entry,
                   apr_pool_t *pool)
 {
@@ -687,13 +685,10 @@ copy_node_to_temp(pack_context_t *context,
                                          sizeof(*path_order));
   node_revision_t *noderev;
   const char *sort_path;
-  svn_stream_t *stream;
   apr_off_t source_offset = entry->offset;
 
   /* read & parse noderev */
-  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_x__read_noderev(&noderev, stream, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_fs_x__read_noderev(&noderev, rev_file->stream, pool));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
@@ -704,9 +699,9 @@ copy_node_to_temp(pack_context_t *context,
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
-  SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
-                         pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &source_offset, pool));
+  SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
+                         entry->size, pool));
 
   /* if the node has a data representation, make that the node's "base".
    * This will (often) cause the noderev to be placed right in front of
@@ -1284,8 +1279,9 @@ write_reps_containers(pack_context_t *context,
     = svn_fs_x__reps_builder_create(context->fs, container_pool);
   apr_array_header_t *sub_items
     = apr_array_make(pool, 64, sizeof(svn_fs_x__id_part_t));
-  svn_stream_t *temp_stream
-    = svn_stream_from_aprfile2(temp_file, TRUE, pool);
+  svn_fs_x__revision_file_t *file;
+
+  SVN_ERR(svn_fs_x__wrap_temp_rev_file(&file, context->fs, temp_file, pool));
 
   /* copy all items in strict order */
   for (i = entries->nelts-1; i >= 0; --i)
@@ -1331,8 +1327,8 @@ write_reps_containers(pack_context_t *context,
                                iterpool));
       SVN_ERR(svn_fs_x__get_representation_length(&representation.size,
                                              &representation.expanded_size,
-                                             context->fs, temp_file,
-                                             temp_stream, entry, iterpool));
+                                             context->fs, file,
+                                             entry, iterpool));
       SVN_ERR(svn_fs_x__get_contents(&stream, context->fs, &representation,
                                      FALSE, iterpool));
       contents = svn_stringbuf_create_ensure(representation.expanded_size,
@@ -1837,7 +1833,7 @@ pack_range(pack_context_t *context,
     {
       apr_off_t offset = 0;
       apr_finfo_t finfo;
-      apr_file_t *rev_file;
+      svn_fs_x__revision_file_t *rev_file;
 
       /* Get the size of the file. */
       const char *path = svn_dirent_join(context->shard_dir,
@@ -1845,10 +1841,8 @@ pack_range(pack_context_t *context,
                                                       revision),
                                          revpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, revpool));
-
-      SVN_ERR(svn_io_file_open(&rev_file, path,
-                               APR_READ | APR_BUFFERED | APR_BINARY,
-                               APR_OS_DEFAULT, revpool));
+      SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
+                                              revision, revpool));
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
@@ -1862,7 +1856,7 @@ pack_range(pack_context_t *context,
           apr_array_header_t *entries;
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs,
+          SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs, rev_file,
                                              revision, offset,
                                              ffd->p2l_page_size, iterpool));
 
@@ -1880,7 +1874,7 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < finfo.size)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset,
+                  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset,
                                            iterpool));
 
                   if (entry->type == SVN_FS_X__ITEM_TYPE_CHANGES)
@@ -1962,7 +1956,7 @@ append_revision(pack_context_t *context,
   fs_x_data_t *ffd = context->fs->fsap_data;
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_file_t *rev_file;
+  svn_fs_x__revision_file_t *rev_file;
   apr_finfo_t finfo;
 
   /* Get the size of the file. */
@@ -1973,11 +1967,10 @@ append_revision(pack_context_t *context,
   SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, pool));
 
   /* Copy all the bits from the rev file to the end of the pack file. */
-  SVN_ERR(svn_io_file_open(&rev_file, path,
-                           APR_READ | APR_BUFFERED | APR_BINARY,
-                           APR_OS_DEFAULT, pool));
-  SVN_ERR(copy_file_data(context, context->pack_file, rev_file, finfo.size, 
-                         iterpool));
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
+                                          context->start_rev, pool));
+  SVN_ERR(copy_file_data(context, context->pack_file, rev_file->file,
+                         finfo.size, iterpool));
 
   /* mark the start of a new revision */
   SVN_ERR(svn_fs_x__l2p_proto_index_add_revision(context->proto_l2p_index,
@@ -1990,9 +1983,9 @@ append_revision(pack_context_t *context,
       /* read one cluster */
       int i;
       apr_array_header_t *entries;
-      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs,
-                                          context->start_rev, offset,
-                                          ffd->p2l_page_size, iterpool));
+      SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs, rev_file,
+                                         context->start_rev, offset,
+                                         ffd->p2l_page_size, iterpool));
 
       for (i = 0; i < entries->nelts; ++i)
         {

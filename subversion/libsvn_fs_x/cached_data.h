@@ -95,8 +95,7 @@ svn_error_t *
 svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
                                     svn_filesize_t *expanded_len,
                                     svn_fs_t *fs,
-                                    apr_file_t *file,
-                                    svn_stream_t *stream,
+                                    svn_fs_x__revision_file_t *rev_file,
                                     svn_fs_x__p2l_entry_t* entry,
                                     apr_pool_t *pool);
 
