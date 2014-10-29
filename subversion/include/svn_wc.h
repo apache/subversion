@@ -7214,7 +7214,7 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * the copy/move source (even if the copy-/move-here replaces a locally
  * deleted file).
  *
- * If @a local_abspath refers to an unversioned or non-existing path, return
+ * If @a local_abspath refers to an unversioned or non-existent path, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
  * @a contents may not be @c NULL (unlike @a *contents).
  *
