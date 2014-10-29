@@ -1125,6 +1125,12 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
+ * It is an error if a target is just a peg specifier with no path, such as
+ * "@abc". Before r878062 this form was interpreted as a literal path, and
+ * it is now ambiguous. The form "@abc@" should now be used to refer to the
+ * literal path "@abc" with no peg revision, or the form ".@abc" to refer to
+ * the empty path with peg revision "abc".
+ *
  * @since New in 1.7
  */
 svn_error_t *
