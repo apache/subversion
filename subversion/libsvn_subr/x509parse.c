@@ -363,9 +363,6 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
 
   cur->next = apr_palloc(result_pool, sizeof(x509_name));
 
-  if (cur->next == NULL)
-    return SVN_NO_ERROR;
-
   return svn_error_trace(x509_get_name(p, end2, cur->next, result_pool));
 }
 
