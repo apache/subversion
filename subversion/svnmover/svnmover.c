@@ -43,7 +43,6 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
-#include "private/svn_client_mtcc.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -1323,17 +1322,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
-  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
-  while (opts->ind < opts->argc)
-    {
-      const char *arg = opts->argv[opts->ind++];
-      SVN_ERR(svn_utf_cstring_to_utf8(&APR_ARRAY_PUSH(action_args,
-                                                      const char *),
-                                      arg, pool));
-    }
-
   /* If there are extra arguments in a supplementary file, tack those
      on, too (again, in UTF8 form). */
+  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
   if (extra_args_file)
     {
       const char *extra_args_file_utf8;
@@ -1346,6 +1337,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);
     }
+  SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
+                                           ctx, FALSE, pool));
 
   /* Now initialize the client context */
 
@@ -1508,7 +1501,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                          "'%s' is not a URL, and "
                                          "--root-url (-U) not provided\n",
                                          path);
-              path = svn_path_internal_style(path, pool);
               url = svn_path_url_add_component2(root_url, path, pool);
             }
           url = sanitize_url(url, pool);
