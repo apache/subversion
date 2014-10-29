@@ -1854,7 +1854,7 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
   b->sibling_defn = branch_sibling;
   b->rev_root = rev_root;
   b->e_map = apr_hash_make(result_pool);
-  b->branch_root_rrpath = branch_root_rrpath;
+  b->branch_root_rrpath = apr_pstrdup(result_pool, branch_root_rrpath);
   return b;
 }
 
@@ -2042,7 +2042,7 @@ branch_map_update(svn_branch_instance_t *branch,
  * subbranch root node. This node has no content in this branch; the
  * corresponding element of the subbranch will define its content.
  *
- * Duplicate NEW_NAME and NEW_CONTENT into the branch mapping's pool.
+ * Duplicate NEW_NAME into the branch mapping's pool.
  */
 static void
 branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
@@ -2520,7 +2520,8 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   SVN_ERR_ASSERT(n == 4);
 
   SVN_ERR_ASSERT(fid == family->fid);
-  branch_root_rrpath = svn_path_internal_style(branch_root_path, scratch_pool);
+  branch_root_rrpath
+    = strcmp(branch_root_path, ".") == 0 ? "" : branch_root_path;
   branch_sibling = svn_branch_sibling_create(family, bid, root_eid,
                                              result_pool);
   branch_instance = svn_branch_instance_create(branch_sibling, rev_root,
@@ -2539,8 +2540,8 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
       SVN_ERR_ASSERT(n == 6);
       if (strcmp(this_path, "(null)") != 0)
         {
-          const char *name = svn_path_internal_style(this_name, scratch_pool);
-          const char *path = svn_path_internal_style(this_path, scratch_pool);
+          const char *name = strcmp(this_name, ".") == 0 ? "" : this_name;
+          const char *path = strcmp(this_path, ".") == 0 ? "" : this_path;
           const char *rrpath = svn_relpath_join(branch_root_rrpath, path,
                                                 scratch_pool);
           svn_editor3_peg_path_t peg;
@@ -2673,8 +2674,7 @@ svn_branch_instance_serialize(svn_stream_t *stream,
                             "f%db%d: root-eid %d at %s\n",
                             family->fid, branch->sibling_defn->bid,
                             branch->sibling_defn->root_eid,
-                            svn_path_local_style(branch_root_rrpath,
-                                                 scratch_pool)));
+                            branch_root_rrpath[0] ? branch_root_rrpath : "."));
 
   branch_map_purge_orphans(branch, scratch_pool);
   for (eid = family->first_eid; eid < family->next_eid; eid++)
@@ -2689,8 +2689,8 @@ svn_branch_instance_serialize(svn_stream_t *stream,
           path = branch_map_get_path_by_eid(branch, eid, scratch_pool);
           SVN_ERR_ASSERT(path);
           parent_eid = node->parent_eid;
-          name = svn_path_local_style(node->name, scratch_pool);
-          path = svn_path_local_style(path, scratch_pool);
+          name = node->name[0] ? node->name : ".";
+          path = path[0] ? path : ".";
         }
       else
         {
