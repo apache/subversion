@@ -65,15 +65,6 @@ typedef struct svn_fs_x__revision_file_t
   apr_pool_t *pool;
 } svn_fs_x__revision_file_t;
 
-/* Initialize the FILE data structure for REVISION in FS without actually
- * opening any files.  Use POOL for all future allocations in FILE.
- */
-void
-svn_fs_x__init_revision_file(svn_fs_x__revision_file_t *file,
-                             svn_fs_t *fs,
-                             svn_revnum_t revision,
-                             apr_pool_t *pool);
-
 /* Open the correct revision file for REV.  If the filesystem FS has
  * been packed, *FILE will be set to the packed file; otherwise, set *FILE
  * to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
