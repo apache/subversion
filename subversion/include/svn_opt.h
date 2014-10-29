@@ -656,6 +656,10 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  * canonical form if @a path is in canonical form.
  *
  * @since New in 1.1.
+ * @since Since 1.6.5, this returns an error if @a path contains a peg
+ * specifier with no path before it, such as "@abc".
+ * @since Since 1.9.0, this no longer returns an error if @a path contains a peg
+ * specifier with no path before it, such as "@abc".
  */
 svn_error_t *
 svn_opt_parse_path(svn_opt_revision_t *rev,
