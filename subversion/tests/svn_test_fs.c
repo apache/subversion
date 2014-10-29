@@ -524,7 +524,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(extra_entries, "\n");
     }
 
-  /* Test that non-exiting paths will not be found.
+  /* Test that non-existent paths will not be found.
    * Skip this test if somebody sneakily added NA_NAME. */
   if (!svn_hash_gets(expected_entries, na_name))
     {

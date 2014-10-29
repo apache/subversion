@@ -276,6 +276,14 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
                                  svn_revnum_t revnum,
                                  apr_pool_t *scratch_pool);
 
+/* Set *REV to the value read from the 'current' file.  Perform temporary
+ * allocations in POOL.
+ */
+svn_error_t *
+svn_fs_x__read_current(svn_revnum_t *rev,
+                       svn_fs_t *fs,
+                       apr_pool_t *pool);
+
 /* Atomically update the 'current' file to hold the specifed REV.
    Perform temporary allocations in POOL. */
 svn_error_t *

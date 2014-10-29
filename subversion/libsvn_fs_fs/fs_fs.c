@@ -761,8 +761,8 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
                                    ffd->compress_packed_revprops
-                                       ? 0x100
-                                       : 0x40));
+                                       ? 0x10
+                                       : 0x4));
 
       ffd->revprop_pack_size *= 1024;
     }
@@ -966,20 +966,16 @@ write_config(svn_fs_t *fs,
 "### much larger than the limit set here.  The threshold will be applied"    NL
 "### before optional compression takes place."                               NL
 "### Large values will reduce disk space usage at the expense of increased"  NL
-"### latency and CPU usage reading and changing individual revprops.  They"  NL
-"### become an advantage when revprop caching has been enabled because a"    NL
-"### lot of data can be read in one go.  Values smaller than 4 kByte will"   NL
-"### not improve latency any further and quickly render revprop packing"     NL
-"### ineffective."                                                           NL
-"### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
-"### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
+"### latency and CPU usage reading and changing individual revprops."        NL
+"### Values smaller than 4 kByte will not improve latency any further and "  NL
+"### quickly render revprop packing ineffective."                            NL
+"### revprop-pack-size is 4 kBytes by default for non-compressed revprop"    NL
+"### pack files and 16 kBytes when compression has been enabled."            NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 4"                                  NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
-"### even more so writing, become significantly more CPU intensive.  With"   NL
-"### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
-"### unless you often modify revprops after packing."                        NL
+"### even more so writing, become significantly more CPU intensive."         NL
 "### Compressing packed revprops is disabled by default."                    NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ""                                                                           NL
