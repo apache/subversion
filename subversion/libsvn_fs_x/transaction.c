@@ -43,6 +43,7 @@
 #include "index.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
@@ -1008,85 +1009,83 @@ fold_change(apr_hash_t *changed_paths,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with process_changes(). */
+typedef struct process_changes_baton_t
+{
+  /* Folded list of path changes. */
+  apr_hash_t *changed_paths;
 
-/* Examine all the changed path entries in CHANGES and store them in
+  /* Path changes that are deletions and have been turned into
+     replacements.  If those replacements get deleted again, this
+     container contains the record that we have to revert to. */
+  apr_hash_t *deletions;
+} process_changes_baton_t;
+
+/* An implementation of svn_fs_x__change_receiver_t.
+   Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
    data. Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-process_changes(apr_hash_t *changed_paths,
-                apr_array_header_t *changes,
+process_changes(void *baton_p,
+                change_t *change,
                 apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *deletions = svn_hash__make(scratch_pool);
-  int i;
+  process_changes_baton_t *baton = baton_p;
 
-  /* Read in the changes one by one, folding them into our local hash
-     as necessary. */
+  SVN_ERR(fold_change(baton->changed_paths, baton->deletions, change));
 
-  for (i = 0; i < changes->nelts; ++i)
+  /* Now, if our change was a deletion or replacement, we have to
+     blow away any changes thus far on paths that are (or, were)
+     children of this path.
+     ### i won't bother with another iteration pool here -- at
+     most we talking about a few extra dups of paths into what
+     is already a temporary subpool.
+  */
+
+  if ((change->info.change_kind == svn_fs_path_change_delete)
+       || (change->info.change_kind == svn_fs_path_change_replace))
     {
-      /* The ITERPOOL will be cleared at the end of this function
-       * since it is only used rarely and for a single hash iterator.
-       */
-      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      apr_hash_index_t *hi;
 
-      SVN_ERR(fold_change(changed_paths, deletions, change));
-
-      /* Now, if our change was a deletion or replacement, we have to
-         blow away any changes thus far on paths that are (or, were)
-         children of this path.
-         ### i won't bother with another iteration pool here -- at
-         most we talking about a few extra dups of paths into what
-         is already a temporary subpool.
+      /* a potential child path must contain at least 2 more chars
+         (the path separator plus at least one char for the name).
+         Also, we should not assume that all paths have been normalized
+         i.e. some might have trailing path separators.
       */
+      apr_ssize_t path_len = change->path.len;
+      apr_ssize_t min_child_len = path_len == 0
+                                ? 1
+                                : change->path.data[path_len-1] == '/'
+                                    ? path_len + 1
+                                    : path_len + 2;
 
-      if ((change->info.change_kind == svn_fs_path_change_delete)
-           || (change->info.change_kind == svn_fs_path_change_replace))
+      /* CAUTION: This is the inner loop of an O(n^2) algorithm.
+         The number of changes to process may be >> 1000.
+         Therefore, keep the inner loop as tight as possible.
+      */
+      for (hi = apr_hash_first(scratch_pool, baton->changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          apr_hash_index_t *hi;
+          /* KEY is the path. */
+          const void *path;
+          apr_ssize_t klen;
+          apr_hash_this(hi, &path, &klen, NULL);
 
-          /* a potential child path must contain at least 2 more chars
-             (the path separator plus at least one char for the name).
-             Also, we should not assume that all paths have been normalized
-             i.e. some might have trailing path separators.
-          */
-          apr_ssize_t path_len = change->path.len;
-          apr_ssize_t min_child_len = path_len == 0
-                                    ? 1
-                                    : change->path.data[path_len-1] == '/'
-                                        ? path_len + 1
-                                        : path_len + 2;
-
-          /* CAUTION: This is the inner loop of an O(n^2) algorithm.
-             The number of changes to process may be >> 1000.
-             Therefore, keep the inner loop as tight as possible.
-          */
-          for (hi = apr_hash_first(iterpool, changed_paths);
-               hi;
-               hi = apr_hash_next(hi))
+          /* If we come across a child of our path, remove it.
+             Call svn_fspath__skip_ancestor only if there is a chance that
+             this is actually a sub-path.
+           */
+          if (klen >= min_child_len)
             {
-              /* KEY is the path. */
-              const void *path;
-              apr_ssize_t klen;
-              apr_hash_this(hi, &path, &klen, NULL);
+              const char *child;
 
-              /* If we come across a child of our path, remove it.
-                 Call svn_dirent_is_child only if there is a chance that
-                 this is actually a sub-path.
-               */
-              if (   klen >= min_child_len
-                  && svn_dirent_is_child(change->path.data, path, iterpool))
-                apr_hash_set(changed_paths, path, klen, NULL);
+              child = svn_fspath__skip_ancestor(change->path.data, path);
+              if (child && child[0] != '\0')
+                apr_hash_set(baton->changed_paths, path, klen, NULL);
             }
-
-          /* Clear the per-iteration subpool. */
-          svn_pool_clear(iterpool);
         }
     }
-
-  /* Destroy the per-iteration subpool. */
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1099,19 +1098,22 @@ svn_fs_x__txn_changes_fetch(apr_hash_t **changed_paths_p,
 {
   apr_file_t *file;
   apr_hash_t *changed_paths = apr_hash_make(pool);
-  apr_array_header_t *changes;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  process_changes_baton_t baton;
+
+  baton.changed_paths = changed_paths;
+  baton.deletions = apr_hash_make(scratch_pool);
 
   SVN_ERR(svn_io_file_open(&file,
                            svn_fs_x__path_txn_changes(fs, txn_id, scratch_pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            scratch_pool));
 
-  SVN_ERR(svn_fs_x__read_changes(&changes,
+  SVN_ERR(svn_fs_x__read_changes_incrementally(
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
+                                  process_changes, &baton,
                                   scratch_pool));
-  SVN_ERR(process_changes(changed_paths, changes, pool));
   svn_pool_destroy(scratch_pool);
 
   *changed_paths_p = changed_paths;
@@ -3064,36 +3066,37 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
 static svn_error_t *
 verify_locks(svn_fs_t *fs,
              svn_fs_x__txn_id_t txn_id,
+             apr_hash_t *changed_paths,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *changes;
   apr_hash_index_t *hi;
-  apr_array_header_t *changed_paths;
+  apr_array_header_t *changed_paths_sorted;
   svn_stringbuf_t *last_recursed = NULL;
   int i;
 
-  /* Fetch the changes for this transaction. */
-  SVN_ERR(svn_fs_x__txn_changes_fetch(&changes, fs, txn_id, pool));
-
   /* Make an array of the changed paths, and sort them depth-first-ily.  */
-  changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,
-                                 sizeof(const char *));
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(changed_paths, const char *) = apr_hash_this_key(hi);
-  svn_sort__array(changed_paths, svn_sort_compare_paths);
+  changed_paths_sorted = apr_array_make(pool,
+                                        apr_hash_count(changed_paths) + 1,
+                                        sizeof(const char *));
+  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
+    {
+      APR_ARRAY_PUSH(changed_paths_sorted, const char *) =
+        apr_hash_this_key(hi);
+    }
+  svn_sort__array(changed_paths_sorted, svn_sort_compare_paths);
 
   /* Now, traverse the array of changed paths, verify locks.  Note
      that if we need to do a recursive verification a path, we'll skip
      over children of that path when we get to them. */
-  for (i = 0; i < changed_paths->nelts; i++)
+  for (i = 0; i < changed_paths_sorted->nelts; i++)
     {
       const char *path;
       svn_fs_path_change2_t *change;
       svn_boolean_t recurse = TRUE;
 
       svn_pool_clear(subpool);
-      path = APR_ARRAY_IDX(changed_paths, i, const char *);
+      path = APR_ARRAY_IDX(changed_paths_sorted, i, const char *);
 
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
@@ -3102,7 +3105,7 @@ verify_locks(svn_fs_t *fs,
         continue;
 
       /* Fetch the change associated with our path.  */
-      change = svn_hash_gets(changes, path);
+      change = svn_hash_gets(changed_paths, path);
 
       /* What does it mean to succeed at lock verification for a given
          path?  For an existing file or directory getting modified
@@ -3229,16 +3232,16 @@ commit_body(void *baton, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
                             _("Transaction out of date"));
 
+  /* We need the changes list for verification as well as for writing it
+     to the final rev file. */
+  SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, cb->fs, txn_id,
+                                      pool));
+
   /* Locks may have been added (or stolen) between the calling of
      previous svn_fs.h functions and svn_fs_commit_txn(), so we need
      to re-examine every changed-path in the txn and re-verify all
      discovered locks. */
-  SVN_ERR(verify_locks(cb->fs, txn_id, pool));
-
-  /* we need the changes list for verification as well as for writing it
-     to the final rev file */
-  SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, cb->fs, txn_id,
-                                      pool));
+  SVN_ERR(verify_locks(cb->fs, txn_id, changed_paths, pool));
 
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;

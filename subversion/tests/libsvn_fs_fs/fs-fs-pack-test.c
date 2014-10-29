@@ -496,7 +496,7 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
    * files but do not exceed the pack size limit. */
   for (rev = 0; rev <= MAX_REV; ++rev)
     SVN_ERR(svn_fs_change_rev_prop(fs, rev, SVN_PROP_REVISION_LOG,
-                                   large_log(rev, 15000, pool),
+                                   large_log(rev, 1000, pool),
                                    pool));
 
   /* verify */
@@ -505,20 +505,20 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_revision_prop(&prop_value, fs, rev,
                                    SVN_PROP_REVISION_LOG, pool));
       SVN_TEST_STRING_ASSERT(prop_value->data,
-                             large_log(rev, 15000, pool)->data);
+                             large_log(rev, 1000, pool)->data);
     }
 
   /* Put a larger revprop into the last, some middle and the first revision
    * of a pack.  This should cause the packs to split in the middle. */
   SVN_ERR(svn_fs_change_rev_prop(fs, 3, SVN_PROP_REVISION_LOG,
                                  /* rev 0 is not packed */
-                                 large_log(3, 37000, pool),
+                                 large_log(3, 2400, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 5, SVN_PROP_REVISION_LOG,
-                                 large_log(5, 25000, pool),
+                                 large_log(5, 1500, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 8, SVN_PROP_REVISION_LOG,
-                                 large_log(8, 25000, pool),
+                                 large_log(8, 1500, pool),
                                  pool));
 
   /* verify */
@@ -529,13 +529,13 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
 
       if (rev == 3)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 37000, pool)->data);
+                               large_log(rev, 2400, pool)->data);
       else if (rev == 5 || rev == 8)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 25000, pool)->data);
+                               large_log(rev, 1500, pool)->data);
       else
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 15000, pool)->data);
+                               large_log(rev, 1000, pool)->data);
     }
 
   return SVN_NO_ERROR;

@@ -496,6 +496,20 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__read_current(svn_revnum_t *rev,
+                       svn_fs_t *fs,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *content;
+  SVN_ERR(svn_fs_x__read_content(&content,
+                                 svn_fs_x__path_current(fs, pool),
+                                 pool));
+  SVN_ERR(svn_revnum_parse(rev, content->data, NULL));
+
+  return SVN_NO_ERROR;
+}
+
 /* Atomically update the 'current' file to hold the specifed REV.
    Perform temporary allocations in POOL. */
 svn_error_t *
