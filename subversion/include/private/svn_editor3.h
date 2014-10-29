@@ -535,6 +535,11 @@ typedef struct svn_editor3_peg_path_t
   const char *relpath;
 } svn_editor3_peg_path_t;
 
+/* Return a duplicate of OLD, allocated in RESULT_POOL. */
+svn_editor3_peg_path_t
+svn_editor3_peg_path_dup(svn_editor3_peg_path_t old,
+                         apr_pool_t *result_pool);
+
 /** A reference to a node in a txn.
  *
  * @a peg gives a pegged location and @a peg.rev shall not be
@@ -547,6 +552,11 @@ typedef struct svn_editor3_txn_path_t
   svn_editor3_peg_path_t peg;
   const char *relpath;
 } svn_editor3_txn_path_t;
+
+/* Return a duplicate of OLD, allocated in RESULT_POOL. */
+svn_editor3_txn_path_t
+svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
+                         apr_pool_t *result_pool);
 
 /** Element Identifier within a branch family.
  *

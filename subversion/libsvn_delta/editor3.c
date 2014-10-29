@@ -442,6 +442,8 @@ svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
     return NULL;
 
   new_content = apr_pmemdup(result_pool, old, sizeof(*new_content));
+  if (old->ref.relpath)
+    new_content->ref = svn_editor3_peg_path_dup(old->ref, result_pool);
   if (old->props)
     new_content->props = svn_prop_hash_dup(old->props, result_pool);
   if (old->kind == svn_node_file && old->text)
@@ -553,6 +555,32 @@ svn_editor3_node_content_create_symlink(apr_hash_t *props,
   new_content->props = props;
   new_content->target = target;
   return new_content;
+}
+
+
+/*
+ * ===================================================================
+ * Minor data types
+ * ===================================================================
+ */
+
+svn_editor3_peg_path_t
+svn_editor3_peg_path_dup(svn_editor3_peg_path_t p,
+                         apr_pool_t *result_pool)
+{
+  /* The object P is passed by value so we can modify it in place */
+  p.relpath = apr_pstrdup(result_pool, p.relpath);
+  return p;
+}
+
+svn_editor3_txn_path_t
+svn_editor3_txn_path_dup(svn_editor3_txn_path_t p,
+                         apr_pool_t *result_pool)
+{
+  /* The object P is passed by value so we can modify it in place */
+  p.peg = svn_editor3_peg_path_dup(p.peg, result_pool);
+  p.relpath = apr_pstrdup(result_pool, p.relpath);
+  return p;
 }
 
 
