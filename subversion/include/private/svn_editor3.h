@@ -1689,17 +1689,25 @@ typedef struct svn_branch_el_rev_content_t
 
 } svn_branch_el_rev_content_t;
 
-/*  */
+/* Return a new content object constructed with deep copies of PARENT_EID,
+ * NAME and NODE_CONTENT, allocated in RESULT_POOL.
+ */
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_create(svn_editor3_nbid_t parent_eid,
                                  const char *name,
                                  const svn_editor3_node_content_t *node_content,
                                  apr_pool_t *result_pool);
 
-/*  */
+/* Return a new content object constructed with a deep copy of OLD,
+ * allocated in RESULT_POOL.
+ */
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
+                              apr_pool_t *result_pool);
+
+/* Return TRUE iff CONTENT_LEFT is the same as CONTENT_RIGHT. */
 svn_boolean_t
-svn_branch_el_rev_content_equal(int eid,
-                                const svn_branch_el_rev_content_t *content_left,
+svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
                                 const svn_branch_el_rev_content_t *content_right,
                                 apr_pool_t *scratch_pool);
 
