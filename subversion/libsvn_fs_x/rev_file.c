@@ -32,10 +32,10 @@
 
 static svn_fs_x__revision_file_t *
 create_revision_file(svn_fs_t *fs,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  svn_fs_x__revision_file_t *file = apr_palloc(pool, sizeof(*file));
+  svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
 
   file->is_packed = FALSE;
   file->start_revision = SVN_INVALID_REVNUM;
@@ -48,7 +48,7 @@ create_revision_file(svn_fs_t *fs,
   file->l2p_offset = -1;
   file->p2l_offset = -1;
   file->footer_offset = -1;
-  file->pool = pool;
+  file->pool = result_pool;
 
   return file;
 }
@@ -56,10 +56,10 @@ create_revision_file(svn_fs_t *fs,
 static svn_fs_x__revision_file_t *
 init_revision_file(svn_fs_t *fs,
                    svn_revnum_t revision,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  svn_fs_x__revision_file_t *file = create_revision_file(fs, pool);
+  svn_fs_x__revision_file_t *file = create_revision_file(fs, result_pool);
 
   file->is_packed = svn_fs_x__is_packed_rev(fs, revision);
   file->start_revision = revision < ffd->min_unpacked_rev
@@ -76,23 +76,26 @@ static svn_error_t *
 open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_boolean_t retry = FALSE;
 
   do
     {
-      const char *path = svn_fs_x__path_rev_absolute(fs, rev, pool);
+      const char *path = svn_fs_x__path_rev_absolute(fs, rev, scratch_pool);
       apr_file_t *apr_file;
 
       /* open the revision file in buffered r/o mode */
       err = svn_io_file_open(&apr_file, path,
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                             result_pool);
       if (!err)
         {
           file->file = apr_file;
-          file->stream = svn_stream_from_aprfile2(apr_file, TRUE, pool);
+          file->stream = svn_stream_from_aprfile2(apr_file, TRUE,
+                                                  result_pool);
 
           return SVN_NO_ERROR;
         }
@@ -109,7 +112,7 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
                                      _("No such revision %ld"), rev);
 
           /* We failed for the first time. Refresh cache & retry. */
-          SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
+          SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, scratch_pool));
 
           retry = TRUE;
         }
@@ -127,10 +130,12 @@ svn_error_t *
 svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
-  *file = init_revision_file(fs, rev, pool);
-  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, pool));
+  *file = init_revision_file(fs, rev, result_pool);
+  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev,
+                                               result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -174,26 +179,29 @@ svn_error_t *
 svn_fs_x__open_proto_rev_file(svn_fs_x__revision_file_t **file,
                                svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool)
+                               apr_pool_t* result_pool,
+                               apr_pool_t *scratch_pool)
 {
   apr_file_t *apr_file;
   SVN_ERR(svn_io_file_open(&apr_file,
-                           svn_fs_x__path_txn_proto_rev(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                           svn_fs_x__path_txn_proto_rev(fs, txn_id,
+                                                        scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           result_pool));
 
   return svn_error_trace(svn_fs_x__wrap_temp_rev_file(file, fs, apr_file,
-                                                      pool));
+                                                      result_pool));
 }
 
 svn_error_t *
 svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
                              svn_fs_t *fs,
                              apr_file_t *temp_file,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool)
 {
-  *file = create_revision_file(fs, pool);
+  *file = create_revision_file(fs, result_pool);
   (*file)->file = temp_file;
-  (*file)->stream = svn_stream_from_aprfile2(temp_file, TRUE, pool);
+  (*file)->stream = svn_stream_from_aprfile2(temp_file, TRUE, result_pool);
 
   return SVN_NO_ERROR;
 }
