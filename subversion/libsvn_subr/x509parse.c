@@ -167,6 +167,11 @@ x509_get_version(const unsigned char **p, const unsigned char *end, int *ver)
   svn_error_t *err;
   ptrdiff_t len;
 
+  /*
+   * As defined in the Basic Certificate fields:
+   *   version         [0]  EXPLICIT Version DEFAULT v1,
+   * the version is the context specific tag 0.
+   */
   err = asn1_get_tag(p, end, &len,
                      ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | 0);
   if (err)
