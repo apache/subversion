@@ -58,22 +58,22 @@ svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
                        apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.
-   Do any allocations in POOL. */
+   Do any allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__check_rep(representation_t *rep,
                     svn_fs_t *fs,
-                    apr_pool_t *pool);
+                    apr_pool_t *scratch_pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The
    number of reps (including REP) in the chain will be returned in
    *CHAIN_LENGTH.  *SHARD_COUNT will be set to the number of shards
-   accessed.  Do any allocations in POOL. */
+   accessed.  Do any allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
                            representation_t *rep,
                            svn_fs_t *fs,
-                           apr_pool_t *pool);
+                           apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is

@@ -812,7 +812,7 @@ create_rep_state(rep_state_t **rep_state,
 svn_error_t *
 svn_fs_x__check_rep(representation_t *rep,
                     svn_fs_t *fs,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
   apr_uint32_t sub_item;
@@ -820,15 +820,16 @@ svn_fs_x__check_rep(representation_t *rep,
   svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
 
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, revision, pool));
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, revision,
+                                          scratch_pool));
 
   /* Does REP->ID refer to an actual item? Which one is it? */
   SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file, &rep->id,
-                                pool));
+                                scratch_pool));
 
   /* What is the type of that item? */
   SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, rev_file, revision, offset,
-                                     pool));
+                                     scratch_pool));
 
   /* Verify that we've got an item that is actually a representation. */
   if (   entry == NULL
@@ -840,8 +841,8 @@ svn_fs_x__check_rep(representation_t *rep,
     return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
                              _("No representation found at offset %s "
                                "for item %s in revision %ld"),
-                             apr_off_t_toa(pool, offset),
-                             apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                             apr_off_t_toa(scratch_pool, offset),
+                             apr_psprintf(scratch_pool, "%" APR_UINT64_T_FMT,
                                           rep->id.number),
                              revision);
 
@@ -855,7 +856,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
                            representation_t *rep,
                            svn_fs_t *fs,
-                           apr_pool_t *pool)
+                           apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   svn_revnum_t shard_size = ffd->max_files_per_dir
@@ -871,7 +872,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
    * To reuse open file handles between iterations (e.g. while within the
    * same pack file), we only clear this pool once in a while instead of
    * at the start of each iteration. */
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
@@ -2562,26 +2563,22 @@ get_dir_contents(apr_array_header_t **entries,
     }
   else if (noderev->data_rep)
     {
-      /* use a temporary pool for temp objects.
-       * Also undeltify content before parsing it. Otherwise, we could only
+      /* Undeltify content before parsing it. Otherwise, we could only
        * parse it byte-by-byte.
        */
-      apr_pool_t *text_pool = svn_pool_create(scratch_pool);
       apr_size_t len = noderev->data_rep->expanded_size;
       svn_stringbuf_t *text;
 
       /* The representation is immutable.  Read it normally. */
       SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep,
-                                     FALSE, text_pool));
-      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, text_pool));
+                                     FALSE, scratch_pool));
+      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
 
       /* de-serialize hash */
-      contents = svn_stream_from_stringbuf(text, text_pool);
+      contents = svn_stream_from_stringbuf(text, scratch_pool);
       SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
                                result_pool, scratch_pool));
-
-      svn_pool_destroy(text_pool);
     }
 
   return SVN_NO_ERROR;
