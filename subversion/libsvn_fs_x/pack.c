@@ -571,7 +571,8 @@ copy_rep_to_temp(pack_context_t *context,
   add_item_rep_mapping(context, entry);
 
   /* read & parse the representation header */
-  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, rev_file->stream, pool));
+  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, rev_file->stream, pool,
+                                    pool));
 
   /* if the representation is a delta against some other rep, link the two */
   if (   rep_header->type == svn_fs_x__rep_delta
@@ -681,7 +682,7 @@ copy_node_to_temp(pack_context_t *context,
   apr_off_t source_offset = entry->offset;
 
   /* read & parse noderev */
-  SVN_ERR(svn_fs_x__read_noderev(&noderev, rev_file->stream, pool));
+  SVN_ERR(svn_fs_x__read_noderev(&noderev, rev_file->stream, pool, pool));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
@@ -1195,7 +1196,7 @@ store_nodes(pack_context_t *context,
 
       /* item will fit into the block. */
       SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset, iterpool));
-      SVN_ERR(svn_fs_x__read_noderev(&noderev, stream, iterpool));
+      SVN_ERR(svn_fs_x__read_noderev(&noderev, stream, iterpool, iterpool));
       svn_fs_x__noderevs_add(*container, noderev);
 
       container_size += entry->size;
@@ -1645,7 +1646,7 @@ write_changes_containers(pack_context_t *context,
        * the container */
       SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset,
                                iterpool));
-      SVN_ERR(svn_fs_x__read_changes(&changes, temp_stream, iterpool));
+      SVN_ERR(svn_fs_x__read_changes(&changes, temp_stream, pool, iterpool));
       SVN_ERR(svn_fs_x__changes_append_list(&list_index, container, changes));
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
       block_left -= estimated_size;
