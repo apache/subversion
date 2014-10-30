@@ -135,16 +135,6 @@ svn_fs_x__path_rev(svn_fs_t *fs,
                    apr_pool_t *pool);
 
 const char *
-svn_fs_x__path_l2p_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool);
-
-const char *
-svn_fs_x__path_p2l_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool);
-
-const char *
 svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
                               apr_pool_t *pool);

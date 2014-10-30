@@ -150,6 +150,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *max_ids;
 
+  /* common file access structure */
   svn_fs_x__revision_file_t *rev_file;
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool));
 
@@ -180,8 +181,9 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
             continue;
 
           /* find the corresponding P2L entry */
-          SVN_ERR(svn_fs_x__p2l_item_lookup(&p2l_item, fs, rev_file, start,
-                                            offset, sub_item, iterpool));
+          SVN_ERR(svn_fs_x__p2l_item_lookup(&p2l_item, fs, rev_file,
+                                            revision, offset, sub_item,
+                                            iterpool));
 
           if (p2l_item == NULL)
             return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
@@ -210,6 +212,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
     }
 
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
   return SVN_NO_ERROR;
 }
@@ -305,6 +309,8 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
     }
 
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
   return SVN_NO_ERROR;
 }
@@ -483,15 +489,15 @@ compare_p2l_to_rev(svn_fs_t *fs,
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool));
 
   /* check file size vs. range covered by index */
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &offset, pool));
+  SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
                                        pool));
 
-  if (offset != max_offset)
+  if (rev_file->l2p_offset != max_offset)
     return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT, NULL,
                              _("File size of %s for revision r%ld does "
                                "not match p2l index size of %s"),
-                             apr_off_t_toa(pool, offset), start,
+                             apr_off_t_toa(pool, rev_file->l2p_offset), start,
                              apr_off_t_toa(pool, max_offset));
 
   SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,
