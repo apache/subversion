@@ -362,6 +362,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
   fs_x_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
                                    "fsx:", fs->uuid,
+                                   ":", ffd->instance_id,
                                    "/", normalize_key_part(fs->path, pool),
                                    ":",
                                    SVN_VA_NULL);
