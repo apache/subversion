@@ -503,6 +503,10 @@ svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
   fs->uuid = apr_pstrdup(fs->pool, buf);
 
+  limit = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
+  ffd->instance_id = apr_pstrdup(fs->pool, buf);
+
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
   /* Read the min unpacked revision. */
@@ -859,6 +863,73 @@ write_revision_zero(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_x__create_file_tree(svn_fs_t *fs,
+                           const char *path,
+                           int format,
+                           int shard_size,
+                           apr_pool_t *pool)
+{
+  fs_x_data_t *ffd = fs->fsap_data;
+
+  fs->path = apr_pstrdup(fs->pool, path);
+  ffd->format = format;
+
+  /* Use an appropriate sharding mode if supported by the format. */
+  ffd->max_files_per_dir = shard_size;
+
+  /* Create the revision data directories. */
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),
+                                      pool));
+
+  /* Create the revprops directory. */
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(fs, 0,
+                                                                    pool),
+                                      pool));
+
+  /* Create the transaction directory. */
+  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
+                                                      pool),
+                                      pool));
+
+  /* Create the protorevs directory. */
+  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
+                                                      pool),
+                                      pool));
+
+  /* Create the 'current' file. */
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_current(fs, pool), pool));
+  SVN_ERR(svn_fs_x__write_current(fs, 0, pool));
+
+  /* Create the 'uuid' file. */
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, pool), pool));
+  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, NULL, pool));
+
+  /* Create the fsfs.conf file. */
+  SVN_ERR(write_config(fs, pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Add revision 0. */
+  SVN_ERR(write_revision_zero(fs, pool));
+
+  /* Create the min unpacked rev file. */
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
+                             "0\n", pool));
+
+  /* Create the txn-current file if the repository supports
+     the transaction sequence file. */
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, pool),
+                             "0\n", pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs, pool),
+                                   pool));
+
+  /* Initialize the revprop caching info. */
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
+
+  ffd->youngest_rev_cache = 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_x__create(svn_fs_t *fs,
                  const char *path,
                  apr_pool_t *pool)
@@ -891,53 +962,10 @@ svn_fs_x__create(svn_fs_t *fs,
           default:format = SVN_FS_X__FORMAT_NUMBER;
         }
     }
-  ffd->format = format;
-  ffd->max_files_per_dir = SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR;
 
-  /* Create the revision data directories. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),
-                                      pool));
-
-  /* Create the revprops directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(fs, 0,
-                                                                    pool),
-                                      pool));
-
-  /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the protorevs directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(fs, pool), "0\n", pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, pool), pool));
-  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, pool));
-
-  SVN_ERR(write_config(fs, pool));
-
-  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
-
-  /* Add revision 0. */
-  SVN_ERR(write_revision_zero(fs, pool));
-
-  /* Create the min unpacked rev file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
-                              "0\n", pool));
-
-  /* Create the txn-current file if the repository supports
-     the transaction sequence file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, pool),
-                             "0\n", pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs, pool),
-                                   pool));
-
-  /* Initialize the revprop caching info. */
-  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
+  SVN_ERR(svn_fs_x__create_file_tree(fs, path, format,
+                                     SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR,
+                                     pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_x__write_format(fs, FALSE, pool));
@@ -949,28 +977,32 @@ svn_fs_x__create(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *uuid,
+                   const char *instance_id,
                    apr_pool_t *pool)
 {
-  char *my_uuid;
-  apr_size_t my_uuid_len;
+  fs_x_data_t *ffd = fs->fsap_data;
   const char *uuid_path = svn_fs_x__path_uuid(fs, pool);
+  svn_stringbuf_t *contents = svn_stringbuf_create_empty(pool);
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
 
-  /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", SVN_VA_NULL);
-  my_uuid_len = strlen(my_uuid);
+  if (! instance_id)
+    instance_id = svn_uuid_generate(pool);
+
+  svn_stringbuf_appendcstr(contents, uuid);
+  svn_stringbuf_appendcstr(contents, "\n");
+  svn_stringbuf_appendcstr(contents, instance_id);
+  svn_stringbuf_appendcstr(contents, "\n");
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_io_write_atomic(uuid_path, my_uuid, my_uuid_len,
+  SVN_ERR(svn_io_write_atomic(uuid_path, contents->data, contents->len,
                               svn_fs_x__path_current(fs, pool) /* perms */,
                               pool));
 
-  /* Remove the newline we added, and stash the UUID. */
-  my_uuid[my_uuid_len - 1] = '\0';
-  fs->uuid = my_uuid;
+  fs->uuid = apr_pstrdup(fs->pool, uuid);
+  ffd->instance_id = apr_pstrdup(fs->pool, instance_id);
 
   return SVN_NO_ERROR;
 }

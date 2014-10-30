@@ -75,17 +75,27 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      in a subpool, add a reference-count, and add a serialized deconstructor
      to the FS vtable.  That's more machinery than it's worth.
 
-     Using the uuid to obtain the lock creates a corner case if a
-     caller uses svn_fs_set_uuid on the repository in a process where
-     other threads might be using the same repository through another
-     FS object.  The only real-world consumer of svn_fs_set_uuid is
-     "svnadmin load", so this is a low-priority problem, and we don't
-     know of a better way of associating such data with the
-     repository. */
+     Picking an appropriate key for the shared data is tricky, because,
+     unfortunately, a filesystem UUID is not really unique.  It is implicitly
+     shared between hotcopied (1), dump / loaded (2) or naively copied (3)
+     filesystems.  We tackle this problem by using a combination of the UUID
+     and an instance ID as the key.  This allows us to avoid key clashing
+     in (1) and (2) for formats >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT, which
+     do support instance IDs.  For old formats the shared data (locks, shared
+     transaction data, ...) will still clash.
+
+     Speaking of (3), there is not so much we can do about it, except maybe
+     provide a convenient way of fixing things.  Naively copied filesystems
+     have identical filesystem UUIDs *and* instance IDs.  With the key being
+     a combination of these two, clashes can be fixed by changing either of
+     them (or both), e.g. with svn_fs_set_uuid(). */
+
 
   SVN_ERR_ASSERT(fs->uuid);
-  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX, fs->uuid,
-                    SVN_VA_NULL);
+  SVN_ERR_ASSERT(ffd->instance_id);
+
+  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX,
+                    fs->uuid, ":", ffd->instance_id, SVN_VA_NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't fetch FSX shared data"));
@@ -203,6 +213,18 @@ x_revision_proplist(apr_hash_t **proplist_p,
                                                          rev, FALSE, pool));
 }
 
+/* Wrapper around svn_fs_x__set_uuid() adapting between function
+   signatures. */
+static svn_error_t *
+x_set_uuid(svn_fs_t *fs,
+           const char *uuid,
+           apr_pool_t *pool)
+{
+  /* Whenever we set a new UUID, imply that FS will also be a different
+   * instance (on formats that support this). */
+  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, pool));
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
@@ -211,7 +233,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_x__revision_prop,
   x_revision_proplist,
   svn_fs_x__change_rev_prop,
-  svn_fs_x__set_uuid,
+  x_set_uuid,
   svn_fs_x__revision_root,
   svn_fs_x__begin_txn,
   svn_fs_x__open_txn,
@@ -242,6 +264,15 @@ initialize_fs_struct(svn_fs_t *fs)
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;
+}
+
+/* Reset vtable and fsap_data fields in FS such that the FS is basically
+ * closed now.  Note that FS must not hold locks when you call this. */
+static void
+uninitialize_fs_struct(svn_fs_t *fs)
+{
+  fs->vtable = NULL;
+  fs->fsap_data = NULL;
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
@@ -412,11 +443,13 @@ x_hotcopy(svn_fs_t *src_fs,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Provide FFD for DST_FS, test / initialize target repo, remove FFD. */
+  /* Test target repo when in INCREMENTAL mode, initialize it when not.
+   * For this, we need our FS internal data structures to be temporarily
+   * available. */
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_x__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                            incremental, pool));
-  dst_fs->fsap_data = NULL;
+  uninitialize_fs_struct(dst_fs);
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
@@ -424,8 +457,9 @@ x_hotcopy(svn_fs_t *src_fs,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Now, we may copy data as needed ... */
-  return svn_fs_x__hotcopy(src_fs, dst_fs,
-                           incremental, cancel_func, cancel_baton, pool);
+  return svn_fs_x__hotcopy(src_fs, dst_fs, incremental,
+                           notify_func, notify_baton,
+                           cancel_func, cancel_baton, pool);
 }
 
 

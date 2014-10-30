@@ -400,6 +400,12 @@ typedef struct fs_x_data_t
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
 
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
+
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
