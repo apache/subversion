@@ -37,21 +37,22 @@
 static apr_array_header_t *
 deep_copy_array(apr_array_header_t *s, apr_pool_t *result_pool)
 {
-      int i;
-      apr_array_header_t *d;
+  int i;
+  apr_array_header_t *d;
 
-      if (!s)
-        return NULL;
+  if (!s)
+    return NULL;
 
-      d = apr_array_copy(result_pool, s);
+  d = apr_array_copy(result_pool, s);
 
-      /* Make a deep copy of the strings in the array. */
-      for (i = 0; i < s->nelts; ++i)
-        APR_ARRAY_IDX(d, i, const char *) =
-          apr_pstrdup(result_pool,
-                      APR_ARRAY_IDX(s, i, const char *));
+  /* Make a deep copy of the strings in the array. */
+  for (i = 0; i < s->nelts; ++i)
+    {
+      APR_ARRAY_IDX(d, i, const char *) =
+        apr_pstrdup(result_pool, APR_ARRAY_IDX(s, i, const char *));
+    }
 
-      return d;
+  return d;
 }
 
 static apr_hash_t *deep_copy_hash(apr_hash_t *s,
