@@ -45,29 +45,6 @@ extern "C" {
  * - changed path list
  */
 
-/* Given the last "few" bytes (should be at least 40) of revision REV in
- * TRAILER,  parse the last line and return the offset of the root noderev
- * in *ROOT_OFFSET and the offset of the changed paths list in
- * *CHANGES_OFFSET.  Offsets are relative to the revision's start offset.
- * ROOT_OFFSET and / or CHANGES_OFFSET may be NULL.
- * 
- * Note that REV is only used to construct nicer error objects.
- */
-svn_error_t *
-svn_fs_x__parse_revision_trailer(apr_off_t *root_offset,
-                                 apr_off_t *changes_offset,
-                                 svn_stringbuf_t *trailer,
-                                 svn_revnum_t rev);
-
-/* Given the offset of the root noderev in ROOT_OFFSET and the offset of
- * the changed paths list in CHANGES_OFFSET,  return the corresponding
- * revision's trailer.  Allocate it in RESULT_POOL.
- */
-svn_stringbuf_t *
-svn_fs_x__unparse_revision_trailer(apr_off_t root_offset,
-                                   apr_off_t changes_offset,
-                                   apr_pool_t *result_pool);
-
 /* Given the FSX revision / pack FOOTER, parse it destructively
  * and return the start offsets of the index data in *L2P_OFFSET and
  * *P2L_OFFSET, respectively.
