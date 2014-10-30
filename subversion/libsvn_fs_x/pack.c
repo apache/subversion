@@ -1830,7 +1830,7 @@ pack_range(pack_context_t *context,
 
       /* Get the rev file dimensions (mainly index locations). */
       SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
-                                              revision, revpool));
+                                              revision, revpool, iterpool));
       SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
 
       /* store the indirect array index */
@@ -1957,7 +1957,8 @@ append_revision(pack_context_t *context,
 
   /* Copy all the bits from the rev file to the end of the pack file. */
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
-                                          context->start_rev, pool));
+                                          context->start_rev, pool,
+                                          iterpool));
   SVN_ERR(copy_file_data(context, context->pack_file, rev_file->file,
                          finfo.size, iterpool));
 
