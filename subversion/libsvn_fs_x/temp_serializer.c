@@ -1144,18 +1144,15 @@ svn_fs_x__serialize_changes(void **data,
   svn_stringbuf_t *serialized;
   int i;
 
-  /* initialize our auxiliary data structure */
+  /* initialize our auxiliary data structure and link it to the
+   * array elements */
   changes.count = array->nelts;
-  changes.changes = apr_palloc(pool, sizeof(change_t*) * changes.count);
-
-  /* populate it with the array elements */
-  for (i = 0; i < changes.count; ++i)
-    changes.changes[i] = APR_ARRAY_IDX(array, i, change_t*);
+  changes.changes = (change_t **)array->elts;
 
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&changes,
                                       sizeof(changes),
-                                      changes.count * 100,
+                                      changes.count * 250,
                                       pool);
 
   svn_temp_serializer__push(context,
@@ -1184,20 +1181,22 @@ svn_fs_x__deserialize_changes(void **out,
 {
   int i;
   changes_data_t *changes = (changes_data_t *)data;
-  apr_array_header_t *array = apr_array_make(pool, changes->count,
-                                             sizeof(change_t *));
+  apr_array_header_t *array = apr_array_make(pool, 0, sizeof(change_t *));
 
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(changes, (void**)&changes->changes);
 
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
-    {
-      deserialize_change(changes->changes,
-                         (change_t **)&changes->changes[i],
-                         pool);
-      APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
-    }
+    deserialize_change(changes->changes,
+                       (change_t **)&changes->changes[i],
+                       pool);
+
+  /* Use the changes buffer as the array's data buffer
+   * (DATA remains valid for at least as long as POOL). */
+  array->elts = (char *)changes->changes;
+  array->nelts = changes->count;
+  array->nalloc = changes->count;
 
   /* done */
   *out = array;

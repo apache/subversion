@@ -161,10 +161,9 @@ svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
 svn_fs_id_t *svn_fs_x__id_copy(const svn_fs_id_t *id,
                                apr_pool_t *pool);
 
-/* Return an ID resulting from parsing the string DATA (with length
-   LEN), or NULL if DATA is an invalid ID string. */
-svn_fs_id_t *svn_fs_x__id_parse(const char *data,
-                                apr_size_t len,
+/* Return an ID resulting from parsing the string DATA, or NULL if DATA is
+   an invalid ID string. *DATA will be modified / invalidated by this call. */
+svn_fs_id_t *svn_fs_x__id_parse(char *data,
                                 apr_pool_t *pool);
 
 

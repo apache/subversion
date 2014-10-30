@@ -453,7 +453,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_x__id_parse(value, strlen(value), result_pool);
+  noderev->id = svn_fs_x__id_parse(value, result_pool);
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -512,8 +512,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    noderev->predecessor_id = svn_fs_x__id_parse(value, strlen(value),
-                                                 result_pool);
+    noderev->predecessor_id = svn_fs_x__id_parse(value, result_pool);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -816,7 +815,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  info->node_rev_id = svn_fs_x__id_parse(str, strlen(str), result_pool);
+  info->node_rev_id = svn_fs_x__id_parse(str, result_pool);
   if (info->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
@@ -976,9 +975,15 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
   change_t *change;
   apr_pool_t *iterpool;
 
-  /* pre-allocate enough room for most change lists
-     (will be auto-expanded as necessary) */
-  *changes = apr_array_make(result_pool, 30, sizeof(change_t *));
+  /* Pre-allocate enough room for most change lists.
+     (will be auto-expanded as necessary).
+
+     Chose the default to just below 2^N such that the doubling reallocs
+     will request roughly 2^M bytes from the OS without exceeding the
+     respective two-power by just a few bytes (leaves room array and APR
+     node overhead for large enough M).
+   */
+  *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
 
   SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);

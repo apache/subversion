@@ -2506,7 +2506,7 @@ read_dir_entries(apr_array_header_t *entries,
                            _("Directory entry corrupt in '%s'"),
                            svn_fs_x__id_unparse(id, scratch_pool)->data);
 
-      dirent->id = svn_fs_x__id_parse(str, strlen(str), result_pool);
+      dirent->id = svn_fs_x__id_parse(str, result_pool);
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
@@ -2946,8 +2946,18 @@ block_read_changes(apr_array_header_t **changes,
   /* cache for future reference */
 
   if (ffd->changes_cache)
-    SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
-                           scratch_pool));
+    {
+      /* Guesstimate for the size of the in-cache representation. */
+      apr_size_t estimated_size = (apr_size_t)250 * (*changes)->nelts;
+
+      /* Don't even serialize data that probably won't fit into the
+        * cache.  This often implies that either CHANGES is very
+        * large, memory is scarce or both.  Having a huge temporary
+        * copy would not be a good thing in either case. */
+      if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
+        SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
+                               scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
