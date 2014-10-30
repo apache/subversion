@@ -906,7 +906,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around hotcopy_body taking out all necessary source repositories.
+/* Wrapper around hotcopy_body taking out all necessary source repository
+ * locks.
  */
 static svn_error_t *
 hotcopy_locking_src_body(void *baton, apr_pool_t *pool)

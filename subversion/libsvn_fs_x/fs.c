@@ -72,7 +72,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      each separate repository opened during the lifetime of the
      svn_fs_initialize pool.  It's unlikely that anyone will notice
      the modest expenditure; the alternative is to allocate each structure
-     in a subpool, add a reference-count, and add a serialized deconstructor
+     in a subpool, add a reference-count, and add a serialized destructor
      to the FS vtable.  That's more machinery than it's worth.
 
      Picking an appropriate key for the shared data is tricky, because,
@@ -80,9 +80,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      shared between hotcopied (1), dump / loaded (2) or naively copied (3)
      filesystems.  We tackle this problem by using a combination of the UUID
      and an instance ID as the key.  This allows us to avoid key clashing
-     in (1) and (2) for formats >= SVN_FS_FS__MIN_INSTANCE_ID_FORMAT, which
-     do support instance IDs.  For old formats the shared data (locks, shared
-     transaction data, ...) will still clash.
+     in (1) and (2).
 
      Speaking of (3), there is not so much we can do about it, except maybe
      provide a convenient way of fixing things.  Naively copied filesystems
