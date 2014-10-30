@@ -252,6 +252,37 @@ svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
                              svn_revnum_t revision,
                              apr_pool_t *pool);
 
+/* Index (re-)creation utilities.
+ */
+
+/* For FS, create a new L2P auto-deleting proto index file in POOL and return
+ * its name in *PROTONAME.  All entries to write are given in ENTRIES and
+ * entries are of type svn_fs_fs__p2l_entry_t* (sic!).  The ENTRIES array
+ * will be reordered.  Give the proto index file the lifetime of RESULT_POOL
+ * and use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/* For FS, create a new P2L auto-deleting proto index file in POOL and return
+ * its name in *PROTONAME.  All entries to write are given in ENTRIES and
+ * of type svn_fs_fs__p2l_entry_t*.  The FVN1 checksums are not taken from
+ * ENTRIES but are begin calculated from the current contents of REV_FILE
+ * as we go.  Give the proto index file the lifetime of RESULT_POOL and use
+ * SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_x__p2l_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     svn_fs_x__revision_file_t *rev_file,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 /* Serialization and caching interface
  */
 
