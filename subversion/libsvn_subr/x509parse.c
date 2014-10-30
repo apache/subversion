@@ -314,12 +314,12 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
     }
 
   oid = &cur->oid;
-  oid->tag = **p;
 
   err = asn1_get_tag(p, end, &oid->len, ASN1_OID);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
+  oid->tag = ASN1_OID;
   oid->p = *p;
   *p += oid->len;
 
@@ -384,13 +384,16 @@ x509_get_date(apr_time_t *when,
   apr_time_exp_t xt = { 0 };
   char tz;
 
-  tag = **p;
   err = asn1_get_tag(p, end, &len, ASN1_UTC_TIME);
   if (err && err->apr_err == SVN_ERR_ASN1_UNEXPECTED_TAG)
     {
       svn_error_clear(err);
-      tag = **p;
       err = asn1_get_tag(p, end, &len, ASN1_GENERALIZED_TIME);
+      tag = ASN1_GENERALIZED_TIME;
+    }
+  else
+    {
+      tag = ASN1_UTC_TIME;
     }
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, err, NULL);
@@ -493,11 +496,11 @@ x509_get_sig(const unsigned char **p, const unsigned char *end, x509_buf * sig)
   svn_error_t *err;
   ptrdiff_t len;
 
-  sig->tag = **p;
-
   err = asn1_get_tag(p, end, &len, ASN1_BIT_STRING);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_SIGNATURE, err, NULL);
+
+  sig->tag = ASN1_BIT_STRING;
 
   if (--len < 1 || *(*p)++ != 0)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_SIGNATURE, NULL, NULL);
@@ -522,8 +525,6 @@ x509_get_uid(const unsigned char **p,
   if (*p == end)
     return SVN_NO_ERROR;
 
-  uid->tag = **p;
-
   err = asn1_get_tag(p, end, &uid->len,
                      ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n);
   if (err)
@@ -537,6 +538,7 @@ x509_get_uid(const unsigned char **p,
       return svn_error_trace(err);
     }
 
+  uid->tag = ASN1_CONTEXT_SPECIFIC | ASN1_CONSTRUCTED | n;
   uid->p = *p;
   *p += uid->len;
 
