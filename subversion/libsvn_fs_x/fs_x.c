@@ -764,15 +764,25 @@ svn_fs_x__rep_copy(representation_t *rep,
 }
 
 
-/* Write out the zeroth revision for filesystem FS. */
+/* Write out the zeroth revision for filesystem FS.
+   Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-write_revision_zero(svn_fs_t *fs)
+write_revision_zero(svn_fs_t *fs,
+                    apr_pool_t *scratch_pool)
 {
-  const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, fs->pool);
+  /* Use an explicit sub-pool to have full control over temp file lifetimes.
+   * Since we have it, use it for everything else as well. */
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, subpool);
   apr_hash_t *proplist;
   svn_string_t date;
 
-  /* Write out a rev file for revision 0. */
+  apr_array_header_t *index_entries;
+  svn_fs_x__p2l_entry_t *entry;
+  svn_fs_x__revision_file_t *rev_file;
+  const char *l2p_proto_index, *p2l_proto_index;
+
+  /* Write a skeleton r0 with no indexes. */
   SVN_ERR(svn_io_file_create_binary
               (path_revision_zero,
                "DELTA\nSVN\1" /* txdelta v1 */
@@ -787,28 +797,56 @@ write_revision_zero(svn_fs_t *fs)
                "text: 0 3 16 4 "
                "2d2977d1c96f487abe4a1e202dd03b4e\n"
                "cpath: /\n"
-               "\n\n"
+               "\n\n",
+               0x7b, subpool));
 
-               /* L2P index */
-               "\0\1\x80\x40\1\1" /* rev 0, single page */
-               "\5\4"             /* page size: bytes, count */
-               "\0"               /* 0 container offsets in list */
-               "\0\x7b\x1e\1"     /* phys offsets + 1 */
+  /* Construct the index P2L contents: describe the 3 items we have.
+     Be sure to create them in on-disk order. */
+  index_entries = apr_array_make(subpool, 3, sizeof(entry));
 
-               /* P2L index */
-               "\0\x7b"           /* start rev, rev file size */
-               "\x80\x80\4\1\x21" /* 64k pages, 1 page using 33 bytes */
-               "\0"               /* offset entry 0 page 1 */
-                                  /* len, type & count, checksum,
-                                     (rev, 2*item)* */
-               "\x1d\x11\x8e\xef\xf2\xd6\x01\0\6"
-               "\x5d\x15\xb6\xea\x97\xe0\x0f\0\4"
-               "\1\x16\x9d\x9e\xa9\x94\x0f\0\2"
-               "\x85\xff\3\0\0"   /* last entry fills up 64k page */
+  entry = apr_pcalloc(subpool, sizeof(*entry));
+  entry->offset = 0;
+  entry->size = 0x1d;
+  entry->type = SVN_FS_X__ITEM_TYPE_DIR_REP;
+  entry->item_count = 1;
+  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
+  entry->items[0].change_set = 0;
+  entry->items[0].number = SVN_FS_X__ITEM_INDEX_FIRST_USER;
+  APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
 
-               /* Footer */
-               "123 136\7",
-               0x7b + 13 + 40 + 7 + 1, fs->pool));
+  entry = apr_pcalloc(subpool, sizeof(*entry));
+  entry->offset = 0x1d;
+  entry->size = 0x5d;
+  entry->type = SVN_FS_X__ITEM_TYPE_NODEREV;
+  entry->item_count = 1;
+  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
+  entry->items[0].change_set = 0;
+  entry->items[0].number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+  APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
+
+  entry = apr_pcalloc(subpool, sizeof(*entry));
+  entry->offset = 0x1d + 0x5d;
+  entry->size = 1;
+  entry->type = SVN_FS_X__ITEM_TYPE_CHANGES;
+  entry->item_count = 1;
+  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
+  entry->items[0].change_set = 0;
+  entry->items[0].number = SVN_FS_X__ITEM_INDEX_CHANGES;
+  APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
+
+  /* Now re-open r0, create proto-index files from our entries and
+      rewrite the index section of r0. */
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file_writable(&rev_file, fs, 0,
+                                                   subpool, subpool));
+  SVN_ERR(svn_fs_x__p2l_index_from_p2l_entries(&p2l_proto_index, fs,
+                                               rev_file, index_entries,
+                                               subpool, subpool));
+  SVN_ERR(svn_fs_x__l2p_index_from_p2l_entries(&l2p_proto_index, fs,
+                                               index_entries,
+                                               subpool, subpool));
+  SVN_ERR(svn_fs_x__add_index_data(fs, rev_file->file, l2p_proto_index,
+                                   p2l_proto_index, 0, subpool));
+  SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
@@ -880,11 +918,12 @@ svn_fs_x__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_x__set_uuid(fs, NULL, pool));
 
-  SVN_ERR(write_revision_zero(fs));
-
   SVN_ERR(write_config(fs, pool));
 
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Add revision 0. */
+  SVN_ERR(write_revision_zero(fs, pool));
 
   /* Create the min unpacked rev file. */
   SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
