@@ -37,7 +37,8 @@ svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
                             const svn_fs_id_t *id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *COUNT to the value of the mergeinfo_count member of the node-
    revision for the node ID in FS.  Do any allocations in POOL. */
@@ -53,7 +54,8 @@ svn_error_t *
 svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.
    Do any allocations in POOL. */

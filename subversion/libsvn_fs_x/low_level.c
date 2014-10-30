@@ -152,9 +152,9 @@ svn_fs_x__parse_revision_trailer(apr_off_t *root_offset,
 svn_stringbuf_t *
 svn_fs_x__unparse_revision_trailer(apr_off_t root_offset,
                                    apr_off_t changes_offset,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *result_pool)
 {
-  return svn_stringbuf_createf(pool,
+  return svn_stringbuf_createf(result_pool,
                                "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                                root_offset,
                                changes_offset);
@@ -188,9 +188,9 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
 svn_stringbuf_t *
 svn_fs_x__unparse_footer(apr_off_t l2p_offset,
                          apr_off_t p2l_offset,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
-  return svn_stringbuf_createf(pool,
+  return svn_stringbuf_createf(result_pool,
                                "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
                                l2p_offset,
                                p2l_offset);
@@ -199,13 +199,13 @@ svn_fs_x__unparse_footer(apr_off_t l2p_offset,
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
-   POOL. */
+   RESULT_POOL. */
 static svn_error_t *
 read_header_block(apr_hash_t **headers,
                   svn_stream_t *stream,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
-  *headers = svn_hash__make(pool);
+  *headers = svn_hash__make(result_pool);
 
   while (1)
     {
@@ -215,7 +215,8 @@ read_header_block(apr_hash_t **headers,
       apr_ssize_t name_len;
       svn_boolean_t eof;
 
-      SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof, pool));
+      SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof,
+                                  result_pool));
 
       if (eof || header_str->len == 0)
         break; /* end of header block */
@@ -262,7 +263,8 @@ read_header_block(apr_hash_t **headers,
 svn_error_t *
 svn_fs_x__parse_representation(representation_t **rep_p,
                                svn_stringbuf_t *text,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   representation_t *rep;
   char *str;
@@ -270,7 +272,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
   char *string = text->data;
   svn_checksum_t *checksum;
 
-  rep = apr_pcalloc(pool, sizeof(*rep));
+  rep = apr_pcalloc(result_pool, sizeof(*rep));
   *rep_p = rep;
 
   str = svn_cstring_tokenize(" ", &string);
@@ -319,7 +321,8 @@ svn_fs_x__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str,
+                                 scratch_pool));
   if (checksum)
     memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
@@ -333,7 +336,8 @@ svn_fs_x__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
+                                 scratch_pool));
   rep->has_sha1 = checksum != NULL;
   if (checksum)
     memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
@@ -347,17 +351,22 @@ static svn_error_t *
 read_rep_offsets(representation_t **rep_p,
                  char *string,
                  const svn_fs_id_t *noderev_id,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   svn_error_t *err
     = svn_fs_x__parse_representation(rep_p,
-                                     svn_stringbuf_create_wrap(string, pool),
-                                     pool);
+                                     svn_stringbuf_create_wrap(string,
+                                                               scratch_pool),
+                                     result_pool,
+                                     scratch_pool);
   if (err)
     {
-      const svn_string_t *id_unparsed = svn_fs_x__id_unparse(noderev_id, pool);
+      const svn_string_t *id_unparsed;
       const char *where;
-      where = apr_psprintf(pool,
+
+      id_unparsed = svn_fs_x__id_unparse(noderev_id, scratch_pool);
+      where = apr_psprintf(scratch_pool,
                            _("While reading representation offsets "
                              "for node-revision '%s':"),
                            noderev_id ? id_unparsed->data : "(null)");
@@ -423,27 +432,28 @@ auto_unescape_path(const char *path,
 svn_error_t *
 svn_fs_x__read_noderev(node_revision_t **noderev_p,
                        svn_stream_t *stream,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   apr_hash_t *headers;
   node_revision_t *noderev;
   char *value;
   const char *noderev_id;
 
-  SVN_ERR(read_header_block(&headers, stream, pool));
+  SVN_ERR(read_header_block(&headers, stream, scratch_pool));
 
-  noderev = apr_pcalloc(pool, sizeof(*noderev));
+  noderev = apr_pcalloc(result_pool, sizeof(*noderev));
 
   /* Read the node-rev id. */
   value = svn_hash_gets(headers, HEADER_ID);
   if (value == NULL)
-      /* ### More information: filename/offset coordinates */
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Missing id field in node-rev"));
+     /* ### More information: filename/offset coordinates */
+     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Missing id field in node-rev"));
 
   SVN_ERR(svn_stream_close(stream));
 
-  noderev->id = svn_fs_x__id_parse(value, strlen(value), pool);
+  noderev->id = svn_fs_x__id_parse(value, strlen(value), result_pool);
   noderev_id = value; /* for error messages later */
 
   /* Read the type. */
@@ -473,7 +483,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               noderev->id, pool));
+                               noderev->id, result_pool, scratch_pool));
     }
 
   /* Get the data location. */
@@ -481,7 +491,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               noderev->id, pool));
+                               noderev->id, result_pool, scratch_pool));
     }
 
   /* Get the created path. */
@@ -494,13 +504,16 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      noderev->created_path = auto_unescape_path(value, pool);
+      noderev->created_path = auto_unescape_path(apr_pstrdup(result_pool,
+                                                              value),
+                                                 result_pool);
     }
 
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    noderev->predecessor_id = svn_fs_x__id_parse(value, strlen(value), pool);
+    noderev->predecessor_id = svn_fs_x__id_parse(value, strlen(value),
+                                                 result_pool);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -525,7 +538,9 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyroot_path = auto_unescape_path(value, pool);
+      noderev->copyroot_path = auto_unescape_path(apr_pstrdup(result_pool,
+                                                              value),
+                                                  result_pool);
     }
 
   /* Get the copyfrom. */
@@ -549,7 +564,9 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyfrom line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyfrom_path = auto_unescape_path(value, pool);
+      noderev->copyfrom_path = auto_unescape_path(apr_pstrdup(result_pool,
+                                                              value),
+                                                  result_pool);
     }
 
   /* Get whether this is a fresh txn root. */
@@ -574,13 +591,13 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
 
 /* Return a textual representation of the DIGEST of given KIND.
  * If IS_NULL is TRUE, no digest is available.
- * Use POOL for allocations.
+ * Allocate the result in RESULT_POOL.
  */
 static const char *
 format_digest(const unsigned char *digest,
               svn_checksum_kind_t kind,
               svn_boolean_t is_null,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool)
 {
   svn_checksum_t checksum;
   checksum.digest = digest;
@@ -589,92 +606,96 @@ format_digest(const unsigned char *digest,
   if (is_null)
     return "(null)";
 
-  return svn_checksum_to_cstring_display(&checksum, pool);
+  return svn_checksum_to_cstring_display(&checksum, result_pool);
 }
 
 svn_stringbuf_t *
 svn_fs_x__unparse_representation(representation_t *rep,
-                                 int format,
                                  svn_boolean_t mutable_rep_truncated,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   if (!rep->has_sha1)
     return svn_stringbuf_createf
-            (pool,
+            (result_pool,
              "%" APR_INT64_T_FMT " %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
              rep->id.change_set, rep->id.number, rep->size,
              rep->expanded_size,
-             format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
+             format_digest(rep->md5_digest, svn_checksum_md5, FALSE,
+                           scratch_pool));
 
   return svn_stringbuf_createf
-          (pool,
+          (result_pool,
            "%" APR_INT64_T_FMT " %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s",
            rep->id.change_set, rep->id.number, rep->size,
            rep->expanded_size,
-           format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
+           format_digest(rep->md5_digest, svn_checksum_md5,
+                         FALSE, scratch_pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
-                         !rep->has_sha1, pool));
+                         !rep->has_sha1, scratch_pool));
 }
 
 
 svn_error_t *
 svn_fs_x__write_noderev(svn_stream_t *outfile,
                         node_revision_t *noderev,
-                        int format,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_ID ": %s\n",
-                            svn_fs_x__id_unparse(noderev->id, pool)->data));
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_ID ": %s\n",
+                            svn_fs_x__id_unparse(noderev->id,
+                                                 scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TYPE ": %s\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_TYPE ": %s\n",
                             (noderev->kind == svn_node_file) ?
                             SVN_FS_X__KIND_FILE : SVN_FS_X__KIND_DIR));
 
   if (noderev->predecessor_id)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PRED ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PRED ": %s\n",
                               svn_fs_x__id_unparse(noderev->predecessor_id,
-                                                   pool)->data));
+                                                   scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COUNT ": %d\n",
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COUNT ": %d\n",
                             noderev->predecessor_count));
 
   if (noderev->data_rep)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_TEXT ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_TEXT ": %s\n",
                               svn_fs_x__unparse_representation
                                 (noderev->data_rep,
-                                 format,
                                  noderev->kind == svn_node_dir,
-                                 pool)->data));
+                                 scratch_pool, scratch_pool)->data));
 
   if (noderev->prop_rep)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_PROPS ": %s\n",
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PROPS ": %s\n",
                               svn_fs_x__unparse_representation
-                                (noderev->prop_rep, format,
-                                 TRUE, pool)->data));
+                                (noderev->prop_rep,
+                                 TRUE, scratch_pool, scratch_pool)->data));
 
-  SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
-                            auto_escape_path(noderev->created_path, pool)));
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_CPATH ": %s\n",
+                            auto_escape_path(noderev->created_path,
+                                             scratch_pool)));
 
   if (noderev->copyfrom_path)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYFROM ": %ld"
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPYFROM ": %ld"
                               " %s\n",
                               noderev->copyfrom_rev,
-                              auto_escape_path(noderev->copyfrom_path, pool)));
+                              auto_escape_path(noderev->copyfrom_path,
+                                               scratch_pool)));
 
   if ((noderev->copyroot_rev != svn_fs_x__id_rev(noderev->id)) ||
       (strcmp(noderev->copyroot_path, noderev->created_path) != 0))
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYROOT ": %ld"
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPYROOT ": %ld"
                               " %s\n",
                               noderev->copyroot_rev,
-                              auto_escape_path(noderev->copyroot_path, pool)));
+                              auto_escape_path(noderev->copyroot_path,
+                                               scratch_pool)));
 
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
 
   if (noderev->mergeinfo_count > 0)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
+    SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_MINFO_CNT ": %"
                               APR_INT64_T_FMT "\n",
                               noderev->mergeinfo_count));
 
@@ -687,16 +708,17 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
 svn_error_t *
 svn_fs_x__read_rep_header(svn_fs_x__rep_header_t **header,
                           svn_stream_t *stream,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *buffer;
   char *str, *last_str;
   apr_int64_t val;
   svn_boolean_t eol = FALSE;
 
-  SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, pool));
+  SVN_ERR(svn_stream_readline(stream, &buffer, "\n", &eol, scratch_pool));
 
-  *header = apr_pcalloc(pool, sizeof(**header));
+  *header = apr_pcalloc(result_pool, sizeof(**header));
   (*header)->header_size = buffer->len + 1;
   if (strcmp(buffer->data, REP_DELTA) == 0)
     {
@@ -740,7 +762,7 @@ svn_fs_x__read_rep_header(svn_fs_x__rep_header_t **header,
 svn_error_t *
 svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
                            svn_stream_t *stream,
-                           apr_pool_t *pool)
+                           apr_pool_t *scratch_pool)
 {
   const char *text;
   
@@ -751,8 +773,8 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
         break;
 
       default:
-        text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                            SVN_FILESIZE_T_FMT "\n",
+        text = apr_psprintf(scratch_pool, REP_DELTA " %ld %" APR_OFF_T_FMT
+                                          " %" SVN_FILESIZE_T_FMT "\n",
                             header->base_revision, header->base_item_index,
                             header->base_length);
     }
@@ -948,20 +970,22 @@ read_change(change_t **change_p,
 svn_error_t *
 svn_fs_x__read_changes(apr_array_header_t **changes,
                        svn_stream_t *stream,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   change_t *change;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool;
 
   /* pre-allocate enough room for most change lists
      (will be auto-expanded as necessary) */
-  *changes = apr_array_make(pool, 30, sizeof(change_t *));
+  *changes = apr_array_make(result_pool, 30, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, pool, iterpool));
+  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
   while (change)
     {
       APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, pool, iterpool));
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
       svn_pool_clear(iterpool);
     }
   svn_pool_destroy(iterpool);
@@ -974,12 +998,12 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
                                      svn_fs_x__change_receiver_t
                                        change_receiver,
                                      void *change_receiver_baton,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *scratch_pool)
 {
   change_t *change;
   apr_pool_t *iterpool;
 
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   do
     {
       svn_pool_clear(iterpool);
@@ -996,12 +1020,12 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
    string COPYFROM, into the file specified by FILE.  All temporary
-   allocations are in POOL. */
+   allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
                    svn_fs_path_change2_t *change,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   const char *idstr;
   const char *change_string = NULL;
@@ -1033,29 +1057,31 @@ write_change_entry(svn_stream_t *stream,
     }
 
   if (change->node_rev_id)
-    idstr = svn_fs_x__id_unparse(change->node_rev_id, pool)->data;
+    idstr = svn_fs_x__id_unparse(change->node_rev_id, scratch_pool)->data;
   else
     idstr = ACTION_RESET;
 
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
-                  || change->node_kind == svn_node_file);
-  kind_string = apr_psprintf(pool, "-%s",
-                              change->node_kind == svn_node_dir
-                              ? SVN_FS_X__KIND_DIR
-                              : SVN_FS_X__KIND_FILE);
-  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s %s %s\n",
+                 || change->node_kind == svn_node_file);
+  kind_string = apr_psprintf(scratch_pool, "-%s",
+                             change->node_kind == svn_node_dir
+                             ? SVN_FS_X__KIND_DIR
+                             : SVN_FS_X__KIND_FILE);
+
+  buf = svn_stringbuf_createf(scratch_pool, "%s %s%s %s %s %s %s\n",
                               idstr, change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->mergeinfo_mod == svn_tristate_true
                                                ? FLAG_TRUE : FLAG_FALSE,
-                              auto_escape_path(path, pool));
+                              auto_escape_path(path, scratch_pool));
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
-      svn_stringbuf_appendcstr(buf, apr_psprintf(pool, "%ld %s",
-                             change->copyfrom_rev,
-                             auto_escape_path(change->copyfrom_path, pool)));
+      svn_stringbuf_appendcstr(buf, apr_psprintf(scratch_pool, "%ld %s",
+                               change->copyfrom_rev,
+                               auto_escape_path(change->copyfrom_path,
+                                                scratch_pool)));
     }
 
   svn_stringbuf_appendbyte(buf, '\n');
@@ -1070,9 +1096,9 @@ svn_fs_x__write_changes(svn_stream_t *stream,
                         svn_fs_t *fs,
                         apr_hash_t *changes,
                         svn_boolean_t terminate_list,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *sorted_changed_paths;
   int i;
 
@@ -1080,7 +1106,8 @@ svn_fs_x__write_changes(svn_stream_t *stream,
      that the final file is deterministic and repeatable, however the
      rest of the FSX code doesn't require any particular order here. */
   sorted_changed_paths = svn_sort__hash(changes,
-                                        svn_sort_compare_items_lexically, pool);
+                                        svn_sort_compare_items_lexically,
+                                        scratch_pool);
 
   /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
@@ -1099,7 +1126,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
 
   if (terminate_list)
     svn_stream_puts(stream, "\n");
-  
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
