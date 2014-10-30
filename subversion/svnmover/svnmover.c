@@ -192,6 +192,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 
 typedef enum action_code_t {
   ACTION_DIFF,
+  ACTION_DIFF_E,
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
   ACTION_BRANCH,
@@ -208,7 +209,7 @@ struct action {
   action_code_t action;
 
   /* revision (copy-from-rev of path[0] for cp) */
-  svn_revnum_t rev;
+  svn_opt_revision_t rev_spec[3];
 
   /* action    path[0]  path[1]  path[2]
    * ------    -------  -------  -------
@@ -227,13 +228,13 @@ struct action {
 
 /* ====================================================================== */
 
-/* Find the deepest branch in the repository of which RRPATH_REV is
+/* Find the deepest branch in the repository of which REV_SPEC:RRPATH is
  * either the root element or a normal, non-sub-branch element.
  *
- * RRPATH_REV is a repository-relative path with an optional "@REV" suffix.
- * When "@REV" is not present, find in the current txn.
+ * RRPATH is a repository-relative path; REV_SPEC is a revision specifier.
+ * When REV_SPEC.kind is not 'number', find in the current txn.
  *
- * Return the location of the element at RRPATH_REV in that branch, or with
+ * Return the location of the element in that branch, or with
  * EID=-1 if no element exists there.
  *
  * The result will never be NULL, as every path is within at least the root
@@ -242,14 +243,11 @@ struct action {
 static svn_error_t *
 find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
                           svn_editor3_t *editor,
-                          const char *rrpath_rev,
+                          svn_opt_revision_t rev_spec,
+                          const char *rrpath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  const char *rrpath;
-  svn_opt_revision_t rev_spec;
-
-  SVN_ERR(svn_opt_parse_path(&rev_spec, &rrpath, rrpath_rev, scratch_pool));
   if (rev_spec.kind == svn_opt_revision_number)
     {
       svn_revnum_t revnum = rev_spec.value.number;
@@ -268,6 +266,7 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
     }
+  SVN_ERR_ASSERT(*el_rev_p);
   return SVN_NO_ERROR;
 }
 
@@ -703,12 +702,12 @@ svn_branch_merge(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Display differences, referring to elements */
 static svn_error_t *
-svn_branch_diff(svn_editor3_t *editor,
-                svn_branch_el_rev_id_t *left,
-                svn_branch_el_rev_id_t *right,
-                apr_pool_t *scratch_pool)
+svn_branch_diff_e(svn_editor3_t *editor,
+                  svn_branch_el_rev_id_t *left,
+                  svn_branch_el_rev_id_t *right,
+                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff_yca_tgt;
   int first_eid, next_eid, eid;
@@ -759,13 +758,100 @@ svn_branch_diff(svn_editor3_t *editor,
             {
               status_mod = e0 ? 'D' : 'A';
             }
-          printf("%c%c%c e%d (%s -> %s)\n",
+          printf("%c%c%c e%d  %s%s%s\n",
                  status_mod, status_reparent, status_rename,
                  eid,
-                 e0 ? apr_psprintf(scratch_pool, "<e%d/%s>",
-                                   e0->parent_eid, e0->name) : "<nil>",
-                 e1 ? apr_psprintf(scratch_pool, "<e%d/%s>",
-                                   e1->parent_eid, e1->name) : "<nil>");
+                 e1 ? apr_psprintf(scratch_pool, "e%d/%s",
+                                   e1->parent_eid, e1->name) : "",
+                 e0 && e1 ? " from " : "",
+                 e0 ? apr_psprintf(scratch_pool, "e%d/%s",
+                                   e0->parent_eid, e0->name) : "");
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Display differences, referring to paths */
+static svn_error_t *
+svn_branch_diff(svn_editor3_t *editor,
+                svn_branch_el_rev_id_t *left,
+                svn_branch_el_rev_id_t *right,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *diff_yca_tgt;
+  int first_eid, next_eid, eid;
+
+  if (left->branch->sibling_defn->family->fid
+      != right->branch->sibling_defn->family->fid)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Left and right side of an element-based diff "
+                                 "must be in the same branch family "
+                                 "(left: f%d, right: f%d)"),
+                               left->branch->sibling_defn->family->fid,
+                               right->branch->sibling_defn->family->fid);
+    }
+  SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
+
+  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
+                                         editor, left, right,
+                                         scratch_pool, scratch_pool));
+
+  first_eid = left->branch->sibling_defn->family->first_eid;
+  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
+                 right->branch->sibling_defn->family->next_eid);
+
+  for (eid = first_eid; eid < next_eid; eid++)
+    {
+      svn_branch_el_rev_content_t **e_pair
+        = apr_hash_get(diff_yca_tgt, &eid, sizeof(eid));
+      svn_branch_el_rev_content_t *e0, *e1;
+
+      if (! e_pair)
+        continue;
+
+      e0 = e_pair[0];
+      e1 = e_pair[1];
+
+      if (e0 || e1)
+        {
+          char status_mod = ' ', status_reparent = ' ', status_rename = ' ';
+          const char *path0 = NULL, *path1 = NULL;
+          const char *from = "";
+
+          if (e0 && e1)
+            {
+              status_mod = 'M';
+              status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
+              status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
+            }
+          else
+            {
+              status_mod = e0 ? 'D' : 'A';
+            }
+          if (e0)
+            path0 = svn_branch_get_rrpath_by_eid(left->branch, eid, scratch_pool);
+          if (e1)
+            path1 = svn_branch_get_rrpath_by_eid(right->branch, eid, scratch_pool);
+          if (e0 && e1
+              && (e0->parent_eid != e1->parent_eid
+                  || strcmp(e0->name, e1->name) != 0))
+            {
+              if (e0->parent_eid == e1->parent_eid)
+                from = apr_psprintf(scratch_pool, " (renamed from .../%s)", e0->name);
+              else if (strcmp(e0->name, e1->name) == 0)
+                from = apr_psprintf(scratch_pool, " (moved from %s/...)",
+                                    svn_branch_get_rrpath_by_eid(left->branch,
+                                                                 e0->parent_eid,
+                                                                 scratch_pool));
+              else
+                from = apr_psprintf(scratch_pool, " (moved+renamed from %s)", path0);
+            }
+          printf("%c%c%c %s%s\n",
+                 status_mod, status_reparent, status_rename,
+                 e1 ? path1 : path0,
+                 from);
         }
     }
 
@@ -819,15 +905,17 @@ execute(const apr_array_header_t *actions,
         {
           if (action->path[j])
             {
-              const char *rrpath = svn_relpath_join(base_relpath,
-                                                    action->path[j], pool);
-              const char *parent_rrpath = svn_relpath_dirname(rrpath, pool);
+              const char *rrpath, *parent_rrpath;
+
+              rrpath = svn_relpath_join(base_relpath, action->path[j], pool);
+              parent_rrpath = svn_relpath_dirname(rrpath, pool);
 
               path_name[j] = svn_relpath_basename(rrpath, NULL);
-              SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev[j], editor, rrpath,
+              SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev[j], editor,
+                                                action->rev_spec[j], rrpath,
                                                 pool, pool));
-              SVN_ERR(find_el_rev_by_rrpath_rev(&parent_el_rev[j],
-                                                editor, parent_rrpath,
+              SVN_ERR(find_el_rev_by_rrpath_rev(&parent_el_rev[j], editor,
+                                                action->rev_spec[j], parent_rrpath,
                                                 pool, pool));
             }
         }
@@ -851,6 +939,26 @@ execute(const apr_array_header_t *actions,
                                     el_rev[0] /*from*/,
                                     el_rev[1] /*to*/,
                                     iterpool));
+          }
+          break;
+        case ACTION_DIFF_E:
+          {
+            if (el_rev[0]->eid < 0)
+              {
+                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                         _("Element not found: '%s'"),
+                                         action->path[0]);
+              }
+            if (el_rev[1]->eid < 0)
+              {
+                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                         _("Element not found: '%s'"),
+                                         action->path[1]);
+              }
+            SVN_ERR(svn_branch_diff_e(editor,
+                                      el_rev[0] /*from*/,
+                                      el_rev[1] /*to*/,
+                                      iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES:
@@ -893,9 +1001,11 @@ execute(const apr_array_header_t *actions,
             /* Look up path[0] (FROM) and path[2] (YCA) relative to repo
                root, unlike path[1] (TO) which is relative to anchor URL. */
             SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, action->path[0], pool, pool));
+                      &el_rev[0], editor, action->rev_spec[0], action->path[0],
+                      pool, pool));
             SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[2], editor, action->path[2], pool, pool));
+                      &el_rev[2], editor, action->rev_spec[2], action->path[2],
+                      pool, pool));
             SVN_ERR(svn_branch_merge(editor,
                                      el_rev[0] /*from*/,
                                      el_rev[1] /*to*/,
@@ -983,19 +1093,23 @@ usage(FILE *stream, apr_pool_t *pool)
       "  the result as a (single) new revision.\n"
       "\n"
       "Actions:\n"
-      "  ls-br                  : list all branches\n"
-      "  branch SRC DST         : branch the (sub)branch at SRC to make a new branch\n"
-      "                           at DST (presently, SRC must be a branch root)\n"
-      "  branchify BR-ROOT      : change the existing simple sub-tree at SRC into\n"
+      "  ls-br                  : list all branches in this family\n"
+      "  ls-br-r                : list all branches, recursively\n"
+      "  branch SRC DST         : branch the branch-root or branch-subtree at SRC\n"
+      "                           to make a new branch at DST\n"
+      "  branchify ROOT         : change the existing simple subtree at ROOT into\n"
       "                           a sub-branch (presently, in a new branch family)\n"
-      "  dissolve BR-ROOT       : change the existing sub-branch at SRC into a\n"
+      "  dissolve ROOT          : change the existing sub-branch at ROOT into a\n"
       "                           simple sub-tree of its parent branch\n"
       "  diff LEFT RIGHT        : diff LEFT to RIGHT\n"
+      "  diff-e LEFT RIGHT      : diff LEFT to RIGHT (element-focused output)\n"
       "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
-      "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
+      "                           (FROM and YCA are relative to repo, not to root-URL)\n"
+      "  cp SRC-URL@REV DST-URL : copy SRC-URL@REV to DST-URL\n"
       "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
       "  rm URL                 : delete URL\n"
       "  mkdir URL              : create new directory URL\n"
+      "                           (there is presently no way to create a file)\n"
       "\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
@@ -1320,26 +1434,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                 "--non-interactive"));
     }
 
-  /* Copy the rest of our command-line arguments to an array,
-     UTF-8-ing them along the way. */
-  /* If there are extra arguments in a supplementary file, tack those
-     on, too (again, in UTF8 form). */
-  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
-  if (extra_args_file)
-    {
-      const char *extra_args_file_utf8;
-      svn_stringbuf_t *contents, *contents_utf8;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
-                                      extra_args_file, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
-      SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
-      svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
-                               FALSE, pool);
-    }
-  SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
-                                           ctx, FALSE, pool));
-
   /* Now initialize the client context */
 
   err = svn_config_get_config(&cfg_hash, config_dir, pool);
@@ -1390,6 +1484,33 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (! log_msg)
     return SVN_NO_ERROR;
 
+  /* Copy the rest of our command-line arguments to an array,
+     UTF-8-ing them along the way. */
+  /* If there are extra arguments in a supplementary file, tack those
+     on, too (again, in UTF8 form). */
+  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
+  if (extra_args_file)
+    {
+      const char *extra_args_file_utf8;
+      svn_stringbuf_t *contents, *contents_utf8;
+
+      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
+                                      extra_args_file, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
+      SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
+      svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
+                               FALSE, pool);
+    }
+  /* Append the root URL temporarily as a reference for repos-relative URLs. */
+  if (root_url)
+    APR_ARRAY_PUSH(action_args, const char *) = root_url;
+  /* Parse arguments -- converting local style to internal style,
+   * repos-relative URLs to regular URLs, etc. */
+  SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
+                                           ctx, FALSE, pool));
+  if (root_url)
+    action_args->nelts--;
+
   /* Now, we iterate over the combined set of arguments -- our actions. */
   for (i = 0; i < action_args->nelts; ++i)
     {
@@ -1400,6 +1521,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* First, parse the action. */
       if (! strcmp(action_string, "diff"))
         action->action = ACTION_DIFF;
+      else if (! strcmp(action_string, "diff-e"))
+        action->action = ACTION_DIFF_E;
       else if (! strcmp(action_string, "ls-br"))
         action->action = ACTION_LIST_BRANCHES;
       else if (! strcmp(action_string, "ls-br-r"))
@@ -1431,37 +1554,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                  "'%s' is not an action\n",
                                  action_string);
 
-      /* For copies, there should be a revision number next. */
-      if (action->action == ACTION_CP)
-        {
-          const char *rev_str;
-
-          if (++i == action_args->nelts)
-            return svn_error_trace(insufficient());
-          rev_str = APR_ARRAY_IDX(action_args, i, const char *);
-          if (strcmp(rev_str, "head") == 0)
-            action->rev = SVN_INVALID_REVNUM;
-          else if (strcmp(rev_str, "HEAD") == 0)
-            action->rev = SVN_INVALID_REVNUM;
-          else
-            {
-              char *end;
-
-              while (*rev_str == 'r')
-                ++rev_str;
-
-              action->rev = strtol(rev_str, &end, 0);
-              if (*end)
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "'%s' is not a revision\n",
-                                         rev_str);
-            }
-        }
-      else
-        {
-          action->rev = SVN_INVALID_REVNUM;
-        }
-
       /* How many URLs does this action expect? */
       if (action->action == ACTION_RM
           || action->action == ACTION_MKDIR
@@ -1484,6 +1576,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient());
           path = APR_ARRAY_IDX(action_args, i, const char *);
+
+          SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
 
           /* If there's a ROOT_URL, we expect URL to be a path
              relative to ROOT_URL (and we build a full url from the
