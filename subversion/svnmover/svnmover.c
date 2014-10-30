@@ -374,9 +374,9 @@ element_merge(svn_branch_el_rev_content_t **result_p,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_boolean_t same1 = svn_branch_el_rev_content_equal(eid, yca, side1,
+  svn_boolean_t same1 = svn_branch_el_rev_content_equal(yca, side1,
                                                         scratch_pool);
-  svn_boolean_t same2 = svn_branch_el_rev_content_equal(eid, yca, side2,
+  svn_boolean_t same2 = svn_branch_el_rev_content_equal(yca, side2,
                                                         scratch_pool);
   svn_boolean_t conflict = FALSE;
   svn_branch_el_rev_content_t *result = NULL;
@@ -488,7 +488,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
     {
       /* Double add (as we already handled the case where YCA also exists) */
       if (policy->merge_double_add
-          && svn_branch_el_rev_content_equal(eid, side1, side2, scratch_pool))
+          && svn_branch_el_rev_content_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double add",
                    eid));
@@ -498,7 +498,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         {
           SVN_DBG(("e%d conflict: add vs. add (%s)",
                    eid,
-                   svn_branch_el_rev_content_equal(eid, side1, side2,
+                   svn_branch_el_rev_content_equal(side1, side2,
                                                    scratch_pool)
                      ? "same content" : "different content"));
           conflict = TRUE;

@@ -1873,9 +1873,20 @@ svn_branch_el_rev_content_create(svn_editor3_nbid_t parent_eid,
   return content;
 }
 
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
+                              apr_pool_t *result_pool)
+{
+  svn_branch_el_rev_content_t *content
+     = apr_pmemdup(result_pool, old, sizeof(*content));
+
+  content->name = apr_pstrdup(result_pool, old->name);
+  content->content = svn_editor3_node_content_dup(old->content, result_pool);
+  return content;
+}
+
 svn_boolean_t
-svn_branch_el_rev_content_equal(int eid,
-                                const svn_branch_el_rev_content_t *content_left,
+svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
                                 const svn_branch_el_rev_content_t *content_right,
                                 apr_pool_t *scratch_pool)
 {
@@ -2266,7 +2277,6 @@ branch_map_copy_children(svn_branch_instance_t *from_branch,
                          int to_parent_eid,
                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *map_pool = apr_hash_pool_get(to_branch->e_map);
   apr_hash_index_t *hi;
 
   /* The 'from' and 'to' nodes must exist. */
@@ -2283,11 +2293,10 @@ branch_map_copy_children(svn_branch_instance_t *from_branch,
       if (from_node->parent_eid == from_parent_eid)
         {
           int new_eid = family_add_new_element(to_branch->sibling_defn->family);
-          svn_branch_el_rev_content_t *new_node
-            = svn_branch_el_rev_content_create(to_parent_eid, from_node->name,
-                                               from_node->content, map_pool);
 
-          branch_map_set(to_branch, new_eid, new_node);
+          branch_map_update(to_branch, new_eid,
+                            to_parent_eid, from_node->name,
+                            from_node->content);
 
           /* Recurse. (We don't try to check whether it's a directory node,
              as we might not have the node kind in the map.) */
@@ -2346,8 +2355,9 @@ branch_map_branch_children(svn_branch_instance_t *from_branch,
 
           SVN_ERR(copy_content_from(&this_content, from_branch, this_eid,
                                     scratch_pool, scratch_pool));
-          from_node->content = this_content;
-          branch_map_set(to_branch, this_eid, from_node);
+          branch_map_update(to_branch, this_eid,
+                            from_node->parent_eid, from_node->name,
+                            this_content);
 
           /* Recurse. (We don't try to check whether it's a directory node,
              as we might not have the node kind in the map.) */
@@ -3117,7 +3127,7 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
                                         result_pool, scratch_pool));
         }
 
-      if (! svn_branch_el_rev_content_equal(e, content_left, content_right, scratch_pool))
+      if (! svn_branch_el_rev_content_equal(content_left, content_right, scratch_pool))
         {
           int *eid_stored = apr_pmemdup(result_pool, &e, sizeof(e));
           svn_branch_el_rev_content_t **contents
