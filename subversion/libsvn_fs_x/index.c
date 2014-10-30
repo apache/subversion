@@ -2998,6 +2998,270 @@ svn_fs_x__item_offset(apr_off_t *offset,
   return SVN_NO_ERROR;
 }
 
+/* Calculate the FNV1 checksum over the offset range in REV_FILE, covered by
+ * ENTRY.  Store the result in ENTRY->FNV1_CHECKSUM.  Use POOL for temporary
+ * allocations. */
+static svn_error_t *
+calc_fnv1(svn_fs_x__p2l_entry_t *entry,
+          svn_fs_x__revision_file_t *rev_file,
+          apr_pool_t *pool)
+{
+  unsigned char buffer[4096];
+  svn_checksum_t *checksum;
+  svn_checksum_ctx_t *context
+    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+  apr_off_t size = entry->size;
+
+  /* Special rules apply to unused sections / items.  The data must be a
+   * sequence of NUL bytes (not checked here) and the checksum is fixed to 0.
+   */
+  if (entry->type == SVN_FS_X__ITEM_TYPE_UNUSED)
+    {
+      entry->fnv1_checksum = 0;
+      return SVN_NO_ERROR;
+    }
+
+  /* Read the block and feed it to the checksum calculator. */
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &entry->offset, pool));
+  while (size > 0)
+    {
+      apr_size_t to_read = size > sizeof(buffer)
+                         ? sizeof(buffer)
+                         : (apr_size_t)size;
+      SVN_ERR(svn_io_file_read_full2(rev_file->file, buffer, to_read, NULL,
+                                     NULL, pool));
+      SVN_ERR(svn_checksum_update(context, buffer, to_read));
+      size -= to_read;
+    }
+
+  /* Store final checksum in ENTRY. */
+  SVN_ERR(svn_checksum_final(&checksum, context, pool));
+  entry->fnv1_checksum = ntohl(*(const apr_uint32_t *)checksum->digest);
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Index (re-)creation utilities.
+ */
+
+svn_error_t *
+svn_fs_x__p2l_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     svn_fs_x__revision_file_t *rev_file,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_file_t *proto_index;
+
+  /* Use a subpool for immediate temp file cleanup at the end of this
+   * function. */
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  /* Create a proto-index file. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, protoname, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__p2l_proto_index_open(&proto_index, *protoname,
+                                         scratch_pool));
+
+  /* Write ENTRIES to proto-index file and calculate checksums as we go. */
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      svn_fs_x__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_x__p2l_entry_t *);
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(calc_fnv1(entry, rev_file, iterpool));
+      SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(proto_index, entry,
+                                                  iterpool));
+    }
+
+  /* Convert proto-index into final index and move it into position.
+   * Note that REV_FILE contains the start revision of the shard file if it
+   * has been packed while REVISION may be somewhere in the middle.  For
+   * non-packed shards, they will have identical values. */
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
+
+  /* Temp file cleanup. */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Decorator for svn_fs_x__p2l_entry_t that associates it with a sorted
+ * variant of its ITEMS array.
+ */
+typedef struct sub_item_ordered_t
+{
+  /* ENTRY that got wrapped */
+  svn_fs_x__p2l_entry_t *entry;
+
+  /* Array of pointers into ENTRY->ITEMS, sorted by their revision member
+   * _descending_ order.  May be NULL if ENTRY->ITEM_COUNT < 2. */
+  svn_fs_x__id_part_t **order;
+} sub_item_ordered_t;
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter is younger.
+ * Used to sort sub_item_ordered_t::order
+ */
+static int
+compare_sub_items(const svn_fs_x__id_part_t * const * lhs,
+                  const svn_fs_x__id_part_t * const * rhs)
+{
+  return (*lhs)->change_set < (*rhs)->change_set
+       ? 1
+       : ((*lhs)->change_set > (*rhs)->change_set ? -1 : 0);
+}
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
+ * a newer revision.
+ */
+static int
+compare_p2l_info_rev(const sub_item_ordered_t * lhs,
+                     const sub_item_ordered_t * rhs)
+{
+  svn_fs_x__id_part_t *lhs_part;
+  svn_fs_x__id_part_t *rhs_part;
+  
+  assert(lhs != rhs);
+  if (lhs->entry->item_count == 0)
+    return rhs->entry->item_count == 0 ? 0 : -1;
+  if (rhs->entry->item_count == 0)
+    return 1;
+
+  lhs_part = lhs->order ? lhs->order[lhs->entry->item_count - 1]
+                        : &lhs->entry->items[0];
+  rhs_part = rhs->order ? rhs->order[rhs->entry->item_count - 1]
+                        : &rhs->entry->items[0];
+
+  if (lhs_part->change_set == rhs_part->change_set)
+    return 0;
+
+  return lhs_part->change_set < rhs_part->change_set ? -1 : 1;
+}
+
+svn_error_t *
+svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_file_t *proto_index;
+
+  /* Use a subpool for immediate temp file cleanup at the end of this
+   * function. */
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
+  int i;
+  apr_uint32_t k;
+  svn_priority_queue__t *queue;
+  apr_size_t count = 0;
+  apr_array_header_t *sub_item_orders;
+
+  /* Create the temporary proto-rev file. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, protoname, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__l2p_proto_index_open(&proto_index, *protoname,
+                                         scratch_pool));
+
+
+  /* wrap P2L entries such that we have access to the sub-items in revision
+     order.  The ENTRY_COUNT member will point to the next item to read+1. */
+  sub_item_orders = apr_array_make(scratch_pool, entries->nelts,
+                                   sizeof(sub_item_ordered_t));
+  sub_item_orders->nelts = entries->nelts;
+
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      svn_fs_x__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_x__p2l_entry_t *);
+      sub_item_ordered_t *ordered
+        = &APR_ARRAY_IDX(sub_item_orders, i, sub_item_ordered_t);
+
+      /* skip unused regions (e.g. padding) */
+      if (entry->item_count == 0)
+        continue;
+
+      assert(entry);
+      ordered->entry = entry;
+      count += entry->item_count;
+
+      if (entry->item_count > 1)
+        {
+          ordered->order
+            = apr_palloc(scratch_pool,
+                         sizeof(*ordered->order) * entry->item_count);
+          for (k = 0; k < entry->item_count; ++k)
+            ordered->order[k] = &entry->items[k];
+
+          qsort(ordered->order, entry->item_count, sizeof(*ordered->order),
+                (int (*)(const void *, const void *))compare_sub_items);
+        }
+    }
+
+  /* we need to write the index in ascending revision order */
+  queue = svn_priority_queue__create
+            (sub_item_orders,
+             (int (*)(const void *, const void *))compare_p2l_info_rev);
+
+  /* write index entries */
+  for (i = 0; i < count; ++i)
+    {
+      svn_fs_x__id_part_t *sub_item;
+      sub_item_ordered_t *ordered = svn_priority_queue__peek(queue);
+
+      if (ordered->entry->item_count > 0)
+        {
+          /* if there is only one item, we skip the overhead of having an
+             extra array for the item order */
+          sub_item = ordered->order
+                   ? ordered->order[ordered->entry->item_count - 1]
+                   : &ordered->entry->items[0];
+
+          /* next revision? */
+          if (prev_rev != svn_fs_x__get_revnum(sub_item->change_set))
+            {
+              prev_rev = svn_fs_x__get_revnum(sub_item->change_set);
+              SVN_ERR(svn_fs_x__l2p_proto_index_add_revision
+                          (proto_index, iterpool));
+            }
+
+          /* add entry */
+          SVN_ERR(svn_fs_x__l2p_proto_index_add_entry
+                      (proto_index, ordered->entry->offset,
+                      (apr_uint32_t)(sub_item - ordered->entry->items),
+                      sub_item->number, iterpool));
+
+          /* make ITEM_COUNT point the next sub-item to use+1 */
+          --ordered->entry->item_count;
+        }
+
+      /* process remaining sub-items (if any) of that container later */
+      if (ordered->entry->item_count)
+        svn_priority_queue__update(queue);
+      else
+        svn_priority_queue__pop(queue);
+
+      /* keep memory usage in check */
+      if (i % 256 == 0)
+        svn_pool_clear(iterpool);
+    }
+
+  /* Convert proto-index into final index and move it into position. */
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
+
+  /* Temp file cleanup. */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /*
  * Standard (de-)serialization functions
  */

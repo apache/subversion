@@ -3242,12 +3242,12 @@ svn_fs_x__add_index_data(svn_fs_t *fs,
 
   /* Append the actual index data to the pack file. */
   l2p_offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &l2p_offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_END, &l2p_offset, pool));
   SVN_ERR(svn_fs_x__l2p_index_append(fs, file, l2p_proto_index, revision,
                                      pool));
 
   p2l_offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &p2l_offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_END, &p2l_offset, pool));
   SVN_ERR(svn_fs_x__p2l_index_append(fs, file, p2l_proto_index, revision,
                                      pool));
 

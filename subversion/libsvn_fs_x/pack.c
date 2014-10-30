@@ -757,58 +757,6 @@ sort_items(apr_array_header_t *entries)
                   (int (*)(const void *, const void *))compare_p2l_info);
 }
 
-/* Decorator for svn_fs_x__p2l_entry_t that associates it with a sorted
- * variant of its ITEMS array.
- */
-typedef struct sub_item_ordered_t
-{
-  /* ENTRY that got wrapped */
-  svn_fs_x__p2l_entry_t *entry;
-
-  /* Array of pointers into ENTRY->ITEMS, sorted by their revision member
-   * _descending_ order.  May be NULL if ENTRY->ITEM_COUNT < 2. */
-  svn_fs_x__id_part_t **order;
-} sub_item_ordered_t;
-
-/* implements compare_fn_t. Place LHS before RHS, if the latter is younger.
- * Used to sort sub_item_ordered_t::order
- */
-static int
-compare_sub_items(const svn_fs_x__id_part_t * const * lhs,
-                  const svn_fs_x__id_part_t * const * rhs)
-{
-  return (*lhs)->change_set < (*rhs)->change_set
-       ? 1
-       : ((*lhs)->change_set > (*rhs)->change_set ? -1 : 0);
-}
-
-/* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
- * a newer revision.
- */
-static int
-compare_p2l_info_rev(const sub_item_ordered_t * lhs,
-                     const sub_item_ordered_t * rhs)
-{
-  svn_fs_x__id_part_t *lhs_part;
-  svn_fs_x__id_part_t *rhs_part;
-  
-  assert(lhs != rhs);
-  if (lhs->entry->item_count == 0)
-    return rhs->entry->item_count == 0 ? 0 : -1;
-  if (rhs->entry->item_count == 0)
-    return 1;
-
-  lhs_part = lhs->order ? lhs->order[lhs->entry->item_count - 1]
-                        : &lhs->entry->items[0];
-  rhs_part = rhs->order ? rhs->order[rhs->entry->item_count - 1]
-                        : &rhs->entry->items[0];
-
-  if (lhs_part->change_set == rhs_part->change_set)
-    return 0;
-
-  return lhs_part->change_set < rhs_part->change_set ? -1 : 1;
-}
-
 /* implements compare_fn_t.  Sort descending by PATH, NODE_ID and REVISION.
  */
 static int
@@ -1710,13 +1658,10 @@ static svn_error_t *
 write_l2p_index(pack_context_t *context,
                 apr_pool_t *pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
-  int i;
-  apr_uint32_t k;
-  svn_priority_queue__t *queue;
-  apr_size_t count = 0;
-  apr_array_header_t *sub_item_orders;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  const char *temp_name;
+  const char *proto_index;
+  apr_off_t offset = 0;
 
   /* lump all items into one bucket.  As target, use the bucket that
    * probably has the most entries already. */
@@ -1724,88 +1669,24 @@ write_l2p_index(pack_context_t *context,
   append_entries(context->reps, context->file_props);
   append_entries(context->reps, context->dir_props);
 
-  /* wrap P2L entries such that we have access to the sub-items in revision
-     order.  The ENTRY_COUNT member will point to the next item to read+1. */
-  sub_item_orders
-    = apr_array_make(pool, context->reps->nelts, sizeof(sub_item_ordered_t));
-  sub_item_orders->nelts = context->reps->nelts;
+  /* Let the index code do the expensive L2P -> P2L transformation. */
+  SVN_ERR(svn_fs_x__l2p_index_from_p2l_entries(&temp_name,
+                                               context->fs,
+                                               context->reps,
+                                               pool, scratch_pool));
 
-  for (i = 0; i < context->reps->nelts; ++i)
-    {
-      svn_fs_x__p2l_entry_t *entry
-        = APR_ARRAY_IDX(context->reps, i, svn_fs_x__p2l_entry_t *);
-      sub_item_ordered_t *ordered
-        = &APR_ARRAY_IDX(sub_item_orders, i, sub_item_ordered_t);
+  /* Append newly written segment to exisiting proto index file. */
+  SVN_ERR(svn_io_file_name_get(&proto_index, context->proto_l2p_index,
+                               scratch_pool));
 
-      /* skip unused regions (e.g. padding) */
-      if (entry->item_count == 0)
-        continue;
+  SVN_ERR(svn_io_file_flush(context->proto_l2p_index, scratch_pool));
+  SVN_ERR(svn_io_append_file(temp_name, proto_index, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(temp_name, FALSE, scratch_pool));
+  SVN_ERR(svn_io_file_seek(context->proto_l2p_index, APR_END, &offset,
+                           scratch_pool));
 
-      assert(entry);
-      ordered->entry = entry;
-      count += entry->item_count;
-
-      if (entry->item_count > 1)
-        {
-          ordered->order
-            = apr_palloc(pool, sizeof(*ordered->order) * entry->item_count);
-          for (k = 0; k < entry->item_count; ++k)
-            ordered->order[k] = &entry->items[k];
-
-          qsort(ordered->order, entry->item_count, sizeof(*ordered->order),
-                (int (*)(const void *, const void *))compare_sub_items);
-        }
-    }
-
-  /* we need to write the index in ascending revision order */
-  queue = svn_priority_queue__create
-            (sub_item_orders,
-             (int (*)(const void *, const void *))compare_p2l_info_rev);
-
-  /* write index entries */
-  for (i = 0; i < count; ++i)
-    {
-      svn_fs_x__id_part_t *sub_item;
-      sub_item_ordered_t *ordered = svn_priority_queue__peek(queue);
-
-      if (ordered->entry->item_count > 0)
-        {
-          /* if there is only one item, we skip the overhead of having an
-             extra array for the item order */
-          sub_item = ordered->order
-                   ? ordered->order[ordered->entry->item_count - 1]
-                   : &ordered->entry->items[0];
-
-          /* next revision? */
-          if (prev_rev != svn_fs_x__get_revnum(sub_item->change_set))
-            {
-              prev_rev = svn_fs_x__get_revnum(sub_item->change_set);
-              SVN_ERR(svn_fs_x__l2p_proto_index_add_revision
-                          (context->proto_l2p_index, iterpool));
-            }
-
-          /* add entry */
-          SVN_ERR(svn_fs_x__l2p_proto_index_add_entry
-                      (context->proto_l2p_index, ordered->entry->offset,
-                      (apr_uint32_t)(sub_item - ordered->entry->items),
-                      sub_item->number, iterpool));
-
-          /* make ITEM_COUNT point the next sub-item to use+1 */
-          --ordered->entry->item_count;
-        }
-
-      /* process remaining sub-items (if any) of that container later */
-      if (ordered->entry->item_count)
-        svn_priority_queue__update(queue);
-      else
-        svn_priority_queue__pop(queue);
-
-      /* keep memory usage in check */
-      if (i % 256 == 0)
-        svn_pool_clear(iterpool);
-    }
-
-  svn_pool_destroy(iterpool);
+  /* Done. */
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
