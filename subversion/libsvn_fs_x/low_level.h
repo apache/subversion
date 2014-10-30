@@ -36,6 +36,15 @@ extern "C" {
 #define SVN_FS_X__KIND_FILE          "file"
 #define SVN_FS_X__KIND_DIR           "dir"
 
+/* The functions are grouped as follows:
+ *
+ * - revision footer
+ * - representation (as in "text:" and "props:" lines)
+ * - node revision
+ * - representation header ("DELTA" lines)
+ * - changed path list
+ */
+
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev
  * in *ROOT_OFFSET and the offset of the changed paths list in
