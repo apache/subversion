@@ -3185,7 +3185,10 @@ svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
 
       /* skip unused regions (e.g. padding) */
       if (entry->item_count == 0)
-        continue;
+        {
+          --sub_item_orders->nelts;
+          continue;
+        }
 
       assert(entry);
       ordered->entry = entry;
