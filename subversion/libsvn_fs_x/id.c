@@ -395,16 +395,11 @@ svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 
 
 svn_fs_id_t *
-svn_fs_x__id_parse(const char *data,
-                   apr_size_t len,
+svn_fs_x__id_parse(char *data,
                    apr_pool_t *pool)
 {
   fs_x__id_t *id;
-  char *data_copy, *str;
-
-  /* Dup the ID data into POOL.  Our returned ID will have references
-     into this memory. */
-  data_copy = apr_pstrmemdup(pool, data, len);
+  char *str;
 
   /* Alloc a new svn_fs_id_t structure. */
   id = apr_pcalloc(pool, sizeof(*id));
@@ -419,21 +414,21 @@ svn_fs_x__id_parse(const char *data,
      string.*/
 
   /* Node Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->node_id, str))
     return NULL;
 
   /* Copy Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->copy_id, str))
     return NULL;
 
   /* NodeRev Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
 
