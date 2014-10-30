@@ -59,6 +59,28 @@ svn_fs_x__unparse_revision_trailer(apr_off_t root_offset,
                                    apr_off_t changes_offset,
                                    apr_pool_t *pool);
 
+/* Given the FSX revision / pack FOOTER, parse it destructively
+ * and return the start offsets of the index data in *L2P_OFFSET and
+ * *P2L_OFFSET, respectively.
+ * 
+ * Note that REV is only used to construct nicer error objects that
+ * mention this revision.
+ */
+svn_error_t *
+svn_fs_x__parse_footer(apr_off_t *l2p_offset,
+                       apr_off_t *p2l_offset,
+                       svn_stringbuf_t *footer,
+                       svn_revnum_t rev);
+
+/* Given the offset of the L2P index data in L2P_OFFSET and the offset of
+ * the P2L index data in P2L_OFFSET,  return the corresponding format 7+
+ * revision / pack file footer.  Allocate it in POOL.
+ */
+svn_stringbuf_t *
+svn_fs_x__unparse_footer(apr_off_t l2p_offset,
+                         apr_off_t p2l_offset,
+                         apr_pool_t *pool);
+
 /* Parse the description of a representation from TEXT and store it
    into *REP_P.  Allocate *REP_P in POOL. */
 svn_error_t *

@@ -771,12 +771,10 @@ write_revision_zero(svn_fs_t *fs)
   const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
-  const char *path;
 
   /* Write out a rev file for revision 0. */
   SVN_ERR(svn_io_file_create_binary
               (path_revision_zero,
-/*             "DELTA\nSVN\4END\nENDREP\n"*/
                "DELTA\nSVN\1" /* txdelta v1 */
                  "\0\0\4\2\5" /* sview offset, sview len,
                                  tview len, instr len, newlen */
@@ -789,37 +787,30 @@ write_revision_zero(svn_fs_t *fs)
                "text: 0 3 16 4 "
                "2d2977d1c96f487abe4a1e202dd03b4e\n"
                "cpath: /\n"
-               "\n\n",
-               0x7b, fs->pool));
+               "\n\n"
 
-  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
+               /* L2P index */
+               "\0\1\x80\x40\1\1" /* rev 0, single page */
+               "\5\4"             /* page size: bytes, count */
+               "\0"               /* 0 container offsets in list */
+               "\0\x7b\x1e\1"     /* phys offsets + 1 */
 
-  path = svn_fs_x__path_l2p_index(fs, 0, fs->pool);
-  SVN_ERR(svn_io_file_create_binary
-              (path,
-              "\0\1\x80\x40\1\1" /* rev 0, single page */
-              "\5\4"             /* page size: bytes, count */
-              "\0"               /* 0 container offsets in list */
-              "\0\x7b\x1e\1",    /* phys offsets + 1 */
-              13,
-              fs->pool));
-  SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
-
-  path = svn_fs_x__path_p2l_index(fs, 0, fs->pool);
-  SVN_ERR(svn_io_file_create_binary
-              (path,
-              "\0\x7b"            /* start rev, rev file size */
-              "\x80\x80\4\1\x21"  /* 64k pages, 1 page using 33 bytes */
-              "\0"                /* offset entry 0 page 1 */
+               /* P2L index */
+               "\0\x7b"           /* start rev, rev file size */
+               "\x80\x80\4\1\x21" /* 64k pages, 1 page using 33 bytes */
+               "\0"               /* offset entry 0 page 1 */
                                   /* len, type & count, checksum,
                                      (rev, 2*item)* */
-              "\x1d\x11\x8e\xef\xf2\xd6\x01\0\6"
-              "\x5d\x15\xb6\xea\x97\xe0\x0f\0\4"
-              "\1\x16\x9d\x9e\xa9\x94\x0f\0\2"
-              "\x85\xff\3\0\0",   /* last entry fills up 64k page */
-              40,
-              fs->pool));
-  SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
+               "\x1d\x11\x8e\xef\xf2\xd6\x01\0\6"
+               "\x5d\x15\xb6\xea\x97\xe0\x0f\0\4"
+               "\1\x16\x9d\x9e\xa9\x94\x0f\0\2"
+               "\x85\xff\3\0\0"   /* last entry fills up 64k page */
+
+               /* Footer */
+               "123 136\7",
+               0x7b + 13 + 40 + 7 + 1, fs->pool));
+
+  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);

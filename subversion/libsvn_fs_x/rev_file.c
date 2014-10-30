@@ -23,30 +23,50 @@
 #include "rev_file.h"
 #include "fs_x.h"
 #include "index.h"
+#include "low_level.h"
 #include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
 
-static void
-svn_fs_x__init_revision_file(svn_fs_x__revision_file_t *file,
-                              svn_fs_t *fs,
-                              svn_revnum_t revision,
-                              apr_pool_t *pool)
+static svn_fs_x__revision_file_t *
+create_revision_file(svn_fs_t *fs,
+                     apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__revision_file_t *file = apr_palloc(pool, sizeof(*file));
+
+  file->is_packed = FALSE;
+  file->start_revision = SVN_INVALID_REVNUM;
+
+  file->file = NULL;
+  file->stream = NULL;
+  file->p2l_stream = NULL;
+  file->l2p_stream = NULL;
+  file->block_size = ffd->block_size;
+  file->l2p_offset = -1;
+  file->p2l_offset = -1;
+  file->footer_offset = -1;
+  file->pool = pool;
+
+  return file;
+}
+
+static svn_fs_x__revision_file_t *
+init_revision_file(svn_fs_t *fs,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
+{
+  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__revision_file_t *file = create_revision_file(fs, pool);
 
   file->is_packed = svn_fs_x__is_packed_rev(fs, revision);
   file->start_revision = revision < ffd->min_unpacked_rev
                        ? revision - (revision % ffd->max_files_per_dir)
                        : revision;
 
-  file->file = NULL;
-  file->stream = NULL;
-  file->p2l_stream = NULL;
-  file->l2p_stream = NULL;
-  file->pool = pool;
+  return file;
 }
 
 /* Core implementation of svn_fs_x__open_pack_or_rev_file working on an
@@ -109,21 +129,45 @@ svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
                                  svn_revnum_t rev,
                                  apr_pool_t *pool)
 {
-  *file = apr_palloc(pool, sizeof(**file));
-  svn_fs_x__init_revision_file(*file, fs, rev, pool);
-
+  *file = init_revision_file(fs, rev, pool);
   return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, pool));
 }
 
 svn_error_t *
-svn_fs_x__reopen_revision_file(svn_fs_x__revision_file_t *file,
-                                svn_fs_t *fs,
-                                svn_revnum_t rev)
+svn_fs_x__auto_read_footer(svn_fs_x__revision_file_t *file)
 {
-  if (file->file)
-    svn_fs_x__close_revision_file(file);
+  if (file->l2p_offset == -1)
+    {
+      apr_off_t filesize = 0;
+      unsigned char footer_length;
+      svn_stringbuf_t *footer;
 
-  return svn_error_trace(open_pack_or_rev_file(file, fs, rev, file->pool));
+      /* Determine file size. */
+      SVN_ERR(svn_io_file_seek(file->file, APR_END, &filesize, file->pool));
+
+      /* Read last byte (containing the length of the footer). */
+      SVN_ERR(svn_io_file_aligned_seek(file->file, file->block_size, NULL,
+                                       filesize - 1, file->pool));
+      SVN_ERR(svn_io_file_read_full2(file->file, &footer_length,
+                                     sizeof(footer_length), NULL, NULL,
+                                     file->pool));
+
+      /* Read footer. */
+      footer = svn_stringbuf_create_ensure(footer_length, file->pool);
+      SVN_ERR(svn_io_file_aligned_seek(file->file, file->block_size, NULL,
+                                       filesize - 1 - footer_length,
+                                       file->pool));
+      SVN_ERR(svn_io_file_read_full2(file->file, footer->data, footer_length,
+                                     &footer->len, NULL, file->pool));
+      footer->data[footer->len] = '\0';
+
+      /* Extract index locations. */
+      SVN_ERR(svn_fs_x__parse_footer(&file->l2p_offset, &file->p2l_offset,
+                                     footer, file->start_revision));
+      file->footer_offset = filesize - footer_length - 1;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -137,13 +181,8 @@ svn_fs_x__open_proto_rev_file(svn_fs_x__revision_file_t **file,
                            svn_fs_x__path_txn_proto_rev(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  *file = apr_pcalloc(pool, sizeof(**file));
-  (*file)->file = apr_file;
-  (*file)->is_packed = FALSE;
-  (*file)->start_revision = SVN_INVALID_REVNUM;
-  (*file)->stream = svn_stream_from_aprfile2(apr_file, TRUE, pool);
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_fs_x__wrap_temp_rev_file(file, fs, apr_file,
+                                                      pool));
 }
 
 svn_error_t *
@@ -152,10 +191,8 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
                              apr_file_t *temp_file,
                              apr_pool_t *pool)
 {
-  *file = apr_pcalloc(pool, sizeof(**file));
+  *file = create_revision_file(fs, pool);
   (*file)->file = temp_file;
-  (*file)->is_packed = FALSE;
-  (*file)->start_revision = SVN_INVALID_REVNUM;
   (*file)->stream = svn_stream_from_aprfile2(temp_file, TRUE, pool);
 
   return SVN_NO_ERROR;
@@ -168,9 +205,6 @@ svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file)
     SVN_ERR(svn_stream_close(file->stream));
   if (file->file)
     SVN_ERR(svn_io_file_close(file->file, file->pool));
-
-  SVN_ERR(svn_fs_x__packed_stream_close(file->l2p_stream));
-  SVN_ERR(svn_fs_x__packed_stream_close(file->p2l_stream));
 
   file->file = NULL;
   file->stream = NULL;

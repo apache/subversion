@@ -172,24 +172,6 @@ svn_fs_x__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-svn_fs_x__path_l2p_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
-svn_fs_x__path_p2l_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
 svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *pool)

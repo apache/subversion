@@ -165,6 +165,15 @@ struct svn_fs_x__packed_number_stream_t
   /* underlying data file containing the packed values */
   apr_file_t *file;
 
+  /* Offset within FILE at which the stream data starts
+   * (i.e. which offset will reported as offset 0 by packed_stream_offset). */
+  apr_off_t stream_start;
+
+  /* First offset within FILE after the stream data.
+   * Attempts to read beyond this will cause an "Unexpected End Of Stream"
+   * error. */
+  apr_off_t stream_end;
+
   /* number of used entries in BUFFER (starting at index 0) */
   apr_size_t used;
 
@@ -246,6 +255,10 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
   if (block_left >= 10 && block_left < read)
     read = block_left;
 
+  /* Don't read beyond the end of the file section that belongs to this
+   * index / stream. */
+  read = MIN(read, stream->stream_end - stream->next_offset);
+
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
@@ -306,45 +319,33 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Create and open a packed number stream reading from FILE_NAME and
- * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.
- * Use POOL for allocations.
+/* Create and open a packed number stream reading from offsets START to
+ * END in FILE and return it in *STREAM.  Access the file in chunks of
+ * BLOCK_SIZE bytes.  Use POOL for allocations.
  */
 static svn_error_t *
 packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
-                   const char *file_name,
+                   apr_file_t *file,
+                   apr_off_t start,
+                   apr_off_t end,
                    apr_size_t block_size,
                    apr_pool_t *pool)
 {
   svn_fs_x__packed_number_stream_t *result
     = apr_palloc(pool, sizeof(*result));
-  result->pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_io_file_open(&result->file, file_name,
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                           result->pool));
+  result->pool = pool;
+  result->file = file;
+  result->stream_start = start;
+  result->stream_end = end;
 
   result->used = 0;
   result->current = 0;
-  result->start_offset = 0;
-  result->next_offset = 0;
+  result->start_offset = result->stream_start;
+  result->next_offset = result->stream_start;
   result->block_size = block_size;
 
   *stream = result;
-  
-  return SVN_NO_ERROR;
-}
-
-/* Close STREAM which may be NULL.
- */
-svn_error_t *
-svn_fs_x__packed_stream_close(svn_fs_x__packed_number_stream_t *stream)
-{
-  if (stream)
-    {
-      SVN_ERR(svn_io_file_close(stream->file, stream->pool));
-      svn_pool_destroy(stream->pool);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -369,20 +370,22 @@ packed_stream_get(apr_uint64_t *value,
   return SVN_NO_ERROR;
 }
 
-/* Navigate STREAM to packed file offset OFFSET.  There will be no checks
+/* Navigate STREAM to packed stream offset OFFSET.  There will be no checks
  * whether the given OFFSET is valid.
  */
 static void
 packed_stream_seek(svn_fs_x__packed_number_stream_t *stream,
                    apr_off_t offset)
 {
+  apr_off_t file_offset = offset + stream->stream_start;
+
   if (   stream->used == 0
       || offset < stream->start_offset
       || offset >= stream->next_offset)
     {
       /* outside buffered data.  Next get() will read() from OFFSET. */
-      stream->start_offset = offset;
-      stream->next_offset = offset;
+      stream->start_offset = file_offset;
+      stream->next_offset = file_offset;
       stream->current = 0;
       stream->used = 0;
     }
@@ -393,22 +396,25 @@ packed_stream_seek(svn_fs_x__packed_number_stream_t *stream,
        * it for the desired position. */
       apr_size_t i;
       for (i = 0; i < stream->used; ++i)
-        if (stream->buffer[i].total_len > offset - stream->start_offset)
+        if (stream->buffer[i].total_len > file_offset - stream->start_offset)
           break;
 
       stream->current = i;
     }
 }
 
-/* Return the packed file offset of at which the next number in the stream
+/* Return the packed stream offset of at which the next number in the stream
  * can be found.
  */
 static apr_off_t
 packed_stream_offset(svn_fs_x__packed_number_stream_t *stream)
 {
-  return stream->current == 0
+  apr_off_t file_offset
+       = stream->current == 0
        ? stream->start_offset
        : stream->buffer[stream->current-1].total_len + stream->start_offset;
+
+  return file_offset - stream->stream_start;
 }
 
 /*
@@ -662,25 +668,9 @@ encode_l2p_page(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
-{
-  /* remove any old index file
-   * (it would probably be r/o and simply re-writing it would fail) */
-  SVN_ERR(svn_io_remove_file2(file_name, TRUE, pool));
-
-  /* We most likely own the write lock to the repo, so this should
-   * either just work or fail indicating a serious problem. */
-  SVN_ERR(svn_io_file_open(index_file, file_name,
-                           APR_WRITE | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
-svn_fs_x__l2p_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__l2p_index_append(svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
                            apr_pool_t *pool)
@@ -691,7 +681,6 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   int end;
   apr_uint64_t entry;
   svn_boolean_t eof = FALSE;
-  apr_file_t *index_file;
   unsigned char encoded[ENCODED_INT_LENGTH];
 
   int last_page_count = 0;          /* total page count at the start of
@@ -803,9 +792,6 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* we are now done with the source file */
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
-  /* create the target file */
-  SVN_ERR(index_create(&index_file, file_name, local_pool));
-
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G pages per index. */
   if (page_counts->nelts > APR_INT32_MAX)
@@ -856,10 +842,6 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
                            svn_stream_from_aprfile2(index_file, TRUE,
                                                     local_pool),
                            NULL, NULL, local_pool));
-
-  /* finalize the index file */
-  SVN_ERR(svn_io_file_close(index_file, local_pool));
-  SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
 
   svn_pool_destroy(local_pool);
 
@@ -1038,9 +1020,12 @@ auto_open_l2p_index(svn_fs_x__revision_file_t *rev_file,
   if (rev_file->l2p_stream == NULL)
     {
       fs_x_data_t *ffd = fs->fsap_data;
+
+      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
       SVN_ERR(packed_stream_open(&rev_file->l2p_stream,
-                                 svn_fs_x__path_l2p_index(fs, revision,
-                                                          rev_file->pool),
+                                 rev_file->file,
+                                 rev_file->l2p_offset,
+                                 rev_file->p2l_offset,
                                  ffd->block_size,
                                  rev_file->pool));
     }
@@ -1823,8 +1808,8 @@ svn_fs_x__p2l_proto_index_next_offset(apr_off_t *next_offset,
 }
 
 svn_error_t *
-svn_fs_x__p2l_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__p2l_index_append(svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
                            apr_pool_t *pool)
@@ -1835,7 +1820,6 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   int i;
   apr_uint32_t sub_item;
   svn_boolean_t eof = FALSE;
-  apr_file_t *index_file;
   unsigned char encoded[ENCODED_INT_LENGTH];
 
   apr_uint64_t last_entry_end = 0;
@@ -1983,9 +1967,6 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
-  /* create the target file */
-  SVN_ERR(index_create(&index_file, file_name, local_pool));
-
   /* write the start revision, file size and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
                                  encode_uint(encoded, revision),
@@ -2015,12 +1996,31 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
                                                     local_pool),
                            NULL, NULL, local_pool));
 
-  /* finalize the index file */
-  SVN_ERR(svn_io_file_close(index_file, local_pool));
-  SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
-
   svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* If REV_FILE->P2L_STREAM is NULL, create a new stream for the phys-to-log
+ * index for REVISION in FS using the rev / pack file provided by REV_FILE.
+ */
+static svn_error_t *
+auto_open_p2l_index(svn_fs_x__revision_file_t *rev_file,
+                    svn_fs_t *fs,
+                    svn_revnum_t revision)
+{
+  if (rev_file->p2l_stream == NULL)
+    {
+      fs_x_data_t *ffd = fs->fsap_data;
+
+      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+      SVN_ERR(packed_stream_open(&rev_file->p2l_stream,
+                                 rev_file->file,
+                                 rev_file->p2l_offset,
+                                 rev_file->footer_offset,
+                                 ffd->block_size, rev_file->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2112,30 +2112,9 @@ p2l_page_info_func(void **out,
   return SVN_NO_ERROR;
 }
 
-/* If REV_FILE->L2P_STREAM is NULL, create a new stream for the log-to-phys
- * index for REVISION in FS and return it in REV_FILE.
- */
-static svn_error_t *
-auto_open_p2l_index(svn_fs_x__revision_file_t *rev_file,
-                    svn_fs_t *fs,
-                    svn_revnum_t revision)
-{
-  if (rev_file->p2l_stream == NULL)
-    {
-      fs_x_data_t *ffd = fs->fsap_data;
-      SVN_ERR(packed_stream_open(&rev_file->p2l_stream,
-                                 svn_fs_x__path_p2l_index(fs, revision,
-                                                          rev_file->pool),
-                                 ffd->block_size,
-                                 rev_file->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Read the header data structure of the phys-to-log index for REVISION in
- * FS and return it in *HEADER, allocated in POOL. Use REV_FILE to access
- * on-disk data.
+ * FS and return it in *HEADER. Use REV_FILE to access on-disk data.
+ * Use POOL for allocations.
  */
 static svn_error_t *
 get_p2l_header(p2l_header_t **header,
@@ -2153,8 +2132,8 @@ get_p2l_header(p2l_header_t **header,
 
   /* look for the header data in our cache */
   pair_cache_key_t key;
-  key.revision = base_revision(fs, revision);
-  key.second = svn_fs_x__is_packed_rev(fs, revision);
+  key.revision = rev_file->start_revision;
+  key.second = rev_file->is_packed;
 
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->p2l_header_cache,
                          &key, pool));
@@ -2864,13 +2843,8 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
                            apr_off_t offset,
                            apr_pool_t *pool)
 {
-  svn_fs_x__packed_number_stream_t *stream = NULL;
-
   /* look for this info in our cache */
   SVN_ERR(p2l_entry_lookup(entry_p, rev_file, fs, revision, offset, pool));
-
-  /* make sure we close files after usage */
-  SVN_ERR(svn_fs_x__packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }

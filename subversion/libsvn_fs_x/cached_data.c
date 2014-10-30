@@ -721,6 +721,8 @@ create_rep_state_body(rep_state_t **rep_state,
               *rep_state = rs;
               return SVN_NO_ERROR;
             }
+
+          SVN_ERR(rs_aligned_seek(rs, NULL, offset, pool));
         }
 
       SVN_ERR(svn_fs_x__read_rep_header(&rh, rs->sfile->rfile->stream, pool));

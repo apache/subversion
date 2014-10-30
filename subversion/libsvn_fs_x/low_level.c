@@ -160,6 +160,42 @@ svn_fs_x__unparse_revision_trailer(apr_off_t root_offset,
                                changes_offset);
 }
 
+svn_error_t *
+svn_fs_x__parse_footer(apr_off_t *l2p_offset,
+                       apr_off_t *p2l_offset,
+                       svn_stringbuf_t *footer,
+                       svn_revnum_t rev)
+{
+  apr_int64_t val;
+
+  /* Split the footer into the 2 number strings. */
+  char *seperator = strchr(footer->data, ' ');
+  if (!seperator)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Revision file (r%ld) has corrupt footer"),
+                             rev);
+  *seperator = '\0';
+
+  /* Convert offset values. */
+  SVN_ERR(svn_cstring_atoi64(&val, footer->data));
+  *l2p_offset = (apr_off_t)val;
+  SVN_ERR(svn_cstring_atoi64(&val, seperator + 1));
+  *p2l_offset = (apr_off_t)val;
+
+  return SVN_NO_ERROR;
+}
+
+svn_stringbuf_t *
+svn_fs_x__unparse_footer(apr_off_t l2p_offset,
+                         apr_off_t p2l_offset,
+                         apr_pool_t *pool)
+{
+  return svn_stringbuf_createf(pool,
+                               "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
+                               l2p_offset,
+                               p2l_offset);
+}
+
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
