@@ -10,27 +10,43 @@ Merge policy:
   Please don't review for implementation issues, not even big-O
   complexity concerns etc. at this time.
 
+  Please do try it out.
+
   If you can help me get my head around how the logic should work, I'd be
   extremely glad of any discussion of that.
 
 
 Work on this branch:
 
-  * Develop a proof-of-concept utility for playing with scenarios so
-    as to check how the logic of move tracking and branches works in
-    practice.
+  * A proof-of-concept utility for playing with moves and branching
+    to see how well the logic works out in practice.
 
-    It's a program called 'svnmover', a bit like 'svnmucc', so it
-    completely avoids any working copy considerations.
+    It's called 'svnmover'. Like 'svnmucc', it operates directly on a repo,
+    completely avoiding any working copy considerations.
 
-    The implementation (which stores metadata in revprops) is just a hack.
-    The idea is to check the logic pans out usefully, without caring about
-    how the metadata is stored or what it looks like.
+    The implementation is just a hack. It stores metadata in revprops, with
+    little concern for efficiency etc. at this stage.
 
     STATUS
 
-    This is my current focus. Implemented move/copy/delete and
-    branch/branchify/list-branches. The next big one to do is 'merge'.
+    This is my current focus.
+
+    Implemented:
+      basic edits including move, copy, delete
+      branching: branch, branchify, list-branches
+      diff
+      merge
+
+    To do:
+      dissolve (unbranchify)
+      provide a way to specify a mixed-rev base state
+      copying: use Ev1 copy rather than plain add to commit a move
+
+
+  * The model.
+
+    To do:
+      copying: model copying as a (tree) relationship between elements?
 
 
   * Develop a 'commit editor' interface supporting moves.
@@ -53,10 +69,6 @@ Work on this branch:
     svnlook test fails due to svnlook reporting a no-op change as a
     change.)
 
-    Not tested with moves -- unit tests need to be written. (I complained
-    that Ev2 was not tested with moves, but the difference is I can
-    understand the way Ev3 is designed to handle moves.)
-
 
   * Adapt the editor as necessary to use as an 'update editor'.
 
@@ -73,7 +85,7 @@ Work on this branch:
     Not started.
 
 
-  * 'update', 'diff', 'merge', ...
+  * 'update'
 
     STATUS
 
