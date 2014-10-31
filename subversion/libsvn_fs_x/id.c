@@ -246,8 +246,9 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->node_id, &id_b->node_id,
-                3 * sizeof(svn_fs_x__id_part_t)) == 0;
+  return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id)
+      && svn_fs_x__id_part_eq(&id_a->copy_id, &id_b->copy_id)
+      && svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id);
 }
 
 
@@ -385,7 +386,7 @@ svn_fs_id_t *
 svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)source;
-  fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*id));
+  fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
   new_id->generic_id.fsap_data = new_id;
   new_id->pool = pool;
