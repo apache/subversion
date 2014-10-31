@@ -1726,9 +1726,10 @@ pack_range(pack_context_t *context,
           apr_array_header_t *entries;
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs, rev_file,
-                                             revision, offset,
-                                             ffd->p2l_page_size, iterpool));
+          SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs,
+                                             rev_file, revision, offset,
+                                             ffd->p2l_page_size, iterpool,
+                                             iterpool));
 
           for (i = 0; i < entries->nelts; ++i)
             {
@@ -1856,7 +1857,8 @@ append_revision(pack_context_t *context,
       apr_array_header_t *entries;
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, context->fs, rev_file,
                                          context->start_rev, offset,
-                                         ffd->p2l_page_size, iterpool));
+                                         ffd->p2l_page_size, iterpool,
+                                         iterpool));
 
       for (i = 0; i < entries->nelts; ++i)
         {
@@ -1939,7 +1941,7 @@ pack_log_addressed(svn_fs_t *fs,
   /* phase 1: determine the size of the revisions to pack */
   SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, shard_rev,
                                     context.shard_end_rev - shard_rev,
-                                    pool));
+                                    pool, pool));
 
   /* pack revisions in ranges that don't exceed MAX_MEM */
   for (i = 0; i < max_ids->nelts; ++i)
