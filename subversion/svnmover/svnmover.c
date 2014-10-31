@@ -201,6 +201,7 @@ typedef enum action_code_t {
   ACTION_MERGE,
   ACTION_MV,
   ACTION_MKDIR,
+  ACTION_PUT_FILE,
   ACTION_CP,
   ACTION_RM
 } action_code_t;
@@ -220,6 +221,7 @@ struct action {
    * merge     from     to       yca@rev
    * mv        source   target
    * mkdir     target
+   * put       src-file target
    * cp        source   target
    * rm        target
    */
@@ -1048,6 +1050,53 @@ execute(const apr_array_header_t *actions,
           }
           made_changes = TRUE;
           break;
+        case ACTION_PUT_FILE:
+          {
+            apr_hash_t *props = apr_hash_make(iterpool);
+            svn_stringbuf_t *text;
+            svn_editor3_node_content_t *content;
+
+            if (el_rev[1]->eid >= 0)
+              {
+                /* ### get existing props */
+                props = apr_hash_make(iterpool);
+              }
+            else
+              {
+                props = apr_hash_make(iterpool);
+              }
+            /* read new text from file */
+            {
+              svn_stream_t *src;
+
+              if (strcmp(action->path[0], "-") != 0)
+                SVN_ERR(svn_stream_open_readonly(&src, action->path[0],
+                                                 pool, iterpool));
+              else
+                SVN_ERR(svn_stream_for_stdin(&src, pool));
+
+              svn_stringbuf_from_stream(&text, src, 0, iterpool);
+            }
+            content = svn_editor3_node_content_create_file(props, text, iterpool);
+
+            if (el_rev[1]->eid >= 0)
+              {
+                SVN_ERR(svn_editor3_alter(editor, SVN_INVALID_REVNUM,
+                                          el_rev[1]->eid,
+                                          parent_el_rev[1]->eid, path_name[1],
+                                          content));
+              }
+            else
+              {
+                int new_eid;
+
+                SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_file,
+                                        parent_el_rev[1]->eid, path_name[1],
+                                        content));
+              }
+          }
+          made_changes = TRUE;
+          break;
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1109,7 +1158,8 @@ usage(FILE *stream, apr_pool_t *pool)
       "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
       "  rm URL                 : delete URL\n"
       "  mkdir URL              : create new directory URL\n"
-      "                           (there is presently no way to create a file)\n"
+      "  put SRC-FILE URL       : add or modify file URL with text copied from\n"
+      "                           SRC-FILE (use \"-\" to read from standard input)\n"
       "\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
@@ -1541,6 +1591,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         action->action = ACTION_CP;
       else if (! strcmp(action_string, "mkdir"))
         action->action = ACTION_MKDIR;
+      else if (! strcmp(action_string, "put"))
+        action->action = ACTION_PUT_FILE;
       else if (! strcmp(action_string, "rm"))
         action->action = ACTION_RM;
       else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
