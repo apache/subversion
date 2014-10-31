@@ -41,6 +41,11 @@ Work on this branch:
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
       copying: use Ev1 copy rather than plain add to commit a move
+      merge: interpret the three arguments consistently as relative to
+        the repo root
+      change the editor API so that the branch is specified explicitly
+        by each action instead of having a 'main' branch for the whole
+        edit
 
 
   * The model.
