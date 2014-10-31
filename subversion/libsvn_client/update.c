@@ -203,7 +203,9 @@ record_conflict(svn_wc_conflict_result_t **result,
 */
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
+                svn_boolean_t *timestamp_sleep,
                 apr_hash_t *conflicted_paths,
+                svn_ra_session_t **ra_session_p,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const svn_opt_revision_t *revision,
@@ -212,11 +214,10 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t adds_as_modification,
-                svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
-                svn_ra_session_t **ra_session_p,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
@@ -253,7 +254,7 @@ update_internal(svn_revnum_t *result_rev,
     depth_is_sticky = FALSE;
 
   if (strcmp(local_abspath, anchor_abspath))
-    target = svn_dirent_basename(local_abspath, pool);
+    target = svn_dirent_basename(local_abspath, scratch_pool);
   else
     target = "";
 
@@ -262,7 +263,7 @@ update_internal(svn_revnum_t *result_rev,
                                 &repos_uuid, NULL,
                                 ctx->wc_ctx, anchor_abspath,
                                 TRUE, FALSE,
-                                pool, pool));
+                                scratch_pool, scratch_pool));
 
   /* It does not make sense to update conflict victims. */
   if (repos_relpath)
@@ -271,11 +272,11 @@ update_internal(svn_revnum_t *result_rev,
       svn_boolean_t text_conflicted, prop_conflicted;
 
       anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                               pool);
+                                               scratch_pool);
 
       err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
                                  NULL,
-                                 ctx->wc_ctx, local_abspath, pool);
+                                 ctx->wc_ctx, local_abspath, scratch_pool);
 
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
         return svn_error_trace(err);
@@ -298,9 +299,9 @@ update_internal(svn_revnum_t *result_rev,
                                     target_conflicted
                                       ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
-                                    pool);
+                                    scratch_pool);
 
-          ctx->notify_func2(ctx->notify_baton2, nt, pool);
+          ctx->notify_func2(ctx->notify_baton2, nt, scratch_pool);
         }
       return SVN_NO_ERROR;
     }
@@ -317,32 +318,33 @@ update_internal(svn_revnum_t *result_rev,
                                  local_abspath,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  ctx->notify_func2, ctx->notify_baton2,
-                                 pool));
+                                 scratch_pool));
 
           /* Target excluded, we are done now */
           return SVN_NO_ERROR;
         }
 
       SVN_ERR(svn_wc_read_kind2(&target_kind, ctx->wc_ctx, local_abspath,
-                                TRUE, TRUE, pool));
+                                TRUE, TRUE, scratch_pool));
       if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
-                                    pool));
+                                    scratch_pool));
         }
     }
 
   /* check whether the "clean c/o" optimization is applicable */
-  SVN_ERR(is_empty_wc(&clean_checkout, local_abspath, anchor_abspath, pool));
+  SVN_ERR(is_empty_wc(&clean_checkout, local_abspath, anchor_abspath,
+                      scratch_pool));
 
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   if (diff3_cmd != NULL)
-    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
 
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
@@ -354,7 +356,7 @@ update_internal(svn_revnum_t *result_rev,
   svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
   preserved_exts = *preserved_exts_str
-    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, scratch_pool)
     : NULL;
 
   /* Let everyone know we're starting a real update (unless we're
@@ -363,12 +365,12 @@ update_internal(svn_revnum_t *result_rev,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(local_abspath, svn_wc_notify_update_started,
-                               pool);
+                               scratch_pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
     }
 
   /* Try to reuse the RA session by reparenting it to the anchor_url.
@@ -377,7 +379,7 @@ update_internal(svn_revnum_t *result_rev,
    * have to be in the same repo. */
   if (ra_session)
     {
-      svn_error_t *err = svn_ra_reparent(ra_session, anchor_url, pool);
+      svn_error_t *err = svn_ra_reparent(ra_session, anchor_url, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
@@ -405,7 +407,8 @@ update_internal(svn_revnum_t *result_rev,
                                                    anchor_abspath, NULL,
                                                    TRUE /* write_dav_props */,
                                                    TRUE /* read_dav_props */,
-                                                   ctx, pool, pool));
+                                                   ctx,
+                                                   result_pool, scratch_pool));
       *ra_session_p = ra_session;
     }
 
@@ -417,12 +420,13 @@ update_internal(svn_revnum_t *result_rev,
 
       /* To relocate everything inside our repository we need the old and new
          repos root. */
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url,
+                                     scratch_pool));
 
       /* svn_client_relocate2() will check the uuid */
       SVN_ERR(svn_client_relocate2(anchor_abspath, repos_root_url,
                                    new_repos_root_url, ignore_externals,
-                                   ctx, pool));
+                                   ctx, scratch_pool));
 
       /* Store updated repository root for externals */
       repos_root_url = new_repos_root_url;
@@ -443,10 +447,10 @@ update_internal(svn_revnum_t *result_rev,
      to take a URL as easily as a local path?  */
   SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
                                           local_abspath, ra_session, &opt_rev,
-                                          pool));
+                                          scratch_pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
+                                SVN_RA_CAPABILITY_DEPTH, scratch_pool));
 
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
@@ -454,7 +458,7 @@ update_internal(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_client__get_inheritable_props(&wcroot_iprops, local_abspath,
                                             revnum, depth, ra_session,
-                                            ctx, pool, pool));
+                                            ctx, scratch_pool, scratch_pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
@@ -473,7 +477,7 @@ update_internal(svn_revnum_t *result_rev,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
-                                    pool, pool));
+                                    scratch_pool, scratch_pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
@@ -484,7 +488,8 @@ update_internal(svn_revnum_t *result_rev,
                              : svn_depth_unknown),
                             FALSE /* send_copyfrom_args */,
                             FALSE /* ignore_ancestry */,
-                            update_editor, update_edit_baton, pool, pool));
+                            update_editor, update_edit_baton,
+                            scratch_pool, scratch_pool));
 
   /* Past this point, we assume the WC is going to be modified so we will
    * need to sleep for timestamps. */
@@ -500,7 +505,7 @@ update_internal(svn_revnum_t *result_rev,
                                   use_commit_times,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   ctx->notify_func2, ctx->notify_baton2,
-                                  pool));
+                                  scratch_pool));
 
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -513,13 +518,14 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc__externals_gather_definitions(&new_externals,
                                                    &new_depths,
                                                    ctx->wc_ctx, local_abspath,
-                                                   depth, pool, pool));
+                                                   depth,
+                                                   scratch_pool, scratch_pool));
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
                                            repos_root_url, local_abspath,
-                                           depth, timestamp_sleep,
-                                           ctx, pool));
+                                           depth, timestamp_sleep, ra_session,
+                                           ctx, scratch_pool));
     }
 
   /* Let everyone know we're finished here (unless we're asked not to). */
@@ -527,13 +533,13 @@ update_internal(svn_revnum_t *result_rev,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
-                               pool);
+                               scratch_pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
     }
 
   /* If the caller wants the result revision, give it to them. */
@@ -545,6 +551,7 @@ update_internal(svn_revnum_t *result_rev,
 
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
+                            svn_boolean_t *timestamp_sleep,
                             const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
@@ -554,14 +561,13 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t adds_as_modification,
                             svn_boolean_t make_parents,
                             svn_boolean_t innerupdate,
-                            svn_boolean_t *timestamp_sleep,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
   svn_opt_revision_t peg_revision = *revision;
-  svn_ra_session_t *ra_session = NULL;
   apr_hash_t *conflicted_paths
     = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
@@ -574,16 +580,21 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       const char *parent_abspath = local_abspath;
       apr_array_header_t *missing_parents =
         apr_array_make(pool, 4, sizeof(const char *));
+      apr_pool_t *iterpool;
+
+      iterpool = svn_pool_create(pool);
 
       while (1)
         {
+          svn_pool_clear(iterpool);
+
           /* Try to lock.  If we can't lock because our target (or its
              parent) isn't a working copy, we'll try to walk up the
              tree to find a working copy, remembering this path's
              parent as one we need to flesh out.  */
           err = svn_wc__acquire_write_lock(&lockroot_abspath, ctx->wc_ctx,
                                            parent_abspath, !innerupdate,
-                                           pool, pool);
+                                           pool, iterpool);
           if (!err)
             break;
           if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
@@ -605,12 +616,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           const char *missing_parent =
             APR_ARRAY_IDX(missing_parents, i, const char *);
 
-          err = update_internal(result_rev, conflicted_paths,
-                                missing_parent, anchor_abspath,
-                                &peg_revision, svn_depth_empty, FALSE,
-                                ignore_externals, allow_unver_obstructions,
-                                adds_as_modification, timestamp_sleep,
-                                FALSE, ctx, &ra_session, pool);
+          svn_pool_clear(iterpool);
+
+          err = update_internal(result_rev, timestamp_sleep, conflicted_paths,
+                                &ra_session, missing_parent,
+                                anchor_abspath, &peg_revision, svn_depth_empty,
+                                FALSE, ignore_externals,
+                                allow_unver_obstructions, adds_as_modification,
+                                FALSE, ctx, pool, iterpool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -621,6 +634,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           peg_revision.kind = svn_opt_revision_number;
           peg_revision.value.number = *result_rev;
         }
+
+      svn_pool_destroy(iterpool);
     }
   else
     {
@@ -630,16 +645,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       anchor_abspath = lockroot_abspath;
     }
 
-  err = update_internal(result_rev, conflicted_paths,
+  err = update_internal(result_rev, timestamp_sleep, conflicted_paths,
+                        &ra_session,
                         local_abspath, anchor_abspath,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
-                        adds_as_modification, timestamp_sleep,
-                        TRUE, ctx, &ra_session, pool);
+                        adds_as_modification,
+                        TRUE, ctx, pool, pool);
 
   /* Give the conflict resolver callback the opportunity to
    * resolve any conflicts that were raised. */
-  if (! err && ctx->conflict_func2)
+  if (! err && ctx->conflict_func2 && apr_hash_count(conflicted_paths))
     {
       err = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
     }
@@ -703,14 +719,13 @@ svn_client_update4(apr_array_header_t **result_revs,
       err = svn_dirent_get_absolute(&local_abspath, path, iterpool);
       if (err)
         goto cleanup;
-      err = svn_client__update_internal(&result_rev, local_abspath,
+      err = svn_client__update_internal(&result_rev, &sleep, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
                                         allow_unver_obstructions,
                                         adds_as_modification,
                                         make_parents,
-                                        FALSE, &sleep,
-                                        ctx,
+                                        FALSE, NULL, ctx,
                                         iterpool);
 
       if (err)
