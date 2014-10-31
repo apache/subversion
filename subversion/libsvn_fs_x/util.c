@@ -444,7 +444,7 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
+  SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
@@ -483,11 +483,15 @@ svn_fs_x__read_current(svn_revnum_t *rev,
                        svn_fs_t *fs,
                        apr_pool_t *pool)
 {
+  const char *str;
   svn_stringbuf_t *content;
   SVN_ERR(svn_fs_x__read_content(&content,
                                  svn_fs_x__path_current(fs, pool),
                                  pool));
-  SVN_ERR(svn_revnum_parse(rev, content->data, NULL));
+  SVN_ERR(svn_revnum_parse(rev, content->data, &str));
+  if (*str != '\n')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Corrupt 'current' file"));
 
   return SVN_NO_ERROR;
 }

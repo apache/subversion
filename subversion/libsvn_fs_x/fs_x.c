@@ -201,6 +201,49 @@ get_youngest(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+/* Check that BLOCK_SIZE is a valid block / page size, i.e. it is within
+ * the range of what the current system may address in RAM and it is a
+ * power of 2.  Assume that the element size within the block is ITEM_SIZE.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+verify_block_size(apr_int64_t block_size,
+                  apr_size_t item_size,
+                  const char *name,
+                  apr_pool_t *scratch_pool
+                 )
+{
+  /* Limit range. */
+  if (block_size <= 0)
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is too small for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  if (block_size > SVN_MAX_OBJECT_SIZE / item_size)
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is too large for fsfs.conf setting '%s'."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  /* Ensure it is a power of two.
+   * For positive X,  X & (X-1) will reset the lowest bit set.
+   * If the result is 0, at most one bit has been set. */
+  if (0 != (block_size & (block_size - 1)))
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                             _("%s is invalid for fsfs.conf setting '%s' "
+                               "because it is not a power of 2."),
+                             apr_psprintf(scratch_pool,
+                                          "%" APR_INT64_T_FMT,
+                                          block_size),
+                             name);
+
+  return SVN_NO_ERROR;
+}
 
 /* Read the configuration information of the file system at FS_PATH
  * and set the respective values in FFD.  Use pools as usual.
@@ -268,6 +311,17 @@ read_config(fs_x_data_t *ffd,
                                CONFIG_OPTION_P2L_PAGE_SIZE,
                                0x400));
 
+  /* Don't accept unreasonable or illegal values.
+   * Block size and P2L page size are in kbytes;
+   * L2P blocks are arrays of apr_off_t. */
+  SVN_ERR(verify_block_size(ffd->block_size, 0x400,
+                            CONFIG_OPTION_BLOCK_SIZE, scratch_pool));
+  SVN_ERR(verify_block_size(ffd->p2l_page_size, 0x400,
+                            CONFIG_OPTION_P2L_PAGE_SIZE, scratch_pool));
+  SVN_ERR(verify_block_size(ffd->l2p_page_size, sizeof(apr_off_t),
+                            CONFIG_OPTION_L2P_PAGE_SIZE, scratch_pool));
+
+  /* convert kBytes to bytes */
   ffd->block_size *= 0x400;
   ffd->p2l_page_size *= 0x400;
 
@@ -439,19 +493,14 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 "###"                                                                        NL
 "### The log-to-phys index maps data item numbers to offsets within the"     NL
-"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
-"### per changed path.  For each revision, at least one page is being"       NL
-"### allocated in the l2p index with unused parts resulting in no wasted"    NL
-"### space."                                                                 NL
-"### Changing this parameter only affects larger revisions with thousands"   NL
-"### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions, increasing the size of the page table"    NL
-"### meaning it takes longer to read that table (once).  Access to each"     NL
-"### page is then faster because less data has to read.  So, if you have"    NL
-"### several extremely large revisions (approaching 1 mio changes),  think"  NL
+"### rev or pack file.  This index is organized in pages of a fixed maximum" NL
+"### capacity.  To access an item, the page table and the respective page"   NL
+"### must be read."                                                          NL
+"### This parameter only affects revisions with thousands of changed paths." NL
+"### If you have several extremely large revisions (~1 mio changes), think"  NL
 "### about increasing this setting.  Reducing the value will rarely result"  NL
 "### in a net speedup."                                                      NL
-"### This is an expert setting.  Any non-zero value is possible."            NL
+"### This is an expert setting.  Must be a power of 2."                      NL
 "### l2p-page-size is 8192 entries by default."                              NL
 "# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
 "###"                                                                        NL
@@ -460,7 +509,7 @@ write_config(svn_fs_t *fs,
 "### stored at any particular offset.  The index describes the rev file"     NL
 "### in chunks (pages) and keeps a global list of all those pages.  Large"   NL
 "### pages mean a shorter page table but a larger per-page description of"   NL
-"### data items in it.  The latency sweetspot depends on the change size"    NL
+"### data items in it.  The latency sweet spot depends on the change size"   NL
 "### distribution but covers a relatively wide range."                       NL
 "### If the repository contains very large files,  i.e. individual changes"  NL
 "### of tens of MB each,  increasing the page size will shorten the index"   NL
