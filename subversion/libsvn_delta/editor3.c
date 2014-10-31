@@ -521,7 +521,7 @@ svn_editor3_node_content_create_dir(apr_hash_t *props,
     = apr_pcalloc(result_pool, sizeof(*new_content));
 
   new_content->kind = svn_node_dir;
-  new_content->props = svn_prop_hash_dup(props, result_pool);
+  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   return new_content;
 }
 
@@ -536,7 +536,7 @@ svn_editor3_node_content_create_file(apr_hash_t *props,
   SVN_ERR_ASSERT_NO_RETURN(text);
 
   new_content->kind = svn_node_file;
-  new_content->props = svn_prop_hash_dup(props, result_pool);
+  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_content->text = svn_stringbuf_dup(text, result_pool);
   return new_content;
 }
@@ -552,7 +552,7 @@ svn_editor3_node_content_create_symlink(apr_hash_t *props,
   SVN_ERR_ASSERT_NO_RETURN(target);
 
   new_content->kind = svn_node_symlink;
-  new_content->props = svn_prop_hash_dup(props, result_pool);
+  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_content->target = apr_pstrdup(result_pool, target);
   return new_content;
 }
