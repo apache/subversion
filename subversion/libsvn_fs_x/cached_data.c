@@ -718,7 +718,7 @@ create_rep_state_body(rep_state_t **rep_state,
               svn_fs_x__p2l_entry_t *entry;
               SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, rs->sfile->rfile,
                                                  revision, offset,
-                                                 scratch_pool));
+                                                 scratch_pool, scratch_pool));
               in_container = entry->type == SVN_FS_X__ITEM_TYPE_REPS_CONT;
             }
 
@@ -831,7 +831,7 @@ svn_fs_x__check_rep(representation_t *rep,
 
   /* What is the type of that item? */
   SVN_ERR(svn_fs_x__p2l_entry_lookup(&entry, fs, rev_file, revision, offset,
-                                     scratch_pool));
+                                     scratch_pool, scratch_pool));
 
   /* Verify that we've got an item that is actually a representation. */
   if (   entry == NULL
@@ -3187,7 +3187,8 @@ block_read(void **result,
                            iterpool));
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, revision_file,
                                          revision, block_start,
-                                         ffd->block_size, scratch_pool));
+                                         ffd->block_size, scratch_pool,
+                                         scratch_pool));
 
       /* read all items from the block */
       for (i = 0; i < entries->nelts; ++i)

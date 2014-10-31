@@ -156,7 +156,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                           iterpool));
 
   /* determine the range of items to check for each revision */
-  SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, pool));
+  SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, pool,
+                                    iterpool));
 
   /* check all items in all revisions if the given range */
   for (i = 0; i < max_ids->nelts; ++i)
@@ -184,7 +185,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
           /* find the corresponding P2L entry */
           SVN_ERR(svn_fs_x__p2l_item_lookup(&p2l_item, fs, rev_file,
                                             revision, offset, sub_item,
-                                            iterpool));
+                                            iterpool, iterpool));
 
           if (p2l_item == NULL)
             return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
@@ -260,7 +261,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       /* get all entries for the current block */
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, rev_file, start,
                                          offset, ffd->p2l_page_size,
-                                         iterpool));
+                                         iterpool, iterpool));
       if (entries->nelts == 0)
         return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
                                  NULL,
@@ -518,7 +519,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
       /* get all entries for the current block */
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, rev_file, start,
                                          offset, ffd->p2l_page_size,
-                                         iterpool));
+                                         iterpool, iterpool));
 
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
