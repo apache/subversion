@@ -403,7 +403,7 @@ expected_checksum(apr_file_t *file,
       SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
       SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Checksum mismatch item at offset %s of "
+                               _("Checksum mismatch in item at offset %s of "
                                  "length %s bytes in file %s"),
                                apr_off_t_toa(pool, entry->offset),
                                apr_off_t_toa(pool, entry->size), file_name);
@@ -521,6 +521,11 @@ compare_p2l_to_rev(svn_fs_t *fs,
                                          offset, ffd->p2l_page_size,
                                          iterpool, iterpool));
 
+      /* The above might have moved the file pointer.
+       * Ensure we actually start reading at OFFSET.  */
+      SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size,
+                                       NULL, offset, iterpool));
+
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
         {
@@ -553,7 +558,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
               if (entry->offset != max_offset)
                 SVN_ERR(read_all_nul(rev_file->file, entry->size, pool));
             }
-          else if (entry->fnv1_checksum)
+          else
             {
               if (entry->size < STREAM_THRESHOLD)
                 SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
