@@ -70,7 +70,7 @@ static svn_error_t *
 dgb__log_access(svn_fs_t *fs,
                 const svn_fs_x__id_part_t *id,
                 void *item,
-                int item_type,
+                apr_uint32_t item_type,
                 apr_pool_t *scratch_pool)
 {
   /* no-op if this macro is not defined */

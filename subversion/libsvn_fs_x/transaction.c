@@ -2589,7 +2589,7 @@ write_container_delta_rep(representation_t *rep,
                           svn_fs_x__txn_id_t txn_id,
                           node_revision_t *noderev,
                           apr_hash_t *reps_hash,
-                          int item_type,
+                          apr_uint32_t item_type,
                           svn_revnum_t final_revision,
                           apr_pool_t *scratch_pool)
 {
@@ -2901,9 +2901,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
     {
       apr_hash_t *proplist;
-      int item_type = noderev->kind == svn_node_dir
-                    ? SVN_FS_X__ITEM_TYPE_DIR_PROPS
-                    : SVN_FS_X__ITEM_TYPE_FILE_PROPS;
+      apr_uint32_t item_type = noderev->kind == svn_node_dir
+                             ? SVN_FS_X__ITEM_TYPE_DIR_PROPS
+                             : SVN_FS_X__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_x__get_proplist(&proplist, fs, noderev, pool));
 
       noderev->prop_rep->id.change_set = change_set;
@@ -3239,20 +3239,25 @@ svn_fs_x__add_index_data(svn_fs_t *fs,
   apr_off_t p2l_offset;
   svn_stringbuf_t *footer;
   unsigned char footer_length;
+  svn_checksum_t *l2p_checksum;
+  svn_checksum_t *p2l_checksum;
 
   /* Append the actual index data to the pack file. */
   l2p_offset = 0;
   SVN_ERR(svn_io_file_seek(file, APR_END, &l2p_offset, pool));
-  SVN_ERR(svn_fs_x__l2p_index_append(fs, file, l2p_proto_index, revision,
-                                     pool));
+  SVN_ERR(svn_fs_x__l2p_index_append(&l2p_checksum, fs, file,
+                                     l2p_proto_index, revision,
+                                     pool, pool));
 
   p2l_offset = 0;
   SVN_ERR(svn_io_file_seek(file, APR_END, &p2l_offset, pool));
-  SVN_ERR(svn_fs_x__p2l_index_append(fs, file, p2l_proto_index, revision,
-                                     pool));
+  SVN_ERR(svn_fs_x__p2l_index_append(&p2l_checksum, fs, file,
+                                     p2l_proto_index, revision,
+                                     pool, pool));
 
   /* Append footer. */
-  footer = svn_fs_x__unparse_footer(l2p_offset, p2l_offset, pool);
+  footer = svn_fs_x__unparse_footer(l2p_offset, l2p_checksum, 
+                                    p2l_offset, p2l_checksum, pool, pool);
   SVN_ERR(svn_io_file_write_full(file, footer->data, footer->len, NULL,
                                  pool));
 

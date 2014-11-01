@@ -44,6 +44,33 @@
 /* maximum length of a uint64 in an 7/8b encoding */
 #define ENCODED_INT_LENGTH 10
 
+/* APR is missing an APR_OFF_T_MAX.  So, define one.  We will use it to
+ * limit file offsets stored in the indexes.
+ *
+ * We assume that everything shorter than 64 bits, it is at least 32 bits.
+ * We also assume that the type is always signed meaning we only have an
+ * effective positive range of 63 or 31 bits, respectively.
+ */
+static
+const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
+                             ? APR_INT64_MAX
+                             : APR_INT32_MAX;
+
+/* We store P2L proto-index entries as 6 values, 64 bits each on disk.
+ * See also svn_fs_fs__p2l_proto_index_add_entry().
+ */
+#define P2L_PROTO_INDEX_ENTRY_SIZE (6 * sizeof(apr_uint64_t))
+
+/* We put this string in front of the L2P index header. */
+#define L2P_STREAM_PREFIX "L2P-INDEX\n"
+
+/* We put this string in front of the P2L index header. */
+#define P2L_STREAM_PREFIX "P2L-INDEX\n"
+
+/* Size of the buffer that will fit the index header prefixes. */
+#define STREAM_PREFIX_LEN MAX(sizeof(L2P_STREAM_PREFIX), \
+                              sizeof(P2L_STREAM_PREFIX))
+
 /* Page tables in the log-to-phys index file exclusively contain entries
  * of this type to describe position and size of a given page.
  */
@@ -321,22 +348,45 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
 
 /* Create and open a packed number stream reading from offsets START to
  * END in FILE and return it in *STREAM.  Access the file in chunks of
- * BLOCK_SIZE bytes.  Allocate *STREAM in RESULT_POOL.
+ * BLOCK_SIZE bytes.  Expect the stream to be prefixed by STREAM_PREFIX.
+ * Allocate *STREAM in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
 packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
                    apr_file_t *file,
                    apr_off_t start,
                    apr_off_t end,
+                   const char *stream_prefix,
                    apr_size_t block_size,
-                   apr_pool_t *result_pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  svn_fs_x__packed_number_stream_t *result
-    = apr_palloc(result_pool, sizeof(*result));
+  char buffer[STREAM_PREFIX_LEN + 1] = { 0 };
+  apr_size_t len = strlen(stream_prefix);
+  svn_fs_x__packed_number_stream_t *result;
+
+  /* If this is violated, we forgot to adjust STREAM_PREFIX_LEN after
+   * changing the index header prefixes. */
+  SVN_ERR_ASSERT(len < sizeof(buffer));
+
+  /* Read the header prefix and compare it with the expected prefix */
+  SVN_ERR(svn_io_file_aligned_seek(file, block_size, NULL, start,
+                                   scratch_pool));
+  SVN_ERR(svn_io_file_read_full2(file, buffer, len, NULL, NULL,
+                                 scratch_pool));
+
+  if (strncmp(buffer, stream_prefix, len))
+    return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                             _("Index stream header prefix mismatch.\n"
+                               "  expected: %s"
+                               "  found: %s"), stream_prefix, buffer);
+
+  /* Construct the actual stream object. */
+  result = apr_palloc(result_pool, sizeof(*result));
 
   result->pool = result_pool;
   result->file = file;
-  result->stream_start = start;
+  result->stream_start = start + len;
   result->stream_end = end;
 
   result->used = 0;
@@ -417,6 +467,138 @@ packed_stream_offset(svn_fs_x__packed_number_stream_t *stream)
   return file_offset - stream->stream_start;
 }
 
+/* Write VALUE to the PROTO_INDEX file, using SCRATCH_POOL for temporary
+ * allocations.
+ *
+ * The point of this function is to ensure an architecture-independent
+ * proto-index file format.  All data is written as unsigned 64 bits ints
+ * in little endian byte order.  64 bits is the largest portable integer
+ * we have and unsigned values have well-defined conversions in C.
+ */
+static svn_error_t *
+write_uint64_to_proto_index(apr_file_t *proto_index,
+                            apr_uint64_t value,
+                            apr_pool_t *scratch_pool)
+{
+  apr_byte_t buffer[sizeof(value)];
+  int i;
+  apr_size_t written;
+
+  /* Split VALUE into 8 bytes using LE ordering. */
+  for (i = 0; i < sizeof(buffer); ++i)
+    {
+      /* Unsigned conversions are well-defined ... */
+      buffer[i] = (apr_byte_t)value;
+      value >>= CHAR_BIT;
+    }
+
+  /* Write it all to disk. */
+  SVN_ERR(svn_io_file_write_full(proto_index, buffer, sizeof(buffer),
+                                 &written, scratch_pool));
+  SVN_ERR_ASSERT(written == sizeof(buffer));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read one unsigned 64 bit value from PROTO_INDEX file and return it in
+ * *VALUE_P.  If EOF is NULL, error out when trying to read beyond EOF.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * This function is the inverse to write_uint64_to_proto_index (see there),
+ * reading the external LE byte order and convert it into host byte order.
+ */
+static svn_error_t *
+read_uint64_from_proto_index(apr_file_t *proto_index,
+                             apr_uint64_t *value_p,
+                             svn_boolean_t *eof,
+                             apr_pool_t *scratch_pool)
+{
+  apr_byte_t buffer[sizeof(*value_p)];
+  apr_size_t read;
+
+  /* Read the full 8 bytes or our 64 bit value, unless we hit EOF.
+   * Assert that we never read partial values. */
+  SVN_ERR(svn_io_file_read_full2(proto_index, buffer, sizeof(buffer),
+                                 &read, eof, scratch_pool));
+  SVN_ERR_ASSERT((eof && *eof) || read == sizeof(buffer));
+
+  /* If we did not hit EOF, reconstruct the uint64 value and return it. */
+  if (!eof || !*eof)
+    {
+      int i;
+      apr_uint64_t value;
+
+      /* This could only overflow if CHAR_BIT had a value that is not
+       * a divisor of 64. */
+      value = 0;
+      for (i = sizeof(buffer) - 1; i >= 0; --i)
+        value = (value << CHAR_BIT) + buffer[i];
+
+      *value_p = value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Convenience function similar to read_uint64_from_proto_index, but returns
+ * an uint32 value in VALUE_P.  Return an error if the value does not fit.
+ */
+static svn_error_t *
+read_uint32_from_proto_index(apr_file_t *proto_index,
+                             apr_uint32_t *value_p,
+                             svn_boolean_t *eof,
+                             apr_pool_t *scratch_pool)
+{
+  apr_uint64_t value;
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
+                                       scratch_pool));
+  if (!eof || !*eof)
+    {
+      if (value > APR_UINT32_MAX)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                _("UINT32 0x%" APR_UINT64_T_HEX_FMT
+                                  " too large, max = 0x%"
+                                  APR_UINT64_T_HEX_FMT),
+                                value, (apr_uint64_t)APR_UINT32_MAX);
+
+      /* This conversion is not lossy because the value can be represented
+       * in the target type. */
+      *value_p = (apr_uint32_t)value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Convenience function similar to read_uint64_from_proto_index, but returns
+ * an off_t value in VALUE_P.  Return an error if the value does not fit.
+ */
+static svn_error_t *
+read_off_t_from_proto_index(apr_file_t *proto_index,
+                            apr_off_t *value_p,
+                            svn_boolean_t *eof,
+                            apr_pool_t *scratch_pool)
+{
+  apr_uint64_t value;
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
+                                       scratch_pool));
+  if (!eof || !*eof)
+    {
+      if (value > off_t_max)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                _("File offset 0x%" APR_UINT64_T_HEX_FMT
+                                  " too large, max = 0x%"
+                                  APR_UINT64_T_HEX_FMT),
+                                value, off_t_max);
+
+      /* Shortening conversion from unsigned to signed int is well-defined
+       * and not lossy in C because the value can be represented in the
+       * target type. */
+      *value_p = (apr_off_t)value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * log-to-phys index
  */
@@ -432,18 +614,41 @@ svn_fs_x__l2p_proto_index_open(apr_file_t **proto_index,
   return SVN_NO_ERROR;
 }
 
-/* Write ENTRY to log-to-phys PROTO_INDEX file and verify the results.
+/* Append ENTRY to log-to-phys PROTO_INDEX file.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
-write_entry_to_proto_index(apr_file_t *proto_index,
-                           l2p_proto_entry_t entry,
-                           apr_pool_t *scratch_pool)
+write_l2p_entry_to_proto_index(apr_file_t *proto_index,
+                               l2p_proto_entry_t entry,
+                               apr_pool_t *scratch_pool)
 {
-  apr_size_t written = sizeof(entry);
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.offset,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.item_index,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.sub_item,
+                                      scratch_pool));
 
-  SVN_ERR(svn_io_file_write(proto_index, &entry, &written, scratch_pool));
-  SVN_ERR_ASSERT(written == sizeof(entry));
+  return SVN_NO_ERROR;
+}
+
+/* Read *ENTRY from log-to-phys PROTO_INDEX file and indicate end-of-file
+ * in *EOF, or error out in that case if EOF is NULL.  *ENTRY is in an
+ * undefined state if an end-of-file occurred.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_l2p_entry_from_proto_index(apr_file_t *proto_index,
+                                l2p_proto_entry_t *entry,
+                                svn_boolean_t *eof,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &entry->offset, eof,
+                                       scratch_pool));
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &entry->item_index, eof,
+                                       scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->sub_item, eof,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -453,8 +658,8 @@ svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                        apr_pool_t *scratch_pool)
 {
   l2p_proto_entry_t entry = { 0 };
-  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
-                                                    scratch_pool));
+  return svn_error_trace(write_l2p_entry_to_proto_index(proto_index, entry,
+                                                        scratch_pool));
 }
 
 svn_error_t *
@@ -480,8 +685,8 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
   /* no limits on the container sub-item index */
   entry.sub_item = sub_item;
 
-  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
-                                                    scratch_pool));
+  return svn_error_trace(write_l2p_entry_to_proto_index(proto_index, entry,
+                                                        scratch_pool));
 }
 
 /* Encode VALUE as 7/8b into P and return the number of bytes written.
@@ -510,6 +715,18 @@ static apr_size_t
 encode_int(unsigned char *p, apr_int64_t value)
 {
   return encode_uint(p, (apr_uint64_t)(value < 0 ? -1 - 2*value : 2*value));
+}
+
+/* Append VALUE to STREAM in 7/8b encoding.
+ */
+static svn_error_t *
+stream_write_encoded(svn_stream_t *stream,
+                     apr_uint64_t value)
+{
+  unsigned char encoded[ENCODED_INT_LENGTH];
+ 
+  apr_size_t len = encode_uint(encoded, value);
+  return svn_error_trace(svn_stream_write(stream, (char *)encoded, &len));
 }
 
 /* Run-length-encode the uint64 numbers in ARRAY starting at index START
@@ -672,19 +889,21 @@ encode_l2p_page(apr_array_header_t *entries,
 }
 
 svn_error_t *
-svn_fs_x__l2p_index_append(svn_fs_t *fs,
+svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
                            apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
+                           apr_pool_t * result_pool,
                            apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   int end;
   apr_uint64_t entry;
   svn_boolean_t eof = FALSE;
-  unsigned char encoded[ENCODED_INT_LENGTH];
 
   int last_page_count = 0;          /* total page count at the start of
                                        the current revision */
@@ -726,13 +945,10 @@ svn_fs_x__l2p_index_append(svn_fs_t *fs,
   for (entry = 0; !eof; ++entry)
     {
       l2p_proto_entry_t proto_entry;
-      apr_size_t read = 0;
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(proto_index,
-                                     &proto_entry, sizeof(proto_entry),
-                                     &read, &eof, local_pool));
-      SVN_ERR_ASSERT(eof || read == sizeof(proto_entry));
+      SVN_ERR(read_l2p_entry_from_proto_index(proto_index, &proto_entry,
+                                              &eof, local_pool));
 
       /* handle new revision */
       if ((entry > 0 && proto_entry.offset == 0) || eof)
@@ -803,48 +1019,40 @@ svn_fs_x__l2p_index_append(svn_fs_t *fs,
                               " exceeds current limit of 2G pages"),
                             page_counts->nelts);
 
+  /* open target stream. */
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
+
+
   /* write header info */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_counts->nelts),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, ffd->l2p_page_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(svn_stream_puts(stream, L2P_STREAM_PREFIX));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, page_counts->nelts));
+  SVN_ERR(stream_write_encoded(stream, ffd->l2p_page_size));
+  SVN_ERR(stream_write_encoded(stream, page_sizes->nelts));
 
   /* write the revision table */
   end = rle_array(page_counts, 0, page_counts->nelts);
   for (i = 0; i < end; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
-    
+
   /* write the page table */
   for (i = 0; i < page_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
       value = APR_ARRAY_IDX(entry_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(local_pool);
 
@@ -1029,7 +1237,9 @@ auto_open_l2p_index(svn_fs_x__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->l2p_offset,
                                  rev_file->p2l_offset,
-                                 ffd->block_size,
+                                 L2P_STREAM_PREFIX,
+                                 (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
                                  rev_file->pool));
     }
 
@@ -1683,12 +1893,10 @@ l2p_proto_index_lookup(apr_off_t *offset,
   while (!eof)
     {
       l2p_proto_entry_t entry;
-      apr_size_t read = 0;
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(file, &entry, sizeof(entry),
-                                     &read, &eof, scratch_pool));
-      SVN_ERR_ASSERT(eof || read == sizeof(entry));
+      SVN_ERR(read_l2p_entry_from_proto_index(file, &entry, &eof,
+                                              scratch_pool));
 
       /* handle new revision */
       if (!eof && entry.item_index == item_index)
@@ -1801,33 +2009,138 @@ svn_fs_x__p2l_proto_index_open(apr_file_t **proto_index,
 
 svn_error_t *
 svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
-                                    svn_fs_x__p2l_entry_t *entry,
+                                    const svn_fs_x__p2l_entry_t *entry,
                                     apr_pool_t *scratch_pool)
 {
-  apr_size_t written = sizeof(*entry);
-  apr_size_t written_total = 0;
+  apr_uint64_t revision;
+  apr_int32_t i;
 
-  /* Write main record. */
-  SVN_ERR(svn_io_file_write_full(proto_index, entry, sizeof(*entry),
-                                 &written, scratch_pool));
-  SVN_ERR_ASSERT(written == sizeof(*entry));
-  written_total += written;
+  /* Make sure all signed elements of ENTRY have non-negative values.
+   *
+   * For file offsets and sizes, this is a given as we use them to describe
+   * absolute positions and sizes.  For revisions, SVN_INVALID_REVNUM is
+   * valid, hence we have to shift it by 1.
+   */
+  SVN_ERR_ASSERT(entry->offset >= 0);
+  SVN_ERR_ASSERT(entry->size >= 0);
+
+  /* Now, all values will nicely convert to uint64. */
+  /* Make sure to keep P2L_PROTO_INDEX_ENTRY_SIZE consistent with this: */
+
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->offset,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->size,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->type,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->fnv1_checksum,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->item_count,
+                                      scratch_pool));
 
   /* Add sub-items. */
-  if (entry->item_count)
+  for (i = 0; i < entry->item_count; ++i)
     {
-      written = entry->item_count * sizeof(*entry->items);
-      SVN_ERR(svn_io_file_write_full(proto_index, entry->items, written,
-                                     &written, scratch_pool));
-      SVN_ERR_ASSERT(written == entry->item_count * sizeof(*entry->items));
-      written_total += written;
+      const svn_fs_x__id_part_t *sub_item = &entry->items[i];
+
+      /* Make sure all signed elements of ENTRY have non-negative values.
+       *
+       * For file offsets and sizes, this is a given as we use them to
+       * describe absolute positions and sizes.  For revisions,
+       * SVN_INVALID_REVNUM is valid, hence we have to shift it by 1.
+      */
+      SVN_ERR_ASSERT(   sub_item->change_set >= 0
+                     || sub_item->change_set == SVN_INVALID_REVNUM);
+
+      /* Write sub- record. */
+      revision = sub_item->change_set == SVN_INVALID_REVNUM
+               ? 0
+               : ((apr_uint64_t)sub_item->change_set + 1);
+
+      SVN_ERR(write_uint64_to_proto_index(proto_index, revision,
+                                          scratch_pool));
+      SVN_ERR(write_uint64_to_proto_index(proto_index, sub_item->number,
+                                          scratch_pool));
     }
 
-  /* Add trailer: number of bytes total in this entr.y */
-  written = sizeof(written_total);
-  SVN_ERR(svn_io_file_write_full(proto_index, &written_total, written,
-                                 &written, scratch_pool));
-  SVN_ERR_ASSERT(written == sizeof(written_total));
+  /* Add trailer: rev / pack file offset of the next item */
+  SVN_ERR(write_uint64_to_proto_index(proto_index,
+                                      entry->offset + entry->size,
+                                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read *ENTRY from log-to-phys PROTO_INDEX file and indicate end-of-file
+ * in *EOF, or error out in that case if EOF is NULL.  *ENTRY is in an
+ * undefined state if an end-of-file occurred.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_p2l_entry_from_proto_index(apr_file_t *proto_index,
+                                svn_fs_x__p2l_entry_t *entry,
+                                svn_boolean_t *eof,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(read_off_t_from_proto_index(proto_index, &entry->offset,
+                                      eof, scratch_pool));
+  SVN_ERR(read_off_t_from_proto_index(proto_index, &entry->size,
+                                      eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->type,
+                                       eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->fnv1_checksum,
+                                       eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->item_count,
+                                       eof, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_p2l_sub_items_from_proto_index(apr_file_t *proto_index,
+                                    svn_fs_x__p2l_entry_t *entry,
+                                    svn_boolean_t *eof,
+                                    apr_pool_t *scratch_pool)
+{
+  apr_int32_t i;
+  for (i = 0; i < entry->item_count; ++i)
+    {
+      apr_uint64_t revision;
+      svn_fs_x__id_part_t *sub_item = &entry->items[i];
+
+      SVN_ERR(read_uint64_from_proto_index(proto_index, &revision,
+                                           eof, scratch_pool));
+      SVN_ERR(read_uint64_from_proto_index(proto_index, &sub_item->number,
+                                           eof, scratch_pool));
+
+      /* Do the inverse REVSION number conversion (see
+       * svn_fs_x__p2l_proto_index_add_entry), if we actually read a
+       * complete record.
+      */
+      if (!eof || !*eof)
+        {
+          /* Be careful with the arithmetics here (overflows and wrap-around):
+           */
+          if (revision > 0 && revision - 1 > LONG_MAX)
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                    _("Revision 0x%" APR_UINT64_T_HEX_FMT
+                                      " too large, max = 0x%"
+                                      APR_UINT64_T_HEX_FMT),
+                                    revision, (apr_uint64_t)LONG_MAX);
+
+          /* Shortening conversion from unsigned to signed int is well-
+           * defined and not lossy in C because the value can be represented
+           * in the target type.  Also, cast to 'long' instead of
+           * 'svn_revnum_t' here to provoke a compiler warning if those
+           * types should differ and we would need to change the overflow
+           * checking logic.
+           */
+          sub_item->change_set = revision == 0
+                               ? SVN_INVALID_REVNUM
+                               : (long)(revision - 1);
+        }
+
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1847,39 +2160,29 @@ svn_fs_x__p2l_proto_index_next_offset(apr_off_t *next_offset,
     }
   else
     {
-      /* At least one entry.  Read last entry. */
-      apr_size_t size;
-      svn_fs_x__p2l_entry_t entry;
-
-      /* Read length of last entry. */
-      offset -= sizeof(size);
+      /* The last 64 bits contain the value we are looking for. */
+      offset -= sizeof(apr_uint64_t);
       SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, scratch_pool));
-      SVN_ERR(svn_io_file_read_full2(proto_index, &size, sizeof(size),
-                                    NULL, NULL, scratch_pool));
-
-      /* Read last entry's main record. */
-      offset -= size;
-      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, scratch_pool));
-      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                    NULL, NULL, scratch_pool));
-
-      /* Return next offset. */
-      *next_offset = entry.offset + entry.size;
+      SVN_ERR(read_off_t_from_proto_index(proto_index, next_offset, NULL,
+                                          scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_x__p2l_index_append(svn_fs_t *fs,
+svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
                            apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
+                           apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t page_size = ffd->p2l_page_size;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   apr_uint32_t sub_item;
   svn_boolean_t eof = FALSE;
@@ -1913,8 +2216,6 @@ svn_fs_x__p2l_index_append(svn_fs_t *fs,
   while (!eof)
     {
       svn_fs_x__p2l_entry_t entry;
-      apr_size_t read = 0;
-      apr_size_t to_read;
       apr_uint64_t entry_end;
       svn_boolean_t new_page = svn_spillbuf__get_size(buffer) == 0;
       svn_revnum_t last_revision = revision;
@@ -1923,28 +2224,23 @@ svn_fs_x__p2l_index_append(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                     &read, &eof, iterpool));
-      SVN_ERR_ASSERT(eof || read == sizeof(entry));
+      SVN_ERR(read_p2l_entry_from_proto_index(proto_index, &entry,
+                                              &eof, iterpool));
 
       if (entry.item_count && !eof)
         {
-          to_read = entry.item_count * sizeof(*entry.items);
-          entry.items = apr_palloc(iterpool, to_read);
-
-          SVN_ERR(svn_io_file_read_full2(proto_index, entry.items, to_read,
-                                         &read, &eof, iterpool));
-          SVN_ERR_ASSERT(eof || read == to_read);
+          entry.items = apr_palloc(iterpool,
+                                   entry.item_count * sizeof(*entry.items));
+          SVN_ERR(read_p2l_sub_items_from_proto_index(proto_index, &entry,
+                                                      &eof, iterpool));
         }
 
       /* Read entry trailer. However, we won't need its content. */
       if (!eof)
         {
-          apr_size_t entry_size;
-          to_read = sizeof(entry_size);
-          SVN_ERR(svn_io_file_read_full2(proto_index, &entry_size, to_read,
-                                         &read, &eof, iterpool));
-          SVN_ERR_ASSERT(eof || read == to_read);
+          apr_uint64_t trailer;
+          SVN_ERR(read_uint64_from_proto_index(proto_index, &trailer, &eof,
+                                               scratch_pool));
         }
 
       /* "unused" (and usually non-existent) section to cover the offsets
@@ -2031,34 +2327,29 @@ svn_fs_x__p2l_index_append(svn_fs_t *fs,
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
+  /* Open target stream. */
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
+
   /* write the start revision, file size and page size */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, file_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_size),
-                                 NULL, local_pool));
+  SVN_ERR(svn_stream_puts(stream, P2L_STREAM_PREFIX));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, file_size));
+  SVN_ERR(stream_write_encoded(stream, page_size));
 
   /* write the page table (actually, the sizes of each page description) */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, table_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(stream_write_encoded(stream, table_sizes->nelts));
   for (i = 0; i < table_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(table_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
@@ -2083,7 +2374,10 @@ auto_open_p2l_index(svn_fs_x__revision_file_t *rev_file,
                                  rev_file->file,
                                  rev_file->p2l_offset,
                                  rev_file->footer_offset,
-                                 ffd->block_size, rev_file->pool));
+                                 P2L_STREAM_PREFIX,
+                                 (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
+                                 rev_file->pool));
     }
 
   return SVN_NO_ERROR;

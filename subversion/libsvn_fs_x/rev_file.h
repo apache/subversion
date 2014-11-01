@@ -72,10 +72,18 @@ typedef struct svn_fs_x__revision_file_t
    * has not been called, yet. */
   apr_off_t l2p_offset;
 
+  /* MD5 checksum on the whole on-disk representation of the L2P index.
+   * NULL if svn_fs_fs__auto_read_footer has not been called, yet. */
+  svn_checksum_t *l2p_checksum;
+
   /* Offset within FILE at which the L2P index ends and the P2L index
    * data starts. Greater than L2P_OFFSET. -1 if svn_fs_fs__auto_read_footer
    * has not been called, yet. */
   apr_off_t p2l_offset;
+
+  /* MD5 checksum on the whole on-disk representation of the P2L index.
+   * NULL if svn_fs_fs__auto_read_footer has not been called, yet. */
+  svn_checksum_t *p2l_checksum;
 
   /* Offset within FILE at which the P2L index ends and the footer starts.
    * Greater than P2L_OFFSET. -1 if svn_fs_fs__auto_read_footer has not
