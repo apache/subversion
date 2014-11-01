@@ -157,10 +157,20 @@ svn_error_t *
 svn_fs_x__txn_by_name(svn_fs_x__txn_id_t *txn_id,
                       const char *txn_name);
 
+/* Return the path of the directory containing the transaction TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
 const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool);
+
+/* Return the path of the 'transactions' directory in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_x__path_txns_dir(svn_fs_t *fs,
+                        apr_pool_t *pool);
 
 /* Return the name of the sha1->rep mapping file in transaction TXN_ID
  * within FS for the given SHA1 checksum.  Use POOL for allocations.
@@ -171,6 +181,16 @@ svn_fs_x__path_txn_sha1(svn_fs_t *fs,
                         const unsigned char *sha1,
                         apr_pool_t *pool);
 
+/* Return the path of the 'txn-protorevs' directory in FS, even if that
+ * folder may not exist in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
+                              apr_pool_t *pool);
+
+/* Return the path of the proto-revision file for transaction TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
 const char *
 svn_fs_x__path_txn_changes(svn_fs_t *fs,
                            svn_fs_x__txn_id_t txn_id,
