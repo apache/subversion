@@ -2408,7 +2408,7 @@ typedef struct p2l_page_info_baton_t
   /* offset within the p2l index file describing the following page */
   apr_off_t next_offset;
 
-  /* PAGE_NO * PAGE_SIZE (is <= OFFSET) */
+  /* PAGE_NO * PAGE_SIZE (if <= OFFSET) */
   apr_off_t page_start;
 
   /* total number of pages indexed */
