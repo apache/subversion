@@ -47,25 +47,35 @@ extern "C" {
 
 /* Given the FSX revision / pack FOOTER, parse it destructively
  * and return the start offsets of the index data in *L2P_OFFSET and
- * *P2L_OFFSET, respectively.
+ * *P2L_OFFSET, respectively.  Also, return the expected checksums in
+ * in *L2P_CHECKSUM and *P2L_CHECKSUM.
  * 
  * Note that REV is only used to construct nicer error objects that
- * mention this revision.
+ * mention this revision.  Allocate the checksums in RESULT_POOL.
  */
 svn_error_t *
 svn_fs_x__parse_footer(apr_off_t *l2p_offset,
+                       svn_checksum_t **l2p_checksum,
                        apr_off_t *p2l_offset,
+                       svn_checksum_t **p2l_checksum,
                        svn_stringbuf_t *footer,
-                       svn_revnum_t rev);
+                       svn_revnum_t rev,
+                       apr_pool_t *result_pool);
 
-/* Given the offset of the L2P index data in L2P_OFFSET and the offset of
- * the P2L index data in P2L_OFFSET,  return the corresponding format 7+
- * revision / pack file footer.  Allocate it in RESULT_POOL.
+/* Given the offset of the L2P index data in L2P_OFFSET, the content
+ * checksum in L2P_CHECKSUM and the offset plus checksum of the P2L
+ * index data in P2L_OFFSET and P2L_CHECKSUM.
+ *
+ * Return the corresponding format 7+ revision / pack file footer.
+ * Allocate it in RESULT_POOL and use SCRATCH_POOL for temporary.
  */
 svn_stringbuf_t *
 svn_fs_x__unparse_footer(apr_off_t l2p_offset,
+                         svn_checksum_t *l2p_checksum,
                          apr_off_t p2l_offset,
-                         apr_pool_t *result_pool);
+                         svn_checksum_t *p2l_checksum,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /* Parse the description of a representation from TEXT and store it
    into *REP_P.  TEXT will be invalidated by this call.  Allocate *REP_P in
