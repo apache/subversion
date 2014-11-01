@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Read the 'format' file of fsx filesystem FS and store its info in FS.
+ * Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_fs_x__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool);
+
 /* Open the fsx filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations.
 

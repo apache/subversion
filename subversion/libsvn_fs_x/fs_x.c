@@ -183,24 +183,6 @@ svn_fs_x__write_format(svn_fs_t *fs,
   return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
-/* Find the youngest revision in a repository at path FS_PATH and
-   return it in *YOUNGEST_P.  Perform temporary allocations in
-   POOL. */
-static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p,
-             const char *fs_path,
-             apr_pool_t *pool)
-{
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_x__read_content(&buf,
-                                 svn_dirent_join(fs_path, PATH_CURRENT, pool),
-                                 pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf->data);
-
-  return SVN_NO_ERROR;
-}
-
 /* Check that BLOCK_SIZE is a valid block / page size, i.e. it is within
  * the range of what the current system may address in RAM and it is a
  * power of 2.  Assume that the element size within the block is ITEM_SIZE.
@@ -525,38 +507,65 @@ write_config(svn_fs_t *fs,
                             fsx_conf_contents, pool);
 }
 
+/* Read FS's UUID file and store the data in the FS struct. */
+static svn_error_t *
+read_uuid(svn_fs_t *fs,
+          apr_pool_t *scratch_pool)
+{
+  fs_x_data_t *ffd = fs->fsap_data;
+  apr_file_t *uuid_file;
+  char buf[APR_UUID_FORMATTED_LENGTH + 2];
+  apr_size_t limit;
+
+  /* Read the repository uuid. */
+  SVN_ERR(svn_io_file_open(&uuid_file, svn_fs_x__path_uuid(fs, scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
+
+  limit = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, scratch_pool));
+  fs->uuid = apr_pstrdup(fs->pool, buf);
+
+  /* Read the instance ID. */
+  limit = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit,
+                                  scratch_pool));
+  ffd->instance_id = apr_pstrdup(fs->pool, buf);
+
+  SVN_ERR(svn_io_file_close(uuid_file, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__read_format_file(svn_fs_t *fs,
+                           apr_pool_t *scratch_pool)
+{
+  fs_x_data_t *ffd = fs->fsap_data;
+  int format, max_files_per_dir;
+
+  /* Read info from format file. */
+  SVN_ERR(read_format(&format, &max_files_per_dir,
+                      svn_fs_x__path_format(fs, scratch_pool), scratch_pool));
+
+  /* Now that we've got *all* info, store / update values in FFD. */
+  ffd->format = format;
+  ffd->max_files_per_dir = max_files_per_dir;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  apr_file_t *uuid_file;
-  int format, max_files_per_dir;
-  char buf[APR_UUID_FORMATTED_LENGTH + 2];
-  apr_size_t limit;
-
   fs->path = apr_pstrdup(fs->pool, path);
 
-  /* Read the FS format number. */
-  SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_fs_x__path_format(fs, pool), pool));
-
-  /* Now we've got a format number no matter what. */
-  ffd->format = format;
-  ffd->max_files_per_dir = max_files_per_dir;
+  /* Read the FS format file. */
+  SVN_ERR(svn_fs_x__read_format_file(fs, pool));
 
   /* Read in and cache the repository uuid. */
-  SVN_ERR(svn_io_file_open(&uuid_file, svn_fs_x__path_uuid(fs, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  fs->uuid = apr_pstrdup(fs->pool, buf);
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  ffd->instance_id = apr_pstrdup(fs->pool, buf);
-
-  SVN_ERR(svn_io_file_close(uuid_file, pool));
+  SVN_ERR(read_uuid(fs, pool));
 
   /* Read the min unpacked revision. */
   SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
@@ -564,7 +573,8 @@ svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
 
-  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
+  return svn_error_trace(svn_fs_x__read_current(&ffd->youngest_rev_cache,
+                                                fs, pool));
 }
 
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
@@ -619,12 +629,11 @@ svn_fs_x__upgrade(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__youngest_rev(svn_revnum_t *youngest_p,
-                        svn_fs_t *fs,
-                        apr_pool_t *pool)
+                       svn_fs_t *fs,
+                       apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-
-  SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  SVN_ERR(svn_fs_x__read_current(youngest_p, fs, pool));
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
@@ -647,7 +656,7 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
   if (rev <= ffd->youngest_rev_cache)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+  SVN_ERR(svn_fs_x__read_current(&ffd->youngest_rev_cache, fs, pool));
 
   /* Check again. */
   if (rev <= ffd->youngest_rev_cache)
@@ -936,13 +945,11 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
                                       pool));
 
   /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
-                                                      pool),
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_txns_dir(fs, pool),
                                       pool));
 
   /* Create the protorevs directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
-                                                      pool),
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_txn_proto_revs(fs, pool),
                                       pool));
 
   /* Create the 'current' file. */
