@@ -102,6 +102,17 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
   return result;
 }
 
+static asn1_oid asn1_oids[] = {
+  { SVN_X509_OID_COMMON_NAME,  "CN", "commonName" },
+  { SVN_X509_OID_COUNTRY,      "C",  "countryName" },
+  { SVN_X509_OID_LOCALITY,     "L",  "localityName" },
+  { SVN_X509_OID_STATE,        "ST", "stateOrProvinceName" },
+  { SVN_X509_OID_ORGANIZATION, "O",  "organizationName" },
+  { SVN_X509_OID_ORG_UNIT,     "OU", "organizationalUnitName"},
+  { SVN_X509_OID_EMAIL,        NULL, "emailAddress" },
+  { NULL },
+};
+
 static const asn1_oid *oid_string_to_asn1_oid(const char *oid_string)
 {
   const asn1_oid *oid;

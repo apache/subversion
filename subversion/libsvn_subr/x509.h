@@ -72,17 +72,6 @@ typedef struct asn1_oid {
   const char *long_label;
 } asn1_oid;
 
-static asn1_oid asn1_oids[] = {
-  { SVN_X509_OID_COMMON_NAME,  "CN", "commonName" },
-  { SVN_X509_OID_COUNTRY,      "C",  "countryName" },
-  { SVN_X509_OID_LOCALITY,     "L",  "localityName" },
-  { SVN_X509_OID_STATE,        "ST", "stateOrProvinceName" },
-  { SVN_X509_OID_ORGANIZATION, "O",  "organizationName" },
-  { SVN_X509_OID_ORG_UNIT,     "OU", "organizationalUnitName"},
-  { SVN_X509_OID_EMAIL,        NULL, "emailAddress" },
-  { NULL },
-};
-
 #define OID_SUBJECT_ALT_NAME    "\x55\x1D\x11"
 
 #ifdef __cplusplus
