@@ -102,7 +102,13 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
   return result;
 }
 
-static asn1_oid asn1_oids[] = {
+typedef struct asn1_oid {
+  const char *oid_string;
+  const char *short_label;
+  const char *long_label;
+} asn1_oid;
+
+static const asn1_oid asn1_oids[] = {
   { SVN_X509_OID_COMMON_NAME,  "CN", "commonName" },
   { SVN_X509_OID_COUNTRY,      "C",  "countryName" },
   { SVN_X509_OID_LOCALITY,     "L",  "localityName" },
