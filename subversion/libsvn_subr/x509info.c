@@ -34,6 +34,7 @@
 
 
 
+/* Array elements are assumed to be nul-terminated C strings. */
 static apr_array_header_t *
 deep_copy_array(apr_array_header_t *s, apr_pool_t *result_pool)
 {
@@ -55,6 +56,7 @@ deep_copy_array(apr_array_header_t *s, apr_pool_t *result_pool)
   return d;
 }
 
+/* Hash key and value are assumed to be nul-terminated C strings. */
 static apr_hash_t *deep_copy_hash(apr_hash_t *s,
                                   apr_pool_t *scratch_pool, 
                                   apr_pool_t *result_pool)

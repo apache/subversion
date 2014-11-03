@@ -686,8 +686,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
  * All of the encoding formats somewhat overlap with ascii (BMPString
  * and UniversalString are actually always wider so you'll end up
  * with a bunch of escaped nul bytes, but ideally we don't get here
- * for those). */
-static const svn_string_t *
+ * for those).  The result is always a nul-terminated C string. */
+static const char *
 fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
 {
   const char *end = src->data + src->len;
@@ -702,7 +702,7 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
     }
 
   if (q == end)
-    return src;
+    return src->data;
 
   outstr = svn_stringbuf_create_empty(result_pool);
   while (1)
@@ -726,12 +726,12 @@ fuzzy_escape(const svn_string_t *src, apr_pool_t *result_pool)
       p = q + 1;
     }
 
-  return svn_stringbuf__morph_into_string(outstr);
+  return outstr->data;
 }
 
 /* Escape only NUL characters from a string that is presumed to
- * be UTF-8 encoded. */
-static const svn_string_t *
+ * be UTF-8 encoded and return a nul-terminated C string. */
+static const char *
 nul_escape(const svn_string_t *src, apr_pool_t *result_pool)
 {
   const char *end = src->data + src->len;
@@ -745,7 +745,7 @@ nul_escape(const svn_string_t *src, apr_pool_t *result_pool)
     }
 
   if (q == end)
-    return src;
+    return src->data;
 
   outstr = svn_stringbuf_create_empty(result_pool);
   while (1)
@@ -767,7 +767,7 @@ nul_escape(const svn_string_t *src, apr_pool_t *result_pool)
       p = q + 1;
     }
 
-  return svn_stringbuf__morph_into_string(outstr);
+  return outstr->data;
 }
 
 
@@ -801,7 +801,7 @@ latin1_to_utf8(const svn_string_t **result, const svn_string_t *src,
 /* Make a best effort to convert a X.509 name to a UTF-8 encoded
  * string and return it.  If we can't properly convert just do a
  * fuzzy conversion so we have something to display. */
-static const svn_string_t *
+static const char *
 x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 {
   const svn_string_t *src_string;
@@ -879,11 +879,11 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
   return nul_escape(utf8_string, result_pool);
 }
 
-/* Given an OID return a string representation in RESULT.
+/* Given an OID return a null-terminated C string representation in *RESULT.
  * For example an OID with the bytes "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
  * would be converted to the string "1.2.840.113549.1.9.1". */
 static svn_error_t *
-asn1_oid_to_string(svn_stringbuf_t **result, const x509_buf *oid,
+asn1_oid_to_string(const char **result, const x509_buf *oid,
                    apr_pool_t *scratch_pool, apr_pool_t *result_pool)
 {
   svn_stringbuf_t *out = svn_stringbuf_create_empty(result_pool);
@@ -934,7 +934,7 @@ asn1_oid_to_string(svn_stringbuf_t **result, const x509_buf *oid,
     svn_stringbuf_appendcstr(out, temp);
   }
 
-  *result = out;
+  *result = out->data;
   return SVN_NO_ERROR;
 }
 
@@ -951,18 +951,18 @@ x509_name_to_certinfo(apr_array_header_t **oids,
   *hash = apr_hash_make(result_pool);
 
   while (name != NULL) {
-    svn_stringbuf_t *oid_string;
-    const svn_string_t *utf8_value;
+    const char *oid_string;
+    const char *utf8_value;
 
     SVN_ERR(asn1_oid_to_string(&oid_string, &name->oid,
                                scratch_pool, result_pool));
-    APR_ARRAY_PUSH(*oids, const char *) = oid_string->data;
+    APR_ARRAY_PUSH(*oids, const char *) = oid_string;
     utf8_value = x509name_to_utf8_string(name, result_pool);
     if (utf8_value)
-      svn_hash_sets(*hash, oid_string->data, utf8_value->data);
+      svn_hash_sets(*hash, oid_string, utf8_value);
     else
       /* this should never happen */
-      svn_hash_sets(*hash, oid_string->data, "??");
+      svn_hash_sets(*hash, oid_string, "??");
 
     name = name->next;
   }
@@ -1025,8 +1025,8 @@ x509parse_get_hostnames(svn_x509_certinfo_t *ci, x509_cert *crt,
                                                         dnsname->len,
                                                         scratch_pool);
 
-          temp = fuzzy_escape(temp, result_pool);
-          APR_ARRAY_PUSH(ci->hostnames, const char*) = temp->data;
+          APR_ARRAY_PUSH(ci->hostnames, const char*)
+            = fuzzy_escape(temp, result_pool);
         }
     }
   else
