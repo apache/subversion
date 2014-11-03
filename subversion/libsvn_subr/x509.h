@@ -66,12 +66,6 @@
 /*
  * various object identifiers
  */
-typedef struct asn1_oid {
-  const char *oid_string;
-  const char *short_label;
-  const char *long_label;
-} asn1_oid;
-
 #define OID_SUBJECT_ALT_NAME    "\x55\x1D\x11"
 
 #ifdef __cplusplus
