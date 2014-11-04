@@ -858,6 +858,30 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+#define VERIFY_REV_SPECIFIED(op, i)                                     \
+  if (el_rev[i]->rev != SVN_INVALID_REVNUM)                             \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: '%s': revision number required"),   \
+                             op, action->path[i]);
+
+#define VERIFY_REV_UNSPECIFIED(op, i)                                   \
+  if (el_rev[i]->rev != SVN_INVALID_REVNUM)                             \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: '%s@...': revision number not allowed"), \
+                             op, action->path[i]);
+
+#define VERIFY_EID_NONEXISTENT(op, i)                                   \
+  if (el_rev[i]->eid != -1)                                             \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: '%s': already exists"),             \
+                             op, action->path[i]);
+
+#define VERIFY_EID_EXISTS(op, i)                                        \
+  if (el_rev[i]->eid == -1)                                             \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: '%s': not found"),                  \
+                             op, action->path[i]);
+
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor_url,
@@ -937,19 +961,9 @@ execute(const apr_array_header_t *actions,
       switch (action->action)
         {
         case ACTION_DIFF:
+          VERIFY_EID_EXISTS("diff", 0);
+          VERIFY_EID_EXISTS("diff", 1);
           {
-            if (el_rev[0]->eid < 0)
-              {
-                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                         _("Element not found: '%s'"),
-                                         action->path[0]);
-              }
-            if (el_rev[1]->eid < 0)
-              {
-                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                         _("Element not found: '%s'"),
-                                         action->path[1]);
-              }
             SVN_ERR(svn_branch_diff(editor,
                                     el_rev[0] /*from*/,
                                     el_rev[1] /*to*/,
@@ -957,19 +971,9 @@ execute(const apr_array_header_t *actions,
           }
           break;
         case ACTION_DIFF_E:
+          VERIFY_EID_EXISTS("diff-e", 0);
+          VERIFY_EID_EXISTS("diff-e", 1);
           {
-            if (el_rev[0]->eid < 0)
-              {
-                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                         _("Element not found: '%s'"),
-                                         action->path[0]);
-              }
-            if (el_rev[1]->eid < 0)
-              {
-                return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                         _("Element not found: '%s'"),
-                                         action->path[1]);
-              }
             SVN_ERR(svn_branch_diff_e(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
@@ -993,6 +997,8 @@ execute(const apr_array_header_t *actions,
           }
           break;
         case ACTION_BRANCH:
+          VERIFY_REV_UNSPECIFIED("branch", 1);
+          VERIFY_EID_NONEXISTENT("branch", 1);
           SVN_ERR(svn_branch_branch(editor,
                                     el_rev[0]->branch, el_rev[0]->eid,
                                     el_rev[1]->branch, parent_el_rev[1]->eid,
@@ -1001,6 +1007,8 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_BRANCHIFY:
+          VERIFY_REV_UNSPECIFIED("branchify", 0);
+          VERIFY_EID_EXISTS("branchify", 0);
           SVN_ERR(svn_branch_branchify(editor,
                                        el_rev[0]->eid,
                                        iterpool));
@@ -1009,6 +1017,8 @@ execute(const apr_array_header_t *actions,
         case ACTION_DISSOLVE:
           return svn_error_create(SVN_ERR_BRANCHING, NULL,
                                   _("'dissolve' operation not implemented"));
+          VERIFY_REV_UNSPECIFIED("dissolve", 0);
+          VERIFY_EID_EXISTS("dissolve", 0);
           made_changes = TRUE;
           break;
         case ACTION_MERGE:
@@ -1021,6 +1031,9 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(find_el_rev_by_rrpath_rev(
                       &el_rev[2], editor, revnum[2], action->path[2],
                       pool, pool));
+            VERIFY_EID_EXISTS("merge", 0);
+            VERIFY_EID_EXISTS("merge", 1);
+            VERIFY_EID_EXISTS("merge", 2);
             SVN_ERR(svn_branch_merge(editor,
                                      el_rev[0] /*from*/,
                                      el_rev[1] /*to*/,
@@ -1030,6 +1043,10 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_MV:
+          VERIFY_REV_UNSPECIFIED("cp", 0);
+          VERIFY_EID_EXISTS("cp", 0);
+          VERIFY_REV_UNSPECIFIED("cp", 1);
+          VERIFY_EID_NONEXISTENT("cp", 1);
           {
             svn_editor3_node_content_t *content = NULL; /* "no change" */
 
@@ -1040,18 +1057,26 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_CP:
+          VERIFY_REV_SPECIFIED("cp", 0);
+            /* (Or do we want to support copying from "this txn" too?) */
+          VERIFY_EID_EXISTS("cp", 0);
+          VERIFY_REV_UNSPECIFIED("cp", 1);
+          VERIFY_EID_NONEXISTENT("cp", 1);
           SVN_ERR(svn_editor3_copy_tree(editor,
                                         el_rev[0]->rev, el_rev[0]->eid,
                                         parent_el_rev[1]->eid, path_name[1]));
           made_changes = TRUE;
           break;
         case ACTION_RM:
-          SVN_ERR_ASSERT(el_rev[0]->rev == SVN_INVALID_REVNUM);
+          VERIFY_REV_UNSPECIFIED("rm", 0);
+          VERIFY_EID_EXISTS("rm", 0);
           SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
                                      el_rev[0]->eid));
           made_changes = TRUE;
           break;
         case ACTION_MKDIR:
+          VERIFY_REV_UNSPECIFIED("mkdir", 0);
+          VERIFY_EID_NONEXISTENT("mkdir", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_editor3_node_content_t *content
@@ -1064,6 +1089,8 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_PUT_FILE:
+          VERIFY_REV_UNSPECIFIED("put", 1);
+          VERIFY_EID_NONEXISTENT("put", 1);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;
