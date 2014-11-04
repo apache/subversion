@@ -234,7 +234,9 @@ stream_error_create(svn_fs_fs__packed_number_stream_t *stream,
   SVN_ERR(svn_io_file_seek(stream->file, APR_CUR, &offset, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
-                           (apr_uint64_t)offset);
+                           apr_psprintf(stream->pool,
+                                        "%" APR_UINT64_T_HEX_FMT,
+                                        (apr_uint64_t)offset));
 }
 
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
@@ -283,7 +285,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
-      _("Can't read index file '%s' at offset 0x%" APR_UINT64_T_HEX_FMT));
+      _("Can't read index file '%s' at offset 0x%s"));
 
   /* if the last number is incomplete, trim it from the buffer */
   while (read > 0 && buffer[read-1] >= 0x80)
@@ -293,7 +295,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
    * at least *one* further number. */
   if SVN__PREDICT_FALSE(read == 0)
     return stream_error_create(stream, err,
-      _("Unexpected end of index file %s at offset 0x%"APR_UINT64_T_HEX_FMT));
+      _("Unexpected end of index file %s at offset 0x%s"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
