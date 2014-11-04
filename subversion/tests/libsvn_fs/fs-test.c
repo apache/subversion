@@ -6210,6 +6210,34 @@ test_node_created_info(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_print_modules(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  const char *expected, *module_name;
+  svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
+
+  /* Name of the providing module */
+  if (strcmp(opts->fs_type, "fsx") == 0)
+    module_name = "fs_x";
+  else if (strcmp(opts->fs_type, "fsfs") == 0)
+    module_name = "fs_fs";
+  else if (strcmp(opts->fs_type, "bdb") == 0)
+    module_name = "fs_base";
+  else
+    return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
+                             "don't know the module name for %s",
+                             opts->fs_type);
+
+  SVN_ERR(svn_fs_print_modules(modules, pool));
+
+  /* The requested FS type must be listed amongst the available modules. */
+  expected = apr_psprintf(pool, "* %s : ", module_name);
+  SVN_TEST_ASSERT(strstr(modules->data, expected));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6321,6 +6349,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_path_change2_create"),
     SVN_TEST_OPTS_PASS(test_node_created_info,
                        "test FS 'node created' info"),
+    SVN_TEST_OPTS_PASS(test_print_modules,
+                       "test FS module listing"),
     SVN_TEST_NULL
   };
 
