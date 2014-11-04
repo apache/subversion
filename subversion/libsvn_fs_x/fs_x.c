@@ -306,6 +306,7 @@ read_config(fs_x_data_t *ffd,
   /* convert kBytes to bytes */
   ffd->block_size *= 0x400;
   ffd->p2l_page_size *= 0x400;
+  /* L2P pages are in entries - not in (k)Bytes */
 
   /* Debug options. */
   SVN_ERR(svn_config_get_bool(config, &ffd->pack_after_commit,
@@ -471,7 +472,7 @@ write_config(svn_fs_t *fs,
 "### For SSD-based storage systems, slightly lower values around 16 kB"      NL
 "### may improve latency while still maximizing throughput."                 NL
 "### Can be changed at any time but must be a power of 2."                   NL
-"### block-size is 64 kBytes by default."                                    NL
+"### block-size is given in kBytes and with a default of 64 kBytes."         NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 "###"                                                                        NL
 "### The log-to-phys index maps data item numbers to offsets within the"     NL
@@ -499,7 +500,7 @@ write_config(svn_fs_t *fs,
 "### smaller changes."                                                       NL
 "### For source code repositories, this should be about 16x the block-size." NL
 "### Must be a power of 2."                                                  NL
-"### p2l-page-size is 1024 kBytes by default."                               NL
+"### p2l-page-size is given in kBytes and with a default of 1024 kBytes."    NL
 "# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
 ;
 #undef NL
@@ -1019,6 +1020,7 @@ svn_fs_x__create(svn_fs_t *fs,
         }
     }
 
+  /* Actual FS creation. */
   SVN_ERR(svn_fs_x__create_file_tree(fs, path, format,
                                      SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR,
                                      pool));

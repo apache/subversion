@@ -3293,6 +3293,22 @@ commit_body(void *baton, apr_pool_t *pool)
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
 
+  /* Re-Read the current repository format.  All our repo upgrade and
+     config evaluation strategies are such that existing information in
+     FS and FFD remains valid.
+
+     Although we don't recommend upgrading hot repositories, people may
+     still do it and we must make sure to either handle them gracefully
+     or to error out.
+
+     Committing pre-format 3 txns will fail after upgrade to format 3+
+     because the proto-rev cannot be found; no further action needed.
+     Upgrades from pre-f7 to f7+ means a potential change in addressing
+     mode for the final rev.  We must be sure to detect that cause because
+     the failure would only manifest once the new revision got committed.
+   */
+  SVN_ERR(svn_fs_x__read_format_file(cb->fs, pool));
+
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_x__youngest_rev(&old_rev, cb->fs, pool));
 
