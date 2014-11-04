@@ -6105,6 +6105,111 @@ test_path_change_create(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_node_created_info(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Test vectors. */
+  struct
+    {
+      svn_revnum_t rev;
+      const char *path;
+      svn_revnum_t crev;
+      const char *cpath;
+    } to_check[] =
+    {
+      /* New noderev only upon modification. */
+      { 1, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 2, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "A/B/E/beta",  3, "/A/B/E/beta" },
+      { 4, "A/B/E/beta",  3, "/A/B/E/beta" },
+
+      /* Lazily copied node. */
+      { 2, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 4, "Z/B/E/beta",  4, "/Z/B/E/beta" },
+
+      /* Bubble-up upon sub-tree change. */
+      { 2, "Z",  2, "/Z" },
+      { 3, "Z",  2, "/Z" },
+      { 4, "Z",  4, "/Z" },
+
+      { 0 }
+    };
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-created-path",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r2: copy a subtree */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, iterpool));
+  SVN_ERR(svn_fs_copy(root, "A", txn_root, "Z", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r3: touch node in copy source */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r4: touch same relative node in copy target */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "Z/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* Now ask for some 'node created' info. */
+  for (i = 0; to_check[i].rev > 0; ++i)
+    {
+      svn_revnum_t crev;
+      const char *cpath;
+
+      svn_pool_clear(iterpool);
+
+      /* Get created path and rev. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, to_check[i].rev, iterpool));
+      SVN_ERR(svn_fs_node_created_path(&cpath, root, to_check[i].path,
+                                       iterpool));
+      SVN_ERR(svn_fs_node_created_rev(&crev, root, to_check[i].path,
+                                      iterpool));
+
+      /* Compare the results with our expectations. */
+      SVN_TEST_STRING_ASSERT(cpath, to_check[i].cpath);
+
+      if (crev != to_check[i].crev)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "created rev mismatch for %s@%ld:\n"
+                                 "  expected '%ld'\n"
+                                 "     found '%ld",
+                                 to_check[i].path,
+                                 to_check[i].rev,
+                                 to_check[i].crev,
+                                 crev);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6214,6 +6319,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "compare contents of different nodes"),
     SVN_TEST_OPTS_PASS(test_path_change_create,
                        "test svn_fs_path_change2_create"),
+    SVN_TEST_OPTS_PASS(test_node_created_info,
+                       "test FS 'node created' info"),
     SVN_TEST_NULL
   };
 
