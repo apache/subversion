@@ -240,7 +240,9 @@ stream_error_create(svn_fs_x__packed_number_stream_t *stream,
   SVN_ERR(svn_io_file_seek(stream->file, APR_CUR, &offset, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
-                           (apr_uint64_t)offset);
+                           apr_psprintf(stream->pool,
+                                        "%" APR_UINT64_T_HEX_FMT,
+                                        (apr_uint64_t)offset));
 }
 
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
@@ -289,7 +291,7 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
-      _("Can't read index file '%s' at offset 0x%" APR_UINT64_T_HEX_FMT));
+      _("Can't read index file '%s' at offset 0x%"));
 
   /* if the last number is incomplete, trim it from the buffer */
   while (read > 0 && buffer[read-1] >= 0x80)
@@ -299,7 +301,7 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
    * at least *one* further number. */
   if SVN__PREDICT_FALSE(read == 0)
     return stream_error_create(stream, err,
-      _("Unexpected end of index file %s at offset 0x%"APR_UINT64_T_HEX_FMT));
+      _("Unexpected end of index file %s at offset 0x%"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
@@ -556,10 +558,13 @@ read_uint32_from_proto_index(apr_file_t *proto_index,
     {
       if (value > APR_UINT32_MAX)
         return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                _("UINT32 0x%" APR_UINT64_T_HEX_FMT
-                                  " too large, max = 0x%"
-                                  APR_UINT64_T_HEX_FMT),
-                                value, (apr_uint64_t)APR_UINT32_MAX);
+                                 _("UINT32 0x%s too large, max = 0x%s"),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              value),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                             (apr_uint64_t)APR_UINT32_MAX));
 
       /* This conversion is not lossy because the value can be represented
        * in the target type. */
@@ -585,10 +590,13 @@ read_off_t_from_proto_index(apr_file_t *proto_index,
     {
       if (value > off_t_max)
         return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                _("File offset 0x%" APR_UINT64_T_HEX_FMT
-                                  " too large, max = 0x%"
-                                  APR_UINT64_T_HEX_FMT),
-                                value, off_t_max);
+                                _("File offset 0x%s too large, max = 0x%s"),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              value),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              off_t_max));
 
       /* Shortening conversion from unsigned to signed int is well-defined
        * and not lossy in C because the value can be represented in the
@@ -2137,10 +2145,13 @@ read_p2l_sub_items_from_proto_index(apr_file_t *proto_index,
            */
           if (revision > 0 && revision - 1 > LONG_MAX)
             return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
-                                    _("Revision 0x%" APR_UINT64_T_HEX_FMT
-                                      " too large, max = 0x%"
-                                      APR_UINT64_T_HEX_FMT),
-                                    revision, (apr_uint64_t)LONG_MAX);
+                                     _("Revision 0x%s too large, max = 0x%s"),
+                                     apr_psprintf(scratch_pool,
+                                                  "%" APR_UINT64_T_FMT,
+                                                  revision),
+                                     apr_psprintf(scratch_pool,
+                                                  "%" APR_UINT64_T_FMT,
+                                                  (apr_uint64_t)LONG_MAX));
 
           /* Shortening conversion from unsigned to signed int is well-
            * defined and not lossy in C because the value can be represented
