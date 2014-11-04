@@ -5862,6 +5862,204 @@ purge_txn_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+compare_contents(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root1, *root2;
+  const char *original = "original contents";
+  svn_revnum_t rev;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Two similar but different texts that yield the same MD5 digest. */
+  const char *evil_text1
+    = "\xd1\x31\xdd\x02\xc5\xe6\xee\xc4\x69\x3d\x9a\x06\x98\xaf\xf9\x5c"
+      "\x2f\xca\xb5\x87\x12\x46\x7e\xab\x40\x04\x58\x3e\xb8\xfb\x7f\x89"
+      "\x55\xad\x34\x06\x09\xf4\xb3\x02\x83\xe4\x88\x83\x25\x71\x41\x5a"
+      "\x08\x51\x25\xe8\xf7\xcd\xc9\x9f\xd9\x1d\xbd\xf2\x80\x37\x3c\x5b"
+      "\xd8\x82\x3e\x31\x56\x34\x8f\x5b\xae\x6d\xac\xd4\x36\xc9\x19\xc6"
+      "\xdd\x53\xe2\xb4\x87\xda\x03\xfd\x02\x39\x63\x06\xd2\x48\xcd\xa0"
+      "\xe9\x9f\x33\x42\x0f\x57\x7e\xe8\xce\x54\xb6\x70\x80\xa8\x0d\x1e"
+      "\xc6\x98\x21\xbc\xb6\xa8\x83\x93\x96\xf9\x65\x2b\x6f\xf7\x2a\x70";
+  const char *evil_text2
+    = "\xd1\x31\xdd\x02\xc5\xe6\xee\xc4\x69\x3d\x9a\x06\x98\xaf\xf9\x5c"
+      "\x2f\xca\xb5\x07\x12\x46\x7e\xab\x40\x04\x58\x3e\xb8\xfb\x7f\x89"
+      "\x55\xad\x34\x06\x09\xf4\xb3\x02\x83\xe4\x88\x83\x25\xf1\x41\x5a"
+      "\x08\x51\x25\xe8\xf7\xcd\xc9\x9f\xd9\x1d\xbd\x72\x80\x37\x3c\x5b"
+      "\xd8\x82\x3e\x31\x56\x34\x8f\x5b\xae\x6d\xac\xd4\x36\xc9\x19\xc6"
+      "\xdd\x53\xe2\x34\x87\xda\x03\xfd\x02\x39\x63\x06\xd2\x48\xcd\xa0"
+      "\xe9\x9f\x33\x42\x0f\x57\x7e\xe8\xce\x54\xb6\x70\x80\x28\x0d\x1e"
+      "\xc6\x98\x21\xbc\xb6\xa8\x83\x93\x96\xf9\x65\xab\x6f\xf7\x2a\x70";
+  svn_checksum_t *checksum1, *checksum2;
+
+  /* (path, rev) pairs to compare plus the expected API return values */
+  struct 
+    {
+      svn_revnum_t rev1;
+      const char *path1;
+      svn_revnum_t rev2;
+      const char *path2;
+
+      svn_boolean_t different;  /* result of svn_fs_*_different */
+      svn_tristate_t changed;   /* result of svn_fs_*_changed */
+    } to_compare[] =
+    {
+      /* same representation */
+      { 1, "foo", 2, "foo", FALSE, svn_tristate_false },
+      { 1, "foo", 2, "bar", FALSE, svn_tristate_false },
+      { 2, "foo", 2, "bar", FALSE, svn_tristate_false },
+
+      /* different content but MD5 check is not reliable */
+      { 3, "foo", 3, "bar", TRUE, svn_tristate_true },
+
+      /* different contents */
+      { 1, "foo", 3, "bar", TRUE, svn_tristate_true },
+      { 1, "foo", 3, "foo", TRUE, svn_tristate_true },
+      { 3, "foo", 4, "bar", TRUE, svn_tristate_true },
+      { 3, "foo", 4, "bar", TRUE, svn_tristate_true },
+      { 2, "bar", 3, "bar", TRUE, svn_tristate_true },
+      { 3, "bar", 4, "bar", TRUE, svn_tristate_true },
+
+      /* variations on the same theme: same content, possibly different rep */
+      { 4, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 1, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 2, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 1, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
+      { 2, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
+      { 2, "bar", 4, "bar", FALSE, svn_tristate_unknown }, 
+
+      /* EOL */
+      { 0 },
+    };
+
+  /* Same same, but different.
+   * Just checking that we actually have an MD5 collision. */
+  SVN_ERR(svn_checksum(&checksum1, svn_checksum_md5, evil_text1,
+                       strlen(evil_text1), pool));
+  SVN_ERR(svn_checksum(&checksum2, svn_checksum_md5, evil_text2,
+                       strlen(evil_text2), pool));
+  SVN_TEST_ASSERT(svn_checksum_match(checksum1, checksum1));
+  SVN_TEST_ASSERT(strcmp(evil_text1, evil_text2));
+
+  /* Now, build up our test repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-compare-contents",
+                              opts, pool));
+
+  /* Rev 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", original, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 1);
+  svn_pool_clear(iterpool);
+
+  /* Rev 2: copy that file. */
+  SVN_ERR(svn_fs_revision_root(&root1, fs, rev, iterpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_copy(root1, "foo", txn_root, "bar", iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 2);
+  svn_pool_clear(iterpool);
+
+  /* Rev 3: modify both files.
+   * The new contents differs for both files but has the same length and MD5.
+   */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", evil_text1, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "bar", evil_text2, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(evil_text1, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "bar", "prop",
+                                  svn_string_create(evil_text2, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 3);
+  svn_pool_clear(iterpool);
+
+  /* Rev 4: revert both file contents.
+   */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", original, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "bar", original, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "bar", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 4);
+  svn_pool_clear(iterpool);
+
+  /* Perform all comparisons listed in TO_COMPARE. */
+  for (i = 0; to_compare[i].rev1 > 0; ++i)
+    {
+      svn_boolean_t text_different;
+      svn_boolean_t text_changed;
+      svn_boolean_t props_different;
+      svn_boolean_t props_changed;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_revision_root(&root1, fs, to_compare[i].rev1, iterpool));
+      SVN_ERR(svn_fs_revision_root(&root2, fs, to_compare[i].rev2, iterpool));
+
+      /* Compare node texts. */
+      SVN_ERR(svn_fs_contents_different(&text_different,
+                                        root1, to_compare[i].path1,
+                                        root2, to_compare[i].path2,
+                                        iterpool));
+      SVN_ERR(svn_fs_contents_changed(&text_changed,
+                                      root1, to_compare[i].path1,
+                                      root2, to_compare[i].path2,
+                                      iterpool));
+
+      /* Compare properties. */
+      SVN_ERR(svn_fs_props_different(&props_different,
+                                     root1, to_compare[i].path1,
+                                     root2, to_compare[i].path2,
+                                     iterpool));
+      SVN_ERR(svn_fs_props_changed(&props_changed,
+                                   root1, to_compare[i].path1,
+                                   root2, to_compare[i].path2,
+                                   iterpool));
+
+      /* Check results. */
+      SVN_TEST_ASSERT(text_different == to_compare[i].different);
+      SVN_TEST_ASSERT(props_different == to_compare[i].different);
+
+      switch (to_compare[i].changed)
+        {
+        case svn_tristate_true:
+          SVN_TEST_ASSERT(text_changed);
+          SVN_TEST_ASSERT(props_changed);
+          break;
+
+        case svn_tristate_false:
+          SVN_TEST_ASSERT(!text_changed);
+          SVN_TEST_ASSERT(!props_changed);
+          break;
+
+        default:
+          break;
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -5968,6 +6166,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test deletion after replace in changed paths list"),
     SVN_TEST_OPTS_PASS(purge_txn_test,
                        "test purging transactions"),
+    SVN_TEST_OPTS_PASS(compare_contents,
+                       "compare contents of different nodes"),
     SVN_TEST_NULL
   };
 
