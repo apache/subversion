@@ -6067,6 +6067,43 @@ compare_contents(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_path_change_create(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const svn_fs_id_t *id;
+  svn_fs_path_change2_t *change;
+
+  /* Build an empty test repo ... */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-path-change-create",
+                              opts, pool));
+
+  /* ... just to give us a valid ID. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_ERR(svn_fs_node_id(&id, root, "", pool));
+
+  /* Do what we came here for. */
+  change = svn_fs_path_change2_create(id, svn_fs_path_change_replace, pool);
+
+  SVN_TEST_ASSERT(change);
+  SVN_TEST_ASSERT(change->node_rev_id == id);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_replace);
+
+  /* All other fields should be "empty" / "unused". */
+  SVN_TEST_ASSERT(change->node_kind == svn_node_none);
+
+  SVN_TEST_ASSERT(change->text_mod == FALSE);
+  SVN_TEST_ASSERT(change->prop_mod == FALSE);
+  SVN_TEST_ASSERT(change->mergeinfo_mod == svn_tristate_unknown);
+
+  SVN_TEST_ASSERT(change->copyfrom_known == FALSE);
+  SVN_TEST_ASSERT(change->copyfrom_rev == SVN_INVALID_REVNUM);
+  SVN_TEST_ASSERT(change->copyfrom_path == NULL);
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -6175,6 +6212,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test purging transactions"),
     SVN_TEST_OPTS_PASS(compare_contents,
                        "compare contents of different nodes"),
+    SVN_TEST_OPTS_PASS(test_path_change_create,
+                       "test svn_fs_path_change2_create"),
     SVN_TEST_NULL
   };
 
