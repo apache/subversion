@@ -1596,6 +1596,10 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_make_file(txn_root, "theta", pool));
     SVN_ERR(svn_test__set_file_contents
             (txn_root, "theta", "This is another file 'theta'.\n", pool));
+
+    /* TXN must actually be based upon revisions[4] (instead of HEAD). */
+    SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == revisions[4]);
+
     SVN_ERR(test_commit_txn(&failed_rev, txn, "/theta", pool));
     SVN_ERR(svn_fs_abort_txn(txn, pool));
 
@@ -1618,6 +1622,9 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
+
+    /* TXN must actually be based upon revisions[1] (instead of HEAD). */
+    SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == revisions[1]);
 
     /* We used to create the revision like this before fixing issue
        #2751 -- Directory prop mods reverted in overlapping commits scenario.
