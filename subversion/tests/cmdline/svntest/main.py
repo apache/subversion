@@ -155,6 +155,7 @@ svnrdump_binary = P('svnrdump/svnrdump')
 svnsync_binary = P('svnsync/svnsync')
 svnversion_binary = P('svnversion/svnversion')
 svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
+svnmover_binary = P('svnmover/svnmover')
 svnmucc_binary = P('svnmucc/svnmucc')
 svnfsfs_binary = P('svnfsfs/svnfsfs')
 entriesdump_binary = P('tests/cmdline/entries-dump')
@@ -744,6 +745,12 @@ def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
   return run_command(svnversion_binary, 1, False, *varargs)
+
+def run_svnmover(*varargs):
+  """Run svnmover with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators).  Use binary mode for output."""
+  return run_command(svnmover_binary, 1, True,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
@@ -2052,6 +2059,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
+  global svnmover_binary
   global svnmucc_binary
   global svnauthz_binary
   global svnauthz_validate_binary
@@ -2160,6 +2168,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
+    svnmover_binary = os.path.join(options.svn_bin, 'jsvnmover' + _bat)
     svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
@@ -2171,6 +2180,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
+      svnmover_binary = os.path.join(options.svn_bin, 'svnmover' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
 
   if options.tools_bin:
