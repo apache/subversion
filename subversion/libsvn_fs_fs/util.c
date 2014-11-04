@@ -239,7 +239,7 @@ svn_fs_fs__path_txns_dir(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  return ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
+  return (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
        ? svn_dirent_join(fs->path, PATH_TXNS_LA_DIR, pool)
        : svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
 }
