@@ -280,11 +280,11 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
   read = sizeof(buffer);
   block_left = stream->block_size - (stream->next_offset - block_start);
   if (block_left >= 10 && block_left < read)
-    read = block_left;
+    read = (apr_size_t)block_left;
 
   /* Don't read beyond the end of the file section that belongs to this
    * index / stream. */
-  read = MIN(read, stream->stream_end - stream->next_offset);
+  read = (apr_size_t)MIN(read, stream->stream_end - stream->next_offset);
 
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
@@ -958,8 +958,11 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
           int entry_count = 0;
           for (i = 0; i < entries->nelts; i += entry_count)
             {
-              /* 1 page with up to 8k entries */
-              apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
+              /* 1 page with up to L2P_PAGE_SIZE entries.
+               * fsfs.conf settings validation guarantees this to fit into
+               * our address space. */
+              apr_size_t last_buffer_size
+                = (apr_size_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 
@@ -1260,11 +1263,12 @@ get_l2p_header_body(l2p_header_t **header,
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
-  int i;
+  apr_size_t i;
   apr_size_t page, page_count;
   apr_off_t offset;
   l2p_header_t *result = apr_pcalloc(result_pool, sizeof(*result));
   apr_size_t page_table_index;
+  svn_revnum_t next_rev;
   apr_array_header_t *expanded_values
     = apr_array_make(scratch_pool, 16, sizeof(apr_uint64_t));
 
@@ -1305,12 +1309,11 @@ get_l2p_header_body(l2p_header_t **header,
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                             _("L2P index page count implausibly large"));
 
-  if (   result->first_revision > revision
-      || result->first_revision + result->revision_count <= revision)
+  next_rev = result->first_revision + (svn_revnum_t)result->revision_count;
+  if (result->first_revision > revision || next_rev <= revision)
     return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
-                      revision, result->first_revision,
-                      result->first_revision + result->revision_count);
+                      revision, result->first_revision, next_rev);
 
   /* allocate the page tables */
   result->page_table
@@ -1701,6 +1704,17 @@ prefetch_l2p_pages(svn_boolean_t *end,
   apr_pool_t *iterpool;
   svn_fs_x__page_cache_key_t key = { 0 };
 
+  /* Parameter check. */
+  if (min_offset < 0)
+    min_offset = 0;
+
+  if (max_offset <= 0)
+    {
+      /* Nothing to do */
+      *end = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* get the page table for REVISION from cache */
   *end = FALSE;
   SVN_ERR(get_l2p_page_table(pages, fs, revision, scratch_pool));
@@ -1730,8 +1744,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
         continue;
 
       /* skip pages outside the specified index file range */
-      if (   entry->offset < min_offset
-          || entry->offset + entry->size > max_offset)
+      if (   entry->offset < (apr_uint64_t)min_offset
+          || entry->offset + entry->size > (apr_uint64_t)max_offset)
         {
           *end = TRUE;
           continue;
@@ -1809,7 +1823,7 @@ l2p_index_lookup(apr_off_t *offset,
       svn_revnum_t prefetch_revision;
       svn_revnum_t last_revision
         = info_baton.first_revision
-          + (key.is_packed ? ffd->max_files_per_dir : 1);
+          + svn_fs_x__pack_size(fs, info_baton.first_revision);
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       svn_boolean_t end;
       apr_off_t max_offset
@@ -2431,13 +2445,15 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
    */
   if (baton->offset / header->page_size < header->page_count)
     {
-      baton->page_no = baton->offset / header->page_size;
+      /* This cast is safe because the value is < header->page_count. */
+      baton->page_no = (apr_size_t)(baton->offset / header->page_size);
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no + 1];
       baton->page_size = header->page_size;
     }
   else
     {
+      /* Beyond the last page. */
       baton->page_no = header->page_count;
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no];
@@ -2516,7 +2532,7 @@ get_p2l_header(p2l_header_t **header,
 
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->file_size = value;
-  if (result->file_size != rev_file->l2p_offset)
+  if (result->file_size != (apr_uint64_t)rev_file->l2p_offset)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                    _("Index offset and rev / pack file size do not match"));
 
@@ -2532,8 +2548,8 @@ get_p2l_header(p2l_header_t **header,
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                    _("P2L page count does not match rev / pack file size"));
 
-  result->offsets = apr_pcalloc(result_pool, (result->page_count + 1)
-                                           * sizeof(*result->offsets));
+  result->offsets
+    = apr_pcalloc(result_pool, (result->page_count + 1) * sizeof(*result->offsets));
 
   /* read page sizes and derive page description offsets from them */
   result->offsets[0] = 0;

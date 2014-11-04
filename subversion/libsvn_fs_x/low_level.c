@@ -186,8 +186,8 @@ read_header_block(apr_hash_t **headers,
     {
       svn_stringbuf_t *header_str;
       const char *name, *value;
-      apr_ssize_t i = 0;
-      apr_ssize_t name_len;
+      apr_size_t i = 0;
+      apr_size_t name_len;
       svn_boolean_t eof;
 
       SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof,
@@ -211,19 +211,19 @@ read_header_block(apr_hash_t **headers,
       name = header_str->data;
       name_len = i;
 
-      /* Skip over the NULL byte and the space following it. */
-      i += 2;
-
-      if (i > header_str->len)
+      /* Check if we have enough data to parse. */
+      if (i + 2 > header_str->len)
         {
           /* Restore the original line for the error. */
-          i -= 2;
           header_str->data[i] = ':';
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Found malformed header '%s' in "
                                      "revision file"),
                                    header_str->data);
         }
+
+      /* Skip over the NULL byte and the space following it. */
+      i += 2;
 
       value = header_str->data + i;
 

@@ -78,9 +78,11 @@ svn_boolean_t
 svn_fs_x__is_packed_revprop(svn_fs_t *fs,
                             svn_revnum_t rev);
 
-/* Return the revision number of the pack / rev file in FS containing REV. */
+/* Return the first revision in the pack / rev file containing REVISION in
+ * filesystem FS.  For non-packed revs, this will simply be REVISION. */
 svn_revnum_t
-svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev);
+svn_fs_x__packed_base_rev(svn_fs_t *fs,
+                          svn_revnum_t rev);
 
 /* Return the number of revisions in the pack / rev file in FS that contains
  * revision REV. */

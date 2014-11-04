@@ -66,13 +66,10 @@ init_revision_file(svn_fs_t *fs,
                    svn_revnum_t revision,
                    apr_pool_t *result_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__revision_file_t *file = create_revision_file(fs, result_pool);
 
   file->is_packed = svn_fs_x__is_packed_rev(fs, revision);
-  file->start_revision = revision < ffd->min_unpacked_rev
-                       ? revision - (revision % ffd->max_files_per_dir)
-                       : revision;
+  file->start_revision = svn_fs_x__packed_base_rev(fs, revision);
 
   return file;
 }
@@ -194,6 +191,7 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
 
           /* We failed for the first time. Refresh cache & retry. */
           SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, scratch_pool));
+              file->start_revision = svn_fs_x__packed_base_rev(fs, rev);
 
           retry = TRUE;
         }
