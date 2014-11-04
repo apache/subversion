@@ -1904,7 +1904,7 @@ shards_spanned(int *spanned,
                apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
+  int shard_size = ffd->max_files_per_dir;
   apr_pool_t *iterpool;
 
   int count = walk ? 1 : 0; /* The start of a walk already touches a shard. */

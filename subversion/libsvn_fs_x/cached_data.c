@@ -861,9 +861,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
                            apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  svn_revnum_t shard_size = ffd->max_files_per_dir
-                          ? ffd->max_files_per_dir
-                          : 1;
+  svn_revnum_t shard_size = ffd->max_files_per_dir;
   svn_boolean_t is_delta = FALSE;
   int count = 0;
   int shards = 1;
