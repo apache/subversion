@@ -38,6 +38,7 @@ Work on this branch:
       merge
 
     To do:
+      copying: fix translation to Ev1 of operations nested inside a copy
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
       copying: use Ev1 copy rather than plain add to commit a move
@@ -46,12 +47,17 @@ Work on this branch:
       change the editor API so that the branch is specified explicitly
         by each action instead of having a 'main' branch for the whole
         edit
+      synthesize element tracking info (instead of aborting) when reading
+        a revision that was committed by a non-move-tracking client
+      make the user interface degrade cross-branch moves so that the user
+        gets some sort of reasonable result rather than an error
 
 
   * The model.
 
     To do:
-      copying: model copying as a (tree) relationship between elements?
+      copying: model copying as a (tree) relationship between elements
+        that is the same across all branches in a family?
 
 
   * Develop a 'commit editor' interface supporting moves.
