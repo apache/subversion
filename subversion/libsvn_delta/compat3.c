@@ -2175,6 +2175,11 @@ branch_map_get_eid_by_path(const svn_branch_instance_t *branch,
       const char *this_path = branch_map_get_path_by_eid(branch, eid,
                                                          scratch_pool);
 
+      if (! this_path)
+        {
+          /* Mapping is not complete; this element is in effect not present. */
+          continue;
+        }
       if (strcmp(path, this_path) == 0)
         {
           return eid;

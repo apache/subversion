@@ -230,11 +230,11 @@ struct action {
 
 /* ====================================================================== */
 
-/* Find the deepest branch in the repository of which REV_SPEC:RRPATH is
+/* Find the deepest branch in the repository of which REVNUM:RRPATH is
  * either the root element or a normal, non-sub-branch element.
  *
- * RRPATH is a repository-relative path; REV_SPEC is a revision specifier.
- * When REV_SPEC.kind is not 'number', find in the current txn.
+ * RRPATH is a repository-relative path. REVNUM is a revision number, or
+ * SVN_INVALID_REVNUM meaning the current txn.
  *
  * Return the location of the element in that branch, or with
  * EID=-1 if no element exists there.
@@ -245,15 +245,13 @@ struct action {
 static svn_error_t *
 find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
                           svn_editor3_t *editor,
-                          svn_opt_revision_t rev_spec,
+                          svn_revnum_t revnum,
                           const char *rrpath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  if (rev_spec.kind == svn_opt_revision_number)
+  if (SVN_IS_VALID_REVNUM(revnum))
     {
-      svn_revnum_t revnum = rev_spec.value.number;
-
       SVN_ERR(svn_editor3_find_el_rev_by_path_rev(el_rev_p,
                                                   editor, rrpath, revnum,
                                                   result_pool, scratch_pool));
@@ -898,6 +896,7 @@ execute(const apr_array_header_t *actions,
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
       int j;
+      svn_revnum_t revnum[3] = { -1, -1, -1 };
       const char *path_name[3] = { NULL, NULL, NULL };
       svn_branch_el_rev_id_t *el_rev[3], *parent_el_rev[3];
 
@@ -909,15 +908,29 @@ execute(const apr_array_header_t *actions,
             {
               const char *rrpath, *parent_rrpath;
 
+              if (action->rev_spec[j].kind == svn_opt_revision_unspecified)
+                revnum[j] = SVN_INVALID_REVNUM;
+              else if (action->rev_spec[j].kind == svn_opt_revision_number)
+                revnum[j] = action->rev_spec[j].value.number;
+              else if (action->rev_spec[j].kind == svn_opt_revision_head)
+                {
+                  revnum[j] = mtcc->head_revision;
+                }
+              else
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "'%s@...': revision specifier "
+                                         "must be a number or 'head'",
+                                         action->path[j]);
+
               rrpath = svn_relpath_join(base_relpath, action->path[j], pool);
               parent_rrpath = svn_relpath_dirname(rrpath, pool);
 
               path_name[j] = svn_relpath_basename(rrpath, NULL);
               SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev[j], editor,
-                                                action->rev_spec[j], rrpath,
+                                                revnum[j], rrpath,
                                                 pool, pool));
               SVN_ERR(find_el_rev_by_rrpath_rev(&parent_el_rev[j], editor,
-                                                action->rev_spec[j], parent_rrpath,
+                                                revnum[j], parent_rrpath,
                                                 pool, pool));
             }
         }
@@ -1003,10 +1016,10 @@ execute(const apr_array_header_t *actions,
             /* Look up path[0] (FROM) and path[2] (YCA) relative to repo
                root, unlike path[1] (TO) which is relative to anchor URL. */
             SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, action->rev_spec[0], action->path[0],
+                      &el_rev[0], editor, revnum[0], action->path[0],
                       pool, pool));
             SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[2], editor, action->rev_spec[2], action->path[2],
+                      &el_rev[2], editor, revnum[2], action->path[2],
                       pool, pool));
             SVN_ERR(svn_branch_merge(editor,
                                      el_rev[0] /*from*/,
