@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -288,17 +287,9 @@ typedef struct fs_x_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
   /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
+     the first access.  May be also get closed and set to NULL again. */
+  apr_file_t *revprop_generation_file;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
@@ -408,6 +399,12 @@ typedef struct fs_x_data_t
 
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
+
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,

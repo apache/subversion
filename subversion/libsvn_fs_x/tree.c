@@ -395,7 +395,9 @@ cache_lookup( fs_x_dag_cache_t *cache
 /* 2nd level cache */
 
 /* Find and return the DAG node cache for ROOT and the key that
-   should be used for PATH. */
+   should be used for PATH.
+
+   Pool will only be used for allocating a new keys if necessary */
 static void
 locate_cache(svn_cache__t **cache,
              const char **key,
@@ -406,15 +408,20 @@ locate_cache(svn_cache__t **cache,
   if (root->is_txn_root)
     {
       fs_txn_root_data_t *frd = root->fsap_data;
-      if (cache) *cache = frd->txn_node_cache;
-      if (key && path) *key = path;
+
+      if (cache)
+        *cache = frd->txn_node_cache;
+      if (key && path)
+        *key = path;
     }
   else
     {
       fs_x_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key
-        = svn_fs_x__combine_number_and_string(root->rev, path, pool);
+
+      if (cache)
+        *cache = ffd->rev_node_cache;
+      if (key && path)
+        *key = svn_fs_x__combine_number_and_string(root->rev, path, pool);
     }
 }
 
@@ -1044,7 +1051,7 @@ open_path(parent_path_t **parent_path_p,
 
           if (flags & open_path_node_only)
             {
-              /* Shortcut: the caller only wan'ts the final DAG node. */
+              /* Shortcut: the caller only wants the final DAG node. */
               parent_path->node = child;
             }
           else
@@ -1509,7 +1516,7 @@ x_change_node_prop(svn_fs_root_t *root,
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   svn_fs_x__txn_id_t txn_id;
-  svn_boolean_t modeinfo_mod = FALSE;
+  svn_boolean_t mergeinfo_mod = FALSE;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -1553,7 +1560,7 @@ x_change_node_prop(svn_fs_root_t *root,
                                                   (value != NULL), pool));
         }
 
-      modeinfo_mod = TRUE;
+      mergeinfo_mod = TRUE;
     }
 
   /* Set the property. */
@@ -1566,7 +1573,7 @@ x_change_node_prop(svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
                     svn_fs_x__dag_get_id(parent_path->node),
-                    svn_fs_path_change_modify, FALSE, TRUE, modeinfo_mod,
+                    svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                     svn_fs_x__dag_node_kind(parent_path->node),
                     SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -1826,11 +1833,19 @@ merge(svn_stringbuf_t *conflict_p,
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
     svn_boolean_t same;
+    apr_pool_t *scratch_pool;
 
     /* Get node revisions for our id's. */
-    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool));
-    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs, ancestor_id, pool));
-    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs, source_id, pool));
+    scratch_pool = svn_pool_create(pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool,
+                                        scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs, ancestor_id, pool,
+                                        scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs, source_id, pool,
+                                        scratch_pool));
+    svn_pool_destroy(scratch_pool);
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -2452,27 +2467,15 @@ x_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
-/* Type to select the various behavioral modes of copy_helper.
- */
-typedef enum copy_type_t
-{
-  /* add without history */
-  copy_type_plain_add,
-
-  /* add with history */
-  copy_type_add_with_history
-} copy_type_t;
-
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
-   TO_ROOT.  COPY_TYPE determines whether then the copy is recorded in
-   the copies table and whether it is being marked as a move.
-   Perform temporary allocations in POOL. */
+   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
+   the copies table.  Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper(svn_fs_root_t *from_root,
             const char *from_path,
             svn_fs_root_t *to_root,
             const char *to_path,
-            copy_type_t copy_type,
+            svn_boolean_t preserve_history,
             apr_pool_t *pool)
 {
   dag_node_t *from_node;
@@ -2558,7 +2561,7 @@ copy_helper(svn_fs_root_t *from_root,
       SVN_ERR(svn_fs_x__dag_copy(to_parent_path->parent->node,
                                  to_parent_path->entry,
                                  from_node,
-                                 copy_type != copy_type_plain_add,
+                                 preserve_history,
                                  from_root->rev,
                                  from_canonpath,
                                  txn_id, pool));
@@ -2617,7 +2620,7 @@ x_copy(svn_fs_root_t *from_root,
                                      to_root,
                                      svn_fs__canonicalize_abspath(to_path,
                                                                   pool),
-                                     copy_type_add_with_history, pool));
+                                     TRUE, pool));
 }
 
 
@@ -2635,7 +2638,7 @@ x_revision_link(svn_fs_root_t *from_root,
 
   path = svn_fs__canonicalize_abspath(path, pool);
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                     copy_type_plain_add, pool));
+                                     FALSE, pool));
 }
 
 
@@ -4100,10 +4103,12 @@ stringify_node(dag_node_t *node,
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
    information for DAG nodes in revision REV, and trust the metadata
-   accuracy for nodes belonging to older revisions. */
+   accuracy for nodes belonging to older revisions.  To detect cycles,
+   provide all parent dag_node_t * in PARENT_NODES. */
 static svn_error_t *
 verify_node(dag_node_t *node,
             svn_revnum_t rev,
+            apr_array_header_t *parent_nodes,
             apr_pool_t *pool)
 {
   svn_boolean_t has_mergeinfo;
@@ -4113,6 +4118,18 @@ verify_node(dag_node_t *node,
   int pred_count;
   svn_node_kind_t kind;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  /* Detect (non-)DAG cycles. */
+  for (i = 0; i < parent_nodes->nelts; ++i)
+    {
+      dag_node_t *parent = APR_ARRAY_IDX(parent_nodes, i, dag_node_t *);
+      if (svn_fs_x__id_eq(svn_fs_x__dag_get_id(parent),
+                          svn_fs_x__dag_get_id(node)))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                "Node is its own direct or indirect parent '%s'",
+                                stringify_node(node, iterpool));
+    }
 
   /* Fetch some data. */
   SVN_ERR(svn_fs_x__dag_has_mergeinfo(&has_mergeinfo, node));
@@ -4164,8 +4181,8 @@ verify_node(dag_node_t *node,
   if (kind == svn_node_dir)
     {
       apr_array_header_t *entries;
-      int i;
       apr_int64_t children_mergeinfo = 0;
+      APR_ARRAY_PUSH(parent_nodes, dag_node_t*) = node;
 
       SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, pool));
 
@@ -4184,7 +4201,7 @@ verify_node(dag_node_t *node,
             {
               SVN_ERR(svn_fs_x__dag_get_node(&child, fs, dirent->id,
                                              iterpool));
-              SVN_ERR(verify_node(child, rev, iterpool));
+              SVN_ERR(verify_node(child, rev, parent_nodes, iterpool));
               SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&child_mergeinfo,
                                                         child));
             }
@@ -4206,6 +4223,10 @@ verify_node(dag_node_t *node,
                                  stringify_node(node, iterpool),
                                  mergeinfo_count, has_mergeinfo,
                                  children_mergeinfo);
+
+      /* If we don't make it here, there was an error / corruption.
+       * In that case, nobody will need PARENT_NODES anymore. */
+      apr_array_pop(parent_nodes);
     }
 
   svn_pool_destroy(iterpool);
@@ -4218,6 +4239,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
 {
   svn_fs_t *fs = root->fs;
   dag_node_t *root_dir;
+  apr_array_header_t *parent_nodes;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
@@ -4241,7 +4263,8 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
     }
 
   /* Recursively verify ROOT_DIR. */
-  SVN_ERR(verify_node(root_dir, root->rev, pool));
+  parent_nodes = apr_array_make(pool, 16, sizeof(dag_node_t *));
+  SVN_ERR(verify_node(root_dir, root->rev, parent_nodes, pool));
 
   /* Verify explicitly the predecessor of the root. */
   {

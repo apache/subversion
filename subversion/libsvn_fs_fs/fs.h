@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -58,7 +57,8 @@ extern "C" {
 #define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
-#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions in
+                                                    repos w/o log addressing */
 #define PATH_NODE_ORIGINS_DIR "node-origins"     /* Lazy node-origin cache */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
@@ -165,7 +165,7 @@ extern "C" {
 #define SVN_FS_FS__MIN_PACK_LOCK_FORMAT 7
 
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
-#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
+#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT 7
 
 /* Minimum format number that supports per-instance filesystem IDs. */
 #define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
@@ -326,18 +326,6 @@ typedef struct fs_fs_data_t
   /* Fulltext cache; currently only used with memcached.  Maps from
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
-
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
-  /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;

@@ -59,7 +59,7 @@ get_empty_string(apr_pool_t *pool)
 {
   svn_pool_clear(pool);
 
-  return svn_stringbuf_ncreate(0, 0, pool);
+  return svn_stringbuf_create_empty(pool);
 }
 
 /* Parse a skeleton from a Subversion string.  */

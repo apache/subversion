@@ -365,7 +365,7 @@ switch_internal(svn_revnum_t *result_rev,
                                            new_depths,
                                            switch_loc->repos_root_url,
                                            local_abspath,
-                                           depth, timestamp_sleep,
+                                           depth, timestamp_sleep, ra_session,
                                            ctx, pool));
     }
 

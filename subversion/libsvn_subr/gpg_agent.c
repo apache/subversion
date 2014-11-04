@@ -108,7 +108,7 @@ escape_blanks(char *str)
  * to other password caching mechanisms. */
 static svn_error_t *
 get_cache_id(const char **cache_id_p, const char *realmstring,
-             apr_pool_t *scratch_pool, apr_pool_t *result_pool)
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *cache_id = NULL;
   svn_checksum_t *digest = NULL;

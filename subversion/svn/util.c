@@ -560,8 +560,8 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
   if (fputs(string, stream) == EOF)
     {
-      if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+      if (apr_get_os_error()) /* is errno on POSIX */
+        return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }

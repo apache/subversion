@@ -523,10 +523,14 @@ svn_client__make_local_parents(const char *local_abspath,
    (with depth=empty) any parent directories of the requested update
    target which are missing from the working copy.
 
+   If RA_SESSION is NOT NULL, it may be used to avoid creating a new
+   session. The session may point to a different URL after returning.
+
    NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
+                            svn_boolean_t *timestamp_sleep,
                             const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
@@ -536,7 +540,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t adds_as_modification,
                             svn_boolean_t make_parents,
                             svn_boolean_t innerupdate,
-                            svn_boolean_t *timestamp_sleep,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -552,11 +556,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
-   RA_CACHE is a pointer to a cache of information for the URL at
-   REVISION based on the PEG_REVISION.  Any information not in
-   *RA_CACHE is retrieved by a round-trip to the repository.  RA_CACHE
-   may be NULL which indicates that no cache information is available.
-
    If IGNORE_EXTERNALS is true, do no externals processing.
 
    Set *TIMESTAMP_SLEEP to TRUE if a sleep is required; otherwise do not
@@ -567,9 +566,13 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    unversioned children of LOCAL_ABSPATH that obstruct items added from
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
+
+   If RA_SESSION is NOT NULL, it may be used to avoid creating a new
+   session. The session may point to a different URL after returning.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
+                              svn_boolean_t *timestamp_sleep,
                               const char *URL,
                               const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
@@ -577,7 +580,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
-                              svn_boolean_t *timestamp_sleep,
+                              svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
@@ -1010,6 +1013,9 @@ svn_client__do_commit(const char *base_url,
    change *TIMESTAMP_SLEEP.  The output will be valid even if the function
    returns an error.
 
+   If RA_SESSION is NOT NULL, it may be used to avoid creating a new
+   session. The session may point to a different URL after returning.
+
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(apr_hash_t *externals_new,
@@ -1018,6 +1024,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
                              const char *target_abspath,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
+                             svn_ra_session_t *ra_session,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 

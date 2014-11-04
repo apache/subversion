@@ -72,6 +72,16 @@ setup_cancellation_signals(void (*handler)(int signum))
 }
 
 
+svn_error_t *
+check_cancel(void *baton)
+{
+  if (cancelled)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
+  else
+    return SVN_NO_ERROR;
+}
+
+
 /* Custom filesystem warning function. */
 static void
 warning_func(void *baton,

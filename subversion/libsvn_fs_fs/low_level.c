@@ -191,38 +191,71 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
 
 svn_error_t *
 svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
+                        svn_checksum_t **l2p_checksum,
                         apr_off_t *p2l_offset,
+                        svn_checksum_t **p2l_checksum,
                         svn_stringbuf_t *footer,
-                        svn_revnum_t rev)
+                        svn_revnum_t rev,
+                        apr_pool_t *result_pool)
 {
   apr_int64_t val;
+  char *last_str = footer->data;
 
-  /* Split the footer into the 2 number strings. */
-  char *seperator = strchr(footer->data, ' ');
-  if (!seperator)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision file (r%ld) has corrupt footer"),
-                             rev);
-  *seperator = '\0';
+  /* Get the L2P offset. */
+  const char *str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
 
-  /* Convert offset values. */
-  SVN_ERR(svn_cstring_atoi64(&val, footer->data));
+  SVN_ERR(svn_cstring_atoi64(&val, str));
   *l2p_offset = (apr_off_t)val;
-  SVN_ERR(svn_cstring_atoi64(&val, seperator + 1));
+
+  /* Get the L2P checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_checksum_parse_hex(l2p_checksum, svn_checksum_md5, str,
+                                 result_pool));
+
+  /* Get the P2L offset. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_cstring_atoi64(&val, str));
   *p2l_offset = (apr_off_t)val;
+
+  /* Get the P2L checksum. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid revision footer"));
+
+  SVN_ERR(svn_checksum_parse_hex(p2l_checksum, svn_checksum_md5, str,
+                                 result_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_stringbuf_t *
 svn_fs_fs__unparse_footer(apr_off_t l2p_offset,
+                          svn_checksum_t *l2p_checksum,
                           apr_off_t p2l_offset,
-                          apr_pool_t *result_pool)
+                          svn_checksum_t *p2l_checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   return svn_stringbuf_createf(result_pool,
-                               "%" APR_OFF_T_FMT " %" APR_OFF_T_FMT,
+                               "%" APR_OFF_T_FMT " %s %" APR_OFF_T_FMT " %s",
                                l2p_offset,
-                               p2l_offset);
+                               svn_checksum_to_cstring(l2p_checksum,
+                                                       scratch_pool),
+                               p2l_offset,
+                               svn_checksum_to_cstring(p2l_checksum,
+                                                       scratch_pool));
 }
 
 /* Read the next entry in the changes record from file FILE and store
@@ -355,7 +388,9 @@ read_change(change_t **change_p,
     }
 
   /* Get the mergeinfo-mod flag if given.  Otherwise, the next thing
-     is the path starting with a slash. */
+     is the path starting with a slash.  Also, we must initialize the
+     flag explicitly because 0 is not valid for a svn_tristate_t. */
+  info->mergeinfo_mod = svn_tristate_unknown;
   if (*last_str != '/')
     {
       str = svn_cstring_tokenize(" ", &last_str);
@@ -468,11 +503,11 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  Only include the
-   mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
-   allocations are in SCRATCH_POOL. */
+/* Write a single change entry, path PATH, change CHANGE, to STREAM.
+
+   Only include the node kind field if INCLUDE_NODE_KIND is true.  Only
+   include the mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.
+   All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
@@ -565,13 +600,19 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
   svn_boolean_t include_mergeinfo_mods =
-      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT;
+      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
   /* For the sake of the repository administrator sort the changes so
      that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
+     rest of the FSFS code doesn't require any particular order here.
+
+     Also, this sorting is only effective in writing all entries with
+     a single call as write_final_changed_path_info() does.  For the
+     list being written incrementally during transaction, we actually
+     *must not* change the order of entries from different calls.
+   */
   sorted_changed_paths = svn_sort__hash(changes,
                                         svn_sort_compare_items_lexically,
                                         scratch_pool);

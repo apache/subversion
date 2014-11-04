@@ -86,7 +86,7 @@ are likely some errors because of that.
 /* Declarations. */
 
 static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+get_youngest(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool);
 
 /* Pathname helper functions */
 
@@ -213,7 +213,7 @@ with_some_lock_file(with_lock_baton_t *baton)
           if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
             err = svn_fs_fs__update_min_unpacked_rev(fs, pool);
           if (!err)
-            err = get_youngest(&ffd->youngest_rev_cache, fs->path, pool);
+            err = get_youngest(&ffd->youngest_rev_cache, fs, pool);
         }
 
       if (!err)
@@ -671,8 +671,8 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
                                    ffd->compress_packed_revprops
-                                       ? 0x100
-                                       : 0x40));
+                                       ? 0x10
+                                       : 0x4));
 
       ffd->revprop_pack_size *= 1024;
     }
@@ -841,20 +841,16 @@ write_config(svn_fs_t *fs,
 "### much larger than the limit set here.  The threshold will be applied"    NL
 "### before optional compression takes place."                               NL
 "### Large values will reduce disk space usage at the expense of increased"  NL
-"### latency and CPU usage reading and changing individual revprops.  They"  NL
-"### become an advantage when revprop caching has been enabled because a"    NL
-"### lot of data can be read in one go.  Values smaller than 4 kByte will"   NL
-"### not improve latency any further and quickly render revprop packing"     NL
-"### ineffective."                                                           NL
-"### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
-"### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
+"### latency and CPU usage reading and changing individual revprops."        NL
+"### Values smaller than 4 kByte will not improve latency any further and "  NL
+"### quickly render revprop packing ineffective."                            NL
+"### revprop-pack-size is 4 kBytes by default for non-compressed revprop"    NL
+"### pack files and 16 kBytes when compression has been enabled."            NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 4"                                  NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
-"### even more so writing, become significantly more CPU intensive.  With"   NL
-"### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
-"### unless you often modify revprops after packing."                        NL
+"### even more so writing, become significantly more CPU intensive."         NL
 "### Compressing packed revprops is disabled by default."                    NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ""                                                                           NL
@@ -972,7 +968,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
+  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1054,10 +1050,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
      dir, make that directory.  */
   if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     {
-      /* We don't use path_txn_proto_rev() here because it expects
-         we've already bumped our format. */
       SVN_ERR(svn_io_make_dir_recursively(
-          svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
+          svn_fs_fs__path_txn_proto_revs(fs, pool), pool));
     }
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
@@ -1098,6 +1092,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Bump the format file. */
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
+
   if (upgrade_baton->notify_func)
     SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
                                        SVN_FS_FS__FORMAT_NUMBER,
@@ -1141,17 +1136,11 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
    POOL. */
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p,
-             const char *fs_path,
+             svn_fs_t *fs,
              apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_fs__read_content(&buf,
-                                  svn_dirent_join(fs_path, PATH_CURRENT,
-                                                  pool),
-                                  pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf->data);
-
+  apr_uint64_t dummy;
+  SVN_ERR(svn_fs_fs__read_current(youngest_p, &dummy, &dummy, fs, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1163,7 +1152,7 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  SVN_ERR(get_youngest(youngest_p, fs, pool));
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
@@ -1207,7 +1196,7 @@ svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
   if (rev <= ffd->youngest_rev_cache)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs, pool));
 
   /* Check again. */
   if (rev <= ffd->youngest_rev_cache)
@@ -1281,10 +1270,15 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
     }
 
   /* Old repositories may not have the SHA1 checksum handy.
-     This check becomes expensive.  Skip it unless explicitly required. */
+     This check becomes expensive.  Skip it unless explicitly required.
+
+     We already have seen that the ID is different, so produce a likely
+     false negative as allowed by the API description - even though the
+     MD5 matched, there is an extremely slim chance that the SHA1 wouldn't.
+   */
   if (!strict)
     {
-      *equal = TRUE;
+      *equal = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1436,15 +1430,105 @@ write_revision_zero(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  fs->path = apr_pstrdup(fs->pool, path);
+  ffd->format = format;
+
+  /* Use an appropriate sharding mode if supported by the format. */
+  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
+    ffd->max_files_per_dir = shard_size;
+  else
+    ffd->max_files_per_dir = 0;
+
+  /* Create the revision data directories. */
+  if (ffd->max_files_per_dir)
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(fs, 0,
+                                                                  pool),
+                                        pool));
+  else
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
+                                                        pool),
+                                        pool));
+
+  /* Create the revprops directory. */
+  if (ffd->max_files_per_dir)
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_revprops_shard(fs, 0,
+                                                                       pool),
+                                        pool));
+  else
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
+                                                        PATH_REVPROPS_DIR,
+                                                        pool),
+                                        pool));
+
+  /* Create the transaction directory. */
+  SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_txns_dir(fs, pool),
+                                      pool));
+
+  /* Create the protorevs directory. */
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_txn_proto_revs(fs,
+                                                                       pool),
+                                        pool));
+
+  /* Create the 'current' file. */
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_current(fs, pool), pool));
+  SVN_ERR(svn_fs_fs__write_current(fs, 0, 1, 1, pool));
+
+  /* Create the 'uuid' file. */
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
+  SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, NULL, pool));
+
+  /* Create the fsfs.conf file if supported.  Older server versions would
+     simply ignore the file but that might result in a different behavior
+     than with the later releases.  Also, hotcopy would ignore, i.e. not
+     copy, a fsfs.conf with old formats. */
+  if (ffd->format >= SVN_FS_FS__MIN_CONFIG_FILE)
+    SVN_ERR(write_config(fs, pool));
+
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
+
+  /* Add revision 0. */
+  SVN_ERR(write_revision_zero(fs, pool));
+
+  /* Create the min unpacked rev file. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
+                               "0\n", pool));
+
+  /* Create the txn-current file if the repository supports
+     the transaction sequence file. */
+  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    {
+      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create_empty(
+                                 svn_fs_fs__path_txn_current_lock(fs, pool),
+                                 pool));
+    }
+
+  ffd->youngest_rev_cache = 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__create(svn_fs_t *fs,
                   const char *path,
                   apr_pool_t *pool)
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
-  fs_fs_data_t *ffd = fs->fsap_data;
   int shard_size = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
 
-  fs->path = apr_pstrdup(fs->pool, path);
   /* Process the given filesystem config. */
   if (fs->config)
     {
@@ -1490,87 +1574,13 @@ svn_fs_fs__create(svn_fs_t *fs,
           shard_size = (int) val;
         }
     }
-  ffd->format = format;
 
-  /* Use an appropriate sharding mode if supported by the format. */
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    ffd->max_files_per_dir = shard_size;
-
-  /* Create the revision data directories. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(fs, 0,
-                                                                  pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the revprops directory. */
-  if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_revprops_shard(fs, 0,
-                                                                       pool),
-                                        pool));
-  else
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
-                                                        PATH_REVPROPS_DIR,
-                                                        pool),
-                                        pool));
-
-  /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXNS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the protorevs directory. */
-  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_TXN_PROTOS_DIR,
-                                                      pool),
-                                        pool));
-
-  /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                              ? "0\n" : "0 1 1\n"),
-                             pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
-  SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, NULL, pool));
-
-  /* Create the fsfs.conf file if supported.  Older server versions would
-     simply ignore the file but that might result in a different behavior
-     than with the later releases.  Also, hotcopy would ignore, i.e. not
-     copy, a fsfs.conf with old formats. */
-  if (ffd->format >= SVN_FS_FS__MIN_CONFIG_FILE)
-    SVN_ERR(write_config(fs, pool));
-
-  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
-
-  /* Global configuration options. */
-  SVN_ERR(read_global_config(fs));
-
-  /* Add revision 0. */
-  SVN_ERR(write_revision_zero(fs, pool));
-
-  /* Create the min unpacked rev file. */
-  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
-                               "0\n", pool));
-
-  /* Create the txn-current file if the repository supports
-     the transaction sequence file. */
-  if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    {
-      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(
-                                 svn_fs_fs__path_txn_current_lock(fs, pool),
-                                 pool));
-    }
+  /* Actual FS creation. */
+  SVN_ERR(svn_fs_fs__create_file_tree(fs, path, format, shard_size, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
 
-  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 

@@ -275,14 +275,14 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                  "manifest", SVN_VA_NULL);
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind != svn_node_file)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "Expected manifest file '%s' not found",
-                                 path);
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "manifest", SVN_VA_NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected manifest file '%s' not found",
+                                     path);
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",
@@ -493,7 +493,7 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
    * files but do not exceed the pack size limit. */
   for (rev = 0; rev <= MAX_REV; ++rev)
     SVN_ERR(svn_fs_change_rev_prop(fs, rev, SVN_PROP_REVISION_LOG,
-                                   large_log(rev, 15000, pool),
+                                   large_log(rev, 1000, pool),
                                    pool));
 
   /* verify */
@@ -502,20 +502,20 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_revision_prop(&prop_value, fs, rev,
                                    SVN_PROP_REVISION_LOG, pool));
       SVN_TEST_STRING_ASSERT(prop_value->data,
-                             large_log(rev, 15000, pool)->data);
+                             large_log(rev, 1000, pool)->data);
     }
 
   /* Put a larger revprop into the last, some middle and the first revision
    * of a pack.  This should cause the packs to split in the middle. */
   SVN_ERR(svn_fs_change_rev_prop(fs, 3, SVN_PROP_REVISION_LOG,
                                  /* rev 0 is not packed */
-                                 large_log(3, 37000, pool),
+                                 large_log(3, 2400, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 5, SVN_PROP_REVISION_LOG,
-                                 large_log(5, 25000, pool),
+                                 large_log(5, 1500, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 8, SVN_PROP_REVISION_LOG,
-                                 large_log(8, 25000, pool),
+                                 large_log(8, 1500, pool),
                                  pool));
 
   /* verify */
@@ -526,13 +526,13 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
 
       if (rev == 3)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 37000, pool)->data);
+                               large_log(rev, 2400, pool)->data);
       else if (rev == 5 || rev == 8)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 25000, pool)->data);
+                               large_log(rev, 1500, pool)->data);
       else
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 15000, pool)->data);
+                               large_log(rev, 1000, pool)->data);
     }
 
   return SVN_NO_ERROR;
@@ -780,7 +780,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "get_set_multiple_huge_revprops_packed_fs"
+#define REPO_NAME "test-repo-get_set_multiple_huge_revprops_packed_fs"
 #define SHARD_SIZE 4
 #define MAX_REV 9
 static svn_error_t *
@@ -1015,7 +1015,7 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
 }
 #undef SHARD_SIZE
 
-#define REPO_NAME "upgrade_new_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_new_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1030,7 +1030,7 @@ upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "upgrade_old_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_old_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1047,7 +1047,7 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "revprop_caching_on_off"
+#define REPO_NAME "test-repo-revprop_caching_on_off"
 static svn_error_t *
 revprop_caching_on_off(const svn_test_opts_t *opts,
                        apr_pool_t *pool)

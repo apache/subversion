@@ -701,6 +701,47 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test SVNClient.status on externals.
+     * @throws Throwable
+     */
+    public void testExternalStatus() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+
+        // Add an externals reference to the working copy.
+        client.propertySetLocal(thisTest.getWCPathSet(), "svn:externals",
+                                "^/A/D/H ADHext".getBytes(),
+                                Depth.empty, null, false);
+
+        // Update the working copy to bring in the external subtree.
+        client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                      Depth.unknown, false, false, false, false);
+
+        // Test status of an external file
+        File psi = new File(thisTest.getWorkingCopy() + "/ADHext", "psi");
+
+        MyStatusCallback statusCallback = new MyStatusCallback();
+        client.status(fileToSVNPath(psi, false), Depth.unknown,
+                      false, true, true, false, false, false,
+                      null, statusCallback);
+
+        final int statusCount = statusCallback.getStatusArray().length;
+        if (statusCount == 1)
+        {
+            Status st = statusCallback.getStatusArray()[0];
+            assertFalse(st.isConflicted());
+            assertEquals(Status.Kind.normal, st.getNodeStatus());
+            assertEquals(NodeKind.file, st.getNodeKind());
+        }
+        else if (statusCount > 1)
+            fail("File psi should not return more than one status.");
+        else
+            fail("File psi should return exactly one status.");
+    }
+
+    /**
      * Test the basic SVNClient.checkout functionality.
      * @throws Throwable
      */

@@ -24,31 +24,11 @@
 #define SVN_LIBSVN_FS_FS_ID_H
 
 #include "svn_fs.h"
+#include "private/svn_fs_fs_private.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-/* Node-revision IDs in FSFS consist of 3 of sub-IDs ("parts") that consist
- * of a creation REVISION number and some revision- / transaction-local
- * counter value (NUMBER).  Old-style ID parts use global counter values.
- *
- * The parts are: node_id, copy_id and txn_id for in-txn IDs as well as
- * node_id, copy_id and rev_offset for in-revision IDs.  This struct the
- * data structure used for each of those parts.
- */
-typedef struct svn_fs_fs__id_part_t
-{
-  /* SVN_INVALID_REVNUM for txns -> not a txn, COUNTER must be 0.
-     SVN_INVALID_REVNUM for others -> not assigned to a revision, yet.
-     0                  for others -> old-style ID or the root in rev 0. */
-  svn_revnum_t revision;
-
-  /* sub-id value relative to REVISION.  Its interpretation depends on
-     the part itself.  In rev_item, it is the index_index value, in others
-     it represents a unique counter value. */
-  apr_uint64_t number;
-} svn_fs_fs__id_part_t;
 
 
 /*** Operations on ID parts. ***/
