@@ -640,7 +640,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   if (had_conflict)
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("merge failed: conflict(s) occurred"));
+                               _("Merge failed: conflict(s) occurred"));
     }
   else
     {
@@ -1425,7 +1425,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_utf_cstring_to_utf8(&root_url, arg, pool));
           if (! svn_path_is_url(root_url))
             return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     "'%s' is not a URL\n", root_url);
+                                     "'%s' is not a URL", root_url);
           root_url = sanitize_url(root_url, pool);
           anchor = root_url;
           break;
@@ -1616,7 +1616,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 "'%s' is not an action\n",
+                                 "'%s' is not an action",
                                  action_string);
 
       /* How many URLs does this action expect? */
@@ -1658,7 +1658,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
               if (! root_url)
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s' is not a URL, and "
-                                         "--root-url (-U) not provided\n",
+                                         "--root-url (-U) not provided",
                                          path);
               url = svn_path_url_add_component2(root_url, path, pool);
             }
