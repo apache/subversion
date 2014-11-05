@@ -273,74 +273,74 @@ svn_editor3_put(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_editor3_nbid_t *local_nbid_p,
+                svn_editor3_eid_t *local_eid_p,
                 svn_node_kind_t new_kind,
-                svn_editor3_nbid_t new_parent_nbid,
+                svn_editor3_eid_t new_parent_eid,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content)
 {
   int eid = -1;
 
   SVN_ERR_ASSERT(VALID_NODE_KIND(new_kind));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(VALID_CONTENT(new_content));
   SVN_ERR_ASSERT(new_content->kind == new_kind);
 
   DO_CALLBACK(editor, cb_add,
               5(&eid, new_kind,
-                new_parent_nbid, new_name,
+                new_parent_eid, new_name,
                 new_content));
 
   SVN_ERR_ASSERT(VALID_EID(eid));
 
   /* We allow the output pointer to be null, here, so that implementations
      may assume their output pointer is non-null. */
-  if (local_nbid_p)
-    *local_nbid_p = eid;
+  if (local_eid_p)
+    *local_eid_p = eid;
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
-                        svn_editor3_nbid_t local_nbid,
-                        svn_editor3_nbid_t new_parent_nbid,
+                        svn_editor3_eid_t local_eid,
+                        svn_editor3_eid_t new_parent_eid,
                         const char *new_name,
                         const svn_editor3_node_content_t *new_content)
 {
-  SVN_ERR_ASSERT(VALID_EID(local_nbid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_EID(local_eid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(VALID_CONTENT(new_content));
 
   DO_CALLBACK(editor, cb_instantiate,
-              4(local_nbid,
-                new_parent_nbid, new_name,
+              4(local_eid,
+                new_parent_eid, new_name,
                 new_content));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
-                     svn_editor3_nbid_t local_nbid,
+                     svn_editor3_eid_t local_eid,
                      svn_revnum_t src_revision,
-                     svn_editor3_nbid_t src_nbid,
-                     svn_editor3_nbid_t new_parent_nbid,
+                     svn_editor3_eid_t src_eid,
+                     svn_editor3_eid_t new_parent_eid,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content)
 {
-  SVN_ERR_ASSERT(VALID_EID(local_nbid));
+  SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
-  SVN_ERR_ASSERT(VALID_EID(src_nbid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_EID(src_eid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
 
   DO_CALLBACK(editor, cb_copy_one,
-              6(local_nbid,
-                src_revision, src_nbid,
-                new_parent_nbid, new_name,
+              6(local_eid,
+                src_revision, src_eid,
+                new_parent_eid, new_name,
                 new_content));
 
   return SVN_NO_ERROR;
@@ -349,18 +349,18 @@ svn_editor3_copy_one(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_revnum_t src_revision,
-                      svn_editor3_nbid_t src_nbid,
-                      svn_editor3_nbid_t new_parent_nbid,
+                      svn_editor3_eid_t src_eid,
+                      svn_editor3_eid_t new_parent_eid,
                       const char *new_name)
 {
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
-  SVN_ERR_ASSERT(VALID_EID(src_nbid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_EID(src_eid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
 
   DO_CALLBACK(editor, cb_copy_tree,
-              4(src_revision, src_nbid,
-                new_parent_nbid, new_name));
+              4(src_revision, src_eid,
+                new_parent_eid, new_name));
 
   return SVN_NO_ERROR;
 }
@@ -368,12 +368,12 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
-                   svn_editor3_nbid_t nbid)
+                   svn_editor3_eid_t eid)
 {
-  SVN_ERR_ASSERT(VALID_EID(nbid));
+  SVN_ERR_ASSERT(VALID_EID(eid));
 
   DO_CALLBACK(editor, cb_delete,
-              2(since_rev, nbid));
+              2(since_rev, eid));
 
   return SVN_NO_ERROR;
 }
@@ -381,19 +381,19 @@ svn_editor3_delete(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   svn_revnum_t since_rev,
-                  svn_editor3_nbid_t nbid,
-                  svn_editor3_nbid_t new_parent_nbid,
+                  svn_editor3_eid_t eid,
+                  svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content)
 {
-  SVN_ERR_ASSERT(VALID_EID(nbid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_nbid));
+  SVN_ERR_ASSERT(VALID_EID(eid));
+  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
 
   DO_CALLBACK(editor, cb_alter,
-              5(since_rev, nbid,
-                new_parent_nbid, new_name,
+              5(since_rev, eid,
+                new_parent_eid, new_name,
                 new_content));
 
   return SVN_NO_ERROR;
@@ -643,12 +643,12 @@ txn_path_str(svn_editor3_txn_path_t loc,
                       peg_path_str(loc.peg, result_pool), loc.relpath);
 }
 
-/* Return a human-readable string representation of NBID. */
+/* Return a human-readable string representation of EID. */
 static const char *
-nbid_str(svn_editor3_nbid_t nbid,
+eid_str(svn_editor3_eid_t eid,
          apr_pool_t *result_pool)
 {
-  return apr_psprintf(result_pool, "%d", nbid);
+  return apr_psprintf(result_pool, "%d", eid);
 }
 
 static svn_error_t *
@@ -756,9 +756,9 @@ wrap_put(void *baton,
 
 static svn_error_t *
 wrap_add(void *baton,
-         svn_editor3_nbid_t *local_nbid,
+         svn_editor3_eid_t *local_eid,
          svn_node_kind_t new_kind,
-         svn_editor3_nbid_t new_parent_nbid,
+         svn_editor3_eid_t new_parent_eid,
          const char *new_name,
          const svn_editor3_node_content_t *new_content,
          apr_pool_t *scratch_pool)
@@ -767,17 +767,17 @@ wrap_add(void *baton,
 
   dbg(eb, scratch_pool, "... : add(k=%s, p=%s, n=%s, c=...)",
       svn_node_kind_to_word(new_kind),
-      nbid_str(new_parent_nbid, scratch_pool), new_name);
+      eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          local_nbid, new_kind,
-                          new_parent_nbid, new_name, new_content));
+                          local_eid, new_kind,
+                          new_parent_eid, new_name, new_content));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_instantiate(void *baton,
-         svn_editor3_nbid_t local_nbid,
-         svn_editor3_nbid_t new_parent_nbid,
+         svn_editor3_eid_t local_eid,
+         svn_editor3_eid_t new_parent_eid,
          const char *new_name,
          const svn_editor3_node_content_t *new_content,
          apr_pool_t *scratch_pool)
@@ -785,20 +785,20 @@ wrap_instantiate(void *baton,
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "%s : instantiate(p=%s, n=%s, c=...)",
-      nbid_str(local_nbid, scratch_pool),
-      nbid_str(new_parent_nbid, scratch_pool), new_name);
+      eid_str(local_eid, scratch_pool),
+      eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_instantiate(eb->wrapped_editor,
-                                  local_nbid,
-                                  new_parent_nbid, new_name, new_content));
+                                  local_eid,
+                                  new_parent_eid, new_name, new_content));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_copy_one(void *baton,
-              svn_editor3_nbid_t local_nbid,
+              svn_editor3_eid_t local_eid,
               svn_revnum_t src_revision,
-              svn_editor3_nbid_t src_nbid,
-              svn_editor3_nbid_t new_parent_nbid,
+              svn_editor3_eid_t src_eid,
+              svn_editor3_eid_t new_parent_eid,
               const char *new_name,
               const svn_editor3_node_content_t *new_content,
               apr_pool_t *scratch_pool)
@@ -806,53 +806,53 @@ wrap_copy_one(void *baton,
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "%s : copy_one(f=%s, p=%s, n=%s, c=...)",
-      nbid_str(local_nbid, scratch_pool), nbid_str(src_nbid, scratch_pool),
-      nbid_str(new_parent_nbid, scratch_pool), new_name);
+      eid_str(local_eid, scratch_pool), eid_str(src_eid, scratch_pool),
+      eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
-                               local_nbid, src_revision, src_nbid,
-                               new_parent_nbid, new_name, new_content));
+                               local_eid, src_revision, src_eid,
+                               new_parent_eid, new_name, new_content));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_copy_tree(void *baton,
                svn_revnum_t src_revision,
-               svn_editor3_nbid_t src_nbid,
-               svn_editor3_nbid_t new_parent_nbid,
+               svn_editor3_eid_t src_eid,
+               svn_editor3_eid_t new_parent_eid,
                const char *new_name,
                apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "... : copy_tree(f=%s, p=%s, n=%s)",
-      nbid_str(src_nbid, scratch_pool),
-      nbid_str(new_parent_nbid, scratch_pool), new_name);
+      eid_str(src_eid, scratch_pool),
+      eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
-                                src_revision, src_nbid,
-                                new_parent_nbid, new_name));
+                                src_revision, src_eid,
+                                new_parent_eid, new_name));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_delete(void *baton,
             svn_revnum_t since_rev,
-            svn_editor3_nbid_t nbid,
+            svn_editor3_eid_t eid,
             apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "%s : delete()",
-      nbid_str(nbid, scratch_pool));
+      eid_str(eid, scratch_pool));
   SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
-                             since_rev, nbid));
+                             since_rev, eid));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_alter(void *baton,
            svn_revnum_t since_rev,
-           svn_editor3_nbid_t nbid,
-           svn_editor3_nbid_t new_parent_nbid,
+           svn_editor3_eid_t eid,
+           svn_editor3_eid_t new_parent_eid,
            const char *new_name,
            const svn_editor3_node_content_t *new_content,
            apr_pool_t *scratch_pool)
@@ -860,11 +860,11 @@ wrap_alter(void *baton,
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "%s : alter(p=%s, n=%s, c=...)",
-      nbid_str(nbid, scratch_pool), nbid_str(nbid, scratch_pool),
-      nbid_str(new_parent_nbid, scratch_pool), new_name);
+      eid_str(eid, scratch_pool), eid_str(eid, scratch_pool),
+      eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            since_rev, nbid,
-                            new_parent_nbid, new_name, new_content));
+                            since_rev, eid,
+                            new_parent_eid, new_name, new_content));
   return SVN_NO_ERROR;
 }
 
