@@ -549,7 +549,7 @@ duplicate_child_changes(apr_hash_t *changes,
  * out-of-band cues. In fact, the code structure is likely to be
  * unsuitable for processing moves.
  *
- * The design assumes that each Ev1 path maps to a different Ev3 node-branch.
+ * The design assumes that each Ev1 path maps to a different Ev3 element.
  *
  * It works like this:
  *
@@ -1859,7 +1859,7 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
 }
 
 svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(svn_editor3_nbid_t parent_eid,
+svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
                                  const char *name,
                                  const svn_editor3_node_content_t *node_content,
                                  apr_pool_t *result_pool)
@@ -2027,7 +2027,7 @@ branch_map_delete(svn_branch_instance_t *branch,
 static void
 branch_map_update(svn_branch_instance_t *branch,
                   int eid,
-                  svn_editor3_nbid_t new_parent_eid,
+                  svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content)
 {
@@ -2058,7 +2058,7 @@ branch_map_update(svn_branch_instance_t *branch,
 static void
 branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
                                     int eid,
-                                    svn_editor3_nbid_t new_parent_eid,
+                                    svn_editor3_eid_t new_parent_eid,
                                     const char *new_name)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
@@ -2943,7 +2943,7 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                         svn_branch_instance_t *from_branch,
                         int from_eid,
                         svn_branch_instance_t *to_outer_branch,
-                        svn_editor3_nbid_t to_outer_parent_eid,
+                        svn_editor3_eid_t to_outer_parent_eid,
                         const char *new_name,
                         apr_pool_t *scratch_pool)
 {
@@ -3028,9 +3028,9 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
  */
 static svn_error_t *
 branch_copy_subtree_r(svn_branch_instance_t *from_branch,
-                      svn_editor3_nbid_t from_eid,
+                      svn_editor3_eid_t from_eid,
                       svn_branch_instance_t *to_branch,
-                      svn_editor3_nbid_t to_parent_eid,
+                      svn_editor3_eid_t to_parent_eid,
                       const char *to_name,
                       apr_pool_t *scratch_pool)
 {
@@ -3984,7 +3984,7 @@ svn_branch_branch(svn_editor3_t *editor,
                   svn_branch_instance_t *from_branch,
                   int from_eid,
                   svn_branch_instance_t *to_outer_branch,
-                  svn_editor3_nbid_t to_outer_parent_eid,
+                  svn_editor3_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
@@ -4007,7 +4007,7 @@ svn_branch_branch(svn_editor3_t *editor,
 
 svn_error_t *
 svn_branch_branchify(svn_editor3_t *editor,
-                     svn_editor3_nbid_t outer_eid,
+                     svn_editor3_eid_t outer_eid,
                      apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
@@ -4055,9 +4055,9 @@ svn_branch_branchify(svn_editor3_t *editor,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_add(void *baton,
-            svn_editor3_nbid_t *eid_p,
+            svn_editor3_eid_t *eid_p,
             svn_node_kind_t new_kind,
-            svn_editor3_nbid_t new_parent_eid,
+            svn_editor3_eid_t new_parent_eid,
             const char *new_name,
             const svn_editor3_node_content_t *new_content,
             apr_pool_t *scratch_pool)
@@ -4081,8 +4081,8 @@ editor3_add(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_instantiate(void *baton,
-                    svn_editor3_nbid_t eid,
-                    svn_editor3_nbid_t new_parent_eid,
+                    svn_editor3_eid_t eid,
+                    svn_editor3_eid_t new_parent_eid,
                     const char *new_name,
                     const svn_editor3_node_content_t *new_content,
                     apr_pool_t *scratch_pool)
@@ -4101,10 +4101,10 @@ editor3_instantiate(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_one(void *baton,
-                 svn_editor3_nbid_t eid,
+                 svn_editor3_eid_t eid,
                  svn_revnum_t src_revision,
-                 svn_editor3_nbid_t src_eid,
-                 svn_editor3_nbid_t new_parent_eid,
+                 svn_editor3_eid_t src_eid,
+                 svn_editor3_eid_t new_parent_eid,
                  const char *new_name,
                  const svn_editor3_node_content_t *new_content,
                  apr_pool_t *scratch_pool)
@@ -4123,8 +4123,8 @@ editor3_copy_one(void *baton,
 static svn_error_t *
 editor3_copy_tree(void *baton,
                   svn_revnum_t src_revision,
-                  svn_editor3_nbid_t src_eid,
-                  svn_editor3_nbid_t new_parent_eid,
+                  svn_editor3_eid_t src_eid,
+                  svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
@@ -4149,7 +4149,7 @@ editor3_copy_tree(void *baton,
 static svn_error_t *
 editor3_delete(void *baton,
                    svn_revnum_t since_rev,
-                   svn_editor3_nbid_t eid,
+                   svn_editor3_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
@@ -4169,8 +4169,8 @@ editor3_delete(void *baton,
 static svn_error_t *
 editor3_alter(void *baton,
               svn_revnum_t since_rev,
-              svn_editor3_nbid_t eid,
-              svn_editor3_nbid_t new_parent_eid,
+              svn_editor3_eid_t eid,
+              svn_editor3_eid_t new_parent_eid,
               const char *new_name,
               const svn_editor3_node_content_t *new_content,
               apr_pool_t *scratch_pool)

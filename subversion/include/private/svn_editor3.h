@@ -64,7 +64,7 @@ extern "C" {
  *     "the same copy" as its parent, it's just copied at the same time
  *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
  *   - a node-rev's versioned state consists of:
- *        its tree linkage (parent node-branch identity, name)
+ *        its tree linkage (parent element identity, name)
  *        its content (props, text, link-target)
  *   - resurrection is supported
  *
@@ -138,7 +138,7 @@ extern "C" {
  *
  * (1) path [@ old-rev] + created-relpath
  *
- * (2) node-id
+ * (2) element-id
  *
  * (We are talking just about what the editor API needs to know, not
  * about how the sender or receiver implementation connects the editor
@@ -234,25 +234,25 @@ extern "C" {
  *     satisfactory manner in the first place. And it's only possible
  *     with a sequential editing model.
  *
- * Addressing by Node-Id
- * ---------------------
+ * Addressing by Element-Id
+ * ------------------------
  *
- * For the purposes of addressing nodes within an edit, node-ids need not
+ * For the purposes of addressing elements within an edit, element-ids need not
  * be repository-wide unique ids, they only need to be known within the
  * editor. However, if the sender is to use ids that are not already known
- * to the receiver, then it must provide a mapping from ids to nodes.
+ * to the receiver, then it must provide a mapping from ids to elements.
  *
- * The sender assigns an id to each node including new nodes. (It is not
+ * The sender assigns an id to each element including new elements. (It is not
  * appropriate for the editor or its receiver to assign an id to an added
- * node, because the sender needs to be able to refer to that node as a
- * parent node for other nodes without creating any ordering dependency.)
+ * element, because the sender needs to be able to refer to that element as a
+ * parent element for other elements without creating any ordering dependency.)
  *
- * If the sender does not know the repository-wide id for a node, which is
- * especially likely for a new node, it must assign a temporary id for use
- * just within the edit. In that case, each new node or new node-branch is
+ * If the sender does not know the repository-wide id for an element, which is
+ * especially likely for a new element, it must assign a temporary id for use
+ * just within the edit. In that case, each new element or element-branch is
  * necessarily independent. On the other hand, if the sender is able to
  * use repository-wide ids, then the possibility arises of the sender
- * asking to create a new node or a new node-branch that has the same id
+ * asking to create a new element or element-branch that has the same id
  * as an existing one. The receiver would consider that to be a conflict.
  *
  *
@@ -388,26 +388,26 @@ extern "C" {
  *      change     requirements on other side
  *      ------     ------------------------------------------------------
  *
- *      make       node-id does not exist [1]
- *      new        target parent node-branch exists (may have
+ *      make       element-id not already assigned [1]
+ *      new        target parent element exists (may have
  *      node         been moved/altered/del-and-resurrected)
  *                 no same-named sibling exists in target parent
  *
  *      copy       (source: no restriction)
- *      (root      target node-branch-id does not exist [1]
- *      node)      target parent node-branch exists (")
+ *      (root      target element-id does not exist [1]
+ *      node)      target parent element exists (")
  *                 no same-named sibling exists in target parent
  *
- *      resurrect  node-branch does not exist
- *      (per       target parent node-branch exists (")
+ *      resurrect  element does not exist
+ *      (per       target parent element exists (")
  *      node)      no same-named sibling exists in target parent
  *
- *      move       node-branch exists and is identical to base
+ *      move       element exists and is identical to base
  *      &/or       (children: no restriction)
- *      alter      target parent node-branch exists (")
+ *      alter      target parent element exists (")
  *                 no same-named sibling exists in target parent
  *
- *      del        node-branch exists and is identical to base
+ *      del        element exists and is identical to base
  *      (per       (parent: no restriction)
  *      node)      no new children on the other side
  *                   (they would end up as orphans)
@@ -424,39 +424,39 @@ extern "C" {
  *      change     requirements on other side
  *      ------     ------------------------------------------------------
  *
- *      make       node-id does not exist, or
- *      new          node-branch exists and is identical [1]
- *      node       target parent node-branch exists (may have
+ *      make       element-id not already assigned, or
+ *      new          element exists and is identical [1]
+ *      node       target parent element exists (may have
  *                   been moved/altered/del-and-resurrected)
  *                 no same-named sibling exists in target parent
  *
  *      copy       (source: no restriction)
- *      (root      target node-branch-id does not exist, or
- *      node)        node-branch exists and is identical [1]
- *                 target parent node-branch exists (")
+ *      (root      target element-id does not exist, or
+ *      node)        element exists and is identical [1]
+ *                 target parent element exists (")
  *                 no same-named sibling exists in target parent
  *
- *      resurrect  node-branch does not exist, or
- *      (per         node-branch exists and is identical
- *      node)      target parent node-branch exists (")
+ *      resurrect  element does not exist, or
+ *      (per         element exists and is identical
+ *      node)      target parent element exists (")
  *                 no same-named sibling exists in target parent
  *
- *      move       node-branch exists, and
+ *      move       element exists, and
  *      &/or         is identical to base or identical to target
  *      alter      (children: no restriction)
- *                 target parent node-branch exists (")
+ *                 target parent element exists (")
  *                 no same-named sibling exists in target parent
  *
- *      del        node-branch exists and is identical to base, or
- *      (per         node-branch is deleted
+ *      del        element exists and is identical to base, or
+ *      (per         element is deleted
  *      node)      (parent: no restriction)
  *                 no new children on the other side
  *                   (they would end up as orphans)
  *
  * Terminology:
- *      An id. "exists" even if deleted, whereas a node-branch "exists"
- *      only when it is alive, not deleted. A node-branch is "identical"
- *      if its content and name and parent-nbid are identical.
+ *      An id. "exists" even if deleted, whereas an element "exists"
+ *      only when it is alive, not deleted. An element is "identical"
+ *      if its content and name and parent-eid are identical.
  *
  * Notes:
  *      [1] A target node or id that is to be created can be found to
@@ -562,7 +562,7 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *
  * This does not contain an implied revision number or branch identifier.
  */
-typedef int svn_editor3_nbid_t;
+typedef int svn_editor3_eid_t;
 
 /** Versioned content of a node, excluding tree structure information.
  *
@@ -871,7 +871,7 @@ svn_editor3_put(svn_editor3_t *editor,
 
 /*
  * ========================================================================
- * Editor for Commit (independent per-node changes; node-id addressing)
+ * Editor for Commit (independent per-node changes; element-id addressing)
  * ========================================================================
  *
  * Scope of Edit:
@@ -881,11 +881,11 @@ svn_editor3_put(svn_editor3_t *editor,
  * Edit Operations:
  *
  *   operations on elements of "this" branch
- *   - add       kind      new-parent-nb[2] new-name new-content  ->  new-nb
- *   - copy-one  nb@rev[3] new-parent-nb[2] new-name new-content  ->  new-nb
- *   - copy-tree nb@rev[3] new-parent-nb[2] new-name              ->  new-nb
- *   - delete    nb[1]   since-rev
- *   - alter     nb[1,2] since-rev new-parent-nb[2] new-name new-content
+ *   - add       kind          new-(parent-eid[2],name,content)  ->  new-eid
+ *   - copy-one  br:eid@rev[3] new-(parent-eid[2],name,content)  ->  new-eid
+ *   - copy-tree br:eid@rev[3] new-(parent-eid[2],name)          ->  new-eid
+ *   - delete    eid[1]     since-rev
+ *   - alter     eid[1,2]   since-rev new-(parent-eid[2],name,content)
  *
  *   operations on sub-branches
  *   - branch
@@ -894,8 +894,8 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Preconditions:
  *
- *   [1] node-branch must exist in initial state
- *   [2] node-branch must exist in final state
+ *   [1] element must exist in initial state
+ *   [2] element must exist in final state
  *   [3] source must exist in committed revision or txn final state
  *
  * Characteristics of this editor:
@@ -940,7 +940,7 @@ svn_editor3_put(svn_editor3_t *editor,
  * Assign the new node a new element id; store this in @a *eid_p if
  * @a eid_p is not null.
  *
- * Set the node's parent and name to @a new_parent_nbid and @a new_name.
+ * Set the node's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content.
  *
@@ -948,9 +948,9 @@ svn_editor3_put(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_editor3_nbid_t *eid,
+                svn_editor3_eid_t *eid,
                 svn_node_kind_t new_kind,
-                svn_editor3_nbid_t new_parent_eid,
+                svn_editor3_eid_t new_parent_eid,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content);
 
@@ -960,7 +960,7 @@ svn_editor3_add(svn_editor3_t *editor,
  * This can be used to "branch" the element from another branch during a
  * merge, or to resurrect it.
  *
- * Set the node's parent and name to @a new_parent_nbid and @a new_name.
+ * Set the node's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content.
  *
@@ -970,44 +970,44 @@ svn_editor3_add(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
-                        svn_editor3_nbid_t eid,
-                        svn_editor3_nbid_t new_parent_eid,
+                        svn_editor3_eid_t eid,
+                        svn_editor3_eid_t new_parent_eid,
                         const char *new_name,
                         const svn_editor3_node_content_t *new_content);
 
-/** Create a new node-branch that is copied (branched) from a pre-existing
+/** Create a new element that is copied (branched) from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
- * node-branch, with the same or different content.
+ * element, with the same or different content.
  *
- * Assign the target node a locally unique node-branch-id, @a local_nbid,
+ * Assign the target node a locally unique element-id, @a local_eid,
  * with which it can be referenced within this edit.
  *
- * Copy from the source node at @a src_revision, @a src_nbid.
+ * Copy from the source node at @a src_revision, @a src_eid.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described.
  *   ### See note on copy_tree().
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
- * Set the target node's parent and name to @a new_parent_nbid and
+ * Set the target node's parent and name to @a new_parent_eid and
  * @a new_name. Set the target node's content to @a new_content, or make
  * it the same as the source if @a new_content is null.
  *
  * @note This copy is not recursive. Children may be copied separately if
  * required.
  *
- * @note The @a local_nbid has meaning only within this edit. The server
- * must create a new node, and MUST NOT match local_nbid with any other
+ * @note The @a local_eid has meaning only within this edit. The server
+ * must create a new node, and MUST NOT match local_eid with any other
  * node that may already exist or that may be created by another edit.
  *
  * @see svn_editor3_copy_tree(), #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
-                     svn_editor3_nbid_t local_nbid,
+                     svn_editor3_eid_t local_eid,
                      svn_revnum_t src_revision,
-                     svn_editor3_nbid_t src_nbid,
-                     svn_editor3_nbid_t new_parent_nbid,
+                     svn_editor3_eid_t src_eid,
+                     svn_editor3_eid_t new_parent_eid,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content);
 
@@ -1016,13 +1016,13 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  * subtree, with the same content and tree structure.
  *
  * Each node in the source subtree will be copied (branched) to the same
- * relative path within the target subtree. The node-branches created by
+ * relative path within the target subtree. The elements created by
  * this copy cannot be modified or addressed within this edit.
  *
- * Set the target root node's parent and name to @a new_parent_nbid and
+ * Set the target root node's parent and name to @a new_parent_eid and
  * @a new_name.
  *
- * Copy from the source node at @a src_revision, @a src_nbid.
+ * Copy from the source node at @a src_revision, @a src_eid.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described. In this case the subtree copied is
@@ -1044,15 +1044,15 @@ svn_editor3_copy_one(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_revnum_t src_revision,
-                      svn_editor3_nbid_t src_nbid,
-                      svn_editor3_nbid_t new_parent_nbid,
+                      svn_editor3_eid_t src_eid,
+                      svn_editor3_eid_t new_parent_eid,
                       const char *new_name);
 
-/** Delete the existing node-branch identified by @a nbid.
+/** Delete the existing element identified by @a eid.
  *
  * @a since_rev specifies the base revision on which this deletion was
  * performed: the server can consider the change "out of date" if a commit
- * since then has changed or deleted this node-branch.
+ * since then has changed or deleted this element.
  *
  * ###  @note The delete is not recursive. Each child node must be
  *      explicitly deleted or moved away. (In this case, the rebase does
@@ -1076,17 +1076,17 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
-                   svn_editor3_nbid_t nbid);
+                   svn_editor3_eid_t eid);
 
-/** Alter the tree position and/or contents of the node-branch identified
- * by @a nbid.
+/** Alter the tree position and/or contents of the element identified
+ * by @a eid.
  * <SVN_EDITOR3_WITH_RESURRECTION> ### or resurrect it? </>
  *
  * @a since_rev specifies the base revision on which this edit was
  * performed: the server can consider the change "out of date" if a commit
- * since then has changed or deleted this node-branch.
+ * since then has changed or deleted this element.
  *
- * Set the node's parent and name to @a new_parent_nbid and @a new_name.
+ * Set the node's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content, or if null then leave the content
  * unchanged.
@@ -1099,8 +1099,8 @@ svn_editor3_delete(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   svn_revnum_t since_rev,
-                  svn_editor3_nbid_t nbid,
-                  svn_editor3_nbid_t new_parent_nbid,
+                  svn_editor3_eid_t eid,
+                  svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content);
 
@@ -1211,9 +1211,9 @@ typedef svn_error_t *(*svn_editor3_cb_put_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
-  svn_editor3_nbid_t *eid,
+  svn_editor3_eid_t *eid,
   svn_node_kind_t new_kind,
-  svn_editor3_nbid_t new_parent_eid,
+  svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
@@ -1222,8 +1222,8 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
   void *baton,
-  svn_editor3_nbid_t eid,
-  svn_editor3_nbid_t new_parent_eid,
+  svn_editor3_eid_t eid,
+  svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
@@ -1232,10 +1232,10 @@ typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   void *baton,
-  svn_editor3_nbid_t local_nbid,
+  svn_editor3_eid_t local_eid,
   svn_revnum_t src_revision,
-  svn_editor3_nbid_t src_nbid,
-  svn_editor3_nbid_t new_parent_nbid,
+  svn_editor3_eid_t src_eid,
+  svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
@@ -1245,8 +1245,8 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
 typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   void *baton,
   svn_revnum_t src_revision,
-  svn_editor3_nbid_t src_nbid,
-  svn_editor3_nbid_t new_parent_nbid,
+  svn_editor3_eid_t src_eid,
+  svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
@@ -1255,7 +1255,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
 typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
   svn_revnum_t since_rev,
-  svn_editor3_nbid_t nbid,
+  svn_editor3_eid_t eid,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_alter(), #svn_editor3_t
@@ -1263,8 +1263,8 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
   svn_revnum_t since_rev,
-  svn_editor3_nbid_t nbid,
-  svn_editor3_nbid_t new_parent_nbid,
+  svn_editor3_eid_t eid,
+  svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
@@ -1693,7 +1693,7 @@ typedef struct svn_branch_el_rev_content_t
  * NAME and NODE_CONTENT, allocated in RESULT_POOL.
  */
 svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(svn_editor3_nbid_t parent_eid,
+svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
                                  const char *name,
                                  const svn_editor3_node_content_t *node_content,
                                  apr_pool_t *result_pool);
@@ -1809,7 +1809,7 @@ svn_branch_branch(svn_editor3_t *editor,
                   svn_branch_instance_t *from_branch,
                   int from_eid,
                   svn_branch_instance_t *to_outer_branch,
-                  svn_editor3_nbid_t to_outer_parent_eid,
+                  svn_editor3_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
 
@@ -1835,7 +1835,7 @@ svn_branch_branch(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_branch_branchify(svn_editor3_t *editor,
-                     svn_editor3_nbid_t outer_eid,
+                     svn_editor3_eid_t outer_eid,
                      apr_pool_t *scratch_pool);
 
 
