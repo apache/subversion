@@ -1050,26 +1050,44 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 
 /** Delete the existing element identified by @a eid.
  *
+ * The delete is not explicitly recursive. However, unless otherwise
+ * specified, the caller may assume that each element that has element
+ * @a eid as its parent in the final state will also be deleted,
+ * recursively.
+ *
+ * If the element @a eid is a subbranch root, then delete that subbranch
+ * (recursively).
+ *
  * @a since_rev specifies the base revision on which this deletion was
  * performed: the server can consider the change "out of date" if a commit
  * since then has changed or deleted this element.
  *
- * ###  @note The delete is not recursive. Each child node must be
- *      explicitly deleted or moved away. (In this case, the rebase does
- *      not have to check explicitly whether the other side modified a
- *      child. That will be checked either when we try to delete or move
- *      the child, or, for a child added on the other side, when we check
- *      for orphaned nodes in the final state.)
- *   OR @note The delete is implicitly recursive: each child node that
- *      is not otherwise moved to a new parent will be deleted as well.
- *      (The rebase should check for changes in the whole subtree,
- *      including checking that the other side has not added any child.)
- *      ### Does this make sense when deleting a mixed-rev tree? Sender
- *          asks to delete a "complete" tree, as if single-rev; this
- *          implies to the receiver what set of nodes is involved. How
- *          would the WC know whether its mixed-rev tree is "complete"?
- *          Would we need a non-recursive delete as well?
- *      ### Deletes nested branches.
+ * ### Options for Out-Of-Date Checking on Rebase
+ *
+ *   We may want to specify what kind of OOD check takes place. The
+ *   following two options differ in what happens to an element that is
+ *   added, on the other side, as a child of this deleted element.
+ *
+ *   Rebase option 1: The rebase checks for changes in the whole subtree,
+ *   excluding any portions of the subtree for which an explicit delete or
+ *   move-away has been issued. The check includes checking that the other
+ *   side has not added any child. In other words, the deletion is
+ *   interpreted as an action affecting a subtree (dynamically rooted at
+ *   this element), rather than as an action affecting a single element or
+ *   a fixed set of elements that was explicitly or implicitly specified
+ *   by the sender.
+ *
+ *   To delete a mixed-rev subtree, the client sends an explicit delete for
+ *   each subtree that has a different base revision from its parent.
+ *
+ *   Rebase option 2: The rebase checks for changes to this element only.
+ *   The sender can send an explicit delete for each existing child element
+ *   that it requires to be checked as well. However, there is no way for
+ *   the sender to specify whether a child element added by the other side
+ *   should be considered an out-of-date error or silently deleted.
+ *
+ *   It would also be possible to let the caller specify, per delete call,
+ *   which option to use.
  *
  * @see #svn_editor3_t
  */
