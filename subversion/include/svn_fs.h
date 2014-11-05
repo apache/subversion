@@ -2252,13 +2252,13 @@ typedef svn_error_t *
  * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
- * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be @c FALSE.  Also, this
- * is a best-effort function which means that there is no guarantee that
- * @a processor gets called at all for some content.
+ * not be implemented for all data backends or not be applicable for certain
+ * content.  In those cases, @a *success will always be @c FALSE.  Also,
+ * this is a best-effort function which means that there is no guarantee
+ * that @a processor gets called at all.
  *
- * @note @a processor is expected to be relatively short function with
- * at most O(content size) runtime.
+ * @note @a processor is expected to be a relatively simple function with
+ * a runtime of O(content size) or less.
  *
  * @since New in 1.8.
  */
