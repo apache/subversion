@@ -6238,6 +6238,91 @@ test_print_modules(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Baton to be used with process_file_contents. */
+typedef struct process_file_contents_baton_t
+{
+  const char *contents;
+  svn_boolean_t processed;
+} process_file_contents_baton_t;
+
+/* Implements svn_fs_process_contents_func_t.
+ * We flag the BATON as "processed" and compare the CONTENTS we've got to
+ * what we expect through the BATON.
+ */
+static svn_error_t *
+process_file_contents(const unsigned char *contents,
+                      apr_size_t len,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  process_file_contents_baton_t *b = baton;
+
+  SVN_TEST_ASSERT(strlen(b->contents) == len);
+  SVN_TEST_ASSERT(memcmp(b->contents, contents, len) == 0);
+  b->processed = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_zero_copy_processsing(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-zero-copy-processing",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Prime the full-text cache by reading all file contents. */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_stream_t *stream;
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_file_contents(&stream, root, node->path, iterpool));
+        SVN_ERR(svn_stream_copy3(stream, svn_stream_buffered(iterpool),
+                                NULL, NULL, iterpool));
+      }
+
+  /* Now, try to get the data directly from cache
+   * (if the backend has caches). */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_boolean_t success;
+
+        process_file_contents_baton_t baton;
+        baton.contents = node->contents;
+        baton.processed = FALSE;
+
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_try_process_file_contents(&success, root, node->path,
+                                                process_file_contents, &baton,
+                                                iterpool));
+        SVN_TEST_ASSERT(success == baton.processed);
+      }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6351,6 +6436,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test FS 'node created' info"),
     SVN_TEST_OPTS_PASS(test_print_modules,
                        "test FS module listing"),
+    SVN_TEST_OPTS_PASS(test_zero_copy_processsing,
+                       "test zero copy file processing"),
     SVN_TEST_NULL
   };
 
