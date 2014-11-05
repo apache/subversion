@@ -38,6 +38,8 @@ Work on this branch:
       merge
 
     To do:
+      when reading metadata, share the same branch definition and family
+        objects across all revisions
       copying: fix translation to Ev1 of operations nested inside a copy
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
@@ -103,7 +105,12 @@ Work on this branch:
     Needs design.
 
 
-Notes:
+Terminology:
 
-  Naming: 'Ev3'/'svn_editor3_t' is a temporary name. It should end up
+  'Ev3'/'svn_editor3_t' is a temporary name. It should end up
   replacing Ev2 and so should be called 'Ev2'/'svn_editor_t' then.
+  Or perhaps 'svn_branch[ing]_editor'.
+
+  'branch sibling' -> 'branch segment'?
+
+  'branch instance' -> 'branch rev'/'branch txn'/'branch version'?
