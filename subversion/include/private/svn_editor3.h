@@ -871,7 +871,7 @@ svn_editor3_put(svn_editor3_t *editor,
 
 /*
  * ========================================================================
- * Editor for Commit (independent per-node changes; element-id addressing)
+ * Editor for Commit (independent per-element changes; element-id addressing)
  * ========================================================================
  *
  * Scope of Edit:
@@ -900,19 +900,19 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  * Characteristics of this editor:
  *
- *   - Tree structure is partitioned among the nodes, in such a way that
+ *   - Tree structure is partitioned among the elements, in such a way that
  *     each of the most important concepts such as "move", "copy",
  *     "create" and "delete" is modeled as a single change to a single
- *     node. The name and the identity of its parent directory node are
- *     considered to be attributes of that node, alongside its content.
+ *     element. The name and the identity of its parent directory element are
+ *     considered to be attributes of that element, alongside its content.
  *
- *   - Changes are independent and unordered. The change to one node is
- *     independent of the change to any other node, except for the
+ *   - Changes are independent and unordered. The change to one element is
+ *     independent of the change to any other element, except for the
  *     requirement that the final state forms a valid (path-wise) tree
  *     hierarchy. A valid tree hierarchy is NOT required in any
  *     intermediate state after each change or after a subset of changes.
  *
- *   - Copies can be made in two ways: a copy of a single node can have
+ *   - Copies can be made in two ways: a copy of a single element can have
  *     its content changed and its children may be arbitrarily arranged,
  *     or a "cheap" O(1) copy of a subtree which cannot be edited.
  *
@@ -925,22 +925,22 @@ svn_editor3_put(svn_editor3_t *editor,
  *
  *   - copy_one and copy_tree are separate. In this model it doesn't
  *     make sense to describe a copy-and-modify by means of generating
- *     a full copy (with ids, at least implicitly, for each node) and
- *     then potentially "deleting" some of the generated child nodes.
- *     Instead, each node has to be specified in its final state or not
+ *     a full copy (with ids, at least implicitly, for each element) and
+ *     then potentially "deleting" some of the generated child elements.
+ *     Instead, each element has to be specified in its final state or not
  *     at all. Tree-copy therefore generates an immutable copy, while
- *     single-node copy supports arbitrary copy-and-modify operations,
+ *     single-element copy supports arbitrary copy-and-modify operations,
  *     and tree-copy can be used for any unmodified subtrees therein.
- *     There is no need to reference the root node of a tree-copy again
+ *     There is no need to reference the root element of a tree-copy again
  *     within the same edit, and so no id is provided.
  */
 
 /** Create a new element (versioned object) of kind @a new_kind.
  * 
- * Assign the new node a new element id; store this in @a *eid_p if
+ * Assign the new element a new element id; store this in @a *eid_p if
  * @a eid_p is not null.
  *
- * Set the node's parent and name to @a new_parent_eid and @a new_name.
+ * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content.
  *
@@ -960,7 +960,7 @@ svn_editor3_add(svn_editor3_t *editor,
  * This can be used to "branch" the element from another branch during a
  * merge, or to resurrect it.
  *
- * Set the node's parent and name to @a new_parent_eid and @a new_name.
+ * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content.
  *
@@ -979,26 +979,26 @@ svn_editor3_instantiate(svn_editor3_t *editor,
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
  * element, with the same or different content.
  *
- * Assign the target node a locally unique element-id, @a local_eid,
+ * Assign the target element a locally unique element-id, @a local_eid,
  * with which it can be referenced within this edit.
  *
- * Copy from the source node at @a src_revision, @a src_eid.
+ * Copy from the source element at @a src_revision, @a src_eid.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described.
  *   ### See note on copy_tree().
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
- * Set the target node's parent and name to @a new_parent_eid and
- * @a new_name. Set the target node's content to @a new_content, or make
+ * Set the target element's parent and name to @a new_parent_eid and
+ * @a new_name. Set the target element's content to @a new_content, or make
  * it the same as the source if @a new_content is null.
  *
  * @note This copy is not recursive. Children may be copied separately if
  * required.
  *
  * @note The @a local_eid has meaning only within this edit. The server
- * must create a new node, and MUST NOT match local_eid with any other
- * node that may already exist or that may be created by another edit.
+ * must create a new element, and MUST NOT match local_eid with any other
+ * element that may already exist or that may be created by another edit.
  *
  * @see svn_editor3_copy_tree(), #svn_editor3_t
  */
@@ -1015,14 +1015,14 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
  * subtree, with the same content and tree structure.
  *
- * Each node in the source subtree will be copied (branched) to the same
+ * Each element in the source subtree will be copied (branched) to the same
  * relative path within the target subtree. The elements created by
  * this copy cannot be modified or addressed within this edit.
  *
- * Set the target root node's parent and name to @a new_parent_eid and
+ * Set the target root element's parent and name to @a new_parent_eid and
  * @a new_name.
  *
- * Copy from the source node at @a src_revision, @a src_eid.
+ * Copy from the source element at @a src_revision, @a src_eid.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described. In this case the subtree copied is
@@ -1035,9 +1035,9 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  *       such as a WC update?
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
- * The content of each node copied from an existing revision is the content
- * of the source node. The content of each node copied from this revision
- * is the FINAL content of the source node as committed.
+ * The content of each element copied from an existing revision is the content
+ * of the source element. The content of each element copied from this revision
+ * is the FINAL content of the source element as committed.
  *
  * @see svn_editor3_copy_one(), #svn_editor3_t
  */
@@ -1104,7 +1104,7 @@ svn_editor3_delete(svn_editor3_t *editor,
  * performed: the server can consider the change "out of date" if a commit
  * since then has changed or deleted this element.
  *
- * Set the node's parent and name to @a new_parent_eid and @a new_name.
+ * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the content to @a new_content, or if null then leave the content
  * unchanged.
@@ -1700,7 +1700,7 @@ typedef struct svn_branch_el_rev_content_t
   /* eid of the parent element, or -1 if this is the root element */
   int parent_eid;
   /* struct svn_branch_element_t *parent_element; */
-  /* node name, or "" for root node; never null */
+  /* element name, or "" for root element; never null */
   const char *name;
   /* content (kind, props, text, ...) */
   svn_editor3_node_content_t *content;
@@ -1841,8 +1841,8 @@ svn_branch_branch(svn_editor3_t *editor,
  *
  *   create a new family
  *   create a new branch-def and branch-instance
- *   for each node in subtree:
- *     ?[unassign eid in outer branch (except root node)]
+ *   for each element in subtree:
+ *     ?[unassign eid in outer branch (except root element)]
  *     assign a new eid in inner branch
  */
 /* The element-based version */
@@ -1931,8 +1931,8 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  *     - Use 'entry-props'?
  *     - Send copy-and-delete with copy-from-rev = -1?
  *
- * This editor implements the "independent per-node changes" variant of the Ev3
- * commit editor interface.
+ * This editor implements the "independent per-element changes" variant
+ * of the Ev3 commit editor interface.
  *
  * Use *BRANCHING_TXN as the branching state info ...
  *
