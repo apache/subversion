@@ -358,8 +358,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     } },
 
   {"delrevprop", subcommand_delrevprop, {0}, N_
-   ("usage: 1. svnadmin delrevprop -r REVISION REPOS_PATH NAME\n"
-    "                   2. svnadmin delrevprop -t TXN REPOS_PATH NAME\n\n"
+   ("usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
+    "                   2. svnadmin delrevprop REPO_PATH -t TXN NAME\n\n"
     "1. Delete the property NAME on revision REVISION.\n\n"
     "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
     "trigger the revision property-related hooks (for example, if you want\n"
@@ -499,8 +499,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', svnadmin__bypass_hooks} },
 
   {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: 1. svnadmin setrevprop -r REVISION REPOS_PATH FILE\n"
-    "                   2. svnadmin setrevprop -t TXN REPOS_PATH FILE\n\n"
+   ("usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+    "                   2. svnadmin setrevprop REPOS_PATH -t TXN NAME FILE\n\n"
     "1. Set the property NAME on revision REVISION to the contents of FILE.\n\n"
     "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
     "trigger the revision property-related hooks (for example, if you want\n"
