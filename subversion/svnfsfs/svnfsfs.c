@@ -186,9 +186,9 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"load-index", subcommand__load_index, {0}, N_
    ("usage: svnfsfs load-index REPOS_PATH\n\n"
-    "Read the index contents to console.  The format is the same as produced by the\n"
-    "dump command, except that checksum as well as header are optional and will be\n"
-    "ignored.  The data must cover the full revision / pack file;  the revision\n"
+    "Read index contents from console.  The format is the same as produced by the\n"
+    "dump-index command, except that checksum as well as header are optional and will\n"
+    "be ignored.  The data must cover the full revision / pack file;  the revision\n"
     "number is automatically extracted from input stream.  No ordering is required.\n"),
    {'M'} },
 
