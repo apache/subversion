@@ -329,7 +329,7 @@ static const apr_getopt_option_t options_table[] =
         "                             identical")},
 
     {"metadata-only", svnadmin__metadata_only, 0,
-     N_("verify metadata only (ignored for BDB),"
+     N_("verify metadata only (ignored for BDB),\n"
         "                             checking against external corruption in\n"
         "                             Subversion 1.9+ format repositories.\n")},
 
