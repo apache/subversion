@@ -154,7 +154,7 @@ dbg_log_access(svn_fs_t *fs,
     }
 
   /* some info is only available in format7 repos */
-  if (svn_fs_fs__use_log_addressing(fs, revision))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
@@ -284,8 +284,7 @@ use_block_read(svn_fs_t *fs,
                svn_revnum_t revision)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return   svn_fs_fs__use_log_addressing(fs, revision)
-        && ffd->use_block_read;
+  return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
 /* Get the node-revision for the node ID in FS.
@@ -552,7 +551,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   fs_fs_data_t *ffd = fs->fsap_data;
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
 
-  if (svn_fs_fs__use_log_addressing(fs, rev))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       *root_id_p = svn_fs_fs__id_create_root(rev, result_pool);
     }
@@ -922,7 +921,7 @@ svn_fs_fs__check_rep(representation_t *rep,
                      void **hint,
                      apr_pool_t *scratch_pool)
 {
-  if (svn_fs_fs__use_log_addressing(fs, rep->revision))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
@@ -2721,7 +2720,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
         {
           /* Addressing is very different for old formats
            * (needs to read the revision trailer). */
-          if (svn_fs_fs__use_log_addressing(fs, rev))
+          if (svn_fs_fs__use_log_addressing(fs))
             SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
                                            revision_file, rev, NULL,
                                            SVN_FS_FS__ITEM_INDEX_CHANGES,

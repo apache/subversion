@@ -1778,7 +1778,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
   svn_error_t *err = SVN_NO_ERROR;
   if (txn_id)
     {
-      if (svn_fs_fs__use_log_addressing(fs, txn_id->revision + 1))
+      if (svn_fs_fs__use_log_addressing(fs))
         {
           /* the txn is going to produce a rev with logical addressing.
              So, we need to get our info from the (proto) index file. */
@@ -1791,7 +1791,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
           *absolute_position = item_index;
         }
     }
-  else if (svn_fs_fs__use_log_addressing(fs, revision))
+  else if (svn_fs_fs__use_log_addressing(fs))
     {
       /* ordinary index lookup */
       SVN_ERR(l2p_index_lookup(absolute_position, fs, rev_file, revision,

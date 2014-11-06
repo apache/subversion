@@ -811,9 +811,9 @@ svn_fs_fs__verify(svn_fs_t *fs,
 
   /* log/phys index consistency.  We need to check them first to make
      sure we can access the rev / pack files in format7. */
-  if (svn_fs_fs__use_log_addressing(fs, end))
+  if (svn_fs_fs__use_log_addressing(fs))
     SVN_ERR(verify_index_consistency(fs,
-                                     MAX(start, ffd->min_log_addressing_rev),
+                                     start,
                                      end, notify_func, notify_baton,
                                      cancel_func, cancel_baton, pool));
 
