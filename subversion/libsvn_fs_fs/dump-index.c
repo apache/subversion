@@ -45,7 +45,7 @@ svn_fs_fs__dump_index(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Check the FS format. */
-  if (! svn_fs_fs__use_log_addressing(fs, revision))
+  if (! svn_fs_fs__use_log_addressing(fs))
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
 
   /* Revision & index file access object. */

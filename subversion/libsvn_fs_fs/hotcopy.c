@@ -1025,7 +1025,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
   /* Create the DST_FS repository with the same layout as SRC_FS. */
   SVN_ERR(svn_fs_fs__create_file_tree(dst_fs, dst_path, src_ffd->format,
                                       src_ffd->max_files_per_dir,
-                                      src_ffd->min_log_addressing_rev,
+                                      src_ffd->use_log_addressing,
                                       pool));
 
   /* Copy the UUID.  Hotcopy destination receives a new instance ID, but

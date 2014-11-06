@@ -468,7 +468,7 @@ check_format(int format)
 static svn_error_t *
 read_format(int *pformat,
             int *max_files_per_dir,
-            svn_revnum_t *min_log_addressing_rev,
+            svn_boolean_t *use_log_addressing,
             const char *path,
             apr_pool_t *pool)
 {
@@ -515,7 +515,7 @@ read_format(int *pformat,
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
-  *min_log_addressing_rev = SVN_INVALID_REVNUM;
+  *use_log_addressing = FALSE;
 
   /* Read any options. */
   while (!eos)
@@ -547,18 +547,13 @@ read_format(int *pformat,
         {
           if (strcmp(buf->data + 11, "physical") == 0)
             {
-              *min_log_addressing_rev = SVN_INVALID_REVNUM;
+              *use_log_addressing = FALSE;
               continue;
             }
 
-          if (strncmp(buf->data + 11, "logical ", 8) == 0)
+          if (strcmp(buf->data + 11, "logical") == 0)
             {
-              int value;
-
-              /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf->data, 19, path, pool));
-              SVN_ERR(svn_cstring_atoi(&value, buf->data + 19));
-              *min_log_addressing_rev = value;
+              *use_log_addressing = TRUE;
               continue;
             }
         }
@@ -572,7 +567,7 @@ read_format(int *pformat,
    * If the format file is inconsistent in that respect, something
    * probably went wrong.
    */
-  if (*min_log_addressing_rev != SVN_INVALID_REVNUM && !*max_files_per_dir)
+  if (*use_log_addressing && !*max_files_per_dir)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
        _("'%s' specifies logical addressing for a non-sharded repository"),
        svn_dirent_local_style(path, pool));
@@ -610,13 +605,10 @@ svn_fs_fs__write_format(svn_fs_t *fs,
 
   if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
     {
-      if (ffd->min_log_addressing_rev == SVN_INVALID_REVNUM)
-        svn_stringbuf_appendcstr(sb, "addressing physical\n");
+      if (ffd->use_log_addressing)
+        svn_stringbuf_appendcstr(sb, "addressing logical\n");
       else
-        svn_stringbuf_appendcstr(sb,
-                                 apr_psprintf(pool,
-                                              "addressing logical %ld\n",
-                                              ffd->min_log_addressing_rev));
+        svn_stringbuf_appendcstr(sb, "addressing physical\n");
     }
 
   /* svn_io_write_version_file() does a load of magic to allow it to
@@ -1097,16 +1089,16 @@ svn_fs_fs__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
-  svn_revnum_t min_log_addressing_rev;
+  svn_boolean_t use_log_addressing;
 
   /* Read info from format file. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
+  SVN_ERR(read_format(&format, &max_files_per_dir, &use_log_addressing,
                       path_format(fs, scratch_pool), scratch_pool));
 
   /* Now that we've got *all* info, store / update values in FFD. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
-  ffd->min_log_addressing_rev = min_log_addressing_rev;
+  ffd->use_log_addressing = use_log_addressing;
 
   return SVN_NO_ERROR;
 }
@@ -1169,15 +1161,14 @@ upgrade_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
-  svn_revnum_t min_log_addressing_rev;
+  svn_boolean_t use_log_addressing;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
-  svn_error_t* err;
   const char *txns_dir;
 
   /* Read the FS format number and max-files-per-dir setting. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
+  SVN_ERR(read_format(&format, &max_files_per_dir, &use_log_addressing,
                       format_path, pool));
 
   /* If the config file does not exist, create one. */
@@ -1247,14 +1238,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
                                                pool));
     }
 
-  if (   format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
-      && max_files_per_dir > 0)
-    {
-      min_log_addressing_rev
-        = (ffd->youngest_rev_cache / max_files_per_dir + 1)
-        * max_files_per_dir;
-    }
-
   /* We will need the UUID info shortly ...
      Read it before the format bump as the UUID file still uses the old
      format. */
@@ -1264,37 +1247,20 @@ upgrade_body(void *baton, apr_pool_t *pool)
      down will use the format from FS to create missing info. */
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
-  ffd->min_log_addressing_rev = min_log_addressing_rev;
+  ffd->use_log_addressing = use_log_addressing;
 
   /* Always add / bump the instance ID such that no form of caching
      accidentally uses outdated information.  Keep the UUID. */
   SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
-  /* Rename the 'transactions' folder */
-  if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    SVN_ERR(svn_io_file_rename(txns_dir, svn_fs_fs__path_txns_dir(fs, pool),
-                               pool));
-
   /* Bump the format file. */
-  err = svn_fs_fs__write_format(fs, TRUE, pool);
-  if (err)
-    {
-      /* Something went wrong at the last minute.
-       * Undo the 'transactions' dir rename. */
-      if (format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        svn_error_compose(err,
-                          svn_io_file_rename(svn_fs_fs__path_txns_dir(fs,
-                                                                      pool),
-                                             txns_dir, pool));
+  SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
 
-      SVN_ERR(err);
-    }
-  else
-    if (upgrade_baton->notify_func)
-      SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
-                                        SVN_FS_FS__FORMAT_NUMBER,
-                                        svn_fs_upgrade_format_bumped,
-                                        pool));
+  if (upgrade_baton->notify_func)
+    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                       SVN_FS_FS__FORMAT_NUMBER,
+                                       svn_fs_upgrade_format_bumped,
+                                       pool));
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
@@ -1607,7 +1573,7 @@ write_revision_zero(svn_fs_t *fs,
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  if (svn_fs_fs__use_log_addressing(fs, 0))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       apr_array_header_t *index_entries;
       svn_fs_fs__p2l_entry_t *entry;
@@ -1696,7 +1662,7 @@ svn_fs_fs__create_file_tree(svn_fs_t *fs,
                             const char *path,
                             int format,
                             int shard_size,
-                            svn_revnum_t min_log_addressing_rev,
+                            svn_boolean_t use_log_addressing,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1712,9 +1678,9 @@ svn_fs_fs__create_file_tree(svn_fs_t *fs,
 
   /* Select the addressing mode depending on the format. */
   if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-    ffd->min_log_addressing_rev = min_log_addressing_rev;
+    ffd->use_log_addressing = use_log_addressing;
   else
-    ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
+    ffd->use_log_addressing = FALSE;
 
   /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
@@ -1845,7 +1811,7 @@ svn_fs_fs__create(svn_fs_t *fs,
     }
 
   /* Actual FS creation. */
-  SVN_ERR(svn_fs_fs__create_file_tree(fs, path, format, shard_size, 0, pool));
+  SVN_ERR(svn_fs_fs__create_file_tree(fs, path, format, shard_size, TRUE, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));

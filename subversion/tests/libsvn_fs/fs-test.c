@@ -5569,11 +5569,11 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   /* Upgrade filesystem, but keep existing svn_fs_t object. */
   SVN_ERR(svn_fs_upgrade(fs_path, pool));
 
-  /* Creating a new txn for the old svn_fs_t object shall fail. */
-  SVN_TEST_ASSERT_ANY_ERROR(svn_fs_begin_txn(&txn2, fs, head_rev, pool));
+  /* Creating a new txn for the old svn_fs_t should not fail. */
+  SVN_ERR(svn_fs_begin_txn(&txn2, fs, head_rev, pool));
 
-  /* Committing the already existing txn shall fail as well. */
-  SVN_TEST_ASSERT_ANY_ERROR(test_commit_txn(&head_rev, txn1, NULL, pool));
+  /* Committing the already existing txn should not fail. */
+  SVN_ERR(test_commit_txn(&head_rev, txn1, NULL, pool));
 
   /* Verify filesystem content. */
   SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,

@@ -650,7 +650,7 @@ svn_fs_fs__order_dir_entries(svn_fs_t *fs,
 {
   apr_array_header_t *ordered
     = svn_sort__hash(directory,
-                     svn_fs_fs__use_log_addressing(fs, revision)
+                     svn_fs_fs__use_log_addressing(fs)
                        ? compare_dir_entries_format7
                        : compare_dir_entries_format6,
                      pool);
@@ -1753,7 +1753,7 @@ pack_rev_shard(svn_fs_t *fs,
   SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, pool));
 
   /* Index information files */
-  if (svn_fs_fs__use_log_addressing(fs, shard_rev))
+  if (svn_fs_fs__use_log_addressing(fs))
     SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
                                max_mem, cancel_func, cancel_baton, pool));
   else

@@ -555,7 +555,7 @@ parse_representation(rep_stats_t **representation,
       result->offset = (apr_size_t)rep->item_index;
       result->size = (apr_size_t)rep->size;
 
-      if (!svn_fs_fs__use_log_addressing(query->fs, rep->revision))
+      if (!svn_fs_fs__use_log_addressing(query->fs))
         {
           svn_fs_fs__rep_header_t *header;
           svn_stream_t *stream;
@@ -697,7 +697,7 @@ read_noderev(query_t *query,
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
   if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
-      && !svn_fs_fs__use_log_addressing(query->fs, revision_info->revision))
+      && !svn_fs_fs__use_log_addressing(query->fs))
     SVN_ERR(parse_dir(query, file_content, noderev, revision_info,
                       pool, subpool));
 
@@ -1053,14 +1053,14 @@ read_revisions(query_t *query,
   for ( revision = 0
       ; revision < query->min_unpacked_rev
       ; revision += query->shard_size)
-    if (svn_fs_fs__use_log_addressing(query->fs, revision))
+    if (svn_fs_fs__use_log_addressing(query->fs))
       SVN_ERR(read_log_pack_file(query, revision, pool));
     else
       SVN_ERR(read_phys_pack_file(query, revision, pool));
 
   /* read non-packed revs */
   for ( ; revision <= query->head; ++revision)
-    if (svn_fs_fs__use_log_addressing(query->fs, revision))
+    if (svn_fs_fs__use_log_addressing(query->fs))
       SVN_ERR(read_log_revision_file(query, revision, pool));
     else
       SVN_ERR(read_phys_revision_file(query, revision, pool));

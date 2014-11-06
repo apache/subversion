@@ -239,9 +239,7 @@ svn_fs_fs__path_txns_dir(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  return (  ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
-          ? svn_dirent_join(fs->path, PATH_TXNS_LA_DIR, pool)
-          : svn_dirent_join(fs->path, PATH_TXNS_DIR, pool));
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
 }
 
 const char *
@@ -691,10 +689,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
 }
 
 svn_boolean_t
-svn_fs_fs__use_log_addressing(svn_fs_t *fs,
-                              svn_revnum_t rev)
+svn_fs_fs__use_log_addressing(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return ffd->min_log_addressing_rev != SVN_INVALID_REVNUM
-      && ffd->min_log_addressing_rev <= rev;
+  return ffd->use_log_addressing;
 }
