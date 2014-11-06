@@ -237,8 +237,6 @@ const char *
 svn_fs_fs__path_txns_dir(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-
   return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
 }
 
