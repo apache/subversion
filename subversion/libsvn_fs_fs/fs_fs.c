@@ -1165,7 +1165,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
-  const char *txns_dir;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &use_log_addressing,
@@ -1192,9 +1191,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* If we're already up-to-date, there's nothing else to be done here. */
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
-
-  /* Remember the current 'transactions' dir path */
-  txns_dir = svn_fs_fs__path_txns_dir(fs, pool);
 
   /* If our filesystem predates the existence of the 'txn-current
      file', make that file and its corresponding lock file. */

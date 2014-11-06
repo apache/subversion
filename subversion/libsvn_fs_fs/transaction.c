@@ -3275,55 +3275,6 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Return TRUE, if the file with FILENAME contains a node revision.
- */
-static svn_boolean_t
-is_noderev_file(const char *filename)
-{
-  apr_size_t dot_count = 0;
-
-  /* all interesting files start with "node." */
-  if (strncmp(filename, PATH_PREFIX_NODE, strlen(PATH_PREFIX_NODE)))
-    return FALSE;
-
-  for (; *filename; ++filename)
-    if (*filename == '.')
-      ++dot_count;
-
-  return dot_count == 2;
-}
-
-/* Determine the checksum for the SIZE bytes of data starting at START
- * in FILE and return the result in *FNV1_CHECKSUM.
- * Use POOL for tempoary allocations.
- */
-static svn_error_t *
-fnv1a_checksum_on_file_range(apr_uint32_t *fnv1_checksum,
-                             apr_file_t *file,
-                             apr_off_t start,
-                             apr_off_t size,
-                             apr_pool_t *pool)
-{
-  char *buffer = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-
-  svn_checksum_ctx_t *checksum_ctx
-    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
-
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &start, pool));
-  while (size > 0)
-    {
-      apr_size_t to_read = MIN(size, sizeof(buffer));
-
-      SVN_ERR(svn_io_file_read_full2(file, buffer, to_read, &to_read,
-                                     NULL, pool));
-      SVN_ERR(svn_checksum_update(checksum_ctx, buffer, to_read));
-      size -= to_read;
-    }
-  SVN_ERR(fnv1a_checksum_finalize(fnv1_checksum, checksum_ctx, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Return in *PATH the path to a file containing the properties that
    make up the final revision properties file.  This involves setting
    svn:date and removing any temporary properties associated with the
