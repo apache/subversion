@@ -6323,6 +6323,61 @@ test_zero_copy_processsing(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dir_optimal_order(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  apr_hash_t *unordered;
+  apr_array_header_t *ordered;
+  int i;
+  apr_hash_index_t *hi;
+
+  /* Create a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-dir-optimal-order",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Call the API function we are interested in. */
+  SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+
+  /* Verify that all entries are returned. */
+  SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));
+  for (hi = apr_hash_first(pool, unordered); hi; hi = apr_hash_next(hi))
+    {
+      svn_boolean_t found = FALSE;
+      const char *name = apr_hash_this_key(hi);
+
+      /* Compare hash -> array because the array might contain the same
+       * entry more than once.  Since that can't happen in the hash, doing
+       * it in this direction ensures ORDERED won't contain duplicates.
+       */
+      for (i = 0; !found && i < ordered->nelts; ++i)
+        {
+          svn_fs_dirent_t *item = APR_ARRAY_IDX(ordered, i, svn_fs_dirent_t*);
+          if (strcmp(item->name, name) == 0)
+            {
+              found = TRUE;
+              SVN_TEST_ASSERT(item == apr_hash_this_val(hi));
+            }
+        }
+
+      SVN_TEST_ASSERT(found);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6438,6 +6493,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test FS module listing"),
     SVN_TEST_OPTS_PASS(test_zero_copy_processsing,
                        "test zero copy file processing"),
+    SVN_TEST_OPTS_PASS(test_dir_optimal_order,
+                       "test svn_fs_dir_optimal_order"),
     SVN_TEST_NULL
   };
 
