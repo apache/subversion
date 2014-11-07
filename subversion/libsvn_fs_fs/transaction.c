@@ -1636,13 +1636,11 @@ store_l2p_index_entry(svn_fs_t *fs,
 
 /* If the transaction TXN_ID in FS uses logical addressing, store ENTRY
  * in the phys-to-log proto index file of transaction TXN_ID.
- * If FINAL_REVISION is not SVN_INVALID_REVNUM, use it to determine whether
- * to actually write to the proto-index.  Use POOL for allocations.
+ * Use POOL for allocations.
  */
 static svn_error_t *
 store_p2l_index_entry(svn_fs_t *fs,
                       const svn_fs_fs__id_part_t *txn_id,
-                      svn_revnum_t final_revision,
                       svn_fs_fs__p2l_entry_t *entry,
                       apr_pool_t *pool)
 {
@@ -2324,8 +2322,8 @@ rep_write_contents_close(void *baton)
                                       b->scratch_pool));
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->scratch_pool));
-      SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, SVN_INVALID_REVNUM,
-                                    &entry, b->scratch_pool));
+      SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, &entry,
+                                    b->scratch_pool));
     }
 
   SVN_ERR(svn_io_file_close(b->file, b->scratch_pool));
@@ -2582,8 +2580,7 @@ write_container_rep(representation_t *rep,
                                       fnv1a_checksum_ctx,
                                       scratch_pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, final_revision,
-                                    &entry, scratch_pool));
+      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
       /* update the representation */
       rep->size = whb->size;
@@ -2726,8 +2723,7 @@ write_container_delta_rep(representation_t *rep,
                                       fnv1a_checksum_ctx,
                                       scratch_pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, final_revision,
-                                    &entry, scratch_pool));
+      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
       /* update the representation */
       rep->expanded_size = whb->size;
@@ -3064,7 +3060,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                       fnv1a_checksum_ctx,
                                       pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, txn_id, rev, &entry, pool));
+      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
     }
 
   /* Return our ID that references the revision file. */
@@ -3116,7 +3112,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
                                       fnv1a_checksum_ctx,
                                       pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, txn_id, new_rev, &entry, pool));
+      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
       SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
                                     SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
     }
