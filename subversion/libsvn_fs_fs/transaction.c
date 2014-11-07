@@ -3461,7 +3461,15 @@ commit_body(void *baton, apr_pool_t *pool)
                                         cb->fs, txn_id, changed_paths,
                                         new_rev, pool));
 
-  if (!svn_fs_fs__use_log_addressing(cb->fs))
+  if (svn_fs_fs__use_log_addressing(cb->fs))
+    {
+      /* Append the index data to the rev file. */
+      SVN_ERR(svn_fs_fs__add_index_data(cb->fs, proto_file,
+                      svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
+                      svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
+                      new_rev, pool));
+    }
+  else
     {
       /* Write the final line. */
 
@@ -3473,15 +3481,6 @@ commit_body(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
                                      NULL, pool));
     }
-  else
-    {
-      /* Append the index data to the rev file. */
-      SVN_ERR(svn_fs_fs__add_index_data(cb->fs, proto_file,
-                      svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
-                      svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
-                      new_rev, pool));
-    }
-
 
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
