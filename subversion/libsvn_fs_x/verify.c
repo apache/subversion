@@ -687,13 +687,16 @@ verify_index_consistency(svn_fs_t *fs,
 {
   svn_error_t *err;
   fs_x_data_t *ffd = fs->fsap_data;
-  svn_revnum_t revision, pack_start, pack_end;
+  svn_revnum_t revision, next_revision;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  for (revision = start; revision <= end; revision = pack_end)
+  for (revision = start; revision <= end; revision = next_revision)
     {
-      pack_start = svn_fs_x__packed_base_rev(fs, revision);
-      pack_end = pack_start + svn_fs_x__pack_size(fs, revision);
+      svn_revnum_t count = svn_fs_x__packed_base_rev(fs, revision);
+      svn_revnum_t pack_start = count;
+      svn_revnum_t pack_end = pack_start + svn_fs_x__pack_size(fs, revision);
+
+      svn_pool_clear(iterpool);
 
       if (notify_func && (pack_start % ffd->max_files_per_dir == 0))
         notify_func(pack_start, notify_baton, iterpool);
@@ -711,10 +714,30 @@ verify_index_consistency(svn_fs_t *fs,
                                        cancel_func, cancel_baton, iterpool);
 
       /* verify in-index checksums and types vs. actual rev / pack files */
-      SVN_ERR(compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
-                                 cancel_func, cancel_baton, iterpool));
+      if (!err)
+        err = compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
+                                 cancel_func, cancel_baton, iterpool);
 
-      svn_pool_clear(iterpool);
+      /* concurrent packing is one of the reasons why verification may fail.
+         Make sure, we operate on up-to-date information. */
+      if (err)
+        SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                                                fs, pool));
+
+      /* retry the whole shard if it got packed in the meantime */
+      if (err && count != svn_fs_x__pack_size(fs, revision))
+        {
+          svn_error_clear(err);
+
+          /* We could simply assign revision here but the code below is
+             more intuitive to maintainers. */
+          next_revision = svn_fs_x__packed_base_rev(fs, revision);
+        }
+      else
+        {
+          SVN_ERR(err);
+          next_revision = pack_end;
+        }
     }
 
   svn_pool_destroy(iterpool);

@@ -564,7 +564,7 @@ parse_representation(rep_stats_t **representation,
 
       stream = svn_stream_from_string(&content, scratch_pool);
       SVN_ERR(svn_fs_fs__read_rep_header(&header, stream,
-                                          scratch_pool, scratch_pool));
+                                         scratch_pool, scratch_pool));
 
       result->header_size = header->header_size;
 

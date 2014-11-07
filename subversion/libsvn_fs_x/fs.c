@@ -108,13 +108,16 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
-      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* ... the pack lock ... */
-      SVN_ERR(svn_mutex__init(&ffsd->fs_pack_lock, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_pack_lock,
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, TRUE, common_pool));
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* We also need a mutex for synchronizing access to the active
          transaction list and free transaction pointer. */
@@ -532,7 +535,7 @@ x_delete_fs(const char *path,
             apr_pool_t *pool)
 {
   /* Remove everything. */
-  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 }
 
 static const svn_version_t *

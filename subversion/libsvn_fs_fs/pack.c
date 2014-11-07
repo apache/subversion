@@ -270,7 +270,7 @@ pack_rev_shard(svn_fs_t *fs,
   SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
                               max_files_per_dir, cancel_func,
                               cancel_baton, pool));
-  
+
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
 

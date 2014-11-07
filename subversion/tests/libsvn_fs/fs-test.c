@@ -5569,10 +5569,10 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   /* Upgrade filesystem, but keep existing svn_fs_t object. */
   SVN_ERR(svn_fs_upgrade(fs_path, pool));
 
-  /* Creating a new txn for the old svn_fs_t object doesn't fail. */
+  /* Creating a new txn for the old svn_fs_t should not fail. */
   SVN_ERR(svn_fs_begin_txn(&txn2, fs, head_rev, pool));
 
-  /* Committing the already existing txn doesn't fail also. */
+  /* Committing the already existing txn should not fail. */
   SVN_ERR(test_commit_txn(&head_rev, txn1, NULL, pool));
 
   /* Verify filesystem content. */
@@ -6067,6 +6067,261 @@ compare_contents(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_path_change_create(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const svn_fs_id_t *id;
+  svn_fs_path_change2_t *change;
+
+  /* Build an empty test repo ... */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-path-change-create",
+                              opts, pool));
+
+  /* ... just to give us a valid ID. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_ERR(svn_fs_node_id(&id, root, "", pool));
+
+  /* Do what we came here for. */
+  change = svn_fs_path_change2_create(id, svn_fs_path_change_replace, pool);
+
+  SVN_TEST_ASSERT(change);
+  SVN_TEST_ASSERT(change->node_rev_id == id);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_replace);
+
+  /* All other fields should be "empty" / "unused". */
+  SVN_TEST_ASSERT(change->node_kind == svn_node_none);
+
+  SVN_TEST_ASSERT(change->text_mod == FALSE);
+  SVN_TEST_ASSERT(change->prop_mod == FALSE);
+  SVN_TEST_ASSERT(change->mergeinfo_mod == svn_tristate_unknown);
+
+  SVN_TEST_ASSERT(change->copyfrom_known == FALSE);
+  SVN_TEST_ASSERT(change->copyfrom_rev == SVN_INVALID_REVNUM);
+  SVN_TEST_ASSERT(change->copyfrom_path == NULL);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_node_created_info(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Test vectors. */
+  struct
+    {
+      svn_revnum_t rev;
+      const char *path;
+      svn_revnum_t crev;
+      const char *cpath;
+    } to_check[] =
+    {
+      /* New noderev only upon modification. */
+      { 1, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 2, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "A/B/E/beta",  3, "/A/B/E/beta" },
+      { 4, "A/B/E/beta",  3, "/A/B/E/beta" },
+
+      /* Lazily copied node. */
+      { 2, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 4, "Z/B/E/beta",  4, "/Z/B/E/beta" },
+
+      /* Bubble-up upon sub-tree change. */
+      { 2, "Z",  2, "/Z" },
+      { 3, "Z",  2, "/Z" },
+      { 4, "Z",  4, "/Z" },
+
+      { 0 }
+    };
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-created-path",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r2: copy a subtree */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, iterpool));
+  SVN_ERR(svn_fs_copy(root, "A", txn_root, "Z", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r3: touch node in copy source */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r4: touch same relative node in copy target */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "Z/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* Now ask for some 'node created' info. */
+  for (i = 0; to_check[i].rev > 0; ++i)
+    {
+      svn_revnum_t crev;
+      const char *cpath;
+
+      svn_pool_clear(iterpool);
+
+      /* Get created path and rev. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, to_check[i].rev, iterpool));
+      SVN_ERR(svn_fs_node_created_path(&cpath, root, to_check[i].path,
+                                       iterpool));
+      SVN_ERR(svn_fs_node_created_rev(&crev, root, to_check[i].path,
+                                      iterpool));
+
+      /* Compare the results with our expectations. */
+      SVN_TEST_STRING_ASSERT(cpath, to_check[i].cpath);
+
+      if (crev != to_check[i].crev)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "created rev mismatch for %s@%ld:\n"
+                                 "  expected '%ld'\n"
+                                 "     found '%ld",
+                                 to_check[i].path,
+                                 to_check[i].rev,
+                                 to_check[i].crev,
+                                 crev);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_print_modules(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  const char *expected, *module_name;
+  svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
+
+  /* Name of the providing module */
+  if (strcmp(opts->fs_type, "fsx") == 0)
+    module_name = "fs_x";
+  else if (strcmp(opts->fs_type, "fsfs") == 0)
+    module_name = "fs_fs";
+  else if (strcmp(opts->fs_type, "bdb") == 0)
+    module_name = "fs_base";
+  else
+    return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
+                             "don't know the module name for %s",
+                             opts->fs_type);
+
+  SVN_ERR(svn_fs_print_modules(modules, pool));
+
+  /* The requested FS type must be listed amongst the available modules. */
+  expected = apr_psprintf(pool, "* %s : ", module_name);
+  SVN_TEST_ASSERT(strstr(modules->data, expected));
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton to be used with process_file_contents. */
+typedef struct process_file_contents_baton_t
+{
+  const char *contents;
+  svn_boolean_t processed;
+} process_file_contents_baton_t;
+
+/* Implements svn_fs_process_contents_func_t.
+ * We flag the BATON as "processed" and compare the CONTENTS we've got to
+ * what we expect through the BATON.
+ */
+static svn_error_t *
+process_file_contents(const unsigned char *contents,
+                      apr_size_t len,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  process_file_contents_baton_t *b = baton;
+
+  SVN_TEST_ASSERT(strlen(b->contents) == len);
+  SVN_TEST_ASSERT(memcmp(b->contents, contents, len) == 0);
+  b->processed = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_zero_copy_processsing(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-zero-copy-processing",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Prime the full-text cache by reading all file contents. */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_stream_t *stream;
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_file_contents(&stream, root, node->path, iterpool));
+        SVN_ERR(svn_stream_copy3(stream, svn_stream_buffered(iterpool),
+                                NULL, NULL, iterpool));
+      }
+
+  /* Now, try to get the data directly from cache
+   * (if the backend has caches). */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_boolean_t success;
+
+        process_file_contents_baton_t baton;
+        baton.contents = node->contents;
+        baton.processed = FALSE;
+
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_try_process_file_contents(&success, root, node->path,
+                                                process_file_contents, &baton,
+                                                iterpool));
+        SVN_TEST_ASSERT(success == baton.processed);
+      }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -6175,6 +6430,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test purging transactions"),
     SVN_TEST_OPTS_PASS(compare_contents,
                        "compare contents of different nodes"),
+    SVN_TEST_OPTS_PASS(test_path_change_create,
+                       "test svn_fs_path_change2_create"),
+    SVN_TEST_OPTS_PASS(test_node_created_info,
+                       "test FS 'node created' info"),
+    SVN_TEST_OPTS_PASS(test_print_modules,
+                       "test FS module listing"),
+    SVN_TEST_OPTS_PASS(test_zero_copy_processsing,
+                       "test zero copy file processing"),
     SVN_TEST_NULL
   };
 

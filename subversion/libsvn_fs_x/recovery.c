@@ -126,6 +126,11 @@ recover_body(void *baton, apr_pool_t *pool)
   /* Lose potentially corrupted data in temp files */
   SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
 
+  /* The admin may have created a plain copy of this repo before attempting
+     to recover it (hotcopy may or may not work with corrupted repos).
+     Bump the instance ID. */
+  SVN_ERR(svn_fs_x__set_uuid(fs, fs->uuid, NULL, pool));
+
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
 

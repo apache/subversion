@@ -709,8 +709,8 @@ fold_change(apr_hash_t *changed_paths,
   else
     {
       /* Add this path.  The API makes no guarantees that this (new) key
-        will not be retained.  Thus, we copy the key into the target pool
-        to ensure a proper lifetime.  */
+         will not be retained.  Thus, we copy the key into the target pool
+         to ensure a proper lifetime.  */
       apr_hash_set(changed_paths,
                    apr_pstrmemdup(pool, path->data, path->len), path->len,
                    path_change_dup(info, pool));

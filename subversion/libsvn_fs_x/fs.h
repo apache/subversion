@@ -126,6 +126,16 @@ extern "C" {
  */
 #define SVN_FS_X__FORMAT_NUMBER   1
 
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_X__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_X__USE_LOCK_MUTEX 0
+#endif
+
 /* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
@@ -245,9 +255,11 @@ typedef struct fs_x_data_t
   /* The maximum number of files to store per directory. */
   int max_files_per_dir;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
