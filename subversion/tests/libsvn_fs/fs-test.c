@@ -6406,6 +6406,94 @@ test_config_files(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_delta_file_stream(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root1, *root2;
+  svn_revnum_t rev;
+
+  const char *old_content = "some content";
+  const char *new_content = "some more content";
+  svn_txdelta_window_handler_t delta_handler;
+  void *delta_baton;
+  svn_txdelta_stream_t *delta_stream;
+  svn_stringbuf_t *source = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *dest = svn_stringbuf_create_empty(pool);
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delta-file-stream",
+                              opts, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", old_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  /* Revision 2: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", new_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root1, fs, 1, pool));
+  SVN_ERR(svn_fs_revision_root(&root2, fs, 2, pool));
+
+  /* Test 1: Get delta against empty target. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       NULL, NULL, root1, "foo", pool));
+
+  svn_stringbuf_setempty(source);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  /* Test 2: Get delta against previous version. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root1, "foo", root2, "foo", pool));
+
+  svn_stringbuf_set(source, old_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(new_content, dest->data);
+
+  /* Test 3: Get reverse delta. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root2, "foo", root1, "foo", pool));
+
+  svn_stringbuf_set(source, new_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6525,6 +6613,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_dir_optimal_order"),
     SVN_TEST_OPTS_PASS(test_config_files,
                        "get configuration files"),
+    SVN_TEST_OPTS_PASS(test_delta_file_stream,
+                       "get a delta stream on a file"),
     SVN_TEST_NULL
   };
 
