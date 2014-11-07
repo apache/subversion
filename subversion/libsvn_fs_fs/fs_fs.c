@@ -457,12 +457,12 @@ check_format(int format)
 
 /* Read the format number and maximum number of files per directory
    from PATH and return them in *PFORMAT, *MAX_FILES_PER_DIR and
-   MIN_LOG_ADDRESSING_REV respectively.
+   USE_LOG_ADDRESSIONG respectively.
 
    *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
    will be set to zero if a linear scheme should be used.
-   *MIN_LOG_ADDRESSING_REV is obtained from the 'addressing' format option,
-   and will be set to SVN_INVALID_REVNUM for physical addressing.
+   *USE_LOG_ADDRESSIONG is obtained from the 'addressing' format option,
+   and will be set to FALSE for physical addressing.
 
    Use POOL for temporary allocation. */
 static svn_error_t *
