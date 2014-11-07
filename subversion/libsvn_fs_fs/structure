@@ -46,8 +46,6 @@ repository) is:
     revprops.db       SQLite database of the packed revprops (format 5 only)
   transactions/       Subdirectory containing transactions (format 1 to 6)
     <txnid>.txn/      Directory containing transaction <txnid>
-  transactions-la/    Subdirectory containing transactions (format 7+)
-    <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
     <txnid>.rev       Proto-revision file for transaction <txnid>
     <txnid>.rev-lock  Write lock for proto-rev file
@@ -216,8 +214,8 @@ Filesystem format options
 
 Currently, the only recognised format options are "layout" and "addressing".
 The first specifies the paths that will be used to store the revision
-files and revision property files.  The second specifies for which
-revisions address translation is required.
+files and revision property files.  The second specifies that logical to
+physical address translation is required.
 
 The "layout" option is followed by the name of the filesystem layout
 and any required parameters.  The default layout, if no "layout"
@@ -257,11 +255,10 @@ The supported modes, and the parameters they require, are as follows:
   pairs with "offset" being the byte offset relative to the beginning of
   the revision in the respective rev or pack file.
 
-"logical <first-revision-to-use-it>"
-  'first-revision-to-use-it' specifies the first revision to use logical
-  addressing, must coincide with the beginning of a shard and may be a
-  future revision.  All earlier revisions use physical addressing.  It is
-  illegal to use logical addressing on non-sharded repositories.
+"logical"
+  All existing and future revision files will use logical
+  addressing. It is illegal to use logical addressing on non-sharded
+  repositories.
 
 
 Addressing modes

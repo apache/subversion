@@ -1612,8 +1612,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 
 /* If the transaction TXN_ID in FS uses logical addressing, store the
  * (ITEM_INDEX, OFFSET) pair in the txn's log-to-phys proto index file.
- * If FINAL_REVISION is not SVN_INVALID_REVNUM, use it to determine whether
- * to actually write to the proto-index.  Use POOL for allocations.
+ * Use POOL for allocations.
  */
 static svn_error_t *
 store_l2p_index_entry(svn_fs_t *fs,
