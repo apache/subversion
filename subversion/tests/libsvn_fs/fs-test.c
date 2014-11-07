@@ -6494,6 +6494,51 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_fs_merge(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root0, *root1;
+  svn_revnum_t rev;
+
+  /* Very basic test for svn_fs_merge because all the other interesting
+   * cases get tested implicitly with concurrent txn / commit tests.
+   * This API is just a thin layer around the internal merge function
+   * and we simply check that the plumbing between them works.
+   */
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delta-file-stream",
+                              opts, pool));
+  SVN_ERR(svn_fs_revision_root(&root0, fs, 0, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+  SVN_ERR(svn_fs_revision_root(&root1, fs, rev, pool));
+
+  /* Merge-able txn: create another file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "bar", pool));
+
+  SVN_ERR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0, "/", pool));
+
+  /* Not merge-able: create the same file file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0,
+                                     "/", pool), SVN_ERR_FS_CONFLICT);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6615,6 +6660,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "get configuration files"),
     SVN_TEST_OPTS_PASS(test_delta_file_stream,
                        "get a delta stream on a file"),
+    SVN_TEST_OPTS_PASS(test_fs_merge,
+                       "get merging txns with newer revisions"),
     SVN_TEST_NULL
   };
 
