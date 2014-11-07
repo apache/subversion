@@ -6510,7 +6510,7 @@ test_fs_merge(const svn_test_opts_t *opts,
    */
 
   /* Create a new repo. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delta-file-stream",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-merge",
                               opts, pool));
   SVN_ERR(svn_fs_revision_root(&root0, fs, 0, pool));
 
