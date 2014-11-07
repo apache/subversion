@@ -6378,6 +6378,34 @@ test_dir_optimal_order(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_config_files(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  apr_array_header_t *files;
+  int i;
+  const char *repo_name = "test-repo-config-files";
+
+  /* Create a empty and get its config files. */
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, pool));
+  SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
+
+  /* All files should exist and be below the repo. */
+  for (i = 0; i < files->nelts; ++i)
+    {
+      svn_node_kind_t kind;
+      const char *path = APR_ARRAY_IDX(files, i, const char*);
+
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+
+      SVN_TEST_ASSERT(kind == svn_node_file);
+      SVN_TEST_ASSERT(svn_dirent_is_ancestor(repo_name, path));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6495,6 +6523,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test zero copy file processing"),
     SVN_TEST_OPTS_PASS(test_dir_optimal_order,
                        "test svn_fs_dir_optimal_order"),
+    SVN_TEST_OPTS_PASS(test_config_files,
+                       "get configuration files"),
     SVN_TEST_NULL
   };
 
