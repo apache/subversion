@@ -202,6 +202,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1637826
+   Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
+   Justification:
+     Makes no sense to tell users to set environment variables
+     to fix builds with libtool in a nonstandard location, if we
+     then don't interpret said environment variables correctly.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
