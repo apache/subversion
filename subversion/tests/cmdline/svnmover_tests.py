@@ -161,24 +161,24 @@ def basic_svnmover(sbox):
   # revision 7
   test_svnmover(sbox.repo_url,
                 ['D /zig/zag/bar/y.c',
-                 'A /zig/zag/bar/y y.c (from /zig/zag/bar/y.c:6)',
+                 'A /zig/zag/bar/y_y.c (from /zig/zag/bar/y.c:6)',
                  'A /zig/zag/bar/y%20y.c (from /zig/zag/bar/y.c:6)',
                  ], # ---------
                 '-m', 'log msg',
-                'mv',         'zig/zag/bar/y.c', 'zig/zag/bar/y%20y.c',
-                'cp', 'HEAD', 'zig/zag/bar/y.c', 'zig/zag/bar/y%2520y.c')
+                'mv',         'zig/zag/bar/y.c', 'zig/zag/bar/y_y.c',
+                'cp', 'HEAD', 'zig/zag/bar/y.c', 'zig/zag/bar/y%20y.c')
 
   # revision 8
   test_svnmover(sbox.repo_url,
-                ['D /zig/zag/bar/y y.c',
-                 'A /zig/zag/bar/z z1.c (from /zig/zag/bar/y y.c:7)',
+                ['D /zig/zag/bar/y_y.c',
+                 'A /zig/zag/bar/z_z1.c (from /zig/zag/bar/y_y.c:7)',
                  'A /zig/zag/bar/z%20z.c (from /zig/zag/bar/y%20y.c:7)',
-                 'A /zig/zag/bar/z z2.c (from /zig/zag/bar/y y.c:7)',
+                 'A /zig/zag/bar/z_z2.c (from /zig/zag/bar/y_y.c:7)',
                  ], #---------
                 '-m', 'log msg',
-                'mv',         'zig/zag/bar/y%20y.c',   'zig/zag/bar/z z1.c',
-                'cp', 'HEAD', 'zig/zag/bar/y%2520y.c', 'zig/zag/bar/z%2520z.c',
-                'cp', 'HEAD', 'zig/zag/bar/y y.c',     'zig/zag/bar/z z2.c')
+                'mv',         'zig/zag/bar/y_y.c',   'zig/zag/bar/z_z1.c',
+                'cp', 'HEAD', 'zig/zag/bar/y%20y.c', 'zig/zag/bar/z%20z.c',
+                'cp', 'HEAD', 'zig/zag/bar/y_y.c',   'zig/zag/bar/z_z2.c')
 
 
   # revision 9
@@ -186,15 +186,15 @@ def basic_svnmover(sbox):
                 ['D /zig/zag',
                  'A /zig/foo (from /zig/zag:8)',
                  'D /zig/foo/bar/z%20z.c',
-                 'D /zig/foo/bar/z z2.c',
-                 'R /zig/foo/bar/z z1.c (from /zig/zag/bar/x.c:6)',
+                 'D /zig/foo/bar/z_z2.c',
+                 'R /zig/foo/bar/z_z1.c (from /zig/zag/bar/x.c:6)',
                  ], #---------
                 '-m', 'log msg',
                 'mv',      'zig/zag',         'zig/foo',
-                'rm',                         'zig/foo/bar/z z1.c',
-                'rm',                         'zig/foo/bar/z%20z2.c',
-                'rm',                         'zig/foo/bar/z%2520z.c',
-                'cp', '6', 'zig/zag/bar/x.c', 'zig/foo/bar/z%20z1.c')
+                'rm',                         'zig/foo/bar/z_z1.c',
+                'rm',                         'zig/foo/bar/z_z2.c',
+                'rm',                         'zig/foo/bar/z%20z.c',
+                'cp', '6', 'zig/zag/bar/x.c', 'zig/foo/bar/z_z1.c')
 
   # revision 10
   test_svnmover(sbox.repo_url,
@@ -207,12 +207,12 @@ def basic_svnmover(sbox):
   # revision 11
   test_svnmover(sbox.repo_url,
                 ['R /zig/foo/bar (from /zig/foo/bar:9)',
-                 'D /zig/foo/bar/z z1.c',
+                 'D /zig/foo/bar/z_z1.c',
                  ], #---------
                 '-m', 'log msg',
                 'rm',                     'zig/foo/bar',
                 'cp', '9', 'zig/foo/bar', 'zig/foo/bar',
-                'rm',                     'zig/foo/bar/z%20z1.c')
+                'rm',                     'zig/foo/bar/z_z1.c')
 
   # revision 12
   test_svnmover(sbox.repo_url,

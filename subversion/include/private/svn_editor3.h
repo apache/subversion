@@ -540,6 +540,12 @@ svn_editor3_peg_path_t
 svn_editor3_peg_path_dup(svn_editor3_peg_path_t old,
                          apr_pool_t *result_pool);
 
+/* Return true iff PEG_PATH1 and PEG_PATH2 are both the same location.
+ */
+svn_boolean_t
+svn_editor3_peg_path_equal(svn_editor3_peg_path_t *peg_path1,
+                           svn_editor3_peg_path_t *peg_path2);
+
 /** A reference to a node in a txn.
  *
  * @a peg gives a pegged location and @a peg.rev shall not be
@@ -578,6 +584,8 @@ typedef int svn_editor3_eid_t;
  *     would not make sense in a commit.)
  */
 typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
+
+struct svn_branch_el_rev_id_t;
 
 /** The kind of the checksum to be used throughout the #svn_editor3_t APIs.
  */
@@ -932,7 +940,9 @@ svn_editor3_put(svn_editor3_t *editor,
  *     single-element copy supports arbitrary copy-and-modify operations,
  *     and tree-copy can be used for any unmodified subtrees therein.
  *     There is no need to reference the root element of a tree-copy again
- *     within the same edit, and so no id is provided.
+ *     within the same edit, and so no id is provided. [### Or maybe there
+ *     is such a need, when performing the same copy in multiple branches;
+ *     but in that case the caller would need to specify the new eids.]
  */
 
 /** Create a new element (versioned object) of kind @a new_kind.
@@ -982,9 +992,9 @@ svn_editor3_instantiate(svn_editor3_t *editor,
  * Assign the target element a locally unique element-id, @a local_eid,
  * with which it can be referenced within this edit.
  *
- * Copy from the source element at @a src_revision, @a src_eid.
+ * Copy from the source element at @a src_el_rev.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
- * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
+ * If @a src_el_rev->rev is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described.
  *   ### See note on copy_tree().
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
@@ -1005,8 +1015,7 @@ svn_editor3_instantiate(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
                      svn_editor3_eid_t local_eid,
-                     svn_revnum_t src_revision,
-                     svn_editor3_eid_t src_eid,
+                     const struct svn_branch_el_rev_id_t *src_el_rev,
                      svn_editor3_eid_t new_parent_eid,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content);
@@ -1022,9 +1031,9 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  * Set the target root element's parent and name to @a new_parent_eid and
  * @a new_name.
  *
- * Copy from the source element at @a src_revision, @a src_eid.
+ * Copy from the source subtree at @a src_el_rev.
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
- * If @a src_revision is #SVN_INVALID_REVNUM, it means copy from within
+ * If @a src_el_rev->rev is #SVN_INVALID_REVNUM, it means copy from within
  * the new revision being described. In this case the subtree copied is
  * the FINAL subtree as committed, regardless of the order in which the
  * edit operations are described.
@@ -1043,8 +1052,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
-                      svn_revnum_t src_revision,
-                      svn_editor3_eid_t src_eid,
+                      const struct svn_branch_el_rev_id_t *src_el_rev,
                       svn_editor3_eid_t new_parent_eid,
                       const char *new_name);
 
@@ -1251,8 +1259,7 @@ typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   void *baton,
   svn_editor3_eid_t local_eid,
-  svn_revnum_t src_revision,
-  svn_editor3_eid_t src_eid,
+  const struct svn_branch_el_rev_id_t *src_el_rev,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
@@ -1262,8 +1269,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   void *baton,
-  svn_revnum_t src_revision,
-  svn_editor3_eid_t src_eid,
+  const struct svn_branch_el_rev_id_t *src_el_rev,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   apr_pool_t *scratch_pool);
@@ -1692,6 +1698,15 @@ typedef struct svn_branch_el_rev_id_t
 
 } svn_branch_el_rev_id_t;
 
+/* Return a new el_rev_id object constructed with *shallow* copies of BRANCH,
+ * EID and REV, allocated in RESULT_POOL.
+ */
+svn_branch_el_rev_id_t *
+svn_branch_el_rev_id_create(svn_branch_instance_t *branch,
+                            int eid,
+                            svn_revnum_t rev,
+                            apr_pool_t *result_pool);
+
 /* The content (parent, name and node-content) of an element-revision.
  * In other words, an el-rev node in a (mixed-rev) directory-tree.
  */
@@ -1716,8 +1731,7 @@ svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
                                  const svn_editor3_node_content_t *node_content,
                                  apr_pool_t *result_pool);
 
-/* Return a new content object constructed with a deep copy of OLD,
- * allocated in RESULT_POOL.
+/* Return a deep copy of OLD, allocated in RESULT_POOL.
  */
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
