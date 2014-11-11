@@ -29,6 +29,7 @@
 ##     SVNBB_APR_15             Path of APR-1.5
 ##     SVNBB_APR_20_DEV         Path of APR-2.0
 ##     SVNBB_JUNIT              The path of the junit.jar
+##     LIBTOOL_CONFIG           Optional: libtool configuration path
 ##
 ## The invoking script will set local variable named ${scripts} that
 ## is the absolute path the parent of this file.
@@ -45,6 +46,7 @@ export SVNBB_APR_13_NOTHREAD
 export SVNBB_APR_15
 export SVNBB_APR_20_DEV
 export SVNBB_JUNIT
+export LIBTOOL_CONFIG
 
 
 # A file named 'ramdisk' containing the uniqe RAM disk volume name
