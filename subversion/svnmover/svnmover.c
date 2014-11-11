@@ -1090,7 +1090,6 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_PUT_FILE:
           VERIFY_REV_UNSPECIFIED("put", 1);
-          VERIFY_EID_NONEXISTENT("put", 1);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;
