@@ -35,11 +35,11 @@ run_tests() {
 
     # The tests.log file must exist
     test -f tests.log || exit 1
-    mv tests.log tests-${ra}-${fs}.log
+    mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
 
     # If a fails.log file exists, the tests failed.
     test -f fails.log && {
-        mv fails.log fails-${ra}-${fs}.log
+        mv fails.log "${abssrc}/.test-logs/fails-${ra}-${fs}.log"
         exit 1
     }
 }
@@ -69,6 +69,13 @@ while [ ! -z "$1" ]; do
     esac
     shift
 done
+
+# Create a directory for the test log files
+if [ -d "${abssrc}/.test-logs" ]; then
+    rm -fr "${abssrc}/.test-logs"
+fi
+mkdir "${abssrc}/.test-logs"
+
 
 ${check_local} && {
     ${check_fsfs} && run_tests local fsfs
