@@ -859,7 +859,7 @@ svn_branch_diff(svn_editor3_t *editor,
 }
 
 #define VERIFY_REV_SPECIFIED(op, i)                                     \
-  if (el_rev[i]->rev != SVN_INVALID_REVNUM)                             \
+  if (el_rev[i]->rev == SVN_INVALID_REVNUM)                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: '%s': revision number required"),   \
                              op, action->path[i]);
@@ -1063,7 +1063,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_REV_UNSPECIFIED("cp", 1);
           VERIFY_EID_NONEXISTENT("cp", 1);
           SVN_ERR(svn_editor3_copy_tree(editor,
-                                        el_rev[0]->rev, el_rev[0]->eid,
+                                        el_rev[0],
                                         parent_el_rev[1]->eid, path_name[1]));
           made_changes = TRUE;
           break;
@@ -1194,7 +1194,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "  diff-e LEFT RIGHT      : diff LEFT to RIGHT (element-focused output)\n"
       "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
       "                           (FROM and YCA are relative to repo, not to root-URL)\n"
-      "  cp SRC-URL@REV DST-URL : copy SRC-URL@REV to DST-URL\n"
+      "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
       "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
       "  rm URL                 : delete URL\n"
       "  mkdir URL              : create new directory URL\n"
@@ -1607,6 +1607,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       int j, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
       struct action *action = apr_pcalloc(pool, sizeof(*action));
+      const char *cp_from_rev = NULL;
 
       /* First, parse the action. */
       if (! strcmp(action_string, "diff"))
@@ -1628,7 +1629,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       else if (! strcmp(action_string, "mv"))
         action->action = ACTION_MV;
       else if (! strcmp(action_string, "cp"))
-        action->action = ACTION_CP;
+        {
+          action->action = ACTION_CP;
+
+          /* next argument is the copy source revision */
+          if (++i == action_args->nelts)
+            return svn_error_trace(insufficient());
+          cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
+        }
       else if (! strcmp(action_string, "mkdir"))
         action->action = ACTION_MKDIR;
       else if (! strcmp(action_string, "put"))
@@ -1668,6 +1676,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient());
           path = APR_ARRAY_IDX(action_args, i, const char *);
+
+          if (cp_from_rev && j == 0)
+            {
+              path = apr_psprintf(pool, "%s@%s", path, cp_from_rev);
+            }
 
           SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
 

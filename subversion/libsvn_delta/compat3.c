@@ -41,6 +41,17 @@
 /* Verify EXPR is true; raise an error if not. */
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
+#ifdef SVN_DEBUG
+/* Return a human-readable string representation of LOC. */
+static const char *
+peg_path_str(svn_editor3_peg_path_t loc,
+             apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "%s@%ld",
+                      loc.relpath, loc.rev);
+}
+#endif
+
 /*
  * ========================================================================
  * Configuration Options
@@ -1858,6 +1869,20 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
   return b;
 }
 
+svn_branch_el_rev_id_t *
+svn_branch_el_rev_id_create(svn_branch_instance_t *branch,
+                            int eid,
+                            svn_revnum_t rev,
+                            apr_pool_t *result_pool)
+{
+  svn_branch_el_rev_id_t *id = apr_palloc(result_pool, sizeof(*id));
+
+  id->branch = branch;
+  id->eid = eid;
+  id->rev = rev;
+  return id;
+}
+
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
                                  const char *name,
@@ -3017,45 +3042,50 @@ branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
 }
 
 /* Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
- * of a subtree from FROM_BRANCH:FROM_EID to TO_PARENT_EID:TO_NAME.
+ * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
  *
- * FROM_EID must be an existing element of FROM_BRANCH. (It may be the root.)
- * If FROM_EID is the root of a subbranch and/or contains nested
- * subbranches, also copy them (by branching).
+ * FROM_EL_REV must be an existing element. (It may be a branch root.)
+ *
+ * ### TODO:
+ * If FROM_EL_REV is the root of a subbranch and/or contains nested
+ * subbranches, also copy them ...
+ * ### What shall we do with a subbranch? Make plain copies of its raw
+ *     elements; make a subbranch by branching the source subbranch in
+ *     cases where possible; make a subbranch in a new family?
  *
  * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
  * non-existing path in it.
  */
 static svn_error_t *
-branch_copy_subtree_r(svn_branch_instance_t *from_branch,
-                      svn_editor3_eid_t from_eid,
+branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
                       svn_branch_instance_t *to_branch,
                       svn_editor3_eid_t to_parent_eid,
                       const char *to_name,
                       apr_pool_t *scratch_pool)
 {
-  /* Copy the root element */
-  {
-    int to_eid = family_add_new_element(to_branch->sibling_defn->family);
-    svn_branch_el_rev_content_t *old_content = branch_map_get(from_branch, from_eid);
+  int to_eid;
+  svn_branch_el_rev_content_t *old_content;
 
-    /* ### If this element is a subbranch root, need to call
-           branch_map_update_as_subbranch_root() instead. */
-    branch_map_update(to_branch, to_eid,
-                      to_parent_eid, to_name, old_content->content);
-  }
+  /* Copy the root element */
+  to_eid = family_add_new_element(to_branch->sibling_defn->family);
+  old_content = branch_map_get(from_el_rev->branch, from_el_rev->eid);
+
+  /* ### If this element is a subbranch root, need to call
+         branch_map_update_as_subbranch_root() instead. */
+  branch_map_update(to_branch, to_eid,
+                    to_parent_eid, to_name, old_content->content);
 
   /* Copy the children within this branch */
-  SVN_ERR(branch_map_copy_children(from_branch, from_eid,
-                                   to_branch, to_parent_eid,
+  SVN_ERR(branch_map_copy_children(from_el_rev->branch, from_el_rev->eid,
+                                   to_branch, to_eid,
                                    scratch_pool));
 
   /* handle any subbranches under FROM_BRANCH:FROM_EID */
   /* ### Later. */
-  /* ### What shall we do with a subbranch? Make plain copies of its raw
-         elements; make a subbranch by branching the source subbranch in
-         cases where possible; make a subbranch in a new family? */
 
+  SVN_DBG(("cp subtree from e%d (%d/%s) to e%d (%d/%s)",
+           from_el_rev->eid, old_content->parent_eid, old_content->name,
+           to_eid, to_parent_eid, to_name));
   return SVN_NO_ERROR;
 }
 
@@ -3889,6 +3919,33 @@ editor3_put(void *baton,
  * ========================================================================
  */
 
+/*  */
+static svn_error_t *
+content_fetch(svn_editor3_node_content_t **content_p,
+              apr_hash_t **children_names,
+              ev3_from_delta_baton_t *eb,
+              const svn_editor3_peg_path_t *path_rev,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  svn_editor3_node_content_t *content
+    = apr_pcalloc(result_pool, sizeof (*content));
+
+  SVN_ERR(eb->fetch_func(&content->kind,
+                         &content->props,
+                         &content->text,
+                         children_names,
+                         eb->fetch_baton,
+                         path_rev->relpath, path_rev->rev,
+                         result_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(content->kind == svn_node_dir
+                 || content->kind == svn_node_file);
+  if (content_p)
+    *content_p = content;
+  return SVN_NO_ERROR;
+}
+
 /* Get the content of BRANCH:EID, as fully resolved content (not as a
  * reference). BRANCH:EID must not be a subbranch root.
  *
@@ -3914,32 +3971,24 @@ svn_branch_el_rev_get(svn_branch_el_rev_content_t **node_p,
   /* If content is by reference, fetch full content. */
   if (node && (node->content->ref.relpath))
     {
-      svn_editor3_node_content_t *content
-        = apr_pcalloc(result_pool, sizeof(*content));
-
-      SVN_ERR(eb->fetch_func(&content->kind,
-                             &content->props,
-                             &content->text, NULL,
-                             eb->fetch_baton,
-                             node->content->ref.relpath, node->content->ref.rev,
-                             result_pool, scratch_pool));
-      node->content = content;
+      SVN_ERR(content_fetch(&node->content, NULL,
+                            eb, &node->content->ref,
+                            result_pool, scratch_pool));
     }
 
   *node_p = node;
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                    svn_editor3_t *editor,
-                                    const char *rrpath,
-                                    svn_revnum_t revnum,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
+/*  */
+static svn_error_t *
+repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
+                              const char *rrpath,
+                              svn_revnum_t revnum,
+                              const svn_branch_repos_t *repos,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  const svn_branch_repos_t *repos = eb->edited_rev_root->repos;
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
   const svn_branch_revision_root_t *rev_root;
 
@@ -3954,6 +4003,22 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
   /* Any path must at least be within the repository root branch */
   SVN_ERR_ASSERT_NO_RETURN(el_rev->branch);
   *el_rev_p = el_rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
+                                    svn_editor3_t *editor,
+                                    const char *rrpath,
+                                    svn_revnum_t revnum,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
+  const svn_branch_repos_t *repos = eb->edited_rev_root->repos;
+
+  SVN_ERR(repos_find_el_rev_by_path_rev(el_rev_p, rrpath, revnum, repos,
+                                        result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -4102,8 +4167,7 @@ editor3_instantiate(void *baton,
 static svn_error_t *
 editor3_copy_one(void *baton,
                  svn_editor3_eid_t eid,
-                 svn_revnum_t src_revision,
-                 svn_editor3_eid_t src_eid,
+                 const struct svn_branch_el_rev_id_t *src_el_rev,
                  svn_editor3_eid_t new_parent_eid,
                  const char *new_name,
                  const svn_editor3_node_content_t *new_content,
@@ -4122,25 +4186,20 @@ editor3_copy_one(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_tree(void *baton,
-                  svn_revnum_t src_revision,
-                  svn_editor3_eid_t src_eid,
+                  const svn_branch_el_rev_id_t *src_el_rev,
                   svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
-#if 0
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *src_branch /* = ### */;
   svn_branch_instance_t *to_branch = eb->edited_branch;
 
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
-           /*branch->sibling_defn->bid,*/
-           src_eid, new_parent_eid, new_name));
+           src_el_rev->eid, new_parent_eid, new_name));
 
-  SVN_ERR(branch_copy_subtree_r(src_branch, src_eid,
+  SVN_ERR(branch_copy_subtree_r(src_el_rev,
                                 to_branch, new_parent_eid, new_name,
                                 scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -4195,23 +4254,12 @@ editor3_alter(void *baton,
   return SVN_NO_ERROR;
 }
 
-/*  */
-typedef struct initial_final_t
-{
-  svn_branch_instance_t *branch;
-  int eid;
-  svn_revnum_t rev;
-  svn_branch_el_rev_content_t *node;
-} initial_final_t;
-
-/* Update *PATHS, a hash of (rrpath -> initial_final_t[2]), creating or
- * filling in entries for all elements in BRANCH, at index [I] in the
- * initial_final_t array.
+/* Update *PATHS, a hash of (rrpath -> svn_branch_el_rev_id_t),
+ * creating or filling in entries for all elements in BRANCH.
  */
 static void
 convert_branch_to_paths(apr_hash_t *paths,
                         svn_branch_instance_t *branch,
-                        int i,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -4222,53 +4270,43 @@ convert_branch_to_paths(apr_hash_t *paths,
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
-      svn_branch_el_rev_content_t *node = apr_hash_this_val(hi);
       const char *relpath = branch_map_get_path_by_eid(branch, eid, result_pool);
       const char *rrpath = svn_relpath_join(svn_branch_get_root_rrpath(branch),
                                             relpath, result_pool);
-      initial_final_t *ba = svn_hash_gets(paths, rrpath);
-
-      if (! ba)
-        {
-          ba = apr_pcalloc(result_pool, 2 * sizeof(*ba));
-          ba[0].eid = -1;
-          ba[1].eid = -1;
-          ba[0].rev = SVN_INVALID_REVNUM;
-          ba[1].rev = SVN_INVALID_REVNUM;
-          svn_hash_sets(paths, rrpath, ba);
-        }
+      svn_branch_el_rev_id_t *ba = svn_hash_gets(paths, rrpath);
 
       /* Fill in the details. If it's already been filled in, then let a
          branch-root element override a sub-branch element of an outer
          branch, because the branch-root element is the one that should
          be specifying the element's content.
        */
-      if (! ba[i].branch
+      if (! ba
           || eid == branch->sibling_defn->root_eid)
         {
-          ba[i].branch = branch;
-          ba[i].eid = eid;
-          ba[i].rev = branch->rev_root->rev;
-          ba[i].node = node;
+          ba = svn_branch_el_rev_id_create(branch, eid, branch->rev_root->rev,
+                                           result_pool);
+          svn_hash_sets(paths, rrpath, ba);
           /*SVN_DBG(("branch-to-path[%d]: b%d e%d -> %s",
                    i, branch->sibling_defn->bid, eid, rrpath));*/
         }
       else
         {
-          /*SVN_DBG(("branch-to-path[%d]: b%d e%d -> <already present; not overwriting> (%s)",
-                   i, branch->sibling_defn->bid, eid, rrpath));*/
+          SVN_DBG(("branch-to-path: b%d e%d -> <already present; not overwriting> (%s)",
+                   branch->sibling_defn->bid, eid, rrpath));
         }
     }
 }
 
-/* Update *PATHS_UNION, a hash of (rrpath -> initial_final_t[2]), creating or
- * filling in entries for all elements in all branches at and under BRANCH,
- * recursively, at index [I] in the initial_final_t array.
+/* Produce a mapping from paths to element ids, covering all elements in
+ * BRANCH and all its sub-branches, recursively.
+ *
+ * Update *PATHS_UNION, a hash of (rrpath -> svn_branch_el_rev_id_t),
+ * creating or filling in entries for all elements in all branches at and
+ * under BRANCH, recursively.
  */
 static void
 convert_branch_to_paths_r(apr_hash_t *paths_union,
                           svn_branch_instance_t *branch,
-                          int idx,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -4277,7 +4315,7 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
 
   /*SVN_DBG(("[%d] branch={b%de%d at '%s'}", idx,
            branch->sibling_defn->bid, branch->sibling_defn->root_eid, branch->branch_root_rrpath));*/
-  convert_branch_to_paths(paths_union, branch, idx,
+  convert_branch_to_paths(paths_union, branch,
                           result_pool, scratch_pool);
 
   /* Rercurse into sub-branches */
@@ -4287,8 +4325,348 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
     {
       svn_branch_instance_t *b = APR_ARRAY_IDX(sub_branches, i, void *);
 
-      convert_branch_to_paths_r(paths_union, b, idx, result_pool, scratch_pool);
+      convert_branch_to_paths_r(paths_union, b, result_pool, scratch_pool);
     }
+}
+
+/* Return TRUE iff INITIAL_CONTENT and FINAL_CONTENT are both non-null
+ * and have the same properties.
+ */
+static svn_boolean_t
+props_equal(svn_editor3_node_content_t *initial_content,
+            svn_editor3_node_content_t *final_content,
+            apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *prop_diffs;
+
+  if (!initial_content || !final_content)
+    return FALSE;
+
+  svn_error_clear(svn_prop_diffs(&prop_diffs,
+                                 initial_content->props,
+                                 final_content->props,
+                                 scratch_pool));
+  return (prop_diffs->nelts == 0);
+}
+
+/* Return TRUE iff INITIAL_CONTENT and FINAL_CONTENT are both file content
+ * and have the same text.
+ */
+static svn_boolean_t
+text_equal(svn_editor3_node_content_t *initial_content,
+           svn_editor3_node_content_t *final_content)
+{
+  if (!initial_content || !final_content
+      || initial_content->kind != svn_node_file
+      || final_content->kind != svn_node_file)
+    {
+      return FALSE;
+    }
+
+  return svn_stringbuf_compare(initial_content->text,
+                               final_content->text);
+}
+
+/* Return the copy-from location to be used if this is to be a copy;
+ * otherwise return NULL.
+ *
+ * ### Currently this is indicated by content-by-reference, which is
+ *     an inadequate indication.
+ */
+static svn_editor3_peg_path_t *
+get_copy_from(svn_editor3_node_content_t *final_content)
+{
+  if (final_content->ref.relpath)
+    {
+      return &final_content->ref;
+    }
+  return NULL;
+}
+
+/* Return a hash whose keys are the names of the immediate children of
+ * RRPATH in PATHS.
+ */
+static apr_hash_t *
+get_immediate_children_names(apr_hash_t *paths,
+                             const char *parent_rrpath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *children = apr_hash_make(result_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *this_rrpath = apr_hash_this_key(hi);
+
+      if (this_rrpath[0]
+          && strcmp(parent_rrpath, svn_relpath_dirname(this_rrpath,
+                                                       scratch_pool)) == 0)
+        {
+          svn_hash_sets(children,
+                        svn_relpath_basename(this_rrpath, result_pool), "");
+        }
+    }
+
+  return children;
+}
+
+/* Return true iff EL_REV1 and EL_REV2 identify the same branch-family
+ * and element.
+ */
+static svn_boolean_t
+same_family_and_element(const svn_branch_el_rev_id_t *el_rev1,
+                        const svn_branch_el_rev_id_t *el_rev2)
+{
+  if (el_rev1->branch->sibling_defn->family->fid
+      != el_rev2->branch->sibling_defn->family->fid)
+    return FALSE;
+  if (el_rev1->eid != el_rev2->eid)
+    return FALSE;
+
+  return TRUE;
+}
+
+/* Generate Ev1 instructions to edit from a current state to a final state
+ * at RRPATH, recursing for child paths of RRPATH.
+ *
+ * The current state at RRPATH might not be the initial state because,
+ * although neither RRPATH nor any sub-paths have been explicitly visited
+ * before, the current state at RRPATH and its sub-paths might be the
+ * result of a copy.
+ *
+ * PRED_LOC is the predecessor location of the node currently at RRPATH in
+ * the Ev1 transaction, or NULL if there is no node currently at RRPATH.
+ * If the node is copied, including a child of a copy, this is its copy-from
+ * location, otherwise this is its location in the txn base revision.
+ * (The current node cannot be a plain added node on entry to this function,
+ * as the function must be called only once for each path and there is no
+ * recursive add operation.) PRED_LOC identifies the node content that the
+ * that the Ev1 edit needs to delete, replace, update or leave unchanged.
+ *
+ */
+static svn_error_t *
+drive_changes_r(const char *rrpath,
+                svn_editor3_peg_path_t *pred_loc,
+                apr_hash_t *paths_final,
+                ev3_from_delta_baton_t *eb,
+                apr_pool_t *scratch_pool)
+{
+  /* The el-rev-id of the element that will finally exist at RRPATH. */
+  svn_branch_el_rev_id_t *final_el_rev = svn_hash_gets(paths_final, rrpath);
+  svn_editor3_node_content_t *final_content;
+  svn_editor3_peg_path_t *final_copy_from;
+  svn_boolean_t succession;
+
+  SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
+           rrpath,
+           pred_loc ? peg_path_str(*pred_loc, scratch_pool) : "<nil>",
+           final_el_rev ? final_el_rev->eid : -1));
+
+  SVN_ERR_ASSERT(!pred_loc || (pred_loc->relpath && SVN_IS_VALID_REVNUM(pred_loc->rev)));
+  /* A non-null FINAL address means an element exists there. */
+  SVN_ERR_ASSERT(!final_el_rev || branch_map_get(final_el_rev->branch, final_el_rev->eid));
+
+  if (final_el_rev)
+    {
+      final_content
+        = branch_map_get(final_el_rev->branch, final_el_rev->eid)->content;
+
+      /* Decide whether the state at this path should be a copy (incl. a
+         copy-child) */
+      final_copy_from = get_copy_from(final_content);
+      /* It doesn't make sense to have a non-copy inside a copy */
+      /*SVN_ERR_ASSERT(!(parent_is_copy && !final_copy_from));*/
+   }
+  else
+    {
+      final_content = NULL;
+      final_copy_from = NULL;
+    }
+
+  /* Succession means:
+       for a copy (inc. child)  -- copy-from same place as natural predecessor
+       otherwise                -- it's succession if it's the same element
+                                   (which also implies the same kind) */
+  if (pred_loc && final_copy_from)
+    {
+      succession = svn_editor3_peg_path_equal(pred_loc, final_copy_from);
+    }
+  else if (pred_loc && final_el_rev)
+    {
+      svn_branch_el_rev_id_t *pred_el_rev;
+
+      SVN_ERR(repos_find_el_rev_by_path_rev(&pred_el_rev,
+                                            pred_loc->relpath, pred_loc->rev,
+                                            eb->edited_rev_root->repos,
+                                            scratch_pool, scratch_pool));
+
+      succession = same_family_and_element(pred_el_rev, final_el_rev);
+    }
+  else
+    {
+      succession = FALSE;
+    }
+
+  /* If there's an initial node that isn't also going to be the final
+     node at this path, then it's being deleted or replaced: delete it. */
+  if (pred_loc && !succession)
+    {
+      /* Issue an Ev1 delete unless this path is inside a path at which
+         we've already issued a delete. */
+      if (check_existence(eb->changes, rrpath) != svn_tristate_false)
+        {
+          SVN_DBG(("ev1:del(%s)", rrpath));
+          /* ### We don't need "delete_subtree", we only need to insert a
+             single delete operation, as we know we haven't
+             inserted any changes inside this subtree. */
+          SVN_ERR(delete_subtree(eb->changes, rrpath, pred_loc->rev));
+        }
+      else
+        SVN_DBG(("ev1:del(%s): parent is already deleted", rrpath));
+    }
+
+  /* If there's a final node, it's being added or modified.
+     Or it's unchanged -- we do nothing in that case. */
+  if (final_el_rev)
+    {
+      svn_editor3_node_content_t *current_content = NULL;
+      apr_hash_t *current_children = NULL;
+      change_node_t *change = NULL;
+
+      /* Get the full content of the final node. If we have
+         only a reference to the content, fetch it in full. */
+      SVN_ERR_ASSERT(final_content);
+      if (final_content->ref.relpath)
+        {
+          /* Get content by reference. */
+          SVN_ERR(content_fetch(&final_content, NULL,
+                                eb, &final_content->ref,
+                                scratch_pool, scratch_pool));
+        }
+
+      /* If the final node was also the initial node, it's being
+         modified, otherwise it's being added (perhaps a replacement). */
+      if (succession)
+        {
+          /* Get full content of the current node */
+          SVN_ERR(content_fetch(&current_content, &current_children,
+                                eb, pred_loc,
+                                scratch_pool, scratch_pool));
+
+          /* If no changes to make, then skip this path */
+          if (svn_editor3_node_content_equal(current_content,
+                                             final_content, scratch_pool))
+            {
+              SVN_DBG(("ev1:no-op(%s)", rrpath));
+            }
+          else
+            {
+              SVN_DBG(("ev1:mod(%s)", rrpath));
+              SVN_ERR(insert_change(&change, eb->changes, rrpath,
+                                    RESTRUCTURE_NONE));
+              change->changing_rev = pred_loc->rev;
+            }
+        }
+      else /* add or copy/move */
+        {
+          SVN_DBG(("ev1:add(%s)", rrpath));
+          SVN_ERR(insert_change(&change, eb->changes, rrpath,
+                                RESTRUCTURE_ADD));
+
+          /* If content is to be copied (and possibly modified) ... */
+          if (final_copy_from)
+            {
+              change->copyfrom_rev = final_copy_from->rev;
+              change->copyfrom_path = final_copy_from->relpath;
+
+              /* Get full content of the copy source node */
+              SVN_ERR(content_fetch(&current_content, &current_children,
+                                    eb, final_copy_from,
+                                    scratch_pool, scratch_pool));
+            }
+        }
+
+      if (change)
+        {
+          /* Copy the required content into the change record. Avoid no-op
+             changes of props / text, not least to minimize clutter when
+             debugging Ev1 operations. */
+          SVN_ERR_ASSERT(final_content->kind == svn_node_dir
+                         || final_content->kind == svn_node_file);
+          change->kind = final_content->kind;
+          if (!props_equal(current_content, final_content, scratch_pool))
+            {
+              change->props = final_content->props;
+            }
+          if (final_content->kind == svn_node_file
+              && !text_equal(current_content, final_content))
+            {
+              change->contents_text = final_content->text;
+            }
+        }
+
+      /* Recurse to process this directory's children */
+      if (final_content->kind == svn_node_dir)
+        {
+          apr_hash_t *final_children;
+          apr_hash_t *union_children;
+          apr_hash_index_t *hi;
+
+          final_children = get_immediate_children_names(paths_final, rrpath,
+                                                        scratch_pool,
+                                                        scratch_pool);
+          union_children = (current_children
+                            ? apr_hash_overlay(scratch_pool, current_children,
+                                               final_children)
+                            : final_children);
+          for (hi = apr_hash_first(scratch_pool, union_children);
+               hi; hi = apr_hash_next(hi))
+            {
+              const char *name = apr_hash_this_key(hi);
+              const char *this_rrpath = svn_relpath_join(rrpath, name,
+                                                         scratch_pool);
+              svn_boolean_t child_in_current
+                = current_children && svn_hash_gets(current_children, name);
+              svn_editor3_peg_path_t *child_pred = NULL;
+
+              if (child_in_current)
+                {
+                 /* If the parent dir is copied, then this child has been
+                    copied along with it: predecessor is parent's copy-from
+                    location extended by the child's name. */
+                  child_pred = apr_palloc(scratch_pool, sizeof(*child_pred));
+                  if (final_copy_from)
+                    {
+                      child_pred->rev = final_copy_from->rev;
+                      child_pred->relpath
+                        = svn_relpath_join(final_copy_from->relpath, name,
+                                           scratch_pool);
+                    }
+                  else
+                    {
+                      child_pred->rev = pred_loc->rev;
+                      child_pred->relpath = this_rrpath;
+                    }
+               }
+              SVN_DBG(("child '%s' current=%s final? %d%s",
+                       name,
+                       child_pred ? peg_path_str(*child_pred, scratch_pool)
+                                  : "<nil>",
+                       (svn_hash_gets(final_children, name) != NULL),
+                       final_copy_from
+                         ? apr_psprintf(scratch_pool, " parent-cp-from=%s@%ld",
+                                        final_copy_from->relpath,
+                                        final_copy_from->rev) : ""));
+
+              SVN_ERR(drive_changes_r(this_rrpath,
+                                      child_pred,
+                                      paths_final, eb, scratch_pool));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -4299,19 +4677,8 @@ static svn_error_t *
 drive_changes_branch(ev3_from_delta_baton_t *eb,
                      apr_pool_t *scratch_pool)
 {
-  svn_branch_revision_root_t *base_rev_root;
-  apr_hash_t *paths_union;
-  apr_array_header_t *sorted_paths;
+  apr_hash_t *paths_final;
   const apr_array_header_t *paths;
-  int i;
-
-  /* Find the initial branching state.
-     ### For now, assume single-rev state based on youngest known rev. */
-  {
-    int base_rev = eb->edited_rev_root->repos->rev_roots->nelts - 1;
-    base_rev_root = APR_ARRAY_IDX(eb->edited_rev_root->repos->rev_roots,
-                                  base_rev, void *);
-  }
 
   /* Convert the element mappings to an svn_delta_editor_t traversal.
 
@@ -4319,116 +4686,18 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
         2. traverse paths in depth-first order.
         3. modify/delete/add/replace as needed at each path.
    */
-  paths_union = apr_hash_make(scratch_pool);
-  convert_branch_to_paths_r(paths_union, base_rev_root->root_branch, 0,
-                            scratch_pool, scratch_pool);
-  convert_branch_to_paths_r(paths_union, eb->edited_rev_root->root_branch, 1,
+  paths_final = apr_hash_make(scratch_pool);
+  convert_branch_to_paths_r(paths_final, eb->edited_rev_root->root_branch,
                             scratch_pool, scratch_pool);
 
-  sorted_paths = svn_sort__hash(paths_union, svn_sort_compare_items_as_paths,
-                                scratch_pool);
-  for (i = 0; i < sorted_paths->nelts; i++)
-    {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_paths, i, svn_sort__item_t);
-      const char *rrpath = item->key;
-      initial_final_t *ba = item->value, *initial = &ba[0], *final = &ba[1];
+  {
+    svn_editor3_peg_path_t current = { -1, "" };
 
-      /* If there's an initial node that isn't also going to be the final
-         node, it's being deleted or replaced: delete it. */
-      if (initial->node
-          && (! final->node || final->eid != initial->eid))
-        {
-          /* Issue an Ev1 delete unless this path is inside a path at which
-             we've already issued a delete. */
-          if (check_existence(eb->changes, rrpath) != svn_tristate_false)
-            {
-              /*SVN_DBG(("ev1:del(%s)", rrpath));*/
-              SVN_ERR(delete_subtree(eb->changes, rrpath, initial->rev));
-            }
-          /*else
-            SVN_DBG(("ev1:del(%s): parent is already deleted", rrpath));*/
-        }
-
-      /* If there's a final node, it's being added or modified.
-         ### Or it's unchanged -- we should do nothing in that case. */
-      if (final->node)
-        {
-          svn_editor3_node_content_t *initial_content = NULL;
-          svn_editor3_node_content_t *final_content = final->node->content;
-          change_node_t *change;
-
-          /* Get the full content of the initial node, if there was one. */
-          initial_content = initial->node ? initial->node->content : NULL;
-          if (initial_content && initial_content->ref.relpath)
-            {
-              /* Get content by reference. */
-              SVN_ERR(eb->fetch_func(&initial_content->kind,
-                                     &initial_content->props,
-                                     &initial_content->text, NULL,
-                                     eb->fetch_baton,
-                                     initial_content->ref.relpath,
-                                     initial_content->ref.rev,
-                                     scratch_pool, scratch_pool));
-              SVN_ERR_ASSERT(initial_content->kind == svn_node_dir
-                             || initial_content->kind == svn_node_file);
-              initial_content->ref.relpath = NULL;
-            }
-          /* Get the full content of the final node. If we have
-             only a reference to the content, fetch it in full. */
-          SVN_ERR_ASSERT(final_content);
-          if (final_content->ref.relpath)
-            {
-              /* Get content by reference. */
-              SVN_ERR(eb->fetch_func(&final_content->kind,
-                                     &final_content->props,
-                                     &final_content->text, NULL,
-                                     eb->fetch_baton,
-                                     final_content->ref.relpath,
-                                     final_content->ref.rev,
-                                     scratch_pool, scratch_pool));
-              SVN_ERR_ASSERT(final_content->kind == svn_node_dir
-                             || final_content->kind == svn_node_file);
-              final_content->ref.relpath = NULL;
-            }
-
-          /* If the final node was also the initial node, it's being
-             modified, otherwise it's being added (perhaps a replacement). */
-          if (initial->node
-              /* && same branch family */
-              && (final->eid == initial->eid))
-            {
-              /* If no changes to make, then skip this path */
-              if (svn_editor3_node_content_equal(initial->node->content,
-                                                 final_content, scratch_pool))
-                {
-                  /*SVN_DBG(("ev1:no-op(%s)", rrpath));*/
-                  continue;
-                }
-
-              /*SVN_DBG(("ev1:mod(%s)", rrpath));*/
-              SVN_ERR(insert_change(&change, eb->changes, rrpath,
-                                    RESTRUCTURE_NONE));
-              change->changing_rev = initial->rev;
-            }
-          else
-            {
-              /*SVN_DBG(("ev1:add(%s)", rrpath));*/
-              SVN_ERR(insert_change(&change, eb->changes, rrpath,
-                                    RESTRUCTURE_ADD));
-              /* ### TODO: copy from */
-            }
-
-          /* Copy the required content into the change record. */
-          SVN_ERR_ASSERT(final_content->kind == svn_node_dir
-                         || final_content->kind == svn_node_file);
-          change->kind = final_content->kind;
-          change->props = final_content->props;
-          if (final_content->kind == svn_node_file)
-            {
-              change->contents_text = final_content->text;
-            }
-        }
-    }
+    /* ### For now, assume based on youngest known rev. */
+    current.rev = eb->edited_rev_root->repos->rev_roots->nelts - 1;
+    SVN_ERR(drive_changes_r("", &current,
+                            paths_final, eb, scratch_pool));
+  }
 
   /* If the driver has not explicitly opened the root directory via the
      start_edit (aka open_root) callback, do so now. */
