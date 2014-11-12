@@ -2138,14 +2138,8 @@ branch_map_purge_orphans(svn_branch_instance_t *branch,
   while (changed);
 }
 
-/* If the mapping has a complete path from the root to element EID,
- * return this path, relative to the branch root.
- *
- * If the EID mapping does not currently have a complete path to EID,
- * return NULL.
- */
-static const char *
-branch_map_get_path_by_eid(const svn_branch_instance_t *branch,
+const char *
+svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
                            int eid,
                            apr_pool_t *result_pool)
 {
@@ -2171,7 +2165,7 @@ svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
                              int eid,
                              apr_pool_t *result_pool)
 {
-  const char *path = branch_map_get_path_by_eid(branch, eid, result_pool);
+  const char *path = svn_branch_get_path_by_eid(branch, eid, result_pool);
   const char *rrpath = NULL;
 
   if (path)
@@ -2197,7 +2191,7 @@ branch_map_get_eid_by_path(const svn_branch_instance_t *branch,
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
-      const char *this_path = branch_map_get_path_by_eid(branch, eid,
+      const char *this_path = svn_branch_get_path_by_eid(branch, eid,
                                                          scratch_pool);
 
       if (! this_path)
@@ -2521,7 +2515,7 @@ branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
   /* All this next bit is to get an RRPATH. Should ultimately go away. */
   const char *outer_root_rrpath = svn_branch_get_root_rrpath(outer_branch);
   const char *outer_eid_relpath
-    = branch_map_get_path_by_eid(outer_branch, outer_eid, scratch_pool);
+    = svn_branch_get_path_by_eid(outer_branch, outer_eid, scratch_pool);
   const char *new_root_rrpath
     = svn_relpath_join(outer_root_rrpath, outer_eid_relpath, scratch_pool);
 
@@ -2735,7 +2729,7 @@ svn_branch_instance_serialize(svn_stream_t *stream,
 
       if (node)
         {
-          path = branch_map_get_path_by_eid(branch, eid, scratch_pool);
+          path = svn_branch_get_path_by_eid(branch, eid, scratch_pool);
           SVN_ERR_ASSERT(path);
           parent_eid = node->parent_eid;
           name = node->name[0] ? node->name : ".";
@@ -3109,9 +3103,9 @@ element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
     eid >= subtree->branch->sibling_defn->family->first_eid
     && eid < subtree->branch->sibling_defn->family->next_eid);
 
-  subtree_path = branch_map_get_path_by_eid(subtree->branch, subtree->eid,
+  subtree_path = svn_branch_get_path_by_eid(subtree->branch, subtree->eid,
                                             scratch_pool);
-  element_path = branch_map_get_path_by_eid(subtree->branch, eid,
+  element_path = svn_branch_get_path_by_eid(subtree->branch, eid,
                                             scratch_pool);
 
   SVN_ERR_ASSERT_NO_RETURN(subtree_path);
@@ -4055,7 +4049,7 @@ svn_branch_branch(svn_editor3_t *editor,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
-  if (! branch_map_get_path_by_eid(from_branch, from_eid, scratch_pool))
+  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                _("cannot branch from b%d e%d: "
@@ -4272,7 +4266,7 @@ convert_branch_to_paths(apr_hash_t *paths,
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
-      const char *relpath = branch_map_get_path_by_eid(branch, eid, result_pool);
+      const char *relpath = svn_branch_get_path_by_eid(branch, eid, result_pool);
       const char *rrpath = svn_relpath_join(svn_branch_get_root_rrpath(branch),
                                             relpath, result_pool);
       svn_branch_el_rev_id_t *ba = svn_hash_gets(paths, rrpath);
