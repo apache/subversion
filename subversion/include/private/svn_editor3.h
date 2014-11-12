@@ -585,7 +585,9 @@ typedef int svn_editor3_eid_t;
  */
 typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 
-struct svn_branch_el_rev_id_t;
+typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
+
+typedef struct svn_branch_instance_t svn_branch_instance_t;
 
 /** The kind of the checksum to be used throughout the #svn_editor3_t APIs.
  */
@@ -945,7 +947,7 @@ svn_editor3_put(svn_editor3_t *editor,
  *     but in that case the caller would need to specify the new eids.]
  */
 
-/** Create a new element (versioned object) of kind @a new_kind.
+/** Create a new element of kind @a new_kind in branch @a branch.
  * 
  * Assign the new element a new element id; store this in @a *eid_p if
  * @a eid_p is not null.
@@ -960,11 +962,12 @@ svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
                 svn_editor3_eid_t *eid,
                 svn_node_kind_t new_kind,
+                svn_branch_instance_t *branch,
                 svn_editor3_eid_t new_parent_eid,
                 const char *new_name,
                 const svn_editor3_node_content_t *new_content);
 
-/* Make the existing element @a eid exist in this branch, assuming it was
+/* Make the existing element @a eid exist in branch @a branch, assuming it was
  * previously not existing in this branch.
  *
  * This can be used to "branch" the element from another branch during a
@@ -980,12 +983,13 @@ svn_editor3_add(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
+                        svn_branch_instance_t *branch,
                         svn_editor3_eid_t eid,
                         svn_editor3_eid_t new_parent_eid,
                         const char *new_name,
                         const svn_editor3_node_content_t *new_content);
 
-/** Create a new element that is copied (branched) from a pre-existing
+/** Create a new element that is copied from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
  * element, with the same or different content.
  *
@@ -1014,8 +1018,9 @@ svn_editor3_instantiate(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
+                     const svn_branch_el_rev_id_t *src_el_rev,
+                     svn_branch_instance_t *branch,
                      svn_editor3_eid_t local_eid,
-                     const struct svn_branch_el_rev_id_t *src_el_rev,
                      svn_editor3_eid_t new_parent_eid,
                      const char *new_name,
                      const svn_editor3_node_content_t *new_content);
@@ -1052,7 +1057,8 @@ svn_editor3_copy_one(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
-                      const struct svn_branch_el_rev_id_t *src_el_rev,
+                      const svn_branch_el_rev_id_t *src_el_rev,
+                      svn_branch_instance_t *branch,
                       svn_editor3_eid_t new_parent_eid,
                       const char *new_name);
 
@@ -1102,6 +1108,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
+                   svn_branch_instance_t *branch,
                    svn_editor3_eid_t eid);
 
 /** Alter the tree position and/or contents of the element identified
@@ -1125,6 +1132,7 @@ svn_editor3_delete(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   svn_revnum_t since_rev,
+                  svn_branch_instance_t *branch,
                   svn_editor3_eid_t eid,
                   svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
@@ -1239,6 +1247,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
   svn_editor3_eid_t *eid,
   svn_node_kind_t new_kind,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
@@ -1248,6 +1257,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
   void *baton,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t eid,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
@@ -1258,8 +1268,9 @@ typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   void *baton,
+  const svn_branch_el_rev_id_t *src_el_rev,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t local_eid,
-  const struct svn_branch_el_rev_id_t *src_el_rev,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   const svn_editor3_node_content_t *new_content,
@@ -1269,7 +1280,8 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   void *baton,
-  const struct svn_branch_el_rev_id_t *src_el_rev,
+  const svn_branch_el_rev_id_t *src_el_rev,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
   apr_pool_t *scratch_pool);
@@ -1279,6 +1291,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
 typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
   svn_revnum_t since_rev,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t eid,
   apr_pool_t *scratch_pool);
 
@@ -1287,6 +1300,7 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
   svn_revnum_t since_rev,
+  svn_branch_instance_t *branch,
   svn_editor3_eid_t eid,
   svn_editor3_eid_t new_parent_eid,
   const char *new_name,
@@ -1489,8 +1503,6 @@ svn_editor3_node_content_create_symlink(apr_hash_t *props,
 /* ### */
 #define SVN_ERR_BRANCHING 123456
 
-struct svn_branch_instance_t;
-
 /* Per-repository branching info.
  */
 typedef struct svn_branch_repos_t
@@ -1643,7 +1655,7 @@ svn_branch_sibling_create(svn_branch_family_t *family,
  * A branch instance object describes one branch in this family. (There is
  * one instance of this branch within each branch of its outer families.)
  */
-typedef struct svn_branch_instance_t
+struct svn_branch_instance_t
 {
   /* --- Identity of this object --- */
 
@@ -1666,7 +1678,7 @@ typedef struct svn_branch_instance_t
    * be calculated on demand not stored here. */
   const char *branch_root_rrpath;
 
-} svn_branch_instance_t;
+};
 
 /* Create a new branch instance object */
 svn_branch_instance_t *
@@ -1686,7 +1698,7 @@ typedef struct svn_branch_element_t
 */
 
 /* Branch-Element-Revision */
-typedef struct svn_branch_el_rev_id_t
+struct svn_branch_el_rev_id_t
 {
   /* The branch-instance that applies to REV. */
   svn_branch_instance_t *branch;
@@ -1696,7 +1708,7 @@ typedef struct svn_branch_el_rev_id_t
      ### Do we need this if BRANCH refers to a particular branch-revision? */
   svn_revnum_t rev;
 
-} svn_branch_el_rev_id_t;
+};
 
 /* Return a new el_rev_id object constructed with *shallow* copies of BRANCH,
  * EID and REV, allocated in RESULT_POOL.
@@ -1829,10 +1841,6 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
                                    int next_fid,
                                    apr_pool_t *scratch_pool);
 
-/* Return the branch family of the main branch of @a editor. */
-svn_branch_family_t *
-svn_branch_get_family(svn_editor3_t *editor);
-
 /* Return (left, right) pairs of element content that differ between
  * subtrees LEFT and RIGHT.
 
@@ -1860,8 +1868,8 @@ svn_branch_branch(svn_editor3_t *editor,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
 
-/* Change the existing simple sub-tree at OUTER_EID into a sub-branch in a
- * new branch family.
+/* Change the existing simple sub-tree at OUTER_BRANCH:OUTER_EID into a
+ * sub-branch in a new branch family.
  *
  * ### TODO: Also we must (in order to maintain correctness) branchify
  *     the corresponding subtrees in all other branches in this family.
@@ -1882,6 +1890,7 @@ svn_branch_branch(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_branch_branchify(svn_editor3_t *editor,
+                     svn_branch_instance_t *outer_branch,
                      svn_editor3_eid_t outer_eid,
                      apr_pool_t *scratch_pool);
 

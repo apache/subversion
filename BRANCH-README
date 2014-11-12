@@ -44,9 +44,6 @@ Work on this branch:
       provide a way to specify a mixed-rev base state
       merge: interpret the three arguments consistently as relative to
         the repo root
-      change the editor API so that the branch is specified explicitly
-        by each action instead of having a 'main' branch for the whole
-        edit
       synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
       make the user interface degrade cross-branch moves so that the user
@@ -56,6 +53,9 @@ Work on this branch:
   * The model.
 
     To do:
+      clarify the sequencing requirements of editing: for example,
+        requesting the full path to an element implies finalization of
+        at least it and all its parent elements
       copying: model copying as a (tree) relationship between elements
         that is the same across all branches in a family?
 

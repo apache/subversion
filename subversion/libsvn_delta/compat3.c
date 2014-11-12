@@ -2885,32 +2885,6 @@ svn_branch_find_nested_branch_element_by_rrpath(
     *eid_p = branch_map_get_eid_by_rrpath(root_branch, rrpath, scratch_pool);
 }
 
-/* Find the deepest branch in REV_ROOT of which RRPATH is
- * either the root element or a normal, non-sub-branch element.
- * If EID_P is not null, set *EID_P to the EID of RRPATH in that branch.
- *
- * An element need not exist at RRPATH.
- *
- * The result will never be NULL.
- */
-static svn_branch_instance_t *
-svn_branch_revision_root_find_branch_element_by_rrpath(
-                                int *eid_p,
-                                svn_branch_revision_root_t *rev_root,
-                                const char *rrpath,
-                                apr_pool_t *scratch_pool)
-{
-  svn_branch_instance_t *branch;
-
-  svn_branch_find_nested_branch_element_by_rrpath(&branch, eid_p,
-                                                  rev_root->root_branch, rrpath,
-                                                  scratch_pool);
-
-  /* Any path must at least be within the repository root branch */
-  SVN_ERR_ASSERT_NO_RETURN(branch);
-  return branch;
-}
-
 /* Adjust BRANCH and its subbranches (recursively),
  * to reflect deletion of the subtree at EID.
  *
@@ -3217,13 +3191,8 @@ typedef struct ev3_from_delta_baton_t
   /* Moves recorded so far: from_relpath -> (char *)to_relpath. */
   apr_hash_t *moves;
 
-  /* The branch on which the per-element API is working */
-  /* ### Assumes most operations operate on a single branch. Not true for
-         operations such as "branch", "branchify", and those that recurse
-         into nested branches. For the time being, this just gives a
-         notion of a "main" branch for the editing. */
+  /* The branching state on which the per-element API is working */
   svn_branch_revision_root_t *edited_rev_root;
-  svn_branch_instance_t *edited_branch;
 
   apr_pool_t *edit_pool;
 } ev3_from_delta_baton_t;
@@ -4032,14 +4001,6 @@ svn_editor3_find_branch_element_by_rrpath(svn_branch_instance_t **branch_p,
                                                   rrpath, scratch_pool);
 }
 
-svn_branch_family_t *
-svn_branch_get_family(svn_editor3_t *editor)
-{
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_family_t *family = eb->edited_branch->sibling_defn->family;
-  return family;
-}
-
 svn_error_t *
 svn_branch_branch(svn_editor3_t *editor,
                   svn_branch_instance_t *from_branch,
@@ -4068,12 +4029,10 @@ svn_branch_branch(svn_editor3_t *editor,
 
 svn_error_t *
 svn_branch_branchify(svn_editor3_t *editor,
+                     svn_branch_instance_t *outer_branch,
                      svn_editor3_eid_t outer_eid,
                      apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_instance_t *outer_branch = eb->edited_branch;
-
   /* ### TODO: First check the element is not already a branch root
          and its subtree does not contain any branch roots. */
 
@@ -4118,13 +4077,12 @@ static svn_error_t *
 editor3_add(void *baton,
             svn_editor3_eid_t *eid_p,
             svn_node_kind_t new_kind,
+            svn_branch_instance_t *branch,
             svn_editor3_eid_t new_parent_eid,
             const char *new_name,
             const svn_editor3_node_content_t *new_content,
             apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *branch = eb->edited_branch;
   int eid;
 
   eid = family_add_new_element(branch->sibling_defn->family);
@@ -4142,15 +4100,13 @@ editor3_add(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_instantiate(void *baton,
+                    svn_branch_instance_t *branch,
                     svn_editor3_eid_t eid,
                     svn_editor3_eid_t new_parent_eid,
                     const char *new_name,
                     const svn_editor3_node_content_t *new_content,
                     apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *branch = eb->edited_branch;
-
   SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
            /*branch->sibling->bid,*/ eid, new_parent_eid,
            new_name, svn_node_kind_to_word(new_content->kind)));
@@ -4162,8 +4118,9 @@ editor3_instantiate(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_one(void *baton,
+                 const svn_branch_el_rev_id_t *src_el_rev,
+                 svn_branch_instance_t *branch,
                  svn_editor3_eid_t eid,
-                 const struct svn_branch_el_rev_id_t *src_el_rev,
                  svn_editor3_eid_t new_parent_eid,
                  const char *new_name,
                  const svn_editor3_node_content_t *new_content,
@@ -4183,13 +4140,11 @@ editor3_copy_one(void *baton,
 static svn_error_t *
 editor3_copy_tree(void *baton,
                   const svn_branch_el_rev_id_t *src_el_rev,
+                  svn_branch_instance_t *to_branch,
                   svn_editor3_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *to_branch = eb->edited_branch;
-
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
 
@@ -4204,12 +4159,10 @@ editor3_copy_tree(void *baton,
 static svn_error_t *
 editor3_delete(void *baton,
                    svn_revnum_t since_rev,
+                   svn_branch_instance_t *branch,
                    svn_editor3_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *branch = eb->edited_branch;
-
   SVN_DBG(("delete(e%d)",
            /*branch->sibling_defn->bid,*/ eid));
 
@@ -4224,15 +4177,13 @@ editor3_delete(void *baton,
 static svn_error_t *
 editor3_alter(void *baton,
               svn_revnum_t since_rev,
+              svn_branch_instance_t *branch,
               svn_editor3_eid_t eid,
               svn_editor3_eid_t new_parent_eid,
               const char *new_name,
               const svn_editor3_node_content_t *new_content,
               apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_instance_t *branch = eb->edited_branch;
-
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
            /*branch->sibling_defn->bid,*/ eid,
            new_parent_eid,
@@ -4730,7 +4681,7 @@ editor3_complete(void *baton,
   svn_error_t *err;
 
   /* Drive the tree we've created. */
-  if (eb->edited_branch)
+  if (eb->edited_rev_root)
     err = drive_changes_branch(eb, scratch_pool);
   else
     err = drive_changes(eb, scratch_pool);
@@ -4836,14 +4787,6 @@ svn_delta__ev3_from_delta_for_commit2(
          and those that recurse into sub-branches operate on more than one.
    */
   eb->edited_rev_root = branching_txn;
-  eb->edited_branch = svn_branch_revision_root_find_branch_element_by_rrpath(
-                       NULL, eb->edited_rev_root, base_relpath, scratch_pool);
-  SVN_DBG(("look up path '%s': found branch f%db%de%d at path '%s'",
-           base_relpath,
-           eb->edited_branch->sibling_defn->family->fid,
-           eb->edited_branch->sibling_defn->bid,
-           eb->edited_branch->sibling_defn->root_eid,
-           svn_branch_get_root_rrpath(eb->edited_branch)));
 
   if (shim_connector)
     {
