@@ -17,7 +17,6 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-set -e
 set -x
 
 if [ -z "$1" ]; then
@@ -27,14 +26,13 @@ fi
 
 volume="/Volumes/$1"
 
-mount | fgrep "${volume}" >/dev/null || {
-    test -e "${volume}" || {
-        # Make sure we strip trailing spaces from the result of older
-        # versions of hduitil.
-        device=$(echo $(hdiutil attach -nomount ram://1000000))
-        newfs_hfs -M 0700 -v "$1" "${device}"
-        hdiutil mountvol "${device}"
-    }
+mount | fgrep "on ${volume} " >/dev/null || {
+    set -e
+    # Make sure we strip trailing spaces from the result of older
+    # versions of hduitil.
+    device=$(echo $(hdiutil attach -nomount ram://1000000))
+    newfs_hfs -M 0700 -v "$1" "${device}"
+    hdiutil mountvol "${device}"
 }
 
 exit 0

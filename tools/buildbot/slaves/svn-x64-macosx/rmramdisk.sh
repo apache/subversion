@@ -17,7 +17,6 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-set -e
 set -x
 
 if [ -z "$1" ]; then
@@ -27,8 +26,9 @@ fi
 
 volume="/Volumes/$1"
 
-mount | fgrep "${volume}" >/dev/null && {
-    test -e "${volume}" && hdiutil detach "${volume}" -force
+mount | fgrep "on ${volume} " >/dev/null && {
+    set -e
+    hdiutil detach "${volume}" -force
 }
 
 exit 0
