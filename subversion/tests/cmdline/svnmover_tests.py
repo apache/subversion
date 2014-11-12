@@ -88,20 +88,18 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
                           "     actual: %s" % (str(expected_path_changes),
                                                str(changed_paths)))
 
-def xtest_svnmover(repo_url, expected_errors, *varargs):
+def xtest_svnmover(repo_url, error_re_string, *varargs):
   """Run svnmover with the list of VARARGS arguments.  Verify that
-  its run results match the list of EXPECTED_ERRORS."""
+  its run produces an error that matches ERROR_RE_STRING."""
 
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
                                                             *varargs)
-  errors = []
-  for line in errlines:
-    match = _err_re.match(line)
-    if match:
-      errors.append(line.rstrip('\n\r'))
-  if errors != expected_errors:
-    raise svntest.main.SVNUnmatchedError(str(errors))
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = svntest.verify.RegexOutput(error_re_string, match_all=False)
+    svntest.verify.verify_outputs(None, None, errlines, None, expected_err)
 
 ######################################################################
 
@@ -271,75 +269,41 @@ def basic_svnmover(sbox):
                 'rm',              'boozle/guz/svnmover-test.py',
                 'put', empty_file, 'boozle/guz/svnmover-test.py')
 
-  # revision 17
-  test_svnmover(sbox.repo_url,
-                ['R /foo/bar (from /foo/foo:16)'
-                 ], #---------
-                '-m', 'log msg',
-                'rm',                            'foo/bar',
-                'cp', '16', 'foo/foo',           'foo/bar',
-                'propset',  'testprop',  'true', 'foo/bar')
-
-  # revision 18
-  test_svnmover(sbox.repo_url,
-                ['M /foo/bar'
-                 ], #---------
-                '-m', 'log msg',
-                'propdel', 'testprop', 'foo/bar')
-
-  # revision 19
-  test_svnmover(sbox.repo_url,
-                ['M /foo/z.c',
-                 'M /foo/foo',
-                 ], #---------
-                '-m', 'log msg',
-                'propset', 'testprop', 'true', 'foo/z.c',
-                'propset', 'testprop', 'true', 'foo/foo')
-
-  # revision 20
-  test_svnmover(sbox.repo_url,
-                ['M /foo/z.c',
-                 'M /foo/foo',
-                 ], #---------
-                '-m', 'log msg',
-                'propsetf', 'testprop', empty_file, 'foo/z.c',
-                'propsetf', 'testprop', empty_file, 'foo/foo')
-
   # Expected missing revision error
   xtest_svnmover(sbox.repo_url,
-                 ["svnmover: E200004: 'a' is not a revision"
-                  ], #---------
+                 "E205000: Syntax error parsing peg revision 'a'",
+                 #---------
                  '-m', 'log msg',
                  'cp', 'a', 'b')
 
   # Expected cannot be younger error
   xtest_svnmover(sbox.repo_url,
-                 ['svnmover: E160006: No such revision 42',
-                  ], #---------
+                 "E160006: No such revision 42",
+                 #---------
                  '-m', 'log msg',
                  'cp', '42', 'a', 'b')
 
   # Expected already exists error
   xtest_svnmover(sbox.repo_url,
-                 ["svnmover: E160020: Path 'foo' already exists",
-                  ], #---------
+                 "'foo' already exists",
+                 #---------
                  '-m', 'log msg',
-                 'cp', '17', 'a', 'foo')
+                 'cp', '16', 'A', 'foo')
 
-  # Expected copy_src already exists error
+  # Expected copy-child already exists error
   xtest_svnmover(sbox.repo_url,
-                 ["svnmover: E160020: Path 'a/bar' already exists",
-                  ], #---------
+                 "'a/bar' already exists",
+                 #---------
                  '-m', 'log msg',
-                 'cp', '17', 'foo', 'a',
-                 'cp', '17', 'foo/foo', 'a/bar')
+                 'cp', '16', 'foo', 'a',
+                 'cp', '16', 'foo/foo', 'a/bar')
 
   # Expected not found error
   xtest_svnmover(sbox.repo_url,
-                 ["svnmover: E160013: Path 'a' not found in revision 17",
-                  ], #---------
+                 "'a' not found",
+                 #---------
                  '-m', 'log msg',
-                 'cp', '17', 'a', 'b')
+                 'cp', '16', 'a', 'b')
 
 
 def nested_replaces(sbox):
