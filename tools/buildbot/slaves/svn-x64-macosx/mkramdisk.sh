@@ -34,3 +34,5 @@ mount | fgrep "${volume}" >/dev/null || {
     newfs_hfs -M 0700 -v "$1" "${device}"
     hdiutil mountvol "${device}"
 }
+
+exit 0
