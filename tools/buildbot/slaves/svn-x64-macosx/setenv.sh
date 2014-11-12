@@ -29,6 +29,7 @@
 ##     SVNBB_APR_15             Path of APR-1.5
 ##     SVNBB_APR_20_DEV         Path of APR-2.0
 ##     SVNBB_JUNIT              The path of the junit.jar
+##     SVNBB_PARALLEL           Optional: parallelization; defaults to 2
 ##     LIBTOOL_CONFIG           Optional: libtool configuration path
 ##
 ## The invoking script will set local variable named ${scripts} that
@@ -38,6 +39,8 @@
 environment=$(cd "${scripts}/.." && pwd)/environment.sh
 
 eval $(${environment})
+SVNBB_PARALLEL="${SVNBB_PARALLEL-2}"
+
 export PATH
 export SVNBB_BDB
 export SVNBB_SWIG
@@ -46,27 +49,19 @@ export SVNBB_APR_13_NOTHREAD
 export SVNBB_APR_15
 export SVNBB_APR_20_DEV
 export SVNBB_JUNIT
+export SVNBB_PARALLEL
 export LIBTOOL_CONFIG
 
 
-# A file named 'ramdisk' containing the uniqe RAM disk volume name
-# used by the build slave must be present in the same directory as the
-# scripts.
+# Set the absolute source path
+abssrc=$(pwd)
 
-if [ ! -f "${scripts}/ramdisk" ]; then
-    echo "Missing config file: ${scripts}/ramdisk"
-    exit 1
-fi
-
-# Set the name of the RAMdisk volume
-volume_name=$(head -1 "${scripts}/ramdisk")
+# The RAMdisk volume name is the same as the name of the builder
+volume_name=$(basename $(dirname "${abssrc}"))
 if [ -z "${volume_name}" ]; then
     echo "Missing config parameter: RAMdisk volume name"
     exit 1
 fi
-
-# Set the absolute source path
-abssrc=$(pwd)
 
 # Set the absolute build path
 absbld="/Volumes/${volume_name}"

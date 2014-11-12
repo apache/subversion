@@ -51,7 +51,7 @@ rm -fr sqlite-amalgamation
 # Step 2: Regenerate build scripts
 #
 
-echo "\n============ autogen.sh\n"
+echo "============ autogen.sh"
 cd ${abssrc}
 ./autogen.sh
 
@@ -81,4 +81,4 @@ ${abssrc}/configure \
 
 echo "============ make"
 cd ${absbld}
-make -j4
+make -j${SVNBB_PARALLEL}

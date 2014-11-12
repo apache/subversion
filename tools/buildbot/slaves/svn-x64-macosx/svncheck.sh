@@ -31,7 +31,7 @@ run_tests() {
 
     echo "============ make check ${ra}+${fs}"
     cd ${absbld}
-    make ${check} FS_TYPE=${fs} PARALLEL=2 CLEANUP=1 ${skipC}
+    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC}
 
     # The tests.log file must exist
     test -f tests.log || exit 1
