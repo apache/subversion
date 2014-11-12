@@ -3992,7 +3992,9 @@ repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
   const svn_branch_revision_root_t *rev_root;
 
-  SVN_ERR_ASSERT(revnum >= 0 && revnum < repos->rev_roots->nelts);
+  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), revnum);
 
   rev_root = APR_ARRAY_IDX(repos->rev_roots, revnum, void *);
   el_rev->rev = revnum;

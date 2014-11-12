@@ -873,13 +873,13 @@ svn_branch_diff(svn_editor3_t *editor,
 #define VERIFY_EID_NONEXISTENT(op, i)                                   \
   if (el_rev[i]->eid != -1)                                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: '%s': already exists"),             \
+                             _("%s: Path '%s' already exists"),         \
                              op, action->path[i]);
 
 #define VERIFY_EID_EXISTS(op, i)                                        \
   if (el_rev[i]->eid == -1)                                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: '%s': not found"),                  \
+                             _("%s: Path '%s' not found"),              \
                              op, action->path[i]);
 
 static svn_error_t *
