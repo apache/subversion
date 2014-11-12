@@ -611,14 +611,14 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           SVN_DBG(("merged: e%d => parent=e%d, name=%s, content=...",
                    eid, result->parent_eid, result->name));
 
-          SVN_ERR(svn_editor3_alter(editor, tgt->rev, eid,
+          SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
                                     result->parent_eid, result->name,
                                     result->content));
         }
       else if (e_tgt)
         {
           SVN_DBG(("merged: e%d => <deleted>", eid));
-          SVN_ERR(svn_editor3_delete(editor, tgt->rev, eid));
+          SVN_ERR(svn_editor3_delete(editor, tgt->rev, tgt->branch, eid));
         }
       else if (result)
         {
@@ -631,7 +631,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_editor3_instantiate(editor, eid,
+          SVN_ERR(svn_editor3_instantiate(editor, tgt->branch, eid,
                                           result->parent_eid, result->name,
                                           result->content));
         }
@@ -1027,17 +1027,21 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_LIST_BRANCHES:
           {
-            svn_branch_family_t *family = svn_branch_get_family(editor);
+            SVN_ERR(find_el_rev_by_rrpath_rev(
+                      &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
+                      pool, pool));
 
-            SVN_ERR(family_list_branch_instances(family,
+            SVN_ERR(family_list_branch_instances(el_rev[0]->branch->sibling_defn->family,
                                                  FALSE, iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES_R:
           {
-            svn_branch_family_t *family = svn_branch_get_family(editor);
+            SVN_ERR(find_el_rev_by_rrpath_rev(
+                      &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
+                      pool, pool));
 
-            SVN_ERR(family_list_branch_instances(family,
+            SVN_ERR(family_list_branch_instances(el_rev[0]->branch->sibling_defn->family,
                                                  TRUE, iterpool));
           }
           break;
@@ -1055,7 +1059,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_REV_UNSPECIFIED("branchify", 0);
           VERIFY_EID_EXISTS("branchify", 0);
           SVN_ERR(svn_branch_branchify(editor,
-                                       el_rev[0]->eid,
+                                       el_rev[0]->branch, el_rev[0]->eid,
                                        iterpool));
           made_changes = TRUE;
           break;
@@ -1096,7 +1100,7 @@ execute(const apr_array_header_t *actions,
             svn_editor3_node_content_t *content = NULL; /* "no change" */
 
             SVN_ERR(svn_editor3_alter(editor, el_rev[0]->rev,
-                                      el_rev[0]->eid,
+                                      el_rev[0]->branch, el_rev[0]->eid,
                                       parent_el_rev[1]->eid, path_name[1], content));
           }
           made_changes = TRUE;
@@ -1109,6 +1113,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_NONEXISTENT("cp", 1);
           SVN_ERR(svn_editor3_copy_tree(editor,
                                         el_rev[0],
+                                        parent_el_rev[1]->branch,
                                         parent_el_rev[1]->eid, path_name[1]));
           made_changes = TRUE;
           break;
@@ -1116,7 +1121,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_REV_UNSPECIFIED("rm", 0);
           VERIFY_EID_EXISTS("rm", 0);
           SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
-                                     el_rev[0]->eid));
+                                     el_rev[0]->branch, el_rev[0]->eid));
           made_changes = TRUE;
           break;
         case ACTION_MKDIR:
@@ -1129,7 +1134,9 @@ execute(const apr_array_header_t *actions,
             int new_eid;
 
             SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
-                                    parent_el_rev[0]->eid, path_name[0], content));
+                                    parent_el_rev[0]->branch,
+                                    parent_el_rev[0]->eid, path_name[0],
+                                    content));
           }
           made_changes = TRUE;
           break;
@@ -1166,7 +1173,7 @@ execute(const apr_array_header_t *actions,
             if (el_rev[1]->eid >= 0)
               {
                 SVN_ERR(svn_editor3_alter(editor, SVN_INVALID_REVNUM,
-                                          el_rev[1]->eid,
+                                          el_rev[1]->branch, el_rev[1]->eid,
                                           parent_el_rev[1]->eid, path_name[1],
                                           content));
               }
@@ -1175,6 +1182,7 @@ execute(const apr_array_header_t *actions,
                 int new_eid;
 
                 SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_file,
+                                        parent_el_rev[1]->branch,
                                         parent_el_rev[1]->eid, path_name[1],
                                         content));
               }
