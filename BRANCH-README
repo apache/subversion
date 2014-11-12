@@ -40,10 +40,8 @@ Work on this branch:
     To do:
       when reading metadata, share the same branch definition and family
         objects across all revisions
-      copying: fix translation to Ev1 of operations nested inside a copy
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
-      copying: use Ev1 copy rather than plain add to commit a move
       merge: interpret the three arguments consistently as relative to
         the repo root
       change the editor API so that the branch is specified explicitly
