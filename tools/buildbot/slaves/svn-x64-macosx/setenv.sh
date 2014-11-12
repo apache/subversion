@@ -35,7 +35,7 @@
 ## is the absolute path the parent of this file.
 
 # Modify this to suit your deployment
-environment=$(cd "${scripts}/../tools" && pwd)/environment.sh
+environment=$(cd "${scripts}/.." && pwd)/environment.sh
 
 eval $(${environment})
 export PATH
@@ -54,12 +54,16 @@ export LIBTOOL_CONFIG
 # scripts.
 
 if [ ! -f "${scripts}/ramdisk" ]; then
-    echo "Missing config file: 'ramdisk'"
+    echo "Missing config file: ${scripts}/ramdisk"
     exit 1
 fi
 
 # Set the name of the RAMdisk volume
 volume_name=$(head -1 "${scripts}/ramdisk")
+if [ -z "${volume_name}" ]; then
+    echo "Missing config parameter: RAMdisk volume name"
+    exit 1
+fi
 
 # Set the absolute source path
 abssrc=$(pwd)
