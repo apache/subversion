@@ -28,7 +28,7 @@ fi
 volume="/Volumes/$1"
 
 mount | fgrep "${volume}" >/dev/null && {
-    hdiutil detach "${volume}" -force
+    test -e "${volume}" && hdiutil detach "${volume}" -force
 }
 
 exit 0

@@ -28,11 +28,13 @@ fi
 volume="/Volumes/$1"
 
 mount | fgrep "${volume}" >/dev/null || {
-    # Make sure we strip trailing spaces from the result of older
-    # versions of hduitil.
-    device=$(echo $(hdiutil attach -nomount ram://1200000))
-    newfs_hfs -M 0700 -v "$1" "${device}"
-    hdiutil mountvol "${device}"
+    test -e "${volume}" || {
+        # Make sure we strip trailing spaces from the result of older
+        # versions of hduitil.
+        device=$(echo $(hdiutil attach -nomount ram://1000000))
+        newfs_hfs -M 0700 -v "$1" "${device}"
+        hdiutil mountvol "${device}"
+    }
 }
 
 exit 0
