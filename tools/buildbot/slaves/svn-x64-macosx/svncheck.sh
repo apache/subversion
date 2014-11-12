@@ -21,6 +21,7 @@
 run_tests() {
     ra="$1"
     fs="$2"
+    ok=true
 
     case "${ra}" in
         local) check=check;             skipC=;;
@@ -31,17 +32,13 @@ run_tests() {
 
     echo "============ make check ${ra}+${fs}"
     cd ${absbld}
-    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC}
+    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} || ok=false
 
-    # The tests.log file must exist
-    test -f tests.log || exit 1
-    mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
+    # Move any log files to the buildbot work directory
+    test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
+    test -f fails.log && mv fails.log "${abssrc}/.test-logs/fails-${ra}-${fs}.log"
 
-    # If a fails.log file exists, the tests failed.
-    test -f fails.log && {
-        mv fails.log "${abssrc}/.test-logs/fails-${ra}-${fs}.log"
-        exit 1
-    }
+    ${ok} || exit 1
 }
 
 
