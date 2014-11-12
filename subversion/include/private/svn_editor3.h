@@ -1751,7 +1751,22 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
 const char *
 svn_branch_get_root_rrpath(const svn_branch_instance_t *branch);
 
+/* Return the branch-relative path of element EID in BRANCH.
+ *
+ * If the EID mapping does not currently have a complete path to EID,
+ * return NULL.
+ *
+ * ### A branch element's rrpath can change during the edit.
+ */
+const char *
+svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
+                           int eid,
+                           apr_pool_t *result_pool);
+
 /* Return the repos-relpath of element EID in BRANCH.
+ *
+ * If the EID mapping does not currently have a complete path to EID,
+ * return NULL.
  *
  * ### A branch element's rrpath can change during the edit.
  */

@@ -772,6 +772,28 @@ svn_branch_diff_e(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/*  */
+typedef struct diff_item_t
+{
+  char status_mod, status_reparent, status_rename;
+  const char *major_path;
+  const char *from;
+} diff_item_t;
+
+/*  */
+static int
+diff_ordering(const void *a, const void *b)
+{
+  const diff_item_t *item1 = *(void *const *)a, *item2 = *(void *const *)b;
+
+  /* Sort items with status 'D' before all others */
+  if ((item1->status_mod == 'D') != (item2->status_mod == 'D'))
+    return (item2->status_mod == 'D') - (item1->status_mod == 'D');
+
+  /* Sort by path */
+  return svn_path_compare_paths(item1->major_path, item2->major_path);
+}
+
 /* Display differences, referring to paths */
 static svn_error_t *
 svn_branch_diff(svn_editor3_t *editor,
@@ -781,6 +803,9 @@ svn_branch_diff(svn_editor3_t *editor,
 {
   apr_hash_t *diff_yca_tgt;
   int first_eid, next_eid, eid;
+  apr_array_header_t *diff_changes
+    = apr_array_make(scratch_pool, 0, sizeof(void *));
+  int i;
 
   if (left->branch->sibling_defn->family->fid
       != right->branch->sibling_defn->family->fid)
@@ -816,43 +841,63 @@ svn_branch_diff(svn_editor3_t *editor,
 
       if (e0 || e1)
         {
-          char status_mod = ' ', status_reparent = ' ', status_rename = ' ';
+          diff_item_t *item = apr_palloc(scratch_pool, sizeof(*item));
           const char *path0 = NULL, *path1 = NULL;
           const char *from = "";
 
+          item->status_mod = ' ';
+          item->status_reparent = ' ';
+          item->status_rename = ' ';
+
           if (e0 && e1)
             {
-              status_mod = 'M';
-              status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
-              status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
+              item->status_mod = 'M';
+              item->status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
+              item->status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
             }
           else
             {
-              status_mod = e0 ? 'D' : 'A';
+              item->status_mod = e0 ? 'D' : 'A';
             }
           if (e0)
-            path0 = svn_branch_get_rrpath_by_eid(left->branch, eid, scratch_pool);
+            path0 = svn_branch_get_path_by_eid(left->branch, eid, scratch_pool);
           if (e1)
-            path1 = svn_branch_get_rrpath_by_eid(right->branch, eid, scratch_pool);
+            path1 = svn_branch_get_path_by_eid(right->branch, eid, scratch_pool);
           if (e0 && e1
               && (e0->parent_eid != e1->parent_eid
                   || strcmp(e0->name, e1->name) != 0))
             {
               if (e0->parent_eid == e1->parent_eid)
-                from = apr_psprintf(scratch_pool, " (renamed from .../%s)", e0->name);
+                from = apr_psprintf(scratch_pool,
+                                    " (renamed from .../%s)",
+                                    e0->name);
               else if (strcmp(e0->name, e1->name) == 0)
-                from = apr_psprintf(scratch_pool, " (moved from %s/...)",
-                                    svn_branch_get_rrpath_by_eid(left->branch,
-                                                                 e0->parent_eid,
-                                                                 scratch_pool));
+                from = apr_psprintf(scratch_pool,
+                                    " (moved from %s/...)",
+                                    svn_branch_get_path_by_eid(left->branch,
+                                                               e0->parent_eid,
+                                                               scratch_pool));
               else
-                from = apr_psprintf(scratch_pool, " (moved+renamed from %s)", path0);
+                from = apr_psprintf(scratch_pool,
+                                    " (moved+renamed from %s)",
+                                    path0);
             }
-          printf("%c%c%c %s%s\n",
-                 status_mod, status_reparent, status_rename,
-                 e1 ? path1 : path0,
-                 from);
+          item->major_path = (e1 ? path1 : path0);
+          item->from = from;
+          APR_ARRAY_PUSH(diff_changes, void *) = item;
         }
+    }
+
+  svn_sort__array(diff_changes, diff_ordering);
+
+  for (i = 0; i < diff_changes->nelts; i++)
+    {
+      diff_item_t *item = APR_ARRAY_IDX(diff_changes, i, void *);
+
+      printf("%c%c%c %s%s\n",
+             item->status_mod, item->status_reparent, item->status_rename,
+             item->major_path,
+             item->from);
     }
 
   return SVN_NO_ERROR;
