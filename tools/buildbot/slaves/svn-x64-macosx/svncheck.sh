@@ -74,7 +74,7 @@ done
 if [ -d "${abssrc}/.test-logs" ]; then
     rm -fr "${abssrc}/.test-logs"
 fi
-mkdir "${abssrc}/.test-logs"
+mkdir "${abssrc}/.test-logs" || exit 1
 
 
 ${check_local} && {
