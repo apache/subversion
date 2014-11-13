@@ -1288,8 +1288,8 @@ record_skip(merge_cmd_baton_t *merge_b,
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
 
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    scratch_pool);
+      merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2, notify,
+                                 scratch_pool);
     }
   return SVN_NO_ERROR;
 }
@@ -1415,8 +1415,8 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                                     scratch_pool);
       notify->kind = local_node_kind;
 
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    scratch_pool);
+      merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2, notify,
+                                 scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1450,8 +1450,8 @@ record_update_add(merge_cmd_baton_t *merge_b,
       notify = svn_wc_create_notify(local_abspath, action, scratch_pool);
       notify->kind = kind;
 
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    scratch_pool);
+      merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2, notify,
+                                 scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1484,8 +1484,8 @@ record_update_update(merge_cmd_baton_t *merge_b,
       notify->content_state = content_state;
       notify->prop_state = prop_state;
 
-      (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                    scratch_pool);
+      merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2, notify,
+                                 scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1551,8 +1551,8 @@ handle_pending_notifications(merge_cmd_baton_t *merge_b,
           notify->kind = svn_node_kind_from_word(
                                     apr_hash_this_val(hi));
 
-          (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
-                                        notify, scratch_pool);
+          merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
+                                     notify, scratch_pool);
         }
 
       db->pending_deletes = NULL;
@@ -1618,9 +1618,9 @@ mark_dir_edited(merge_cmd_baton_t *merge_b,
           notify->kind = svn_node_dir;
           notify->content_state = notify->prop_state = db->skip_reason;
 
-          (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
-                                        notify,
-                                        scratch_pool);
+          merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
+                                     notify,
+                                     scratch_pool);
         }
 
       if (merge_b->merge_source.ancestral
@@ -1700,9 +1700,9 @@ mark_file_edited(merge_cmd_baton_t *merge_b,
           notify->kind = svn_node_file;
           notify->content_state = notify->prop_state = fb->skip_reason;
 
-          (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2,
-                                        notify,
-                                        scratch_pool);
+          merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2,
+                                     notify,
+                                     scratch_pool);
         }
 
       if (merge_b->merge_source.ancestral
@@ -3680,8 +3680,8 @@ notify_merge_begin(merge_cmd_baton_t *merge_b,
       notify->merge_range = NULL;
     }
 
-  (*merge_b->ctx->notify_func2)(merge_b->ctx->notify_baton2, notify,
-                                scratch_pool);
+  merge_b->ctx->notify_func2(merge_b->ctx->notify_baton2, notify,
+                             scratch_pool);
 
   return SVN_NO_ERROR;
 }

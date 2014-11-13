@@ -1740,7 +1740,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
       svn_wc_notify_t *notify = svn_wc_create_notify(
                                   dst_abspath, svn_wc_notify_add, pool);
       notify->kind = pair->src_kind;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;

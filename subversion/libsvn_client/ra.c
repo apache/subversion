@@ -431,7 +431,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                 svn_wc_create_notify_url(corrected,
                                          svn_wc_notify_url_redirect,
                                          scratch_pool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+              ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
             }
 
           /* Our caller will want to know what our final corrected URL was. */

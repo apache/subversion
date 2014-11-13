@@ -370,7 +370,7 @@ update_internal(svn_revnum_t *result_rev,
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
   /* Try to reuse the RA session by reparenting it to the anchor_url.
@@ -539,7 +539,7 @@ update_internal(svn_revnum_t *result_rev,
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
   /* If the caller wants the result revision, give it to them. */
@@ -745,7 +745,7 @@ svn_client_update4(apr_array_header_t **result_revs,
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_skip,
                                             iterpool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
         }
       else
