@@ -543,12 +543,11 @@ parse_dir(query_t *query,
           apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   int i;
   apr_array_header_t *entries;
   SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, query->fs, noderev,
-                                      subpool, subpool));
+                                      scratch_pool, scratch_pool));
 
   for (i = 0; i < entries->nelts; ++i)
     {
@@ -568,7 +567,6 @@ parse_dir(query_t *query,
     }
 
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -590,16 +588,16 @@ read_noderev(query_t *query,
   rep_stats_t *text = NULL;
   rep_stats_t *props = NULL;
   node_revision_t *noderev;
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  svn_stream_t *stream = svn_stream_from_stringbuf(noderev_str, subpool);
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, subpool, subpool));
+  svn_stream_t *stream = svn_stream_from_stringbuf(noderev_str, scratch_pool);
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, scratch_pool,
+                                  scratch_pool));
 
   if (noderev->data_rep)
     {
       SVN_ERR(parse_representation(&text, query,
                                    noderev->data_rep, revision_info,
-                                   result_pool, subpool));
+                                   result_pool, scratch_pool));
 
       /* if we are the first to use this rep, mark it as "text rep" */
       if (++text->ref_count == 1)
@@ -610,7 +608,7 @@ read_noderev(query_t *query,
     {
       SVN_ERR(parse_representation(&props, query,
                                    noderev->prop_rep, revision_info,
-                                   result_pool, subpool));
+                                   result_pool, scratch_pool));
 
       /* if we are the first to use this rep, mark it as "prop rep" */
       if (++props->ref_count == 1)
@@ -632,7 +630,8 @@ read_noderev(query_t *query,
    * process it recursively */
   if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
       && !svn_fs_fs__use_log_addressing(query->fs))
-    SVN_ERR(parse_dir(query, noderev, revision_info, result_pool, subpool));
+    SVN_ERR(parse_dir(query, noderev, revision_info, result_pool,
+                      scratch_pool));
 
   /* update stats */
   if (noderev->kind == svn_node_dir)
@@ -645,7 +644,6 @@ read_noderev(query_t *query,
       revision_info->file_noderev_size += noderev_str->len;
       revision_info->file_noderev_count++;
     }
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
