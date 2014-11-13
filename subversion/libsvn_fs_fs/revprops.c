@@ -135,20 +135,6 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Test whether revprop cache and necessary infrastructure are
-   available in FS. */
-static svn_boolean_t
-has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  /* is the cache (still) enabled? */
-  if (ffd->revprop_cache == NULL)
-    return FALSE;
-
-  return FALSE;
-}
-
 /* Container for all data required to access the packed revprop file
  * for a given REVISION.  This structure will be filled incrementally
  * by read_pack_revprops() its sub-routines.
@@ -223,16 +209,6 @@ parse_revprop(apr_hash_t **properties,
   *properties = apr_hash_make(pool);
 
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
-  if (has_revprop_cache(fs, pool))
-    {
-      fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key = { 0 };
-
-      key.revision = revision;
-      key.second = generation;
-      SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
-                             scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -709,7 +685,6 @@ switch_to_new_revprop(svn_fs_t *fs,
                       const char *tmp_path,
                       const char *perms_reference,
                       apr_array_header_t *files_to_delete,
-                      svn_boolean_t bump_generation,
                       apr_pool_t *pool)
 {
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, perms_reference,
@@ -1065,7 +1040,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
                                  apr_pool_t *pool)
 {
   svn_boolean_t is_packed;
-  svn_boolean_t bump_generation = FALSE;
   const char *final_path;
   const char *tmp_path;
   const char *perms_reference;
@@ -1075,24 +1049,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
-
-  /* Test whether revprops already exist for this revision.
-   * Only then will we need to bump the revprop generation. */
-  if (has_revprop_cache(fs, pool))
-    {
-      if (is_packed)
-        {
-          bump_generation = TRUE;
-        }
-      else
-        {
-          svn_node_kind_t kind;
-          SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprops(fs, rev, pool),
-                                    &kind,
-                                    pool));
-          bump_generation = kind != svn_node_none;
-        }
-    }
 
   /* Serialize the new revprop data */
   if (is_packed)
@@ -1111,7 +1067,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
-                                files_to_delete, bump_generation, pool));
+                                files_to_delete, pool));
 
   return SVN_NO_ERROR;
 }

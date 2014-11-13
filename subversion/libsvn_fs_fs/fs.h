@@ -353,9 +353,6 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
-  svn_cache__t *revprop_cache;
-
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
 
