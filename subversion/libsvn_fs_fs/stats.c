@@ -721,22 +721,25 @@ read_phys_revision(query_t *query,
 }
 
 /* Read the content of the pack file staring at revision BASE physical
- * addressing mode and store it in QUERY.  Use POOL for allocations.
+ * addressing mode and store it in QUERY.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_phys_pack_file(query_t *query,
                     svn_revnum_t base,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  apr_pool_t *local_pool = svn_pool_create(pool);
-  apr_pool_t *iterpool = svn_pool_create(local_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_off_t file_size = 0;
   svn_fs_fs__revision_file_t *rev_file;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, query->fs, base,
-                                           pool, pool));
-  SVN_ERR(get_file_size(&file_size, rev_file, local_pool));
+                                           scratch_pool, scratch_pool));
+  SVN_ERR(get_file_size(&file_size, rev_file, scratch_pool));
 
   /* process each revision in the pack file */
   for (i = 0; i < query->shard_size; ++i)
@@ -748,8 +751,9 @@ read_phys_pack_file(query_t *query,
         SVN_ERR(query->cancel_func(query->cancel_baton));
 
       /* create the revision info for the current rev */
-      info = apr_pcalloc(pool, sizeof(*info));
-      info->representations = apr_array_make(iterpool, 4, sizeof(rep_stats_t*));
+      info = apr_pcalloc(result_pool, sizeof(*info));
+      info->representations = apr_array_make(result_pool, 4,
+                                             sizeof(rep_stats_t*));
       info->rev_file = rev_file;
 
       info->revision = base + i;
@@ -761,9 +765,10 @@ read_phys_pack_file(query_t *query,
         SVN_ERR(svn_fs_fs__get_packed_offset(&info->end, query->fs,
                                              base + i + 1, iterpool));
 
-      SVN_ERR(read_phys_revision(query, info, pool, iterpool));
+      SVN_ERR(read_phys_revision(query, info, result_pool, iterpool));
 
-      info->representations = apr_array_copy(pool, info->representations);
+      info->representations = apr_array_copy(result_pool,
+                                             info->representations);
 
       /* Done with this revision. */
       info->rev_file = NULL;
@@ -780,23 +785,24 @@ read_phys_pack_file(query_t *query,
 
   /* one more pack file processed */
   if (query->progress_func)
-    query->progress_func(base, query->progress_baton, local_pool);
-
-  svn_pool_destroy(local_pool);
+    query->progress_func(base, query->progress_baton, scratch_pool);
 
   return SVN_NO_ERROR;
 }
 
 /* Read the content of the file for REVISION in physical addressing mode
- * and store its contents in QUERY.  Use POOL for allocations.
+ * and store its contents in QUERY.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_phys_revision_file(query_t *query,
                         svn_revnum_t revision,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
-  apr_pool_t *local_pool = svn_pool_create(pool);
-  revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
+  revision_info_t *info = apr_pcalloc(result_pool, sizeof(*info));
   apr_off_t file_size = 0;
   svn_fs_fs__revision_file_t *rev_file;
 
@@ -806,18 +812,18 @@ read_phys_revision_file(query_t *query,
 
   /* read the whole pack file into memory */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, query->fs, revision,
-                                           pool, pool));
-  SVN_ERR(get_file_size(&file_size, rev_file, local_pool));
+                                           scratch_pool, scratch_pool));
+  SVN_ERR(get_file_size(&file_size, rev_file, scratch_pool));
 
   /* create the revision info for the current rev */
-  info->representations = apr_array_make(pool, 4, sizeof(rep_stats_t*));
+  info->representations = apr_array_make(result_pool, 4, sizeof(rep_stats_t*));
 
   info->rev_file = rev_file;
   info->revision = revision;
   info->offset = 0;
   info->end = file_size;
 
-  SVN_ERR(read_phys_revision(query, info, pool, local_pool));
+  SVN_ERR(read_phys_revision(query, info, result_pool, scratch_pool));
 
   /* Done with this revision. */
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
@@ -830,12 +836,10 @@ read_phys_revision_file(query_t *query,
   if (query->progress_func)
     {
       if (query->shard_size && (revision % query->shard_size == 0))
-        query->progress_func(revision, query->progress_baton, local_pool);
+        query->progress_func(revision, query->progress_baton, scratch_pool);
       if (!query->shard_size && (revision % 1000 == 0))
-        query->progress_func(revision, query->progress_baton, local_pool);
+        query->progress_func(revision, query->progress_baton, scratch_pool);
     }
-
-  svn_pool_destroy(local_pool);
 
   return SVN_NO_ERROR;
 }
@@ -860,23 +864,26 @@ get_log_change_count(const char *changes,
   return lines / 2;
 }
 
-/* Read the item described by ENTRY from the REV_FILE and return
- * the respective byte sequence in *CONTENTS allocated in POOL.
+/* Read the item described by ENTRY from the REV_FILE and return the
+ * respective byte sequence in *CONTENTS, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations
  */
 static svn_error_t *
 read_item(svn_stringbuf_t **contents,
           svn_fs_fs__revision_file_t *rev_file,
           svn_fs_fs__p2l_entry_t *entry,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *item = svn_stringbuf_create_ensure(entry->size, pool);
+  svn_stringbuf_t *item = svn_stringbuf_create_ensure(entry->size,
+                                                      result_pool);
   item->len = entry->size;
   item->data[item->len] = 0;
 
   SVN_ERR(svn_io_file_aligned_seek(rev_file->file, rev_file->block_size,
-                                   NULL, entry->offset, pool));
+                                   NULL, entry->offset, scratch_pool));
   SVN_ERR(svn_io_file_read_full2(rev_file->file, item->data, item->len,
-                                 NULL, NULL, pool));
+                                 NULL, NULL, scratch_pool));
 
   *contents = item;
 
@@ -884,17 +891,20 @@ read_item(svn_stringbuf_t **contents,
 }
 
 /* Process the logically addressed revision contents of revisions BASE to
- * BASE + COUNT - 1 in QUERY.  Use POOL for allocations.
+ * BASE + COUNT - 1 in QUERY.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_log_rev_or_packfile(query_t *query,
                          svn_revnum_t base,
                          int count,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = query->fs->fsap_data;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_pool_t *localpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
   int i;
@@ -904,8 +914,9 @@ read_log_rev_or_packfile(query_t *query,
   for (i = 0; i < count; ++i)
     {
       /* create the revision info for the current rev */
-      revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
-      info->representations = apr_array_make(pool, 4, sizeof(rep_stats_t*));
+      revision_info_t *info = apr_pcalloc(result_pool, sizeof(*info));
+      info->representations = apr_array_make(result_pool, 4,
+                                             sizeof(rep_stats_t*));
       info->revision = base + i;
 
       APR_ARRAY_PUSH(query->revisions, revision_info_t*) = info;
@@ -913,9 +924,9 @@ read_log_rev_or_packfile(query_t *query,
 
   /* open the pack / rev file that is covered by the p2l index */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, query->fs, base,
-                                           localpool, iterpool));
+                                           scratch_pool, iterpool));
   SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, query->fs, rev_file,
-                                        base, localpool));
+                                        base, scratch_pool));
 
   /* record the whole pack size in the first rev so the total sum will
      still be correct */
@@ -959,8 +970,8 @@ read_log_rev_or_packfile(query_t *query,
               revision_info_t *info = APR_ARRAY_IDX(query->revisions,
                                                     entry->item.revision,
                                                     revision_info_t*);
-              SVN_ERR(read_item(&item, rev_file, entry, iterpool));
-              SVN_ERR(read_noderev(query, item, info, pool, iterpool));
+              SVN_ERR(read_item(&item, rev_file, entry, iterpool, iterpool));
+              SVN_ERR(read_noderev(query, item, info, result_pool, iterpool));
             }
           else if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
             {
@@ -968,7 +979,7 @@ read_log_rev_or_packfile(query_t *query,
               revision_info_t *info = APR_ARRAY_IDX(query->revisions,
                                                     entry->item.revision,
                                                     revision_info_t*);
-              SVN_ERR(read_item(&item, rev_file, entry, iterpool));
+              SVN_ERR(read_item(&item, rev_file, entry, iterpool, iterpool));
               info->change_count
                 = get_log_change_count(item->data + 0, item->len);
               info->changes_len += entry->size;
@@ -981,74 +992,99 @@ read_log_rev_or_packfile(query_t *query,
 
   /* clean up and close file handles */
   svn_pool_destroy(iterpool);
-  svn_pool_destroy(localpool);
 
   return SVN_NO_ERROR;
 }
 
 /* Read the content of the pack file staring at revision BASE logical
- * addressing mode and store it in QUERY.  Use POOL for allocations.
+ * addressing mode and store it in QUERY.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_log_pack_file(query_t *query,
                    svn_revnum_t base,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(read_log_rev_or_packfile(query, base, query->shard_size, pool));
+  SVN_ERR(read_log_rev_or_packfile(query, base, query->shard_size,
+                                   result_pool, scratch_pool));
 
   /* one more pack file processed */
   if (query->progress_func)
-    query->progress_func(base, query->progress_baton, pool);
+    query->progress_func(base, query->progress_baton, scratch_pool);
 
   return SVN_NO_ERROR;
 }
 
 /* Read the content of the file for REVISION in logical addressing mode
- * and store its contents in QUERY.  Use POOL for allocations.
+ * and store its contents in QUERY.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_log_revision_file(query_t *query,
                        svn_revnum_t revision,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  SVN_ERR(read_log_rev_or_packfile(query, revision, 1, pool));
+  SVN_ERR(read_log_rev_or_packfile(query, revision, 1,
+                                   result_pool, scratch_pool));
 
   /* show progress every 1000 revs or so */
   if (query->progress_func)
     {
       if (query->shard_size && (revision % query->shard_size == 0))
-        query->progress_func(revision, query->progress_baton, pool);
+        query->progress_func(revision, query->progress_baton, scratch_pool);
       if (!query->shard_size && (revision % 1000 == 0))
-        query->progress_func(revision, query->progress_baton, pool);
+        query->progress_func(revision, query->progress_baton, scratch_pool);
     }
 
   return SVN_NO_ERROR;
 }
 
 /* Read the repository and collect the stats info in QUERY.
- * Use POOL for allocations.
+ *
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_revisions(query_t *query,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_revnum_t revision;
 
   /* read all packed revs */
   for ( revision = 0
       ; revision < query->min_unpacked_rev
       ; revision += query->shard_size)
-    if (svn_fs_fs__use_log_addressing(query->fs))
-      SVN_ERR(read_log_pack_file(query, revision, pool));
-    else
-      SVN_ERR(read_phys_pack_file(query, revision, pool));
+    {
+      svn_pool_clear(iterpool);
+
+      if (svn_fs_fs__use_log_addressing(query->fs))
+        SVN_ERR(read_log_pack_file(query, revision, result_pool, iterpool));
+      else
+        SVN_ERR(read_phys_pack_file(query, revision, result_pool, iterpool));
+    }
 
   /* read non-packed revs */
   for ( ; revision <= query->head; ++revision)
-    if (svn_fs_fs__use_log_addressing(query->fs))
-      SVN_ERR(read_log_revision_file(query, revision, pool));
-    else
-      SVN_ERR(read_phys_revision_file(query, revision, pool));
+    {
+      svn_pool_clear(iterpool);
+
+      if (svn_fs_fs__use_log_addressing(query->fs))
+        SVN_ERR(read_log_revision_file(query, revision, result_pool,
+                                       iterpool));
+      else
+        SVN_ERR(read_phys_revision_file(query, revision, result_pool,
+                                        iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1217,7 +1253,7 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
   SVN_ERR(create_query(&query, fs, *stats, progress_func, progress_func,
                        cancel_func, cancel_baton, scratch_pool,
                        scratch_pool));
-  SVN_ERR(read_revisions(query, scratch_pool));
+  SVN_ERR(read_revisions(query, scratch_pool, scratch_pool));
   aggregate_stats(query->revisions, *stats);
 
   return SVN_NO_ERROR;
