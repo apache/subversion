@@ -74,10 +74,10 @@ typedef struct rep_stats_t
   apr_off_t offset;
 
   /* item length in bytes */
-  apr_size_t size;
+  apr_uint64_t size;
 
   /* item length after de-deltification */
-  apr_size_t expanded_size;
+  apr_uint64_t expanded_size;
 
   /* revision that contains this representation
    * (may be referenced by other revisions, though) */
@@ -108,26 +108,26 @@ typedef struct revision_info_t
   apr_size_t changes;
 
   /* length of the changes list on bytes */
-  apr_size_t changes_len;
+  apr_uint64_t changes_len;
 
   /* offset of the changes list relative to OFFSET */
-  apr_size_t change_count;
+  apr_uint64_t change_count;
 
   /* first offset behind the revision data in the pack file (file length
    * for non-packed revs) */
   apr_off_t end;
 
   /* number of directory noderevs in this revision */
-  apr_size_t dir_noderev_count;
+  apr_uint64_t dir_noderev_count;
 
   /* number of file noderevs in this revision */
-  apr_size_t file_noderev_count;
+  apr_uint64_t file_noderev_count;
 
   /* total size of directory noderevs (i.e. the structs - not the rep) */
-  apr_size_t dir_noderev_size;
+  apr_uint64_t dir_noderev_size;
 
   /* total size of file noderevs (i.e. the structs - not the rep) */
-  apr_size_t file_noderev_size;
+  apr_uint64_t file_noderev_size;
 
   /* all rep_stats_t of this revision (in no particular order),
    * i.e. those that point back to this struct */
@@ -704,11 +704,11 @@ read_noderev(query_t *query,
 /* Given the unparsed changes list in CHANGES with LEN chars, return the
  * number of changed paths encoded in it.
  */
-static apr_size_t
+static apr_uint64_t
 get_change_count(const char *changes,
                  apr_size_t len)
 {
-  apr_size_t lines = 0;
+  apr_uint64_t lines = 0;
   const char *end = changes + len;
 
   /* line count */

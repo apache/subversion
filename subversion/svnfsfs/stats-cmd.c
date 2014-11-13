@@ -44,14 +44,14 @@ print_rep_stats(svn_fs_fs__representation_stats_t *stats,
            "%20s bytes expanded shared size\n"
            "%20s bytes with rep-sharing off\n"
            "%20s shared references\n"),
-         svn__i64toa_sep(stats->total.packed_size, ',', pool),
-         svn__i64toa_sep(stats->total.count, ',', pool),
-         svn__i64toa_sep(stats->shared.packed_size, ',', pool),
-         svn__i64toa_sep(stats->shared.count, ',', pool),
-         svn__i64toa_sep(stats->total.expanded_size, ',', pool),
-         svn__i64toa_sep(stats->shared.expanded_size, ',', pool),
-         svn__i64toa_sep(stats->expanded_size, ',', pool),
-         svn__i64toa_sep(stats->references - stats->total.count, ',', pool));
+         svn__ui64toa_sep(stats->total.packed_size, ',', pool),
+         svn__ui64toa_sep(stats->total.count, ',', pool),
+         svn__ui64toa_sep(stats->shared.packed_size, ',', pool),
+         svn__ui64toa_sep(stats->shared.count, ',', pool),
+         svn__ui64toa_sep(stats->total.expanded_size, ',', pool),
+         svn__ui64toa_sep(stats->shared.expanded_size, ',', pool),
+         svn__ui64toa_sep(stats->expanded_size, ',', pool),
+         svn__ui64toa_sep(stats->references - stats->total.count, ',', pool));
 }
 
 /* Print the (used) contents of CHANGES.  Use POOL for allocations.
@@ -63,7 +63,7 @@ print_largest_reps(svn_fs_fs__largest_changes_t *changes,
   apr_size_t i;
   for (i = 0; i < changes->count && changes->changes[i]->size; ++i)
     printf(_("%12s r%-8ld %s\n"),
-           svn__i64toa_sep(changes->changes[i]->size, ',', pool),
+           svn__ui64toa_sep(changes->changes[i]->size, ',', pool),
            changes->changes[i]->revision,
            changes->changes[i]->path->data);
 }
@@ -90,9 +90,9 @@ print_histogram(svn_fs_fs__histogram_t *histogram,
   for (i = last; i >= first; --i)
     printf(_("  [2^%2d, 2^%2d)   %15s (%2d%%) bytes in %12s (%2d%%) items\n"),
            i-1, i,
-           svn__i64toa_sep(histogram->lines[i].sum, ',', pool),
+           svn__ui64toa_sep(histogram->lines[i].sum, ',', pool),
            (int)(histogram->lines[i].sum * 100 / histogram->total.sum),
-           svn__i64toa_sep(histogram->lines[i].count, ',', pool),
+           svn__ui64toa_sep(histogram->lines[i].count, ',', pool),
            (int)(histogram->lines[i].count * 100 / histogram->total.count));
 }
 
@@ -209,14 +209,14 @@ print_extensions_by_changes(svn_fs_fs__stats_t *stats,
       sum += info->node_histogram.total.count;
       printf(_("%11s %20s (%2d%%) representations\n"),
              info->extension,
-             svn__i64toa_sep(info->node_histogram.total.count, ',', pool),
+             svn__ui64toa_sep(info->node_histogram.total.count, ',', pool),
              (int)(info->node_histogram.total.count * 100 /
                    stats->file_histogram.total.count));
     }
 
   printf(_("%11s %20s (%2d%%) representations\n"),
          "(others)",
-         svn__i64toa_sep(stats->file_histogram.total.count - sum, ',', pool),
+         svn__ui64toa_sep(stats->file_histogram.total.count - sum, ',', pool),
          (int)((stats->file_histogram.total.count - sum) * 100 /
                stats->file_histogram.total.count));
 }
@@ -239,14 +239,14 @@ print_extensions_by_nodes(svn_fs_fs__stats_t *stats,
       sum += info->node_histogram.total.sum;
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
-             svn__i64toa_sep(info->node_histogram.total.sum, ',', pool),
+             svn__ui64toa_sep(info->node_histogram.total.sum, ',', pool),
              (int)(info->node_histogram.total.sum * 100 /
                    stats->file_histogram.total.sum));
     }
 
   printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
-         svn__i64toa_sep(stats->file_histogram.total.sum - sum, ',', pool),
+         svn__ui64toa_sep(stats->file_histogram.total.sum - sum, ',', pool),
          (int)((stats->file_histogram.total.sum - sum) * 100 /
                stats->file_histogram.total.sum));
 }
@@ -269,14 +269,15 @@ print_extensions_by_reps(svn_fs_fs__stats_t *stats,
       sum += info->rep_histogram.total.sum;
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
-             svn__i64toa_sep(info->rep_histogram.total.sum, ',', pool),
+             svn__ui64toa_sep(info->rep_histogram.total.sum, ',', pool),
              (int)(info->rep_histogram.total.sum * 100 /
                    stats->rep_size_histogram.total.sum));
     }
 
   printf(_("%11s %20s (%2d%%) bytes\n"),
          "(others)",
-         svn__i64toa_sep(stats->rep_size_histogram.total.sum - sum, ',', pool),
+         svn__ui64toa_sep(stats->rep_size_histogram.total.sum - sum, ',',
+                          pool),
          (int)((stats->rep_size_histogram.total.sum - sum) * 100 /
                stats->rep_size_histogram.total.sum));
 }
@@ -320,29 +321,29 @@ print_stats(svn_fs_fs__stats_t *stats,
            "%20s bytes in %12s representations\n"
            "%20s bytes expanded representation size\n"
            "%20s bytes with rep-sharing off\n"),
-         svn__i64toa_sep(stats->total_size, ',', pool),
-         svn__i64toa_sep(stats->revision_count, ',', pool),
-         svn__i64toa_sep(stats->change_len, ',', pool),
-         svn__i64toa_sep(stats->change_count, ',', pool),
-         svn__i64toa_sep(stats->total_node_stats.size, ',', pool),
-         svn__i64toa_sep(stats->total_node_stats.count, ',', pool),
-         svn__i64toa_sep(stats->total_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->total_size, ',', pool),
+         svn__ui64toa_sep(stats->revision_count, ',', pool),
+         svn__ui64toa_sep(stats->change_len, ',', pool),
+         svn__ui64toa_sep(stats->change_count, ',', pool),
+         svn__ui64toa_sep(stats->total_node_stats.size, ',', pool),
+         svn__ui64toa_sep(stats->total_node_stats.count, ',', pool),
+         svn__ui64toa_sep(stats->total_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->total_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->total_rep_stats.total.expanded_size, ',',
+         svn__ui64toa_sep(stats->total_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->total_rep_stats.total.expanded_size, ',',
                          pool),
-         svn__i64toa_sep(stats->total_rep_stats.expanded_size, ',', pool));
+         svn__ui64toa_sep(stats->total_rep_stats.expanded_size, ',', pool));
 
   printf("\nNoderev statistics:\n");
   printf(_("%20s bytes in %12s nodes total\n"
            "%20s bytes in %12s directory noderevs\n"
            "%20s bytes in %12s file noderevs\n"),
-         svn__i64toa_sep(stats->total_node_stats.size, ',', pool),
-         svn__i64toa_sep(stats->total_node_stats.count, ',', pool),
-         svn__i64toa_sep(stats->dir_node_stats.size, ',', pool),
-         svn__i64toa_sep(stats->dir_node_stats.count, ',', pool),
-         svn__i64toa_sep(stats->file_node_stats.size, ',', pool),
-         svn__i64toa_sep(stats->file_node_stats.count, ',', pool));
+         svn__ui64toa_sep(stats->total_node_stats.size, ',', pool),
+         svn__ui64toa_sep(stats->total_node_stats.count, ',', pool),
+         svn__ui64toa_sep(stats->dir_node_stats.size, ',', pool),
+         svn__ui64toa_sep(stats->dir_node_stats.count, ',', pool),
+         svn__ui64toa_sep(stats->file_node_stats.size, ',', pool),
+         svn__ui64toa_sep(stats->file_node_stats.count, ',', pool));
 
   printf("\nRepresentation statistics:\n");
   printf(_("%20s bytes in %12s representations total\n"
@@ -352,26 +353,26 @@ print_stats(svn_fs_fs__stats_t *stats,
            "%20s bytes in %12s directory property representations\n"
            "%20s bytes in %12s file property representations\n"
            "%20s bytes in header & footer overhead\n"),
-         svn__i64toa_sep(stats->total_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->total_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->total_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->dir_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->total_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->dir_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->dir_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->file_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->dir_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->file_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->file_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->added_rep_size_histogram.total.sum, ',',
+         svn__ui64toa_sep(stats->file_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->added_rep_size_histogram.total.sum, ',',
                          pool),
-         svn__i64toa_sep(stats->added_rep_size_histogram.total.count, ',',
+         svn__ui64toa_sep(stats->added_rep_size_histogram.total.count, ',',
                          pool),
-         svn__i64toa_sep(stats->dir_prop_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->dir_prop_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->dir_prop_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->file_prop_rep_stats.total.packed_size, ',',
+         svn__ui64toa_sep(stats->dir_prop_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->file_prop_rep_stats.total.packed_size, ',',
                          pool),
-         svn__i64toa_sep(stats->file_prop_rep_stats.total.count, ',', pool),
-         svn__i64toa_sep(stats->total_rep_stats.total.overhead_size, ',',
+         svn__ui64toa_sep(stats->file_prop_rep_stats.total.count, ',', pool),
+         svn__ui64toa_sep(stats->total_rep_stats.total.overhead_size, ',',
                         pool));
 
   printf("\nDirectory representation statistics:\n");
