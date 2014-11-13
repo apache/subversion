@@ -720,6 +720,38 @@ get_change_count(const char *changes,
   return lines / 2;
 }
 
+/* Read header information for the revision stored in FILE_CONTENT (one
+ * whole revision).  Return the offsets within FILE_CONTENT for the
+ * *ROOT_NODEREV, the list of *CHANGES and its len in *CHANGES_LEN.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+read_phys_revision(query_t *query,
+                   revision_info_t *info,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_size_t root_node_offset;
+  svn_stringbuf_t *rev_content;
+
+  SVN_ERR(get_content(&rev_content, info->rev_file->file, query,
+                      info->revision, info->offset, info->end - info->offset,
+                      scratch_pool));
+
+  SVN_ERR(read_revision_header(&info->changes,
+                               &info->changes_len,
+                               &root_node_offset,
+                               rev_content,
+                               scratch_pool));
+
+  info->change_count
+    = get_change_count(rev_content->data + info->changes,
+                       info->changes_len);
+  SVN_ERR(read_noderev(query, rev_content,
+                       root_node_offset, info, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Read the content of the pack file staring at revision BASE physical
  * addressing mode and store it in QUERY.  Use POOL for allocations.
  */
@@ -741,8 +773,6 @@ read_phys_pack_file(query_t *query,
   /* process each revision in the pack file */
   for (i = 0; i < query->shard_size; ++i)
     {
-      apr_size_t root_node_offset;
-      svn_stringbuf_t *rev_content;
       revision_info_t *info;
 
       /* cancellation support */
@@ -763,22 +793,7 @@ read_phys_pack_file(query_t *query,
         SVN_ERR(svn_fs_fs__get_packed_offset(&info->end, query->fs,
                                              base + i + 1, iterpool));
 
-      SVN_ERR(get_content(&rev_content, rev_file->file, query, info->revision,
-                          info->offset,
-                          info->end - info->offset,
-                          iterpool));
-
-      SVN_ERR(read_revision_header(&info->changes,
-                                   &info->changes_len,
-                                   &root_node_offset,
-                                   rev_content,
-                                   iterpool));
-
-      info->change_count
-        = get_change_count(rev_content->data + info->changes,
-                           info->changes_len);
-      SVN_ERR(read_noderev(query, rev_content,
-                           root_node_offset, info, pool, iterpool));
+      SVN_ERR(read_phys_revision(query, info, pool, iterpool));
 
       info->representations = apr_array_copy(pool, info->representations);
 
@@ -810,9 +825,7 @@ read_phys_revision_file(query_t *query,
                         svn_revnum_t revision,
                         apr_pool_t *pool)
 {
-  apr_size_t root_node_offset;
   apr_pool_t *local_pool = svn_pool_create(pool);
-  svn_stringbuf_t *rev_content;
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
   apr_off_t file_size = 0;
   svn_fs_fs__revision_file_t *rev_file;
@@ -834,23 +847,7 @@ read_phys_revision_file(query_t *query,
   info->offset = 0;
   info->end = file_size;
 
-  SVN_ERR(get_content(&rev_content, rev_file->file, query, revision, 0,
-                      file_size, local_pool));
-
-  SVN_ERR(read_revision_header(&info->changes,
-                               &info->changes_len,
-                               &root_node_offset,
-                               rev_content,
-                               local_pool));
-
-  info->change_count
-    = get_change_count(rev_content->data + info->changes,
-                       info->changes_len);
-
-  /* parse the revision content recursively. */
-  SVN_ERR(read_noderev(query, rev_content,
-                       root_node_offset, info,
-                       pool, local_pool));
+  SVN_ERR(read_phys_revision(query, info, pool, local_pool));
 
   /* Done with this revision. */
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
