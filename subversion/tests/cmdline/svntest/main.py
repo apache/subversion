@@ -1473,7 +1473,7 @@ __mod_dav_url_quoting_broken_versions = frozenset([
 ])
 def is_mod_dav_url_quoting_broken():
     if is_ra_type_dav():
-        httpd_version = os.environ['SVNTEST_HTTPD_VERSION']
+        httpd_version = os.environ.get('SVNTEST_HTTPD_VERSION')
         return (httpd_version in __mod_dav_url_quoting_broken_versions)
     return None
 
