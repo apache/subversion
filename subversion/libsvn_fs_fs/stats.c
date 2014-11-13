@@ -192,42 +192,6 @@ get_file_size(apr_off_t *file_size,
   return SVN_NO_ERROR;
 }
 
-/* Get the file content of revision REVISION in QUERY and return it in
- * *CONTENT.  Read the LEN bytes starting at file OFFSET.  When provided,
- * use FILE as packed or plain rev file.
- * Use POOL for temporary allocations.
- */
-static svn_error_t *
-get_content(svn_stringbuf_t **content,
-            apr_file_t *file,
-            query_t *query,
-            svn_revnum_t revision,
-            apr_off_t offset,
-            apr_size_t len,
-            apr_pool_t *pool)
-{
-  apr_pool_t * file_pool = svn_pool_create(pool);
-  apr_size_t large_buffer_size = 0x10000;
-
-  *content = svn_stringbuf_create_ensure(len, pool);
-  (*content)->len = len;
-
-  /* for better efficiency use larger buffers on large reads */
-  if (   (len >= large_buffer_size)
-      && (apr_file_buffer_size_get(file) < large_buffer_size))
-    apr_file_buffer_set(file,
-                        apr_palloc(apr_file_pool_get(file),
-                                   large_buffer_size),
-                        large_buffer_size);
-
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
-  SVN_ERR(svn_io_file_read_full2(file, (*content)->data, len,
-                                 NULL, NULL, pool));
-  svn_pool_destroy(file_pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Initialize the LARGEST_CHANGES member in STATS with a capacity of COUNT
  * entries.  Use POOL for allocations.
  */
@@ -379,61 +343,6 @@ add_change(svn_fs_fs__stats_t *stats,
       add_to_histogram(&info->node_histogram, expanded_size);
       add_to_histogram(&info->rep_histogram, rep_size);
     }
-}
-
-/* Read header information for the revision stored in FILE_CONTENT (one
- * whole revision).  Return the offsets within FILE_CONTENT for the
- * *ROOT_NODEREV, the list of *CHANGES and its len in *CHANGES_LEN.
- * Use POOL for temporary allocations. */
-static svn_error_t *
-read_revision_header(apr_size_t *changes,
-                     apr_size_t *changes_len,
-                     apr_size_t *root_noderev,
-                     svn_stringbuf_t *file_content,
-                     apr_pool_t *pool)
-{
-  char buf[64];
-  const char *line;
-  char *space;
-  apr_uint64_t val;
-  apr_size_t len;
-
-  /* Read in this last block, from which we will identify the last line. */
-  len = sizeof(buf);
-  if (len > file_content->len)
-    len = file_content->len;
-
-  memcpy(buf, file_content->data + file_content->len - len, len);
-
-  /* The last byte should be a newline. */
-  if (buf[(apr_ssize_t)len - 1] != '\n')
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Revision lacks trailing newline"));
-
-  /* Look for the next previous newline. */
-  buf[len - 1] = 0;
-  line = strrchr(buf, '\n');
-  if (line == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Final line in revision file longer "
-                              "than 64 characters"));
-
-  space = strchr(line, ' ');
-  if (space == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Final line in revision file missing space"));
-
-  /* terminate the header line */
-  *space = 0;
-
-  /* extract information */
-  SVN_ERR(svn_cstring_strtoui64(&val, line+1, 0, APR_SIZE_MAX, 10));
-  *root_noderev = (apr_size_t)val;
-  SVN_ERR(svn_cstring_strtoui64(&val, space+1, 0, APR_SIZE_MAX, 10));
-  *changes = (apr_size_t)val;
-  *changes_len = file_content->len - *changes - (buf + len - line) + 1;
-
-  return SVN_NO_ERROR;
 }
 
 /* Comparator used for binary search comparing the absolute file offset
@@ -769,25 +678,36 @@ read_phys_revision(query_t *query,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  apr_size_t root_node_offset;
-  apr_size_t changes_offset;
-  svn_stringbuf_t *rev_content;
+  char buf[64];
+  apr_off_t root_node_offset;
+  apr_off_t changes_offset;
+  svn_stringbuf_t *trailer;
   svn_stringbuf_t *noderev_str;
 
-  SVN_ERR(get_content(&rev_content, info->rev_file->file, query,
-                      info->revision, info->offset, info->end - info->offset,
-                      scratch_pool));
+  /* Read the last 64 bytes of the revision (if long enough). */
+  apr_off_t start = MAX(info->offset, info->end - sizeof(buf));
+  apr_size_t len = (apr_size_t)(info->end - start);
+  SVN_ERR(svn_io_file_seek(info->rev_file->file, APR_SET, &start,
+                           scratch_pool));
+  SVN_ERR(svn_io_file_read_full2(info->rev_file->file, buf, len, NULL, NULL,
+                                 scratch_pool));
+  trailer = svn_stringbuf_ncreate(buf, len, scratch_pool);
 
-  SVN_ERR(read_revision_header(&changes_offset,
-                               &info->changes_len,
-                               &root_node_offset,
-                               rev_content,
-                               scratch_pool));
-
+  /* Parse that trailer. */
+  SVN_ERR(svn_fs_fs__parse_revision_trailer(&root_node_offset, 
+                                            &changes_offset, trailer,
+                                            info->revision));
   SVN_ERR(get_phys_change_count(query, info, scratch_pool));
 
-  SVN_ERR(read_phsy_noderev(&noderev_str, query,
-                            (apr_off_t)root_node_offset, info,
+  /* Calculate the length of the changes list. */
+  trailer = svn_fs_fs__unparse_revision_trailer(root_node_offset,
+                                                changes_offset,
+                                                scratch_pool);
+  info->changes_len = info->end - info->offset - changes_offset
+                    - trailer->len;
+
+  /* Recursively read nodes added in this rev. */
+  SVN_ERR(read_phsy_noderev(&noderev_str, query, root_node_offset, info,
                             scratch_pool, scratch_pool));
   SVN_ERR(read_noderev(query, noderev_str, info, result_pool, scratch_pool));
 
