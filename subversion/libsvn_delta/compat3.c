@@ -1811,13 +1811,14 @@ family_add_new_subfamily(svn_branch_family_t *outer_family)
   return family;
 }
 
-/* Create a new branch sibling in FAMILY, with root element ROOT_EID.
+/* Create a new branch sibling in FAMILY, with branch id BID and
+ * root element ROOT_EID, and register it as a member of the family.
  */
 static svn_branch_sibling_t *
-family_add_new_branch_sibling(svn_branch_family_t *family,
-                              int root_eid)
+family_create_branch_sibling(svn_branch_family_t *family,
+                             int bid,
+                             int root_eid)
 {
-  int bid = family->next_bid++;
   svn_branch_sibling_t *branch_sibling
     = svn_branch_sibling_create(family, bid, root_eid, family->pool);
 
@@ -1828,6 +1829,60 @@ family_add_new_branch_sibling(svn_branch_family_t *family,
 
   /* Register the branch */
   APR_ARRAY_PUSH(family->branch_siblings, void *) = branch_sibling;
+
+  return branch_sibling;
+}
+
+/* Return the branch sibling definition with branch id BID in FAMILY.
+ *
+ * Return NULL if not found.
+ */
+static svn_branch_sibling_t *
+family_find_branch_sibling(svn_branch_family_t *family,
+                           int bid)
+{
+  int i;
+
+  for (i = 0; i < family->branch_siblings->nelts; i++)
+    {
+      svn_branch_sibling_t *this
+        = APR_ARRAY_IDX(family->branch_siblings, i, void *);
+
+      if (this->bid == bid)
+        return this;
+    }
+  return NULL;
+}
+
+/* Return an existing (if found) or new (otherwise) branch sibling
+ * definition object with id BID and root-eid ROOT_EID in FAMILY.
+ */
+static svn_branch_sibling_t *
+family_find_or_create_branch_sibling(svn_branch_family_t *family,
+                                     int bid,
+                                     int root_eid)
+{
+  svn_branch_sibling_t *sibling = family_find_branch_sibling(family, bid);
+
+  if (!sibling)
+    {
+      sibling = family_create_branch_sibling(family, bid, root_eid);
+    }
+
+  SVN_ERR_ASSERT_NO_RETURN(sibling->root_eid == root_eid);
+  return sibling;
+}
+
+/* Add a new branch sibling definition to FAMILY, with root element id
+ * ROOT_EID.
+ */
+static svn_branch_sibling_t *
+family_add_new_branch_sibling(svn_branch_family_t *family,
+                              int root_eid)
+{
+  int bid = family->next_bid++;
+  svn_branch_sibling_t *branch_sibling
+    = family_create_branch_sibling(family, bid, root_eid);
 
   return branch_sibling;
 }
@@ -2609,8 +2664,7 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   SVN_ERR_ASSERT(fid == family->fid);
   branch_root_rrpath
     = strcmp(branch_root_path, ".") == 0 ? "" : branch_root_path;
-  branch_sibling = svn_branch_sibling_create(family, bid, root_eid,
-                                             result_pool);
+  branch_sibling = family_find_or_create_branch_sibling(family, bid, root_eid);
   branch_instance = svn_branch_instance_create(branch_sibling, rev_root,
                                                branch_root_rrpath, result_pool);
 
