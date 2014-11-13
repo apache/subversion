@@ -245,7 +245,7 @@ import_file(const svn_delta_editor_t *editor,
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   /* If this is a special file, we need to set the svn:special
@@ -328,7 +328,7 @@ get_filtered_children(apr_hash_t **children,
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
               notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
 
           svn_hash_sets(dirents, base_name, NULL);
@@ -470,7 +470,7 @@ import_children(const char *dir_abspath,
                   notify->content_state = notify->prop_state
                     = svn_wc_notify_state_inapplicable;
                   notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-                  (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+                  ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
                 }
             }
           else
@@ -559,7 +559,7 @@ import_dir(const svn_delta_editor_t *editor,
         notify->content_state = notify->prop_state
           = svn_wc_notify_state_inapplicable;
         notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-        (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        ctx->notify_func2(ctx->notify_baton2, notify, pool);
       }
   }
 

@@ -2017,7 +2017,7 @@ send_hunk_notification(const hunk_info_t *hi,
   notify->hunk_fuzz = hi->fuzz;
   notify->prop_name = prop_name;
 
-  (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+  ctx->notify_func2(ctx->notify_baton2, notify, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2079,7 +2079,7 @@ send_patch_notification(const patch_target_t *target,
         notify->prop_state = svn_wc_notify_state_changed;
     }
 
-  (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+  ctx->notify_func2(ctx->notify_baton2, notify, pool);
 
   if (action == svn_wc_notify_patch)
     {
@@ -2133,7 +2133,7 @@ send_patch_notification(const patch_target_t *target,
       notify = svn_wc_create_notify(target->local_abspath,
                                     svn_wc_notify_delete, pool);
       notify->kind = svn_node_file;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;
