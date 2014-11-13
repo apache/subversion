@@ -228,10 +228,10 @@ stream_error_create(svn_fs_fs__packed_number_stream_t *stream,
                     const char *message)
 {
   const char *file_name;
-  apr_off_t offset = 0;
+  apr_off_t offset;
   SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                stream->pool));
-  SVN_ERR(svn_io_file_seek(stream->file, APR_CUR, &offset, stream->pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, stream->file, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
                            apr_psprintf(stream->pool,
