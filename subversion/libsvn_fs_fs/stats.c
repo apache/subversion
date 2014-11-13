@@ -104,9 +104,6 @@ typedef struct revision_info_t
   /* pack file offset (manifest value), 0 for non-packed files */
   apr_off_t offset;
 
-  /* offset of the changes list relative to OFFSET */
-  apr_size_t changes;
-
   /* length of the changes list on bytes */
   apr_uint64_t changes_len;
 
@@ -741,23 +738,25 @@ read_noderev(query_t *query,
   return SVN_NO_ERROR;
 }
 
-/* Given the unparsed changes list in CHANGES with LEN chars, return the
- * number of changed paths encoded in it.
+/* For the revision given as REVISION_INFO within QUERY, determine the number
+ * of entries in its changed paths list and store that info in REVISION_INFO.
+ * Use SCRATCH_POOL for temporary allocations.
  */
-static apr_uint64_t
-get_change_count(const char *changes,
-                 apr_size_t len)
+static svn_error_t *
+get_phys_change_count(query_t *query,
+                      revision_info_t *revision_info,
+                      apr_pool_t *scratch_pool)
 {
-  apr_uint64_t lines = 0;
-  const char *end = changes + len;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *changes;
 
-  /* line count */
-  for (; changes < end; ++changes)
-    if (*changes == '\n')
-      ++lines;
+  SVN_ERR(svn_fs_fs__get_changes(&changes, query->fs,
+                                 revision_info->revision, subpool));
+  revision_info->change_count = changes->nelts;
 
-  /* two lines per change */
-  return lines / 2;
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 /* Read header information for the revision stored in FILE_CONTENT (one
@@ -771,6 +770,7 @@ read_phys_revision(query_t *query,
                    apr_pool_t *scratch_pool)
 {
   apr_size_t root_node_offset;
+  apr_size_t changes_offset;
   svn_stringbuf_t *rev_content;
   svn_stringbuf_t *noderev_str;
 
@@ -778,15 +778,13 @@ read_phys_revision(query_t *query,
                       info->revision, info->offset, info->end - info->offset,
                       scratch_pool));
 
-  SVN_ERR(read_revision_header(&info->changes,
+  SVN_ERR(read_revision_header(&changes_offset,
                                &info->changes_len,
                                &root_node_offset,
                                rev_content,
                                scratch_pool));
 
-  info->change_count
-    = get_change_count(rev_content->data + info->changes,
-                       info->changes_len);
+  SVN_ERR(get_phys_change_count(query, info, scratch_pool));
 
   SVN_ERR(read_phsy_noderev(&noderev_str, query,
                             (apr_off_t)root_node_offset, info,
@@ -914,6 +912,26 @@ read_phys_revision_file(query_t *query,
   return SVN_NO_ERROR;
 }
 
+/* Given the unparsed changes list in CHANGES with LEN chars, return the
+ * number of changed paths encoded in it.  Only used in log. addressing
+ * mode.
+ */
+static apr_uint64_t
+get_log_change_count(const char *changes,
+                     apr_size_t len)
+{
+  apr_size_t lines = 0;
+  const char *end = changes + len;
+
+  /* line count */
+  for (; changes < end; ++changes)
+    if (*changes == '\n')
+      ++lines;
+
+  /* two lines per change */
+  return lines / 2;
+}
+
 /* Read the item described by ENTRY from the REV_FILE and return
  * the respective byte sequence in *CONTENTS allocated in POOL.
  */
@@ -1024,7 +1042,7 @@ read_log_rev_or_packfile(query_t *query,
                                                     revision_info_t*);
               SVN_ERR(read_item(&item, rev_file, entry, iterpool));
               info->change_count
-                = get_change_count(item->data + 0, item->len);
+                = get_log_change_count(item->data + 0, item->len);
               info->changes_len += entry->size;
             }
 
