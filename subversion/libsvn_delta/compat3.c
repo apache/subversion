@@ -1713,8 +1713,33 @@ svn_branch_repos_create(apr_pool_t *result_pool)
   svn_branch_repos_t *repos = apr_pcalloc(result_pool, sizeof(*repos));
 
   repos->rev_roots = apr_array_make(result_pool, 1, sizeof(void *));
+  repos->families = apr_hash_make(result_pool);
   repos->pool = result_pool;
   return repos;
+}
+
+/* Find the existing family with id FID in REPOS.
+ *
+ * Return NULL if not found.
+ *
+ * Note: An FID is unique among all families.
+ */
+static svn_branch_family_t *
+repos_get_family_by_id(svn_branch_repos_t *repos,
+                       int fid)
+{
+  return apr_hash_get(repos->families, &fid, sizeof(fid));
+}
+
+static void
+repos_register_family(svn_branch_repos_t *repos,
+                      svn_branch_family_t *family)
+{
+  int fid = family->fid;
+
+  apr_hash_set(repos->families,
+               apr_pmemdup(repos->pool, &fid, sizeof(fid)), sizeof(fid),
+               family);
 }
 
 svn_branch_revision_root_t *
@@ -1729,6 +1754,7 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   rev_root->repos = repos;
   rev_root->rev = rev;
   rev_root->root_branch = root_branch;
+  rev_root->branch_instances = apr_array_make(result_pool, 1, sizeof(void *));
   return rev_root;
 }
 
@@ -1746,7 +1772,6 @@ svn_branch_family_create(svn_branch_repos_t *repos,
   f->fid = fid;
   f->repos = repos;
   f->branch_siblings = apr_array_make(result_pool, 1, sizeof(void *));
-  f->branch_instances = apr_array_make(result_pool, 1, sizeof(void *));
   f->sub_families = apr_array_make(result_pool, 1, sizeof(void *));
   f->first_bid = first_bid;
   f->next_bid = next_bid;
@@ -1780,6 +1805,7 @@ family_add_new_subfamily(svn_branch_family_t *outer_family)
                                outer_family->pool);
 
   /* Register the family */
+  repos_register_family(repos, family);
   APR_ARRAY_PUSH(outer_family->sub_families, void *) = family;
 
   return family;
@@ -1806,33 +1832,34 @@ family_add_new_branch_sibling(svn_branch_family_t *family,
   return branch_sibling;
 }
 
-/* Find the existing family with id FID in FAMILY (recursively, including
- * FAMILY itself). Assume FID is unique among all families.
- *
- * Return NULL if not found.
- */
-static svn_branch_family_t *
-family_get_subfamily_by_id(svn_branch_family_t *family,
-                           int fid)
+apr_array_header_t *
+svn_branch_family_get_children(svn_branch_family_t *family,
+                               apr_pool_t *result_pool)
 {
+  return family->sub_families;
+}
+
+apr_array_header_t *
+svn_branch_family_get_branch_instances(
+                                svn_branch_revision_root_t *rev_root,
+                                svn_branch_family_t *family,
+                                apr_pool_t *result_pool)
+{
+  apr_array_header_t *rev_branch_instances = rev_root->branch_instances;
+  apr_array_header_t *fam_branch_instances
+    = apr_array_make(result_pool, 0, sizeof(void *));
   int i;
 
-  SVN_ERR_ASSERT_NO_RETURN(fid >= 0 && fid < family->repos->next_fid);
-
-  if (family->fid == fid)
-    return family;
-
-  for (i = 0; i < family->sub_families->nelts; i++)
+  for (i = 0; i < rev_branch_instances->nelts; i++)
     {
-      svn_branch_family_t *f
-        = APR_ARRAY_IDX(family->sub_families, i, svn_branch_family_t *);
+      svn_branch_instance_t *branch
+        = APR_ARRAY_IDX(rev_branch_instances, i, svn_branch_instance_t *);
 
-      f = family_get_subfamily_by_id(f, fid);
-      if (f)
-        return f;
+      if (branch->sibling_defn->family == family)
+        APR_ARRAY_PUSH(fam_branch_instances, void *) = branch;
     }
 
-  return NULL;
+  return fam_branch_instances;
 }
 
 svn_branch_sibling_t *
@@ -2403,6 +2430,24 @@ branch_map_branch_children(svn_branch_instance_t *from_branch,
   return SVN_NO_ERROR;
 }
 
+/* Return true iff CHILD_FAMILY is an immediate child of PARENT_FAMILY. */
+static svn_boolean_t
+family_is_child(svn_branch_family_t *parent_family,
+                svn_branch_family_t *child_family)
+{
+  int i;
+
+  for (i = 0; i < parent_family->sub_families->nelts; i++)
+    {
+      svn_branch_family_t *sub_family
+        = APR_ARRAY_IDX(parent_family->sub_families, i, void *);
+
+      if (sub_family == child_family)
+        return TRUE;
+    }
+  return FALSE;
+}
+
 /* Return an array of pointers to the branch instances that are immediate
  * sub-branches of BRANCH at or below EID.
  */
@@ -2412,28 +2457,26 @@ branch_get_sub_branches(const svn_branch_instance_t *branch,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  svn_branch_family_t *family = branch->sibling_defn->family;
   const char *top_rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
                                                         scratch_pool);
   apr_array_header_t *sub_branches = apr_array_make(result_pool, 0,
                                                     sizeof(void *));
   int i;
 
-  for (i = 0; i < branch->sibling_defn->family->sub_families->nelts; i++)
+  for (i = 0; i < branch->rev_root->branch_instances->nelts; i++)
     {
-      svn_branch_family_t *family
-        = APR_ARRAY_IDX(branch->sibling_defn->family->sub_families, i, void *);
-      int b;
+      svn_branch_instance_t *sub_branch
+        = APR_ARRAY_IDX(branch->rev_root->branch_instances, i, void *);
+      svn_branch_family_t *sub_branch_family = sub_branch->sibling_defn->family;
+      const char *sub_branch_root_rrpath
+        = svn_branch_get_root_rrpath(sub_branch);
 
-      for (b = 0; b < family->branch_instances->nelts; b++)
+      /* Is it an immediate child at or below EID? */
+      if (family_is_child(family, sub_branch_family)
+          && svn_relpath_skip_ancestor(top_rrpath, sub_branch_root_rrpath))
         {
-          svn_branch_instance_t *sub_branch
-            = APR_ARRAY_IDX(family->branch_instances, b, void *);
-          const char *sub_branch_root_rrpath = svn_branch_get_root_rrpath(sub_branch);
-
-          if (svn_relpath_skip_ancestor(top_rrpath, sub_branch_root_rrpath))
-            {
-              APR_ARRAY_PUSH(sub_branches, void *) = sub_branch;
-            }
+          APR_ARRAY_PUSH(sub_branches, void *) = sub_branch;
         }
     }
   return sub_branches;
@@ -2452,23 +2495,23 @@ branch_get_all_sub_branches(const svn_branch_instance_t *branch,
 }
 
 /* Delete the branch instance BRANCH by removing the record of it from its
- * family.
+ * revision-root.
  */
 static svn_error_t *
 branch_instance_delete(svn_branch_instance_t *branch,
                        apr_pool_t *scratch_pool)
 {
-  svn_branch_family_t *family = branch->sibling_defn->family;
+  apr_array_header_t *branch_instances = branch->rev_root->branch_instances;
   int i;
 
-  for (i = 0; i < family->branch_instances->nelts; i++)
+  for (i = 0; i < branch_instances->nelts; i++)
     {
       svn_branch_instance_t *b
-        = APR_ARRAY_IDX(family->branch_instances, i, void *);
+        = APR_ARRAY_IDX(branch_instances, i, void *);
 
       if (b == branch)
         {
-          svn_sort__array_delete(family->branch_instances, i, 1);
+          svn_sort__array_delete(branch_instances, i, 1);
           break;
         }
     }
@@ -2523,7 +2566,8 @@ branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
     = svn_branch_instance_create(branch_sibling, outer_branch->rev_root,
                                  new_root_rrpath, family->pool);
 
-  APR_ARRAY_PUSH(family->branch_instances, void *) = branch_instance;
+  APR_ARRAY_PUSH(branch_instance->rev_root->branch_instances, void *)
+    = branch_instance;
 
   return branch_instance;
 }
@@ -2604,21 +2648,25 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   return SVN_NO_ERROR;
 }
 
-/* Create a new family *NEW_FAMILY as a sub-family of FAMILY, initialized
- * with info parsed from STREAM, allocated in RESULT_POOL.
+/* Parse a branch family from STREAM.
+ *
+ * If the family is already found in REPOS, update it (assume it's from a
+ * later revision), otherwise create a new one and register it in REPOS.
+ *
+ * Set *NEW_FAMILY to the branch family object, allocated in REPOS's pool.
  */
 static svn_error_t *
 svn_branch_family_parse(svn_branch_family_t **new_family,
                         int *parent_fid,
                         svn_branch_repos_t *repos,
                         svn_stream_t *stream,
-                        apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line;
   svn_boolean_t eof;
   int n;
   int fid, first_bid, next_bid, first_eid, next_eid;
+  svn_branch_family_t *family;
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
@@ -2628,11 +2676,36 @@ svn_branch_family_parse(svn_branch_family_t **new_family,
              parent_fid);
   SVN_ERR_ASSERT(n == 6);
 
-  *new_family = svn_branch_family_create(repos, fid,
-                                         first_bid, next_bid,
-                                         first_eid, next_eid,
-                                         result_pool);
+  family = repos_get_family_by_id(repos, fid);
+  if (family)
+    {
+      SVN_ERR_ASSERT(first_bid == family->first_bid);
+      SVN_ERR_ASSERT(next_bid >= family->next_bid);
+      SVN_ERR_ASSERT(first_eid == family->first_eid);
+      SVN_ERR_ASSERT(next_eid >= family->next_eid);
+      family->next_bid = next_bid;
+      family->next_eid = next_eid;
+    }
+  else
+    {
+      family = svn_branch_family_create(repos, fid,
+                                        first_bid, next_bid,
+                                        first_eid, next_eid,
+                                        repos->pool);
 
+      /* Register this family in the repos and in its parent family (if any) */
+      repos_register_family(repos, family);
+      if (*parent_fid >= 0)
+        {
+          svn_branch_family_t *parent_family
+            = repos_get_family_by_id(repos, *parent_fid);
+
+          SVN_ERR_ASSERT(parent_family);
+          APR_ARRAY_PUSH(parent_family->sub_families, void *) = family;
+        }
+    }
+
+  *new_family = family;
   return SVN_NO_ERROR;
 }
 
@@ -2644,19 +2717,21 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  svn_branch_revision_root_t *rev_root = NULL;
+  svn_branch_revision_root_t *rev_root;
   svn_revnum_t rev;
   int root_fid;
   svn_stringbuf_t *line;
   svn_boolean_t eof;
   int n, i;
-  svn_branch_family_t *root_family = NULL;
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(! eof);
   n = sscanf(line->data, "r%ld: fids %*d %d root-fid %d",
              &rev, /* 0, */ next_fid_p, &root_fid);
   SVN_ERR_ASSERT(n == 3);
+
+  rev_root = svn_branch_revision_root_create(repos, rev, NULL /*root_branch*/,
+                                             result_pool);
 
   /* parse the families */
   for (i = 0; i < *next_fid_p; i++)
@@ -2665,23 +2740,7 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
       int bid, parent_fid;
 
       SVN_ERR(svn_branch_family_parse(&family, &parent_fid, repos, stream,
-                                      result_pool, scratch_pool));
-
-      if (family->fid == root_fid)
-        {
-          rev_root = svn_branch_revision_root_create(repos, rev,
-                                                     NULL /*root_branch*/,
-                                                     result_pool);
-          root_family = family;
-        }
-      else
-        {
-          svn_branch_family_t *parent_family
-            = family_get_subfamily_by_id(root_family, parent_fid);
-
-          SVN_ERR_ASSERT(parent_family);
-          APR_ARRAY_PUSH(parent_family->sub_families, void *) = family;
-        }
+                                      scratch_pool));
 
       /* parse the branches */
       for (bid = family->first_bid; bid < family->next_bid; ++bid)
@@ -2690,7 +2749,7 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
 
           SVN_ERR(svn_branch_instance_parse(&branch, family, rev_root, stream,
                                             family->pool, scratch_pool));
-          APR_ARRAY_PUSH(family->branch_instances, void *) = branch;
+          APR_ARRAY_PUSH(branch->rev_root->branch_instances, void *) = branch;
           if (family->fid == root_fid)
             {
               branch->rev_root->root_branch = branch;
@@ -2756,6 +2815,7 @@ svn_branch_instance_serialize(svn_stream_t *stream,
  */
 static svn_error_t *
 svn_branch_family_serialize(svn_stream_t *stream,
+                            svn_branch_revision_root_t *rev_root,
                             svn_branch_family_t *family,
                             int parent_fid,
                             apr_pool_t *scratch_pool)
@@ -2769,24 +2829,23 @@ svn_branch_family_serialize(svn_stream_t *stream,
                             family->first_eid, family->next_eid,
                             parent_fid));
 
-  for (i = 0; i < family->branch_instances->nelts; i++)
+  for (i = 0; i < rev_root->branch_instances->nelts; i++)
     {
       svn_branch_instance_t *branch
-        = APR_ARRAY_IDX(family->branch_instances, i, void *);
+        = APR_ARRAY_IDX(rev_root->branch_instances, i, void *);
 
-      SVN_ERR(svn_branch_instance_serialize(stream, branch, scratch_pool));
+      if (branch->sibling_defn->family == family)
+        {
+          SVN_ERR(svn_branch_instance_serialize(stream, branch, scratch_pool));
+        }
     }
 
-  if (family->sub_families)
+  for (i = 0; i < family->sub_families->nelts; i++)
     {
-      for (i = 0; i < family->sub_families->nelts; i++)
-        {
-          svn_branch_family_t *f
-            = APR_ARRAY_IDX(family->sub_families, i, void *);
+      svn_branch_family_t *f = APR_ARRAY_IDX(family->sub_families, i, void *);
 
-          SVN_ERR(svn_branch_family_serialize(stream, f, family->fid,
-                                              scratch_pool));
-        }
+      SVN_ERR(svn_branch_family_serialize(stream, rev_root, f, family->fid,
+                                          scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -2804,8 +2863,8 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
                             rev_root->root_branch->sibling_defn->family->fid));
 
   SVN_ERR(svn_branch_family_serialize(
-            stream, rev_root->root_branch->sibling_defn->family,
-            0 /*parent_fid*/, scratch_pool));
+            stream, rev_root, rev_root->root_branch->sibling_defn->family,
+            -1 /*parent_fid*/, scratch_pool));
 
   return SVN_NO_ERROR;
 }

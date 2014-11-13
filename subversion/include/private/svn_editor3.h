@@ -1513,6 +1513,10 @@ typedef struct svn_branch_repos_t
   /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
   apr_array_header_t *rev_roots;
 
+  /* Hash of (int *fid -> svn_branch_family_t *), of all the branch family
+     objects. */
+  apr_hash_t *families;
+
   /* The pool in which this object lives. */
   apr_pool_t *pool;
 } svn_branch_repos_t;
@@ -1532,6 +1536,10 @@ typedef struct svn_branch_revision_root_t
 
   /* The root branch instance. */
   struct svn_branch_instance_t *root_branch;
+
+  /* All branch instances. */
+  /* ### including root_branch */
+  apr_array_header_t *branch_instances;
 
 } svn_branch_revision_root_t;
 
@@ -1564,10 +1572,6 @@ typedef struct svn_branch_family_t
   /* The branch siblings in this family. */
   apr_array_header_t *branch_siblings;
 
-  /* The branch instances in this family. */
-  /* ### This is per-revision data. Move to svn_branch_revision_root_t? */
-  apr_array_header_t *branch_instances;
-
   /* The range of branch ids assigned within this family. */
   int first_bid, next_bid;
 
@@ -1590,6 +1594,24 @@ svn_branch_family_create(svn_branch_repos_t *repos,
                          int first_eid,
                          int next_eid,
                          apr_pool_t *result_pool);
+
+/* Return an array of the immediate sub-families of FAMILY.
+ *
+ * Return an empty array if there are none.
+ */
+apr_array_header_t *
+svn_branch_family_get_children(svn_branch_family_t *family,
+                               apr_pool_t *result_pool);
+
+/* Return the branch instances that are members of FAMILY in REV_ROOT.
+ *
+ * Return an empty array if there are none.
+ */
+apr_array_header_t *
+svn_branch_family_get_branch_instances(
+                                svn_branch_revision_root_t *rev_root,
+                                svn_branch_family_t *family,
+                                apr_pool_t *result_pool);
 
 /* A branch.
  *
