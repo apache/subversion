@@ -275,10 +275,13 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
  * If RECURSIVE is true, include branches in nested families.
  */
 static svn_error_t *
-family_list_branch_instances(svn_branch_family_t *family,
+family_list_branch_instances(svn_branch_revision_root_t *rev_root,
+                             svn_branch_family_t *family,
                              svn_boolean_t recursive,
                              apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *fam_branch_instances
+    = svn_branch_family_get_branch_instances(rev_root, family, scratch_pool);
   int b;
 
   printf("family %d (BIDs %d:%d, EIDs %d:%d)\n",
@@ -286,10 +289,10 @@ family_list_branch_instances(svn_branch_family_t *family,
          family->first_bid, family->next_bid,
          family->first_eid, family->next_eid);
 
-  for (b = 0; b < family->branch_instances->nelts; b++)
+  for (b = 0; b < fam_branch_instances->nelts; b++)
     {
       svn_branch_instance_t *branch
-        = APR_ARRAY_IDX(family->branch_instances, b, svn_branch_instance_t *);
+        = APR_ARRAY_IDX(fam_branch_instances, b, svn_branch_instance_t *);
       int eid;
 
       printf("  branch %d (root element %d -> '/%s')\n",
@@ -312,16 +315,18 @@ family_list_branch_instances(svn_branch_family_t *family,
         }
     }
 
-  if (recursive && family->sub_families)
+  if (recursive)
     {
+      apr_array_header_t *sub_families
+        = svn_branch_family_get_children(family, scratch_pool);
       int f;
 
-      for (f = 0; f < family->sub_families->nelts; f++)
+      for (f = 0; f < sub_families->nelts; f++)
         {
           svn_branch_family_t *sub_family
-            = APR_ARRAY_IDX(family->sub_families, f, svn_branch_family_t *);
+            = APR_ARRAY_IDX(sub_families, f, svn_branch_family_t *);
 
-          SVN_ERR(family_list_branch_instances(sub_family, recursive,
+          SVN_ERR(family_list_branch_instances(rev_root, sub_family, recursive,
                                                scratch_pool));
         }
     }
@@ -1031,8 +1036,10 @@ execute(const apr_array_header_t *actions,
                       &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
                       pool, pool));
 
-            SVN_ERR(family_list_branch_instances(el_rev[0]->branch->sibling_defn->family,
-                                                 FALSE, iterpool));
+            SVN_ERR(family_list_branch_instances(
+                      el_rev[0]->branch->rev_root,
+                      el_rev[0]->branch->sibling_defn->family,
+                      FALSE, iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES_R:
@@ -1041,8 +1048,10 @@ execute(const apr_array_header_t *actions,
                       &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
                       pool, pool));
 
-            SVN_ERR(family_list_branch_instances(el_rev[0]->branch->sibling_defn->family,
-                                                 TRUE, iterpool));
+            SVN_ERR(family_list_branch_instances(
+                      el_rev[0]->branch->rev_root,
+                      el_rev[0]->branch->sibling_defn->family,
+                      TRUE, iterpool));
           }
           break;
         case ACTION_BRANCH:

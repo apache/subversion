@@ -38,7 +38,7 @@ Work on this branch:
       merge
 
     To do:
-      when reading metadata, share the same branch definition and family
+      when reading metadata, share the same branch sibling definition
         objects across all revisions
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
