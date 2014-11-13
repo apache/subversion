@@ -567,21 +567,67 @@ parse_representation(rep_stats_t **representation,
 /* forward declaration */
 static svn_error_t *
 read_noderev(query_t *query,
-             svn_stringbuf_t *file_content,
-             apr_size_t offset,
+             svn_stringbuf_t *noderev_str,
              revision_info_t *revision_info,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool);
 
-/* Starting at the directory in NODEREV's text in FILE_CONTENT, read all
- * DAG nodes, directories and representations linked in that tree structure.
+/* Read the noderev item at OFFSET in REVISION_INFO from the filesystem
+ * provided by QUERY.  Return it in *NODEREV, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * The textual representation of the noderev will be used to determine
+ * the on-disk size of the noderev.  Only called in phys. addressing mode.
+ */
+static svn_error_t *
+read_phsy_noderev(svn_stringbuf_t **noderev,
+                  query_t *query,
+                  apr_off_t offset,
+                  revision_info_t *revision_info,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *noderev_str = svn_stringbuf_create_empty(result_pool);
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Navigate the file stream to the start of noderev. */
+  SVN_ERR_ASSERT(revision_info->rev_file);
+
+  offset += revision_info->offset;
+  SVN_ERR(svn_io_file_seek(revision_info->rev_file->file, APR_SET,
+                           &offset, scratch_pool));
+
+  /* Read it (terminated by an empty line) */
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_stream_readline(revision_info->rev_file->stream, &line,
+                                  "\n", &eof, iterpool));
+      svn_stringbuf_appendstr(noderev_str, line);
+      svn_stringbuf_appendbyte(noderev_str, '\n');
+    }
+  while (line->len > 0 && !eof);
+
+  /* Return the result. */
+  *noderev = noderev_str;
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Starting at the directory in NODEREV's text, read all DAG nodes,
+ * directories and representations linked in that tree structure.
  * Store them in QUERY and REVISION_INFO.  Also, read them only once.
  *
  * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
 parse_dir(query_t *query,
-          svn_stringbuf_t *file_content,
           node_revision_t *noderev,
           revision_info_t *revision_info,
           apr_pool_t *pool,
@@ -601,10 +647,14 @@ parse_dir(query_t *query,
 
       if (svn_fs_fs__id_rev(dirent->id) == revision_info->revision)
         {
+          svn_stringbuf_t *noderev_str;
           svn_pool_clear(iterpool);
-          SVN_ERR(read_noderev(query, file_content,
-                               (apr_size_t)svn_fs_fs__id_item(dirent->id),
-                               revision_info, pool, iterpool));
+
+          SVN_ERR(read_phsy_noderev(&noderev_str, query,
+                                    svn_fs_fs__id_item(dirent->id),
+                                    revision_info, iterpool, iterpool));
+          SVN_ERR(read_noderev(query, noderev_str, revision_info, pool,
+                               iterpool));
         }
     }
 
@@ -614,35 +664,26 @@ parse_dir(query_t *query,
   return SVN_NO_ERROR;
 }
 
-/* Starting at the noderev at OFFSET in FILE_CONTENT, read all DAG nodes,
- * directories and representations linked in that tree structure.  Store
- * them in QUERY and REVISION_INFO.  Also, read them only once.  Return the
- * result in *NODEREV.
+/* Parse the noderev given as NODEREV_STR and store the info in QUERY and
+ * REVISION_INFO.  In phys. addressing mode, continue reading all DAG nodes,
+ * directories and representations linked in that tree structure.
  *
  * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
 read_noderev(query_t *query,
-             svn_stringbuf_t *file_content,
-             apr_size_t offset,
+             svn_stringbuf_t *noderev_str,
              revision_info_t *revision_info,
              apr_pool_t *pool,
              apr_pool_t *scratch_pool)
 {
-  const char *end_marker = "\n\n";
-  const char *noderev_end = strstr(file_content->data + offset, end_marker);
-  apr_size_t noderev_len = noderev_end ? (noderev_end - file_content->data -
-                                          offset + strlen(end_marker))
-                                       : (file_content->len - offset);
-
   rep_stats_t *text = NULL;
   rep_stats_t *props = NULL;
 
   node_revision_t *noderev;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  svn_stream_t *stream = svn_stream_from_stringbuf(file_content, subpool);
-  svn_stream_skip(stream, offset);
+  svn_stream_t *stream = svn_stream_from_stringbuf(noderev_str, subpool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, subpool, subpool));
 
   if (noderev->data_rep)
@@ -682,18 +723,17 @@ read_noderev(query_t *query,
    * process it recursively */
   if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
       && !svn_fs_fs__use_log_addressing(query->fs))
-    SVN_ERR(parse_dir(query, file_content, noderev, revision_info,
-                      pool, subpool));
+    SVN_ERR(parse_dir(query, noderev, revision_info, pool, subpool));
 
   /* update stats */
   if (noderev->kind == svn_node_dir)
     {
-      revision_info->dir_noderev_size += noderev_len;
+      revision_info->dir_noderev_size += noderev_str->len;
       revision_info->dir_noderev_count++;
     }
   else
     {
-      revision_info->file_noderev_size += noderev_len;
+      revision_info->file_noderev_size += noderev_str->len;
       revision_info->file_noderev_count++;
     }
   svn_pool_destroy(subpool);
@@ -732,6 +772,7 @@ read_phys_revision(query_t *query,
 {
   apr_size_t root_node_offset;
   svn_stringbuf_t *rev_content;
+  svn_stringbuf_t *noderev_str;
 
   SVN_ERR(get_content(&rev_content, info->rev_file->file, query,
                       info->revision, info->offset, info->end - info->offset,
@@ -746,8 +787,11 @@ read_phys_revision(query_t *query,
   info->change_count
     = get_change_count(rev_content->data + info->changes,
                        info->changes_len);
-  SVN_ERR(read_noderev(query, rev_content,
-                       root_node_offset, info, result_pool, scratch_pool));
+
+  SVN_ERR(read_phsy_noderev(&noderev_str, query,
+                            (apr_off_t)root_node_offset, info,
+                            scratch_pool, scratch_pool));
+  SVN_ERR(read_noderev(query, noderev_str, info, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -970,7 +1014,7 @@ read_log_rev_or_packfile(query_t *query,
                                                     entry->item.revision,
                                                     revision_info_t*);
               SVN_ERR(read_item(&item, rev_file, entry, iterpool));
-              SVN_ERR(read_noderev(query, item, 0, info, pool, iterpool));
+              SVN_ERR(read_noderev(query, item, info, pool, iterpool));
             }
           else if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
             {
