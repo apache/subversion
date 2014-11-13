@@ -1465,6 +1465,18 @@ def is_plaintext_password_storage_disabled():
     return False
   return True
 
+
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+__mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.26',
+    '2.4.9',
+])
+def is_mod_dav_url_quoting_broken():
+    if is_ra_type_dav():
+        httpd_version = os.environ['SVNTEST_HTTPD_VERSION']
+        return (httpd_version in __mod_dav_url_quoting_broken_versions)
+    return None
+
 ######################################################################
 
 
