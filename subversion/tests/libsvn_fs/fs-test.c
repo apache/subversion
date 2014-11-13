@@ -6323,6 +6323,222 @@ test_zero_copy_processsing(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dir_optimal_order(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  apr_hash_t *unordered;
+  apr_array_header_t *ordered;
+  int i;
+  apr_hash_index_t *hi;
+
+  /* Create a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-dir-optimal-order",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Call the API function we are interested in. */
+  SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+
+  /* Verify that all entries are returned. */
+  SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));
+  for (hi = apr_hash_first(pool, unordered); hi; hi = apr_hash_next(hi))
+    {
+      svn_boolean_t found = FALSE;
+      const char *name = apr_hash_this_key(hi);
+
+      /* Compare hash -> array because the array might contain the same
+       * entry more than once.  Since that can't happen in the hash, doing
+       * it in this direction ensures ORDERED won't contain duplicates.
+       */
+      for (i = 0; !found && i < ordered->nelts; ++i)
+        {
+          svn_fs_dirent_t *item = APR_ARRAY_IDX(ordered, i, svn_fs_dirent_t*);
+          if (strcmp(item->name, name) == 0)
+            {
+              found = TRUE;
+              SVN_TEST_ASSERT(item == apr_hash_this_val(hi));
+            }
+        }
+
+      SVN_TEST_ASSERT(found);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_config_files(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  apr_array_header_t *files;
+  int i;
+  const char *repo_name = "test-repo-config-files";
+
+  /* Create a empty and get its config files. */
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, pool));
+  SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
+
+  /* All files should exist and be below the repo. */
+  for (i = 0; i < files->nelts; ++i)
+    {
+      svn_node_kind_t kind;
+      const char *path = APR_ARRAY_IDX(files, i, const char*);
+
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+
+      SVN_TEST_ASSERT(kind == svn_node_file);
+      SVN_TEST_ASSERT(svn_dirent_is_ancestor(repo_name, path));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_delta_file_stream(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root1, *root2;
+  svn_revnum_t rev;
+
+  const char *old_content = "some content";
+  const char *new_content = "some more content";
+  svn_txdelta_window_handler_t delta_handler;
+  void *delta_baton;
+  svn_txdelta_stream_t *delta_stream;
+  svn_stringbuf_t *source = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *dest = svn_stringbuf_create_empty(pool);
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delta-file-stream",
+                              opts, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", old_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  /* Revision 2: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", new_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root1, fs, 1, pool));
+  SVN_ERR(svn_fs_revision_root(&root2, fs, 2, pool));
+
+  /* Test 1: Get delta against empty target. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       NULL, NULL, root1, "foo", pool));
+
+  svn_stringbuf_setempty(source);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  /* Test 2: Get delta against previous version. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root1, "foo", root2, "foo", pool));
+
+  svn_stringbuf_set(source, old_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(new_content, dest->data);
+
+  /* Test 3: Get reverse delta. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root2, "foo", root1, "foo", pool));
+
+  svn_stringbuf_set(source, new_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fs_merge(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root0, *root1;
+  svn_revnum_t rev;
+
+  /* Very basic test for svn_fs_merge because all the other interesting
+   * cases get tested implicitly with concurrent txn / commit tests.
+   * This API is just a thin layer around the internal merge function
+   * and we simply check that the plumbing between them works.
+   */
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-merge",
+                              opts, pool));
+  SVN_ERR(svn_fs_revision_root(&root0, fs, 0, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+  SVN_ERR(svn_fs_revision_root(&root1, fs, rev, pool));
+
+  /* Merge-able txn: create another file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "bar", pool));
+
+  SVN_ERR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0, "/", pool));
+
+  /* Not merge-able: create the same file file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0,
+                                     "/", pool), SVN_ERR_FS_CONFLICT);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6438,6 +6654,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test FS module listing"),
     SVN_TEST_OPTS_PASS(test_zero_copy_processsing,
                        "test zero copy file processing"),
+    SVN_TEST_OPTS_PASS(test_dir_optimal_order,
+                       "test svn_fs_dir_optimal_order"),
+    SVN_TEST_OPTS_PASS(test_config_files,
+                       "get configuration files"),
+    SVN_TEST_OPTS_PASS(test_delta_file_stream,
+                       "get a delta stream on a file"),
+    SVN_TEST_OPTS_PASS(test_fs_merge,
+                       "get merging txns with newer revisions"),
     SVN_TEST_NULL
   };
 

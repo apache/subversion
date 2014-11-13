@@ -2651,15 +2651,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           reset_txn_in_rep(noderev->data_rep);
           noderev->data_rep->revision = rev;
 
-          /* See issue 3845.  Some unknown mechanism caused the
-             protorev file to get truncated, so check for that
-             here.  */
-          if (noderev->data_rep->item_index + noderev->data_rep->size
-              > initial_offset)
-            return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                    _("Truncated protorev file detected"));
+              /* See issue 3845.  Some unknown mechanism caused the
+                 protorev file to get truncated, so check for that
+                 here.  */
+              if (noderev->data_rep->item_index + noderev->data_rep->size
+                  > initial_offset)
+                return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                        _("Truncated protorev file detected"));
+            }
         }
-    }
 
   svn_pool_destroy(subpool);
 
@@ -3104,15 +3104,15 @@ commit_body(void *baton, apr_pool_t *pool)
                                         cb->fs, txn_id, changed_paths,
                                         new_rev, pool));
 
-  /* Write the final line. */
+      /* Write the final line. */
 
   trailer
-    = svn_fs_fs__unparse_revision_trailer
-              ((apr_off_t)svn_fs_fs__id_item(new_root_id),
-               changed_path_offset,
-               pool);
-  SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
-                                 NULL, pool));
+        = svn_fs_fs__unparse_revision_trailer
+                  ((apr_off_t)svn_fs_fs__id_item(new_root_id),
+                   changed_path_offset,
+                   pool);
+      SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
+                                     NULL, pool));
 
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));

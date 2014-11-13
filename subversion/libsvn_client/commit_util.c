@@ -1650,7 +1650,7 @@ do_item_commit(void **dir_baton,
         {
           notify->kind = item->kind;
           notify->path_prefix = icb->notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
     }
 

@@ -552,7 +552,7 @@ switch_file_external(const char *local_abspath,
           = svn_wc_notify_state_inapplicable;
         notify->lock_state = svn_wc_notify_lock_state_inapplicable;
         notify->revision = revnum;
-        (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+        ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
       }
   }
 
@@ -665,7 +665,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
       notify->kind = kind;
       notify->err = err;
 
-      (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
         {
@@ -675,7 +675,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
           notify->kind = svn_node_dir;
           notify->err = err;
 
-          (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
 
@@ -774,7 +774,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
   /* First notify that we're about to handle an external. */
   if (ctx->notify_func2)
     {
-      (*ctx->notify_func2)(
+      ctx->notify_func2(
          ctx->notify_baton2,
          svn_wc_create_notify(local_abspath,
                               svn_wc_notify_update_external,

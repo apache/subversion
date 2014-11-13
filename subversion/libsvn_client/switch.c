@@ -380,7 +380,7 @@ switch_internal(svn_revnum_t *result_rev,
         = svn_wc_notify_state_inapplicable;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   /* If the caller wants the result revision, give it to them. */

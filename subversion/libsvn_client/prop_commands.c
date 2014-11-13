@@ -520,7 +520,7 @@ svn_client_revprop_set2(const char *propname,
       notify->prop_name = propname;
       notify->revision = *set_rev;
 
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;
