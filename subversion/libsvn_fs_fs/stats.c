@@ -176,43 +176,45 @@ typedef struct query_t
   void *cancel_baton;
 } query_t;
 
-/* Return the length of REV_FILE in *FILE_SIZE.  Use POOL for allocations.
-*/
+/* Return the length of REV_FILE in *FILE_SIZE.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 static svn_error_t *
 get_file_size(apr_off_t *file_size,
               svn_fs_fs__revision_file_t *rev_file,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
 
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, rev_file->file,
-                               pool));
+                               scratch_pool));
 
   *file_size = finfo.size;
   return SVN_NO_ERROR;
 }
 
 /* Initialize the LARGEST_CHANGES member in STATS with a capacity of COUNT
- * entries.  Use POOL for allocations.
+ * entries.  Allocate the result in RESULT_POOL.
  */
 static void
 initialize_largest_changes(svn_fs_fs__stats_t *stats,
                            apr_size_t count,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool)
 {
   apr_size_t i;
 
-  stats->largest_changes = apr_pcalloc(pool, sizeof(*stats->largest_changes));
+  stats->largest_changes = apr_pcalloc(result_pool,
+                                       sizeof(*stats->largest_changes));
   stats->largest_changes->count = count;
   stats->largest_changes->min_size = 1;
   stats->largest_changes->changes
-    = apr_palloc(pool, count * sizeof(*stats->largest_changes->changes));
+    = apr_palloc(result_pool, count * sizeof(*stats->largest_changes->changes));
 
   /* allocate *all* entries before the path stringbufs.  This increases
    * cache locality and enhances performance significantly. */
   for (i = 0; i < count; ++i)
     stats->largest_changes->changes[i]
-      = apr_palloc(pool, sizeof(**stats->largest_changes->changes));
+      = apr_palloc(result_pool, sizeof(**stats->largest_changes->changes));
 
   /* now initialize them and allocate the stringbufs */
   for (i = 0; i < count; ++i)
@@ -220,7 +222,7 @@ initialize_largest_changes(svn_fs_fs__stats_t *stats,
       stats->largest_changes->changes[i]->size = 0;
       stats->largest_changes->changes[i]->revision = SVN_INVALID_REVNUM;
       stats->largest_changes->changes[i]->path
-        = svn_stringbuf_create_ensure(1024, pool);
+        = svn_stringbuf_create_ensure(1024, result_pool);
     }
 }
 
@@ -412,15 +414,15 @@ find_representation(int *idx,
 /* Find / auto-construct the representation stats for REP in QUERY and
  * return it in *REPRESENTATION.
  *
- * If necessary, allocate the result in POOL; use SCRATCH_POOL for temp.
- * allocations.
+ * If necessary, allocate the result in RESULT_POOL; use SCRATCH_POOL for
+ * temporary allocations.
  */
 static svn_error_t *
 parse_representation(rep_stats_t **representation,
                      query_t *query,
                      representation_t *rep,
                      revision_info_t *revision_info,
-                     apr_pool_t *pool,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   rep_stats_t *result;
@@ -436,7 +438,7 @@ parse_representation(rep_stats_t **representation,
       /* not parsed, yet (probably a rep in the same revision).
        * Create a new rep object and determine its base rep as well.
        */
-      result = apr_pcalloc(pool, sizeof(*result));
+      result = apr_pcalloc(result_pool, sizeof(*result));
       result->revision = rep->revision;
       result->expanded_size = (rep->expanded_size ? rep->expanded_size
                                                   : rep->size);
@@ -475,7 +477,7 @@ static svn_error_t *
 read_noderev(query_t *query,
              svn_stringbuf_t *noderev_str,
              revision_info_t *revision_info,
-             apr_pool_t *pool,
+             apr_pool_t *result_pool,
              apr_pool_t *scratch_pool);
 
 /* Read the noderev item at OFFSET in REVISION_INFO from the filesystem
@@ -530,13 +532,14 @@ read_phsy_noderev(svn_stringbuf_t **noderev,
  * directories and representations linked in that tree structure.
  * Store them in QUERY and REVISION_INFO.  Also, read them only once.
  *
- * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 parse_dir(query_t *query,
           node_revision_t *noderev,
           revision_info_t *revision_info,
-          apr_pool_t *pool,
+          apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -559,8 +562,8 @@ parse_dir(query_t *query,
           SVN_ERR(read_phsy_noderev(&noderev_str, query,
                                     svn_fs_fs__id_item(dirent->id),
                                     revision_info, iterpool, iterpool));
-          SVN_ERR(read_noderev(query, noderev_str, revision_info, pool,
-                               iterpool));
+          SVN_ERR(read_noderev(query, noderev_str, revision_info,
+                               result_pool, iterpool));
         }
     }
 
@@ -574,18 +577,18 @@ parse_dir(query_t *query,
  * REVISION_INFO.  In phys. addressing mode, continue reading all DAG nodes,
  * directories and representations linked in that tree structure.
  *
- * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
+ * Use RESULT_POOL for persistent allocations and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 read_noderev(query_t *query,
              svn_stringbuf_t *noderev_str,
              revision_info_t *revision_info,
-             apr_pool_t *pool,
+             apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
   rep_stats_t *text = NULL;
   rep_stats_t *props = NULL;
-
   node_revision_t *noderev;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
@@ -596,7 +599,7 @@ read_noderev(query_t *query,
     {
       SVN_ERR(parse_representation(&text, query,
                                    noderev->data_rep, revision_info,
-                                   pool, subpool));
+                                   result_pool, subpool));
 
       /* if we are the first to use this rep, mark it as "text rep" */
       if (++text->ref_count == 1)
@@ -607,7 +610,7 @@ read_noderev(query_t *query,
     {
       SVN_ERR(parse_representation(&props, query,
                                    noderev->prop_rep, revision_info,
-                                   pool, subpool));
+                                   result_pool, subpool));
 
       /* if we are the first to use this rep, mark it as "prop rep" */
       if (++props->ref_count == 1)
@@ -629,7 +632,7 @@ read_noderev(query_t *query,
    * process it recursively */
   if (   noderev->kind == svn_node_dir && text && text->ref_count == 1
       && !svn_fs_fs__use_log_addressing(query->fs))
-    SVN_ERR(parse_dir(query, noderev, revision_info, pool, subpool));
+    SVN_ERR(parse_dir(query, noderev, revision_info, result_pool, subpool));
 
   /* update stats */
   if (noderev->kind == svn_node_dir)
