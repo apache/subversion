@@ -656,6 +656,10 @@ get_phys_change_count(query_t *query,
                       revision_info_t *revision_info,
                       apr_pool_t *scratch_pool)
 {
+  /* We are going to use our own sub-pool here because the changes object
+   * may well be >100MB and SCRATCH_POOL may not get cleared until all other
+   * info has been read by read_phys_revision().  Therefore, tidy up early.
+   */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
   apr_array_header_t *changes;
 
@@ -663,6 +667,7 @@ get_phys_change_count(query_t *query,
                                  revision_info->revision, subpool));
   revision_info->change_count = changes->nelts;
 
+  /* Release potentially tons of memory. */
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
