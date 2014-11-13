@@ -768,7 +768,6 @@ read_phys_pack_file(query_t *query,
       info->representations = apr_array_copy(pool, info->representations);
 
       /* Done with this revision. */
-      SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
       info->rev_file = NULL;
 
       /* put it into our container */
@@ -777,6 +776,9 @@ read_phys_pack_file(query_t *query,
       /* destroy temps */
       svn_pool_clear(iterpool);
     }
+
+  /* Done with this pack file. */
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
   /* one more pack file processed */
   if (query->progress_func)
