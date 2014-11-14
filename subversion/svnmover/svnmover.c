@@ -1352,6 +1352,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
+      "  -v [--verbose]         : display debugging messages\n"
       "  -m [--message] ARG     : use ARG as a log message\n"
       "  -F [--file] ARG        : read log message from file ARG\n"
       "  -u [--username] ARG    : commit the changes as username ARG\n"
@@ -1521,6 +1522,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     trust_server_cert_opt
   };
   static const apr_getopt_option_t options[] = {
+    {"verbose", 'v', 0, ""},
     {"branch", 'b', 1, ""},
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
@@ -1581,6 +1583,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         return svn_error_wrap_apr(status, "getopt failure");
       switch(opt)
         {
+        case 'v':
+          svn__set_verbose(TRUE);
+          break;
         case 'm':
           SVN_ERR(svn_utf_cstring_to_utf8(&message, arg, pool));
           break;

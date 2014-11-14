@@ -42,7 +42,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
+
+void svn__set_verbose(svn_boolean_t);
+svn_boolean_t svn__is_verbose(void);
+
 /*
  * ### Under construction. Currently, two kinds of editor interface are
  *     declared within the same "svn_editor3_t" framework. This is for

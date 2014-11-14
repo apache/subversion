@@ -41,6 +41,10 @@
 /* Verify EXPR is true; raise an error if not. */
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
+#undef SVN_DBG
+#define SVN_DBG(ARGS)
+
+
 /*
  * ========================================================================
  * Configuration Options
