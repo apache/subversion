@@ -1093,10 +1093,10 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_MV:
-          VERIFY_REV_UNSPECIFIED("cp", 0);
-          VERIFY_EID_EXISTS("cp", 0);
-          VERIFY_REV_UNSPECIFIED("cp", 1);
-          VERIFY_EID_NONEXISTENT("cp", 1);
+          VERIFY_REV_UNSPECIFIED("mv", 0);
+          VERIFY_EID_EXISTS("mv", 0);
+          VERIFY_REV_UNSPECIFIED("mv", 1);
+          VERIFY_EID_NONEXISTENT("mv", 1);
           {
             svn_editor3_node_content_t *content = NULL; /* "no change" */
 
