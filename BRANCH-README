@@ -40,8 +40,6 @@ Work on this branch:
     To do:
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
-      merge: interpret the three arguments consistently as relative to
-        the repo root
       synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
       make the user interface degrade cross-branch moves so that the user

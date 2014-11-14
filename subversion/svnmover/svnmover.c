@@ -1081,14 +1081,6 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_MERGE:
           {
-            /* Look up path[0] (FROM) and path[2] (YCA) relative to repo
-               root, unlike path[1] (TO) which is relative to anchor URL. */
-            SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, revnum[0], action->path[0],
-                      pool, pool));
-            SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[2], editor, revnum[2], action->path[2],
-                      pool, pool));
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
@@ -1254,7 +1246,6 @@ usage(FILE *stream, apr_pool_t *pool)
       "  diff LEFT RIGHT        : diff LEFT to RIGHT\n"
       "  diff-e LEFT RIGHT      : diff LEFT to RIGHT (element-focused output)\n"
       "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
-      "                           (FROM and YCA are relative to repo, not to root-URL)\n"
       "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
       "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
       "  rm URL                 : delete URL\n"
