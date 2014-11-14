@@ -261,7 +261,8 @@ svn_branch_sibling_create(svn_branch_family_t *family,
 svn_branch_instance_t *
 svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
                            svn_branch_revision_root_t *rev_root,
-                           const char *branch_root_rrpath,
+                           svn_branch_instance_t *outer_branch,
+                           int outer_eid,
                            apr_pool_t *result_pool)
 {
   svn_branch_instance_t *b = apr_pcalloc(result_pool, sizeof(*b));
@@ -269,7 +270,8 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
   b->sibling_defn = branch_sibling;
   b->rev_root = rev_root;
   b->e_map = apr_hash_make(result_pool);
-  b->branch_root_rrpath = apr_pstrdup(result_pool, branch_root_rrpath);
+  b->outer_branch = outer_branch;
+  b->outer_eid = outer_eid;
   return b;
 }
 
@@ -352,15 +354,6 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
  * Branch mappings
  * ========================================================================
  */
-
-const char *
-svn_branch_get_root_rrpath(const svn_branch_instance_t *branch)
-{
-  const char *root_rrpath = branch->branch_root_rrpath;
-
-  SVN_ERR_ASSERT_NO_RETURN(root_rrpath);
-  return root_rrpath;
-}
 
 /* Validate that NODE is suitable for a mapping of BRANCH:EID.
  * NODE->content may be null.
@@ -526,6 +519,27 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
 }
 
 const char *
+svn_branch_get_root_rrpath(const svn_branch_instance_t *branch,
+                           apr_pool_t *result_pool)
+{
+  const char *root_rrpath;
+
+  if (branch->outer_branch)
+    {
+      root_rrpath
+        = svn_branch_get_rrpath_by_eid(branch->outer_branch, branch->outer_eid,
+                                       result_pool);
+    }
+  else
+    {
+      root_rrpath = "";
+    }
+
+  SVN_ERR_ASSERT_NO_RETURN(root_rrpath);
+  return root_rrpath;
+}
+
+const char *
 svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
                            int eid,
                            apr_pool_t *result_pool)
@@ -557,7 +571,7 @@ svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
 
   if (path)
     {
-      rrpath = svn_relpath_join(svn_branch_get_root_rrpath(branch),
+      rrpath = svn_relpath_join(svn_branch_get_root_rrpath(branch, result_pool),
                                 path, result_pool);
     }
   return rrpath;
@@ -597,7 +611,8 @@ svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
                              const char *rrpath,
                              apr_pool_t *scratch_pool)
 {
-  const char *path = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(branch),
+  const char *path = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
+                                                 branch, scratch_pool),
                                                rrpath);
   int eid = -1;
 
@@ -790,7 +805,7 @@ branch_get_sub_branches(const svn_branch_instance_t *branch,
         = APR_ARRAY_IDX(branch->rev_root->branch_instances, i, void *);
       svn_branch_family_t *sub_branch_family = sub_branch->sibling_defn->family;
       const char *sub_branch_root_rrpath
-        = svn_branch_get_root_rrpath(sub_branch);
+        = svn_branch_get_root_rrpath(sub_branch, scratch_pool);
 
       /* Is it an immediate child at or below EID? */
       if (family_is_child(family, sub_branch_family)
@@ -869,16 +884,9 @@ svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
 {
   svn_branch_family_t *family = branch_sibling->family;
 
-  /* ### All this next bit is to get an RRPATH. Should ultimately go away. */
-  const char *outer_root_rrpath = svn_branch_get_root_rrpath(outer_branch);
-  const char *outer_eid_relpath
-    = svn_branch_get_path_by_eid(outer_branch, outer_eid, scratch_pool);
-  const char *new_root_rrpath
-    = svn_relpath_join(outer_root_rrpath, outer_eid_relpath, scratch_pool);
-
   svn_branch_instance_t *branch_instance
     = svn_branch_instance_create(branch_sibling, outer_branch->rev_root,
-                                 new_root_rrpath, family->pool);
+                                 outer_branch, outer_eid, family->pool);
 
   APR_ARRAY_PUSH(branch_instance->rev_root->branch_instances, void *)
     = branch_instance;
@@ -912,6 +920,8 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   svn_branch_instance_t *branch_instance;
   char branch_root_path[100];
   const char *branch_root_rrpath;
+  svn_branch_instance_t *outer_branch;
+  int outer_eid;
   int eid;
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
@@ -924,8 +934,21 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   branch_root_rrpath
     = strcmp(branch_root_path, ".") == 0 ? "" : branch_root_path;
   branch_sibling = family_find_or_create_branch_sibling(family, bid, root_eid);
+  if (branch_root_rrpath[0])
+    {
+      svn_branch_find_nested_branch_element_by_rrpath(&outer_branch, &outer_eid,
+                                                      rev_root->root_branch,
+                                                      branch_root_rrpath,
+                                                      scratch_pool);
+    }
+  else
+    {
+      outer_branch = NULL;
+      outer_eid = -1;
+    }
   branch_instance = svn_branch_instance_create(branch_sibling, rev_root,
-                                               branch_root_rrpath, result_pool);
+                                               outer_branch, outer_eid,
+                                               result_pool);
 
   for (eid = family->first_eid; eid < family->next_eid; eid++)
     {
@@ -1056,6 +1079,7 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
                                       scratch_pool));
 
       /* parse the branches */
+      /* ### Need to iterate over N(instances) not over N(sibling-defs) */
       for (bid = family->first_bid; bid < family->next_bid; ++bid)
         {
           svn_branch_instance_t *branch;
@@ -1082,7 +1106,8 @@ svn_branch_instance_serialize(svn_stream_t *stream,
                               apr_pool_t *scratch_pool)
 {
   svn_branch_family_t *family = branch->sibling_defn->family;
-  const char *branch_root_rrpath = svn_branch_get_root_rrpath(branch);
+  const char *branch_root_rrpath = svn_branch_get_root_rrpath(branch,
+                                                              scratch_pool);
   int eid;
 
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
@@ -1195,7 +1220,8 @@ svn_branch_find_nested_branch_element_by_rrpath(
                                 const char *rrpath,
                                 apr_pool_t *scratch_pool)
 {
-  const char *branch_root_path = svn_branch_get_root_rrpath(root_branch);
+  const char *branch_root_path = svn_branch_get_root_rrpath(root_branch,
+                                                            scratch_pool);
   apr_array_header_t *branch_instances;
   int i;
 

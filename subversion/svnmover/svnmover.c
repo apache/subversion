@@ -297,7 +297,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
       printf("  branch %d (root element %d -> '/%s')\n",
              branch->sibling_defn->bid, branch->sibling_defn->root_eid,
-             svn_branch_get_root_rrpath(branch));
+             svn_branch_get_root_rrpath(branch, scratch_pool));
       for (eid = family->first_eid; eid < family->next_eid; eid++)
         {
           const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
@@ -306,8 +306,8 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
           if (rrpath)
             {
               const char *relpath
-                = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(branch),
-                                            rrpath);
+                = svn_relpath_skip_ancestor(
+                    svn_branch_get_root_rrpath(branch, scratch_pool), rrpath);
 
               printf("    e%d -> %s\n",
                      eid, relpath[0] ? relpath : ".");
