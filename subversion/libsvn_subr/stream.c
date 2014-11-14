@@ -81,6 +81,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream = apr_palloc(pool, sizeof(*stream));
   stream->baton = baton;
   stream->read_fn = NULL;
+  stream->read_full_fn = NULL;
   stream->skip_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
