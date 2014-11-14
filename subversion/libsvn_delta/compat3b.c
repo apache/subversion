@@ -40,6 +40,24 @@
 /* Verify EXPR is true; raise an error if not. */
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
+#undef SVN_DBG
+#define SVN_DBG(ARGS) (svn__is_verbose() \
+                       ? (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
+                          svn_dbg__printf ARGS) : (void)0)
+
+static svn_boolean_t _verbose = FALSE;
+
+void svn__set_verbose(svn_boolean_t verbose)
+{
+  _verbose = verbose;
+}
+
+svn_boolean_t svn__is_verbose(void)
+{
+  return _verbose;
+}
+
+
 #ifdef SVN_DEBUG
 /* Return a human-readable string representation of LOC. */
 static const char *

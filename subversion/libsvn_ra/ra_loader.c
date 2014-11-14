@@ -1029,8 +1029,9 @@ svn_error_t *svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
 
-    SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
-                                        deditor, dedit_baton, "", pool));
+    if (svn__is_verbose())
+      SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
+                                          deditor, dedit_baton, "", pool));
     SVN_ERR(svn_delta__ev3_from_delta_for_commit2(
                         editor,
                         &shim_connector,
