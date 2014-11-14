@@ -75,7 +75,7 @@ while [ ! -z "$1" ]; do
         dav)     check_dav=true;;
         fsfs)    check_fsfs=true;;
         fsfs-v6) check_fsfs_v6=true;;
-        fsfs-v4) check_fsfs_v6=true;;
+        fsfs-v4) check_fsfs_v4=true;;
         fsx)     check_fsx=true;;
         bdb)     check_bdb=true;;
         *)       exit 1;;
