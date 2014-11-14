@@ -74,6 +74,7 @@ ${abssrc}/configure \
     --enable-javahl \
     --without-jikes \
     --with-junit="${SVNBB_JUNIT}"
+test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 
 #
 # Step 4: build
