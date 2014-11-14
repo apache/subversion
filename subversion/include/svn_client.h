@@ -1081,20 +1081,15 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 /** @} end group: Client context management */
 
 /**
- * @name Authentication information file names
- *
- * Names of files that contain authentication information.
- *
- * These filenames are decided by libsvn_client, since this library
- * implements all the auth-protocols;  libsvn_wc does nothing but
- * blindly store and retrieve these files from protected areas.
- *
- * @defgroup clnt_auth_filenames Client authentication file names
- * @{
+ * @deprecated Provided for backward compatibility. This constant was never
+ * used in released versions.
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
+/**
+ * @deprecated Provided for backward compatibility. This constant was never
+ * used in released versions.
+ */
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
-/** @} group end: Authentication information file names */
 
 /** Client argument processing
  *
@@ -1130,6 +1125,12 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
+ * Return an error if a target is just a peg specifier with no path, such as
+ * "@abc". Before v1.6.5 (r878062) this form was interpreted as a literal path;
+ * it is now ambiguous. The form "@abc@" should now be used to refer to the
+ * literal path "@abc" with no peg revision, or the form ".@abc" to refer to
+ * the empty path with peg revision "abc".
+ *
  * @since New in 1.7
  */
 svn_error_t *
@@ -1143,6 +1144,9 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
 /**
  * Similar to svn_client_args_to_target_array2() but with
  * @a keep_last_origpath_on_truepath_collision always set to FALSE.
+ *
+ * @since Since 1.6.5, this returns an error if a path contains a peg
+ * specifier with no path before it, such as "@abc".
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */

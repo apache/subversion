@@ -41,12 +41,6 @@
    process got aborted and that we have re-read revprops. */
 #define REVPROP_CHANGE_TIMEOUT (10 * 1000000)
 
-/* The following are names of atomics that will be used to communicate
- * revprop updates across all processes on this machine. */
-#define ATOMIC_REVPROP_GENERATION "rev-prop-generation"
-#define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
-#define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
-
 svn_error_t *
 svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
                                  svn_fs_upgrade_notify_t notify_func,
@@ -141,403 +135,6 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Revprop caching management.
- *
- * Mechanism:
- * ----------
- *
- * Revprop caching needs to be activated and will be deactivated for the
- * respective FS instance if the necessary infrastructure could not be
- * initialized.  In deactivated mode, there is almost no runtime overhead
- * associated with revprop caching.  As long as no revprops are being read
- * or changed, revprop caching imposes no overhead.
- *
- * When activated, we cache revprops using (revision, generation) pairs
- * as keys with the generation being incremented upon every revprop change.
- * Since the cache is process-local, the generation needs to be tracked
- * for at least as long as the process lives but may be reset afterwards.
- *
- * To track the revprop generation, we use two-layer approach. On the lower
- * level, we use named atomics to have a system-wide consistent value for
- * the current revprop generation.  However, those named atomics will only
- * remain valid for as long as at least one process / thread in the system
- * accesses revprops in the respective repository.  The underlying shared
- * memory gets cleaned up afterwards.
- *
- * On the second level, we will use a persistent file to track the latest
- * revprop generation.  It will be written upon each revprop change but
- * only be read if we are the first process to initialize the named atomics
- * with that value.
- *
- * The overhead for the second and following accesses to revprops is
- * almost zero on most systems.
- *
- *
- * Tech aspects:
- * -------------
- *
- * A problem is that we need to provide a globally available file name to
- * back the SHM implementation on OSes that need it.  We can only assume
- * write access to some file within the respective repositories.  Because
- * a given server process may access thousands of repositories during its
- * lifetime, keeping the SHM data alive for all of them is also not an
- * option.
- *
- * So, we store the new revprop generation on disk as part of each
- * setrevprop call, i.e. this write will be serialized and the write order
- * be guaranteed by the repository write lock.
- *
- * The only racy situation occurs when the data is being read again by two
- * processes concurrently but in that situation, the first process to
- * finish that procedure is guaranteed to be the only one that initializes
- * the SHM data.  Since even writers will first go through that
- * initialization phase, they will never operate on stale data.
- */
-
-/* Read revprop generation as stored on disk for repository FS. The result
- * is returned in *CURRENT. Default to 2 if no such file is available.
- */
-static svn_error_t *
-read_revprop_generation_file(apr_int64_t *current,
-                             svn_fs_t *fs,
-                             apr_pool_t *pool)
-{
-  svn_error_t *err;
-  apr_file_t *file;
-  char buf[80];
-  apr_size_t len;
-  const char *path = svn_fs_fs__path_revprop_generation(fs, pool);
-
-  err = svn_io_file_open(&file, path,
-                         APR_READ | APR_BUFFERED,
-                         APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      *current = 2;
-
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
-
-  /* Check that the first line contains only digits. */
-  SVN_ERR(svn_fs_fs__check_file_buffer_numeric(buf, 0, path,
-                                               "Revprop Generation", pool));
-  SVN_ERR(svn_cstring_atoi64(current, buf));
-
-  return svn_io_file_close(file, pool);
-}
-
-/* Write the CURRENT revprop generation to disk for repository FS.
- */
-svn_error_t *
-svn_fs_fs__write_revprop_generation_file(svn_fs_t *fs,
-                                         apr_int64_t current,
-                                         apr_pool_t *pool)
-{
-  char buf[SVN_INT64_BUFFER_SIZE];
-  apr_size_t len = svn__i64toa(buf, current);
-  buf[len] = '\n';
-
-  SVN_ERR(svn_io_write_atomic(svn_fs_fs__path_revprop_generation(fs, pool),
-                              buf, len + 1,
-                              NULL /* copy_perms */, pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Make sure the revprop_namespace member in FS is set. */
-static svn_error_t *
-ensure_revprop_namespace(svn_fs_t *fs)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return ffd->revprop_namespace == NULL
-    ? svn_atomic_namespace__create(&ffd->revprop_namespace,
-                                   svn_dirent_join(fs->path,
-                                                   ATOMIC_REVPROP_NAMESPACE,
-                                                   fs->pool),
-                                   fs->pool)
-    : SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__cleanup_revprop_namespace(svn_fs_t *fs)
-{
-  const char *name = svn_dirent_join(fs->path,
-                                     ATOMIC_REVPROP_NAMESPACE,
-                                     fs->pool);
-  return svn_error_trace(svn_atomic_namespace__cleanup(name, fs->pool));
-}
-
-/* Make sure the revprop_generation member in FS is set and, if necessary,
- * initialized with the latest value stored on disk.
- */
-static svn_error_t *
-ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  SVN_ERR(ensure_revprop_namespace(fs));
-  if (ffd->revprop_generation == NULL)
-    {
-      apr_int64_t current;
-
-      SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
-                                    ffd->revprop_namespace,
-                                    ATOMIC_REVPROP_GENERATION,
-                                    TRUE));
-
-      /* If the generation is at 0, we just created a new namespace
-       * (it would be at least 2 otherwise). Read the latest generation
-       * from disk and if we are the first one to initialize the atomic
-       * (i.e. is still 0), set it to the value just gotten.
-       */
-      SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
-      if (current == 0)
-        {
-          SVN_ERR(read_revprop_generation_file(&current, fs, pool));
-          SVN_ERR(svn_named_atomic__cmpxchg(NULL, current, 0,
-                                            ffd->revprop_generation));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Make sure the revprop_timeout member in FS is set. */
-static svn_error_t *
-ensure_revprop_timeout(svn_fs_t *fs)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  SVN_ERR(ensure_revprop_namespace(fs));
-  return ffd->revprop_timeout == NULL
-    ? svn_named_atomic__get(&ffd->revprop_timeout,
-                            ffd->revprop_namespace,
-                            ATOMIC_REVPROP_TIMEOUT,
-                            TRUE)
-    : SVN_NO_ERROR;
-}
-
-/* Create an error object with the given MESSAGE and pass it to the
-   WARNING member of FS. Clears UNDERLYING_ERR. */
-static void
-log_revprop_cache_init_warning(svn_fs_t *fs,
-                               svn_error_t *underlying_err,
-                               const char *message,
-                               apr_pool_t *pool)
-{
-  svn_error_t *err = svn_error_createf(
-                       SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
-                       underlying_err, message,
-                       svn_dirent_local_style(fs->path, pool));
-
-  if (fs->warning)
-    (fs->warning)(fs->warning_baton, err);
-
-  svn_error_clear(err);
-}
-
-/* Test whether revprop cache and necessary infrastructure are
-   available in FS. */
-static svn_boolean_t
-has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *error;
-
-  /* is the cache (still) enabled? */
-  if (ffd->revprop_cache == NULL)
-    return FALSE;
-
-  /* is it efficient? */
-  if (!svn_named_atomic__is_efficient())
-    {
-      /* access to it would be quite slow
-       * -> disable the revprop cache for good
-       */
-      ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, NULL,
-                                     "Revprop caching for '%s' disabled"
-                                     " because it would be inefficient.",
-                                     pool);
-
-      return FALSE;
-    }
-
-  /* try to access our SHM-backed infrastructure */
-  error = ensure_revprop_generation(fs, pool);
-  if (error)
-    {
-      /* failure -> disable revprop cache for good */
-
-      ffd->revprop_cache = NULL;
-      log_revprop_cache_init_warning(fs, error,
-                                     "Revprop caching for '%s' disabled "
-                                     "because SHM infrastructure for revprop "
-                                     "caching failed to initialize.",
-                                     pool);
-
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-/* Baton structure for revprop_generation_fixup. */
-typedef struct revprop_generation_fixup_t
-{
-  /* revprop generation to read */
-  apr_int64_t *generation;
-
-  /* containing the revprop_generation member to query */
-  fs_fs_data_t *ffd;
-} revprop_generation_upgrade_t;
-
-/* If the revprop generation has an odd value, it means the original writer
-   of the revprop got killed. We don't know whether that process as able
-   to change the revprop data but we assume that it was. Therefore, we
-   increase the generation in that case to basically invalidate everyone's
-   cache content.
-   Execute this only while holding the write lock to the repo in baton->FFD.
- */
-static svn_error_t *
-revprop_generation_fixup(void *void_baton,
-                         apr_pool_t *pool)
-{
-  revprop_generation_upgrade_t *baton = void_baton;
-  assert(baton->ffd->has_write_lock);
-
-  /* Maybe, either the original revprop writer or some other reader has
-     already corrected / bumped the revprop generation.  Thus, we need
-     to read it again. */
-  SVN_ERR(svn_named_atomic__read(baton->generation,
-                                 baton->ffd->revprop_generation));
-
-  /* Cause everyone to re-read revprops upon their next access, if the
-     last revprop write did not complete properly. */
-  while (*baton->generation % 2)
-    SVN_ERR(svn_named_atomic__add(baton->generation,
-                                  1,
-                                  baton->ffd->revprop_generation));
-
-  return SVN_NO_ERROR;
-}
-
-/* Read the current revprop generation and return it in *GENERATION.
-   Also, detect aborted / crashed writers and recover from that.
-   Use the access object in FS to set the shared mem values. */
-static svn_error_t *
-read_revprop_generation(apr_int64_t *generation,
-                        svn_fs_t *fs,
-                        apr_pool_t *pool)
-{
-  apr_int64_t current = 0;
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  /* read the current revprop generation number */
-  SVN_ERR(ensure_revprop_generation(fs, pool));
-  SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
-
-  /* is an unfinished revprop write under the way? */
-  if (current % 2)
-    {
-      apr_int64_t timeout = 0;
-
-      /* read timeout for the write operation */
-      SVN_ERR(ensure_revprop_timeout(fs));
-      SVN_ERR(svn_named_atomic__read(&timeout, ffd->revprop_timeout));
-
-      /* has the writer process been aborted,
-       * i.e. has the timeout been reached?
-       */
-      if (apr_time_now() > timeout)
-        {
-          revprop_generation_upgrade_t baton;
-          baton.generation = &current;
-          baton.ffd = ffd;
-
-          /* Ensure that the original writer process no longer exists by
-           * acquiring the write lock to this repository.  Then, fix up
-           * the revprop generation.
-           */
-          if (ffd->has_write_lock)
-            SVN_ERR(revprop_generation_fixup(&baton, pool));
-          else
-            SVN_ERR(svn_fs_fs__with_write_lock(fs, revprop_generation_fixup,
-                                               &baton, pool));
-        }
-    }
-
-  /* return the value we just got */
-  *generation = current;
-  return SVN_NO_ERROR;
-}
-
-/* Set the revprop generation to the next odd number to indicate that
-   there is a revprop write process under way. If that times out,
-   readers shall recover from that state & re-read revprops.
-   Use the access object in FS to set the shared mem value. */
-static svn_error_t *
-begin_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
-{
-  apr_int64_t current;
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  /* set the timeout for the write operation */
-  SVN_ERR(ensure_revprop_timeout(fs));
-  SVN_ERR(svn_named_atomic__write(NULL,
-                                  apr_time_now() + REVPROP_CHANGE_TIMEOUT,
-                                  ffd->revprop_timeout));
-
-  /* set the revprop generation to an odd value to indicate
-   * that a write is in progress
-   */
-  SVN_ERR(ensure_revprop_generation(fs, pool));
-  do
-    {
-      SVN_ERR(svn_named_atomic__add(&current,
-                                    1,
-                                    ffd->revprop_generation));
-    }
-  while (current % 2 == 0);
-
-  return SVN_NO_ERROR;
-}
-
-/* Set the revprop generation to the next even number to indicate that
-   a) readers shall re-read revprops, and
-   b) the write process has been completed (no recovery required)
-   Use the access object in FS to set the shared mem value. */
-static svn_error_t *
-end_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
-{
-  apr_int64_t current = 1;
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  /* set the revprop generation to an even value to indicate
-   * that a write has been completed
-   */
-  SVN_ERR(ensure_revprop_generation(fs, pool));
-  do
-    {
-      SVN_ERR(svn_named_atomic__add(&current,
-                                    1,
-                                    ffd->revprop_generation));
-    }
-  while (current % 2);
-
-  /* Save the latest generation to disk. FS is currently in a "locked"
-   * state such that we can be sure the be the only ones to write that
-   * file.
-   */
-  return svn_fs_fs__write_revprop_generation_file(fs, current, pool);
-}
-
 /* Container for all data required to access the packed revprop file
  * for a given REVISION.  This structure will be filled incrementally
  * by read_pack_revprops() its sub-routines.
@@ -612,16 +209,6 @@ parse_revprop(apr_hash_t **properties,
   *properties = apr_hash_make(pool);
 
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
-  if (has_revprop_cache(fs, pool))
-    {
-      fs_fs_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key = { 0 };
-
-      key.revision = revision;
-      key.second = generation;
-      SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, *properties,
-                             scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -669,6 +256,19 @@ read_non_packed_revprop(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
+/* Return the minimum length of any packed revprop file name in REVPROPS. */
+static apr_size_t
+get_min_filename_len(packed_revprops_t *revprops)
+{
+  char number_buffer[SVN_INT64_BUFFER_SIZE];
+
+  /* The revprop filenames have the format <REV>.<COUNT> - with <REV> being
+   * at least the first rev in the shard and <COUNT> having at least one
+   * digit.  Thus, the minimum is 2 + #decimal places in the start rev.
+   */
+  return svn__i64toa(number_buffer, revprops->manifest_start) + 2;
+}
+
 /* Given FS and REVPROPS->REVISION, fill the FILENAME, FOLDER and MANIFEST
  * members. Use POOL for allocating results and SCRATCH_POOL for temporaries.
  */
@@ -681,9 +281,27 @@ get_revprop_packname(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
-  int idx;
+  int idx, rev_count;
+  char *buffer, *buffer_end;
+  const char **filenames, **filenames_end;
+  apr_size_t min_filename_len;
 
-  /* read content of the manifest file */
+  /* Determine the dimensions. Rev 0 is excluded from the first shard. */
+  rev_count = ffd->max_files_per_dir;
+  revprops->manifest_start
+    = revprops->revision - (revprops->revision % rev_count);
+  if (revprops->manifest_start == 0)
+    {
+      ++revprops->manifest_start;
+      --rev_count;
+    }
+
+  revprops->manifest = apr_array_make(pool, rev_count, sizeof(const char*));
+
+  /* No line in the file can be less than this number of chars long. */
+  min_filename_len = get_min_filename_len(revprops);
+
+  /* Read the content of the manifest file */
   revprops->folder
     = svn_fs_fs__path_revprops_pack_shard(fs, revprops->revision, pool);
   manifest_file_path
@@ -691,37 +309,68 @@ get_revprop_packname(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_fs__read_content(&content, manifest_file_path, pool));
 
-  /* parse the manifest. Every line is a file name */
-  revprops->manifest = apr_array_make(pool, ffd->max_files_per_dir,
-                                      sizeof(const char*));
-
-  /* Read all lines.  Since the last line ends with a newline, we will
-     end up with a valid but empty string after the last entry. */
-  while (content->data && *content->data)
-    {
-      APR_ARRAY_PUSH(revprops->manifest, const char*) = content->data;
-      content->data = strchr(content->data, '\n');
-      if (content->data)
-        {
-          *content->data = 0;
-          content->data++;
-        }
-    }
-  content = NULL; /* No longer a valid stringbuf. */
-
-  /* Index for our revision. Rev 0 is excluded from the first shard. */
-  revprops->manifest_start = revprops->revision
-                           - (revprops->revision % ffd->max_files_per_dir);
-  if (revprops->manifest_start == 0)
-    ++revprops->manifest_start;
-  idx = (int)(revprops->revision - revprops->manifest_start);
-
-  if (revprops->manifest->nelts <= idx)
+  /* There CONTENT must have a certain minimal size and there no
+   * unterminated lines at the end of the file.  Both guarantees also
+   * simplify the parser loop below.
+   */
+  if (   content->len < rev_count * (min_filename_len + 1)
+      || content->data[content->len - 1] != '\n')
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for r%ld too "
-                               "small"), revprops->revision);
+                             _("Packed revprop manifest for r%ld not "
+                               "properly terminated"), revprops->revision);
+
+  /* Chop (parse) the manifest CONTENT into filenames, one per line.
+   * We only have to replace all newlines with NUL and add all line
+   * starts to REVPROPS->MANIFEST.
+   *
+   * There must be exactly REV_COUNT lines and that is the number of
+   * lines we parse from BUFFER to FILENAMES.  Set the end pointer for
+   * the source BUFFER such that BUFFER+MIN_FILENAME_LEN is still valid
+   * BUFFER_END is always valid due to CONTENT->LEN > MIN_FILENAME_LEN.
+   *
+   * Please note that this loop is performance critical for e.g. 'svn log'.
+   * It is run 1000x per revprop access, i.e. per revision and about
+   * 50 million times per sec (and CPU core).
+   */
+  for (filenames = (const char **)revprops->manifest->elts,
+       filenames_end = filenames + rev_count,
+       buffer = content->data,
+       buffer_end = buffer + content->len - min_filename_len;
+       (filenames < filenames_end) && (buffer < buffer_end);
+       ++filenames)
+    {
+      /* BUFFER always points to the start of the next line / filename. */
+      *filenames = buffer;
+
+      /* Find the next EOL.  This is guaranteed to stay within the CONTENT
+       * buffer because we left enough room after BUFFER_END and we know
+       * we will always see a newline as the last non-NUL char. */
+      buffer += min_filename_len;
+      while (*buffer != '\n')
+        ++buffer;
+
+      /* Found EOL.  Turn it into the filename terminator and move BUFFER
+       * to the start of the next line or CONTENT buffer end. */
+      *buffer = '\0';
+      ++buffer;
+    }
+
+  /* We must have reached the end of both buffers. */
+  if (buffer < content->data + content->len)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Packed revprop manifest for r%ld "
+                               "has too many entries"), revprops->revision);
+
+  if (filenames < filenames_end)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Packed revprop manifest for r%ld "
+                               "has too few entries"), revprops->revision);
+
+  /* The target array has now exactly one entry per revision. */
+  revprops->manifest->nelts = rev_count;
 
   /* Now get the file name */
+  idx = (int)(revprops->revision - revprops->manifest_start);
   revprops->filename = APR_ARRAY_IDX(revprops->manifest, idx, const char*);
 
   return SVN_NO_ERROR;
@@ -739,8 +388,9 @@ same_shard(svn_fs_t *fs,
 }
 
 /* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
- * fill the START_REVISION, SIZES, OFFSETS members. Also, make
- * PACKED_REVPROPS point to the first serialized revprop.
+ * fill the START_REVISION member, and make PACKED_REVPROPS point to the
+ * first serialized revprop.  If READ_ALL is set, initialize the SIZES
+ * and OFFSETS members as well.
  *
  * Parse the revprops for REVPROPS->REVISION and set the PROPERTIES as
  * well as the SERIALIZED_SIZE member.  If revprop caching has been
@@ -749,6 +399,7 @@ same_shard(svn_fs_t *fs,
 static svn_error_t *
 parse_packed_revprops(svn_fs_t *fs,
                       packed_revprops_t *revprops,
+                      svn_boolean_t read_all,
                       apr_pool_t *pool,
                       apr_pool_t *scratch_pool)
 {
@@ -805,11 +456,14 @@ parse_packed_revprops(svn_fs_t *fs,
   revprops->packed_revprops->len = (apr_size_t)(uncompressed->len - offset);
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
 
-  /* STREAM still points to the first entry in the sizes list.
-   * Init / construct REVPROPS members. */
+  /* STREAM still points to the first entry in the sizes list. */
   revprops->start_revision = (svn_revnum_t)first_rev;
-  revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
-  revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+  if (read_all)
+    {
+      /* Init / construct REVPROPS members. */
+      revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
+      revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+    }
 
   /* Now parse, revision by revision, the size and content of each
    * revisions' revprops. */
@@ -817,7 +471,6 @@ parse_packed_revprops(svn_fs_t *fs,
     {
       apr_int64_t size;
       svn_string_t serialized;
-      apr_hash_t *properties;
       svn_revnum_t revision = (svn_revnum_t)(first_rev + i);
       svn_pool_clear(iterpool);
 
@@ -838,20 +491,18 @@ parse_packed_revprops(svn_fs_t *fs,
                                 revprops->generation, &serialized,
                                 pool, iterpool));
           revprops->serialized_size = serialized.len;
-        }
-      else
-        {
-          /* If revprop caching is enabled, parse any revprops.
-           * They will get cached as a side-effect of this. */
-          if (has_revprop_cache(fs, pool))
-            SVN_ERR(parse_revprop(&properties, fs, revision,
-                                  revprops->generation, &serialized,
-                                  iterpool, iterpool));
+
+          /* If we only wanted the revprops for REVISION then we are done. */
+          if (!read_all)
+            break;
         }
 
-      /* fill REVPROPS data structures */
-      APR_ARRAY_PUSH(revprops->sizes, apr_off_t) = serialized.len;
-      APR_ARRAY_PUSH(revprops->offsets, apr_off_t) = offset;
+      if (read_all)
+        {
+          /* fill REVPROPS data structures */
+          APR_ARRAY_PUSH(revprops->sizes, apr_off_t) = serialized.len;
+          APR_ARRAY_PUSH(revprops->offsets, apr_off_t) = offset;
+        }
       revprops->total_size += serialized.len;
 
       offset += serialized.len;
@@ -862,6 +513,8 @@ parse_packed_revprops(svn_fs_t *fs,
 
 /* In filesystem FS, read the packed revprops for revision REV into
  * *REVPROPS.  Use GENERATION to populate the revprop cache, if enabled.
+ * If you want to modify revprop contents / update REVPROPS, READ_ALL
+ * must be set.  Otherwise, only the properties of REV are being provided.
  * Allocate data in POOL.
  */
 static svn_error_t *
@@ -869,6 +522,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                   svn_fs_t *fs,
                   svn_revnum_t rev,
                   apr_int64_t generation,
+                  svn_boolean_t read_all,
                   apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -911,14 +565,6 @@ read_pack_revprop(packed_revprops_t **revprops,
                                 file_path,
                                 i + 1 < SVN_FS_FS__RECOVERABLE_RETRY_COUNT,
                                 pool));
-
-      /* If we could not find the file, there was a write.
-       * So, we should refresh our revprop generation info as well such
-       * that others may find data we will put into the cache.  They would
-       * consider it outdated, otherwise.
-       */
-      if (missing && has_revprop_cache(fs, pool))
-        SVN_ERR(read_revprop_generation(&result->generation, fs, pool));
     }
 
   /* the file content should be available now */
@@ -927,7 +573,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                   _("Failed to read revprop pack file for r%ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
-  err = parse_packed_revprops(fs, result, pool, iterpool);
+  err = parse_packed_revprops(fs, result, read_all, pool, iterpool);
   svn_pool_destroy(iterpool);
   if (err)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
@@ -957,22 +603,6 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   /* should they be available at all? */
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
-  /* Try cache lookup first. */
-  if (has_revprop_cache(fs, pool))
-    {
-      svn_boolean_t is_cached;
-      pair_cache_key_t key = { 0 };
-
-      SVN_ERR(read_revprop_generation(&generation, fs, pool));
-
-      key.revision = rev;
-      key.second = generation;
-      SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                             ffd->revprop_cache, &key, pool));
-      if (is_cached)
-        return SVN_NO_ERROR;
-    }
-
   /* if REV had not been packed when we began, try reading it from the
    * non-packed shard.  If that fails, we will fall through to packed
    * shard reads. */
@@ -997,7 +627,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
       packed_revprops_t *revprops;
-      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, FALSE, pool));
       *proplist_p = revprops->properties;
     }
 
@@ -1043,7 +673,6 @@ write_non_packed_revprop(const char **final_path,
  * file at TMP_PATH to FINAL_PATH and give it the permissions from
  * PERMS_REFERENCE.
  *
- * If indicated in BUMP_GENERATION, increase FS' revprop generation.
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
  * The latter may be NULL.
  *
@@ -1055,20 +684,10 @@ switch_to_new_revprop(svn_fs_t *fs,
                       const char *tmp_path,
                       const char *perms_reference,
                       apr_array_header_t *files_to_delete,
-                      svn_boolean_t bump_generation,
                       apr_pool_t *pool)
 {
-  /* Now, we may actually be replacing revprops. Make sure that all other
-     threads and processes will know about this. */
-  if (bump_generation)
-    SVN_ERR(begin_revprop_change(fs, pool));
-
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, perms_reference,
                                      pool));
-
-  /* Indicate that the update (if relevant) has been completed. */
-  if (bump_generation)
-    SVN_ERR(end_revprop_change(fs, pool));
 
   /* Clean up temporary files, if necessary. */
   if (files_to_delete)
@@ -1286,13 +905,8 @@ write_packed_revprop(const char **final_path,
   apr_off_t new_total_size;
   int changed_index;
 
-  /* read the current revprop generation. This value will not change
-   * while we hold the global write lock to this FS. */
-  if (has_revprop_cache(fs, pool))
-    SVN_ERR(read_revprop_generation(&generation, fs, pool));
-
   /* read contents of the current pack file */
-  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, TRUE, pool));
 
   /* serialize the new revprops */
   serialized = svn_stringbuf_create_empty(pool);
@@ -1425,7 +1039,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
                                  apr_pool_t *pool)
 {
   svn_boolean_t is_packed;
-  svn_boolean_t bump_generation = FALSE;
   const char *final_path;
   const char *tmp_path;
   const char *perms_reference;
@@ -1435,24 +1048,6 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
-
-  /* Test whether revprops already exist for this revision.
-   * Only then will we need to bump the revprop generation. */
-  if (has_revprop_cache(fs, pool))
-    {
-      if (is_packed)
-        {
-          bump_generation = TRUE;
-        }
-      else
-        {
-          svn_node_kind_t kind;
-          SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprops(fs, rev, pool),
-                                    &kind,
-                                    pool));
-          bump_generation = kind != svn_node_none;
-        }
-    }
 
   /* Serialize the new revprop data */
   if (is_packed)
@@ -1471,7 +1066,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
-                                files_to_delete, bump_generation, pool));
+                                files_to_delete, pool));
 
   return SVN_NO_ERROR;
 }

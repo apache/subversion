@@ -1154,8 +1154,13 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_dir_make_recursive(path_apr, APR_OS_DEFAULT, pool);
-  WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
-                                                   APR_OS_DEFAULT, pool));
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
+                                                     APR_OS_DEFAULT, pool));
+#endif
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't make directory '%s'"),
@@ -3657,7 +3662,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
          buffer and no I/O will actually happen in the FILL_BUFFER
          section below.
        */
-      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
                  || current <= aligned_offset;
     }
@@ -3668,7 +3673,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
       apr_status_t status;
 
       /* seek to the start of the block and cause APR to read 1 block */
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset, pool));
       status = apr_file_getc(&dummy, file);
 
       /* read may fail if we seek to or behind EOF.  That's ok then. */
@@ -3681,7 +3686,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
 
   /* finally, seek to the OFFSET the caller wants */
   desired_offset = offset;
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   if (desired_offset != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
                                       N_("Can't seek in file '%s'"),
@@ -4083,7 +4088,13 @@ dir_make(const char *path, apr_fileperms_t perm,
 #endif
 
   status = apr_dir_make(path_apr, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (status == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+#endif
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create directory '%s'"),

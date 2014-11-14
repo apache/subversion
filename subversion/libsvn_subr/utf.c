@@ -132,7 +132,7 @@ svn_utf_initialize2(svn_boolean_t assume_native_utf8,
          and pool allocation is not thread-safe. */
       apr_pool_t *subpool = svn_pool_create(pool);
       svn_mutex__t *mutex;
-      svn_error_t *err = svn_mutex__init(&mutex, TRUE, FALSE, subpool);
+      svn_error_t *err = svn_mutex__init(&mutex, TRUE, subpool);
       if (err)
         {
           svn_error_clear(err);

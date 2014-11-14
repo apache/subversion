@@ -440,6 +440,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    svn_boolean_t show_diff_header,
                    svn_boolean_t use_git_diff_format,
                    const char *ra_session_relpath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    svn_wc_context_t *wc_ctx,
                    apr_pool_t *scratch_pool)
 {
@@ -508,7 +510,9 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
-            TRUE /* pretty_print_mergeinfo */, scratch_pool));
+            TRUE /* pretty_print_mergeinfo */,
+            -1 /* context_size */,
+            cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -636,6 +640,8 @@ diff_props_changed(const char *diff_relpath,
                                  show_diff_header,
                                  dwi->use_git_diff_format,
                                  dwi->ddi.session_relpath,
+                                 dwi->cancel_func,
+                                 dwi->cancel_baton,
                                  dwi->wc_ctx,
                                  scratch_pool));
     }
@@ -847,8 +853,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                    NULL, NULL, scratch_pool));
         }
 
-      /* We have a printed a diff for this path, mark it as visited. */
-      *wrote_header = TRUE;
+      /* If we have printed a diff for this path, mark it as visited. */
+      if (exitcode == 1)
+        *wrote_header = TRUE;
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -905,8 +912,9 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
 
-          /* We have a printed a diff for this path, mark it as visited. */
-          *wrote_header = TRUE;
+          /* If we have printed a diff for this path, mark it as visited. */
+          if (dwi->use_git_diff_format || svn_diff_contains_diffs(diff))
+            *wrote_header = TRUE;
         }
     }
 
@@ -1021,7 +1029,7 @@ diff_file_added(const char *relpath,
   else if (copyfrom_source && right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
-                                 DIFF_REVNUM_NONEXISTENT,
+                                 copyfrom_source->revision,
                                  right_source->revision,
                                  svn_prop_get_value(left_props,
                                                     SVN_PROP_MIME_TYPE),
@@ -1184,7 +1192,8 @@ diff_dir_added(const char *relpath,
                          scratch_pool));
 
   return svn_error_trace(diff_props_changed(relpath,
-                                            DIFF_REVNUM_NONEXISTENT,
+                                            copyfrom_source ? copyfrom_source->revision
+                                                            : DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
                                             left_props,

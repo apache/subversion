@@ -346,8 +346,8 @@ change_file_prop(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, "change_file_prop : %s\n",
-                            name));
+  SVN_ERR(svn_stream_printf(eb->out, pool, "change_file_prop : %s -> %s\n",
+                            name, value ? value->data : "<deleted>"));
 
   SVN_ERR(eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
                                                name,
@@ -367,7 +367,8 @@ change_dir_prop(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, "change_dir_prop : %s\n", name));
+  SVN_ERR(svn_stream_printf(eb->out, pool, "change_dir_prop : %s -> %s\n",
+                            name, value ? value->data : "<deleted>"));
 
   SVN_ERR(eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
                                               name,

@@ -610,7 +610,7 @@ static const svn_diff_output_fns_t mem_output_unified_vtable =
 
 
 svn_error_t *
-svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     svn_diff_t *diff,
                                     svn_boolean_t with_diff_header,
                                     const char *hunk_delimiter,
@@ -619,6 +619,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                                     const char *header_encoding,
                                     const svn_string_t *original,
                                     const svn_string_t *modified,
+                                    int context_size,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *pool)
 {
 
@@ -636,7 +639,8 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
         = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
           ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
           : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
-      baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      baton.context_size = context_size >= 0 ? context_size
+                                             : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",
@@ -658,8 +662,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                     original_header, modified_header, pool));
         }
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &mem_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                              &mem_output_unified_vtable,
+                              cancel_func, cancel_baton));
 
       SVN_ERR(output_unified_flush_hunk(&baton, hunk_delimiter));
 
@@ -669,28 +674,6 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
-                                   svn_diff_t *diff,
-                                   const char *original_header,
-                                   const char *modified_header,
-                                   const char *header_encoding,
-                                   const svn_string_t *original,
-                                   const svn_string_t *modified,
-                                   apr_pool_t *pool)
-{
-  SVN_ERR(svn_diff_mem_string_output_unified2(output_stream,
-                                              diff,
-                                              TRUE,
-                                              NULL,
-                                              original_header,
-                                              modified_header,
-                                              header_encoding,
-                                              original,
-                                              modified,
-                                              pool));
-  return SVN_NO_ERROR;
-}
 
 
 
@@ -738,6 +721,10 @@ typedef struct merge_output_baton_t
 
   svn_diff_conflict_display_style_t conflict_style;
   int context_size;
+
+  /* cancel support */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* The rest of the fields are for
      svn_diff_conflict_display_only_conflicts only.  Note that for
@@ -923,7 +910,8 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
       if (diff)
-        return svn_diff_output(diff, baton, &merge_output_vtable);
+        return svn_diff_output2(diff, baton, &merge_output_vtable,
+                                btn->cancel_func, btn->cancel_baton);
       else
         style = svn_diff_conflict_display_modified_latest;
     }
@@ -1066,7 +1054,7 @@ detect_eol(svn_string_t *token)
 }
 
 svn_error_t *
-svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_t *diff,
                                   const svn_string_t *original,
                                   const svn_string_t *modified,
@@ -1076,6 +1064,8 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   const char *conflict_latest,
                                   const char *conflict_separator,
                                   svn_diff_conflict_display_style_t style,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
                                   apr_pool_t *pool)
 {
   merge_output_baton_t btn;
@@ -1113,6 +1103,8 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
     eol = APR_EOL_STR;  /* use the platform default */
 
   btn.marker_eol = eol;
+  btn.cancel_func = cancel_func;
+  btn.cancel_baton = cancel_baton;
 
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[1],
                                     conflict_modified
@@ -1135,45 +1127,9 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                     : ">>>>>>> (latest)",
                                     pool));
 
-  SVN_ERR(svn_diff_output(diff, &btn, vtable));
+  SVN_ERR(svn_diff_output2(diff, &btn, vtable, cancel_func, cancel_baton));
   if (conflicts_only)
     svn_pool_destroy(btn.pool);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
-                                 svn_diff_t *diff,
-                                 const svn_string_t *original,
-                                 const svn_string_t *modified,
-                                 const svn_string_t *latest,
-                                 const char *conflict_original,
-                                 const char *conflict_modified,
-                                 const char *conflict_latest,
-                                 const char *conflict_separator,
-                                 svn_boolean_t display_original_in_conflict,
-                                 svn_boolean_t display_resolved_conflicts,
-                                 apr_pool_t *pool)
-{
-  svn_diff_conflict_display_style_t style =
-    svn_diff_conflict_display_modified_latest;
-
-  if (display_resolved_conflicts)
-    style = svn_diff_conflict_display_resolved_modified_latest;
-
-  if (display_original_in_conflict)
-    style = svn_diff_conflict_display_modified_original_latest;
-
-  return svn_diff_mem_string_output_merge2(output_stream,
-                                           diff,
-                                           original,
-                                           modified,
-                                           latest,
-                                           conflict_original,
-                                           conflict_modified,
-                                           conflict_latest,
-                                           conflict_separator,
-                                           style,
-                                           pool);
 }

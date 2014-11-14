@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -126,6 +125,16 @@ extern "C" {
          svn_fs_x__create() as well.
  */
 #define SVN_FS_X__FORMAT_NUMBER   1
+
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_X__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_X__USE_LOCK_MUTEX 0
+#endif
 
 /* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -246,9 +255,11 @@ typedef struct fs_x_data_t
   /* The maximum number of files to store per directory. */
   int max_files_per_dir;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
@@ -288,17 +299,9 @@ typedef struct fs_x_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
   /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
+     the first access.  May be also get closed and set to NULL again. */
+  apr_file_t *revprop_generation_file;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
@@ -408,6 +411,12 @@ typedef struct fs_x_data_t
 
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
+
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,

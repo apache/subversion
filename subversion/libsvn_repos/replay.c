@@ -548,6 +548,17 @@ path_driver_cb_func(void **dir_baton,
       svn_boolean_t src_readable;
       svn_fs_root_t *copyfrom_root;
 
+      /* E.g. when verifying corrupted repositories, their changed path
+         lists may contain an ADD for "/".  The delta path driver will
+         call us with a NULL parent in that case. */
+      if (*edit_path == 0)
+        return svn_error_create(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                _("Root directory already exists."));
+
+      /* A NULL parent_baton will cause a segfault.  It should never be
+          NULL for non-root paths. */
+      SVN_ERR_ASSERT(parent_baton);
+
       /* Was this node copied? */
       SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
                             &src_readable, root, change,

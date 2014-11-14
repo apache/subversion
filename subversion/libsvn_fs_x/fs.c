@@ -45,6 +45,7 @@
 #include "revprops.h"
 #include "rep-cache.h"
 #include "transaction.h"
+#include "util.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -72,20 +73,28 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      each separate repository opened during the lifetime of the
      svn_fs_initialize pool.  It's unlikely that anyone will notice
      the modest expenditure; the alternative is to allocate each structure
-     in a subpool, add a reference-count, and add a serialized deconstructor
+     in a subpool, add a reference-count, and add a serialized destructor
      to the FS vtable.  That's more machinery than it's worth.
 
-     Using the uuid to obtain the lock creates a corner case if a
-     caller uses svn_fs_set_uuid on the repository in a process where
-     other threads might be using the same repository through another
-     FS object.  The only real-world consumer of svn_fs_set_uuid is
-     "svnadmin load", so this is a low-priority problem, and we don't
-     know of a better way of associating such data with the
-     repository. */
+     Picking an appropriate key for the shared data is tricky, because,
+     unfortunately, a filesystem UUID is not really unique.  It is implicitly
+     shared between hotcopied (1), dump / loaded (2) or naively copied (3)
+     filesystems.  We tackle this problem by using a combination of the UUID
+     and an instance ID as the key.  This allows us to avoid key clashing
+     in (1) and (2).
+
+     Speaking of (3), there is not so much we can do about it, except maybe
+     provide a convenient way of fixing things.  Naively copied filesystems
+     have identical filesystem UUIDs *and* instance IDs.  With the key being
+     a combination of these two, clashes can be fixed by changing either of
+     them (or both), e.g. with svn_fs_set_uuid(). */
+
 
   SVN_ERR_ASSERT(fs->uuid);
-  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX, fs->uuid,
-                    SVN_VA_NULL);
+  SVN_ERR_ASSERT(ffd->instance_id);
+
+  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX,
+                    fs->uuid, ":", ffd->instance_id, SVN_VA_NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't fetch FSX shared data"));
@@ -100,21 +109,19 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
          intra-process synchronization when grabbing the repository write
          lock. */
       SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
-                              TRUE, TRUE, common_pool));
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* ... the pack lock ... */
       SVN_ERR(svn_mutex__init(&ffsd->fs_pack_lock,
-                              TRUE, TRUE, common_pool));
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
       SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
-                              TRUE, TRUE, common_pool));
+                              SVN_FS_X__USE_LOCK_MUTEX, common_pool));
 
       /* We also need a mutex for synchronizing access to the active
-         transaction list and free transaction pointer.  This one is
-         enabled unconditionally. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
-                              TRUE, TRUE, common_pool));
+         transaction list and free transaction pointer. */
+      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock, TRUE, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -163,6 +170,16 @@ x_freeze_body(void *baton,
 }
 
 static svn_error_t *
+x_freeze_body2(void *baton,
+               apr_pool_t *pool)
+{
+  struct x_freeze_baton_t *b = baton;
+  SVN_ERR(svn_fs_x__with_write_lock(b->fs, x_freeze_body, baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 x_freeze(svn_fs_t *fs,
          svn_fs_freeze_func_t freeze_func,
          void *freeze_baton,
@@ -175,7 +192,7 @@ x_freeze(svn_fs_t *fs,
   b.freeze_baton = freeze_baton;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_x__with_write_lock(fs, x_freeze_body, &b, pool));
+  SVN_ERR(svn_fs_x__with_pack_lock(fs, x_freeze_body2, &b, pool));
 
   return SVN_NO_ERROR;
 }
@@ -195,15 +212,40 @@ x_info(const void **fsx_info,
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around svn_fs_x__get_revision_proplist() adapting between function
+   signatures. */
+static svn_error_t *
+x_revision_proplist(apr_hash_t **proplist_p,
+                    svn_fs_t *fs,
+                    svn_revnum_t rev,
+                    apr_pool_t *pool)
+{
+  /* No need to bypass the caches for r/o access to revprops. */
+  return svn_error_trace(svn_fs_x__get_revision_proplist(proplist_p, fs,
+                                                         rev, FALSE, pool));
+}
+
+/* Wrapper around svn_fs_x__set_uuid() adapting between function
+   signatures. */
+static svn_error_t *
+x_set_uuid(svn_fs_t *fs,
+           const char *uuid,
+           apr_pool_t *pool)
+{
+  /* Whenever we set a new UUID, imply that FS will also be a different
+   * instance (on formats that support this). */
+  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, pool));
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   svn_fs_x__youngest_rev,
   svn_fs_x__revision_prop,
-  svn_fs_x__revision_proplist,
+  x_revision_proplist,
   svn_fs_x__change_rev_prop,
-  svn_fs_x__set_uuid,
+  x_set_uuid,
   svn_fs_x__revision_root,
   svn_fs_x__begin_txn,
   svn_fs_x__open_txn,
@@ -234,6 +276,15 @@ initialize_fs_struct(svn_fs_t *fs)
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;
+}
+
+/* Reset vtable and fsap_data fields in FS such that the FS is basically
+ * closed now.  Note that FS must not hold locks when you call this. */
+static void
+uninitialize_fs_struct(svn_fs_t *fs)
+{
+  fs->vtable = NULL;
+  fs->fsap_data = NULL;
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
@@ -303,20 +354,53 @@ x_open_for_recovery(svn_fs_t *fs,
                     apr_pool_t *pool,
                     apr_pool_t *common_pool)
 {
-  /* Recovery for FSX is currently limited to recreating the 'current'
+  svn_error_t * err;
+  svn_revnum_t youngest_rev;
+  apr_pool_t * subpool = svn_pool_create(pool);
+
+  /* Recovery for FSFS is currently limited to recreating the 'current'
      file from the latest revision. */
 
   /* The only thing we have to watch out for is that the 'current' file
-     might not exist.  So we'll try to create it here unconditionally,
-     and just ignore any errors that might indicate that it's already
-     present. (We'll need it to exist later anyway as a source for the
-     new file's permissions). */
+     might not exist or contain garbage.  So we'll try to read it here
+     and provide or replace the existing file if we couldn't read it.
+     (We'll also need it to exist later anyway as a source for the new
+     file's permissions). */
 
-  /* Use a partly-filled fs pointer first to create 'current'.  This will fail
-     if 'current' already exists, but we don't care about that. */
+  /* Use a partly-filled fs pointer first to create 'current'. */
   fs->path = apr_pstrdup(fs->pool, path);
-  svn_error_clear(svn_io_file_create(svn_fs_x__path_current(fs, pool),
-                                     "0 1 1\n", pool));
+
+  SVN_ERR(initialize_fs_struct(fs));
+
+  /* Figure out the repo format and check that we can even handle it. */
+  SVN_ERR(svn_fs_x__read_format_file(fs, subpool));
+
+  /* Now, read 'current' and try to patch it if necessary. */
+  err = svn_fs_x__youngest_rev(&youngest_rev, fs, subpool);
+  if (err)
+    {
+      const char *file_path;
+
+      /* 'current' file is missing or contains garbage.  Since we are trying
+       * to recover from whatever problem there is, being picky about the
+       * error code here won't do us much good.  If there is a persistent
+       * problem that we can't fix, it will show up when we try rewrite the
+       * file a few lines further below and we will report the failure back
+       * to the caller.
+       *
+       * Start recovery with HEAD = 0. */
+      svn_error_clear(err);
+      file_path = svn_fs_x__path_current(fs, subpool);
+
+      /* Best effort to ensure the file exists and is valid.
+       * This may fail for r/o filesystems etc. */
+      SVN_ERR(svn_io_remove_file2(file_path, TRUE, subpool));
+      SVN_ERR(svn_io_file_create_empty(file_path, subpool));
+      SVN_ERR(svn_fs_x__write_current(fs, 0, subpool));
+    }
+
+  uninitialize_fs_struct(fs);
+  svn_pool_destroy(subpool);
 
   /* Now open the filesystem properly by calling the vtable method directly. */
   return x_open(fs, path, common_pool_lock, pool, common_pool);
@@ -404,11 +488,13 @@ x_hotcopy(svn_fs_t *src_fs,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Provide FFD for DST_FS, test / initialize target repo, remove FFD. */
+  /* Test target repo when in INCREMENTAL mode, initialize it when not.
+   * For this, we need our FS internal data structures to be temporarily
+   * available. */
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_x__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
                                            incremental, pool));
-  dst_fs->fsap_data = NULL;
+  uninitialize_fs_struct(dst_fs);
 
   /* Now, the destination repo should open just fine. */
   SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
@@ -416,8 +502,9 @@ x_hotcopy(svn_fs_t *src_fs,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Now, we may copy data as needed ... */
-  return svn_fs_x__hotcopy(src_fs, dst_fs,
-                           incremental, cancel_func, cancel_baton, pool);
+  return svn_fs_x__hotcopy(src_fs, dst_fs, incremental,
+                           notify_func, notify_baton,
+                           cancel_func, cancel_baton, pool);
 }
 
 
@@ -448,7 +535,7 @@ x_delete_fs(const char *path,
             apr_pool_t *pool)
 {
   /* Remove everything. */
-  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 }
 
 static const svn_version_t *

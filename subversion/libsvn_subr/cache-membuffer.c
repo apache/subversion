@@ -203,20 +203,20 @@ typedef apr_uint64_t entry_key_t[2];
  */
 typedef struct entry_tag_t
 {
-  /* MD5 checksum over the serialized the item data.
+  /* MD5 checksum over the serialized item data.
    */
-  unsigned char content_hash [APR_MD5_DIGESTSIZE];
+  unsigned char content_hash[APR_MD5_DIGESTSIZE];
 
   /* Hash value of the svn_cache_t instance that wrote the item
    * (i.e. a combination of type and repository)
    */
-  unsigned char prefix_hash [APR_MD5_DIGESTSIZE];
+  unsigned char prefix_hash[APR_MD5_DIGESTSIZE];
 
   /* Note that this only covers the variable part of the key,
    * i.e. it will be different from the full key hash used for
    * cache indexing.
    */
-  unsigned char key_hash [APR_MD5_DIGESTSIZE];
+  unsigned char key_hash[APR_MD5_DIGESTSIZE];
 
   /* Last letters from of the key in human readable format
    * (ends with the type identifier, e.g. "DAG")
@@ -1817,7 +1817,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
 #  if USE_SIMPLE_MUTEX
 
-      SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, FALSE, pool));
+      SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
 
 #  else
 
@@ -1840,8 +1840,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       /* Since a simple mutex already guarantees fully serialized access,
          we need this mutex only when we use multple-reader-1-writer locks. */
       SVN_ERR(svn_mutex__init(&c[seg].counter_mutex,
-                              thread_safe && !USE_SIMPLE_MUTEX, FALSE,
-                              pool));
+                              thread_safe && !USE_SIMPLE_MUTEX, pool));
     }
 
   /* done here
@@ -3132,7 +3131,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->priority = priority;
   cache->key_len = klen;
 
-  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, FALSE, result_pool));
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, result_pool));
 
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it

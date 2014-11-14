@@ -116,6 +116,16 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_BLOCK_READ           "fsfs-block-read"
 
+/** String with a decimal representation of the FSFS format shard size.
+ * Zero ("0") means that a repository with linear layout should be created.
+ *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_SHARD_SIZE           "fsfs-shard-size"
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
@@ -578,6 +588,11 @@ typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
 /**
  * Take an exclusive lock on @a fs to prevent commits and then invoke
  * @a freeze_func passing @a freeze_baton.
+ *
+ * @note @a freeze_func must not, directly or indirectly, call any function
+ * that attempts to take out a lock on the underlying repository.  These
+ * include functions for packing, hotcopying, setting revprops and commits.
+ * Attempts to do so may result in a deadlock.
  *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
@@ -1406,7 +1421,7 @@ typedef enum svn_fs_path_change_kind_t
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset,
+  svn_fs_path_change_reset
 } svn_fs_path_change_kind_t;
 
 /** Change descriptor.
@@ -1414,6 +1429,11 @@ typedef enum svn_fs_path_change_kind_t
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
+ *
+ * @note The @c text_mod, @c prop_mod and @c mergeinfo_mod flags mean the
+ * text, properties and mergeinfo property (respectively) were "touched"
+ * by the commit API; this does not mean the new value is different from
+ * the old value.
  *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
@@ -1424,10 +1444,23 @@ typedef struct svn_fs_path_change2_t
   /** kind of change */
   svn_fs_path_change_kind_t change_kind;
 
-  /** were there text mods? */
+  /** was the text touched?
+   * For node_kind=dir: always false. For node_kind=file:
+   *   modify:      true iff text touched.
+   *   add (copy):  true iff text touched.
+   *   add (plain): always true.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t text_mod;
 
-  /** were there property mods? */
+  /** were the properties touched?
+   *   modify:      true iff props touched.
+   *   add (copy):  true iff props touched.
+   *   add (plain): true iff props touched.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t prop_mod;
 
   /** what node kind is the path?
@@ -1440,7 +1473,12 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
-  /** were there mergeinfo mods?
+  /** was the mergeinfo property touched?
+   *   modify:      } true iff svn:mergeinfo property add/del/mod
+   *   add (copy):  }          and fs format supports this flag.
+   *   add (plain): }
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
    * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
    * @since New in 1.9. */
   svn_tristate_t mergeinfo_mod;
@@ -2214,13 +2252,13 @@ typedef svn_error_t *
  * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
- * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be @c FALSE.  Also, this
- * is a best-effort function which means that there is no guarantee that
- * @a processor gets called at all for some content.
+ * not be implemented for all data backends or not be applicable for certain
+ * content.  In those cases, @a *success will always be @c FALSE.  Also,
+ * this is a best-effort function which means that there is no guarantee
+ * that @a processor gets called at all.
  *
- * @note @a processor is expected to be relatively short function with
- * at most O(content size) runtime.
+ * @note @a processor is expected to be a relatively simple function with
+ * a runtime of O(content size) or less.
  *
  * @since New in 1.8.
  */

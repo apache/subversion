@@ -60,8 +60,6 @@ typedef struct binary_id_t
 } binary_id_t;
 
 /* Our internal representation of an representation.
- * We simply omit the uniquifier, which allows us to share instances of
- * binary_representation_t and uniquify them in a shared_representation_t.
  */
 typedef struct binary_representation_t
 {
@@ -210,6 +208,7 @@ store_id(apr_array_header_t *ids,
 {
   binary_id_t bin_id = { { 0 } };
   int idx;
+  void *idx_void;
 
   if (id == NULL)
     return 0;
@@ -218,7 +217,8 @@ store_id(apr_array_header_t *ids,
   bin_id.copy_id = *svn_fs_x__id_copy_id(id);
   bin_id.noderev_id = *svn_fs_x__id_noderev_id(id);
 
-  idx = (int)(apr_uintptr_t)apr_hash_get(dict, &bin_id, sizeof(bin_id));
+  idx_void = apr_hash_get(dict, &bin_id, sizeof(bin_id));
+  idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
       APR_ARRAY_PUSH(ids, binary_id_t) = bin_id;
@@ -240,6 +240,7 @@ store_representation(apr_array_header_t *reps,
 {
   binary_representation_t binary_rep = { 0 };
   int idx;
+  void *idx_void;
 
   if (rep == NULL)
     return 0;
@@ -251,8 +252,8 @@ store_representation(apr_array_header_t *reps,
   binary_rep.size = rep->size;
   binary_rep.expanded_size = rep->expanded_size;
 
-  idx = (int)(apr_uintptr_t)apr_hash_get(dict, &binary_rep,
-                                         sizeof(binary_rep));
+  idx_void = apr_hash_get(dict, &binary_rep, sizeof(binary_rep));
+  idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
       APR_ARRAY_PUSH(reps, binary_representation_t) = binary_rep;
@@ -740,7 +741,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(ids_stream));
   noderevs->ids
-    = apr_array_make(result_pool, count, sizeof(binary_id_t));
+    = apr_array_make(result_pool, (int)count, sizeof(binary_id_t));
   for (i = 0; i < count; ++i)
     {
       binary_id_t id;
@@ -765,7 +766,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(noderevs_stream));
   noderevs->noderevs
-    = apr_array_make(result_pool, count, sizeof(binary_noderev_t));
+    = apr_array_make(result_pool, (int)count, sizeof(binary_noderev_t));
   for (i = 0; i < count; ++i)
     {
       binary_noderev_t noderev;

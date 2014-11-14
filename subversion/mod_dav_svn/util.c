@@ -152,7 +152,7 @@ dav_svn__convert_err(svn_error_t *serr,
 
     derr = build_error_chain(pool, purged_serr, status);
     if (message != NULL
-        && purged_serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
+        && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
       /* Don't hide hook failures; we might hide the error text */
       derr = dav_push_error(pool, status, purged_serr->apr_err,
                             message, derr);
@@ -177,10 +177,10 @@ get_last_history_rev(svn_revnum_t *revision,
   const char *ignored;
 
   /* Get an initial HISTORY baton. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, pool, pool));
 
   /* Now get the first *real* point of interesting history. */
-  SVN_ERR(svn_fs_history_prev(&history, history, FALSE, pool));
+  SVN_ERR(svn_fs_history_prev2(&history, history, FALSE, pool, pool));
 
   /* Fetch the location information for this history step. */
   return svn_fs_history_location(&ignored, revision, history, pool);

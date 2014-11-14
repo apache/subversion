@@ -1,4 +1,4 @@
-/* fs-pack-test.c --- tests for the filesystem
+/* fs-x-pack-test.c --- tests for the FSX filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -294,29 +294,11 @@ pack_filesystem(const svn_test_opts_t *opts,
                                   apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
                                   "pack", SVN_VA_NULL);
 
-      /* These files should exist. */
+      /* This file should exist. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
-
-      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                  "pack.l2p", SVN_VA_NULL);
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind != svn_node_file)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                  "Expected log-to-phys index file '%s' not found",
-                                  path);
-
-      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                  "pack.p2l", SVN_VA_NULL);
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind != svn_node_file)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                  "Expected phys-to-log index file '%s' not found",
-                                  path);
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",
@@ -814,11 +796,12 @@ test_reps(const svn_test_opts_t *opts,
   builder = svn_fs_x__reps_builder_create(fs, pool);
   for (i = 10000; i > 10; --i)
     {
+      apr_size_t idx;
       svn_string_t string;
       string.data = contents->data;
       string.len = i;
 
-      svn_fs_x__reps_add(builder, &string);
+      SVN_ERR(svn_fs_x__reps_add(&idx, builder, &string));
     }
 
   serialized = svn_stringbuf_create_empty(pool);

@@ -243,7 +243,8 @@ create_getlock_body(serf_bucket_t **body_bkt,
                                     "xmlns", "DAV:",
                                     SVN_VA_NULL);
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "lockdiscovery", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                     "lockdiscovery", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
 

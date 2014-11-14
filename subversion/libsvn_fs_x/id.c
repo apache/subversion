@@ -246,8 +246,9 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->node_id, &id_b->node_id,
-                3 * sizeof(svn_fs_x__id_part_t)) == 0;
+  return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id)
+      && svn_fs_x__id_part_eq(&id_a->copy_id, &id_b->copy_id)
+      && svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id);
 }
 
 
@@ -264,7 +265,7 @@ svn_fs_x__id_check_related(const svn_fs_id_t *a,
   /* Items from different txns are unrelated. */
   if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
       && svn_fs_x__is_txn(id_b->noderev_id.change_set)
-      && id_a->noderev_id.change_set != id_a->noderev_id.change_set)
+      && id_a->noderev_id.change_set != id_b->noderev_id.change_set)
     return FALSE;
 
   /* related if they trace back to the same node creation */
@@ -385,7 +386,7 @@ svn_fs_id_t *
 svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)source;
-  fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*id));
+  fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
   new_id->generic_id.fsap_data = new_id;
   new_id->pool = pool;
@@ -393,18 +394,14 @@ svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
   return (svn_fs_id_t *)new_id;
 }
 
-
-svn_fs_id_t *
-svn_fs_x__id_parse(const char *data,
-                   apr_size_t len,
-                   apr_pool_t *pool)
+/* Return an ID resulting from parsing the string DATA, or NULL if DATA is
+   an invalid ID string. *DATA will be modified / invalidated by this call. */
+static svn_fs_id_t *
+id_parse(char *data,
+         apr_pool_t *pool)
 {
   fs_x__id_t *id;
-  char *data_copy, *str;
-
-  /* Dup the ID data into POOL.  Our returned ID will have references
-     into this memory. */
-  data_copy = apr_pstrmemdup(pool, data, len);
+  char *str;
 
   /* Alloc a new svn_fs_id_t structure. */
   id = apr_pcalloc(pool, sizeof(*id));
@@ -419,21 +416,21 @@ svn_fs_x__id_parse(const char *data,
      string.*/
 
   /* Node Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->node_id, str))
     return NULL;
 
   /* Copy Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->copy_id, str))
     return NULL;
 
   /* NodeRev Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
 
@@ -441,6 +438,21 @@ svn_fs_x__id_parse(const char *data,
     return NULL;
 
   return (svn_fs_id_t *)id;
+}
+
+svn_error_t *
+svn_fs_x__id_parse(const svn_fs_id_t **id_p,
+                   char *data,
+                   apr_pool_t *pool)
+{
+  svn_fs_id_t *id = id_parse(data, pool);
+  if (id == NULL)
+    return svn_error_createf(SVN_ERR_FS_MALFORMED_NODEREV_ID, NULL,
+                             "Malformed node revision ID string");
+
+  *id_p = id;
+
+  return SVN_NO_ERROR;
 }
 
 /* (de-)serialization support */

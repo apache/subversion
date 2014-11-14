@@ -2795,23 +2795,26 @@ def include_immediate_dir_externals(sbox):
 
 
 @Issue(4085)
-@XFail()
 def shadowing(sbox):
   "external shadows an existing dir"
 
-  sbox.build(read_only=True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # Setup external: /A/B/F as 'C' child of /A
   externals_prop = "^/A/B/F C\n"
+  change_external(sbox.ospath('A'), externals_prop, commit=False)
 
-  raised = False
-  try:
-    change_external(sbox.ospath('A'), externals_prop, commit=False)
-  except:
-    raised = True
-  if not raised:
-    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+  # An update errors out because the external is shadowed by an existing dir
+  svntest.main.run_svn("W205011: Error handling externals definition for '%s'"
+    % (sbox.wc_dir) + "/A/C", 'update', wc_dir)
+
+  # Remove the shadowed directory to unblock the external
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/A/C', '-m', 'remove A/C')
+
+  # The next update should fetch the external and not error out
+  sbox.simple_update()
+
 
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
@@ -3228,7 +3231,6 @@ def update_dir_external_shallow(sbox):
                                         sbox.ospath('A/B/E'))
 
 @Issue(4411)
-@XFail()
 def switch_parent_relative_file_external(sbox):
   "switch parent-relative file external"
 
@@ -3444,6 +3446,41 @@ def update_deletes_file_external(sbox):
   sbox.simple_update()
   
 
+@Issue(4519)
+def switch_relative_externals(sbox):
+  "switch relative externals"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', '1', 'A', 'trunk',
+                                         'cp', '1', 'A', 'branches/A',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'trunk/B',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'branches/A/B')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url + '/trunk', wc)
+
+  # This forgets to update some externals data
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', sbox.repo_url + '/branches/A', wc)
+
+  # This upgrade makes the following update fail
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', wc)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc)
+
+
 ########################################################################
 # Run the tests
 
@@ -3500,7 +3537,8 @@ test_list = [ None,
               file_external_unversioned_obstruction,
               file_external_versioned_obstruction,
               update_external_peg_rev,
-              update_deletes_file_external
+              update_deletes_file_external,
+              switch_relative_externals,
              ]
 
 if __name__ == '__main__':

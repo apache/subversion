@@ -62,7 +62,7 @@ struct parse_baton
   const char *parent_dir; /* repository relpath, or NULL */
   svn_repos_notify_func_t notify_func;
   void *notify_baton;
-  svn_repos_notify_t *notify;
+  apr_pool_t *notify_pool; /* scratch pool for notifications */
   apr_pool_t *pool;
 
   /* Start and end (inclusive) of revision range we'll pay attention
@@ -503,9 +503,14 @@ new_revision_record(void **revision_baton,
 
       if (pb->notify_func)
         {
-          pb->notify->action = svn_repos_notify_load_txn_start;
-          pb->notify->old_revision = rb->rev;
-          pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+          /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+          svn_repos_notify_t *notify = svn_repos_notify_create(
+                                            svn_repos_notify_load_txn_start,
+                                            pb->notify_pool);
+
+          notify->old_revision = rb->rev;
+          pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+          svn_pool_clear(pb->notify_pool);
         }
 
       /* Stash the oldest "old" revision committed from the load stream. */
@@ -516,9 +521,14 @@ new_revision_record(void **revision_baton,
   /* If we're skipping this revision, try to notify someone. */
   if (rb->skipped && pb->notify_func)
     {
-      pb->notify->action = svn_repos_notify_load_skipped_rev;
-      pb->notify->old_revision = rb->rev;
-      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+      /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                        svn_repos_notify_load_skipped_rev,
+                                        pb->notify_pool);
+
+      notify->old_revision = rb->rev;
+      pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+      svn_pool_clear(pb->notify_pool);
     }
 
   /* If we're parsing revision 0, only the revision props are (possibly)
@@ -587,8 +597,13 @@ maybe_add_with_history(struct node_baton *nb,
 
       if (pb->notify_func)
         {
-          pb->notify->action = svn_repos_notify_load_copied_node;
-          pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+          /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+          svn_repos_notify_t *notify = svn_repos_notify_create(
+                                            svn_repos_notify_load_copied_node,
+                                            pb->notify_pool);
+
+          pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+          svn_pool_clear(pb->notify_pool);
         }
     }
 
@@ -657,10 +672,14 @@ new_node_record(void **node_baton,
 
   if (pb->notify_func)
     {
-      pb->notify->action = svn_repos_notify_load_node_start;
-      pb->notify->node_action = nb->action;
-      pb->notify->path = nb->path;
-      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+      /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                        svn_repos_notify_load_node_start,
+                                        pb->notify_pool);
+
+      notify->path = nb->path;
+      pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+      svn_pool_clear(pb->notify_pool);
     }
 
   switch (nb->action)
@@ -773,8 +792,14 @@ set_node_property(void *baton,
 
           if (pb->notify_func)
             {
-              pb->notify->action = svn_repos_notify_load_normalized_mergeinfo;
-              pb->notify_func(pb->notify_baton, pb->notify, nb->pool);
+              /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+              svn_repos_notify_t *notify
+                      = svn_repos_notify_create(
+                                    svn_repos_notify_load_normalized_mergeinfo,
+                                    pb->notify_pool);
+
+              pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+              svn_pool_clear(pb->notify_pool);
             }
         }
 
@@ -901,8 +926,13 @@ close_node(void *baton)
 
   if (pb->notify_func)
     {
-      pb->notify->action = svn_repos_notify_load_node_done;
-      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+      /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                            svn_repos_notify_load_node_done,
+                                            pb->notify_pool);
+
+      pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+      svn_pool_clear(pb->notify_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1029,12 +1059,17 @@ close_revision(void *baton)
 
   if (pb->notify_func)
     {
-      pb->notify->action = svn_repos_notify_load_txn_committed;
-      pb->notify->new_revision = committed_rev;
-      pb->notify->old_revision = ((committed_rev == rb->rev)
+      /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                        svn_repos_notify_load_txn_committed,
+                                        pb->notify_pool);
+
+      notify->new_revision = committed_rev;
+      notify->old_revision = ((committed_rev == rb->rev)
                                     ? SVN_INVALID_REVNUM
                                     : rb->rev);
-      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
+      pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+      svn_pool_clear(pb->notify_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1092,10 +1127,10 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
   pb->validate_props = validate_props;
   pb->notify_func = notify_func;
   pb->notify_baton = notify_baton;
-  pb->notify = svn_repos_notify_create(svn_repos_notify_load_txn_start, pool);
   pb->uuid_action = uuid_action;
   pb->parent_dir = parent_dir;
   pb->pool = pool;
+  pb->notify_pool = svn_pool_create(pool);
   pb->rev_map = apr_hash_make(pool);
   pb->oldest_old_rev = SVN_INVALID_REVNUM;
   pb->last_rev_mapped = SVN_INVALID_REVNUM;

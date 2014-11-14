@@ -80,7 +80,7 @@ static void
 debug_vprintf(const char *fmt, va_list ap)
 {
   FILE *output = debug_output;
-  char prefix[80], buffer[1000];
+  char prefix[80], buffer[4096];
   char *s = buffer;
   int n;
 
