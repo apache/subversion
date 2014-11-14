@@ -911,7 +911,7 @@ svn_branch_branchify(svn_editor3_t *editor,
 
   SVN_DBG(("branchify(b%d e%d at ^/%s): new f%d b%d e%d",
            outer_branch->sibling_defn->bid, outer_eid,
-           svn_branch_get_root_rrpath(new_branch),
+           svn_branch_get_root_rrpath(new_branch, scratch_pool),
            new_family->fid, new_branch_def->bid, new_branch_def->root_eid));
 
   /* Initialize the root element */
@@ -1084,8 +1084,9 @@ convert_branch_to_paths(apr_hash_t *paths,
       int eid = *(const int *)apr_hash_this_key(hi);
       const char *relpath = svn_branch_get_path_by_eid(branch, eid,
                                                        result_pool);
-      const char *rrpath = svn_relpath_join(svn_branch_get_root_rrpath(branch),
-                                            relpath, result_pool);
+      const char *rrpath
+        = svn_relpath_join(svn_branch_get_root_rrpath(branch, scratch_pool),
+                           relpath, result_pool);
       svn_branch_el_rev_id_t *ba = svn_hash_gets(paths, rrpath);
 
       /* Fill in the details. If it's already been filled in, then let a

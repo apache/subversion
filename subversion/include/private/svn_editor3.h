@@ -1726,30 +1726,33 @@ struct svn_branch_instance_t
   /* The revision to which this branch-revision-instance belongs */
   svn_branch_revision_root_t *rev_root;
 
-  /* The branch (instance?), within the outer family, that contains the
-     root element of this branch. */
-  /*svn_branch_instance_t *outer_family_branch_instance;*/
+  /* The branch instance within the outer family that contains the
+     root element of this branch. Null if this is the root branch. */
+  struct svn_branch_instance_t *outer_branch;
+
+  /* The element in OUTER_BRANCH of the root of this branch, or -1
+   * if this is the root branch. */
+  int outer_eid;
 
   /* --- Contents of this object --- */
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
   apr_hash_t *e_map;
 
-  /* ### This need not be constant if a parent branch is updated, so should
-   * be calculated on demand not stored here. */
-  const char *branch_root_rrpath;
-
 };
 
-/* Create a new branch instance object */
+/* Create a new branch instance object, with no elements (not even a root
+ * element).
+ */
 svn_branch_instance_t *
 svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
                            svn_branch_revision_root_t *rev_root,
-                           const char *branch_root_rrpath,
+                           svn_branch_instance_t *outer_branch,
+                           int outer_eid,
                            apr_pool_t *result_pool);
 
-/* Create a new branch instance at OUTER_BRANCH:EID, of the branch class
- * BRANCH_SIBLING, with no elements.
+/* Create a new branch instance at OUTER_BRANCH:OUTER_EID, of the branch class
+ * BRANCH_SIBLING, with no elements (not even a root element).
  */
 svn_branch_instance_t *
 svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
@@ -1988,7 +1991,8 @@ svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_branch_get_root_rrpath(const svn_branch_instance_t *branch);
+svn_branch_get_root_rrpath(const svn_branch_instance_t *branch,
+                           apr_pool_t *result_pool);
 
 /* Return the branch-relative path of element EID in BRANCH.
  *
