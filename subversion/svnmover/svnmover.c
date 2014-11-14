@@ -950,20 +950,20 @@ svn_branch_diff_r(svn_editor3_t *editor,
 
   if (!left)
     {
-      printf("--- branch %d added at '/%s'\n",
-             right->branch->sibling_defn->bid,
+      printf("--- branch added, family %d, at '/%s'\n",
+             right->branch->sibling_defn->family->fid,
              svn_branch_get_root_rrpath(right->branch, scratch_pool));
     }
   else if (!right)
     {
-      printf("--- branch %d deleted at '/%s'\n",
-             right->branch->sibling_defn->bid,
-             svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      printf("--- branch deleted, family %d, at '/%s'\n",
+             left->branch->sibling_defn->family->fid,
+             svn_branch_get_root_rrpath(left->branch, scratch_pool));
     }
   else
     {
-      printf("--- branch %d at (left) '/%s' (right) '/%s'\n",
-             right->branch->sibling_defn->bid,
+      printf("--- branch diff, family %d, at left '/%s' right '/%s'\n",
+             right->branch->sibling_defn->family->fid,
              svn_branch_get_root_rrpath(left->branch, scratch_pool),
              svn_branch_get_root_rrpath(right->branch, scratch_pool));
       SVN_ERR(svn_branch_diff(editor, left, right, scratch_pool));
