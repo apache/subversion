@@ -1126,7 +1126,7 @@ read_helper_gz(svn_stream_t *substream,
      uInt, but Subversion's API requires apr_size_t. */
   apr_size_t apr_len = (apr_size_t) *len;
 
-  SVN_ERR(svn_stream_read2(substream, buffer, &apr_len));
+  SVN_ERR(svn_stream_read_full(substream, buffer, &apr_len));
 
   /* Type cast back to uInt type that zlib uses.  On LP64 platforms
      apr_size_t will be bigger than uInt. */
