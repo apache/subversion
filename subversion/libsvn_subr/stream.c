@@ -78,18 +78,8 @@ svn_stream_create(void *baton, apr_pool_t *pool)
 {
   svn_stream_t *stream;
 
-  stream = apr_palloc(pool, sizeof(*stream));
+  stream = apr_pcalloc(pool, sizeof(*stream));
   stream->baton = baton;
-  stream->read_fn = NULL;
-  stream->read_full_fn = NULL;
-  stream->skip_fn = NULL;
-  stream->write_fn = NULL;
-  stream->close_fn = NULL;
-  stream->mark_fn = NULL;
-  stream->seek_fn = NULL;
-  stream->data_available_fn = NULL;
-  stream->is_buffered_fn = NULL;
-  stream->file = NULL;
   return stream;
 }
 
