@@ -264,11 +264,6 @@ HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 "$HTTPD" -v 1>/dev/null 2>&1 \
   || fail "HTTPD '$HTTPD' doesn't start properly"
 
-SVNTEST_HTTPD_VERSION="`$HTTPD -v | head -1 | sed -e 's@^.*/\([0-9.]*\).*$@\1@'`"
-
-say "Using '$HTTPD', version $SVNTEST_HTTPD_VERSION..."
-export SVNTEST_HTTPD_VERSION
-
 HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
   || fail "Could not find htpasswd or htpasswd2"
 [ -x $HTPASSWD ] \

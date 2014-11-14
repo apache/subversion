@@ -29,6 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
+            [--httpd-version=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             <abs_srcdir> <abs_builddir>
@@ -127,7 +128,8 @@ class TestHarness:
                list_tests=None, svn_bin=None, mode_filter=None,
                milestone_filter=None, set_log_level=None, ssl_cert=None,
                http_proxy=None, http_proxy_username=None,
-               http_proxy_password=None, exclusive_wc_locks=None,
+               http_proxy_password=None, httpd_version=None,
+               exclusive_wc_locks=None,
                memcached_server=None, skip_c_tests=None):
     '''Construct a TestHarness instance.
 
@@ -185,6 +187,7 @@ class TestHarness:
     self.http_proxy = http_proxy
     self.http_proxy_username = http_proxy_username
     self.http_proxy_password = http_proxy_password
+    self.httpd_version = httpd_version
     self.exclusive_wc_locks = exclusive_wc_locks
     self.memcached_server = memcached_server
     if not sys.stdout.isatty() or sys.platform == 'win32':
@@ -527,6 +530,8 @@ class TestHarness:
           svntest.main.options.http_proxy_username = self.http_proxy_username
     if self.http_proxy_password is not None:
         svntest.main.options.http_proxy_password = self.http_proxy_password
+    if self.httpd_version is not None:
+        svntest.main.options.httpd_version = self.httpd_version
     if self.exclusive_wc_locks is not None:
       svntest.main.options.exclusive_wc_locks = self.exclusive_wc_locks
     if self.memcached_server is not None:
@@ -700,7 +705,8 @@ def main():
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
                             'http-proxy=', 'http-proxy-username=',
-                            'http-proxy-password=','exclusive-wc-locks',
+                            'http-proxy-password=', 'httpd-version=',
+                            'exclusive-wc-locks',
                             'memcached-server='])
   except getopt.GetoptError:
     args = []
@@ -713,11 +719,11 @@ def main():
     http_library, server_minor_version, fsfs_sharding, fsfs_packing, \
     parallel, config_file, log_to_stdout, list_tests, mode_filter, \
     milestone_filter, set_log_level, ssl_cert, http_proxy, \
-    http_proxy_username, http_proxy_password, exclusive_wc_locks, \
-    memcached_server = \
+    http_proxy_username, http_proxy_password, httpd_version, \
+    exclusive_wc_locks, memcached_server = \
             None, None, None, None, None, None, None, None, None, None, \
             None, None, None, None, None, None, None, None, None, None, \
-            None, None, None
+            None, None, None, None,
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -761,6 +767,8 @@ def main():
       http_proxy_username = val
     elif opt in ['--http-proxy-password']:
       http_proxy_password = val
+    elif opt in ['--httpd-version']:
+      httpd_version = val
     elif opt in ['--exclusive-wc-locks']:
       exclusive_wc_locks = 1
     elif opt in ['--memcached-server']:
@@ -784,6 +792,7 @@ def main():
                    http_proxy=http_proxy,
                    http_proxy_username=http_proxy_username,
                    http_proxy_password=http_proxy_password,
+                   httpd_version=httpd_version,
                    exclusive_wc_locks=exclusive_wc_locks,
                    memcached_server=memcached_server,
                    skip_c_tests=skip_c_tests)
