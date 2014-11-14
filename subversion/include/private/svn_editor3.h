@@ -587,6 +587,8 @@ typedef struct svn_editor3_node_content_t svn_editor3_node_content_t;
 
 typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
 
+typedef struct svn_branch_sibling_t svn_branch_sibling_t;
+
 typedef struct svn_branch_instance_t svn_branch_instance_t;
 
 /** The kind of the checksum to be used throughout the #svn_editor3_t APIs.
@@ -1525,6 +1527,26 @@ typedef struct svn_branch_repos_t
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool);
 
+/* Set *EL_REV_P to the el-rev-id of the element at repos-relpath RRPATH
+ * in revision REVNUM in REPOS.
+ *
+ * If there is no element there, set *EL_REV_P to point to an id in which
+ * the BRANCH field is the nearest enclosing branch of RRPATH and the EID
+ * field is -1.
+ *
+ * Allocate *EL_REV_P (but not the branch object that it refers to) in
+ * RESULT_POOL.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+svn_error_t *
+svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
+                                const char *rrpath,
+                                svn_revnum_t revnum,
+                                const svn_branch_repos_t *repos,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
 /* Info about the branching in a specific revision (committed or uncommitted) */
 typedef struct svn_branch_revision_root_t
 {
@@ -1613,6 +1635,23 @@ svn_branch_family_get_branch_instances(
                                 svn_branch_family_t *family,
                                 apr_pool_t *result_pool);
 
+/* Assign a new element id in FAMILY.
+ */
+int
+svn_branch_family_add_new_element(svn_branch_family_t *family);
+
+/* Create a new, empty family in OUTER_FAMILY.
+ */
+svn_branch_family_t *
+svn_branch_family_add_new_subfamily(svn_branch_family_t *outer_family);
+
+/* Add a new branch sibling definition to FAMILY, with root element id
+ * ROOT_EID.
+ */
+svn_branch_sibling_t *
+svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
+                                         int root_eid);
+
 /* A branch.
  *
  * A branch sibling object describes the characteristics of a branch
@@ -1646,7 +1685,7 @@ svn_branch_family_get_branch_instances(
  * example, all instances of (family 1, branch 1) will have root-EID 100,
  * and all instances of (family 1, branch 3) will have root-EID 104.
  */
-typedef struct svn_branch_sibling_t
+struct svn_branch_sibling_t
 {
   /* --- Identity of this object --- */
 
@@ -1663,7 +1702,7 @@ typedef struct svn_branch_sibling_t
 
   /* The EID within its family of its pathwise root element. */
   int root_eid;
-} svn_branch_sibling_t;
+};
 
 /* Create a new branch sibling object */
 svn_branch_sibling_t *
@@ -1708,6 +1747,23 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
                            svn_branch_revision_root_t *rev_root,
                            const char *branch_root_rrpath,
                            apr_pool_t *result_pool);
+
+/* Create a new branch instance at OUTER_BRANCH:EID, of the branch class
+ * BRANCH_SIBLING, with no elements.
+ */
+svn_branch_instance_t *
+svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
+                                   int outer_eid,
+                                   svn_branch_sibling_t *branch_sibling,
+                                   apr_pool_t *scratch_pool);
+
+/* Return an array of pointers to the branch instances that are immediate
+ * sub-branches of BRANCH.
+ */
+apr_array_header_t *
+svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* element */
 /*
@@ -1778,19 +1834,167 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
                                 apr_pool_t *scratch_pool);
 
 
+/* In BRANCH, get element EID's node (parent, name, content).
+ *
+ * If element EID is not present, return null. Otherwise, the returned
+ * node's content may be null meaning it is unknown.
+ */
+svn_branch_el_rev_content_t *
+svn_branch_map_get(const svn_branch_instance_t *branch,
+                   int eid);
+
+/* In BRANCH, delete element EID.
+ */
+void
+svn_branch_map_delete(svn_branch_instance_t *branch,
+                      int eid);
+
+/* Set or change the EID:element mapping for EID in BRANCH.
+ *
+ * Duplicate NEW_NAME and NEW_CONTENT into the branch mapping's pool.
+ */
+void
+svn_branch_map_update(svn_branch_instance_t *branch,
+                      int eid,
+                      svn_editor3_eid_t new_parent_eid,
+                      const char *new_name,
+                      const svn_editor3_node_content_t *new_content);
+
+/* Remove from BRANCH's mapping any elements that do not have a complete
+ * line of parents to the branch root. In other words, remove elements
+ * that have been implicitly deleted.
+ *
+ * This does not remove subbranches.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+void
+svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
+                             apr_pool_t *scratch_pool);
+
+/* In BRANCH, update the path mappings to delete all children of EID,
+ * recursively (but not deleting subbranches).
+ *
+ * EID may be any element id in BRANCH: existing or nonexistent, root or
+ * normal or subbranch root (useful if we have just branchified a subtree).
+ */
+svn_error_t *
+svn_branch_map_delete_children(svn_branch_instance_t *branch,
+                               int eid,
+                               apr_pool_t *scratch_pool);
+
+/* Adjust BRANCH and its subbranches (recursively),
+ * to reflect deletion of the subtree at EID.
+ *
+ * Element EID MUST be the location of a non-root element of BRANCH.
+ * If EID is the root of a subbranch and/or contains nested
+ * subbranches, also delete them.
+ */
+svn_error_t *
+svn_branch_delete_subtree_r(svn_branch_instance_t *branch,
+                            int eid,
+                            apr_pool_t *scratch_pool);
+
+/* Update the mappings to reflect branching the subtree [### the what?!]
+ * at FROM_BRANCH:FROM_PARENT_EID to TO_BRANCH:TO_PARENT_EID.
+ *
+ * FROM_BRANCH and TO_BRANCH must be different branch instances in the
+ * same branch family.
+ *
+ * FROM_PATH MUST be an existing path in FROM_BRANCH, and may be the
+ * root path of FROM_BRANCH.
+ *
+ * TO_PATH MUST be a path in TO_BRANCH at which nothing currently exists
+ * if INCLUDE_SELF, or an existing path if not INCLUDE_SELF.
+ *
+ * If INCLUDE_SELF is true, include the element at FROM_PATH, otherwise
+ * only act on children (recursively) of FROM_PATH.
+ */
+svn_error_t *
+svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
+                               int from_parent_eid,
+                               svn_branch_instance_t *to_branch,
+                               int to_parent_eid,
+                               apr_pool_t *scratch_pool);
+
+/* Adjust TO_OUTER_BRANCH and its subbranches (recursively),
+ * to reflect branching a subtree from FROM_BRANCH:FROM_EID to
+ * create a new subbranch of TO_OUTER_BRANCH at TO_OUTER_PARENT_EID:NEW_NAME.
+ *
+ * FROM_BRANCH must be an immediate child branch of OUTER_BRANCH.
+ *
+ * FROM_BRANCH:FROM_EID must be an existing element. It may be the
+ * root of FROM_BRANCH. It must not be the root of a subbranch of
+ * FROM_BRANCH.
+ *
+ * TO_OUTER_BRANCH:TO_OUTER_PARENT_EID must be an existing directory
+ * and NEW_NAME must be nonexistent in that directory.
+ */
+svn_error_t *
+svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
+                            svn_branch_instance_t *from_branch,
+                            int from_eid,
+                            svn_branch_instance_t *to_outer_branch,
+                            svn_editor3_eid_t to_outer_parent_eid,
+                            const char *new_name,
+                            apr_pool_t *scratch_pool);
+
+/* In TO_BRANCH, assign new EIDs and path mappings to reflect the copying
+ * of all children of FROM_BRANCH:FROM_PARENT_EID to TO_BRANCH:TO_PARENT_EID,
+ * recursively, excluding the specified parent element itself.
+ *
+ * Assign a new EID in TO_BRANCH's family for each copied element.
+ *
+ * FROM_BRANCH and TO_BRANCH may be the same or different branch instances
+ * in the same or different branch families.
+ *
+ * FROM_PARENT_EID MUST be an existing element in FROM_BRANCH. It may be the
+ * root element of FROM_BRANCH, but not a subtree root.
+ *
+ * TO_PARENT_EID MUST be an existing path in TO_BRANCH. It may be the
+ * root element of TO_BRANCH, but not a subtree root.
+ */
+svn_error_t *
+svn_branch_map_copy_children(svn_branch_instance_t *from_branch,
+                             int from_parent_eid,
+                             svn_branch_instance_t *to_branch,
+                             int to_parent_eid,
+                             apr_pool_t *scratch_pool);
+
+/* Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
+ * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
+ *
+ * FROM_EL_REV must be an existing element. (It may be a branch root.)
+ *
+ * ### TODO:
+ * If FROM_EL_REV is the root of a subbranch and/or contains nested
+ * subbranches, also copy them ...
+ * ### What shall we do with a subbranch? Make plain copies of its raw
+ *     elements; make a subbranch by branching the source subbranch in
+ *     cases where possible; make a subbranch in a new family?
+ *
+ * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
+ * non-existing path in it.
+ */
+svn_error_t *
+svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
+                          svn_branch_instance_t *to_branch,
+                          svn_editor3_eid_t to_parent_eid,
+                          const char *to_name,
+                          apr_pool_t *scratch_pool);
+
 /* Return the root repos-relpath of BRANCH.
  *
- * ### A branch root's rrpath can change during the edit.
+ * ### TODO: Clarify sequencing requirements.
  */
 const char *
 svn_branch_get_root_rrpath(const svn_branch_instance_t *branch);
 
 /* Return the branch-relative path of element EID in BRANCH.
  *
- * If the EID mapping does not currently have a complete path to EID,
- * return NULL.
+ * If the element EID does not currently exist in BRANCH, return NULL.
  *
- * ### A branch element's rrpath can change during the edit.
+ * ### TODO: Clarify sequencing requirements.
  */
 const char *
 svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
@@ -1799,15 +2003,59 @@ svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
 
 /* Return the repos-relpath of element EID in BRANCH.
  *
- * If the EID mapping does not currently have a complete path to EID,
- * return NULL.
+ * If the element EID does not currently exist in BRANCH, return NULL.
  *
- * ### A branch element's rrpath can change during the edit.
+ * ### TODO: Clarify sequencing requirements.
  */
 const char *
 svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
                              int eid,
                              apr_pool_t *result_pool);
+
+/* Return the EID for the branch-relative path PATH in BRANCH.
+ *
+ * If no element of BRANCH is at this path, return -1.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+int
+svn_branch_get_eid_by_path(const svn_branch_instance_t *branch,
+                           const char *path,
+                           apr_pool_t *scratch_pool);
+
+/* Return the EID for the repos-relpath RRPATH in BRANCH.
+ *
+ * If no element of BRANCH is at this path, return -1.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+int
+svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
+                             const char *rrpath,
+                             apr_pool_t *scratch_pool);
+
+/* Find the (deepest) branch of which the path RRPATH is either the root
+ * path or a normal, non-sub-branch path. An element need not exist at
+ * RRPATH.
+ *
+ * Set *BRANCH_P to the deepest branch within ROOT_BRANCH (recursively,
+ * including itself) that contains the path RRPATH.
+ *
+ * If EID_P is not null then set *EID_P to the element id of RRPATH in
+ * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
+ *
+ * If RRPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
+ * NULL and (if EID_P is not null) *EID_P to -1.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+void
+svn_branch_find_nested_branch_element_by_rrpath(
+                                svn_branch_instance_t **branch_p,
+                                int *eid_p,
+                                svn_branch_instance_t *root_branch,
+                                const char *rrpath,
+                                apr_pool_t *scratch_pool);
 
 /* Find the (deepest) branch in the state being edited by EDITOR, of which
  * the path RRPATH is either the root path or a normal, non-sub-branch
@@ -1817,6 +2065,8 @@ svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
  *
  * If EID_P is not null then set *EID_P to the element id of RRPATH in
  * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
+ *
+ * ### TODO: Clarify sequencing requirements.
  */
 void
 svn_editor3_find_branch_element_by_rrpath(svn_branch_instance_t **branch_p,
@@ -1843,6 +2093,20 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                    svn_revnum_t revnum,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
+
+/* Get the content of BRANCH:EID, as fully resolved content (not as a
+ * reference). BRANCH:EID must not be a subbranch root.
+ *
+ * Set *NODE_P to the content, or to null if there is no such element.
+ * Use the editor's "fetch" callback if the content is not already in memory.
+ */
+svn_error_t *
+svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
+                      svn_editor3_t *editor,
+                      svn_branch_instance_t *branch,
+                      int eid,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /* Create a new revision-root object *REV_ROOT_P, initialized with info
  * parsed from STREAM, allocated in RESULT_POOL.
