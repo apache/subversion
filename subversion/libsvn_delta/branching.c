@@ -994,6 +994,7 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
 static svn_error_t *
 svn_branch_family_parse(svn_branch_family_t **new_family,
                         int *parent_fid,
+                        int *num_branch_instances,
                         svn_branch_repos_t *repos,
                         svn_stream_t *stream,
                         apr_pool_t *scratch_pool)
@@ -1006,11 +1007,12 @@ svn_branch_family_parse(svn_branch_family_t **new_family,
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
-  n = sscanf(line->data, "f%d: bids %d %d eids %d %d parent-fid %d\n",
+  n = sscanf(line->data, "f%d: bids %d %d eids %d %d "
+                         "parent-fid %d b-instances %d\n",
              &fid,
              &first_bid, &next_bid, &first_eid, &next_eid,
-             parent_fid);
-  SVN_ERR_ASSERT(n == 6);
+             parent_fid, num_branch_instances);
+  SVN_ERR_ASSERT(n == 7);
 
   family = repos_get_family_by_id(repos, fid);
   if (family)
@@ -1073,14 +1075,16 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
   for (i = 0; i < *next_fid_p; i++)
     {
       svn_branch_family_t *family;
-      int bid, parent_fid;
+      int parent_fid, num_branch_instances;
+      int j;
 
-      SVN_ERR(svn_branch_family_parse(&family, &parent_fid, repos, stream,
+      SVN_ERR(svn_branch_family_parse(&family,
+                                      &parent_fid, &num_branch_instances,
+                                      repos, stream,
                                       scratch_pool));
 
       /* parse the branches */
-      /* ### Need to iterate over N(instances) not over N(sibling-defs) */
-      for (bid = family->first_bid; bid < family->next_bid; ++bid)
+      for (j = 0; j < num_branch_instances; j++)
         {
           svn_branch_instance_t *branch;
 
@@ -1158,14 +1162,9 @@ svn_branch_family_serialize(svn_stream_t *stream,
                             int parent_fid,
                             apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *branch_instances
+    = apr_array_make(scratch_pool, 0, sizeof(void *));
   int i;
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "f%d: bids %d %d eids %d %d parent-fid %d\n",
-                            family->fid,
-                            family->first_bid, family->next_bid,
-                            family->first_eid, family->next_eid,
-                            parent_fid));
 
   for (i = 0; i < rev_root->branch_instances->nelts; i++)
     {
@@ -1174,8 +1173,25 @@ svn_branch_family_serialize(svn_stream_t *stream,
 
       if (branch->sibling_defn->family == family)
         {
-          SVN_ERR(svn_branch_instance_serialize(stream, branch, scratch_pool));
+          APR_ARRAY_PUSH(branch_instances, void *) = branch;
         }
+    }
+
+  SVN_ERR(svn_stream_printf(stream, scratch_pool,
+                            "f%d: bids %d %d eids %d %d "
+                            "parent-fid %d b-instances %d\n",
+                            family->fid,
+                            family->first_bid, family->next_bid,
+                            family->first_eid, family->next_eid,
+                            parent_fid,
+                            branch_instances->nelts));
+
+  for (i = 0; i < branch_instances->nelts; i++)
+    {
+      svn_branch_instance_t *branch
+        = APR_ARRAY_IDX(branch_instances, i, void *);
+
+      SVN_ERR(svn_branch_instance_serialize(stream, branch, scratch_pool));
     }
 
   for (i = 0; i < family->sub_families->nelts; i++)
