@@ -908,68 +908,10 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
-def _unpack_precooked_repos(path, template):
-  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
-  zipfile.ZipFile(repozip, 'r').extractall(path)
-
-# For creating new, pre-cooked greek repositories
-def unpack_greek_repos(path):
-  template = "greek-fsfs-v%d.zip" % options.fsfs_version
-  _unpack_precooked_repos(path, template)
-
-# For creating blank new repositories
-def create_repos(path, minor_version = None):
-  """Create a brand-new SVN repository at PATH.  If PATH does not yet
-  exist, create it."""
-
-  if not os.path.exists(path):
-    os.makedirs(path) # this creates all the intermediate dirs, if necessary
-
-  if options.fsfs_version is None:
-    if options.fs_type == "bdb":
-      opts = ("--bdb-txn-nosync",)
-    else:
-      opts = ()
-    if minor_version is None or minor_version > options.server_minor_version:
-      minor_version = options.server_minor_version
-    opts += ("--compatible-version=1.%d" % (minor_version),)
-    if options.fs_type is not None:
-      opts += ("--fs-type=" + options.fs_type,)
-    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
-                                            "create", path, *opts)
-  else:
-    # Copy a pre-cooked FSFS repository
-    assert options.fs_type == "fsfs"
-    template = "empty-fsfs-v%d.zip" % options.fsfs_version
-    _unpack_precooked_repos(path, template)
-    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
-                                            "setuuid", path)
-
-  # Skip tests if we can't create the repository.
-  if stderr:
-    stderr_lines = 0
-    not_using_fsfs_backend = (options.fs_type != "fsfs")
-    backend_deprecation_warning = False
-    for line in stderr:
-      stderr_lines += 1
-      if line.find('Unknown FS type') != -1:
-        raise Skip
-      if not_using_fsfs_backend:
-        if 0 < line.find('repository back-end is deprecated, consider using'):
-          backend_deprecation_warning = True
-
-    # Creating BDB repositories will cause svnadmin to print a warning
-    # which should be ignored.
-    if (stderr_lines == 1
-        and not_using_fsfs_backend
-        and backend_deprecation_warning):
-      pass
-    else:
-      # If the FS type is known and we noticed more than just the
-      # BDB-specific warning, assume the repos couldn't be created
-      # (e.g. due to a missing 'svnadmin' binary).
-      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+# For setting up authz and hooks in existing repos
+def _post_create_repos(path, minor_version = None):
+  """Set default access right configurations for svnserve and mod_dav
+  as well as hooks etc. in the SVN repository at PATH."""
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
@@ -1038,6 +980,73 @@ def create_repos(path, minor_version = None):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
+
+def _unpack_precooked_repos(path, template):
+  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
+  zipfile.ZipFile(repozip, 'r').extractall(path)
+
+# For creating new, pre-cooked greek repositories
+def unpack_greek_repos(path):
+  template = "greek-fsfs-v%d.zip" % options.fsfs_version
+  _unpack_precooked_repos(path, template)
+  _post_create_repos(path, options.server_minor_version)
+
+# For creating blank new repositories
+def create_repos(path, minor_version = None):
+  """Create a brand-new SVN repository at PATH.  If PATH does not yet
+  exist, create it."""
+
+  if not os.path.exists(path):
+    os.makedirs(path) # this creates all the intermediate dirs, if necessary
+
+  if options.fsfs_version is None:
+    if options.fs_type == "bdb":
+      opts = ("--bdb-txn-nosync",)
+    else:
+      opts = ()
+    if minor_version is None or minor_version > options.server_minor_version:
+      minor_version = options.server_minor_version
+    opts += ("--compatible-version=1.%d" % (minor_version),)
+    if options.fs_type is not None:
+      opts += ("--fs-type=" + options.fs_type,)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "create", path, *opts)
+  else:
+    # Copy a pre-cooked FSFS repository
+    assert options.fs_type == "fsfs"
+    template = "empty-fsfs-v%d.zip" % options.fsfs_version
+    _unpack_precooked_repos(path, template)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "setuuid", path)
+
+  # Skip tests if we can't create the repository.
+  if stderr:
+    stderr_lines = 0
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
+    for line in stderr:
+      stderr_lines += 1
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+
+  # Configure the new repository.
+  _post_create_repos(path, options.server_minor_version)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
