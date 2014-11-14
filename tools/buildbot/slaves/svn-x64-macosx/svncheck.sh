@@ -83,13 +83,6 @@ while [ ! -z "$1" ]; do
     shift
 done
 
-# Create a directory for the test log files
-if [ -d "${abssrc}/.test-logs" ]; then
-    rm -fr "${abssrc}/.test-logs"
-fi
-mkdir "${abssrc}/.test-logs" || exit 1
-
-
 ${check_local} && check_tests local
 ${check_svn} && check_tests svn
 ${check_dav} && check_tests dav

@@ -39,6 +39,14 @@ if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
 fi
 
 #
+# Step 0: Create a directory for the test log files
+#
+if [ -d "${abssrc}/.test-logs" ]; then
+    rm -fr "${abssrc}/.test-logs"
+fi
+mkdir "${abssrc}/.test-logs" || exit 1
+
+#
 # Step 1: get the latest and greatest amalgamanted SQLite
 #
 
@@ -61,7 +69,6 @@ cd ${abssrc}
 
 echo "============ configure"
 cd ${absbld}
-rm -fr "${abssrc}/.test-logs"
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
