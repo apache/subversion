@@ -752,22 +752,45 @@ get_best_connection(report_context_t *ctx)
   if (ctx->report_received && (ctx->sess->max_connections > 2))
     first_conn = 0;
 
-  /* Currently, we just cycle connections.  In the future we could
-     store the number of pending requests on each connection, or
-     perform other heuristics, to achieve better connection usage.
-     (As an optimization, if there's only one available auxiliary
-     connection to use, don't bother doing all the cur_conn math --
-     just return that one connection.)  */
+  /* If there's only one available auxiliary connection to use, don't bother
+     doing all the cur_conn math -- just return that one connection.  */
   if (ctx->sess->num_conns - first_conn == 1)
     {
       conn = ctx->sess->conns[first_conn];
     }
   else
     {
+#if SERF_VERSION_AT_LEAST(1, 4, 0)
+      /* Often one connection is slower than others, e.g. because the server
+         process/thread has to do more work for the particular set of requests.
+         In the worst case, when REQUEST_COUNT_TO_RESUME requests are queued
+         on such a slow connection, ra_serf will completely stop sending
+         requests.
+
+         The method used here selects the connection with the least amount of
+         pending requests, thereby giving more work to lightly loaded server
+         processes.
+       */
+      unsigned int i, min = INT_MAX, best_conn = first_conn;
+      for (i = first_conn; i < ctx->sess->num_conns; i++)
+        {
+          serf_connection_t *sc = ctx->sess->conns[i]->conn;
+          unsigned int pending = serf_connection_pending_requests(sc);
+          if (pending < min)
+            {
+              min = pending;
+              best_conn = i;
+            }
+        }
+      conn = ctx->sess->conns[best_conn];
+#else
+    /* We don't know how many requests are pending per connection, so just 
+       cycle them. */
       conn = ctx->sess->conns[ctx->sess->cur_conn];
       ctx->sess->cur_conn++;
       if (ctx->sess->cur_conn >= ctx->sess->num_conns)
         ctx->sess->cur_conn = first_conn;
+#endif
     }
   return conn;
 }

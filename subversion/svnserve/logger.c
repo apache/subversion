@@ -60,7 +60,7 @@ logger__create_for_stderr(logger_t **logger,
   result->pool = svn_pool_create(pool);
   
   SVN_ERR(svn_stream_for_stderr(&result->stream, pool));
-  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
   *logger = result;
 
@@ -78,7 +78,7 @@ logger__create(logger_t **logger,
   SVN_ERR(svn_io_file_open(&file, filename,
                            APR_WRITE | APR_CREATE | APR_APPEND,
                            APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, FALSE, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
   result->stream = svn_stream_from_aprfile2(file, FALSE,  pool);
   result->pool = svn_pool_create(pool);

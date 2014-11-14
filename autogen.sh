@@ -59,7 +59,8 @@ done
 # ### APR's libtool. deferring to a second round of change...
 #
 
-libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
+# Much like APR except we do not prefer libtool 1 over libtool 2.
+libtoolize="`./build/PrintPath glibtoolize libtoolize glibtoolize1 libtoolize15 libtoolize14`"
 lt_major_version=`$libtoolize --version 2>/dev/null | sed -e 's/^[^0-9]*//' -e 's/\..*//' -e '/^$/d' -e 1q`
 
 if [ "x$libtoolize" = "x" ]; then
@@ -71,7 +72,7 @@ rm -f build/config.guess build/config.sub
 $libtoolize --copy --automake --force
 
 ltpath="`dirname $libtoolize`"
-ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
+ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`}/libtool.m4
 
 if [ ! -f $ltfile ]; then
     echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
@@ -91,7 +92,7 @@ for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4; do
     rm -f build/$file
 
     if [ $lt_major_version -ge 2 ]; then
-        ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/$file}
+        ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`}/$file
 
         if [ ! -f $ltfile ]; then
             echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
@@ -105,7 +106,7 @@ done
 
 if [ $lt_major_version -ge 2 ]; then
     for file in config.guess config.sub; do
-        configfile=${LIBTOOL_CONFIG-`cd $ltpath/../share/libtool/config ; pwd`/$file}
+        configfile=${LIBTOOL_CONFIG-`cd $ltpath/../share/libtool/config ; pwd`}/$file
 
         if [ ! -f $configfile ]; then
             echo "$configfile not found (try setting the LIBTOOL_CONFIG environment variable)"

@@ -984,7 +984,8 @@ struct path_revision
   svn_revnum_t revnum;
   const char *path;
 
-  /* Does this path_rev have merges to also be included?  */
+  /* Does this path_rev have merges to also be included?  If so, this is
+     the union of both additions and (negated) deletions of mergeinfo. */
   apr_hash_t *merged_mergeinfo;
 
   /* Is this a merged revision? */
@@ -993,6 +994,7 @@ struct path_revision
 
 /* Check for merges in OLD_PATH_REV->PATH at OLD_PATH_REV->REVNUM.  Store
    the mergeinfo difference in *MERGED_MERGEINFO, allocated in POOL.  The
+   difference is the union of both additions and (negated) deletions.  The
    returned *MERGED_MERGEINFO will be NULL if there are no changes. */
 static svn_error_t *
 get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
@@ -1070,7 +1072,8 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   else
     SVN_ERR(err);
 
-  /* Then calculate and merge the differences. */
+  /* Then calculate and merge the differences, combining additions and
+     (negated) deletions as all positive changes in CHANGES. */
   SVN_ERR(svn_mergeinfo_diff2(&deleted, &changed, prev_mergeinfo,
                               curr_mergeinfo, FALSE, result_pool,
                               scratch_pool));

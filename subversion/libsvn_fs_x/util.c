@@ -172,24 +172,6 @@ svn_fs_x__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-svn_fs_x__path_l2p_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
-svn_fs_x__path_p2l_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
 svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
@@ -270,11 +252,18 @@ combine_txn_id_string(svn_fs_x__txn_id_t txn_id,
 }
 
 const char *
+svn_fs_x__path_txns_dir(svn_fs_t *fs,
+                        apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+}
+
+const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txns_dir(fs, pool),
                               combine_txn_id_string(txn_id, PATH_EXT_TXN,
                                                     pool),
                               SVN_VA_NULL);
@@ -359,6 +348,13 @@ svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 const char *
+svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
+                              apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool);
+}
+
+const char *
 svn_fs_x__path_txn_item_index(svn_fs_t *fs,
                               svn_fs_x__txn_id_t txn_id,
                               apr_pool_t *pool)
@@ -372,7 +368,7 @@ svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              svn_fs_x__txn_id_t txn_id,
                              apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
                               combine_txn_id_string(txn_id, PATH_EXT_REV,
                                                     pool),
                               SVN_VA_NULL);
@@ -383,7 +379,7 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   svn_fs_x__txn_id_t txn_id,
                                   apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
                               combine_txn_id_string(txn_id,
                                                     PATH_EXT_REV_LOCK,
                                                     pool),
@@ -462,7 +458,7 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
+  SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
@@ -492,6 +488,24 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
 
   SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
                               final_path /* copy_perms */, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__read_current(svn_revnum_t *rev,
+                       svn_fs_t *fs,
+                       apr_pool_t *pool)
+{
+  const char *str;
+  svn_stringbuf_t *content;
+  SVN_ERR(svn_fs_x__read_content(&content,
+                                 svn_fs_x__path_current(fs, pool),
+                                 pool));
+  SVN_ERR(svn_revnum_parse(rev, content->data, &str));
+  if (*str != '\n')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Corrupt 'current' file"));
 
   return SVN_NO_ERROR;
 }

@@ -1261,6 +1261,53 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 
+/* Opaque struct for svn_wc__db_create_commit_queue, svn_wc__db_commit_queue_add,
+   svn_wc__db_process_commit_queue */
+typedef struct svn_wc__db_commit_queue_t svn_wc__db_commit_queue_t;
+
+/* Create a new svn_wc__db_commit_queue_t instance in RESULT_POOL for the
+   working copy specified with WRI_ABSPATH */
+svn_error_t *
+svn_wc__db_create_commit_queue(svn_wc__db_commit_queue_t **queue,
+                               svn_wc__db_t *db,
+                               const char *wri_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Adds the specified path to the commit queue with the related information.
+
+   See svn_wc_queue_committed4() for argument documentation.
+
+   Note that this function currently DOESN'T copy the passed values to
+   RESULT_POOL, but expects them to be valid until processing. Otherwise the
+   only users memory requirements would +- double.
+  */
+svn_error_t *
+svn_wc__db_commit_queue_add(svn_wc__db_commit_queue_t *queue,
+                            const char *local_abspath,
+                            svn_boolean_t recurse,
+                            svn_boolean_t is_commited,
+                            svn_boolean_t remove_lock,
+                            svn_boolean_t remove_changelist,
+                            const svn_checksum_t *new_sha1_checksum,
+                            apr_hash_t *new_dav_cache,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* Process the items in QUEUE in a single transaction. Commit workqueue items
+   for items that need post processing.
+
+   Implementation detail of svn_wc_process_committed_queue2().
+ */
+svn_error_t *
+svn_wc__db_process_commit_queue(svn_wc__db_t *db,
+                                svn_wc__db_commit_queue_t *queue,
+                                svn_revnum_t new_revnum,
+                                apr_time_t new_date,
+                                const char *new_author,
+                                apr_pool_t *scratch_pool);
+
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -2138,16 +2185,16 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
-/* Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
-   tree (looking through to the BASE tree as required).
-
-   ### *PROPS will set set to NULL in the following situations:
-   ### ... tbd.  see props.c:svn_wc__get_pristine_props()
+/* Set *PROPS to the base properties of the node at LOCAL_ABSPATH.
 
    *PROPS maps "const char *" names to "const svn_string_t *" values.
    If the node has no properties, set *PROPS to an empty hash.
-   If the node is not present, return an error.
+   If the base node is in a state that cannot have properties (such as
+   not-present or locally added without copy-from), return an error.
+
    Allocate *PROPS and its keys and values in RESULT_POOL.
+
+   See also svn_wc_get_pristine_props().
 */
 svn_error_t *
 svn_wc__db_read_pristine_props(apr_hash_t **props,
@@ -2633,10 +2680,12 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool);
 
 
-/* Remove any lock for LOCAL_ABSPATH in DB.  */
+/* Remove any lock for LOCAL_ABSPATH in DB and install WORK_ITEMS
+   (if not NULL) in DB */
 svn_error_t *
 svn_wc__db_lock_remove(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 

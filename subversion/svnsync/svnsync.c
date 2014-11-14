@@ -68,6 +68,11 @@ enum svnsync__opt {
   svnsync_opt_disable_locking,
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
+  svnsync_opt_trust_server_cert_unknown_ca,
+  svnsync_opt_trust_server_cert_cn_mismatch,
+  svnsync_opt_trust_server_cert_expired,
+  svnsync_opt_trust_server_cert_not_yet_valid,
+  svnsync_opt_trust_server_cert_other_failure,
   svnsync_opt_allow_non_empty,
   svnsync_opt_steal_lock
 };
@@ -78,6 +83,11 @@ enum svnsync__opt {
                              svnsync_opt_auth_username, \
                              svnsync_opt_auth_password, \
                              svnsync_opt_trust_server_cert, \
+                             svnsync_opt_trust_server_cert_unknown_ca, \
+                             svnsync_opt_trust_server_cert_cn_mismatch, \
+                             svnsync_opt_trust_server_cert_expired, \
+                             svnsync_opt_trust_server_cert_not_yet_valid, \
+                             svnsync_opt_trust_server_cert_other_failure, \
                              svnsync_opt_source_username, \
                              svnsync_opt_source_password, \
                              svnsync_opt_sync_username, \
@@ -194,11 +204,29 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "see --source-password and --sync-password)") },
     {"trust-server-cert", svnsync_opt_trust_server_cert, 0,
-                       N_("accept SSL server certificates from unknown\n"
-                          "                             "
-                          "certificate authorities without prompting (but only\n"
-                          "                             "
-                          "with '--non-interactive')") },
+                      N_("deprecated; same as --trust-unknown-ca")},
+    {"trust-unknown-ca", svnsync_opt_trust_server_cert_unknown_ca, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates from unknown certificate authorities")},
+    {"trust-cn-mismatch", svnsync_opt_trust_server_cert_cn_mismatch, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates even if the server hostname does not\n"
+                         "                             "
+                         "match the certificate's common name attribute")},
+    {"trust-expired", svnsync_opt_trust_server_cert_expired, 0,
+                      N_("with --non-interactive, accept expired SSL server\n"
+                         "                             "
+                         "certificates")},
+    {"trust-not-yet-valid", svnsync_opt_trust_server_cert_not_yet_valid, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates from the future")},
+    {"trust-other-failure", svnsync_opt_trust_server_cert_other_failure, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates with failures other than the above")},
     {"source-username", svnsync_opt_source_username, 1,
                        N_("connect to source repository with username ARG") },
     {"source-password", svnsync_opt_source_password, 1,
@@ -252,7 +280,11 @@ static const apr_getopt_option_t svnsync_options[] =
 
 typedef struct opt_baton_t {
   svn_boolean_t non_interactive;
-  svn_boolean_t trust_server_cert;
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
   svn_boolean_t no_auth_cache;
   svn_auth_baton_t *source_auth_baton;
   svn_auth_baton_t *sync_auth_baton;
@@ -1969,8 +2001,25 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             force_interactive = TRUE;
             break;
 
-          case svnsync_opt_trust_server_cert:
-            opt_baton.trust_server_cert = TRUE;
+          case svnsync_opt_trust_server_cert: /* backwards compat */
+          case svnsync_opt_trust_server_cert_unknown_ca:
+            opt_baton.trust_server_cert_unknown_ca = TRUE;
+            break;
+
+          case svnsync_opt_trust_server_cert_cn_mismatch:
+            opt_baton.trust_server_cert_cn_mismatch = TRUE;
+            break;
+
+          case svnsync_opt_trust_server_cert_expired:
+            opt_baton.trust_server_cert_expired = TRUE;
+            break;
+
+          case svnsync_opt_trust_server_cert_not_yet_valid:
+            opt_baton.trust_server_cert_not_yet_valid = TRUE;
+            break;
+
+          case svnsync_opt_trust_server_cert_other_failure:
+            opt_baton.trust_server_cert_other_failure = TRUE;
             break;
 
           case svnsync_opt_no_auth_cache:
@@ -2156,12 +2205,29 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                 "mutually exclusive"));
     }
 
-  /* --trust-server-cert can only be used with --non-interactive */
-  if (opt_baton.trust_server_cert && !opt_baton.non_interactive)
+  /* --trust-* can only be used with --non-interactive */
+  if (!opt_baton.non_interactive)
     {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-server-cert requires "
-                                "--non-interactive"));
+      if (opt_baton.trust_server_cert_unknown_ca)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-unknown-ca requires "
+                                  "--non-interactive"));
+      if (opt_baton.trust_server_cert_cn_mismatch)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-cn-mismatch requires "
+                                  "--non-interactive"));
+      if (opt_baton.trust_server_cert_expired)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-expired requires "
+                                  "--non-interactive"));
+      if (opt_baton.trust_server_cert_not_yet_valid)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-not-yet-valid requires "
+                                  "--non-interactive"));
+      if (opt_baton.trust_server_cert_other_failure)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-other-failure requires "
+                                  "--non-interactive"));
     }
 
   SVN_ERR(svn_config_ensure(opt_baton.config_dir, pool));
@@ -2273,27 +2339,37 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  err = svn_cmdline_create_auth_baton(&opt_baton.source_auth_baton,
-                                      opt_baton.non_interactive,
-                                      opt_baton.source_username,
-                                      opt_baton.source_password,
-                                      opt_baton.config_dir,
-                                      opt_baton.no_auth_cache,
-                                      opt_baton.trust_server_cert,
-                                      config,
-                                      check_cancel, NULL,
-                                      pool);
+  err = svn_cmdline_create_auth_baton2(
+          &opt_baton.source_auth_baton,
+          opt_baton.non_interactive,
+          opt_baton.source_username,
+          opt_baton.source_password,
+          opt_baton.config_dir,
+          opt_baton.no_auth_cache,
+          opt_baton.trust_server_cert_unknown_ca,
+          opt_baton.trust_server_cert_cn_mismatch,
+          opt_baton.trust_server_cert_expired,
+          opt_baton.trust_server_cert_not_yet_valid,
+          opt_baton.trust_server_cert_other_failure,
+          config,
+          check_cancel, NULL,
+          pool);
   if (! err)
-    err = svn_cmdline_create_auth_baton(&opt_baton.sync_auth_baton,
-                                        opt_baton.non_interactive,
-                                        opt_baton.sync_username,
-                                        opt_baton.sync_password,
-                                        opt_baton.config_dir,
-                                        opt_baton.no_auth_cache,
-                                        opt_baton.trust_server_cert,
-                                        config,
-                                        check_cancel, NULL,
-                                        pool);
+    err = svn_cmdline_create_auth_baton2(
+            &opt_baton.sync_auth_baton,
+            opt_baton.non_interactive,
+            opt_baton.sync_username,
+            opt_baton.sync_password,
+            opt_baton.config_dir,
+            opt_baton.no_auth_cache,
+            opt_baton.trust_server_cert_unknown_ca,
+            opt_baton.trust_server_cert_cn_mismatch,
+            opt_baton.trust_server_cert_expired,
+            opt_baton.trust_server_cert_not_yet_valid,
+            opt_baton.trust_server_cert_other_failure,
+            config,
+            check_cancel, NULL,
+            pool);
   if (! err)
     err = (*subcommand->cmd_func)(os, &opt_baton, pool);
   if (err)

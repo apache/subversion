@@ -392,6 +392,8 @@ do_text_merge(svn_boolean_t *contains_conflicts,
               const char *target_label,
               const char *left_label,
               const char *right_label,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
               apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -416,13 +418,14 @@ do_text_merge(svn_boolean_t *contains_conflicts,
 
   ostream = svn_stream_from_aprfile2(result_f, TRUE, pool);
 
-  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+  SVN_ERR(svn_diff_file_output_merge3(ostream, diff,
                                       left, detranslated_target, right,
                                       left_marker,
                                       target_marker,
                                       right_marker,
                                       "=======", /* separator */
                                       svn_diff_conflict_display_modified_original_latest,
+                                      cancel_func, cancel_baton,
                                       pool));
   SVN_ERR(svn_stream_close(ostream));
 
@@ -871,6 +874,7 @@ merge_text_file(svn_skel_t **work_items,
                           target_label,
                           left_label,
                           right_label,
+                          cancel_func, cancel_baton,
                           pool));
 
   SVN_ERR(svn_io_file_close(result_f, pool));

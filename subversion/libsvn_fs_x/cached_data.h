@@ -37,7 +37,8 @@ svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
                             const svn_fs_id_t *id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *COUNT to the value of the mergeinfo_count member of the node-
    revision for the node ID in FS.  Do any allocations in POOL. */
@@ -53,25 +54,26 @@ svn_error_t *
 svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.
-   Do any allocations in POOL. */
+   Do any allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__check_rep(representation_t *rep,
                     svn_fs_t *fs,
-                    apr_pool_t *pool);
+                    apr_pool_t *scratch_pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The
    number of reps (including REP) in the chain will be returned in
    *CHAIN_LENGTH.  *SHARD_COUNT will be set to the number of shards
-   accessed.  Do any allocations in POOL. */
+   accessed.  Do any allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
                            representation_t *rep,
                            svn_fs_t *fs,
-                           apr_pool_t *pool);
+                           apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
@@ -95,8 +97,7 @@ svn_error_t *
 svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
                                     svn_filesize_t *expanded_len,
                                     svn_fs_t *fs,
-                                    apr_file_t *file,
-                                    svn_stream_t *stream,
+                                    svn_fs_x__revision_file_t *rev_file,
                                     svn_fs_x__p2l_entry_t* entry,
                                     apr_pool_t *pool);
 

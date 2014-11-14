@@ -140,6 +140,8 @@ svn_string_create_empty(apr_pool_t *pool);
 /** Create a new string copied from a generic string of bytes, @a bytes, of
  * length @a size bytes.  @a bytes is NOT assumed to be null-terminated, but
  * the new string will be.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a size is zero.
  */
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
@@ -205,6 +207,8 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
 /** Create a new stringbuf copied from the generic string of bytes, @a bytes,
  * of length @a size bytes.  @a bytes is NOT assumed to be null-terminated,
  * but the new stringbuf will be.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a size is zero.
  */
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
@@ -307,6 +311,8 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
 /** Append an array of bytes onto @a targetstr.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
+ *
+ * @since 1.9 @a bytes can be NULL if @a count is zero.
  */
 void
 svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
@@ -349,6 +355,8 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
  * @note The inserted string may be a sub-range if @a str.
  *
  * @since New in 1.8.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a count is zero.
  */
 void
 svn_stringbuf_insert(svn_stringbuf_t *str,
@@ -380,6 +388,8 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
  * @endcode
  *
  * @since New in 1.8.
+ *
+ * @since Since 1.9, @a bytes can be NULL if @a new_count is zero.
  */
 void
 svn_stringbuf_replace(svn_stringbuf_t *str,
@@ -525,6 +535,7 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -537,6 +548,7 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -547,6 +559,7 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str);
  * Parse the C string @a str into a 32 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -558,6 +571,7 @@ svn_cstring_atoi(int *n, const char *str);
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -570,6 +584,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */
@@ -580,6 +595,7 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
  * Parse the C string @a str into an unsigned 32 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
+ * Leading whitespace in @a str is skipped in a locale-dependent way.
  *
  * @since New in 1.7.
  */

@@ -204,6 +204,8 @@ show_diff(const svn_wc_conflict_description2_t *desc,
  * and 'my' files of DESC. */
 static svn_error_t *
 show_conflicts(const svn_wc_conflict_description2_t *desc,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -220,7 +222,7 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                 options, pool));
   /* ### Consider putting the markers/labels from
      ### svn_wc__merge_internal in the conflict description. */
-  return svn_diff_file_output_merge2(output, diff,
+  return svn_diff_file_output_merge3(output, diff,
                                      desc->base_abspath,
                                      desc->my_abspath,
                                      desc->their_abspath,
@@ -229,6 +231,8 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
                                      _(">>>>>>> THEIRS (select with 'tc')"),
                                      "=======",
                                      svn_diff_conflict_display_only_conflicts,
+                                     cancel_func,
+                                     cancel_baton,
                                      pool);
 }
 
@@ -244,6 +248,8 @@ static svn_error_t *
 merge_prop_conflict(svn_stream_t *output,
                     const svn_wc_conflict_description2_t *desc,
                     const char *merged_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *pool)
 {
   const char *base_abspath = desc->base_abspath;
@@ -275,7 +281,7 @@ merge_prop_conflict(svn_stream_t *output,
                                 merged_abspath ? merged_abspath : my_abspath,
                                 their_abspath,
                                 options, pool));
-  SVN_ERR(svn_diff_file_output_merge2(output, diff,
+  SVN_ERR(svn_diff_file_output_merge3(output, diff,
                                       base_abspath,
                                       merged_abspath ? merged_abspath
                                                      : my_abspath,
@@ -285,6 +291,8 @@ merge_prop_conflict(svn_stream_t *output,
                                       _(">>>>>>> THEIRS"),
                                       "=======",
                                       svn_diff_conflict_display_modified_original_latest,
+                                      cancel_func,
+                                      cancel_baton,
                                       pool));
 
   return SVN_NO_ERROR;
@@ -300,12 +308,15 @@ merge_prop_conflict(svn_stream_t *output,
 static svn_error_t *
 show_prop_conflict(const svn_wc_conflict_description2_t *desc,
                    const char *merged_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_stream_t *output;
 
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath, pool));
+  SVN_ERR(merge_prop_conflict(output, desc, merged_abspath,
+                              cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -374,7 +385,10 @@ edit_prop_conflict(const char **merged_file_path,
                                    result_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
-  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL, scratch_pool));
+  SVN_ERR(merge_prop_conflict(merged_prop, desc, NULL,
+                              b->pb->cancel_func,
+                              b->pb->cancel_baton,
+                              scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
@@ -463,25 +477,6 @@ static const resolver_option_t prop_conflict_options[] =
                                   svn_wc_conflict_choose_undefined },
   { "r",  N_("mark resolved"),    N_("accept edited version of property"),
                                   svn_wc_conflict_choose_merged },
-  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
-                                     "  [postpone]"),
-                                  svn_wc_conflict_choose_postpone },
-  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
-                                  svn_wc_conflict_choose_postpone },
-  { "h",  N_("help"),             N_("show this help (also '?')"),
-                                  svn_wc_conflict_choose_undefined },
-  { NULL }
-};
-
-/* Resolver options for an obstructued addition */
-static const resolver_option_t obstructed_add_options[] =
-{
-  { "mf", N_("my version"),       N_("accept pre-existing item (ignore "
-                                     "upstream addition)  [mine-full]"),
-                                  svn_wc_conflict_choose_mine_full },
-  { "tf", N_("their version"),    N_("accept incoming item (overwrite "
-                                     "pre-existing item)  [theirs-full]"),
-                                  svn_wc_conflict_choose_theirs_full },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
                                   svn_wc_conflict_choose_postpone },
@@ -778,7 +773,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                             "files not available.\n\n")));
               continue;
             }
-          SVN_ERR(show_conflicts(desc, iterpool));
+          SVN_ERR(show_conflicts(desc,
+                                 b->pb->cancel_func,
+                                 b->pb->cancel_baton,
+                                 iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "df") == 0)
@@ -1025,7 +1023,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(desc, merged_file_path, scratch_pool));
+          SVN_ERR(show_prop_conflict(desc, merged_file_path,
+                                     b->pb->cancel_func, b->pb->cancel_baton,
+                                     scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
@@ -1108,56 +1108,6 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
         }
 
       SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
-      if (! opt)
-        continue;
-
-      if (strcmp(opt->code, "q") == 0)
-        {
-          result->choice = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
-          break;
-        }
-      else if (opt->choice != svn_wc_conflict_choose_undefined)
-        {
-          result->choice = opt->choice;
-          break;
-        }
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-/* Ask the user what to do about the obstructed add described by DESC.
- * Return the answer in RESULT. B is the conflict baton for this
- * conflict resolution session.
- * SCRATCH_POOL is used for temporary allocations. */
-static svn_error_t *
-handle_obstructed_add(svn_wc_conflict_result_t *result,
-                      const svn_wc_conflict_description2_t *desc,
-                      svn_cl__interactive_conflict_baton_t *b,
-                      apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool;
-
-  SVN_ERR(svn_cmdline_fprintf(
-               stderr, scratch_pool,
-               _("Conflict discovered when trying to add '%s'.\n"
-                 "An object of the same name already exists.\n"),
-               svn_cl__local_style_skip_ancestor(b->path_prefix,
-                                                 desc->local_abspath,
-                                                 scratch_pool)));
-
-  iterpool = svn_pool_create(scratch_pool);
-  while (1)
-    {
-      const resolver_option_t *opt;
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(prompt_user(&opt, obstructed_add_options, NULL, b->pb,
-                          iterpool));
       if (! opt)
         continue;
 
@@ -1322,29 +1272,6 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
   else if (desc->kind == svn_wc_conflict_kind_property)
     SVN_ERR(handle_prop_conflict(*result, desc, b, result_pool, scratch_pool));
-
-  /*
-    Dealing with obstruction of additions can be tricky.  The
-    obstructing item could be unversioned, versioned, or even
-    schedule-add.  Here's a matrix of how the caller should behave,
-    based on results we return.
-
-                         Unversioned       Versioned       Schedule-Add
-
-      choose_mine       skip addition,    skip addition     skip addition
-                        add existing item
-
-      choose_theirs     destroy file,    schedule-delete,   revert add,
-                        add new item.    add new item.      rm file,
-                                                            add new item
-
-      postpone               [              bail out                 ]
-
-   */
-  else if ((desc->action == svn_wc_conflict_action_add)
-           && (desc->reason == svn_wc_conflict_reason_obstructed))
-    SVN_ERR(handle_obstructed_add(*result, desc, b, scratch_pool));
-
   else if (desc->kind == svn_wc_conflict_kind_tree)
     SVN_ERR(handle_tree_conflict(*result, desc, b, scratch_pool));
 

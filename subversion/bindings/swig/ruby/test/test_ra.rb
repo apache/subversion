@@ -38,8 +38,7 @@ class SvnRaTest < Test::Unit::TestCase
 
   def test_uuid
     Svn::Ra::Session.open(@repos_uri) do |session|
-      assert_equal(File.read(File.join(@repos_path, "db", "uuid")).strip,
-                   session.uuid)
+      assert_equal(@repos.fs.uuid, session.uuid)
     end
   end
 

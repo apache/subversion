@@ -54,9 +54,6 @@ extern "C" {
 #error Please update your version of serf to at least 1.2.1.
 #endif
 
-/** Use this to silence compiler warnings about unused parameters. */
-#define UNUSED_CTX(x) ((void)(x))
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
@@ -894,6 +891,16 @@ void
 svn_ra_serf__add_close_tag_buckets(serf_bucket_t *agg_bucket,
                                    serf_bucket_alloc_t *bkt_alloc,
                                    const char *tag);
+
+/* Add the appropriate serf buckets to AGG_BUCKET representing the XML
+ * open tag with name TAG, and then immediately closes the tag using the />
+ * notation
+ */
+void
+svn_ra_serf__add_empty_tag_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *tag,
+                                   ...) SVN_NEEDS_SENTINEL_NULL;
 
 /*
  * Add the appropriate serf buckets to AGG_BUCKET with xml-escaped

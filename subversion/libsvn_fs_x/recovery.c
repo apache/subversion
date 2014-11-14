@@ -55,10 +55,11 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   while (1)
     {
       svn_error_t *err;
-      apr_file_t *file;
+      svn_fs_x__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, right, iterpool);
+      err = svn_fs_x__open_pack_or_rev_file(&file, fs, right, iterpool,
+                                            iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -78,10 +79,11 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
       svn_error_t *err;
-      apr_file_t *file;
+      svn_fs_x__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, probe, iterpool);
+      err = svn_fs_x__open_pack_or_rev_file(&file, fs, probe, iterpool,
+                                            iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -122,7 +124,12 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_node_kind_t youngest_revprops_kind;
 
   /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_x__cleanup_revprop_namespace(fs));
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
+
+  /* The admin may have created a plain copy of this repo before attempting
+     to recover it (hotcopy may or may not work with corrupted repos).
+     Bump the instance ID. */
+  SVN_ERR(svn_fs_x__set_uuid(fs, fs->uuid, NULL, pool));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));

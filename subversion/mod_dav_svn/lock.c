@@ -787,7 +787,31 @@ append_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock creation is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && serr->apr_err == SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED)
+    {
+      /* The lock was created in the repository, so we should report the node
+         as locked to the client */
+
+      /* First log the hook failure, for diagnostics. This clears serr */
+      dav_svn__log_err(info->r,
+                       dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                            "Post lock hook failure.",
+                                            resource->pool),
+                       APLOG_WARNING);
+
+      /* How can we report the error to the client?
+
+         We can't return an error code, as that would make it impossible
+         to return the lock details?
+
+         Add yet another custom header?
+         Just an header doesn't handle a full error chain... 
+
+         ### Current behavior: we don't report an error.
+       */
+
+    }
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))
@@ -896,6 +920,22 @@ remove_lock(dav_lockdb *lockdb,
           return dav_svn__new_error(resource->pool, HTTP_NOT_IMPLEMENTED,
                                     DAV_ERR_LOCK_SAVE_LOCK,
                                     "Anonymous lock removal is not allowed.");
+        }
+      else if (serr && serr->apr_err == SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED
+               && !resource->info->repos->is_svn_client)
+        {
+          /* Generic DAV clients don't understand the specific error code we
+             would produce here as being just a warning, so lets produce a
+             success result. We removed the lock anyway. */
+
+          /* First log the hook failure, for diagnostics. This clears serr */
+          dav_svn__log_err(info->r,
+                           dav_svn__convert_err(serr,
+                                                HTTP_INTERNAL_SERVER_ERROR,
+                                                "Post unlock hook failure.",
+                                                resource->pool),
+                           APLOG_WARNING);
+
         }
       else if (serr)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1016,7 +1056,7 @@ refresh_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock refreshing is not allowed.");
     }
-  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+  else if (serr && (svn_error_find_cause(serr, SVN_ERR_REPOS_HOOK_FAILURE) ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
                     SVN_ERR_IS_LOCK_ERROR(serr)))

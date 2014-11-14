@@ -36,9 +36,13 @@
 #include "svn_private_config.h"
 
 /* Like svn_io_dir_file_copy(), but doesn't copy files that exist at
- * the destination and do not differ in terms of kind, size, and mtime. */
+ * the destination and do not differ in terms of kind, size, and mtime.
+ * Set *SKIPPED_P to FALSE only if the file was copied, do not change
+ * the value in *SKIPPED_P otherwise. SKIPPED_P may be NULL if not
+ * required. */
 static svn_error_t *
-hotcopy_io_dir_file_copy(const char *src_path,
+hotcopy_io_dir_file_copy(svn_boolean_t *skipped_p,
+                         const char *src_path,
                          const char *dst_path,
                          const char *file,
                          apr_pool_t *scratch_pool)
@@ -65,6 +69,9 @@ hotcopy_io_dir_file_copy(const char *src_path,
           src_dirent->mtime <= dst_dirent->mtime)
         return SVN_NO_ERROR;
     }
+
+  if (skipped_p)
+    *skipped_p = FALSE;
 
   return svn_error_trace(svn_io_dir_file_copy(src_path, dst_path, file,
                                               scratch_pool));
@@ -107,9 +114,12 @@ entry_name_to_utf8(const char **name_p,
 
 /* Like svn_io_copy_dir_recursively() but doesn't copy regular files that
  * exist in the destination and do not differ from the source in terms of
- * kind, size, and mtime. */
+ * kind, size, and mtime. Set *SKIPPED_P to FALSE only if at least one
+ * file was copied, do not change the value in *SKIPPED_P otherwise.
+ * SKIPPED_P may be NULL if not required. */
 static svn_error_t *
-hotcopy_io_copy_dir_recursively(const char *src,
+hotcopy_io_copy_dir_recursively(svn_boolean_t *skipped_p,
+                                const char *src,
                                 const char *dst_parent,
                                 const char *dst_basename,
                                 svn_boolean_t copy_perms,
@@ -175,8 +185,8 @@ hotcopy_io_copy_dir_recursively(const char *src,
                                      src, subpool));
           if (this_entry.filetype == APR_REG) /* regular file */
             {
-              SVN_ERR(hotcopy_io_dir_file_copy(src, dst_path, entryname_utf8,
-                                               subpool));
+              SVN_ERR(hotcopy_io_dir_file_copy(skipped_p, src, dst_path,
+                                               entryname_utf8, subpool));
             }
           else if (this_entry.filetype == APR_LNK) /* symlink */
             {
@@ -199,7 +209,8 @@ hotcopy_io_copy_dir_recursively(const char *src,
                 continue;
 
               src_target = svn_dirent_join(src, entryname_utf8, subpool);
-              SVN_ERR(hotcopy_io_copy_dir_recursively(src_target,
+              SVN_ERR(hotcopy_io_copy_dir_recursively(skipped_p,
+                                                      src_target,
                                                       dst_path,
                                                       entryname_utf8,
                                                       copy_perms,
@@ -229,14 +240,15 @@ hotcopy_io_copy_dir_recursively(const char *src,
 
 /* Copy an un-packed revision or revprop file for revision REV from SRC_SUBDIR
  * to DST_SUBDIR. Assume a sharding layout based on MAX_FILES_PER_DIR.
- * If INCLUDE_INDEXES is set, copy rev index files as well.
+ * Set *SKIPPED_P to FALSE only if the file was copied, do not change the
+ * value in *SKIPPED_P otherwise. SKIPPED_P may be NULL if not required.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-hotcopy_copy_shard_file(const char *src_subdir,
+hotcopy_copy_shard_file(svn_boolean_t *skipped_p,
+                        const char *src_subdir,
                         const char *dst_subdir,
                         svn_revnum_t rev,
                         int max_files_per_dir,
-                        svn_boolean_t include_indexes,
                         apr_pool_t *scratch_pool)
 {
   const char *src_subdir_shard = src_subdir,
@@ -254,21 +266,10 @@ hotcopy_copy_shard_file(const char *src_subdir,
                                 scratch_pool));
     }
 
-  SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
+  SVN_ERR(hotcopy_io_dir_file_copy(skipped_p,
+                                   src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(scratch_pool, "%ld", rev),
                                    scratch_pool));
-  if (include_indexes)
-    {
-      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
-                                       apr_psprintf(scratch_pool, "%ld.l2p",
-                                                    rev),
-                                       scratch_pool));
-      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
-                                       apr_psprintf(scratch_pool, "%ld.p2l",
-                                                    rev),
-                                       scratch_pool));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -277,9 +278,13 @@ hotcopy_copy_shard_file(const char *src_subdir,
  * MAX_FILES_PER_DIR revisions, from SRC_FS to DST_FS.
  * Update *DST_MIN_UNPACKED_REV in case the shard is new in DST_FS.
  * Do not re-copy data which already exists in DST_FS.
+ * Set *SKIPPED_P to FALSE only if at least one part of the shard
+ * was copied, do not change the value in *SKIPPED_P otherwise.
+ * SKIPPED_P may be NULL if not required.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
+hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
+                          svn_revnum_t *dst_min_unpacked_rev,
                           svn_fs_t *src_fs,
                           svn_fs_t *dst_fs,
                           svn_revnum_t rev,
@@ -301,7 +306,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
                               rev / max_files_per_dir);
   src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
                                             scratch_pool);
-  SVN_ERR(hotcopy_io_copy_dir_recursively(src_subdir_packed_shard,
+  SVN_ERR(hotcopy_io_copy_dir_recursively(skipped_p, src_subdir_packed_shard,
                                           dst_subdir, packed_shard,
                                           TRUE /* copy_perms */,
                                           NULL /* cancel_func */, NULL,
@@ -321,9 +326,9 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
         {
           svn_pool_clear(iterpool);
 
-          SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
+          SVN_ERR(hotcopy_copy_shard_file(skipped_p, src_subdir, dst_subdir,
                                           revprop_rev, max_files_per_dir,
-                                          FALSE, iterpool));
+                                          iterpool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -331,8 +336,8 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
     {
       /* revprop for revision 0 will never be packed */
       if (rev == 0)
-        SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                        0, max_files_per_dir, FALSE,
+        SVN_ERR(hotcopy_copy_shard_file(skipped_p, src_subdir, dst_subdir,
+                                        0, max_files_per_dir,
                                         scratch_pool));
 
       /* packed revprops folder */
@@ -340,7 +345,8 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
                                   rev / max_files_per_dir);
       src_subdir_packed_shard = svn_dirent_join(src_subdir, packed_shard,
                                                 scratch_pool);
-      SVN_ERR(hotcopy_io_copy_dir_recursively(src_subdir_packed_shard,
+      SVN_ERR(hotcopy_io_copy_dir_recursively(skipped_p,
+                                              src_subdir_packed_shard,
                                               dst_subdir, packed_shard,
                                               TRUE /* copy_perms */,
                                               NULL /* cancel_func */, NULL,
@@ -359,53 +365,30 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   return SVN_NO_ERROR;
 }
 
-/* If NEW_YOUNGEST is younger than *DST_YOUNGEST, update the 'current'
- * file in DST_FS and set *DST_YOUNGEST to NEW_YOUNGEST.
- * Use SCRATCH_POOL for temporary allocations. */
+/* Remove file PATH, if it exists - even if it is read-only. 
+ * Use POOL for temporary allocations. */
 static svn_error_t *
-hotcopy_update_current(svn_revnum_t *dst_youngest,
-                       svn_fs_t *dst_fs,
-                       svn_revnum_t new_youngest,
-                       apr_pool_t *scratch_pool)
-{
-  if (*dst_youngest >= new_youngest)
-    return SVN_NO_ERROR;
-
-  /* Update 'current'. */
-  SVN_ERR(svn_fs_x__write_current(dst_fs, new_youngest, scratch_pool));
-
-  *dst_youngest = new_youngest;
-
-  return SVN_NO_ERROR;
-}
-
-/* Remove FILE in SHARD folder.  Use POOL for temporary allocations. */
-static svn_error_t *
-hotcopy_remove_file(const char *shard,
-                    const char *file,
+hotcopy_remove_file(const char *path,
                     apr_pool_t *pool)
 {
-  const char *rev_path = svn_dirent_join(shard, file, pool);
-
   /* Make the rev file writable and remove it. */
-  SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, pool));
-  SVN_ERR(svn_io_remove_file2(rev_path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 /* Remove revision or revprop files between START_REV (inclusive) and
- * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Also,
- * remove index files if REMOVE_INDEXES is set.  Assume sharding as per
- * MAX_FILES_PER_DIR.  Use SCRATCH_POOL for temporary allocations. */
+ * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Assume
+ * sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_remove_files(svn_fs_t *dst_fs,
                      const char *dst_subdir,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      int max_files_per_dir,
-                     svn_boolean_t remove_indexes,
                      apr_pool_t *scratch_pool)
 {
   const char *shard;
@@ -430,18 +413,11 @@ hotcopy_remove_files(svn_fs_t *dst_fs,
         }
 
       /* remove files for REV */
-      SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                  apr_psprintf(iterpool, "%ld", rev),
+      SVN_ERR(hotcopy_remove_file(svn_dirent_join(dst_subdir_shard,
+                                                  apr_psprintf(iterpool,
+                                                               "%ld", rev),
+                                                  iterpool),
                                   iterpool));
-      if (remove_indexes)
-        {
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.p2l", rev),
-                                      iterpool));
-          SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
-                                      apr_psprintf(iterpool, "%ld.l2p", rev),
-                                      iterpool));
-        }
     }
 
   svn_pool_destroy(iterpool);
@@ -465,7 +441,7 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
                                                PATH_REVS_DIR,
                                                scratch_pool),
                                start_rev, end_rev,
-                               max_files_per_dir, TRUE, scratch_pool));
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -489,7 +465,7 @@ hotcopy_remove_revprop_files(svn_fs_t *dst_fs,
                                                PATH_REVPROPS_DIR,
                                                scratch_pool),
                                start_rev ? start_rev : 1, end_rev,
-                               max_files_per_dir, FALSE, scratch_pool));
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -552,135 +528,36 @@ remove_folder(const char *path,
   return svn_error_trace(err);
 }
 
-/* Baton for hotcopy_body(). */
-struct hotcopy_body_baton {
-  svn_fs_t *src_fs;
-  svn_fs_t *dst_fs;
-  svn_boolean_t incremental;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-};
-
-/* Perform a hotcopy, either normal or incremental.
- *
- * Normal hotcopy assumes that the destination exists as an empty
- * directory. It behaves like an incremental hotcopy except that
- * none of the copied files already exist in the destination.
- *
- * An incremental hotcopy copies only changed or new files to the destination,
- * and removes files from the destination no longer present in the source.
- * While the incremental hotcopy is running, readers should still be able
- * to access the destintation repository without error and should not see
- * revisions currently in progress of being copied. Readers are able to see
- * new fully copied revisions even if the entire incremental hotcopy procedure
- * has not yet completed.
- *
- * Writers are blocked out completely during the entire incremental hotcopy
- * process to ensure consistency. This function assumes that the repository
- * write-lock is held.
+/* Copy the revision and revprop files (possibly sharded / packed) from
+ * SRC_FS to DST_FS.  Do not re-copy data which already exists in DST_FS.
+ * When copying packed or unpacked shards, checkpoint the result in DST_FS
+ * for every shard by updating the 'current' file if necessary.  Assume
+ * the >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT filesystem format without
+ * global next-ID counters.  Indicate progress via the optional NOTIFY_FUNC
+ * callback using NOTIFY_BATON.  Use POOL for temporary allocations.
  */
 static svn_error_t *
-hotcopy_body(void *baton, apr_pool_t *pool)
+hotcopy_revisions(svn_fs_t *src_fs,
+                  svn_fs_t *dst_fs,
+                  svn_revnum_t src_youngest,
+                  svn_revnum_t dst_youngest,
+                  svn_boolean_t incremental,
+                  const char *src_revs_dir,
+                  const char *dst_revs_dir,
+                  const char *src_revprops_dir,
+                  const char *dst_revprops_dir,
+                  svn_fs_hotcopy_notify_t notify_func,
+                  void* notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void* cancel_baton,
+                  apr_pool_t *pool)
 {
-  struct hotcopy_body_baton *hbb = baton;
-  svn_fs_t *src_fs = hbb->src_fs;
   fs_x_data_t *src_ffd = src_fs->fsap_data;
-  svn_fs_t *dst_fs = hbb->dst_fs;
   int max_files_per_dir = src_ffd->max_files_per_dir;
-  svn_boolean_t incremental = hbb->incremental;
-  svn_cancel_func_t cancel_func = hbb->cancel_func;
-  void* cancel_baton = hbb->cancel_baton;
-  svn_revnum_t src_youngest;
-  svn_revnum_t dst_youngest;
-  svn_revnum_t rev;
   svn_revnum_t src_min_unpacked_rev;
   svn_revnum_t dst_min_unpacked_rev;
-  const char *src_subdir;
-  const char *dst_subdir;
-  const char *revprop_src_subdir;
-  const char *revprop_dst_subdir;
+  svn_revnum_t rev;
   apr_pool_t *iterpool;
-  svn_node_kind_t kind;
-
-  /* Try to copy the config.
-   *
-   * ### We try copying the config file before doing anything else,
-   * ### because higher layers will abort the hotcopy if we throw
-   * ### an error from this function, and that renders the hotcopy
-   * ### unusable anyway. */
-  svn_error_t *err;
-
-  err = svn_io_dir_file_copy(src_fs->path, dst_fs->path, PATH_CONFIG,
-                             pool);
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* 1.6.0 to 1.6.11 did not copy the configuration file during
-            * hotcopy. So if we're hotcopying a repository which has been
-            * created as a hotcopy itself, it's possible that fsx.conf
-            * does not exist. Ask the user to re-create it.
-            *
-            * ### It would be nice to make this a non-fatal error,
-            * ### but this function does not get an svn_fs_t object
-            * ### so we have no way of just printing a warning via
-            * ### the fs->warning() callback. */
-
-          const char *msg;
-          const char *src_abspath;
-          const char *dst_abspath;
-          const char *config_relpath;
-          svn_error_t *err2;
-
-          config_relpath = svn_dirent_join(src_fs->path, PATH_CONFIG, pool);
-          err2 = svn_dirent_get_absolute(&src_abspath, src_fs->path, pool);
-          if (err2)
-            return svn_error_trace(svn_error_compose_create(err, err2));
-          err2 = svn_dirent_get_absolute(&dst_abspath, dst_fs->path, pool);
-          if (err2)
-            return svn_error_trace(svn_error_compose_create(err, err2));
-
-          /* ### hack: strip off the 'db/' directory from paths so
-            * ### they make sense to the user */
-          src_abspath = svn_dirent_dirname(src_abspath, pool);
-          dst_abspath = svn_dirent_dirname(dst_abspath, pool);
-
-          msg = apr_psprintf(pool,
-                             _("Failed to create hotcopy at '%s'. "
-                               "The file '%s' is missing from the source "
-                               "repository. Please create this file, for "
-                               "instance by running 'svnadmin upgrade %s'"),
-                             dst_abspath, config_relpath, src_abspath);
-          return svn_error_quick_wrap(err, msg);
-        }
-      else
-        return svn_error_trace(err);
-    }
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Find the youngest revision in the source and destination.
-   * We only support hotcopies from sources with an equal or greater amount
-   * of revisions than the destination.
-   * This also catches the case where users accidentally swap the
-   * source and destination arguments. */
-  SVN_ERR(svn_fs_x__youngest_rev(&src_youngest, src_fs, pool));
-  if (incremental)
-    {
-      SVN_ERR(svn_fs_x__youngest_rev(&dst_youngest, dst_fs, pool));
-      if (src_youngest < dst_youngest)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 _("The hotcopy destination already contains more revisions "
-                   "(%lu) than the hotcopy source contains (%lu); are source "
-                   "and destination swapped?"),
-                  dst_youngest, src_youngest);
-    }
-  else
-    dst_youngest = 0;
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
 
   /* Copy the min unpacked rev, and read its value. */
   SVN_ERR(svn_fs_x__read_min_unpacked_rev(&src_min_unpacked_rev, src_fs,
@@ -710,30 +587,41 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * Copy the necessary rev files.
    */
 
-  src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, pool);
-  dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, pool);
-  SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
-
   iterpool = svn_pool_create(pool);
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
+      svn_boolean_t skipped = TRUE;
+      svn_revnum_t pack_end_rev;
+
       svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
       /* Copy the packed shard. */
-      SVN_ERR(hotcopy_copy_packed_shard(&dst_min_unpacked_rev,
+      SVN_ERR(hotcopy_copy_packed_shard(&skipped, &dst_min_unpacked_rev,
                                         src_fs, dst_fs,
                                         rev, max_files_per_dir,
                                         iterpool));
 
-      /* If necessary, update 'current' to the most recent packed rev,
-       * so readers can see new revisions which arrived in this pack. */
-      SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs,
-                                     rev + max_files_per_dir - 1,
-                                     iterpool));
+      pack_end_rev = rev + max_files_per_dir - 1;
+
+      /* Whenever this pack did not previously exist in the destination,
+       * update 'current' to the most recent packed rev (so readers can see
+       * new revisions which arrived in this pack). */
+      if (pack_end_rev > dst_youngest)
+        {
+          SVN_ERR(svn_fs_x__write_current(dst_fs, pack_end_rev, iterpool));
+        }
+
+      /* When notifying about packed shards, make things simpler by either
+       * reporting a full revision range, i.e [pack start, pack end] or
+       * reporting nothing. There is one case when this approach might not
+       * be exact (incremental hotcopy with a pack replacing last unpacked
+       * revisions), but generally this is good enough. */
+      if (notify_func && !skipped)
+        notify_func(notify_baton, rev, pack_end_rev, iterpool);
 
       /* Remove revision files which are now packed. */
       if (incremental)
@@ -760,90 +648,170 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Now, copy pairs of non-packed revisions and revprop files.
-   * If necessary, update 'current' after copying all files from a shard. */
   SVN_ERR_ASSERT(rev == src_min_unpacked_rev);
   SVN_ERR_ASSERT(src_min_unpacked_rev == dst_min_unpacked_rev);
-  revprop_src_subdir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, pool);
-  revprop_dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVPROPS_DIR, pool);
-  SVN_ERR(svn_io_make_dir_recursively(revprop_dst_subdir, pool));
+
+  /* Now, copy pairs of non-packed revisions and revprop files.
+   * If necessary, update 'current' after copying all files from a shard. */
   for (; rev <= src_youngest; rev++)
     {
+      svn_boolean_t skipped = TRUE;
+
       svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
+      /* Copying non-packed revisions is racy in case the source repository is
+       * being packed concurrently with this hotcopy operation.  With the pack
+       * lock, however, the race is impossible, because hotcopy and pack
+       * operations block each other.
+       *
+       * We assume that all revisions coming after 'min-unpacked-rev' really
+       * are unpacked and that's not necessarily true with concurrent packing.
+       * Don't try to be smart in this edge case, because handling it properly
+       * might require copying *everything* from the start. Just abort the
+       * hotcopy with an ENOENT (revision file moved to a pack, so it is no
+       * longer where we expect it to be). */
+
       /* Copy the rev file. */
-      err = hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                    rev, max_files_per_dir, TRUE,
-                                    iterpool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              svn_error_clear(err);
-
-              /* The source rev file does not exist. This can happen if the
-               * source repository is being packed concurrently with this
-               * hotcopy operation.
-               *
-               * If the new revision is now packed, and the youngest revision
-               * we're interested in is not inside this pack, try to copy the
-               * pack instead.
-               *
-               * If the youngest revision ended up being packed, don't try
-               * to be smart and work around this. Just abort the hotcopy. */
-              SVN_ERR(svn_fs_x__update_min_unpacked_rev(src_fs, pool));
-              if (svn_fs_x__is_packed_rev(src_fs, rev))
-                {
-                  if (svn_fs_x__is_packed_rev(src_fs, src_youngest))
-                    return svn_error_createf(
-                             SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("The assumed HEAD revision (%lu) of the "
-                               "hotcopy source has been packed while the "
-                               "hotcopy was in progress; please restart "
-                               "the hotcopy operation"),
-                             src_youngest);
-
-                  SVN_ERR(hotcopy_copy_packed_shard(&dst_min_unpacked_rev,
-                                                    src_fs, dst_fs,
-                                                    rev, max_files_per_dir,
-                                                    iterpool));
-                  rev = dst_min_unpacked_rev;
-                  continue;
-                }
-              else
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("Revision %lu disappeared from the "
-                                           "hotcopy source while hotcopy was "
-                                           "in progress"), rev);
-            }
-          else
-            return svn_error_trace(err);
-        }
-
-      /* Copy the revprop file. */
-      SVN_ERR(hotcopy_copy_shard_file(revprop_src_subdir,
-                                      revprop_dst_subdir,
-                                      rev, max_files_per_dir, FALSE,
+      SVN_ERR(hotcopy_copy_shard_file(&skipped, src_revs_dir, dst_revs_dir,
+                                      rev, max_files_per_dir,
                                       iterpool));
 
-      /* After completing a full shard, update 'current'. */
-      if (max_files_per_dir && rev % max_files_per_dir == 0)
-        SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
+      /* Copy the revprop file. */
+      SVN_ERR(hotcopy_copy_shard_file(&skipped, src_revprops_dir,
+                                      dst_revprops_dir,
+                                      rev, max_files_per_dir, 
+                                      iterpool));
+
+      /* Whenever this revision did not previously exist in the destination,
+       * checkpoint the progress via 'current' (do that once per full shard
+       * in order not to slow things down). */
+      if (rev > dst_youngest)
+        {
+          if (max_files_per_dir && (rev % max_files_per_dir == 0))
+            {
+              SVN_ERR(svn_fs_x__write_current(dst_fs, rev, iterpool));
+            }
+        }
+
+      if (notify_func && !skipped)
+        notify_func(notify_baton, rev, rev, iterpool);
     }
   svn_pool_destroy(iterpool);
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
 
   /* We assume that all revisions were copied now, i.e. we didn't exit the
    * above loop early. 'rev' was last incremented during exit of the loop. */
   SVN_ERR_ASSERT(rev == src_youngest + 1);
 
-  /* All revisions were copied. Update 'current'. */
-  SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, src_youngest, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Baton for hotcopy_body(). */
+struct hotcopy_body_baton {
+  svn_fs_t *src_fs;
+  svn_fs_t *dst_fs;
+  svn_boolean_t incremental;
+  svn_fs_hotcopy_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+/* Perform a hotcopy, either normal or incremental.
+ *
+ * Normal hotcopy assumes that the destination exists as an empty
+ * directory. It behaves like an incremental hotcopy except that
+ * none of the copied files already exist in the destination.
+ *
+ * An incremental hotcopy copies only changed or new files to the destination,
+ * and removes files from the destination no longer present in the source.
+ * While the incremental hotcopy is running, readers should still be able
+ * to access the destintation repository without error and should not see
+ * revisions currently in progress of being copied. Readers are able to see
+ * new fully copied revisions even if the entire incremental hotcopy procedure
+ * has not yet completed.
+ *
+ * Writers are blocked out completely during the entire incremental hotcopy
+ * process to ensure consistency. This function assumes that the repository
+ * write-lock is held.
+ */
+static svn_error_t *
+hotcopy_body(void *baton, apr_pool_t *pool)
+{
+  struct hotcopy_body_baton *hbb = baton;
+  svn_fs_t *src_fs = hbb->src_fs;
+  svn_fs_t *dst_fs = hbb->dst_fs;
+  svn_boolean_t incremental = hbb->incremental;
+  svn_fs_hotcopy_notify_t notify_func = hbb->notify_func;
+  void* notify_baton = hbb->notify_baton;
+  svn_cancel_func_t cancel_func = hbb->cancel_func;
+  void* cancel_baton = hbb->cancel_baton;
+  svn_revnum_t src_youngest;
+  svn_revnum_t dst_youngest;
+  const char *src_revprops_dir;
+  const char *dst_revprops_dir;
+  const char *src_revs_dir;
+  const char *dst_revs_dir;
+  const char *src_subdir;
+  const char *dst_subdir;
+  svn_node_kind_t kind;
+
+  /* Try to copy the config.
+   *
+   * ### We try copying the config file before doing anything else,
+   * ### because higher layers will abort the hotcopy if we throw
+   * ### an error from this function, and that renders the hotcopy
+   * ### unusable anyway. */
+  SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path, PATH_CONFIG,
+                               pool));
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Find the youngest revision in the source and destination.
+   * We only support hotcopies from sources with an equal or greater amount
+   * of revisions than the destination.
+   * This also catches the case where users accidentally swap the
+   * source and destination arguments. */
+  SVN_ERR(svn_fs_x__read_current(&src_youngest, src_fs, pool));
+  if (incremental)
+    {
+      SVN_ERR(svn_fs_x__youngest_rev(&dst_youngest, dst_fs, pool));
+      if (src_youngest < dst_youngest)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                 _("The hotcopy destination already contains more revisions "
+                   "(%lu) than the hotcopy source contains (%lu); are source "
+                   "and destination swapped?"),
+                   dst_youngest, src_youngest);
+    }
+  else
+    dst_youngest = 0;
+
+  src_revs_dir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, pool);
+  dst_revs_dir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, pool);
+  src_revprops_dir = svn_dirent_join(src_fs->path, PATH_REVPROPS_DIR, pool);
+  dst_revprops_dir = svn_dirent_join(dst_fs->path, PATH_REVPROPS_DIR, pool);
+
+  /* Ensure that the required folders exist in the destination
+   * before actually copying the revisions and revprops. */
+  SVN_ERR(svn_io_make_dir_recursively(dst_revs_dir, pool));
+  SVN_ERR(svn_io_make_dir_recursively(dst_revprops_dir, pool));
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Split the logic for new and old FS formats. The latter is much simpler
+   * due to the absense of sharding and packing. However, it requires special
+   * care when updating the 'current' file (which contains not just the
+   * revision number, but also the next-ID counters). */
+  SVN_ERR(hotcopy_revisions(src_fs, dst_fs, src_youngest, dst_youngest,
+                            incremental, src_revs_dir, dst_revs_dir,
+                            src_revprops_dir, dst_revprops_dir,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool));
+  SVN_ERR(svn_fs_x__write_current(dst_fs, src_youngest, pool));
 
   /* Replace the locks tree.
    * This is racy in case readers are currently trying to list locks in
@@ -863,7 +831,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   src_subdir = svn_dirent_join(src_fs->path, PATH_NODE_ORIGINS_DIR, pool);
   SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR(hotcopy_io_copy_dir_recursively(src_subdir, dst_fs->path,
+    SVN_ERR(hotcopy_io_copy_dir_recursively(NULL, src_subdir, dst_fs->path,
                                             PATH_NODE_ORIGINS_DIR, TRUE,
                                             cancel_func, cancel_baton, pool));
 
@@ -879,8 +847,16 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
   if (kind == svn_node_file)
     {
-      SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
-      SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, dst_youngest, pool));
+      /* Copy the rep cache and then remove entries for revisions
+       * that did not make it into the destination. */
+      src_subdir = svn_dirent_join(src_fs->path, REP_CACHE_DB_NAME, pool);
+      dst_subdir = svn_dirent_join(dst_fs->path, REP_CACHE_DB_NAME, pool);
+      SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+          SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, src_youngest, pool));
+        }
     }
 
   /* Copy the txn-current file. */
@@ -891,17 +867,13 @@ hotcopy_body(void *baton, apr_pool_t *pool)
    * reset it to zero (since this is on a different path, it will not
    * overlap with data already in cache).  Also, clean up stale files
    * used for the named atomics implementation. */
-  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprop_generation(src_fs, pool),
-                            &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_fs_x__write_revprop_generation_file(dst_fs, 0, pool));
-
-  SVN_ERR(svn_fs_x__cleanup_revprop_namespace(dst_fs));
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(dst_fs, pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around hotcopy_body taking out all necessary source repositories.
+/* Wrapper around hotcopy_body taking out all necessary source repository
+ * locks.
  */
 static svn_error_t *
 hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
@@ -922,56 +894,24 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                           apr_pool_t *pool)
 {
   fs_x_data_t *src_ffd = src_fs->fsap_data;
-  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
 
-  dst_fs->path = apr_pstrdup(pool, dst_path);
+  /* Create the DST_FS repository with the same layout as SRC_FS. */
+  SVN_ERR(svn_fs_x__create_file_tree(dst_fs, dst_path, src_ffd->format,
+                                     src_ffd->max_files_per_dir, pool));
 
-  dst_ffd->max_files_per_dir = src_ffd->max_files_per_dir;
-  dst_ffd->format = src_ffd->format;
+  /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
+   * has the same filesystem UUID as the source. */
+  SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, NULL, pool));
 
-  /* Create the revision data directories. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(dst_fs, 0,
-                                                               pool),
-                                      pool));
+  /* Remove revision 0 contents.  Otherwise, it may not get overwritten
+   * due to having a newer timestamp. */
+  SVN_ERR(hotcopy_remove_file(svn_fs_x__path_rev(dst_fs, 0, pool), pool));
+  SVN_ERR(hotcopy_remove_file(svn_fs_x__path_revprops(dst_fs, 0, pool),
+                              pool));
 
-  /* Create the revprops directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(dst_fs,
-                                                                    0, pool),
-                                      pool));
-
-  /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path, PATH_TXNS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the protorevs directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
-                                                      PATH_TXN_PROTOS_DIR,
-                                                      pool),
-                                      pool));
-
-  /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(dst_fs, pool), "0\n", 
-                             pool));
-
-  /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(dst_fs, pool), pool));
-  SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, pool));
-
-  /* Create the min unpacked rev file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(dst_fs, pool),
-                              "0\n", pool));
-
-  /* Create the txn-current file if the repository supports
-     the transaction sequence file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(dst_fs, pool),
-                             "0\n", pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(dst_fs,
-                                                                   pool),
-                                   pool));
-
-  /* FS creation is complete. Stamp it with a format file. */
-  SVN_ERR(svn_fs_x__write_format(dst_fs, TRUE, pool));
+  /* This filesystem is ready.  Stamp it with a format number.  Fail if
+   * the 'format' file should already exist. */
+  SVN_ERR(svn_fs_x__write_format(dst_fs, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1020,6 +960,8 @@ svn_error_t *
 svn_fs_x__hotcopy(svn_fs_t *src_fs,
                   svn_fs_t *dst_fs,
                   svn_boolean_t incremental,
+                  svn_fs_hotcopy_notify_t notify_func,
+                  void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   apr_pool_t *pool)
@@ -1029,10 +971,12 @@ svn_fs_x__hotcopy(svn_fs_t *src_fs,
   hbb.src_fs = src_fs;
   hbb.dst_fs = dst_fs;
   hbb.incremental = incremental;
+  hbb.notify_func = notify_func;
+  hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_x__with_write_lock(dst_fs, hotcopy_locking_src_body, &hbb,
-                                    pool));
+  SVN_ERR(svn_fs_x__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
+                                   pool));
 
   return SVN_NO_ERROR;
 }

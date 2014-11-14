@@ -393,7 +393,7 @@ synchronized_initialize(void *baton, apr_pool_t *pool)
 {
   common_pool = svn_pool_create(pool);
   base_defn.next = NULL;
-  SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, TRUE, common_pool));
+  SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
 
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
      ### (via libsvn_ra_local say) since the global common_pool will live
@@ -558,6 +558,13 @@ svn_fs_upgrade2(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* A warning handling function that does not abort on errors,
+   but just lets them be returned normally.  */
+static void
+verify_fs_warning_func(void *baton, svn_error_t *err)
+{
+}
+
 svn_error_t *
 svn_fs_verify(const char *path,
               apr_hash_t *fs_config,
@@ -574,6 +581,7 @@ svn_fs_verify(const char *path,
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(fs_config, pool);
+  svn_fs_set_warning_func(fs, verify_fs_warning_func, NULL);
 
   SVN_ERR(vtable->verify_fs(fs, path, start, end,
                             notify_func, notify_baton,
