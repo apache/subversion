@@ -1046,7 +1046,7 @@ def create_repos(path, minor_version = None):
       raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Configure the new repository.
-  _post_create_repos(path, options.server_minor_version)
+  _post_create_repos(path, minor_version)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
