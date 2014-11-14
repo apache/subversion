@@ -908,6 +908,103 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* Return a hash of (BID -> BRANCH) of the subbranches of BRANCH.
+ * Return an empty hash if BRANCH is null.
+ */
+static apr_hash_t *
+get_subbranches(svn_branch_instance_t *branch,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_hash_t *result = apr_hash_make(result_pool);
+
+  if (branch)
+    {
+      apr_array_header_t *subbranches
+        = svn_branch_get_all_sub_branches(branch, result_pool, scratch_pool);
+      int i;
+
+      for (i = 0; i < subbranches->nelts; i++)
+        {
+          svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
+          int *bid = apr_pmemdup(result_pool, &b->sibling_defn->bid, sizeof (*bid));
+
+          apr_hash_set(result, bid, sizeof (*bid), b);
+        }
+    }
+  return result;
+}
+
+/* Display differences, referring to paths, recursing into sub-branches */
+static svn_error_t *
+svn_branch_diff_r(svn_editor3_t *editor,
+                  svn_branch_el_rev_id_t *left,
+                  svn_branch_el_rev_id_t *right,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
+  apr_hash_index_t *hi;
+
+  /* ### TODO: Allow LEFT or RIGHT to be null, so we can recurse and show
+     branch addition or deletion. */
+
+  if (!left)
+    {
+      printf("--- branch %d added at '/%s'\n",
+             right->branch->sibling_defn->bid,
+             svn_branch_get_root_rrpath(right->branch, scratch_pool));
+    }
+  else if (!right)
+    {
+      printf("--- branch %d deleted at '/%s'\n",
+             right->branch->sibling_defn->bid,
+             svn_branch_get_root_rrpath(right->branch, scratch_pool));
+    }
+  else
+    {
+      printf("--- branch %d at (left) '/%s' (right) '/%s'\n",
+             right->branch->sibling_defn->bid,
+             svn_branch_get_root_rrpath(left->branch, scratch_pool),
+             svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      SVN_ERR(svn_branch_diff(editor, left, right, scratch_pool));
+    }
+
+  subbranches_l = get_subbranches(left ? left->branch : NULL,
+                                  scratch_pool, scratch_pool);
+  subbranches_r = get_subbranches(right ? right->branch : NULL,
+                                  scratch_pool, scratch_pool);
+  subbranches_all = apr_hash_overlay(scratch_pool,
+                                     subbranches_l, subbranches_r);
+
+  for (hi = apr_hash_first(scratch_pool, subbranches_all);
+       hi; hi = apr_hash_next(hi))
+    {
+      int bid = *(const int *)apr_hash_this_key(hi);
+      svn_branch_instance_t *branch_l = apr_hash_get(subbranches_l, &bid, sizeof(bid));
+      svn_branch_instance_t *branch_r = apr_hash_get(subbranches_r, &bid, sizeof(bid));
+      svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
+
+      if (branch_l)
+        {
+          sub_left = svn_branch_el_rev_id_create(branch_l,
+                                                 branch_l->sibling_defn->root_eid,
+                                                 left->rev,
+                                                 scratch_pool);
+        }
+      if (branch_r)
+        {
+          sub_right = svn_branch_el_rev_id_create(branch_r,
+                                                  branch_r->sibling_defn->root_eid,
+                                                  right->rev,
+                                                  scratch_pool);
+        }
+
+      /* recurse */
+      svn_branch_diff_r(editor, sub_left, sub_right, scratch_pool);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Move in the 'best' way possible.
  *
  *    if target is in same branch:
@@ -1108,10 +1205,10 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_EXISTS("diff", 0);
           VERIFY_EID_EXISTS("diff", 1);
           {
-            SVN_ERR(svn_branch_diff(editor,
-                                    el_rev[0] /*from*/,
-                                    el_rev[1] /*to*/,
-                                    iterpool));
+            SVN_ERR(svn_branch_diff_r(editor,
+                                      el_rev[0] /*from*/,
+                                      el_rev[1] /*to*/,
+                                      iterpool));
           }
           break;
         case ACTION_DIFF_E:
