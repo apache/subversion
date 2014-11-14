@@ -61,6 +61,7 @@ cd ${abssrc}
 
 echo "============ configure"
 cd ${absbld}
+rm -fr "${abssrc}/.test-logs"
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
