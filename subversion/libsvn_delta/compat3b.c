@@ -812,13 +812,13 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
                       apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_el_rev_content_t *node
-    = svn_branch_el_rev_content_dup(svn_branch_map_get(branch, eid),
-                                    result_pool);
+  svn_branch_el_rev_content_t *node = svn_branch_map_get(branch, eid);
 
   /* Node content is null iff node is a subbranch root, but we shouldn't
      be querying a subbranch root. */
   SVN_ERR_ASSERT(!node || node->content);
+
+  node = node ? svn_branch_el_rev_content_dup(node, result_pool) : NULL;
 
   /* If content is by reference, fetch full content. */
   if (node && (node->content->ref.relpath))

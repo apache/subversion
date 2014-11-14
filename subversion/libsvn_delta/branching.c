@@ -365,11 +365,13 @@ branch_map_node_validate(const svn_branch_instance_t *branch,
 {
   SVN_ERR_ASSERT_NO_RETURN(node);
 
-  /* Parent EID must be valid, or -1 iff EID is the branch root. */
+  /* Parent EID must be valid and different from this node's EID, or -1
+     iff this is the branch root element. */
   SVN_ERR_ASSERT_NO_RETURN(
     (eid == branch->sibling_defn->root_eid)
     ? (node->parent_eid == -1)
-    : (node->parent_eid >= branch->sibling_defn->family->first_eid
+    : (node->parent_eid != eid
+       && node->parent_eid >= branch->sibling_defn->family->first_eid
        && node->parent_eid < branch->sibling_defn->family->next_eid));
 
   /* Node name must be given, and empty iff EID is the branch root. */

@@ -908,6 +908,94 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* Move in the 'best' way possible.
+ *
+ *    if target is in same branch:
+ *      move the element
+ *    else if target is in another branch of same family:
+ *      delete element from source branch
+ *      instantiate same element in target branch
+ *    else:
+ *      delete element from source branch
+ *      create a new element in target branch
+ */
+static svn_error_t *
+do_move(svn_editor3_t *editor,
+        svn_branch_el_rev_id_t *el_rev,
+        svn_branch_el_rev_id_t *to_parent_el_rev,
+        const char *to_name,
+        apr_pool_t *scratch_pool)
+{
+  svn_branch_el_rev_content_t *old_node;
+
+  /* Simple move/rename within same branch, if possible */
+  if (to_parent_el_rev->branch == el_rev->branch)
+    {
+      /* Move within same branch */
+      SVN_ERR(svn_editor3_alter(editor, el_rev->rev,
+                                el_rev->branch, el_rev->eid,
+                                to_parent_el_rev->eid, to_name,
+                                NULL /* "no change" */));
+      return SVN_NO_ERROR;
+    }
+
+  /* Instantiate same element in another branch of same family, if possible */
+  if (el_rev->branch->sibling_defn->family->fid
+      == to_parent_el_rev->branch->sibling_defn->family->fid)
+    {
+      /* Does this element already exist in the target branch? We can't
+         use this method if it does. */
+      SVN_ERR(svn_editor3_el_rev_get(&old_node,
+                                     editor,
+                                     to_parent_el_rev->branch, el_rev->eid,
+                                     scratch_pool, scratch_pool));
+      if (! old_node)
+        {
+          /* (There is no danger of creating a cyclic directory hierarchy in
+             the target branch, as this element doesn't yet exist there.) */
+
+          printf("mv: moving by deleting element in source branch and "
+                 "instantiating same element in target branch\n");
+
+          /* Get the old content of the source node (which we know exists) */
+          SVN_ERR(svn_editor3_el_rev_get(&old_node,
+                                         editor, el_rev->branch, el_rev->eid,
+                                         scratch_pool, scratch_pool));
+          SVN_ERR_ASSERT(old_node);
+          SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                                     el_rev->branch, el_rev->eid));
+          SVN_ERR(svn_editor3_instantiate(editor,
+                                          to_parent_el_rev->branch, el_rev->eid,
+                                          to_parent_el_rev->eid, to_name,
+                                          old_node->content));
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Move by copy-and-delete */
+  if (el_rev->branch->sibling_defn->family->fid
+      != to_parent_el_rev->branch->sibling_defn->family->fid)
+    {
+      printf("mv: moving by copy-and-delete to a different branch family\n");
+    }
+  else
+    {
+      printf("mv: moving by copy-and-delete\n");
+    }
+  SVN_ERR(svn_editor3_el_rev_get(&old_node,
+                                 editor, el_rev->branch, el_rev->eid,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                             el_rev->branch, el_rev->eid));
+  SVN_ERR(svn_editor3_add(editor, NULL /*new_eid*/,
+                          old_node->content->kind,
+                          to_parent_el_rev->branch,
+                          to_parent_el_rev->eid, to_name,
+                          old_node->content));
+
+  return SVN_NO_ERROR;
+}
+
 #define VERIFY_REV_SPECIFIED(op, i)                                     \
   if (el_rev[i]->rev == SVN_INVALID_REVNUM)                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
@@ -931,6 +1019,12 @@ svn_branch_diff(svn_editor3_t *editor,
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: Path '%s' not found"),              \
                              op, action->path[i]);
+
+#define VERIFY_PARENT_EID_EXISTS(op, i)                                 \
+  if (parent_el_rev[i]->eid == -1)                                      \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: Path '%s' not found"),              \
+                             op, svn_relpath_dirname(action->path[i], pool));
 
 static svn_error_t *
 execute(const apr_array_header_t *actions,
@@ -1057,6 +1151,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_BRANCH:
           VERIFY_REV_UNSPECIFIED("branch", 1);
           VERIFY_EID_NONEXISTENT("branch", 1);
+          VERIFY_PARENT_EID_EXISTS("branch", 1);
           SVN_ERR(svn_branch_branch(editor,
                                     el_rev[0]->branch, el_rev[0]->eid,
                                     el_rev[1]->branch, parent_el_rev[1]->eid,
@@ -1093,17 +1188,16 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_MV:
+          if (svn_relpath_skip_ancestor(action->path[0], action->path[1]))
+            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                     _("mv: cannot move to child of self"));
           VERIFY_REV_UNSPECIFIED("mv", 0);
           VERIFY_EID_EXISTS("mv", 0);
           VERIFY_REV_UNSPECIFIED("mv", 1);
           VERIFY_EID_NONEXISTENT("mv", 1);
-          {
-            svn_editor3_node_content_t *content = NULL; /* "no change" */
-
-            SVN_ERR(svn_editor3_alter(editor, el_rev[0]->rev,
-                                      el_rev[0]->branch, el_rev[0]->eid,
-                                      parent_el_rev[1]->eid, path_name[1], content));
-          }
+          VERIFY_PARENT_EID_EXISTS("mv", 1);
+          SVN_ERR(do_move(editor, el_rev[0], parent_el_rev[1], path_name[1],
+                          pool));
           made_changes = TRUE;
           break;
         case ACTION_CP:
@@ -1112,6 +1206,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_EXISTS("cp", 0);
           VERIFY_REV_UNSPECIFIED("cp", 1);
           VERIFY_EID_NONEXISTENT("cp", 1);
+          VERIFY_PARENT_EID_EXISTS("cp", 1);
           SVN_ERR(svn_editor3_copy_tree(editor,
                                         el_rev[0],
                                         parent_el_rev[1]->branch,
@@ -1128,6 +1223,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_MKDIR:
           VERIFY_REV_UNSPECIFIED("mkdir", 0);
           VERIFY_EID_NONEXISTENT("mkdir", 0);
+          VERIFY_PARENT_EID_EXISTS("mkdir", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_editor3_node_content_t *content
@@ -1143,6 +1239,7 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_PUT_FILE:
           VERIFY_REV_UNSPECIFIED("put", 1);
+          VERIFY_PARENT_EID_EXISTS("put", 1);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;

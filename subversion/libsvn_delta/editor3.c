@@ -30,6 +30,7 @@
 #include "svn_props.h"
 
 #include "private/svn_editor3.h"
+#include "svn_private_config.h"
 
 #ifdef SVN_DEBUG
 /* This enables runtime checks of the editor API constraints.  This may
@@ -272,6 +273,12 @@ svn_editor3_put(svn_editor3_t *editor,
 #define VALID_CONTENT(content) ((content) && VALID_NODE_KIND((content)->kind))
 #define VALID_EL_REV_ID(el_rev) (el_rev && el_rev->branch && VALID_EID(el_rev->eid))
 
+#define VERIFY(method, expr) \
+  if (! (expr)) \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL, \
+                             _("svn_editor3_%s: validation (%s) failed"), \
+                             #method, #expr)
+
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
                 svn_editor3_eid_t *local_eid_p,
@@ -316,6 +323,8 @@ svn_editor3_instantiate(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(VALID_CONTENT(new_content));
+  VERIFY(instantiate, new_parent_eid != local_eid);
+  /* TODO: verify this element does not exist (in initial state) */
 
   DO_CALLBACK(editor, cb_instantiate,
               5(branch, local_eid,
@@ -338,6 +347,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
+  /* TODO: verify source element exists (in a committed rev) */
 
   DO_CALLBACK(editor, cb_copy_one,
               6(src_el_rev,
@@ -358,6 +368,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
+  /* TODO: verify source element exists (in a committed rev) */
 
   DO_CALLBACK(editor, cb_copy_tree,
               4(src_el_rev,
@@ -373,6 +384,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_editor3_eid_t eid)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
+  /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_delete,
               3(since_rev, branch, eid));
@@ -393,6 +405,8 @@ svn_editor3_alter(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
+  VERIFY(alter, new_parent_eid != eid);
+  /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_alter,
               6(since_rev, branch, eid,

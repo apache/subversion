@@ -38,12 +38,11 @@ Work on this branch:
       merge
 
     To do:
+      'diff' should recurse into sub-branches
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
       synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
-      make the user interface degrade cross-branch moves so that the user
-        gets some sort of reasonable result rather than an error
 
 
   * The model.
