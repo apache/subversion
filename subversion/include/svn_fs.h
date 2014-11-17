@@ -3035,6 +3035,9 @@ typedef struct svn_fs_fsfs_info_t {
    * @note Zero (0) if (but not iff) the format does not support packing. */
   svn_revnum_t min_unpacked_rev;
 
+  /* TRUE if logical addressing is enabled for this repository.
+   * FALSE if repository uses physical addressing. */
+  svn_boolean_t log_addressing;
   /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
 
   /* If you add fields here, check whether you need to extend svn_fs_info()
