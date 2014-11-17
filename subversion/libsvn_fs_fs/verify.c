@@ -22,6 +22,7 @@
 
 #include "svn_sorts.h"
 #include "svn_checksum.h"
+#include "svn_time.h"
 #include "private/svn_subr_private.h"
 
 #include "verify.h"
@@ -702,6 +703,49 @@ compare_p2l_to_rev(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Verify that the revprops of the revisions START to END in FS can be
+ * accessed.  Invoke CANCEL_FUNC with CANCEL_BATON at regular intervals.
+ *
+ * The values of START and END have already been auto-selected and
+ * verified.
+ */
+static svn_error_t *
+verify_revprops(svn_fs_t *fs,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  svn_revnum_t revision;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (revision = start; revision < end; ++revision)
+    {
+      svn_string_t *date;
+      apr_time_t timetemp;
+
+      svn_pool_clear(iterpool);
+
+      /* Access the svn:date revprop.
+       * This implies parsing all revprops for that revision. */
+      SVN_ERR(svn_fs_fs__revision_prop(&date, fs, revision,
+                                       SVN_PROP_REVISION_DATE, iterpool));
+
+      /* The time stamp is the only revprop that, if given, needs to
+       * have a valid content. */
+      if (date)
+        SVN_ERR(svn_time_from_cstring(&timetemp, date->data, iterpool));
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_revnum_t
 pack_size(svn_fs_t *fs, svn_revnum_t rev)
 {
@@ -710,22 +754,24 @@ pack_size(svn_fs_t *fs, svn_revnum_t rev)
   return rev < ffd->min_unpacked_rev ? ffd->max_files_per_dir : 1;
 }
 
-/* Verify that the log-to-phys indexes and phys-to-log indexes are
- * consistent with each other.  The function signature is similar to
- * svn_fs_fs__verify.
+/* Verify that on-disk representation has not been tempered with (in a way
+ * that leaves the repository in a corrupted state).  This compares log-to-
+ * phys with phys-to-log indexes, verifies the low-level checksums and
+ * checks that all revprops are available.  The function signature is
+ * similar to svn_fs_fs__verify.
  *
  * The values of START and END have already been auto-selected and
  * verified.  You may call this for format7 or higher repos.
  */
 static svn_error_t *
-verify_index_consistency(svn_fs_t *fs,
-                         svn_revnum_t start,
-                         svn_revnum_t end,
-                         svn_fs_progress_notify_func_t notify_func,
-                         void *notify_baton,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *pool)
+verify_f7_metadata_consistency(svn_fs_t *fs,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
+                               svn_fs_progress_notify_func_t notify_func,
+                               void *notify_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_revnum_t revision, next_revision;
@@ -760,6 +806,11 @@ verify_index_consistency(svn_fs_t *fs,
       if (!err)
         err = compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
                                  cancel_func, cancel_baton, iterpool);
+
+      /* ensure that revprops are available and accessible */
+      if (!err)
+        err = verify_revprops(fs, pack_start, pack_end,
+                              cancel_func, cancel_baton, iterpool);
 
       /* concurrent packing is one of the reasons why verification may fail.
          Make sure, we operate on up-to-date information. */
@@ -812,10 +863,9 @@ svn_fs_fs__verify(svn_fs_t *fs,
   /* log/phys index consistency.  We need to check them first to make
      sure we can access the rev / pack files in format7. */
   if (svn_fs_fs__use_log_addressing(fs))
-    SVN_ERR(verify_index_consistency(fs,
-                                     start,
-                                     end, notify_func, notify_baton,
-                                     cancel_func, cancel_baton, pool));
+    SVN_ERR(verify_f7_metadata_consistency(fs, start, end,
+                                           notify_func, notify_baton,
+                                           cancel_func, cancel_baton, pool));
 
   /* rep cache consistency */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
