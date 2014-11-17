@@ -1840,6 +1840,13 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
                                 apr_pool_t *scratch_pool);
 
 
+/* Declare that the following function requires/implies that in BRANCH's
+ * mapping, for each existing element, the parent also exists.
+ *
+ * ### Find a better word? flattened, canonical, finalized, ...
+ */
+#define SVN_BRANCH_SEQUENCE_POINT(branch)
+
 /* In BRANCH, get element EID's node (parent, name, content).
  *
  * If element EID is not present, return null. Otherwise, the returned
@@ -1866,55 +1873,49 @@ svn_branch_map_update(svn_branch_instance_t *branch,
                       const char *new_name,
                       const svn_editor3_node_content_t *new_content);
 
+/* Set or change the EID:element mapping for EID in BRANCH to reflect a
+ * subbranch root node. This node has no content in this branch; the
+ * corresponding element of the subbranch will define its content.
+ *
+ * Duplicate NEW_NAME into the branch mapping's pool.
+ */
+void
+svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
+                                        int eid,
+                                        svn_editor3_eid_t new_parent_eid,
+                                        const char *new_name);
+
 /* Remove from BRANCH's mapping any elements that do not have a complete
  * line of parents to the branch root. In other words, remove elements
  * that have been implicitly deleted.
  *
  * This does not remove subbranches.
  *
- * ### TODO: Clarify sequencing requirements.
+ * ### TODO: Clarify sequencing requirements. (This leaves BRANCH's mapping
+ * in a [sequence-point/flattened/...?] state.)
  */
 void
 svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
                              apr_pool_t *scratch_pool);
 
-/* In BRANCH, update the path mappings to delete all children of EID,
- * recursively (but not deleting subbranches).
+/* Branch a subtree.
  *
- * EID may be any element id in BRANCH: existing or nonexistent, root or
- * normal or subbranch root (useful if we have just branchified a subtree).
- */
-svn_error_t *
-svn_branch_map_delete_children(svn_branch_instance_t *branch,
-                               int eid,
-                               apr_pool_t *scratch_pool);
-
-/* Adjust BRANCH and its subbranches (recursively),
- * to reflect deletion of the subtree at EID.
+ * For each element that in FROM_BRANCH is a pathwise descendant of
+ * FROM_PARENT_EID, excluding FROM_PARENT_EID itself, instantiate the
+ * same element in TO_BRANCH. For each element, keep the same parent
+ * element (except, for first-level children, change FROM_PARENT_EID to
+ * TO_PARENT_EID), name, and content that it had in FROM_BRANCH.
  *
- * Element EID MUST be the location of a non-root element of BRANCH.
- * If EID is the root of a subbranch and/or contains nested
- * subbranches, also delete them.
- */
-svn_error_t *
-svn_branch_delete_subtree_r(svn_branch_instance_t *branch,
-                            int eid,
-                            apr_pool_t *scratch_pool);
-
-/* Update the mappings to reflect branching the subtree [### the what?!]
- * at FROM_BRANCH:FROM_PARENT_EID to TO_BRANCH:TO_PARENT_EID.
+ * ### It's not particularly useful to allow TO_PARENT_EID != FROM_PARENT_EID.
  *
  * FROM_BRANCH and TO_BRANCH must be different branch instances in the
  * same branch family.
  *
- * FROM_PATH MUST be an existing path in FROM_BRANCH, and may be the
- * root path of FROM_BRANCH.
+ * FROM_PARENT_EID MUST be an existing element in FROM_BRANCH. It may be the
+ * root element of FROM_BRANCH.
  *
- * TO_PATH MUST be a path in TO_BRANCH at which nothing currently exists
- * if INCLUDE_SELF, or an existing path if not INCLUDE_SELF.
- *
- * If INCLUDE_SELF is true, include the element at FROM_PATH, otherwise
- * only act on children (recursively) of FROM_PATH.
+ * TO_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
+ * root element of TO_BRANCH.
  */
 svn_error_t *
 svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
@@ -1923,7 +1924,9 @@ svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
                                int to_parent_eid,
                                apr_pool_t *scratch_pool);
 
-/* Adjust TO_OUTER_BRANCH and its subbranches (recursively),
+/* Branch a subtree.
+ *
+ * Adjust TO_OUTER_BRANCH and its subbranches (recursively),
  * to reflect branching a subtree from FROM_BRANCH:FROM_EID to
  * create a new subbranch of TO_OUTER_BRANCH at TO_OUTER_PARENT_EID:NEW_NAME.
  *
@@ -1945,9 +1948,13 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             const char *new_name,
                             apr_pool_t *scratch_pool);
 
-/* In TO_BRANCH, assign new EIDs and path mappings to reflect the copying
- * of all children of FROM_BRANCH:FROM_PARENT_EID to TO_BRANCH:TO_PARENT_EID,
- * recursively, excluding the specified parent element itself.
+/* Copy a subtree.
+ *
+ * For each element that in FROM_BRANCH is a pathwise descendant of
+ * FROM_PARENT_EID, excluding FROM_PARENT_EID itself, instantiate a
+ * new element in TO_BRANCH. For each element, keep the same parent
+ * element (except, for first-level children, change FROM_PARENT_EID to
+ * TO_PARENT_EID), name, and content that it had in FROM_BRANCH.
  *
  * Assign a new EID in TO_BRANCH's family for each copied element.
  *
@@ -1955,10 +1962,10 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
  * in the same or different branch families.
  *
  * FROM_PARENT_EID MUST be an existing element in FROM_BRANCH. It may be the
- * root element of FROM_BRANCH, but not a subtree root.
+ * root element of FROM_BRANCH.
  *
- * TO_PARENT_EID MUST be an existing path in TO_BRANCH. It may be the
- * root element of TO_BRANCH, but not a subtree root.
+ * TO_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
+ * root element of TO_BRANCH.
  */
 svn_error_t *
 svn_branch_map_copy_children(svn_branch_instance_t *from_branch,
@@ -1967,7 +1974,9 @@ svn_branch_map_copy_children(svn_branch_instance_t *from_branch,
                              int to_parent_eid,
                              apr_pool_t *scratch_pool);
 
-/* Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
+/* Copy a subtree.
+ *
+ * Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
  * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
  *
  * FROM_EL_REV must be an existing element. (It may be a branch root.)

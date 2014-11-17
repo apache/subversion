@@ -462,17 +462,11 @@ svn_branch_map_update(svn_branch_instance_t *branch,
   branch_map_set(branch, eid, node);
 }
 
-/* Set or change the EID:element mapping for EID in BRANCH to reflect a
- * subbranch root node. This node has no content in this branch; the
- * corresponding element of the subbranch will define its content.
- *
- * Duplicate NEW_NAME into the branch mapping's pool.
- */
-static void
-branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
-                                    int eid,
-                                    svn_editor3_eid_t new_parent_eid,
-                                    const char *new_name)
+void
+svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
+                                        int eid,
+                                        svn_editor3_eid_t new_parent_eid,
+                                        const char *new_name)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *node
@@ -508,12 +502,18 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
           int this_eid = *(const int *)apr_hash_this_key(hi);
           svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
 
-          if (this_node->parent_eid != -1
-              && ! svn_branch_map_get(branch, this_node->parent_eid))
+          if (this_node->parent_eid != -1)
             {
-              SVN_DBG(("purge orphan: e%d", this_eid));
-              svn_branch_map_delete(branch, this_eid);
-              changed = TRUE;
+              svn_branch_el_rev_content_t *parent_node
+                = svn_branch_map_get(branch, this_node->parent_eid);
+
+              /* Purge if parent is deleted or is a subbranch-root node */
+              if (! parent_node || ! parent_node->content)
+                {
+                  SVN_DBG(("purge orphan: e%d", this_eid));
+                  svn_branch_map_delete(branch, this_eid);
+                  changed = TRUE;
+                }
             }
         }
     }
@@ -650,34 +650,6 @@ copy_content_from(svn_editor3_node_content_t **content_p,
       content = svn_editor3_node_content_create_ref(peg, result_pool);
     }
   *content_p = content;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_branch_map_delete_children(svn_branch_instance_t *branch,
-                               int eid,
-                               apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(scratch_pool, branch->e_map);
-       hi; hi = apr_hash_next(hi))
-    {
-      int this_eid = *(const int *)apr_hash_this_key(hi);
-      svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
-
-      if (this_node->parent_eid == eid)
-        {
-          /* Recurse. (We don't try to check whether it's a directory node,
-             as we might not have the node kind in the map.) */
-          SVN_ERR(svn_branch_map_delete_children(branch, this_eid,
-                                             scratch_pool));
-
-          /* Delete this immediate child. */
-          svn_branch_map_delete(branch, this_eid);
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -826,56 +798,6 @@ svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
 {
   return branch_get_sub_branches(branch, branch->sibling_defn->root_eid,
                                  result_pool, scratch_pool);
-}
-
-/* Delete the branch instance BRANCH by removing the record of it from its
- * revision-root.
- */
-static svn_error_t *
-branch_instance_delete(svn_branch_instance_t *branch,
-                       apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *branch_instances = branch->rev_root->branch_instances;
-  int i;
-
-  for (i = 0; i < branch_instances->nelts; i++)
-    {
-      svn_branch_instance_t *b
-        = APR_ARRAY_IDX(branch_instances, i, void *);
-
-      if (b == branch)
-        {
-          svn_sort__array_delete(branch_instances, i, 1);
-          break;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Delete the branch instance object BRANCH and any nested branch instances,
- * recursively.
- */
-static svn_error_t *
-branch_instance_delete_r(svn_branch_instance_t *branch,
-                         apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches
-    = svn_branch_get_all_sub_branches(branch, scratch_pool, scratch_pool);
-  int i;
-
-  /* Delete nested branch instances, recursively */
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
-
-      branch_instance_delete_r(b, scratch_pool);
-    }
-
-  /* Remove the record of this branch instance */
-  SVN_ERR(branch_instance_delete(branch, scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 svn_branch_instance_t *
@@ -1314,33 +1236,6 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
  */
 
 svn_error_t *
-svn_branch_delete_subtree_r(svn_branch_instance_t *branch,
-                            int eid,
-                            apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches;
-  int i;
-
-  /* Delete any nested subbranches at or inside EID. */
-  subbranches = branch_get_sub_branches(branch, eid,
-                                        scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch
-        = APR_ARRAY_IDX(subbranches, i, void *);
-
-      /* Delete the whole subbranch (recursively) */
-      SVN_ERR(branch_instance_delete_r(subbranch, scratch_pool));
-    }
-
-  /* update the element mapping in this branch */
-  svn_branch_map_delete(branch, eid /* ### , since_rev? */);
-  /* ### TODO: delete all elements under EID too. */
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_branch_instance_t *from_branch,
                             int from_eid,
@@ -1362,8 +1257,8 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   /* assign new eid to root node (outer branch) */
   to_outer_eid
     = svn_branch_family_add_new_element(to_outer_branch->sibling_defn->family);
-  branch_map_update_as_subbranch_root(to_outer_branch, to_outer_eid,
-                                      to_outer_parent_eid, new_name);
+  svn_branch_map_update_as_subbranch_root(to_outer_branch, to_outer_eid,
+                                          to_outer_parent_eid, new_name);
 
   /* create new inner branch sibling & instance */
   /* ### On sub-branches, should not add new branch sibling, only instance. */

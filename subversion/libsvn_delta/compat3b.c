@@ -926,31 +926,29 @@ svn_branch_branchify(svn_editor3_t *editor,
     new_branch = svn_branch_add_new_branch_instance(outer_branch, outer_eid,
                                                     new_branch_def,
                                                     scratch_pool);
+  svn_branch_el_rev_content_t *old_content;
 
   SVN_DBG(("branchify(b%d e%d at ^/%s): new f%d b%d e%d",
            outer_branch->sibling_defn->bid, outer_eid,
            svn_branch_get_root_rrpath(new_branch, scratch_pool),
            new_family->fid, new_branch_def->bid, new_branch_def->root_eid));
 
-  /* Initialize the root element */
-  {
-    svn_branch_el_rev_content_t *old_content = svn_branch_map_get(outer_branch,
-                                                                  outer_eid);
+  /* create the new root element */
+  old_content = svn_branch_map_get(outer_branch, outer_eid);
+  svn_branch_map_update(new_branch, new_branch_def->root_eid,
+                        -1, "", old_content->content);
 
-    svn_branch_map_update(new_branch, new_branch_def->root_eid,
-                          -1, "", old_content->content);
-  }
-
-  /* assign new EIDs and update the path mappings in this branch */
+  /* copy all the children into the new branch, assigning new EIDs */
   SVN_ERR(svn_branch_map_copy_children(outer_branch, outer_eid,
                                        new_branch, new_branch_def->root_eid,
                                        scratch_pool));
 
-  /* remove old element mappings in outer branch */
-  SVN_ERR(svn_branch_map_delete_children(outer_branch, outer_eid,
-                                         scratch_pool));
-
-  /* ### and convert the old root element to a subbranch-root element? */
+  /* convert the old root element to a subbranch-root element (which
+     implicitly deletes all its children from the old branch, if nothing
+     further touches them) */
+  svn_branch_map_update_as_subbranch_root(outer_branch, outer_eid,
+                                          old_content->parent_eid,
+                                          old_content->name);
 
   return SVN_NO_ERROR;
 }
