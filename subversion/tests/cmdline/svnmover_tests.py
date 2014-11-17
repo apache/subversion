@@ -105,6 +105,7 @@ def xtest_svnmover(repo_url, error_re_string, *varargs):
 
 def basic_svnmover(sbox):
   "basic svnmover tests"
+  # a copy of svnmucc_tests 1
 
   sbox_build_svnmover(sbox)
 
@@ -308,6 +309,7 @@ def basic_svnmover(sbox):
 
 def nested_replaces(sbox):
   "nested replaces"
+  # a copy of svnmucc_tests 2
 
   sbox_build_svnmover(sbox)
   repo_url = sbox.repo_url
@@ -347,12 +349,73 @@ rm A/B/C/Y
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'log', '-qvr3', repo_url)
 
+def merges(sbox):
+  "merges"
+  sbox_build_svnmover(sbox)
+  repo_url = sbox.repo_url
+
+  # (r2)
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
+                           'mkdir', 'trunk', 'mkdir', 'branches',
+                           'mkdir', 'trunk/no_no',
+                           'mkdir', 'trunk/rm_no',
+                           'mkdir', 'trunk/no_rm',
+                           'mkdir', 'trunk/mv_no',
+                           'mkdir', 'trunk/no_mv',
+                           'mkdir', 'trunk/rm_mv',
+                           'mkdir', 'trunk/mv_rm')
+
+  # branchify (r3)
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
+                           'branchify', 'trunk')
+
+  # branch (r4)
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
+                           'branch', 'trunk', 'branches/br1')
+
+  # modify (r5, r6)
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url + '/trunk',
+                           'mkdir', 'add_no',
+                           'rm', 'rm_no',
+                           'rm', 'rm_mv',
+                           'mkdir', 'D1',
+                           'mv', 'mv_no', 'D1/mv_no',
+                           'mv', 'mv_rm', 'mv_rm_D1')
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url + '/branches/br1',
+                           'mkdir', 'no_add',
+                           'rm', 'no_rm',
+                           'rm', 'mv_rm',
+                           'mkdir', 'D2',
+                           'mv', 'no_mv', 'D2/no_mv_B',
+                           'mv', 'rm_mv', 'D2/rm_mv_B')
+
+  # a merge that makes no changes
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
+                           'merge', 'trunk', 'branches/br1', 'trunk@5')
+
+  # a merge that makes changes with no conflict
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
+                           'merge', 'branches/br1', 'trunk', 'trunk@5')
+
+  # a merge that makes changes, with conflicts
+  svntest.actions.run_and_verify_svnmover(None, [], svntest.verify.AnyOutput,
+                           '-U', repo_url,
+                           'merge', 'trunk@6', 'branches/br1', 'trunk@3')
+
 
 ######################################################################
 
 test_list = [ None,
               basic_svnmover,
               nested_replaces,
+              merges,
             ]
 
 if __name__ == '__main__':
