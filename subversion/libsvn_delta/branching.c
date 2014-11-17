@@ -732,7 +732,7 @@ svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
 
   SVN_ERR_ASSERT(from_branch->sibling_defn->family->fid
                  == to_branch->sibling_defn->family->fid);
-  SVN_ERR_ASSERT(from_branch->sibling_defn->bid != to_branch->sibling_defn->bid);
+  SVN_ERR_ASSERT(from_branch != to_branch);
 
   /* The 'from' and 'to' nodes must exist. */
   SVN_ERR_ASSERT(svn_branch_map_get(from_branch, from_parent_eid));
