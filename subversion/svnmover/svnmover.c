@@ -935,11 +935,18 @@ get_subbranches(svn_branch_instance_t *branch,
   return result;
 }
 
+typedef svn_error_t *
+svn_branch_diff_func_t(svn_editor3_t *editor,
+                svn_branch_el_rev_id_t *left,
+                svn_branch_el_rev_id_t *right,
+                apr_pool_t *scratch_pool);
+
 /* Display differences, referring to paths, recursing into sub-branches */
 static svn_error_t *
 svn_branch_diff_r(svn_editor3_t *editor,
                   svn_branch_el_rev_id_t *left,
                   svn_branch_el_rev_id_t *right,
+                  svn_branch_diff_func_t diff_func,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
@@ -966,7 +973,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
              right->branch->sibling_defn->family->fid,
              svn_branch_get_root_rrpath(left->branch, scratch_pool),
              svn_branch_get_root_rrpath(right->branch, scratch_pool));
-      SVN_ERR(svn_branch_diff(editor, left, right, scratch_pool));
+      SVN_ERR(diff_func(editor, left, right, scratch_pool));
     }
 
   subbranches_l = get_subbranches(left ? left->branch : NULL,
@@ -1000,7 +1007,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
         }
 
       /* recurse */
-      svn_branch_diff_r(editor, sub_left, sub_right, scratch_pool);
+      svn_branch_diff_r(editor, sub_left, sub_right, diff_func, scratch_pool);
     }
   return SVN_NO_ERROR;
 }
@@ -1208,6 +1215,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(svn_branch_diff_r(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
+                                      svn_branch_diff,
                                       iterpool));
           }
           break;
@@ -1215,9 +1223,10 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_EXISTS("diff-e", 0);
           VERIFY_EID_EXISTS("diff-e", 1);
           {
-            SVN_ERR(svn_branch_diff_e(editor,
+            SVN_ERR(svn_branch_diff_r(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
+                                      svn_branch_diff_e,
                                       iterpool));
           }
           break;
