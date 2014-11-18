@@ -2507,9 +2507,8 @@ svn_delta__ev3_from_delta_for_commit(
 
   eb->edit_pool = result_pool;
 
-  SVN_ERR(svn_editor3_create(editor_p, &editor_funcs, eb,
-                             cancel_func, cancel_baton,
-                             result_pool, scratch_pool));
+  *editor_p = svn_editor3_create(&editor_funcs, eb,
+                                 cancel_func, cancel_baton, result_pool);
 
   if (shim_connector)
     {

@@ -86,30 +86,28 @@ struct svn_editor3_t
 #endif /* ENABLE_ORDERING_CHECK */
 
 
-svn_error_t *
-svn_editor3_create(svn_editor3_t **editor,
-                   const svn_editor3_cb_funcs_t *editor_funcs,
+svn_editor3_t *
+svn_editor3_create(const svn_editor3_cb_funcs_t *editor_funcs,
                    void *editor_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+                   apr_pool_t *result_pool)
 {
-  *editor = apr_pcalloc(result_pool, sizeof(**editor));
+  svn_editor3_t *editor = apr_pcalloc(result_pool, sizeof(*editor));
 
-  (*editor)->funcs = *editor_funcs;
-  (*editor)->baton = editor_baton;
-  (*editor)->cancel_func = cancel_func;
-  (*editor)->cancel_baton = cancel_baton;
-  (*editor)->scratch_pool = svn_pool_create(result_pool);
+  editor->funcs = *editor_funcs;
+  editor->baton = editor_baton;
+  editor->cancel_func = cancel_func;
+  editor->cancel_baton = cancel_baton;
+  editor->scratch_pool = svn_pool_create(result_pool);
 
 #ifdef ENABLE_ORDERING_CHECK
-  (*editor)->within_callback = FALSE;
-  (*editor)->finished = FALSE;
-  (*editor)->state_pool = result_pool;
+  editor->within_callback = FALSE;
+  editor->finished = FALSE;
+  editor->state_pool = result_pool;
 #endif
 
-  return SVN_NO_ERROR;
+  return editor;
 }
 
 
@@ -938,7 +936,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
                               svn_editor3_t *wrapped_editor,
                               apr_pool_t *result_pool)
 {
-  apr_pool_t *scratch_pool = result_pool;
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     wrap_mk,
     wrap_cp,
@@ -973,9 +970,9 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
     eb->prefix = apr_pstrdup(result_pool, "DBG: ");
   }
 
-  SVN_ERR(svn_editor3_create(editor_p, &wrapper_funcs, eb,
-                             NULL, NULL, /* cancellation */
-                             result_pool, scratch_pool));
+  *editor_p = svn_editor3_create(&wrapper_funcs, eb,
+                                 NULL, NULL, /* cancellation */
+                                 result_pool);
 
   return SVN_NO_ERROR;
 }
