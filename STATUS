@@ -69,17 +69,6 @@ Candidate changes:
      +1: stefan2
      -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
- * r1561426
-   In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
-   Branch: ^/subversion/branches/1.8.x-r1561426
-   Justification:
-     This is not known to be a bug, atm, as we omit these when we write the
-     final revisions.  But we rely on those uniquifiers to be NULL in old
-     repo formats when we compare reps.  Them being non-NULL in a txn might
-     cause problems with future changes.
-   Votes:
-     +1: stefan2, breser
-
  * r1589360
    Make property output in 'svn diff' stable
    Justification:
@@ -130,22 +119,6 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: julianfoad, rhuijben
-
- * r1543594, r1619774, r1619105, r1619118, r1619153, r1619802
-   Disable the revprop caching feature.
-   Justification:
-     The deployment restrictions that come with the 1.8 implementation
-     of this feature make it hard to use correctly. See also
-     http://svn.haxx.se/dev/archive-2014-08/0273.shtml
-   Notes:
-     r1619774 is the actual patch, r1543594 is a whitespace only change
-     that prevents a text conflict.  r1619105, r1619118, r1619153 and
-     r1619802 provide a new test case.  This required the backport branch
-     since the test file has been renamed on /trunk and used 1.9 APIs.
-   Branch:
-     ^/subversion/branches/1.8.x-r1619774
-   Votes:
-     +1: stefan2, ivan
 
  * r1620332
    Remove broken conflict resolver menu options.
@@ -233,9 +206,36 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1543594, r1619774, r1619105, r1619118, r1619153, r1619802
+   Disable the revprop caching feature.
+   Justification:
+     The deployment restrictions that come with the 1.8 implementation
+     of this feature make it hard to use correctly. See also
+     http://svn.haxx.se/dev/archive-2014-08/0273.shtml
+   Notes:
+     r1619774 is the actual patch, r1543594 is a whitespace only change
+     that prevents a text conflict.  r1619105, r1619118, r1619153 and
+     r1619802 provide a new test case.  This required the backport branch
+     since the test file has been renamed on /trunk and used 1.9 APIs.
+   Branch:
+     ^/subversion/branches/1.8.x-r1619774
+   Votes:
+     +1: stefan2, ivan, rhuijben
+
+ * r1561426
+   In FSFS, skip the generation of uniquifiers if rep-shared is not supported.
+   Branch: ^/subversion/branches/1.8.x-r1561426
+   Justification:
+     This is not known to be a bug, atm, as we omit these when we write the
+     final revisions.  But we rely on those uniquifiers to be NULL in old
+     repo formats when we compare reps.  Them being non-NULL in a txn might
+     cause problems with future changes.
+   Votes:
+     +1: stefan2, breser, rhuijben
+
  * r1636874
    Provide @since information in svn_stream_skip docstring.
    Justification:
      Our API docs should be accurate.
    Votes:
-     +1: stefan2, julianfoad
+     +1: stefan2, julianfoad, rhuijben
