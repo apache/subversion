@@ -424,8 +424,10 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                   }
                 else
                   {
-                    subject = svn_x509_certinfo_get_subject(certinfo);
-                    issuer = svn_x509_certinfo_get_issuer(certinfo);
+                    subject = svn_x509_certinfo_get_subject(
+                        certinfo, cb_scratch_pool);
+                    issuer = svn_x509_certinfo_get_issuer(
+                        certinfo, cb_scratch_pool);
                     fingerprint = svn_checksum_to_cstring_display(
                         svn_x509_certinfo_get_digest(certinfo),
                         cb_scratch_pool);
