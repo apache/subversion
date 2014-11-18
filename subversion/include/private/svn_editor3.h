@@ -1364,23 +1364,18 @@ typedef struct svn_editor3_cb_funcs_t
 
 /** Allocate an #svn_editor3_t instance from @a result_pool, store
  * @a *editor_funcs, @a editor_baton, @a cancel_func and @a cancel_baton
- * in the new instance and return it in @a *editor.
+ * in the new instance and return it.
  *
  * @a cancel_func / @a cancel_baton may be NULL / NULL if not wanted.
  *
- * @a scratch_pool is used for temporary allocations (if any). Note that
- * this is NOT the same @a scratch_pool that is passed to callback functions.
- *
  * @see #svn_editor3_t
  */
-svn_error_t *
-svn_editor3_create(svn_editor3_t **editor,
-                   const svn_editor3_cb_funcs_t *editor_funcs,
+svn_editor3_t *
+svn_editor3_create(const svn_editor3_cb_funcs_t *editor_funcs,
                    void *editor_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
+                   apr_pool_t *result_pool);
 
 /** Return an editor's private baton.
  *

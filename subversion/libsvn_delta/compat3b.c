@@ -1658,9 +1658,8 @@ svn_delta__ev3_from_delta_for_commit2(
 
   eb->edit_pool = result_pool;
 
-  SVN_ERR(svn_editor3_create(editor_p, &editor_funcs, eb,
-                             cancel_func, cancel_baton,
-                             result_pool, scratch_pool));
+  *editor_p = svn_editor3_create(&editor_funcs, eb,
+                                 cancel_func, cancel_baton, result_pool);
 
   /* Find what branch we are editing, based on BASE_RELPATH, and capture
      its initial state.
