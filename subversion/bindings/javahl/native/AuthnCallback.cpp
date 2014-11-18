@@ -208,8 +208,10 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
   SVN_JAVAHL_CHECK(env, svn_x509_parse_cert(&certinfo, der->data, der->len,
                                             pool.getPool(), pool.getPool()));
 
-  const ::Java::String subject(env, svn_x509_certinfo_get_subject(certinfo));
-  const ::Java::String issuer(env, svn_x509_certinfo_get_subject(certinfo));
+  const ::Java::String subject(
+      env, svn_x509_certinfo_get_subject(certinfo, pool.getPool()));
+  const ::Java::String issuer(
+      env, svn_x509_certinfo_get_issuer(certinfo, pool.getPool()));
   const ::Java::String cert(env, ascii_cert);
   const jlong valid_from =
     (jlong(svn_x509_certinfo_get_valid_from(certinfo)) + 500) / 1000;
