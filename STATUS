@@ -98,7 +98,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1574868
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1591123
    Display the proper URL for 'svn rm URL' in the commit log editor.
