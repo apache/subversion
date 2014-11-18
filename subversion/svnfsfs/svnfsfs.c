@@ -479,7 +479,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  /* Configure FSFS caches for maximum efficiency with svnadmin.
+  /* Configure FSFS caches for maximum efficiency with svnfsfs.
    * Also, apply the respective command line parameters, if given. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();
@@ -500,7 +500,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
           err = svn_error_quick_wrap(err,
-                                     _("Try 'svnadmin help' for more info"));
+                                     _("Try 'svnfsfs help' for more info"));
         }
       return err;
     }
@@ -516,7 +516,7 @@ main(int argc, const char *argv[])
   svn_error_t *err;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svnadmin", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnfsfs", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a separate mutexless allocator,
