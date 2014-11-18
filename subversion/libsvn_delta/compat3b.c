@@ -922,8 +922,10 @@ svn_branch_branchify(svn_editor3_t *editor,
   svn_branch_sibling_t *
     new_branch_def = svn_branch_family_add_new_branch_sibling(new_family,
                                                               new_root_eid);
+  int new_outer_eid
+    = svn_branch_family_add_new_element(outer_branch->sibling_defn->family);
   svn_branch_instance_t *
-    new_branch = svn_branch_add_new_branch_instance(outer_branch, outer_eid,
+    new_branch = svn_branch_add_new_branch_instance(outer_branch, new_outer_eid,
                                                     new_branch_def,
                                                     scratch_pool);
   svn_branch_el_rev_content_t *old_content;
@@ -943,10 +945,12 @@ svn_branch_branchify(svn_editor3_t *editor,
                                        new_branch, new_branch_def->root_eid,
                                        scratch_pool));
 
-  /* convert the old root element to a subbranch-root element (which
-     implicitly deletes all its children from the old branch, if nothing
-     further touches them) */
-  svn_branch_map_update_as_subbranch_root(outer_branch, outer_eid,
+  /* delete the old subtree-root element (which implicitly deletes all its
+     children from the old branch, if nothing further touches them) */
+  svn_branch_map_delete(outer_branch, outer_eid);
+
+  /* replace the old subtree-root element with a new subbranch-root element */
+  svn_branch_map_update_as_subbranch_root(outer_branch, new_outer_eid,
                                           old_content->parent_eid,
                                           old_content->name);
 
