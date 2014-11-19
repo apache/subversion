@@ -206,17 +206,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1561426
-   In FSFS, skip the generation of uniquifiers if rep-shared is not supported.
-   Branch: ^/subversion/branches/1.8.x-r1561426
-   Justification:
-     This is not known to be a bug, atm, as we omit these when we write the
-     final revisions.  But we rely on those uniquifiers to be NULL in old
-     repo formats when we compare reps.  Them being non-NULL in a txn might
-     cause problems with future changes.
-   Votes:
-     +1: stefan2, breser, rhuijben
-
  * r1636874
    Provide @since information in svn_stream_skip docstring.
    Justification:

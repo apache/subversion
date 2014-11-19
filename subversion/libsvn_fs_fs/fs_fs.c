@@ -6966,8 +6966,13 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
-      SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
-      rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
+
+      if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+        {
+          SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
+          rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
+        }
+
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
@@ -7551,6 +7556,7 @@ rep_write_contents_close(void *baton)
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
+  fs_fs_data_t *ffd = b->fs->fsap_data;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
   rep->offset = b->rep_offset;
@@ -7567,9 +7573,13 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
-  SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
-  rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
-                                 unique_suffix);
+
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
+      rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
+                                     unique_suffix);
+    }
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
