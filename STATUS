@@ -110,15 +110,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1620332
-   Remove broken conflict resolver menu options.
-   Justification:
-     svn shouldn't offer menu options that always error out.
-   Notes:
-     Run merge with --accept theirs-conflict
-   Votes:
-     +1: stsp, julianfoad
-
  * r1621978, r1621981
    Fix changelist filtering for repos-WC and WC-WC diffs.
    Justification:
@@ -206,5 +197,14 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1589360
    Votes:
      +1: ivan, rhuijben, stefan2
+
+ * r1620332
+   Remove broken conflict resolver menu options.
+   Justification:
+     svn shouldn't offer menu options that always error out.
+   Notes:
+     Run merge with --accept theirs-conflict
+   Votes:
+     +1: stsp, julianfoad, stefan2
 
 
