@@ -165,10 +165,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1636874
-   Provide @since information in svn_stream_skip docstring.
-   Justification:
-     Our API docs should be accurate.
-   Votes:
-     +1: stefan2, julianfoad
