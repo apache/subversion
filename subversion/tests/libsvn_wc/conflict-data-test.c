@@ -740,7 +740,7 @@ test_prop_conflicts(const svn_test_opts_t *opts,
   svn_error_t *err;
   const char *lock_abspath;
   test_prop_conflict_baton_t *b = apr_pcalloc(pool, sizeof(*b));
-  svn_wc_conflict_description2_t *desc = apr_pcalloc(pool, sizeof(*b));
+  svn_wc_conflict_description2_t *desc = apr_pcalloc(pool, sizeof(*desc));
 
   SVN_ERR(svn_test__sandbox_create(&sbox, "test_prop_conflicts", opts, pool));
 

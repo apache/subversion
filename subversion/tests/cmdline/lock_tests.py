@@ -1521,7 +1521,6 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
@@ -1554,11 +1553,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
-  # Recreate path for single-db
-  if not os.path.exists(G_path):
-    os.mkdir(G_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'add', G_path)
+                                     'mkdir', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', rho_path)
@@ -1890,6 +1887,168 @@ def drop_locks_on_parent_deletion(sbox):
                                         wc_dir)
 	
 										
+@SkipUnless(svntest.main.is_ra_type_dav)
+def dav_lock_timeout(sbox):
+  "unlock a lock with timeout"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build()
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
+              '<D:lockinfo xmlns:D="DAV:">' \
+              '  <D:lockscope><D:exclusive/></D:lockscope>' \
+              '  <D:locktype><D:write/></D:locktype>' \
+              '  <D:owner>' \
+              '       <D:href>http://a/test</D:href>' \
+              '  </D:owner>' \
+              '</D:lockinfo>'
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Timeout': 'Second-86400'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
+
+  r = h.getresponse()
+
+  # Verify that there is a lock, by trying to obtain one
+  svntest.actions.run_and_verify_svn2(None, None, ".*locked by user", 0,
+                                      'lock', '-m', '', sbox.ospath('iota'))
+
+  # Before this patch this used to fail with a parse error of the timeout
+  svntest.actions.run_and_verify_svn2(None, None, ".*W160039.*Unlock.*403", 0,
+                                     'unlock', sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.ospath('iota'), '--force')
+
+
+
+def non_root_locks(sbox):
+  "locks for working copies not at repos root"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.repo_url, sbox.repo_url + '/X',
+                                     '-m', 'copy greek tree')
+
+  sbox.simple_switch(sbox.repo_url + '/X')  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock a file
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Updates don't break the lock
+  sbox.simple_update('A/D')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  sbox.simple_update('')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Break the lock
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Subdir update reports the break
+  sbox.simple_update('A/D')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Relock and break
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Root update reports the break
+  sbox.simple_update('')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@Issue(3515)
+@SkipUnless(svntest.main.is_ra_type_dav)
+def dav_lock_refresh(sbox):
+  "refresh timeout of DAV lock"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build(create_wc = False)
+
+  # Acquire lock on 'iota'
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     sbox.repo_url + '/iota')
+
+  # Try to refresh lock using 'If' header
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
+    'If': '(<' + lock_token + '>)',
+    'Timeout': 'Second-7200'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', '', lock_headers)
+
+  # XFAIL Refreshing of DAV lock fails with error '412 Precondition Failed'
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
+
+@SkipUnless(svntest.main.is_ra_type_dav)
+def delete_locked_file_with_percent(sbox):
+  "lock and delete a file called 'a %( ) .txt'"
+
+  sbox.build()
+
+  locked_filename = 'a %( ) .txt'
+  locked_path = sbox.ospath(locked_filename)
+  svntest.main.file_write(locked_path, "content\n")
+  sbox.simple_add(locked_filename)
+  sbox.simple_commit()
+  
+  sbox.simple_lock(locked_filename)
+  sbox.simple_rm(locked_filename)
+
+  # XFAIL: With a 1.8.x client, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '/svn-test-work/repositories/lock_tests-52/!svn/txr/2-2/a%20%25(%20)%20.txt'
+  # and the following error in the httpd error log:
+  #  Invalid percent encoded URI in tagged If-header [400, #104]
+  sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -1943,6 +2102,10 @@ test_list = [ None,
               lock_unlock_deleted,
               commit_stolen_lock,
               drop_locks_on_parent_deletion,
+              dav_lock_timeout,
+              non_root_locks,
+              dav_lock_refresh,
+              delete_locked_file_with_percent,
             ]
 
 if __name__ == '__main__':

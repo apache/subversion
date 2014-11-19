@@ -2545,6 +2545,16 @@ def start_commit_hook_test(sbox):
                                            'STDERR',
                                            expected_stderr, actual_stderr)
 
+  # Now list the txns in the repo. The list should be empty.
+  exit_code, output, errput = svntest.main.run_svnadmin('lstxns',
+                                                        sbox.repo_dir)
+  svntest.verify.compare_and_display_lines(
+    "Error running 'svnadmin lstxns'.",
+    'STDERR', [], errput)
+  svntest.verify.compare_and_display_lines(
+    "Output of 'svnadmin lstxns' is unexpected.",
+    'STDOUT', [], output)
+
 #----------------------------------------------------------------------
 @Issue(3553)
 def pre_commit_hook_test(sbox):
@@ -2998,7 +3008,115 @@ def commit_cp_with_deep_delete(sbox):
                                         None,
                                         wc_dir)
 
-  
+def commit_deep_deleted(sbox):
+  "try to commit a deep descendant of a deleted node"
+
+  sbox.build()
+
+  sbox.simple_move('A', 'AA')
+
+  sbox.simple_propset('k', 'v', 'AA/D/G')
+
+  # Committing some added descendant returns a proper error
+  expected_err = ('svn: E200009: \'%s\' is not known to exist in the ' +
+                  'repository and is not part of the commit, yet its ' +
+                  'child \'%s\' is part of the commit') % (
+                    re.escape(os.path.abspath(sbox.ospath('AA'))),
+                    re.escape(os.path.abspath(sbox.ospath('AA/D/G'))))
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        expected_err,
+                                        sbox.ospath('AA/D/G'))
+
+  sbox.simple_propdel('k', 'AA/D/G')
+  sbox.simple_rm('AA/D/G')
+
+  # But a delete fails..
+  # This used to trigger an assertion in Subversion 1.8.0-1.8.8, because
+  # the status walker couldn't find the repository path for AA/D/G
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        expected_err,
+                                        sbox.ospath('AA/D/G'))
+
+  # And now commit like how a GUI client would do it, but forgetting the move
+  expected_err = ('svn: E200009: Cannot commit \'%s\' because it was moved ' +
+                  'from \'%s\' which is not part of the commit; both sides ' +
+                  'of the move must be committed together') % (
+                     re.escape(os.path.abspath(sbox.ospath('AA'))),
+                     re.escape(os.path.abspath(sbox.ospath('A'))))
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        expected_err,
+                                        '--depth', 'empty',
+                                        sbox.ospath('AA/D/G'),
+                                        sbox.ospath('AA'))
+
+
+  # And now how it works
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        [],
+                                        '--depth', 'empty',
+                                        sbox.ospath('AA/D/G'),
+                                        sbox.ospath('AA'),
+                                        sbox.ospath('A'))
+
+@Issue(4480)
+def commit_mergeinfo_ood(sbox):
+  "commit of mergeinfo that should cause out of date"
+
+  sbox.build()
+  sbox.simple_rm('A', 'iota')
+  sbox.simple_commit() # r2
+
+  sbox.simple_mkdir('trunk', 'branch')
+  sbox.simple_commit() # r3
+
+  sbox.simple_append('trunk/a', 'This is a\n')
+  sbox.simple_add('trunk/a')
+  sbox.simple_commit() # r4
+
+  sbox.simple_append('trunk/b', 'This is b\n')
+  sbox.simple_add('trunk/b')
+  sbox.simple_commit() # r5
+
+  sbox.simple_update() # To r5
+
+  expected_output = [
+    '--- Merging r4 into \'%s\':\n' % sbox.ospath('branch'),
+    'A    %s\n' % sbox.ospath('branch/a'),
+    '--- Recording mergeinfo for merge of r4' \
+                                ' into \'%s\':\n' % sbox.ospath('branch'),
+    ' U   %s\n' % sbox.ospath('branch'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '-c4', '^/trunk',
+                                     sbox.ospath('branch'))
+
+  sbox.simple_commit()
+
+  sbox.simple_update(revision='5')
+
+  expected_output = [
+    '--- Merging r5 into \'%s\':\n' % sbox.ospath('branch'),
+    'A    %s\n' % sbox.ospath('branch/b'),
+    '--- Recording mergeinfo for merge of r5 into \'%s\':\n' % sbox.ospath('branch'),
+    ' U   %s\n' % sbox.ospath('branch'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', '-c5', '^/trunk',
+                                     sbox.ospath('branch'))
+
+  # Currently this commit succeeds with dav over HTTPv2, while it should really fail
+  expected_err = '.*out of date.*'
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'commit', sbox.ospath(''), '-m', 'M')
 
 ########################################################################
 # Run the tests
@@ -3072,6 +3190,8 @@ test_list = [ None,
               commit_danglers,
               last_changed_of_copied_subdir,
               commit_cp_with_deep_delete,
+              commit_deep_deleted,
+              commit_mergeinfo_ood,
              ]
 
 if __name__ == '__main__':

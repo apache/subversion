@@ -2654,6 +2654,20 @@ def iprops_list_abspath(sbox):
                                      '--show-inherited-props', '-v',
                                      os.path.abspath(sbox.ospath('')))
 
+def wc_propop_on_url(sbox):
+  "perform wc specific operations on url"
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pl', '-r', 'PREV',
+                                     sbox.repo_url)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*E195000:.*path',
+                                     'pg', 'my:Q', '-r', 'PREV',
+                                     sbox.repo_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -2700,6 +2714,7 @@ test_list = [ None,
               almost_known_prop_names,
               peg_rev_base_working,
               iprops_list_abspath,
+              wc_propop_on_url,
              ]
 
 if __name__ == '__main__':

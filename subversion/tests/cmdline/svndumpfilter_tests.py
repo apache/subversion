@@ -559,7 +559,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   full_dump_contents = open(full_dump).read()
   filtered_dumpfile, filtered_out = filter_and_return_output(
       full_dump_contents,
-      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      16384, # Set a sufficiently large bufsize to avoid a deadlock
       "exclude", "branches/B2",
       "--skip-missing-merge-sources", "--drop-empty-revs")
 

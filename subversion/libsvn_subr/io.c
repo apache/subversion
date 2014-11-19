@@ -1243,32 +1243,44 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
         {
           /* Very simplistic but safe approach:
               If the filesystem has < sec mtime we can be reasonably sure
-              that the filesystem has <= millisecond precision.
+              that the filesystem has some sub-second resolution.  On Windows
+              it is likely to be sub-millisecond; on Linux systems it depends
+              on the filesystem, ext4 is typically 1ms, 4ms or 10ms resolution.
 
              ## Perhaps find a better algorithm here. This will fail once
-                in every 1000 cases on a millisecond precision filesystem.
+                in every 1000 cases on a millisecond precision filesystem
+                if the mtime happens to be an exact second.
 
                 But better to fail once in every thousand cases than every
                 time, like we did before.
-                (All tested filesystems I know have at least microsecond precision.)
 
              Note for further research on algorithm:
-               FAT32 has < 1 sec precision on ctime, but 2 sec on mtime */
+               FAT32 has < 1 sec precision on ctime, but 2 sec on mtime.
 
-          /* Sleep for at least 1 millisecond.
-             (t < 1000 will be round to 0 in apr) */
-          apr_sleep(1000);
+               Linux/ext4 with CONFIG_HZ=250 has high resolution
+               apr_time_now and although the filesystem timestamps
+               have similar high precision they are only updated with
+               a coarser 4ms resolution. */
 
-          return;
+          /* 10 milliseconds after now. */
+#ifndef SVN_HI_RES_SLEEP_MS
+#define SVN_HI_RES_SLEEP_MS 10
+#endif
+          then = now + apr_time_from_msec(SVN_HI_RES_SLEEP_MS);
         }
 
-      now = apr_time_now(); /* Extract the time used for the path stat */
-
-      if (now >= then)
-        return; /* Passing negative values may suspend indefinitely (Windows) */
+      /* Remove time taken to do stat() from sleep. */
+      now = apr_time_now();
     }
 
-  apr_sleep(then - now);
+  if (now >= then)
+    return; /* Passing negative values may suspend indefinitely (Windows) */
+
+  /* (t < 1000 will be round to 0 in apr) */
+  if (then - now < 1000)
+    apr_sleep(1000);
+  else
+    apr_sleep(then - now);
 }
 
 
@@ -4663,8 +4675,25 @@ svn_io_open_unique_file3(apr_file_t **file,
    * case, but only if the umask allows it. */
   if (!using_system_temp_dir)
     {
+      svn_error_t *err;
+
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
+      err = file_perms_set2(tempfile, perms, scratch_pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_INCOMPLETE(err->apr_err) ||
+              APR_STATUS_IS_ENOTIMPL(err->apr_err))
+            svn_error_clear(err);
+          else
+            {
+              const char *message;
+              message = apr_psprintf(scratch_pool,
+                                     _("Can't set permissions on '%s'"),
+                                     svn_dirent_local_style(tempname,
+                                                            scratch_pool));
+              return svn_error_quick_wrap(err, message);
+            }
+        }
     }
 #endif
 

@@ -89,7 +89,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         done
         SVN_DB_INCLUDES="${SVN_DB_INCLUDES## }"
         for l in [`echo "$withval" | $SED -e "s/.*:[^:]*:\([^:]*\):.*/\1/"`]; do
-          LDFLAGS="$LDFLAGS -L$l"
+          LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$l)`"
         done
         SVN_DB_LIBS=""
         for l in [`echo "$withval" | $SED -e "s/.*:\([^:]*\)/\1/"`]; do
