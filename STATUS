@@ -70,17 +70,6 @@ Candidate changes:
      +1: stefan2
      -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
- * r1589360
-   Make property output in 'svn diff' stable
-   Justification:
-     Local change that makes it easier to compare patch files.
-   Branch:
-     ^/subversion/branches/1.8.x-r1589360
-   Votes:
-     +1: ivan, rhuijben
-     -0: stefan2 (compiler misses "private/svn_sorts_private.h",
-                  before branch)
-
  * r1590751
    Use empty, rather than NULL, config if default is unreadable.
    Justification:
@@ -206,3 +195,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1589360
+   Make property output in 'svn diff' stable
+   Justification:
+     Local change that makes it easier to compare patch files.
+   Branch:
+     ^/subversion/branches/1.8.x-r1589360
+   Votes:
+     +1: ivan, rhuijben, stefan2
+
+
