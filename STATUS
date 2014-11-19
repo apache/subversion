@@ -167,6 +167,21 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1561419, r1561427, 1547489, r1560643, r1573744
+   Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
+   Branch: ^/subversion/branches/1.8.x-r1573744-and-friends
+   Justification:
+     Without this, old SVN versions won't be able to e.g. hotcopy those
+     repos once 1.8.x made a commit in them.  Also, fix our hotcopy code
+     and make it cope with repositories broken by previous 1.8.x releases.
+   Notes:
+     The best way to review this is to review the backporting result in
+     r1640603 instead of inspecting the original patches.
+     "r1573744" is a bit of a misnomer as only the test case got backported
+     because the workflow problem fixed by it does not exist in 1.8.x.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
