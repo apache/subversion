@@ -7852,7 +7852,7 @@ write_hash_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = 0;
+      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -9080,7 +9080,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
      stored in the representation. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = data_rep->expanded_size;
+  baton.remaining = data_rep->expanded_size
+                  ? data_rep->expanded_size
+                  : data_rep->size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -10922,6 +10924,9 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
     {
       apr_off_t root_offset;
       apr_file_t *rev_file;
+      char max_node_id[MAX_KEY_SIZE] = "0";
+      char max_copy_id[MAX_KEY_SIZE] = "0";
+      apr_size_t len;
 
       if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(dst_fs, scratch_pool));
@@ -10931,9 +10936,15 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
       SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
                                       dst_fs, new_youngest, scratch_pool));
       SVN_ERR(recover_find_max_ids(dst_fs, new_youngest, rev_file,
-                                   root_offset, next_node_id, next_copy_id,
+                                   root_offset, max_node_id, max_copy_id,
                                    scratch_pool));
       SVN_ERR(svn_io_file_close(rev_file, scratch_pool));
+
+      /* We store the _next_ ids. */
+      len = strlen(max_node_id);
+      svn_fs_fs__next_key(max_node_id, &len, next_node_id);
+      len = strlen(max_copy_id);
+      svn_fs_fs__next_key(max_copy_id, &len, next_copy_id);
     }
 
   /* Update 'current'. */
