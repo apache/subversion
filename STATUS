@@ -44,7 +44,8 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-r1536854
    Votes:
      +1: stefan2
-     +0: breser (I'd be +1 if not for the unused function in svnadmin_tests.py)
+     +0: breser (I'd be +1 if not for the unused function in svnadmin_tests.py;
+                 without r1640560)
 
  * r1542610, r1564576, r1568180
    Add missing description to build.conf, to properly generate a version
