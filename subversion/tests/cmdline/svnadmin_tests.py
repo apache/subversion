@@ -728,18 +728,22 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-def recover_fsfs(sbox):
-  "recover a repository (FSFS only)"
-  sbox.build()
+# Helper for two test functions.
+def corrupt_and_recover_db_current(sbox, minor_version=None):
+  """Build up a MINOR_VERSION sandbox and test different recovery scenarios
+  with missing, out-of-date or even corrupt db/current files.  Recovery should
+  behave the same way with all values of MINOR_VERSION, hence this helper
+  containing the common code that allows us to check it."""
+
+  sbox.build(minor_version=minor_version)
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   # Remember the contents of the db/current file.
   expected_current_contents = open(current_path).read()
@@ -805,6 +809,24 @@ def recover_fsfs(sbox):
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_db_current(sbox):
+  "fsfs recover db/current"
+  corrupt_and_recover_db_current(sbox)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_db_current(sbox):
+  "fsfs recover db/current --compatible-version=1.3"
+
+  # Around trunk@1573728, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 repositories with missing or
+  # invalid db/current file:
+  # svnadmin: E160006: No such revision 1
+
+  corrupt_and_recover_db_current(sbox, minor_version=3)
 
 #----------------------------------------------------------------------
 @Issue(2983)
@@ -1438,6 +1460,9 @@ def verify_non_utf8_paths(sbox):
     elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
       # fix up the representation checksum
       fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "text: 1 280 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 280 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
     elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # fix up the representation checksum
       fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
@@ -1817,11 +1842,41 @@ def mergeinfo_race(sbox):
 
 
 @Issue(4213)
-def recover_old(sbox):
-  "recover --pre-1.4-compatible"
+def recover_old_empty(sbox):
+  "recover empty --compatible-version=1.3"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=0)
-  svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          "recover", sbox.repo_dir)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_non_empty(sbox):
+  "fsfs recover non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E200002: Serialized hash missing terminator
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "recover",
+                                          sbox.repo_dir)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_non_empty(sbox):
+  "fsfs hotcopy non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin hotcopy' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E160006: No such revision 1
+
+  sbox.build(create_wc=False, minor_version=3)
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
 
 
 ########################################################################
@@ -1842,7 +1897,8 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               verify_incremental_fsfs,
-              recover_fsfs,
+              fsfs_recover_db_current,
+              fsfs_recover_old_db_current,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
@@ -1859,7 +1915,9 @@ test_list = [ None,
               hotcopy_incremental_packed,
               locking,
               mergeinfo_race,
-              recover_old,
+              recover_old_empty,
+              fsfs_recover_old_non_empty,
+              fsfs_hotcopy_old_non_empty,
              ]
 
 if __name__ == '__main__':
