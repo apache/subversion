@@ -122,6 +122,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+  * r1640730
+    Use sync Gnome Keyring API as our use of the async is not thread safe.
+    Justification:
+      Fix issue 3498: eclipse IDE crashes.
+    Votes:
+      +1: philip, markphip
+
 Veto-blocked changes:
 =====================
 
