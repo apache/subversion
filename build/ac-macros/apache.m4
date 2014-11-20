@@ -162,6 +162,11 @@ if test -n "$APXS" && test "$APXS" != "no"; then
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
+    HTTPD="`$APXS -q sbindir`/`$APXS -q PROGNAME`"
+    if ! test -e $HTTPD ; then
+      HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
+    fi
+    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's@^.*/\([0-9.]*\)\(.*$\)@\1@ ; 1q'`"]
 
     case $host in
       *-*-cygwin*)
@@ -180,6 +185,7 @@ AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
 AC_SUBST(INSTALL_APACHE_MODS)
+AC_SUBST(HTTPD_VERSION)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS" && test "$APXS" != "no"; then

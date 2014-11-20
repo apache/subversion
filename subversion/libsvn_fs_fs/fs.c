@@ -214,6 +214,7 @@ fs_info(const void **fsfs_info,
   info->fs_type = SVN_FS_TYPE_FSFS;
   info->shard_size = ffd->max_files_per_dir;
   info->min_unpacked_rev = ffd->min_unpacked_rev;
+  info->log_addressing = ffd->use_log_addressing;
   *fsfs_info = info;
   return SVN_NO_ERROR;
 }

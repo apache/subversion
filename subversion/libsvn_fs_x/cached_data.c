@@ -684,7 +684,6 @@ create_rep_state_body(rep_state_t **rep_state,
     {
       /* we will need the on-disk location for non-txn reps */
       apr_off_t offset;
-      apr_uint32_t sub_item;
       svn_boolean_t in_container = TRUE;
 
       /* ensure file is open and navigate to the start of rep header */
@@ -693,7 +692,6 @@ create_rep_state_body(rep_state_t **rep_state,
           /* ... we can re-use the same, already open file object.
            * This implies that we don't read from a txn.
            */
-          SVN_ERR_ASSERT(sub_item == 0);
           rs->sfile = *shared_file;
           SVN_ERR(auto_open_shared_file(rs->sfile));
         }
@@ -708,6 +706,8 @@ create_rep_state_body(rep_state_t **rep_state,
 
       if (SVN_IS_VALID_REVNUM(revision))
         {
+          apr_uint32_t sub_item;
+
           SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs,
                                         rs->sfile->rfile, &rep->id,
                                         scratch_pool));
