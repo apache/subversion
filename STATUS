@@ -86,6 +86,7 @@ Candidate changes:
      'svn upgrade' shouldn't destroy valid information.
    Votes:
      +1: rhuijben
+     -0: philip (needs a backport for apr_hash_this_key)
 
  * r1628536
    Fix issue #4085, "external can shadow a versioned directory".
