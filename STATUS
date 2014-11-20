@@ -147,15 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1589360
-   Make property output in 'svn diff' stable
-   Justification:
-     Local change that makes it easier to compare patch files.
-   Branch:
-     ^/subversion/branches/1.8.x-r1589360
-   Votes:
-     +1: ivan, rhuijben, stefan2
-
  * r1620332
    Remove broken conflict resolver menu options.
    Justification:
@@ -205,5 +196,3 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1611379
    Votes:
      +1: julianfoad, rhuijben, stefan2
-
-
