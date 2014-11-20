@@ -88,8 +88,7 @@ Candidate changes:
    Notes:
      r1628536 is the fix, r1628431 and r1628540 correct the test.
    Votes:
-     +1: stsp (r1628536 only)
-     +1: philip
+     +1: stsp, philip
 
  * r1633126
    Improve performance of recorded timestamp fixups in svn cleanup
