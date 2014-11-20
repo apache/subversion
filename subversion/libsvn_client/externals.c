@@ -186,7 +186,6 @@ switch_dir_external(const char *local_abspath,
                                 &repos_root_url, &repos_uuid,
                                 NULL, ctx->wc_ctx, local_abspath,
                                 TRUE, /* ignore_enoent */
-                                TRUE, /* show hidden */
                                 pool, pool));
   if (kind != svn_node_unknown)
     {

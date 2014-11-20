@@ -375,7 +375,6 @@ organize_lock_targets(apr_array_header_t **lock_paths,
                                             &wli->lock_token,
                                             wc_ctx, local_abspath,
                                             FALSE /* ignore_enoent */,
-                                            FALSE /* show_hidden */,
                                             result_pool, iterpool));
 
               if (kind != svn_node_file)

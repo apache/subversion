@@ -621,7 +621,6 @@ svn_wc__node_get_base(svn_node_kind_t *kind,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       svn_boolean_t ignore_enoent,
-                      svn_boolean_t show_hidden,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
