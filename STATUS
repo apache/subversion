@@ -147,15 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1620332
-   Remove broken conflict resolver menu options.
-   Justification:
-     svn shouldn't offer menu options that always error out.
-   Notes:
-     Run merge with --accept theirs-conflict
-   Votes:
-     +1: stsp, julianfoad, stefan2
-
  * r1542610, r1564576, r1568180
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
