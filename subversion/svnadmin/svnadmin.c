@@ -2027,6 +2027,11 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %ld/%ld\n"),
                                        shards_packed, shards_full));
           }
+
+        if (fsfs_info->log_addressing)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: yes\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: no\n")));
       }
   }
 

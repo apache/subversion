@@ -38,6 +38,10 @@ run_tests() {
     test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
     test -f fails.log && mv fails.log "${abssrc}/.test-logs/fails-${ra}-${fs}.log"
 
+    # Remove the test working directory to make space on the RAM disk
+    # for more tests.
+    rm -fr subversion/tests/cmdline/svn-test-work
+
     ${ok} || exit 1
 }
 
@@ -75,7 +79,7 @@ while [ ! -z "$1" ]; do
         dav)     check_dav=true;;
         fsfs)    check_fsfs=true;;
         fsfs-v6) check_fsfs_v6=true;;
-        fsfs-v4) check_fsfs_v6=true;;
+        fsfs-v4) check_fsfs_v4=true;;
         fsx)     check_fsx=true;;
         bdb)     check_bdb=true;;
         *)       exit 1;;

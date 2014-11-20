@@ -925,10 +925,20 @@ svn_fs_fs__check_rep(representation_t *rep,
     {
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
+      svn_fs_fs__revision_file_t *rev_file = NULL;
 
-      svn_fs_fs__revision_file_t *rev_file;
-      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
-                                               scratch_pool, scratch_pool));
+      /* Reuse the revision file provided by *HINT, if it is given and
+       * actually the rev / pack file that we want. */
+      svn_revnum_t start_rev = svn_fs_fs__packed_base_rev(fs, rep->revision);
+      if (hint)
+        rev_file = *(svn_fs_fs__revision_file_t **)hint;
+
+      if (rev_file == NULL || rev_file->start_revision != start_rev)
+        SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
+                                                 scratch_pool, scratch_pool));
+
+      if (hint)
+        *hint = rev_file;
 
       /* This will auto-retry if there was a background pack. */
       SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rep->revision,
@@ -951,8 +961,6 @@ svn_fs_fs__check_rep(representation_t *rep,
                                               "%" APR_UINT64_T_FMT,
                                               rep->item_index),
                                  rep->revision);
-
-      SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
     }
   else
     {
