@@ -84,9 +84,11 @@ Candidate changes:
    Keep externals registrations on 'svn upgrade' (part of issue 4519)
    Justification:
      'svn upgrade' shouldn't destroy valid information.
+   Branch:
+     ^/subversion/branches/1.8.x-r1625533
    Votes:
      +1: rhuijben
-     -0: philip (needs a backport for apr_hash_this_key)
+     -0: philip (needs a backport for apr_hash_this_key. Before branch)
 
  * r1628536
    Fix issue #4085, "external can shadow a versioned directory".
