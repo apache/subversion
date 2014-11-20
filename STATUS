@@ -147,16 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1542610, r1564576, r1568180
-   Add missing description to build.conf, to properly generate a version
-   resource (including icon) for this executable on Windows.
-   Notes:
-     r1564576 breaks compilation on Visual Studio 2010, 2012 and 2013 of
-     this project. r1568180 fixes this problem.
-   Votes:
-     +1: rhuijben, breser, stefan2
-     +1: (without r1564576, r1568180): stsp
-
  * r1600331, r1600348, 1600368, r1600563, r1600781
    Improve gpg-agent support.
    Justification: Avoids spurious error logs, supports standard socket
