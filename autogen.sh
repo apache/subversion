@@ -106,7 +106,7 @@ for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4; do
     rm -f build/$file
 
     if [ $lt_major_version -ge 2 ]; then
-        ltfile="$ltm4//$file"
+        ltfile="$ltm4/$file"
 
         if [ ! -f "$ltfile" ]; then
             echo "$ltfile not found $ltm4_error"
