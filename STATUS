@@ -75,8 +75,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1625533
    Votes:
-     +1: rhuijben
-     -0: philip (needs a backport for apr_hash_this_key. Before branch)
+     +1: rhuijben, philip
 
  * r1628431, r1628536, r1628540
    Fix issue #4085, "external can shadow a versioned directory".
