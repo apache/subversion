@@ -1660,15 +1660,12 @@ store_p2l_index_entry(svn_fs_t *fs,
  * of file system FS and return it in *ITEM_INDEX.  For old formats, it
  * will simply return the offset as item index; in new formats, it will
  * increment the txn's item index counter file and store the mapping in
- * the proto index file.  If FINAL_REVISION is not SVN_INVALID_REVNUM, use
- * it to determine whether to actually write to the proto-index.
- * Use POOL for allocations.
+ * the proto index file.  Use POOL for allocations.
  */
 static svn_error_t *
 allocate_item_index(apr_uint64_t *item_index,
                     svn_fs_t *fs,
                     const svn_fs_fs__id_part_t *txn_id,
-                    svn_revnum_t final_revision,
                     apr_off_t my_offset,
                     apr_pool_t *pool)
 {
@@ -2295,8 +2292,7 @@ rep_write_contents_close(void *baton)
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
       SVN_ERR(allocate_item_index(&rep->item_index, b->fs, &rep->txn_id,
-                                  SVN_INVALID_REVNUM, b->rep_offset,
-                                  b->scratch_pool));
+                                  b->rep_offset, b->scratch_pool));
 
       b->noderev->data_rep = rep;
     }
@@ -2505,9 +2501,7 @@ write_directory_to_stream(svn_stream_t *stream,
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be
    found, we will truncate the one just written from the file and return
-   the existing rep.  If FINAL_REVISION is not SVN_INVALID_REVNUM, use it
-   to determine whether to write to the proto-index files.
-   Perform temporary allocations in SCRATCH_POOL. */
+   the existing rep.  Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 write_container_rep(representation_t *rep,
                     apr_file_t *file,
@@ -2516,7 +2510,6 @@ write_container_rep(representation_t *rep,
                     svn_fs_t *fs,
                     apr_hash_t *reps_hash,
                     apr_uint32_t item_type,
-                    svn_revnum_t final_revision,
                     apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
@@ -2568,7 +2561,7 @@ write_container_rep(representation_t *rep,
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  final_revision, offset, scratch_pool));
+                                  offset, scratch_pool));
 
       entry.offset = offset;
       SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
@@ -2601,8 +2594,6 @@ write_container_rep(representation_t *rep,
 
    If ITEM_TYPE is IS_PROPS equals SVN_FS_FS__ITEM_TYPE_*_PROPS, assume
    that we want to a props representation as the base for our delta.
-   If FINAL_REVISION is not SVN_INVALID_REVNUM, use it to determine whether
-   to write to the proto-index files.
    Perform temporary allocations in SCRATCH_POOL.
  */
 static svn_error_t *
@@ -2614,7 +2605,6 @@ write_container_delta_rep(representation_t *rep,
                           node_revision_t *noderev,
                           apr_hash_t *reps_hash,
                           apr_uint32_t item_type,
-                          svn_revnum_t final_revision,
                           apr_pool_t *scratch_pool)
 {
   svn_txdelta_window_handler_t diff_wh;
@@ -2711,7 +2701,7 @@ write_container_delta_rep(representation_t *rep,
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  final_revision, offset, scratch_pool));
+                                  offset, scratch_pool));
 
       entry.offset = offset;
       SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
@@ -2910,12 +2900,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                               write_directory_to_stream,
                                               fs, noderev, NULL,
                                               SVN_FS_FS__ITEM_TYPE_DIR_REP,
-                                              rev, pool));
+                                              pool));
           else
             SVN_ERR(write_container_rep(noderev->data_rep, file, entries,
                                         write_directory_to_stream, fs, NULL,
-                                        SVN_FS_FS__ITEM_TYPE_DIR_REP, rev,
-                                        pool));
+                                        SVN_FS_FS__ITEM_TYPE_DIR_REP, pool));
 
           reset_txn_in_rep(noderev->data_rep);
         }
@@ -2960,11 +2949,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       if (ffd->deltify_properties)
         SVN_ERR(write_container_delta_rep(noderev->prop_rep, file, proplist,
                                           write_hash_to_stream, fs, noderev,
-                                          reps_hash, item_type, rev, pool));
+                                          reps_hash, item_type, pool));
       else
         SVN_ERR(write_container_rep(noderev->prop_rep, file, proplist,
                                     write_hash_to_stream, fs, reps_hash,
-                                    item_type, rev, pool));
+                                    item_type, pool));
 
       reset_txn_in_rep(noderev->prop_rep);
     }
@@ -2988,7 +2977,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                     rev_item.number, pool));
     }
   else
-    SVN_ERR(allocate_item_index(&rev_item.number, fs, txn_id, rev,
+    SVN_ERR(allocate_item_index(&rev_item.number, fs, txn_id,
                                 my_offset, pool));
 
   rev_item.revision = rev;
@@ -3070,17 +3059,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 }
 
 /* Write the changed path info CHANGED_PATHS from transaction TXN_ID to the
-   permanent rev-file FILE representing NEW_REV in filesystem FS.  *OFFSET_P
-   is set the to offset in the file of the beginning of this information.
-   NEW_REV is the revision currently being committed.
-   Perform temporary allocations in POOL. */
+   permanent rev-file FILE in filesystem FS.  *OFFSET_P is set the to offset
+   in the file of the beginning of this information.  Perform temporary
+   allocations in POOL. */
 static svn_error_t *
 write_final_changed_path_info(apr_off_t *offset_p,
                               apr_file_t *file,
                               svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_hash_t *changed_paths,
-                              svn_revnum_t new_rev,
                               apr_pool_t *pool)
 {
   apr_off_t offset;
@@ -3459,7 +3446,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, changed_paths,
-                                        new_rev, pool));
+                                        pool));
 
   if (svn_fs_fs__use_log_addressing(cb->fs))
     {
