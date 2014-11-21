@@ -100,14 +100,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1591123
-   Display the proper URL for 'svn rm URL' in the commit log editor.
-   Justification:
-     It's confusing since the URL isn't what the user passed.  Regression since
-     1.7.9 when we fixed issue #4332.
-   Votes:
-     +1: breser, rhuijben
-
  * r1594156
    Fix a problem with the Unix build that could result in linking to the wrong
    Subversion libraries at build time or at run time.
@@ -174,3 +166,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1591123
+   Display the proper URL for 'svn rm URL' in the commit log editor.
+   Justification:
+     It's confusing since the URL isn't what the user passed.  Regression since
+     1.7.9 when we fixed issue #4332.
+   Votes:
+     +1: breser, rhuijben, julianfoad
