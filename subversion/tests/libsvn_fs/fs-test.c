@@ -6539,6 +6539,66 @@ test_fs_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_fsfs_config_opts(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *fs_config;
+  svn_fs_t *fs;
+  const svn_fs_info_placeholder_t *fs_info;
+  const svn_fs_fsfs_info_t *fsfs_info;
+
+  /* Bail (with SKIP) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  /* Remove the test directory from previous runs. */
+  SVN_ERR(svn_io_remove_dir2("test-fsfs-config-opts", TRUE, NULL, NULL, pool));
+
+  /* Create the test directory and add it to the test cleanup list. */
+  SVN_ERR(svn_io_dir_make("test-fsfs-config-opts", APR_OS_DEFAULT, pool));
+  svn_test_add_dir_cleanup("test-fsfs-config-opts");
+
+  /* Create an FSFS filesystem with default config.*/
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
+  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/default", fs_config, pool));
+
+  /* Re-open FS to test the data on disk. */
+  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/default", NULL, pool, pool));
+
+  SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
+  SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
+  fsfs_info = (const void *) fs_info;
+
+  /* Check FSFS specific info. Don't check the SHARD_SIZE, because it depends
+   * on a compile-time constant and may be overridden. */
+  SVN_TEST_ASSERT(fsfs_info->log_addressing);
+  SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+
+  /* Create an FSFS filesystem with custom settings: disabled log-addressing
+   * and custom shard size (123). */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_LOG_ADDRESSING, "false");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "123");
+  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/custom", fs_config, pool));
+
+  /* Re-open FS to test the data on disk. */
+  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/custom", NULL, pool, pool));
+
+  SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
+  SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
+  fsfs_info = (const void *) fs_info;
+
+  /* Check FSFS specific info, including the SHARD_SIZE. */
+  SVN_TEST_ASSERT(fsfs_info->log_addressing == FALSE);
+  SVN_TEST_ASSERT(fsfs_info->shard_size == 123);
+  SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+
+  return SVN_NO_ERROR;
+}
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6662,6 +6722,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "get a delta stream on a file"),
     SVN_TEST_OPTS_PASS(test_fs_merge,
                        "get merging txns with newer revisions"),
+    SVN_TEST_OPTS_PASS(test_fsfs_config_opts,
+                       "test creating FSFS repository with different opts"),
     SVN_TEST_NULL
   };
 

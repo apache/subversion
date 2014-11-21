@@ -126,6 +126,16 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_SHARD_SIZE           "fsfs-shard-size"
 
+/** Enable / disable the FSFS format 7 logical addressing feature for a
+ * newly created repository.
+ *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_LOG_ADDRESSING       "fsfs-log-addressing"
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
