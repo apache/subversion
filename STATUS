@@ -117,20 +117,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1462041
-   Fix issue issue 4339, diff suffix scanning invalid read at last chunk
-   boundary.
-   Justification:
-     Without this patch we access memory that isn't part of the diff, which
-     in some cases causes a segfault.
-   Notes:
-     This branch only merges the actual fix. Trunk and 1.8.x have a test
-     for this case.
-   Branch:
-     ^/subversion/branches/1.7.x-r1462041
-   Votes:
-     +1: rhuijben, stsp
-
  * r1637826
    Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
    Justification:
@@ -174,3 +160,17 @@ Approved changes:
      1.7.9 when we fixed issue #4332.
    Votes:
      +1: breser, rhuijben, julianfoad
+
+ * r1462041
+   Fix issue issue 4339, diff suffix scanning invalid read at last chunk
+   boundary.
+   Justification:
+     Without this patch we access memory that isn't part of the diff, which
+     in some cases causes a segfault.
+   Notes:
+     This branch only merges the actual fix. Trunk and 1.8.x have a test
+     for this case.
+   Branch:
+     ^/subversion/branches/1.7.x-r1462041
+   Votes:
+     +1: rhuijben, stsp, philip
