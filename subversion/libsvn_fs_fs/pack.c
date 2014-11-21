@@ -643,7 +643,6 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
 apr_array_header_t *
 svn_fs_fs__order_dir_entries(svn_fs_t *fs,
                              apr_hash_t *directory,
-                             svn_revnum_t revision,
                              apr_pool_t *pool)
 {
   apr_array_header_t *ordered
