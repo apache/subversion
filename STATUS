@@ -153,14 +153,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1591123
-   Display the proper URL for 'svn rm URL' in the commit log editor.
-   Justification:
-     It's confusing since the URL isn't what the user passed.  Regression since
-     1.7.9 when we fixed issue #4332.
-   Votes:
-     +1: breser, rhuijben, julianfoad
-
  * r1462041
    Fix issue issue 4339, diff suffix scanning invalid read at last chunk
    boundary.
