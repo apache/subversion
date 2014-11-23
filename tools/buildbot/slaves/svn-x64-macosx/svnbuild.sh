@@ -64,10 +64,11 @@ cd ${abssrc}
 ./autogen.sh
 
 svnminor=$(awk '/define *SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h)
-if [ ${svnminor} -eq 8 ]; then
-  # --enable-optimize adds -flto which breaks the 1.8 C tests because
-  # they link main() from a library.
-  extraconfig='--disable-optimize'
+
+# --enable-optimize adds -flto which breaks the 1.8 C tests because
+# they link main() from a library.
+if [ ${svnminor} -gt 8 ]; then
+  optimizeconfig=' --enable-optimize'
 fi
 
 #
@@ -79,8 +80,7 @@ cd ${absbld}
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --disable-debug \
-    --enable-optimize \
+    --disable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
@@ -88,8 +88,8 @@ ${abssrc}/configure \
     --with-berkeley-db=db.h:"${SVNBB_BDB}/include":${SVNBB_BDB}/lib:db \
     --enable-javahl \
     --without-jikes \
-    --with-junit="${SVNBB_JUNIT}" \
-    ${extraconfig}
+    --with-junit="${SVNBB_JUNIT}"
+
 test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 
 #
