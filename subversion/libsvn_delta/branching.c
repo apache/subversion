@@ -874,23 +874,40 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
                                                outer_branch, outer_eid,
                                                result_pool);
 
+  /* Read in the structure, leaving the content of each element as null */
   for (eid = family->first_eid; eid < family->next_eid; eid++)
     {
       int this_fid, this_bid, this_eid, this_parent_eid;
-      char this_name[20], this_path[100];
+      char this_name[20];
 
       SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
       SVN_ERR_ASSERT(! eof);
-      n = sscanf(line->data, "f%db%de%d: %d %20s %100s\n",
+      n = sscanf(line->data, "f%db%de%d: %d %20s\n",
                  &this_fid, &this_bid, &this_eid,
-                 &this_parent_eid, this_name, this_path);
-      SVN_ERR_ASSERT(n == 6);
-      if (strcmp(this_path, "(null)") != 0)
+                 &this_parent_eid, this_name);
+      SVN_ERR_ASSERT(n == 5);
+      if (strcmp(this_name, "(null)") != 0)
         {
           const char *name = strcmp(this_name, ".") == 0 ? "" : this_name;
-          const char *path = strcmp(this_path, ".") == 0 ? "" : this_path;
-          const char *rrpath = svn_relpath_join(branch_root_rrpath, path,
-                                                scratch_pool);
+          svn_branch_el_rev_content_t *node
+            = svn_branch_el_rev_content_create(this_parent_eid, name,
+                                               NULL /*content*/, result_pool);
+
+          branch_map_set(branch_instance, this_eid, node);
+        }
+    }
+
+  /* Populate the content reference for each element, now that we have
+     enough info to calculate full paths */
+  for (eid = family->first_eid; eid < family->next_eid; eid++)
+    {
+      svn_branch_el_rev_content_t *node
+        = svn_branch_map_get(branch_instance, eid);
+
+      if (node)
+        {
+          const char *rrpath = svn_branch_get_rrpath_by_eid(branch_instance,
+                                                            eid, scratch_pool);
           svn_editor3_peg_path_t peg;
           svn_editor3_node_content_t *content;
 
@@ -899,8 +916,8 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
           peg.relpath = rrpath;
           content = svn_editor3_node_content_create_ref(peg, scratch_pool);
 
-          svn_branch_map_update(branch_instance, this_eid,
-                                this_parent_eid, name, content);
+          svn_branch_map_update(branch_instance, eid,
+                                node->parent_eid, node->name, content);
         }
     }
 
@@ -1069,9 +1086,9 @@ svn_branch_instance_serialize(svn_stream_t *stream,
           path = "(null)";
         }
       SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                                "f%db%de%d: %d %s %s\n",
+                                "f%db%de%d: %d %s\n",
                                 family->fid, branch->sibling_defn->bid, eid,
-                                parent_eid, name, path));
+                                parent_eid, name));
     }
   return SVN_NO_ERROR;
 }

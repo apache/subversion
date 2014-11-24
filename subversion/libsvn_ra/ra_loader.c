@@ -707,7 +707,7 @@ static const char *default_repos_info
   = "r0: fids 0 1 root-fid 0\n"
     "f0: bids 0 1 eids 0 1 parent-fid -1 b-instances 1\n"
     "f0b0: root-eid 0 at .\n"
-    "f0b0e0: -1 . .\n";
+    "f0b0e0: -1 .\n";
 
 /* Create a new revision-root object and read the move-tracking /
  * branch-tracking metadata from the repository into it.
