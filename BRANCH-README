@@ -38,6 +38,7 @@ Work on this branch:
       merge
 
     To do:
+      "replay": convert committed changes to an edit drive
       dissolve (unbranchify)
       provide a way to specify a mixed-rev base state
       synthesize element tracking info (instead of aborting) when reading
