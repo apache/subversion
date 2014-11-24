@@ -178,6 +178,33 @@ def redirected_nonroot_update(sbox):
   verify_url(wc_dir, checkout_url)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_externals(sbox):
+  "redirected externals"
+
+  sbox.build()
+
+  sbox.simple_propset('svn:externals',
+                      '^/A/B/E/alpha fileX\n'
+                      '^/A/B/F dirX',
+                      'A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  wc_dir = sbox.add_wc_path("my")
+  co_url = sbox.redirected_root_url()
+  exit_code, out, err = svntest.main.run_svn(None, 'co', co_url, wc_dir)
+  if err:
+    raise svntest.Failure
+  if not redirect_regex.match(out[0]):
+    raise svntest.Failure
+
+  verify_url(wc_dir, sbox.repo_url)
+  verify_url(sbox.ospath('A/C/fileX'), sbox.repo_url + '/A/B/E/alpha',
+             wc_path_is_file=True)
+  verify_url(sbox.ospath('A/C/dirX'), sbox.repo_url + '/A/B/F')
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -188,6 +215,7 @@ test_list = [ None,
               redirected_checkout,
               redirected_update,
               redirected_nonroot_update,
+              redirected_externals,
              ]
 
 if __name__ == '__main__':
