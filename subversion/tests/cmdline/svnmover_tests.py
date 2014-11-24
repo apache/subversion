@@ -354,10 +354,20 @@ def merges(sbox):
   sbox_build_svnmover(sbox)
   repo_url = sbox.repo_url
 
+  # make a 'trunk' branch and a 'branches' directory
   # (r2)
   svntest.actions.run_and_verify_svnmover(None, None, [],
                            '-U', repo_url,
-                           'mkdir', 'trunk', 'mkdir', 'branches',
+                           'mkdir', 'trunk',
+                           'branchify', 'trunk',
+                           'mkdir', 'branches')
+
+  # Create some nodes in trunk, each one named for how we will modify it.
+  # The name 'rm_no', for example, means we are going to 'rm' this node on
+  # trunk and make 'no' change on the branch.
+  # (r3)
+  svntest.actions.run_and_verify_svnmover(None, None, [],
+                           '-U', repo_url,
                            'mkdir', 'trunk/no_no',
                            'mkdir', 'trunk/rm_no',
                            'mkdir', 'trunk/no_rm',
@@ -365,11 +375,6 @@ def merges(sbox):
                            'mkdir', 'trunk/no_mv',
                            'mkdir', 'trunk/rm_mv',
                            'mkdir', 'trunk/mv_rm')
-
-  # branchify (r3)
-  svntest.actions.run_and_verify_svnmover(None, None, [],
-                           '-U', repo_url,
-                           'branchify', 'trunk')
 
   # branch (r4)
   svntest.actions.run_and_verify_svnmover(None, None, [],
