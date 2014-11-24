@@ -741,6 +741,8 @@ handle_external_item_change(svn_client_ctx_t *ctx,
                                                   &(new_item->peg_revision),
                                                   &(new_item->revision), ctx,
                                                   scratch_pool));
+
+          SVN_ERR(svn_ra_reparent(ra_session, new_loc->url, scratch_pool));
         }
     }
 
