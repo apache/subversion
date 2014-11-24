@@ -358,8 +358,7 @@ def merges(sbox):
   # (r2)
   svntest.actions.run_and_verify_svnmover(None, None, [],
                            '-U', repo_url,
-                           'mkdir', 'trunk',
-                           'branchify', 'trunk',
+                           'mkbranch', 'trunk',
                            'mkdir', 'branches')
 
   # Create some nodes in trunk, each one named for how we will modify it.
