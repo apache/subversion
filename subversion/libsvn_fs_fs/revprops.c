@@ -673,7 +673,6 @@ write_non_packed_revprop(const char **final_path,
  * file at TMP_PATH to FINAL_PATH and give it the permissions from
  * PERMS_REFERENCE.
  *
- * If indicated in BUMP_GENERATION, increase FS' revprop generation.
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
  * The latter may be NULL.
  *

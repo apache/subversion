@@ -22,6 +22,7 @@
 
 #include "svn_sorts.h"
 #include "svn_checksum.h"
+#include "svn_time.h"
 #include "private/svn_subr_private.h"
 
 #include "verify.h"

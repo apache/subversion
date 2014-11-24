@@ -39,6 +39,14 @@ if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
 fi
 
 #
+# Step 0: Create a directory for the test log files
+#
+if [ -d "${abssrc}/.test-logs" ]; then
+    rm -fr "${abssrc}/.test-logs"
+fi
+mkdir "${abssrc}/.test-logs" || exit 1
+
+#
 # Step 1: get the latest and greatest amalgamanted SQLite
 #
 
@@ -55,6 +63,14 @@ echo "============ autogen.sh"
 cd ${abssrc}
 ./autogen.sh
 
+svnminor=$(awk '/define *SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h)
+
+# --enable-optimize adds -flto which breaks the 1.8 C tests because
+# they link main() from a library.
+if [ ${svnminor} -gt 8 ]; then
+  optimizeconfig=' --enable-optimize'
+fi
+
 #
 # Step 3: Configure
 #
@@ -64,8 +80,7 @@ cd ${absbld}
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --disable-debug \
-    --enable-optimize \
+    --disable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
@@ -74,6 +89,8 @@ ${abssrc}/configure \
     --enable-javahl \
     --without-jikes \
     --with-junit="${SVNBB_JUNIT}"
+
+test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 
 #
 # Step 4: build

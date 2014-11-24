@@ -38,7 +38,21 @@ run_tests() {
     test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
     test -f fails.log && mv fails.log "${abssrc}/.test-logs/fails-${ra}-${fs}.log"
 
+    # Remove the test working directory to make space on the RAM disk
+    # for more tests.
+    rm -fr subversion/tests/cmdline/svn-test-work
+
     ${ok} || exit 1
+}
+
+check_tests() {
+    ra="$1"
+
+    ${check_fsfs} && run_tests ${ra} fsfs
+    ${check_fsfs_v6} && run_tests ${ra} fsfs-v6
+    ${check_fsfs_v4} && run_tests ${ra} fsfs-v4
+    ${check_bdb} && run_tests ${ra} bdb
+    ${check_fsx} && run_tests ${ra} fsx
 }
 
 
@@ -53,40 +67,28 @@ check_local=false
 check_svn=false
 check_dav=false
 check_fsfs=false
+check_fsfs_v6=false
+check_fsfs_v4=false
+check_fsx=false
 check_bdb=false
 
 while [ ! -z "$1" ]; do
     case "$1" in
-        local) check_local=true;;
-        svn)   check_svn=true;;
-        dav)   check_dav=true;;
-        fsfs)  check_fsfs=true;;
-        bdb)   check_bdb=true;;
-        *)     exit 1;;
+        local)   check_local=true;;
+        svn)     check_svn=true;;
+        dav)     check_dav=true;;
+        fsfs)    check_fsfs=true;;
+        fsfs-v6) check_fsfs_v6=true;;
+        fsfs-v4) check_fsfs_v4=true;;
+        fsx)     check_fsx=true;;
+        bdb)     check_bdb=true;;
+        *)       exit 1;;
     esac
     shift
 done
 
-# Create a directory for the test log files
-if [ -d "${abssrc}/.test-logs" ]; then
-    rm -fr "${abssrc}/.test-logs"
-fi
-mkdir "${abssrc}/.test-logs" || exit 1
-
-
-${check_local} && {
-    ${check_fsfs} && run_tests local fsfs
-    ${check_bdb} && run_tests local bdb
-}
-
-${check_svn} && {
-    ${check_fsfs} && run_tests svn fsfs
-    ${check_bdb} && run_tests svn bdb
-}
-
-${check_dav} && {
-    ${check_fsfs} && run_tests dav fsfs
-    ${check_bdb} && run_tests dav bdb
-}
+${check_local} && check_tests local
+${check_svn} && check_tests svn
+${check_dav} && check_tests dav
 
 exit 0
