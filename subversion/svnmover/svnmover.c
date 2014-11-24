@@ -196,6 +196,7 @@ typedef enum action_code_t {
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
   ACTION_BRANCH,
+  ACTION_MKBRANCH,
   ACTION_BRANCHIFY,
   ACTION_DISSOLVE,
   ACTION_MERGE,
@@ -1265,6 +1266,26 @@ execute(const apr_array_header_t *actions,
                                     iterpool));
           made_changes = TRUE;
           break;
+        case ACTION_MKBRANCH:
+          VERIFY_REV_UNSPECIFIED("mkbranch", 0);
+          VERIFY_EID_NONEXISTENT("mkbranch", 0);
+          VERIFY_PARENT_EID_EXISTS("mkbranch", 0);
+          {
+            apr_hash_t *props = apr_hash_make(iterpool);
+            svn_editor3_node_content_t *content
+              = svn_editor3_node_content_create_dir(props, iterpool);
+            int new_eid;
+
+            SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
+                                    parent_el_rev[0]->branch,
+                                    parent_el_rev[0]->eid, path_name[0],
+                                    content));
+            SVN_ERR(svn_branch_branchify(editor,
+                                         parent_el_rev[0]->branch, new_eid,
+                                         iterpool));
+          }
+          made_changes = TRUE;
+          break;
         case ACTION_BRANCHIFY:
           VERIFY_REV_UNSPECIFIED("branchify", 0);
           VERIFY_EID_EXISTS("branchify", 0);
@@ -1442,6 +1463,8 @@ usage(FILE *stream, apr_pool_t *pool)
       "  ls-br-r                : list all branches, recursively\n"
       "  branch SRC DST         : branch the branch-root or branch-subtree at SRC\n"
       "                           to make a new branch at DST\n"
+      "  mkbranch ROOT          : make a directory that's the root of a new branch\n"
+      "                           in a new branching family; like mkdir+branchify\n"
       "  branchify ROOT         : change the existing simple subtree at ROOT into\n"
       "                           a sub-branch (presently, in a new branch family)\n"
       "  dissolve ROOT          : change the existing sub-branch at ROOT into a\n"
@@ -1880,6 +1903,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         action->action = ACTION_LIST_BRANCHES_R;
       else if (! strcmp(action_string, "branch"))
         action->action = ACTION_BRANCH;
+      else if (! strcmp(action_string, "mkbranch"))
+        action->action = ACTION_MKBRANCH;
       else if (! strcmp(action_string, "branchify"))
         action->action = ACTION_BRANCHIFY;
       else if (! strcmp(action_string, "dissolve"))
@@ -1917,6 +1942,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* How many URLs does this action expect? */
       if (action->action == ACTION_RM
           || action->action == ACTION_MKDIR
+          || action->action == ACTION_MKBRANCH
           || action->action == ACTION_BRANCHIFY
           || action->action == ACTION_DISSOLVE)
         num_url_args = 1;
