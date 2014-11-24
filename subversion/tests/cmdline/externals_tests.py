@@ -3121,7 +3121,7 @@ def move_with_file_externals(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-@Issue(4185)
+@Issue(4185,4529)
 def pinned_externals(sbox):
   "pinned external"
 
@@ -3134,6 +3134,7 @@ def pinned_externals(sbox):
   sbox.simple_mkdir('Z')
   sbox.simple_commit('')
 
+  repo_X_C = repo_url + '/X/C'
   repo_X_mu = repo_url + '/X/mu'
 
   expected_output = verify.RegexOutput(
@@ -3153,20 +3154,17 @@ def pinned_externals(sbox):
                           'old-rev       -r 1  ' + repo_X_mu + '\n' +
                                     repo_X_mu + ' new-plain\n' +
                           '-r1  ' + repo_X_mu + ' new-rev\n' +
-                                    repo_X_mu + '@1 new-peg\n',
+                                    repo_X_mu + '@1 new-peg\n'
+                          '-r1  ' + repo_X_C + ' new-dir-rev\n',
                       'Z')
 
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D'               : Item(status=' U'),
-    'A/D/exdir_E/beta'  : Item(status='A '),
-    'A/D/exdir_E/alpha' : Item(status='A '),
-  })
   expected_error = "svn: E205011: Failure.*externals"
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-dir-rev'     : Item(),
 
     # And verifying X
     'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
