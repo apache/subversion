@@ -3164,6 +3164,7 @@ def pinned_externals(sbox):
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-rev'         : Item(contents="This is the file 'mu'.\n"),
     'Z/new-dir-rev'     : Item(),
 
     # And verifying X
