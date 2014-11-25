@@ -932,7 +932,7 @@ svn_branch_branchify(svn_editor3_t *editor,
 
   SVN_DBG(("branchify(b%d e%d at ^/%s): new f%d b%d e%d",
            outer_branch->sibling_defn->bid, outer_eid,
-           svn_branch_get_root_rrpath(new_branch, scratch_pool),
+           svn_branch_get_rrpath_by_eid(outer_branch, outer_eid, scratch_pool),
            new_family->fid, new_branch_def->bid, new_branch_def->root_eid));
 
   /* create the new root element */
