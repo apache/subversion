@@ -386,7 +386,8 @@ add_to_digest(const char *fs_path,
   const char *index_digest_path;
   apr_hash_t *children;
   svn_lock_t *lock;
-  int i, original_count;
+  int i;
+  unsigned int original_count;
 
   SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path, pool));
 

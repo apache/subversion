@@ -78,17 +78,8 @@ svn_stream_create(void *baton, apr_pool_t *pool)
 {
   svn_stream_t *stream;
 
-  stream = apr_palloc(pool, sizeof(*stream));
+  stream = apr_pcalloc(pool, sizeof(*stream));
   stream->baton = baton;
-  stream->read_fn = NULL;
-  stream->skip_fn = NULL;
-  stream->write_fn = NULL;
-  stream->close_fn = NULL;
-  stream->mark_fn = NULL;
-  stream->seek_fn = NULL;
-  stream->data_available_fn = NULL;
-  stream->is_buffered_fn = NULL;
-  stream->file = NULL;
   return stream;
 }
 
@@ -1126,7 +1117,7 @@ read_helper_gz(svn_stream_t *substream,
      uInt, but Subversion's API requires apr_size_t. */
   apr_size_t apr_len = (apr_size_t) *len;
 
-  SVN_ERR(svn_stream_read2(substream, buffer, &apr_len));
+  SVN_ERR(svn_stream_read_full(substream, buffer, &apr_len));
 
   /* Type cast back to uInt type that zlib uses.  On LP64 platforms
      apr_size_t will be bigger than uInt. */

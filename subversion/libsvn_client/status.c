@@ -577,7 +577,7 @@ svn_client_status6(svn_revnum_t *result_rev,
             = svn_wc_create_notify(target_abspath,
                                    svn_wc_notify_status_completed, pool);
           notify->revision = edit_revision;
-          (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
 
       /* If the caller wants the result revision, give it to them. */

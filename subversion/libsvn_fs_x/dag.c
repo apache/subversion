@@ -160,10 +160,13 @@ get_node_revision(node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       node_revision_t *noderev;
+      apr_pool_t *scratch_pool = svn_pool_create(node->node_pool);
 
       SVN_ERR(svn_fs_x__get_node_revision(&noderev, node->fs,
-                                          node->id, node->node_pool));
+                                          node->id, node->node_pool,
+                                          scratch_pool));
       node->node_revision = noderev;
+      svn_pool_destroy(scratch_pool);
     }
 
   /* Now NODE->node_revision is set.  */
@@ -613,7 +616,7 @@ svn_fs_x__dag_revision_root(dag_node_t **node_p,
   /* Construct the node. */
   new_node = apr_pcalloc(pool, sizeof(*new_node));
   new_node->fs = fs;
-  SVN_ERR(svn_fs_x__rev_get_root(&new_node->id, fs, rev, pool));
+  SVN_ERR(svn_fs_x__rev_get_root(&new_node->id, fs, rev, pool, pool));
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = pool;

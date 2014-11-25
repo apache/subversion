@@ -37,11 +37,39 @@
 
 #include "svn_private_config.h"
 #include "temp_serializer.h"
+#include "fs_x.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
 /* maximum length of a uint64 in an 7/8b encoding */
 #define ENCODED_INT_LENGTH 10
+
+/* APR is missing an APR_OFF_T_MAX.  So, define one.  We will use it to
+ * limit file offsets stored in the indexes.
+ *
+ * We assume that everything shorter than 64 bits, it is at least 32 bits.
+ * We also assume that the type is always signed meaning we only have an
+ * effective positive range of 63 or 31 bits, respectively.
+ */
+static
+const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
+                             ? APR_INT64_MAX
+                             : APR_INT32_MAX;
+
+/* We store P2L proto-index entries as 6 values, 64 bits each on disk.
+ * See also svn_fs_fs__p2l_proto_index_add_entry().
+ */
+#define P2L_PROTO_INDEX_ENTRY_SIZE (6 * sizeof(apr_uint64_t))
+
+/* We put this string in front of the L2P index header. */
+#define L2P_STREAM_PREFIX "L2P-INDEX\n"
+
+/* We put this string in front of the P2L index header. */
+#define P2L_STREAM_PREFIX "P2L-INDEX\n"
+
+/* Size of the buffer that will fit the index header prefixes. */
+#define STREAM_PREFIX_LEN MAX(sizeof(L2P_STREAM_PREFIX), \
+                              sizeof(P2L_STREAM_PREFIX))
 
 /* Page tables in the log-to-phys index file exclusively contain entries
  * of this type to describe position and size of a given page.
@@ -159,10 +187,19 @@ typedef struct value_position_pair_t
 /* State of a prefetching packed number stream.  It will read compressed
  * index data efficiently and present it as a series of non-packed uint64.
  */
-typedef struct packed_number_stream_t
+struct svn_fs_x__packed_number_stream_t
 {
   /* underlying data file containing the packed values */
   apr_file_t *file;
+
+  /* Offset within FILE at which the stream data starts
+   * (i.e. which offset will reported as offset 0 by packed_stream_offset). */
+  apr_off_t stream_start;
+
+  /* First offset within FILE after the stream data.
+   * Attempts to read beyond this will cause an "Unexpected End Of Stream"
+   * error. */
+  apr_off_t stream_end;
 
   /* number of used entries in BUFFER (starting at index 0) */
   apr_size_t used;
@@ -185,14 +222,14 @@ typedef struct packed_number_stream_t
 
   /* buffer for prefetched values */
   value_position_pair_t buffer[MAX_NUMBER_PREFETCH];
-} packed_number_stream_t;
+};
 
 /* Return an svn_error_t * object for error ERR on STREAM with the given
  * MESSAGE string.  The latter must have a placeholder for the index file
  * name ("%s") and the current read offset (e.g. "0x%lx").
  */
 static svn_error_t *
-stream_error_create(packed_number_stream_t *stream,
+stream_error_create(svn_fs_x__packed_number_stream_t *stream,
                     apr_status_t err,
                     const char *message)
 {
@@ -203,7 +240,9 @@ stream_error_create(packed_number_stream_t *stream,
   SVN_ERR(svn_io_file_seek(stream->file, APR_CUR, &offset, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
-                           (apr_uint64_t)offset);
+                           apr_psprintf(stream->pool,
+                                        "%" APR_UINT64_T_HEX_FMT,
+                                        (apr_uint64_t)offset));
 }
 
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
@@ -215,7 +254,7 @@ stream_error_create(packed_number_stream_t *stream,
  */
 SVN__PREVENT_INLINE
 static svn_error_t *
-packed_stream_read(packed_number_stream_t *stream)
+packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
 {
   unsigned char buffer[MAX_NUMBER_PREFETCH];
   apr_size_t read = 0;
@@ -243,12 +282,16 @@ packed_stream_read(packed_number_stream_t *stream)
   read = sizeof(buffer);
   block_left = stream->block_size - (stream->next_offset - block_start);
   if (block_left >= 10 && block_left < read)
-    read = block_left;
+    read = (apr_size_t)block_left;
+
+  /* Don't read beyond the end of the file section that belongs to this
+   * index / stream. */
+  read = (apr_size_t)MIN(read, stream->stream_end - stream->next_offset);
 
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
-      _("Can't read index file '%s' at offset 0x%" APR_UINT64_T_HEX_FMT));
+      _("Can't read index file '%s' at offset 0x%"));
 
   /* if the last number is incomplete, trim it from the buffer */
   while (read > 0 && buffer[read-1] >= 0x80)
@@ -258,7 +301,7 @@ packed_stream_read(packed_number_stream_t *stream)
    * at least *one* further number. */
   if SVN__PREDICT_FALSE(read == 0)
     return stream_error_create(stream, err,
-      _("Unexpected end of index file %s at offset 0x%"APR_UINT64_T_HEX_FMT));
+      _("Unexpected end of index file %s at offset 0x%"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
@@ -305,45 +348,56 @@ packed_stream_read(packed_number_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Create and open a packed number stream reading from FILE_NAME and
- * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.
- * Use POOL for allocations.
+/* Create and open a packed number stream reading from offsets START to
+ * END in FILE and return it in *STREAM.  Access the file in chunks of
+ * BLOCK_SIZE bytes.  Expect the stream to be prefixed by STREAM_PREFIX.
+ * Allocate *STREAM in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
-packed_stream_open(packed_number_stream_t **stream,
-                   const char *file_name,
+packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
+                   apr_file_t *file,
+                   apr_off_t start,
+                   apr_off_t end,
+                   const char *stream_prefix,
                    apr_size_t block_size,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  packed_number_stream_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = svn_pool_create(pool);
+  char buffer[STREAM_PREFIX_LEN + 1] = { 0 };
+  apr_size_t len = strlen(stream_prefix);
+  svn_fs_x__packed_number_stream_t *result;
 
-  SVN_ERR(svn_io_file_open(&result->file, file_name,
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                           result->pool));
-  
+  /* If this is violated, we forgot to adjust STREAM_PREFIX_LEN after
+   * changing the index header prefixes. */
+  SVN_ERR_ASSERT(len < sizeof(buffer));
+
+  /* Read the header prefix and compare it with the expected prefix */
+  SVN_ERR(svn_io_file_aligned_seek(file, block_size, NULL, start,
+                                   scratch_pool));
+  SVN_ERR(svn_io_file_read_full2(file, buffer, len, NULL, NULL,
+                                 scratch_pool));
+
+  if (strncmp(buffer, stream_prefix, len))
+    return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                             _("Index stream header prefix mismatch.\n"
+                               "  expected: %s"
+                               "  found: %s"), stream_prefix, buffer);
+
+  /* Construct the actual stream object. */
+  result = apr_palloc(result_pool, sizeof(*result));
+
+  result->pool = result_pool;
+  result->file = file;
+  result->stream_start = start + len;
+  result->stream_end = end;
+
   result->used = 0;
   result->current = 0;
-  result->start_offset = 0;
-  result->next_offset = 0;
+  result->start_offset = result->stream_start;
+  result->next_offset = result->stream_start;
   result->block_size = block_size;
 
   *stream = result;
-  
-  return SVN_NO_ERROR;
-}
-
-/* Close STREAM which may be NULL.
- */
-SVN__FORCE_INLINE
-static svn_error_t *
-packed_stream_close(packed_number_stream_t *stream)
-{
-  if (stream)
-    {
-      SVN_ERR(svn_io_file_close(stream->file, stream->pool));
-      svn_pool_destroy(stream->pool);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -357,7 +411,7 @@ packed_stream_close(packed_number_stream_t *stream)
 SVN__FORCE_INLINE
 static svn_error_t*
 packed_stream_get(apr_uint64_t *value,
-                  packed_number_stream_t *stream)
+                  svn_fs_x__packed_number_stream_t *stream)
 {
   if (stream->current == stream->used)
     SVN_ERR(packed_stream_read(stream));
@@ -368,20 +422,22 @@ packed_stream_get(apr_uint64_t *value,
   return SVN_NO_ERROR;
 }
 
-/* Navigate STREAM to packed file offset OFFSET.  There will be no checks
+/* Navigate STREAM to packed stream offset OFFSET.  There will be no checks
  * whether the given OFFSET is valid.
  */
 static void
-packed_stream_seek(packed_number_stream_t *stream,
+packed_stream_seek(svn_fs_x__packed_number_stream_t *stream,
                    apr_off_t offset)
 {
+  apr_off_t file_offset = offset + stream->stream_start;
+
   if (   stream->used == 0
       || offset < stream->start_offset
       || offset >= stream->next_offset)
     {
       /* outside buffered data.  Next get() will read() from OFFSET. */
-      stream->start_offset = offset;
-      stream->next_offset = offset;
+      stream->start_offset = file_offset;
+      stream->next_offset = file_offset;
       stream->current = 0;
       stream->used = 0;
     }
@@ -392,22 +448,163 @@ packed_stream_seek(packed_number_stream_t *stream,
        * it for the desired position. */
       apr_size_t i;
       for (i = 0; i < stream->used; ++i)
-        if (stream->buffer[i].total_len > offset - stream->start_offset)
+        if (stream->buffer[i].total_len > file_offset - stream->start_offset)
           break;
 
       stream->current = i;
     }
 }
 
-/* Return the packed file offset of at which the next number in the stream
+/* Return the packed stream offset of at which the next number in the stream
  * can be found.
  */
 static apr_off_t
-packed_stream_offset(packed_number_stream_t *stream)
+packed_stream_offset(svn_fs_x__packed_number_stream_t *stream)
 {
-  return stream->current == 0
+  apr_off_t file_offset
+       = stream->current == 0
        ? stream->start_offset
        : stream->buffer[stream->current-1].total_len + stream->start_offset;
+
+  return file_offset - stream->stream_start;
+}
+
+/* Write VALUE to the PROTO_INDEX file, using SCRATCH_POOL for temporary
+ * allocations.
+ *
+ * The point of this function is to ensure an architecture-independent
+ * proto-index file format.  All data is written as unsigned 64 bits ints
+ * in little endian byte order.  64 bits is the largest portable integer
+ * we have and unsigned values have well-defined conversions in C.
+ */
+static svn_error_t *
+write_uint64_to_proto_index(apr_file_t *proto_index,
+                            apr_uint64_t value,
+                            apr_pool_t *scratch_pool)
+{
+  apr_byte_t buffer[sizeof(value)];
+  int i;
+  apr_size_t written;
+
+  /* Split VALUE into 8 bytes using LE ordering. */
+  for (i = 0; i < sizeof(buffer); ++i)
+    {
+      /* Unsigned conversions are well-defined ... */
+      buffer[i] = (apr_byte_t)value;
+      value >>= CHAR_BIT;
+    }
+
+  /* Write it all to disk. */
+  SVN_ERR(svn_io_file_write_full(proto_index, buffer, sizeof(buffer),
+                                 &written, scratch_pool));
+  SVN_ERR_ASSERT(written == sizeof(buffer));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read one unsigned 64 bit value from PROTO_INDEX file and return it in
+ * *VALUE_P.  If EOF is NULL, error out when trying to read beyond EOF.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * This function is the inverse to write_uint64_to_proto_index (see there),
+ * reading the external LE byte order and convert it into host byte order.
+ */
+static svn_error_t *
+read_uint64_from_proto_index(apr_file_t *proto_index,
+                             apr_uint64_t *value_p,
+                             svn_boolean_t *eof,
+                             apr_pool_t *scratch_pool)
+{
+  apr_byte_t buffer[sizeof(*value_p)];
+  apr_size_t read;
+
+  /* Read the full 8 bytes or our 64 bit value, unless we hit EOF.
+   * Assert that we never read partial values. */
+  SVN_ERR(svn_io_file_read_full2(proto_index, buffer, sizeof(buffer),
+                                 &read, eof, scratch_pool));
+  SVN_ERR_ASSERT((eof && *eof) || read == sizeof(buffer));
+
+  /* If we did not hit EOF, reconstruct the uint64 value and return it. */
+  if (!eof || !*eof)
+    {
+      int i;
+      apr_uint64_t value;
+
+      /* This could only overflow if CHAR_BIT had a value that is not
+       * a divisor of 64. */
+      value = 0;
+      for (i = sizeof(buffer) - 1; i >= 0; --i)
+        value = (value << CHAR_BIT) + buffer[i];
+
+      *value_p = value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Convenience function similar to read_uint64_from_proto_index, but returns
+ * an uint32 value in VALUE_P.  Return an error if the value does not fit.
+ */
+static svn_error_t *
+read_uint32_from_proto_index(apr_file_t *proto_index,
+                             apr_uint32_t *value_p,
+                             svn_boolean_t *eof,
+                             apr_pool_t *scratch_pool)
+{
+  apr_uint64_t value;
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
+                                       scratch_pool));
+  if (!eof || !*eof)
+    {
+      if (value > APR_UINT32_MAX)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                 _("UINT32 0x%s too large, max = 0x%s"),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              value),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                             (apr_uint64_t)APR_UINT32_MAX));
+
+      /* This conversion is not lossy because the value can be represented
+       * in the target type. */
+      *value_p = (apr_uint32_t)value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Convenience function similar to read_uint64_from_proto_index, but returns
+ * an off_t value in VALUE_P.  Return an error if the value does not fit.
+ */
+static svn_error_t *
+read_off_t_from_proto_index(apr_file_t *proto_index,
+                            apr_off_t *value_p,
+                            svn_boolean_t *eof,
+                            apr_pool_t *scratch_pool)
+{
+  apr_uint64_t value;
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &value, eof,
+                                       scratch_pool));
+  if (!eof || !*eof)
+    {
+      if (value > off_t_max)
+        return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                _("File offset 0x%s too large, max = 0x%s"),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              value),
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              off_t_max));
+
+      /* Shortening conversion from unsigned to signed int is well-defined
+       * and not lossy in C because the value can be represented in the
+       * target type. */
+      *value_p = (apr_off_t)value;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -416,38 +613,61 @@ packed_stream_offset(packed_number_stream_t *stream)
 svn_error_t *
 svn_fs_x__l2p_proto_index_open(apr_file_t **proto_index,
                                const char *file_name,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool)
 {
   SVN_ERR(svn_io_file_open(proto_index, file_name, APR_READ | APR_WRITE
                            | APR_CREATE | APR_APPEND | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, result_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Write ENTRY to log-to-phys PROTO_INDEX file and verify the results.
- * Use POOL for allocations.
+/* Append ENTRY to log-to-phys PROTO_INDEX file.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
-write_entry_to_proto_index(apr_file_t *proto_index,
-                           l2p_proto_entry_t entry,
-                           apr_pool_t *pool)
+write_l2p_entry_to_proto_index(apr_file_t *proto_index,
+                               l2p_proto_entry_t entry,
+                               apr_pool_t *scratch_pool)
 {
-  apr_size_t written = sizeof(entry);
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.offset,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.item_index,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry.sub_item,
+                                      scratch_pool));
 
-  SVN_ERR(svn_io_file_write(proto_index, &entry, &written, pool));
-  SVN_ERR_ASSERT(written == sizeof(entry));
+  return SVN_NO_ERROR;
+}
+
+/* Read *ENTRY from log-to-phys PROTO_INDEX file and indicate end-of-file
+ * in *EOF, or error out in that case if EOF is NULL.  *ENTRY is in an
+ * undefined state if an end-of-file occurred.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_l2p_entry_from_proto_index(apr_file_t *proto_index,
+                                l2p_proto_entry_t *entry,
+                                svn_boolean_t *eof,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &entry->offset, eof,
+                                       scratch_pool));
+  SVN_ERR(read_uint64_from_proto_index(proto_index, &entry->item_index, eof,
+                                       scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->sub_item, eof,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
-                                       apr_pool_t *pool)
+                                       apr_pool_t *scratch_pool)
 {
   l2p_proto_entry_t entry = { 0 };
-  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
-                                                    pool));
+  return svn_error_trace(write_l2p_entry_to_proto_index(proto_index, entry,
+                                                        scratch_pool));
 }
 
 svn_error_t *
@@ -455,7 +675,7 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                     apr_off_t offset,
                                     apr_uint32_t sub_item,
                                     apr_uint64_t item_index,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *scratch_pool)
 {
   l2p_proto_entry_t entry = { 0 };
 
@@ -473,8 +693,8 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
   /* no limits on the container sub-item index */
   entry.sub_item = sub_item;
 
-  return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
-                                                    pool));
+  return svn_error_trace(write_l2p_entry_to_proto_index(proto_index, entry,
+                                                        scratch_pool));
 }
 
 /* Encode VALUE as 7/8b into P and return the number of bytes written.
@@ -503,6 +723,18 @@ static apr_size_t
 encode_int(unsigned char *p, apr_int64_t value)
 {
   return encode_uint(p, (apr_uint64_t)(value < 0 ? -1 - 2*value : 2*value));
+}
+
+/* Append VALUE to STREAM in 7/8b encoding.
+ */
+static svn_error_t *
+stream_write_encoded(svn_stream_t *stream,
+                     apr_uint64_t value)
+{
+  unsigned char encoded[ENCODED_INT_LENGTH];
+ 
+  apr_size_t len = encode_uint(encoded, value);
+  return svn_error_trace(svn_stream_write(stream, (char *)encoded, &len));
 }
 
 /* Run-length-encode the uint64 numbers in ARRAY starting at index START
@@ -565,18 +797,18 @@ compare_l2p_entries_by_offset(const l2p_page_entry_t *lhs,
 
 /* Write the log-2-phys index page description for the l2p_page_entry_t
  * array ENTRIES, starting with element START up to but not including END.
- * Write the resulting representation into BUFFER.  Use POOL for temporary
- * allocations.
+ * Write the resulting representation into BUFFER.  Use SCRATCH_POOL for
+ * temporary allocations.
  */
 static svn_error_t *
 encode_l2p_page(apr_array_header_t *entries,
                 int start,
                 int end,
                 svn_spillbuf_t *buffer,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   unsigned char encoded[ENCODED_INT_LENGTH];
-  apr_hash_t *containers = apr_hash_make(pool);
+  apr_hash_t *containers = apr_hash_make(scratch_pool);
   int count = end - start;
   int container_count = 0;
   apr_uint64_t last_offset = 0;
@@ -584,11 +816,11 @@ encode_l2p_page(apr_array_header_t *entries,
   
   apr_size_t data_size = count * sizeof(l2p_page_entry_t);
   svn_stringbuf_t *container_offsets
-    = svn_stringbuf_create_ensure(count * 2, pool);
+    = svn_stringbuf_create_ensure(count * 2, scratch_pool);
 
   /* SORTED: relevant items from ENTRIES, sorted by offset */
   l2p_page_entry_t *sorted
-    = apr_pmemdup(pool,
+    = apr_pmemdup(scratch_pool,
                   entries->elts + start * sizeof(l2p_page_entry_t),
                   data_size);
   qsort(sorted, end - start, sizeof(l2p_page_entry_t),
@@ -600,7 +832,7 @@ encode_l2p_page(apr_array_header_t *entries,
       /* skip "unused" entries */
       if (sorted[i].offset == 0)
         continue;
-      
+
       /* offset already covered? */
       if (i > 0 && sorted[i].offset == sorted[i-1].offset)
         continue;
@@ -624,9 +856,9 @@ encode_l2p_page(apr_array_header_t *entries,
   /* write container list to BUFFER */
   SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                               encode_uint(encoded, container_count),
-                              pool));
+                              scratch_pool));
   SVN_ERR(svn_spillbuf__write(buffer, (const char *)container_offsets->data,
-                              container_offsets->len, pool));
+                              container_offsets->len, scratch_pool));
 
   /* encode items */
   for (i = start; i < end; ++i)
@@ -634,7 +866,7 @@ encode_l2p_page(apr_array_header_t *entries,
       l2p_page_entry_t *entry = &APR_ARRAY_IDX(entries, i, l2p_page_entry_t);
       if (entry->offset == 0)
         {
-          SVN_ERR(svn_spillbuf__write(buffer, "\0", 1, pool));
+          SVN_ERR(svn_spillbuf__write(buffer, "\0", 1, scratch_pool));
         }
       else
         {
@@ -644,16 +876,19 @@ encode_l2p_page(apr_array_header_t *entries,
             {
               apr_uint64_t value = entry->offset + container_count;
               SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
-                                          encode_uint(encoded, value), pool));
+                                          encode_uint(encoded, value),
+                                          scratch_pool));
             }
           else
             {
               apr_uintptr_t idx = (apr_uintptr_t)void_idx;
               apr_uint64_t value = entry->sub_item;
               SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
-                                          encode_uint(encoded, idx), pool));
+                                          encode_uint(encoded, idx),
+                                          scratch_pool));
               SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
-                                          encode_uint(encoded, value), pool));
+                                          encode_uint(encoded, value),
+                                          scratch_pool));
             }
         }
     }
@@ -661,44 +896,29 @@ encode_l2p_page(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
-{
-  /* remove any old index file
-   * (it would probably be r/o and simply re-writing it would fail) */
-  SVN_ERR(svn_io_remove_file2(file_name, TRUE, pool));
-
-  /* We most likely own the write lock to the repo, so this should
-   * either just work or fail indicating a serious problem. */
-  SVN_ERR(svn_io_file_open(index_file, file_name,
-                           APR_WRITE | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
-svn_fs_x__l2p_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
-                           apr_pool_t *pool)
+                           apr_pool_t * result_pool,
+                           apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   int end;
   apr_uint64_t entry;
   svn_boolean_t eof = FALSE;
-  apr_file_t *index_file;
-  unsigned char encoded[ENCODED_INT_LENGTH];
 
   int last_page_count = 0;          /* total page count at the start of
                                        the current revision */
 
   /* temporary data structures that collect the data which will be moved
      to the target file in a second step */
-  apr_pool_t *local_pool = svn_pool_create(pool);
+  apr_pool_t *local_pool = svn_pool_create(scratch_pool);
   apr_pool_t *iterpool = svn_pool_create(local_pool);
   apr_array_header_t *page_counts
     = apr_array_make(local_pool, 16, sizeof(apr_uint64_t));
@@ -733,13 +953,10 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   for (entry = 0; !eof; ++entry)
     {
       l2p_proto_entry_t proto_entry;
-      apr_size_t read = 0;
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(proto_index,
-                                     &proto_entry, sizeof(proto_entry),
-                                     &read, &eof, local_pool));
-      SVN_ERR_ASSERT(eof || read == sizeof(proto_entry));
+      SVN_ERR(read_l2p_entry_from_proto_index(proto_index, &proto_entry,
+                                              &eof, local_pool));
 
       /* handle new revision */
       if ((entry > 0 && proto_entry.offset == 0) || eof)
@@ -749,8 +966,11 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
           int entry_count = 0;
           for (i = 0; i < entries->nelts; i += entry_count)
             {
-              /* 1 page with up to 8k entries */
-              apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
+              /* 1 page with up to L2P_PAGE_SIZE entries.
+               * fsfs.conf settings validation guarantees this to fit into
+               * our address space. */
+              apr_size_t last_buffer_size
+                = (apr_size_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 
@@ -802,9 +1022,6 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* we are now done with the source file */
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
-  /* create the target file */
-  SVN_ERR(index_create(&index_file, file_name, local_pool));
-
   /* Paranoia check that makes later casting to int32 safe.
    * The current implementation is limited to 2G pages per index. */
   if (page_counts->nelts > APR_INT32_MAX)
@@ -813,52 +1030,40 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
                               " exceeds current limit of 2G pages"),
                             page_counts->nelts);
 
+  /* open target stream. */
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
+
+
   /* write header info */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_counts->nelts),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, ffd->l2p_page_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(svn_stream_puts(stream, L2P_STREAM_PREFIX));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, page_counts->nelts));
+  SVN_ERR(stream_write_encoded(stream, ffd->l2p_page_size));
+  SVN_ERR(stream_write_encoded(stream, page_sizes->nelts));
 
   /* write the revision table */
   end = rle_array(page_counts, 0, page_counts->nelts);
   for (i = 0; i < end; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
-    
+
   /* write the page table */
   for (i = 0; i < page_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(page_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
       value = APR_ARRAY_IDX(entry_counts, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
-
-  /* finalize the index file */
-  SVN_ERR(svn_io_file_close(index_file, local_pool));
-  SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(local_pool);
 
@@ -993,7 +1198,7 @@ l2p_header_access_func(void **out,
  */
 static svn_error_t *
 expand_rle(apr_array_header_t *values,
-           packed_number_stream_t *stream,
+           svn_fs_x__packed_number_stream_t *stream,
            apr_size_t count)
 {
   apr_array_clear(values);
@@ -1026,84 +1231,148 @@ expand_rle(apr_array_header_t *values,
   return SVN_NO_ERROR;
 }
 
+/* If REV_FILE->L2P_STREAM is NULL, create a new stream for the log-to-phys
+ * index for REVISION in FS and return it in REV_FILE.
+ */
+static svn_error_t *
+auto_open_l2p_index(svn_fs_x__revision_file_t *rev_file,
+                    svn_fs_t *fs,
+                    svn_revnum_t revision)
+{
+  if (rev_file->l2p_stream == NULL)
+    {
+      fs_x_data_t *ffd = fs->fsap_data;
+
+      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+      SVN_ERR(packed_stream_open(&rev_file->l2p_stream,
+                                 rev_file->file,
+                                 rev_file->l2p_offset,
+                                 rev_file->p2l_offset,
+                                 L2P_STREAM_PREFIX,
+                                 (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
+                                 rev_file->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Read the header data structure of the log-to-phys index for REVISION
- * in FS and return it in *HEADER.  To maximize efficiency, use or return
- * the data stream in *STREAM.  Use POOL for allocations.
+ * in FS and return it in *HEADER, allocated in RESULT_POOL.  Use REV_FILE
+ * to access on-disk data.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_l2p_header_body(l2p_header_t **header,
-                    packed_number_stream_t **stream,
+                    svn_fs_x__revision_file_t *rev_file,
                     svn_fs_t *fs,
                     svn_revnum_t revision,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
-  int i;
+  apr_size_t i;
   apr_size_t page, page_count;
   apr_off_t offset;
-  l2p_header_t *result = apr_pcalloc(pool, sizeof(*result));
+  l2p_header_t *result = apr_pcalloc(result_pool, sizeof(*result));
   apr_size_t page_table_index;
+  svn_revnum_t next_rev;
   apr_array_header_t *expanded_values
-    = apr_array_make(pool, 16, sizeof(apr_uint64_t));
+    = apr_array_make(scratch_pool, 16, sizeof(apr_uint64_t));
 
   pair_cache_key_t key;
-  key.revision = base_revision(fs, revision);
-  key.second = svn_fs_x__is_packed_rev(fs, revision);
+  key.revision = rev_file->start_revision;
+  key.second = rev_file->is_packed;
 
-  if (*stream == NULL)
-    SVN_ERR(packed_stream_open(stream, 
-                               svn_fs_x__path_l2p_index(fs, revision, pool),
-                               ffd->block_size, pool));
-  else
-    packed_stream_seek(*stream, 0);
+  SVN_ERR(auto_open_l2p_index(rev_file, fs, revision));
+  packed_stream_seek(rev_file->l2p_stream, 0);
 
-  /* read the table sizes */
-  SVN_ERR(packed_stream_get(&value, *stream));
+  /* Read the table sizes.  Check the data for plausibility and
+   * consistency with other bits. */
+  SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->first_revision = (svn_revnum_t)value;
-  SVN_ERR(packed_stream_get(&value, *stream));
-  result->revision_count = (int)value;
-  SVN_ERR(packed_stream_get(&value, *stream));
-  result->page_size = (apr_uint32_t)value;
-  SVN_ERR(packed_stream_get(&value, *stream));
-  page_count = (apr_size_t)value;
+  if (result->first_revision != rev_file->start_revision)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                  _("Index rev / pack file revision numbers do not match"));
 
-  if (result->first_revision > revision
-      || result->first_revision + result->revision_count <= revision)
+  SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+  result->revision_count = (int)value;
+  if (   result->revision_count != 1
+      && result->revision_count != (apr_uint64_t)ffd->max_files_per_dir)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Invalid number of revisions in L2P index"));
+
+  SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+  result->page_size = (apr_uint32_t)value;
+  if (!result->page_size || (result->page_size & (result->page_size - 1)))
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("L2P index page size is not a power of two"));
+
+  SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+  page_count = (apr_size_t)value;
+  if (page_count < result->revision_count)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Fewer L2P index pages than revisions"));
+  if (page_count > (rev_file->p2l_offset - rev_file->l2p_offset) / 2)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("L2P index page count implausibly large"));
+
+  next_rev = result->first_revision + (svn_revnum_t)result->revision_count;
+  if (result->first_revision > revision || next_rev <= revision)
     return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                       _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
-                      revision, result->first_revision,
-                      result->first_revision + result->revision_count);
+                      revision, result->first_revision, next_rev);
 
   /* allocate the page tables */
   result->page_table
-    = apr_pcalloc(pool, page_count * sizeof(*result->page_table));
+    = apr_pcalloc(result_pool, page_count * sizeof(*result->page_table));
   result->page_table_index
-    = apr_pcalloc(pool, (result->revision_count + 1)
-                      * sizeof(*result->page_table_index));
+    = apr_pcalloc(result_pool, (result->revision_count + 1)
+                             * sizeof(*result->page_table_index));
 
   /* read per-revision page table sizes (i.e. number of pages per rev) */
   page_table_index = 0;
   result->page_table_index[0] = page_table_index;
-  SVN_ERR(expand_rle(expanded_values, *stream, result->revision_count));
+  SVN_ERR(expand_rle(expanded_values, rev_file->l2p_stream,
+                     result->revision_count));
   for (i = 0; i < result->revision_count; ++i)
     {
-      page_table_index
-        += (apr_size_t)APR_ARRAY_IDX(expanded_values, i, apr_uint64_t);
+      value = (apr_size_t)APR_ARRAY_IDX(expanded_values, i, apr_uint64_t);
+      if (value == 0)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                                _("Revision with no L2P index pages"));
+
+      page_table_index += (apr_size_t)value;
+      if (page_table_index > page_count)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                                _("L2P page table exceeded"));
+
       result->page_table_index[i+1] = page_table_index;
     }
+
+  if (page_table_index != page_count)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                 _("Revisions do not cover the full L2P index page table"));
 
   /* read actual page tables */
   for (page = 0; page < page_count; ++page)
     {
-      SVN_ERR(packed_stream_get(&value, *stream));
+      SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+      if (value == 0)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                                _("Empty L2P index page"));
+
       result->page_table[page].size = (apr_uint32_t)value;
-      SVN_ERR(packed_stream_get(&value, *stream));
+      SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
+      if (value > result->page_size)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                                _("Page exceeds L2P index page size"));
+
       result->page_table[page].entry_count = (apr_uint32_t)value;
     }
 
   /* correct the page description offsets */
-  offset = packed_stream_offset(*stream);
+  offset = packed_stream_offset(rev_file->l2p_stream);
   for (page = 0; page < page_count; ++page)
     {
       result->page_table[page].offset = offset;
@@ -1112,7 +1381,7 @@ get_l2p_header_body(l2p_header_t **header,
 
   /* return and cache the header */
   *header = result;
-  SVN_ERR(svn_cache__set(ffd->l2p_header_cache, &key, result, pool));
+  SVN_ERR(svn_cache__set(ffd->l2p_header_cache, &key, result, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1120,13 +1389,13 @@ get_l2p_header_body(l2p_header_t **header,
 /* Get the page info requested in *BATON from FS and set the output fields
  * in *BATON.
  * To maximize efficiency, use or return the data stream in *STREAM.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_l2p_page_info(l2p_page_info_baton_t *baton,
-                  packed_number_stream_t **stream,
+                  svn_fs_x__revision_file_t *rev_file,
                   svn_fs_t *fs,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   l2p_header_t *result;
@@ -1140,91 +1409,89 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   SVN_ERR(svn_cache__get_partial((void**)&dummy, &is_cached,
                                  ffd->l2p_header_cache, &key,
                                  l2p_header_access_func, baton,
-                                 pool));
+                                 scratch_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
   /* read from disk, cache and copy the result */
-  SVN_ERR(get_l2p_header_body(&result, stream, fs, baton->revision, pool));
+  SVN_ERR(get_l2p_header_body(&result, rev_file, fs, baton->revision,
+                              scratch_pool, scratch_pool));
   SVN_ERR(l2p_header_copy(baton, result, result->page_table,
-                          result->page_table_index, pool));
+                          result->page_table_index, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Read the log-to-phys header info of the index covering REVISION from FS
- * and return it in *HEADER.  To maximize efficiency, use or return the
- * data stream in *STREAM.  Use POOL for allocations.
+ * and return it in *HEADER.  REV_FILE provides the pack / rev status.
+ * Allocate *HEADER in RESULT_POOL, use SCRATCH_POOL for temporary
+ * allocations.
  */
 static svn_error_t *
 get_l2p_header(l2p_header_t **header,
-               packed_number_stream_t **stream,
+               svn_fs_x__revision_file_t *rev_file,
                svn_fs_t *fs,
                svn_revnum_t revision,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
 
   /* first, try cache lookop */
   pair_cache_key_t key;
-  key.revision = base_revision(fs, revision);
-  key.second = svn_fs_x__is_packed_rev(fs, revision);
+  key.revision = rev_file->start_revision;
+  key.second = rev_file->is_packed;
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->l2p_header_cache,
-                         &key, pool));
+                         &key, result_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
   /* read from disk and cache the result */
-  SVN_ERR(get_l2p_header_body(header, stream, fs, revision, pool));
+  SVN_ERR(get_l2p_header_body(header, rev_file, fs, revision, result_pool,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* From the log-to-phys index file starting at START_REVISION in FS, read
  * the mapping page identified by TABLE_ENTRY and return it in *PAGE.
- * To maximize efficiency, use or return the data stream in *STREAM.
- * Use POOL for allocations.
+ * Use REV_FILE to access on-disk files.
+ * Use RESULT_POOL for allocations.
  */
 static svn_error_t *
 get_l2p_page(l2p_page_t **page,
-             packed_number_stream_t **stream,
+             svn_fs_x__revision_file_t *rev_file,
              svn_fs_t *fs,
              svn_revnum_t start_revision,
              l2p_page_table_entry_t *table_entry,
-             apr_pool_t *pool)
+             apr_pool_t *result_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t value, last_value = 0;
   apr_uint32_t i;
-  l2p_page_t *result = apr_pcalloc(pool, sizeof(*result));
+  l2p_page_t *result = apr_pcalloc(result_pool, sizeof(*result));
   apr_uint64_t container_count;
   apr_off_t *container_offsets;
 
   /* open index file and select page */
-  if (*stream == NULL)
-    SVN_ERR(packed_stream_open(stream,
-                               svn_fs_x__path_l2p_index(fs, start_revision,
-                                                        pool),
-                               ffd->block_size,
-                               pool));
-
-  packed_stream_seek(*stream, table_entry->offset);
+  SVN_ERR(auto_open_l2p_index(rev_file, fs, start_revision));
+  packed_stream_seek(rev_file->l2p_stream, table_entry->offset);
 
   /* initialize the page content */
   result->entry_count = table_entry->entry_count;
-  result->offsets = apr_pcalloc(pool, result->entry_count
-                                    * sizeof(*result->offsets));
-  result->sub_items = apr_pcalloc(pool, result->entry_count
-                                      * sizeof(*result->sub_items));
+  result->offsets = apr_pcalloc(result_pool, result->entry_count
+                                           * sizeof(*result->offsets));
+  result->sub_items = apr_pcalloc(result_pool, result->entry_count
+                                             * sizeof(*result->sub_items));
 
   /* container offsets array */
 
-  SVN_ERR(packed_stream_get(&container_count, *stream));
-  container_offsets = apr_pcalloc(pool, container_count * sizeof(*result));
+  SVN_ERR(packed_stream_get(&container_count, rev_file->l2p_stream));
+  container_offsets = apr_pcalloc(result_pool,
+                                  container_count * sizeof(*result));
   for (i = 0; i < container_count; ++i)
     {
-      SVN_ERR(packed_stream_get(&value, *stream));
+      SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
       last_value += value;
       container_offsets[i] = (apr_off_t)last_value - 1;
       /* '-1' is represented as '0' in the index file */
@@ -1233,7 +1500,7 @@ get_l2p_page(l2p_page_t **page,
   /* read all page entries (offsets in rev file and container sub-items) */
   for (i = 0; i < result->entry_count; ++i)
     {
-      SVN_ERR(packed_stream_get(&value, *stream));
+      SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
       if (value == 0)
         {
           result->offsets[i] = -1;
@@ -1242,7 +1509,7 @@ get_l2p_page(l2p_page_t **page,
       else if (value <= container_count)
         {
           result->offsets[i] = container_offsets[value - 1];
-          SVN_ERR(packed_stream_get(&value, *stream));
+          SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
           result->sub_items[i] = (apr_uint32_t)value;
         }
       else
@@ -1251,6 +1518,13 @@ get_l2p_page(l2p_page_t **page,
           result->sub_items[i] = 0;
         }
     }
+
+  /* After reading all page entries, the read cursor must have moved by
+   * TABLE_ENTRY->SIZE bytes. */
+  if (   packed_stream_offset(rev_file->l2p_stream)
+      != table_entry->offset + table_entry->size)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                _("L2P actual page size does not match page table value."));
 
   *page = result;
 
@@ -1385,13 +1659,13 @@ l2p_page_table_access_func(void **out,
  * If the data cannot be found in the cache, the result will be empty
  * (it never can be empty for a valid REVISION if the data is cached).
  * Use the info from REV_FILE to determine pack / rev file properties.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_l2p_page_table(apr_array_header_t *pages,
                    svn_fs_t *fs,
                    svn_revnum_t revision,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
@@ -1406,7 +1680,8 @@ get_l2p_page_table(apr_array_header_t *pages,
   baton.pages = pages;
   SVN_ERR(svn_cache__get_partial((void**)&pages, &is_cached,
                                  ffd->l2p_header_cache, &key,
-                                 l2p_page_table_access_func, &baton, pool));
+                                 l2p_page_table_access_func, &baton,
+                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1423,7 +1698,7 @@ get_l2p_page_table(apr_array_header_t *pages,
 static svn_error_t *
 prefetch_l2p_pages(svn_boolean_t *end,
                    svn_fs_t *fs,
-                   packed_number_stream_t *stream,
+                   svn_fs_x__revision_file_t *rev_file,
                    svn_revnum_t first_revision,
                    svn_revnum_t revision,
                    apr_array_header_t *pages,
@@ -1436,6 +1711,17 @@ prefetch_l2p_pages(svn_boolean_t *end,
   int i;
   apr_pool_t *iterpool;
   svn_fs_x__page_cache_key_t key = { 0 };
+
+  /* Parameter check. */
+  if (min_offset < 0)
+    min_offset = 0;
+
+  if (max_offset <= 0)
+    {
+      /* Nothing to do */
+      *end = TRUE;
+      return SVN_NO_ERROR;
+    }
 
   /* get the page table for REVISION from cache */
   *end = FALSE;
@@ -1466,8 +1752,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
         continue;
 
       /* skip pages outside the specified index file range */
-      if (   entry->offset < min_offset
-          || entry->offset + entry->size > max_offset)
+      if (   entry->offset < (apr_uint64_t)min_offset
+          || entry->offset + entry->size > (apr_uint64_t)max_offset)
         {
           *end = TRUE;
           continue;
@@ -1482,7 +1768,7 @@ prefetch_l2p_pages(svn_boolean_t *end,
           /* no in cache -> read from stream (data already buffered in APR)
            * and cache the result */
           l2p_page_t *page = NULL;
-          SVN_ERR(get_l2p_page(&page, &stream, fs, first_revision,
+          SVN_ERR(get_l2p_page(&page, rev_file, fs, first_revision,
                                entry, iterpool));
 
           SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page,
@@ -1497,21 +1783,21 @@ prefetch_l2p_pages(svn_boolean_t *end,
 
 /* Using the log-to-phys indexes in FS, find the absolute offset in the
  * rev file for (REVISION, ITEM_INDEX) and return it in *OFFSET.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 l2p_index_lookup(apr_off_t *offset,
                  apr_uint32_t *sub_item,
                  svn_fs_t *fs,
+                 svn_fs_x__revision_file_t *rev_file,
                  svn_revnum_t revision,
                  apr_uint64_t item_index,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   l2p_page_info_baton_t info_baton;
   l2p_page_baton_t page_baton;
   l2p_page_t *page = NULL;
-  packed_number_stream_t *stream = NULL;
   svn_fs_x__page_cache_key_t key = { 0 };
   svn_boolean_t is_cached = FALSE;
   void *dummy = NULL;
@@ -1520,7 +1806,7 @@ l2p_index_lookup(apr_off_t *offset,
    * access the l2p index page for (REVISION,ITEM_INDEX)*/
   info_baton.revision = revision;
   info_baton.item_index = item_index;
-  SVN_ERR(get_l2p_page_info(&info_baton, &stream, fs, pool));
+  SVN_ERR(get_l2p_page_info(&info_baton, rev_file, fs, scratch_pool));
 
   /* try to find the page in the cache and get the OFFSET from it */
   page_baton.revision = revision;
@@ -1534,7 +1820,8 @@ l2p_index_lookup(apr_off_t *offset,
 
   SVN_ERR(svn_cache__get_partial(&dummy, &is_cached,
                                  ffd->l2p_page_cache, &key,
-                                 l2p_page_access_func, &page_baton, pool));
+                                 l2p_page_access_func, &page_baton,
+                                 scratch_pool));
 
   if (!is_cached)
     {
@@ -1544,8 +1831,8 @@ l2p_index_lookup(apr_off_t *offset,
       svn_revnum_t prefetch_revision;
       svn_revnum_t last_revision
         = info_baton.first_revision
-          + (key.is_packed ? ffd->max_files_per_dir : 1);
-      apr_pool_t *iterpool = svn_pool_create(pool);
+          + svn_fs_x__pack_size(fs, info_baton.first_revision);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       svn_boolean_t end;
       apr_off_t max_offset
         = APR_ALIGN(info_baton.entry.offset + info_baton.entry.size,
@@ -1553,16 +1840,17 @@ l2p_index_lookup(apr_off_t *offset,
       apr_off_t min_offset = max_offset - ffd->block_size;
 
       /* read the relevant page */
-      SVN_ERR(get_l2p_page(&page, &stream, fs, info_baton.first_revision,
-                           &info_baton.entry, pool));
+      SVN_ERR(get_l2p_page(&page, rev_file, fs, info_baton.first_revision,
+                           &info_baton.entry, scratch_pool));
 
       /* cache the page and extract the result we need */
-      SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, pool));
+      SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, scratch_pool));
       SVN_ERR(l2p_page_get_offset(&page_baton, page, page->offsets,
-                                  page->sub_items, pool));
+                                  page->sub_items, scratch_pool));
 
       /* prefetch pages from following and preceding revisions */
-      pages = apr_array_make(pool, 16, sizeof(l2p_page_table_entry_t));
+      pages = apr_array_make(scratch_pool, 16,
+                             sizeof(l2p_page_table_entry_t));
       end = FALSE;
       for (prefetch_revision = revision;
            prefetch_revision < last_revision && !end;
@@ -1573,7 +1861,7 @@ l2p_index_lookup(apr_off_t *offset,
                                : -1;
           svn_pool_clear(iterpool);
 
-          SVN_ERR(prefetch_l2p_pages(&end, fs, stream,
+          SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
                                      info_baton.first_revision,
                                      prefetch_revision, pages,
                                      excluded_page_no, min_offset,
@@ -1587,7 +1875,7 @@ l2p_index_lookup(apr_off_t *offset,
         {
           svn_pool_clear(iterpool);
 
-          SVN_ERR(prefetch_l2p_pages(&end, fs, stream,
+          SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
                                      info_baton.first_revision,
                                      prefetch_revision, pages, -1,
                                      min_offset, max_offset, iterpool));
@@ -1595,8 +1883,6 @@ l2p_index_lookup(apr_off_t *offset,
 
       svn_pool_destroy(iterpool);
     }
-
-  SVN_ERR(packed_stream_close(stream));
 
   *offset = page_baton.offset;
   *sub_item = page_baton.sub_item;
@@ -1606,7 +1892,7 @@ l2p_index_lookup(apr_off_t *offset,
 
 /* Using the log-to-phys proto index in transaction TXN_ID in FS, find the
  * absolute offset in the proto rev file for the given ITEM_INDEX and return
- * it in *OFFSET.  Use POOL for allocations.
+ * it in *OFFSET.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 l2p_proto_index_lookup(apr_off_t *offset,
@@ -1614,25 +1900,25 @@ l2p_proto_index_lookup(apr_off_t *offset,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
                        apr_uint64_t item_index,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_boolean_t eof = FALSE;
   apr_file_t *file = NULL;
   SVN_ERR(svn_io_file_open(&file,
-                           svn_fs_x__path_l2p_proto_index(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                           svn_fs_x__path_l2p_proto_index(fs, txn_id,
+                                                          scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
 
   /* process all entries until we fail due to EOF */
   *offset = -1;
   while (!eof)
     {
       l2p_proto_entry_t entry;
-      apr_size_t read = 0;
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(file, &entry, sizeof(entry),
-                                     &read, &eof, pool));
-      SVN_ERR_ASSERT(eof || read == sizeof(entry));
+      SVN_ERR(read_l2p_entry_from_proto_index(file, &entry, &eof,
+                                              scratch_pool));
 
       /* handle new revision */
       if (!eof && entry.item_index == item_index)
@@ -1643,7 +1929,7 @@ l2p_proto_index_lookup(apr_off_t *offset,
         }
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
   
   return SVN_NO_ERROR;
 }
@@ -1653,22 +1939,25 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
                           svn_fs_t *fs,
                           svn_revnum_t start_rev,
                           apr_size_t count,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   l2p_header_t *header = NULL;
   svn_revnum_t revision;
   svn_revnum_t last_rev = (svn_revnum_t)(start_rev + count);
-  packed_number_stream_t *stream = NULL;
-  apr_pool_t *header_pool = svn_pool_create(pool);
+  svn_fs_x__revision_file_t *rev_file;
+  apr_pool_t *header_pool = svn_pool_create(scratch_pool);
 
   /* read index master data structure for the index covering START_REV */
-  SVN_ERR(get_l2p_header(&header, &stream, fs, start_rev, header_pool));
-  SVN_ERR(packed_stream_close(stream));
-  stream = NULL;
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start_rev,
+                                          header_pool, header_pool));
+  SVN_ERR(get_l2p_header(&header, rev_file, fs, start_rev, header_pool,
+                         header_pool));
+  SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
   /* Determine the length of the item index list for each rev.
    * Read new index headers as required. */
-  *max_ids = apr_array_make(pool, (int)count, sizeof(apr_uint64_t));
+  *max_ids = apr_array_make(result_pool, (int)count, sizeof(apr_uint64_t));
   for (revision = start_rev; revision < last_rev; ++revision)
     {
       apr_uint64_t full_page_count;
@@ -1682,10 +1971,11 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
            * the number of items in a revision, i.e. there is no consistency
            * issue here. */
           svn_pool_clear(header_pool);
-          SVN_ERR(get_l2p_header(&header, &stream, fs, revision,
-                                 header_pool));
-          SVN_ERR(packed_stream_close(stream));
-          stream = NULL;
+          SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, revision,
+                                                  header_pool, header_pool));
+          SVN_ERR(get_l2p_header(&header, rev_file, fs, revision,
+                                 header_pool, header_pool));
+          SVN_ERR(svn_fs_x__close_revision_file(rev_file));
         }
 
       /* in a revision with N index pages, the first N-1 index pages are
@@ -1729,11 +2019,11 @@ svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
 svn_error_t *
 svn_fs_x__p2l_proto_index_open(apr_file_t **proto_index,
                                const char *file_name,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool)
 {
   SVN_ERR(svn_io_file_open(proto_index, file_name, APR_READ | APR_WRITE
                            | APR_CREATE | APR_APPEND | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1741,33 +2031,141 @@ svn_fs_x__p2l_proto_index_open(apr_file_t **proto_index,
 
 svn_error_t *
 svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
-                                    svn_fs_x__p2l_entry_t *entry,
-                                    apr_pool_t *pool)
+                                    const svn_fs_x__p2l_entry_t *entry,
+                                    apr_pool_t *scratch_pool)
 {
-  apr_size_t written = sizeof(*entry);
-  apr_size_t written_total = 0;
+  apr_uint64_t revision;
+  apr_int32_t i;
 
-  /* Write main record. */
-  SVN_ERR(svn_io_file_write_full(proto_index, entry, sizeof(*entry),
-                                 &written, pool));
-  SVN_ERR_ASSERT(written == sizeof(*entry));
-  written_total += written;
+  /* Make sure all signed elements of ENTRY have non-negative values.
+   *
+   * For file offsets and sizes, this is a given as we use them to describe
+   * absolute positions and sizes.  For revisions, SVN_INVALID_REVNUM is
+   * valid, hence we have to shift it by 1.
+   */
+  SVN_ERR_ASSERT(entry->offset >= 0);
+  SVN_ERR_ASSERT(entry->size >= 0);
+
+  /* Now, all values will nicely convert to uint64. */
+  /* Make sure to keep P2L_PROTO_INDEX_ENTRY_SIZE consistent with this: */
+
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->offset,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->size,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->type,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->fnv1_checksum,
+                                      scratch_pool));
+  SVN_ERR(write_uint64_to_proto_index(proto_index, entry->item_count,
+                                      scratch_pool));
 
   /* Add sub-items. */
-  if (entry->item_count)
+  for (i = 0; i < entry->item_count; ++i)
     {
-      written = entry->item_count * sizeof(*entry->items);
-      SVN_ERR(svn_io_file_write_full(proto_index, entry->items, written,
-                                     &written, pool));
-      SVN_ERR_ASSERT(written == entry->item_count * sizeof(*entry->items));
-      written_total += written;
+      const svn_fs_x__id_part_t *sub_item = &entry->items[i];
+
+      /* Make sure all signed elements of ENTRY have non-negative values.
+       *
+       * For file offsets and sizes, this is a given as we use them to
+       * describe absolute positions and sizes.  For revisions,
+       * SVN_INVALID_REVNUM is valid, hence we have to shift it by 1.
+      */
+      SVN_ERR_ASSERT(   sub_item->change_set >= 0
+                     || sub_item->change_set == SVN_INVALID_REVNUM);
+
+      /* Write sub- record. */
+      revision = sub_item->change_set == SVN_INVALID_REVNUM
+               ? 0
+               : ((apr_uint64_t)sub_item->change_set + 1);
+
+      SVN_ERR(write_uint64_to_proto_index(proto_index, revision,
+                                          scratch_pool));
+      SVN_ERR(write_uint64_to_proto_index(proto_index, sub_item->number,
+                                          scratch_pool));
     }
 
-  /* Add trailer: number of bytes total in this entr.y */
-  written = sizeof(written_total);
-  SVN_ERR(svn_io_file_write_full(proto_index, &written_total, written,
-                                 &written, pool));
-  SVN_ERR_ASSERT(written == sizeof(written_total));
+  /* Add trailer: rev / pack file offset of the next item */
+  SVN_ERR(write_uint64_to_proto_index(proto_index,
+                                      entry->offset + entry->size,
+                                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read *ENTRY from log-to-phys PROTO_INDEX file and indicate end-of-file
+ * in *EOF, or error out in that case if EOF is NULL.  *ENTRY is in an
+ * undefined state if an end-of-file occurred.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_p2l_entry_from_proto_index(apr_file_t *proto_index,
+                                svn_fs_x__p2l_entry_t *entry,
+                                svn_boolean_t *eof,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(read_off_t_from_proto_index(proto_index, &entry->offset,
+                                      eof, scratch_pool));
+  SVN_ERR(read_off_t_from_proto_index(proto_index, &entry->size,
+                                      eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->type,
+                                       eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->fnv1_checksum,
+                                       eof, scratch_pool));
+  SVN_ERR(read_uint32_from_proto_index(proto_index, &entry->item_count,
+                                       eof, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_p2l_sub_items_from_proto_index(apr_file_t *proto_index,
+                                    svn_fs_x__p2l_entry_t *entry,
+                                    svn_boolean_t *eof,
+                                    apr_pool_t *scratch_pool)
+{
+  apr_int32_t i;
+  for (i = 0; i < entry->item_count; ++i)
+    {
+      apr_uint64_t revision;
+      svn_fs_x__id_part_t *sub_item = &entry->items[i];
+
+      SVN_ERR(read_uint64_from_proto_index(proto_index, &revision,
+                                           eof, scratch_pool));
+      SVN_ERR(read_uint64_from_proto_index(proto_index, &sub_item->number,
+                                           eof, scratch_pool));
+
+      /* Do the inverse REVSION number conversion (see
+       * svn_fs_x__p2l_proto_index_add_entry), if we actually read a
+       * complete record.
+      */
+      if (!eof || !*eof)
+        {
+          /* Be careful with the arithmetics here (overflows and wrap-around):
+           */
+          if (revision > 0 && revision - 1 > LONG_MAX)
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW, NULL,
+                                     _("Revision 0x%s too large, max = 0x%s"),
+                                     apr_psprintf(scratch_pool,
+                                                  "%" APR_UINT64_T_FMT,
+                                                  revision),
+                                     apr_psprintf(scratch_pool,
+                                                  "%" APR_UINT64_T_FMT,
+                                                  (apr_uint64_t)LONG_MAX));
+
+          /* Shortening conversion from unsigned to signed int is well-
+           * defined and not lossy in C because the value can be represented
+           * in the target type.  Also, cast to 'long' instead of
+           * 'svn_revnum_t' here to provoke a compiler warning if those
+           * types should differ and we would need to change the overflow
+           * checking logic.
+           */
+          sub_item->change_set = revision == 0
+                               ? SVN_INVALID_REVNUM
+                               : (long)(revision - 1);
+        }
+
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1775,55 +2173,44 @@ svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
 svn_error_t *
 svn_fs_x__p2l_proto_index_next_offset(apr_off_t *next_offset,
                                       apr_file_t *proto_index,
-                                      apr_pool_t *pool)
+                                      apr_pool_t *scratch_pool)
 {
   apr_off_t offset = 0;
 
   /* Empty index file? */
-  SVN_ERR(svn_io_file_seek(proto_index, APR_END, &offset, pool));
+  SVN_ERR(svn_io_file_seek(proto_index, APR_END, &offset, scratch_pool));
   if (offset == 0)
     {
       *next_offset = 0;
     }
   else
     {
-      /* At least one entry.  Read last entry. */
-      apr_size_t size;
-      svn_fs_x__p2l_entry_t entry;
-
-      /* Read length of last entry. */
-      offset -= sizeof(size);
-      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, pool));
-      SVN_ERR(svn_io_file_read_full2(proto_index, &size, sizeof(size),
-                                    NULL, NULL, pool));
-
-      /* Read last entry's main record. */
-      offset -= size;
-      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, pool));
-      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                    NULL, NULL, pool));
-
-      /* Return next offset. */
-      *next_offset = entry.offset + entry.size;
+      /* The last 64 bits contain the value we are looking for. */
+      offset -= sizeof(apr_uint64_t);
+      SVN_ERR(svn_io_file_seek(proto_index, APR_SET, &offset, scratch_pool));
+      SVN_ERR(read_off_t_from_proto_index(proto_index, next_offset, NULL,
+                                          scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_x__p2l_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t page_size = ffd->p2l_page_size;
   apr_file_t *proto_index = NULL;
+  svn_stream_t *stream;
   int i;
   apr_uint32_t sub_item;
   svn_boolean_t eof = FALSE;
-  apr_file_t *index_file;
   unsigned char encoded[ENCODED_INT_LENGTH];
 
   apr_uint64_t last_entry_end = 0;
@@ -1834,7 +2221,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
 
   /* temporary data structures that collect the data which will be moved
      to the target file in a second step */
-  apr_pool_t *local_pool = svn_pool_create(pool);
+  apr_pool_t *local_pool = svn_pool_create(scratch_pool);
   apr_array_header_t *table_sizes
      = apr_array_make(local_pool, 16, sizeof(apr_uint64_t));
 
@@ -1843,7 +2230,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
      = svn_spillbuf__create(0x10000, 0x1000000, local_pool);
 
   /* for loop temps ... */
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
@@ -1854,8 +2241,6 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   while (!eof)
     {
       svn_fs_x__p2l_entry_t entry;
-      apr_size_t read = 0;
-      apr_size_t to_read;
       apr_uint64_t entry_end;
       svn_boolean_t new_page = svn_spillbuf__get_size(buffer) == 0;
       svn_revnum_t last_revision = revision;
@@ -1864,28 +2249,23 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       /* (attempt to) read the next entry from the source */
-      SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
-                                     &read, &eof, iterpool));
-      SVN_ERR_ASSERT(eof || read == sizeof(entry));
+      SVN_ERR(read_p2l_entry_from_proto_index(proto_index, &entry,
+                                              &eof, iterpool));
 
       if (entry.item_count && !eof)
         {
-          to_read = entry.item_count * sizeof(*entry.items);
-          entry.items = apr_palloc(iterpool, to_read);
-
-          SVN_ERR(svn_io_file_read_full2(proto_index, entry.items, to_read,
-                                         &read, &eof, iterpool));
-          SVN_ERR_ASSERT(eof || read == to_read);
+          entry.items = apr_palloc(iterpool,
+                                   entry.item_count * sizeof(*entry.items));
+          SVN_ERR(read_p2l_sub_items_from_proto_index(proto_index, &entry,
+                                                      &eof, iterpool));
         }
 
       /* Read entry trailer. However, we won't need its content. */
       if (!eof)
         {
-          apr_size_t entry_size;
-          to_read = sizeof(entry_size);
-          SVN_ERR(svn_io_file_read_full2(proto_index, &entry_size, to_read,
-                                         &read, &eof, iterpool));
-          SVN_ERR_ASSERT(eof || read == to_read);
+          apr_uint64_t trailer;
+          SVN_ERR(read_uint64_from_proto_index(proto_index, &trailer, &eof,
+                                               scratch_pool));
         }
 
       /* "unused" (and usually non-existent) section to cover the offsets
@@ -1896,7 +2276,8 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
 
           entry.offset = last_entry_end;
           entry.size = APR_ALIGN(entry.offset, page_size) - entry.offset;
-          entry.type = 0;
+          entry.type = SVN_FS_X__ITEM_TYPE_UNUSED;
+          entry.fnv1_checksum = 0;
           entry.item_count = 0;
           entry.items = NULL;
         }
@@ -1971,44 +2352,58 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
-  /* create the target file */
-  SVN_ERR(index_create(&index_file, file_name, local_pool));
+  /* Open target stream. */
+  stream = svn_stream_checksummed2(svn_stream_from_aprfile2(index_file, TRUE,
+                                                            local_pool),
+                                   NULL, checksum, svn_checksum_md5, FALSE,
+                                   result_pool);
 
   /* write the start revision, file size and page size */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, revision),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, file_size),
-                                 NULL, local_pool));
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, page_size),
-                                 NULL, local_pool));
+  SVN_ERR(svn_stream_puts(stream, P2L_STREAM_PREFIX));
+  SVN_ERR(stream_write_encoded(stream, revision));
+  SVN_ERR(stream_write_encoded(stream, file_size));
+  SVN_ERR(stream_write_encoded(stream, page_size));
 
   /* write the page table (actually, the sizes of each page description) */
-  SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                 encode_uint(encoded, table_sizes->nelts),
-                                 NULL, local_pool));
+  SVN_ERR(stream_write_encoded(stream, table_sizes->nelts));
   for (i = 0; i < table_sizes->nelts; ++i)
     {
       apr_uint64_t value = APR_ARRAY_IDX(table_sizes, i, apr_uint64_t);
-      SVN_ERR(svn_io_file_write_full(index_file, encoded,
-                                     encode_uint(encoded, value),
-                                     NULL, local_pool));
+      SVN_ERR(stream_write_encoded(stream, value));
     }
 
-  /* append page contents */
+  /* append page contents and implicitly close STREAM */
   SVN_ERR(svn_stream_copy3(svn_stream__from_spillbuf(buffer, local_pool),
-                           svn_stream_from_aprfile2(index_file, TRUE,
-                                                    local_pool),
-                           NULL, NULL, local_pool));
-
-  /* finalize the index file */
-  SVN_ERR(svn_io_file_close(index_file, local_pool));
-  SVN_ERR(svn_io_set_file_read_only(file_name, FALSE, local_pool));
+                           stream, NULL, NULL, local_pool));
 
   svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* If REV_FILE->P2L_STREAM is NULL, create a new stream for the phys-to-log
+ * index for REVISION in FS using the rev / pack file provided by REV_FILE.
+ */
+static svn_error_t *
+auto_open_p2l_index(svn_fs_x__revision_file_t *rev_file,
+                    svn_fs_t *fs,
+                    svn_revnum_t revision)
+{
+  if (rev_file->p2l_stream == NULL)
+    {
+      fs_x_data_t *ffd = fs->fsap_data;
+
+      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+      SVN_ERR(packed_stream_open(&rev_file->p2l_stream,
+                                 rev_file->file,
+                                 rev_file->p2l_offset,
+                                 rev_file->footer_offset,
+                                 P2L_STREAM_PREFIX,
+                                 (apr_size_t)ffd->block_size,
+                                 rev_file->pool,
+                                 rev_file->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2038,7 +2433,7 @@ typedef struct p2l_page_info_baton_t
   /* offset within the p2l index file describing the following page */
   apr_off_t next_offset;
 
-  /* PAGE_NO * PAGE_SIZE (is <= OFFSET) */
+  /* PAGE_NO * PAGE_SIZE (if <= OFFSET) */
   apr_off_t page_start;
 
   /* total number of pages indexed */
@@ -2061,13 +2456,15 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
    */
   if (baton->offset / header->page_size < header->page_count)
     {
-      baton->page_no = baton->offset / header->page_size;
+      /* This cast is safe because the value is < header->page_count. */
+      baton->page_no = (apr_size_t)(baton->offset / header->page_size);
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no + 1];
       baton->page_size = header->page_size;
     }
   else
     {
+      /* Beyond the last page. */
       baton->page_no = header->page_count;
       baton->start_offset = offsets[baton->page_no];
       baton->next_offset = offsets[baton->page_no];
@@ -2101,19 +2498,16 @@ p2l_page_info_func(void **out,
 }
 
 /* Read the header data structure of the phys-to-log index for REVISION in
- * FS and return it in *HEADER. 
- * 
- * To maximize efficiency, use or return the data stream in *STREAM.
- * If *STREAM is yet to be constructed, do so in STREAM_POOL.
- * Use POOL for allocations.
+ * FS and return it in *HEADER, allocated in RESULT_POOL. Use REV_FILE to
+ * access on-disk data.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_p2l_header(p2l_header_t **header,
-               packed_number_stream_t **stream,
+               svn_fs_x__revision_file_t *rev_file,
                svn_fs_t *fs,
                svn_revnum_t revision,
-               apr_pool_t *stream_pool,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
@@ -2124,54 +2518,65 @@ get_p2l_header(p2l_header_t **header,
 
   /* look for the header data in our cache */
   pair_cache_key_t key;
-  key.revision = base_revision(fs, revision);
-  key.second = svn_fs_x__is_packed_rev(fs, revision);
+  key.revision = rev_file->start_revision;
+  key.second = rev_file->is_packed;
 
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->p2l_header_cache,
-                         &key, pool));
+                         &key, result_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
   /* not found -> must read it from disk.
    * Open index file or position read pointer to the begin of the file */
-  if (*stream == NULL)
-    SVN_ERR(packed_stream_open(stream,
-                               svn_fs_x__path_p2l_index(fs, key.revision,
-                                                        pool),
-                               ffd->block_size, stream_pool));
-  else
-    packed_stream_seek(*stream, 0);
+  SVN_ERR(auto_open_p2l_index(rev_file, fs, key.revision));
+  packed_stream_seek(rev_file->p2l_stream, 0);
 
   /* allocate result data structure */
-  result = apr_pcalloc(pool, sizeof(*result));
+  result = apr_pcalloc(result_pool, sizeof(*result));
   
-  /* read table sizes and allocate page array */
-  SVN_ERR(packed_stream_get(&value, *stream));
+  /* Read table sizes, check them for plausibility and allocate page array. */
+  SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->first_revision = (svn_revnum_t)value;
-  SVN_ERR(packed_stream_get(&value, *stream));
+  if (result->first_revision != rev_file->start_revision)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                  _("Index rev / pack file revision numbers do not match"));
+
+  SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->file_size = value;
-  SVN_ERR(packed_stream_get(&value, *stream));
+  if (result->file_size != (apr_uint64_t)rev_file->l2p_offset)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                   _("Index offset and rev / pack file size do not match"));
+
+  SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->page_size = value;
-  SVN_ERR(packed_stream_get(&value, *stream));
+  if (!result->page_size || (result->page_size & (result->page_size - 1)))
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("P2L index page size is not a power of two"));
+
+  SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->page_count = (apr_size_t)value;
+  if (result->page_count != (result->file_size - 1) / result->page_size + 1)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                   _("P2L page count does not match rev / pack file size"));
+
   result->offsets
-    = apr_pcalloc(pool, (result->page_count + 1) * sizeof(*result->offsets));
+    = apr_pcalloc(result_pool, (result->page_count + 1) * sizeof(*result->offsets));
 
   /* read page sizes and derive page description offsets from them */
   result->offsets[0] = 0;
   for (i = 0; i < result->page_count; ++i)
     {
-      SVN_ERR(packed_stream_get(&value, *stream));
+      SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
       result->offsets[i+1] = result->offsets[i] + (apr_off_t)value;
     }
 
   /* correct the offset values */
-  offset = packed_stream_offset(*stream);
+  offset = packed_stream_offset(rev_file->p2l_stream);
   for (i = 0; i <= result->page_count; ++i)
     result->offsets[i] += offset;
 
   /* cache the header data */
-  SVN_ERR(svn_cache__set(ffd->p2l_header_cache, &key, result, pool));
+  SVN_ERR(svn_cache__set(ffd->p2l_header_cache, &key, result, scratch_pool));
 
   /* return the result */
   *header = result;
@@ -2181,18 +2586,14 @@ get_p2l_header(p2l_header_t **header,
 
 /* Read the header data structure of the phys-to-log index for revision
  * BATON->REVISION in FS.  Return in *BATON all info relevant to read the
- * index page for the rev / pack file offset BATON->OFFSET.
- * 
- * To maximize efficiency, use or return the data stream in *STREAM.
- * If *STREAM is yet to be constructed, do so in STREAM_POOL.
- * Use POOL for allocations.
+ * index page for the rev / pack file offset BATON->OFFSET.  Use REV_FILE
+ * to access on-disk data.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 get_p2l_page_info(p2l_page_info_baton_t *baton,
-                  packed_number_stream_t **stream,
+                  svn_fs_x__revision_file_t *rev_file,
                   svn_fs_t *fs,
-                  apr_pool_t *stream_pool,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   p2l_header_t *header;
@@ -2205,12 +2606,13 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
   key.second = svn_fs_x__is_packed_rev(fs, baton->revision);
 
   SVN_ERR(svn_cache__get_partial(&dummy, &is_cached, ffd->p2l_header_cache,
-                                 &key, p2l_page_info_func, baton, pool));
+                                 &key, p2l_page_info_func, baton,
+                                 scratch_pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
-  SVN_ERR(get_p2l_header(&header, stream, fs, baton->revision,
-                         stream_pool, pool));
+  SVN_ERR(get_p2l_header(&header, rev_file, fs, baton->revision,
+                         scratch_pool, scratch_pool));
 
   /* copy the requested info into *BATON */
   p2l_page_info_copy(baton, header, header->offsets);
@@ -2220,14 +2622,13 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
 
 /* Read a mapping entry from the phys-to-log index STREAM and append it to
  * RESULT.  *ITEM_INDEX contains the phys offset for the entry and will
- * be moved forward by the size of entry.  Use POOL for allocations.
+ * be moved forward by the size of entry.
  */
 static svn_error_t *
-read_entry(packed_number_stream_t *stream,
+read_entry(svn_fs_x__packed_number_stream_t *stream,
            apr_off_t *item_offset,
            svn_revnum_t revision,
-           apr_array_header_t *result,
-           apr_pool_t *pool)
+           apr_array_header_t *result)
 {
   apr_uint64_t value;
   apr_uint64_t number = 0;
@@ -2241,8 +2642,30 @@ read_entry(packed_number_stream_t *stream,
   SVN_ERR(packed_stream_get(&value, stream));
   entry.type = (int)value % 16;
   entry.item_count = (apr_uint32_t)(value / 16);
+
+  /* Verify item type. */
+  if (entry.type > SVN_FS_X__ITEM_TYPE_REPS_CONT)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Invalid item type in P2L index"));
+
   SVN_ERR(packed_stream_get(&value, stream));
   entry.fnv1_checksum = (apr_uint32_t)value;
+
+  /* Truncating the checksum to 32 bits may have hidden random data in the
+   * unused extra bits of the on-disk representation (7/8 bit representation
+   * uses 5 bytes on disk for the 32 bit value, leaving 3 bits unused). */
+  if (value > APR_UINT32_MAX)
+    return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Invalid FNV1 checksum in P2L index"));
+
+  /* Some of the index data for empty rev / pack file sections will not be
+   * used during normal operation.  Thus, we have strict rules for the
+   * contents of those unused fields. */
+  if (entry.type == SVN_FS_X__ITEM_TYPE_UNUSED)
+    if (   entry.fnv1_checksum != 0
+        || entry.item_count != 0)
+      return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                 _("Unused regions must be empty and have checksum 0"));
 
   if (entry.item_count == 0)
     {
@@ -2251,7 +2674,12 @@ read_entry(packed_number_stream_t *stream,
   else
     {
       entry.items
-        = apr_pcalloc(pool, entry.item_count * sizeof(*entry.items));
+        = apr_pcalloc(result->pool, entry.item_count * sizeof(*entry.items));
+
+      if (   entry.item_count > 1
+          && entry.type < SVN_FS_X__ITEM_TYPE_CHANGES_CONT)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                      _("Only containers may have more than one sub-item"));
 
       for (sub_item = 0; sub_item < entry.item_count; ++sub_item)
         {
@@ -2266,6 +2694,12 @@ read_entry(packed_number_stream_t *stream,
           SVN_ERR(packed_stream_get(&value, stream));
           number += value % 2 ? -1 - value / 2 : value / 2;
           entry.items[sub_item].number = number;
+
+          if (   (   entry.type == SVN_FS_X__ITEM_TYPE_CHANGES
+                  || entry.type == SVN_FS_X__ITEM_TYPE_CHANGES_CONT)
+              && number != SVN_FS_X__ITEM_INDEX_CHANGES)
+            return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+                            _("Changed path list must have item number 1"));
         }
     }
 
@@ -2278,59 +2712,70 @@ read_entry(packed_number_stream_t *stream,
 /* Read the phys-to-log mappings for the cluster beginning at rev file
  * offset PAGE_START from the index for START_REVISION in FS.  The data
  * can be found in the index page beginning at START_OFFSET with the next
- * page beginning at NEXT_OFFSET.  Return the relevant index entries in
- * *ENTRIES.  To maximize efficiency, use or return the data stream in
- * STREAM.  If the latter is yet to be constructed, do so in STREAM_POOL.
- * Use POOL for other allocations.
+ * page beginning at NEXT_OFFSET.  PAGE_SIZE is the L2P index page size.
+ * Return the relevant index entries in *ENTRIES.  Use REV_FILE to access
+ * on-disk data.  Allocate *ENTRIES in RESULT_POOL.
  */
 static svn_error_t *
 get_p2l_page(apr_array_header_t **entries,
-             packed_number_stream_t **stream,
+             svn_fs_x__revision_file_t *rev_file,
              svn_fs_t *fs,
              svn_revnum_t start_revision,
              apr_off_t start_offset,
              apr_off_t next_offset,
              apr_off_t page_start,
              apr_uint64_t page_size,
-             apr_pool_t *stream_pool,
-             apr_pool_t *pool)
+             apr_pool_t *result_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
   apr_uint64_t value;
   apr_array_header_t *result
-    = apr_array_make(pool, 16, sizeof(svn_fs_x__p2l_entry_t));
+    = apr_array_make(result_pool, 16, sizeof(svn_fs_x__p2l_entry_t));
   apr_off_t item_offset;
   apr_off_t offset;
 
   /* open index and navigate to page start */
-  if (*stream == NULL)
-    SVN_ERR(packed_stream_open(stream,
-                        svn_fs_x__path_p2l_index(fs, start_revision, pool),
-                        ffd->block_size, stream_pool));
-  packed_stream_seek(*stream, start_offset);
+  SVN_ERR(auto_open_p2l_index(rev_file, fs, start_revision));
+  packed_stream_seek(rev_file->p2l_stream, start_offset);
 
   /* read rev file offset of the first page entry (all page entries will
    * only store their sizes). */
-  SVN_ERR(packed_stream_get(&value, *stream));
+  SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   item_offset = (apr_off_t)value;
 
-  /* read all entries of this page */
-  do
+  /* Special case: empty pages. */
+  if (start_offset == next_offset)
     {
-      SVN_ERR(read_entry(*stream, &item_offset, start_revision, result,
-                         pool));
-      offset = packed_stream_offset(*stream);
+      /* Empty page. This only happens if the first entry of the next page
+       * also covers this page (and possibly more) completely. */
+      SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset, start_revision,
+                         result));
     }
-  while (offset < next_offset);
-
-  /* if we haven't covered the cluster end yet, we must read the first
-   * entry of the next page */
-  if (item_offset < page_start + page_size)
+  else
     {
-      SVN_ERR(packed_stream_get(&value, *stream));
-      item_offset = (apr_off_t)value;
-      SVN_ERR(read_entry(*stream, &item_offset, start_revision, result,
-                         pool));
+      /* Read non-empty page. */
+      do
+        {
+          SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset,
+                             start_revision, result));
+          offset = packed_stream_offset(rev_file->p2l_stream);
+        }
+      while (offset < next_offset);
+
+      /* We should now be exactly at the next offset, i.e. the numbers in
+       * the stream cannot overlap into the next page description. */
+      if (offset != next_offset)
+        return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
+             _("P2L page description overlaps with next page description"));
+
+      /* if we haven't covered the cluster end yet, we must read the first
+       * entry of the next page */
+      if (item_offset < page_start + page_size)
+        {
+          SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
+          item_offset = (apr_off_t)value;
+          SVN_ERR(read_entry(rev_file->p2l_stream, &item_offset,
+                             start_revision, result));
+        }
     }
 
   *entries = result;
@@ -2353,10 +2798,9 @@ static svn_error_t *
 prefetch_p2l_page(svn_boolean_t *end,
                   int *leaking_bucket,
                   svn_fs_t *fs,
-                  packed_number_stream_t **stream,
+                  svn_fs_x__revision_file_t *rev_file,
                   p2l_page_info_baton_t *baton,
                   apr_off_t min_offset,
-                  apr_pool_t *stream_pool,
                   apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
@@ -2367,7 +2811,7 @@ prefetch_p2l_page(svn_boolean_t *end,
   /* fetch the page info */
   *end = FALSE;
   baton->revision = baton->first_revision;
-  SVN_ERR(get_p2l_page_info(baton, stream, fs, stream_pool, scratch_pool));
+  SVN_ERR(get_p2l_page_info(baton, rev_file, fs, scratch_pool));
   if (baton->start_offset < min_offset)
     {
       /* page outside limits -> stop prefetching */
@@ -2396,13 +2840,12 @@ prefetch_p2l_page(svn_boolean_t *end,
   ++*leaking_bucket;
 
   /* read from disk */
-  SVN_ERR(get_p2l_page(&page, stream, fs,
+  SVN_ERR(get_p2l_page(&page, rev_file, fs,
                        baton->first_revision,
                        baton->start_offset,
                        baton->next_offset,
                        baton->page_start,
                        baton->page_size,
-                       stream_pool,
                        scratch_pool));
 
   /* and put it into our cache */
@@ -2414,17 +2857,17 @@ prefetch_p2l_page(svn_boolean_t *end,
 /* Lookup & construct the baton and key information that we will need for
  * a P2L page cache lookup.  We want the page covering OFFSET in the rev /
  * pack file containing REVSION in FS.  Return the results in *PAGE_INFO_P
- * and *KEY_P.  Read data through the auto-allocated *STREAM.
- * Use POOL for allocations.
+ * and *KEY_P.  Read data through REV_FILE.  Use SCRATCH_POOL for temporary
+ * allocations.
  */
 static svn_error_t *
 get_p2l_keys(p2l_page_info_baton_t *page_info_p,
              svn_fs_x__page_cache_key_t *key_p,
-             packed_number_stream_t **stream,
+             svn_fs_x__revision_file_t *rev_file,
              svn_fs_t *fs,
              svn_revnum_t revision,
              apr_off_t offset,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   p2l_page_info_baton_t page_info;
   
@@ -2432,21 +2875,18 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
    * contents at pack / rev file position OFFSET. */
   page_info.offset = offset;
   page_info.revision = revision;
-  SVN_ERR(get_p2l_page_info(&page_info, stream, fs, pool, pool));
+  SVN_ERR(get_p2l_page_info(&page_info, rev_file, fs, scratch_pool));
 
   /* if the offset refers to a non-existent page, bail out */
   if (page_info.page_count <= page_info.page_no)
-    {
-      SVN_ERR(packed_stream_close(*stream));
-      return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
-                               _("Offset %s too large in revision %ld"),
-                               apr_off_t_toa(pool, offset), revision);
-    }
+    return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                             _("Offset %s too large in revision %ld"),
+                             apr_off_t_toa(scratch_pool, offset), revision);
 
   /* return results */
   if (page_info_p)
     *page_info_p = page_info;
-  
+
   /* construct cache key */
   if (key_p)
     {
@@ -2567,12 +3007,12 @@ p2l_entries_func(void **out,
  */
 static svn_error_t *
 p2l_index_lookup(apr_array_header_t *entries,
-                 packed_number_stream_t **stream,
+                 svn_fs_x__revision_file_t *rev_file,
                  svn_fs_t *fs,
                  svn_revnum_t revision,
                  apr_off_t block_start,
                  apr_off_t block_end,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__page_cache_key_t key;
@@ -2589,16 +3029,16 @@ p2l_index_lookup(apr_array_header_t *entries,
   SVN_ERR_ASSERT(block_start < block_end);
 
   /* look for the fist page of the range in our cache */
-  SVN_ERR(get_p2l_keys(&page_info, &key, stream, fs, revision, block_start,
-                       pool));
+  SVN_ERR(get_p2l_keys(&page_info, &key, rev_file, fs, revision, block_start,
+                       scratch_pool));
   SVN_ERR(svn_cache__get_partial((void**)&local_result, &is_cached,
                                  ffd->p2l_page_cache, &key, p2l_entries_func,
-                                 &block, pool));
+                                 &block, scratch_pool));
 
   if (!is_cached)
     {
       svn_boolean_t end;
-      apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       apr_off_t original_page_start = page_info.page_start;
       int leaking_bucket = 4;
       p2l_page_info_baton_t prefetch_info = page_info;
@@ -2620,19 +3060,33 @@ p2l_index_lookup(apr_array_header_t *entries,
       while (prefetch_info.offset >= prefetch_info.page_size && !end)
         {
           prefetch_info.offset -= prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, stream,
-                                    &prefetch_info, min_offset,
-                                    pool, iterpool));
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
+                                    &prefetch_info, min_offset, iterpool));
           svn_pool_clear(iterpool);
         }
 
       /* fetch page from disk and put it into the cache */
-      SVN_ERR(get_p2l_page(&page_entries, stream, fs,
+      SVN_ERR(get_p2l_page(&page_entries, rev_file, fs,
                            page_info.first_revision,
                            page_info.start_offset,
                            page_info.next_offset,
                            page_info.page_start,
-                           page_info.page_size, pool, iterpool));
+                           page_info.page_size, iterpool));
+
+      /* The last cache entry must not end beyond the range covered by
+       * this index.  The same applies for any subset of entries. */
+      if (page_entries->nelts)
+        {
+          const svn_fs_x__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(page_entries, page_entries->nelts - 1,
+                             svn_fs_x__p2l_entry_t);
+          if (  entry->offset + entry->size
+              > page_info.page_size * page_info.page_count)
+            return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                                     _("Last P2L index entry extends beyond "
+                                       "the last page in revision %ld."),
+                                     revision);
+        }
 
       SVN_ERR(svn_cache__set(ffd->p2l_page_cache, &key, page_entries,
                              iterpool));
@@ -2650,9 +3104,8 @@ p2l_index_lookup(apr_array_header_t *entries,
              && !end)
         {
           prefetch_info.offset += prefetch_info.page_size;
-          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, stream,
-                                    &prefetch_info, min_offset,
-                                    pool, iterpool));
+          SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
+                                    &prefetch_info, min_offset, iterpool));
           svn_pool_clear(iterpool);
         }
 
@@ -2700,18 +3153,18 @@ p2l_index_lookup(apr_array_header_t *entries,
 svn_error_t *
 svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t block_start,
                            apr_off_t block_size,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
-  packed_number_stream_t *stream = NULL;
-
   apr_off_t block_end = block_start + block_size;
 
   /* the receiving container */
   int last_count = 0;
-  apr_array_header_t *result = apr_array_make(pool, 16,
+  apr_array_header_t *result = apr_array_make(result_pool, 16,
                                               sizeof(svn_fs_x__p2l_entry_t));
 
   /* Fetch entries page-by-page.  Since the p2l index is supposed to cover
@@ -2720,8 +3173,8 @@ svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
   while (block_start < block_end)
     {
       svn_fs_x__p2l_entry_t *entry;
-      SVN_ERR(p2l_index_lookup(result, &stream, fs, revision, block_start,
-                               block_end, pool));
+      SVN_ERR(p2l_index_lookup(result, rev_file, fs, revision, block_start,
+                               block_end, scratch_pool));
       SVN_ERR_ASSERT(result->nelts > 0);
 
       /* continue directly behind last item */
@@ -2742,9 +3195,6 @@ svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
       last_count = result->nelts;
     }
 
-  /* make sure we close files after usage */
-  SVN_ERR(packed_stream_close(stream));
-
   *entries = result;
   return SVN_NO_ERROR;
 }
@@ -2762,17 +3212,20 @@ compare_p2l_entry_offsets(const void *lhs, const void *rhs)
 }
 
 /* Cached data extraction utility.  DATA is a P2L index page, e.g. an APR
- * array of svn_fs_x__p2l_entry_t elements.  Return the entry for the item
- * starting at OFFSET or NULL if that's not an the start offset of any item.
+ * array of svn_fs_fs__p2l_entry_t elements.  Return the entry for the item,
+ * allocated in RESULT_POOL, starting at OFFSET or NULL if that's not an
+ * the start offset of any item. Use SCRATCH_POOL for temporary allocations.
  */
 static svn_fs_x__p2l_entry_t *
 get_p2l_entry_from_cached_page(const void *data,
                                apr_off_t offset,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   /* resolve all pointer values of in-cache data */
   const apr_array_header_t *page = data;
-  apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
+  apr_array_header_t *entries = apr_pmemdup(scratch_pool, page,
+                                            sizeof(*page));
   svn_fs_x__p2l_entry_t *entry;
 
   entries->elts = (char *)svn_temp_deserializer__ptr(page,
@@ -2786,7 +3239,7 @@ get_p2l_entry_from_cached_page(const void *data,
   if (entry)
     {
       svn_fs_x__p2l_entry_t *result
-        = apr_pmemdup(pool, entry, sizeof(*result));
+        = apr_pmemdup(result_pool, entry, sizeof(*result));
       result->items
         = (svn_fs_x__id_part_t *)svn_temp_deserializer__ptr(entries->elts,
                                      (const void *const *)&entry->items);
@@ -2808,7 +3261,8 @@ p2l_entry_lookup_func(void **out,
                       apr_pool_t *result_pool)
 {
   svn_fs_x__p2l_entry_t *entry
-    = get_p2l_entry_from_cached_page(data, *(apr_off_t *)baton, result_pool);
+    = get_p2l_entry_from_cached_page(data, *(apr_off_t *)baton, result_pool,
+                                     result_pool);
 
   *out = entry && entry->offset == *(apr_off_t *)baton
        ? svn_fs_x__p2l_entry_dup(entry, result_pool)
@@ -2819,11 +3273,12 @@ p2l_entry_lookup_func(void **out,
 
 static svn_error_t *
 p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
-                 packed_number_stream_t **stream,
+                 svn_fs_x__revision_file_t *rev_file,
                  svn_fs_t *fs,
                  svn_revnum_t revision,
                  apr_off_t offset,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__page_cache_key_t key = { 0 };
@@ -2831,17 +3286,20 @@ p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
   p2l_page_info_baton_t page_info;
 
   /* look for this info in our cache */
-  SVN_ERR(get_p2l_keys(&page_info, &key, stream, fs, revision, offset, pool));
+  SVN_ERR(get_p2l_keys(&page_info, &key, rev_file, fs, revision, offset,
+                       scratch_pool));
   SVN_ERR(svn_cache__get_partial((void**)entry_p, &is_cached,
                                  ffd->p2l_page_cache, &key,
-                                 p2l_entry_lookup_func, &offset, pool));
+                                 p2l_entry_lookup_func, &offset,
+                                 result_pool));
   if (!is_cached)
     {
       /* do a standard index lookup.  This is will automatically prefetch
        * data to speed up future lookups. */
-      apr_array_header_t *entries = apr_array_make(pool, 1, sizeof(**entry_p));
-      SVN_ERR(p2l_index_lookup(entries, stream, fs, revision, offset,
-                               offset + 1, pool));
+      apr_array_header_t *entries = apr_array_make(result_pool, 1,
+                                                   sizeof(**entry_p));
+      SVN_ERR(p2l_index_lookup(entries, rev_file, fs, revision, offset,
+                               offset + 1, scratch_pool));
 
       /* Find the entry that we want. */
       *entry_p = svn_sort__array_lookup(entries, &offset, NULL,
@@ -2854,17 +3312,15 @@ p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
 svn_error_t *
 svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t offset,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
-  packed_number_stream_t *stream = NULL;
-
   /* look for this info in our cache */
-  SVN_ERR(p2l_entry_lookup(entry_p, &stream, fs, revision, offset, pool));
-
-  /* make sure we close files after usage */
-  SVN_ERR(packed_stream_close(stream));
+  SVN_ERR(p2l_entry_lookup(entry_p, rev_file, fs, revision, offset,
+                           result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2895,7 +3351,8 @@ p2l_item_lookup_func(void **out,
 {
   p2l_item_lookup_baton_t *lookup_baton = baton;
   svn_fs_x__p2l_entry_t *entry
-    = get_p2l_entry_from_cached_page(data, lookup_baton->offset, result_pool);
+    = get_p2l_entry_from_cached_page(data, lookup_baton->offset, result_pool,
+                                     result_pool);
 
   *out =    entry
          && entry->offset == lookup_baton->offset
@@ -2911,13 +3368,14 @@ p2l_item_lookup_func(void **out,
 svn_error_t *
 svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
                           svn_fs_t *fs,
+                          svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
                           apr_off_t offset,
                           apr_uint32_t sub_item,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  packed_number_stream_t *stream = NULL;
   svn_fs_x__page_cache_key_t key = { 0 };
   svn_boolean_t is_cached = FALSE;
   p2l_page_info_baton_t page_info;
@@ -2926,27 +3384,26 @@ svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
   *item = NULL;
 
   /* look for this info in our cache */
-  SVN_ERR(get_p2l_keys(&page_info, &key, &stream, fs, revision, offset,
-                       pool));
+  SVN_ERR(get_p2l_keys(&page_info, &key, rev_file, fs, revision, offset,
+                       scratch_pool));
   baton.offset = offset;
   baton.sub_item = sub_item;
   SVN_ERR(svn_cache__get_partial((void**)item, &is_cached,
                                  ffd->p2l_page_cache, &key,
-                                 p2l_item_lookup_func, &baton, pool));
+                                 p2l_item_lookup_func, &baton, result_pool));
   if (!is_cached)
     {
       /* do a standard index lookup.  This is will automatically prefetch
        * data to speed up future lookups. */
       svn_fs_x__p2l_entry_t *entry;
-      SVN_ERR(p2l_entry_lookup(&entry, &stream, fs, revision, offset, pool));
+      SVN_ERR(p2l_entry_lookup(&entry, rev_file, fs, revision, offset,
+                               result_pool, scratch_pool));
 
       /* return result */
       if (entry && entry->item_count > sub_item)
-        *item = apr_pmemdup(pool, entry->items + sub_item, sizeof(**item));
+        *item = apr_pmemdup(result_pool, entry->items + sub_item,
+                            sizeof(**item));
     }
-
-  /* make sure we close files after usage */
-  SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
@@ -2971,11 +3428,11 @@ p2l_get_max_offset_func(void **out,
 svn_error_t *
 svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
                              svn_fs_t *fs,
+                             svn_fs_x__revision_file_t *rev_file,
                              svn_revnum_t revision,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  packed_number_stream_t *stream = NULL;
   p2l_header_t *header;
   svn_boolean_t is_cached = FALSE;
   apr_off_t *offset_p;
@@ -2987,40 +3444,308 @@ svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
 
   SVN_ERR(svn_cache__get_partial((void **)&offset_p, &is_cached,
                                  ffd->p2l_header_cache, &key,
-                                 p2l_get_max_offset_func, NULL, pool));
+                                 p2l_get_max_offset_func, NULL,
+                                 scratch_pool));
   if (is_cached)
     {
       *offset = *offset_p;
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_p2l_header(&header, &stream, fs, revision, pool, pool));
+  SVN_ERR(get_p2l_header(&header, rev_file, fs, revision, scratch_pool,
+                         scratch_pool));
   *offset = header->file_size;
-
-  /* make sure we close files after usage */
-  SVN_ERR(packed_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_x__item_offset(apr_off_t *offset,
+svn_fs_x__item_offset(apr_off_t *absolute_position,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
+                      svn_fs_x__revision_file_t *rev_file,
                       const svn_fs_x__id_part_t *item_id,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
   if (svn_fs_x__is_txn(item_id->change_set))
-    SVN_ERR(l2p_proto_index_lookup(offset, sub_item, fs,
+    SVN_ERR(l2p_proto_index_lookup(absolute_position, sub_item, fs,
                                    svn_fs_x__get_txn_id(item_id->change_set),
-                                   item_id->number, pool));
+                                   item_id->number, scratch_pool));
   else
-    SVN_ERR(l2p_index_lookup(offset, sub_item, fs,
+    SVN_ERR(l2p_index_lookup(absolute_position, sub_item, fs, rev_file,
                              svn_fs_x__get_revnum(item_id->change_set),
-                             item_id->number, pool));
+                             item_id->number, scratch_pool));
 
   return SVN_NO_ERROR;
 }
+
+/* Calculate the FNV1 checksum over the offset range in REV_FILE, covered by
+ * ENTRY.  Store the result in ENTRY->FNV1_CHECKSUM.  Use SCRATCH_POOL for
+ * temporary allocations. */
+static svn_error_t *
+calc_fnv1(svn_fs_x__p2l_entry_t *entry,
+          svn_fs_x__revision_file_t *rev_file,
+          apr_pool_t *scratch_pool)
+{
+  unsigned char buffer[4096];
+  svn_checksum_t *checksum;
+  svn_checksum_ctx_t *context
+    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, scratch_pool);
+  apr_off_t size = entry->size;
+
+  /* Special rules apply to unused sections / items.  The data must be a
+   * sequence of NUL bytes (not checked here) and the checksum is fixed to 0.
+   */
+  if (entry->type == SVN_FS_X__ITEM_TYPE_UNUSED)
+    {
+      entry->fnv1_checksum = 0;
+      return SVN_NO_ERROR;
+    }
+
+  /* Read the block and feed it to the checksum calculator. */
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &entry->offset,
+                           scratch_pool));
+  while (size > 0)
+    {
+      apr_size_t to_read = size > sizeof(buffer)
+                         ? sizeof(buffer)
+                         : (apr_size_t)size;
+      SVN_ERR(svn_io_file_read_full2(rev_file->file, buffer, to_read, NULL,
+                                     NULL, scratch_pool));
+      SVN_ERR(svn_checksum_update(context, buffer, to_read));
+      size -= to_read;
+    }
+
+  /* Store final checksum in ENTRY. */
+  SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
+  entry->fnv1_checksum = ntohl(*(const apr_uint32_t *)checksum->digest);
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Index (re-)creation utilities.
+ */
+
+svn_error_t *
+svn_fs_x__p2l_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     svn_fs_x__revision_file_t *rev_file,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_file_t *proto_index;
+
+  /* Use a subpool for immediate temp file cleanup at the end of this
+   * function. */
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  /* Create a proto-index file. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, protoname, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__p2l_proto_index_open(&proto_index, *protoname,
+                                         scratch_pool));
+
+  /* Write ENTRIES to proto-index file and calculate checksums as we go. */
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      svn_fs_x__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_x__p2l_entry_t *);
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(calc_fnv1(entry, rev_file, iterpool));
+      SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(proto_index, entry,
+                                                  iterpool));
+    }
+
+  /* Convert proto-index into final index and move it into position.
+   * Note that REV_FILE contains the start revision of the shard file if it
+   * has been packed while REVISION may be somewhere in the middle.  For
+   * non-packed shards, they will have identical values. */
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
+
+  /* Temp file cleanup. */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Decorator for svn_fs_x__p2l_entry_t that associates it with a sorted
+ * variant of its ITEMS array.
+ */
+typedef struct sub_item_ordered_t
+{
+  /* ENTRY that got wrapped */
+  svn_fs_x__p2l_entry_t *entry;
+
+  /* Array of pointers into ENTRY->ITEMS, sorted by their revision member
+   * _descending_ order.  May be NULL if ENTRY->ITEM_COUNT < 2. */
+  svn_fs_x__id_part_t **order;
+} sub_item_ordered_t;
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter is younger.
+ * Used to sort sub_item_ordered_t::order
+ */
+static int
+compare_sub_items(const svn_fs_x__id_part_t * const * lhs,
+                  const svn_fs_x__id_part_t * const * rhs)
+{
+  return (*lhs)->change_set < (*rhs)->change_set
+       ? 1
+       : ((*lhs)->change_set > (*rhs)->change_set ? -1 : 0);
+}
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
+ * a newer revision.
+ */
+static int
+compare_p2l_info_rev(const sub_item_ordered_t * lhs,
+                     const sub_item_ordered_t * rhs)
+{
+  svn_fs_x__id_part_t *lhs_part;
+  svn_fs_x__id_part_t *rhs_part;
+  
+  assert(lhs != rhs);
+  if (lhs->entry->item_count == 0)
+    return rhs->entry->item_count == 0 ? 0 : -1;
+  if (rhs->entry->item_count == 0)
+    return 1;
+
+  lhs_part = lhs->order ? lhs->order[lhs->entry->item_count - 1]
+                        : &lhs->entry->items[0];
+  rhs_part = rhs->order ? rhs->order[rhs->entry->item_count - 1]
+                        : &rhs->entry->items[0];
+
+  if (lhs_part->change_set == rhs_part->change_set)
+    return 0;
+
+  return lhs_part->change_set < rhs_part->change_set ? -1 : 1;
+}
+
+svn_error_t *
+svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_file_t *proto_index;
+
+  /* Use a subpool for immediate temp file cleanup at the end of this
+   * function. */
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
+  int i;
+  apr_uint32_t k;
+  svn_priority_queue__t *queue;
+  apr_size_t count = 0;
+  apr_array_header_t *sub_item_orders;
+
+  /* Create the temporary proto-rev file. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, protoname, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__l2p_proto_index_open(&proto_index, *protoname,
+                                         scratch_pool));
+
+
+  /* wrap P2L entries such that we have access to the sub-items in revision
+     order.  The ENTRY_COUNT member will point to the next item to read+1. */
+  sub_item_orders = apr_array_make(scratch_pool, entries->nelts,
+                                   sizeof(sub_item_ordered_t));
+  sub_item_orders->nelts = entries->nelts;
+
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      svn_fs_x__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, svn_fs_x__p2l_entry_t *);
+      sub_item_ordered_t *ordered
+        = &APR_ARRAY_IDX(sub_item_orders, i, sub_item_ordered_t);
+
+      /* skip unused regions (e.g. padding) */
+      if (entry->item_count == 0)
+        {
+          --sub_item_orders->nelts;
+          continue;
+        }
+
+      assert(entry);
+      ordered->entry = entry;
+      count += entry->item_count;
+
+      if (entry->item_count > 1)
+        {
+          ordered->order
+            = apr_palloc(scratch_pool,
+                         sizeof(*ordered->order) * entry->item_count);
+          for (k = 0; k < entry->item_count; ++k)
+            ordered->order[k] = &entry->items[k];
+
+          qsort(ordered->order, entry->item_count, sizeof(*ordered->order),
+                (int (*)(const void *, const void *))compare_sub_items);
+        }
+    }
+
+  /* we need to write the index in ascending revision order */
+  queue = svn_priority_queue__create
+            (sub_item_orders,
+             (int (*)(const void *, const void *))compare_p2l_info_rev);
+
+  /* write index entries */
+  for (i = 0; i < count; ++i)
+    {
+      svn_fs_x__id_part_t *sub_item;
+      sub_item_ordered_t *ordered = svn_priority_queue__peek(queue);
+
+      if (ordered->entry->item_count > 0)
+        {
+          /* if there is only one item, we skip the overhead of having an
+             extra array for the item order */
+          sub_item = ordered->order
+                   ? ordered->order[ordered->entry->item_count - 1]
+                   : &ordered->entry->items[0];
+
+          /* next revision? */
+          if (prev_rev != svn_fs_x__get_revnum(sub_item->change_set))
+            {
+              prev_rev = svn_fs_x__get_revnum(sub_item->change_set);
+              SVN_ERR(svn_fs_x__l2p_proto_index_add_revision
+                          (proto_index, iterpool));
+            }
+
+          /* add entry */
+          SVN_ERR(svn_fs_x__l2p_proto_index_add_entry
+                      (proto_index, ordered->entry->offset,
+                      (apr_uint32_t)(sub_item - ordered->entry->items),
+                      sub_item->number, iterpool));
+
+          /* make ITEM_COUNT point the next sub-item to use+1 */
+          --ordered->entry->item_count;
+        }
+
+      /* process remaining sub-items (if any) of that container later */
+      if (ordered->entry->item_count)
+        svn_priority_queue__update(queue);
+      else
+        svn_priority_queue__pop(queue);
+
+      /* keep memory usage in check */
+      if (i % 256 == 0)
+        svn_pool_clear(iterpool);
+    }
+
+  /* Convert proto-index into final index and move it into position. */
+  SVN_ERR(svn_io_file_close(proto_index, iterpool));
+
+  /* Temp file cleanup. */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*
  * Standard (de-)serialization functions

@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS__INDEX_H
 
 #include "fs.h"
+#include "rev_file.h"
 
 /* Per-defined item index values.  They are used to identify empty or
  * mandatory items.
@@ -65,7 +66,7 @@ typedef struct svn_fs_x__p2l_entry_t
   apr_off_t size;
 
   /* type of the item (see SVN_FS_X__ITEM_TYPE_*) defines */
-  unsigned type;
+  apr_uint32_t type;
 
   /* modified FNV-1a checksum.  0 if unknown checksum */
   apr_uint32_t fnv1_checksum;
@@ -86,20 +87,21 @@ svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
                         apr_pool_t *pool);
 
 /* Open / create a log-to-phys index file with the full file path name
- * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
- * allocations.
+ * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
+ * RESULT_POOL.
  */
 svn_error_t *
 svn_fs_x__l2p_proto_index_open(apr_file_t **proto_index,
                                const char *file_name,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Call this function before adding entries for the next revision to the
- * log-to-phys index file in PROTO_INDEX.  Use POOL for allocations.
+ * log-to-phys index file in PROTO_INDEX.  Use SCRATCH_POOL for temporary
+ * allocations.
  */
 svn_error_t *
 svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
-                                       apr_pool_t *pool);
+                                       apr_pool_t *scratch_pool);
 
 /* Add a new mapping, ITEM_INDEX to the (OFFSET, SUB_ITEM) pair, to log-to-
  * phys index file in PROTO_INDEX.  Please note that mappings may be added
@@ -109,72 +111,84 @@ svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
  * that is already implied for all item indexes not explicitly given a
  * mapping.
  * 
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                     apr_off_t offset,
                                     apr_uint32_t sub_item,
                                     apr_uint64_t item_index,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
-/* Use the proto index file stored at PROTO_FILE_NAME and construct the
- * final log-to-phys index file at FILE_NAME.  The first revision will
+/* Use the proto index file stored at PROTO_FILE_NAME, construct the final
+ * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  Use POOL for allocations.
+ * and so forth.  
+ *
+ * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
+ * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__l2p_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Open / create a phys-to-log index file with the full file path name
- * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
- * allocations.
+ * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
+ * RESULT_POOL.
  */
 svn_error_t *
 svn_fs_x__p2l_proto_index_open(apr_file_t **proto_index,
                                const char *file_name,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Add a new mapping ENTRY to the phys-to-log index file in PROTO_INDEX.
  * The entries must be added in ascending offset order and must not leave
  * intermittent ranges uncovered.  The revision value in ENTRY may be
- * SVN_INVALID_REVISION.  Use POOL for allocations.
+ * SVN_INVALID_REVISION.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
-                                    svn_fs_x__p2l_entry_t *entry,
-                                    apr_pool_t *pool);
+                                    const svn_fs_x__p2l_entry_t *entry,
+                                    apr_pool_t *scratch_pool);
 
 /* Set *NEXT_OFFSET to the first offset behind the last entry in the
  * phys-to-log proto index file PROTO_INDEX.  This will be 0 for empty
- * index files.  Use POOL for temporary allocations.
+ * index files.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__p2l_proto_index_next_offset(apr_off_t *next_offset,
                                       apr_file_t *proto_index,
-                                      apr_pool_t *pool);
+                                      apr_pool_t *scratch_pool);
 
-/* Use the proto index file stored at PROTO_FILE_NAME and construct the
- * final phys-to-log index file at FILE_NAME.  Entries without a valid
+/* Use the proto index file stored at PROTO_FILE_NAME, construct the final
+ * phys-to-log index and append it to INDEX_FILE.  Entries without a valid
  * revision will be assigned to the REVISION given here.
- * Use POOL for allocations.
+ *
+ * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
+ * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__p2l_index_create(svn_fs_t *fs,
-                           const char *file_name,
+svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
+                           svn_fs_t *fs,
+                           apr_file_t *index_file,
                            const char *proto_file_name,
                            svn_revnum_t revision,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (at least partly) overlap with the range given by BLOCK_START
  * offset and BLOCK_SIZE in the rep / pack file containing REVISION.
- * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements.
- * Use POOL for allocations.
+ * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements,
+ * allocated in RESULT_POOL.  REV_FILE determines whether to access single
+ * rev or pack file data.  If that is not available anymore (neither in
+ * cache nor on disk), return an error.  Use SCRATCH_POOL for temporary
+ * allocations.
  *
  * Note that (only) the first and the last mapping may cross a cluster
  * boundary.
@@ -182,69 +196,122 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t block_start,
                            apr_off_t block_size,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to return the entry for the
  * container or single item starting at global OFFSET in the rep file
- * containing REVISION in *ENTRY.  Sets *ENTRY to NULL if no item starts
- * at exactly that offset.  Use POOL for allocations.
+ * containing REVISION in*ENTRY, allocated in RESULT_POOL.  Sets *ENTRY
+ * to NULL if no item starts at exactly that offset.  REV_FILE determines
+ * whether to access single rev or pack file data.  If that is not available
+ * anymore (neither in cache nor on disk), return an error.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
                            svn_fs_t *fs,
+                           svn_fs_x__revision_file_t *rev_file,
                            svn_revnum_t revision,
                            apr_off_t offset,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Use the phys-to-log mapping files in FS to return the svn_fs_x__id_part_t
  * for the SUB_ITEM of the container starting at global OFFSET in the rep /
- * pack file containing REVISION in *ITEM.  Sets *ITEM to NULL if no element
- * starts at exactly that offset or if it contains no more than SUB_ITEM
- * sub-items.  Use POOL for allocations.
+ * pack file containing REVISION in *ITEM, allocated in RESULT_POOL.  Sets
+ * *ITEM to NULL if no element starts at exactly that offset or if it
+ * contains no more than SUB_ITEM sub-items.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
                           svn_fs_t *fs,
+                          svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
                           apr_off_t offset,
                           apr_uint32_t sub_item,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
-/* Use the log-to-phys mapping files in FS to find the packed / non-packed /
- * proto-rev file offset and container sub-item of ITEM_ID.  *SUB_ITEM will
- * be 0 for non-container items.  Use POOL for allocations.
+/* For ITEM_ID in FS, return the position in the respective rev or pack file
+ * in *ABSOLUTE_POSITION and the *SUB_ITEM number within the object at that
+ * location. *SUB_ITEM will be 0 for non-container items.
+ *
+ * REV_FILE determines whether to access single rev or pack file data.
+ * If that is not available anymore (neither in cache nor on disk), re-open
+ * the rev / pack file and retry to open the index file.  For transaction
+ * content, REV_FILE may be NULL.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__item_offset(apr_off_t *offset,
+svn_fs_x__item_offset(apr_off_t *absolute_position,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
+                      svn_fs_x__revision_file_t *rev_file,
                       const svn_fs_x__id_part_t *item_id,
-                      apr_pool_t *pool);
+                      apr_pool_t *scratch_pool);
 
 /* Use the log-to-phys indexes in FS to determine the maximum item indexes
  * assigned to revision START_REV to START_REV + COUNT - 1.  That is a
  * close upper limit to the actual number of items in the respective revs.
- * Return the results in *MAX_IDS,  allocated in POOL.
+ * Return the results in *MAX_IDS,  allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
                           svn_fs_t *fs,
                           svn_revnum_t start_rev,
                           apr_size_t count,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* In *OFFSET, return the first OFFSET in the pack / rev file containing
  * REVISION in FS not covered by the log-to-phys index.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
                              svn_fs_t *fs,
+                             svn_fs_x__revision_file_t *rev_file,
                              svn_revnum_t revision,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
+
+/* Index (re-)creation utilities.
+ */
+
+/* For FS, create a new L2P auto-deleting proto index file in POOL and return
+ * its name in *PROTONAME.  All entries to write are given in ENTRIES and
+ * entries are of type svn_fs_fs__p2l_entry_t* (sic!).  The ENTRIES array
+ * will be reordered.  Give the proto index file the lifetime of RESULT_POOL
+ * and use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/* For FS, create a new P2L auto-deleting proto index file in POOL and return
+ * its name in *PROTONAME.  All entries to write are given in ENTRIES and
+ * of type svn_fs_fs__p2l_entry_t*.  The FVN1 checksums are not taken from
+ * ENTRIES but are begin calculated from the current contents of REV_FILE
+ * as we go.  Give the proto index file the lifetime of RESULT_POOL and use
+ * SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_x__p2l_index_from_p2l_entries(const char **protoname,
+                                     svn_fs_t *fs,
+                                     svn_fs_x__revision_file_t *rev_file,
+                                     apr_array_header_t *entries,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /* Serialization and caching interface
  */

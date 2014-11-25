@@ -66,9 +66,8 @@ normalize_key_part(const char *original,
   return normalized->data;
 }
 
-/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
-   according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
-   to use.
+/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS flags will be set according to
+   FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix to use.
 
    Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
    for temporary allocations. */
@@ -76,7 +75,6 @@ static svn_error_t *
 read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
-            svn_boolean_t *cache_revprops,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
@@ -118,10 +116,6 @@ read_config(const char **cache_namespace,
     = svn_hash__get_bool(fs->config,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
-
-  /* For now, always disable revprop caching.
-   */
-  *cache_revprops = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -354,14 +348,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t no_handler = ffd->fail_stop;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
-  svn_boolean_t cache_revprops;
   const char *cache_namespace;
 
   /* Evaluating the cache configuration. */
   SVN_ERR(read_config(&cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
-                      &cache_revprops,
                       fs,
                       pool));
 
@@ -565,28 +557,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->properties_cache = NULL;
       ffd->mergeinfo_cache = NULL;
       ffd->mergeinfo_existence_cache = NULL;
-    }
-
-  /* if enabled, cache revprops */
-  if (cache_revprops)
-    {
-      SVN_ERR(create_cache(&(ffd->revprop_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           svn_fs_fs__serialize_properties,
-                           svn_fs_fs__deserialize_properties,
-                           sizeof(pair_cache_key_t),
-                           apr_pstrcat(pool, prefix, "REVPROP",
-                                       SVN_VA_NULL),
-                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                           fs,
-                           no_handler,
-                           fs->pool, pool));
-    }
-  else
-    {
-      ffd->revprop_cache = NULL;
     }
 
   /* if enabled, cache text deltas and their combinations */

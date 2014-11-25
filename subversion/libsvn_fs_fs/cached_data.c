@@ -154,7 +154,7 @@ dbg_log_access(svn_fs_t *fs,
     }
 
   /* some info is only available in format7 repos */
-  if (svn_fs_fs__use_log_addressing(fs, revision))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
@@ -277,15 +277,13 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Return TRUE, if REVISION in FS is of a format that supports block-read
-   and the feature has been enabled. */
+/* Return TRUE, if FS is of a format that supports block-read and the
+   feature has been enabled. */
 static svn_boolean_t
-use_block_read(svn_fs_t *fs,
-               svn_revnum_t revision)
+use_block_read(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return   svn_fs_fs__use_log_addressing(fs, revision)
-        && ffd->use_block_read;
+  return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
 /* Get the node-revision for the node ID in FS.
@@ -360,7 +358,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                      rev_item->number,
                                      scratch_pool));
 
-      if (use_block_read(fs, rev_item->revision))
+      if (use_block_read(fs))
         {
           /* block-read will parse the whole block and will also return
              the one noderev that we need right now. */
@@ -552,7 +550,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   fs_fs_data_t *ffd = fs->fsap_data;
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
 
-  if (svn_fs_fs__use_log_addressing(fs, rev))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       *root_id_p = svn_fs_fs__id_create_root(rev, result_pool);
     }
@@ -840,7 +838,7 @@ create_rep_state_body(rep_state_t **rep_state,
       /* populate the cache if appropriate */
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
-          if (use_block_read(fs, rep->revision))
+          if (use_block_read(fs))
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
                                rs->sfile->rfile, result_pool, scratch_pool));
           else
@@ -922,14 +920,24 @@ svn_fs_fs__check_rep(representation_t *rep,
                      void **hint,
                      apr_pool_t *scratch_pool)
 {
-  if (svn_fs_fs__use_log_addressing(fs, rep->revision))
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
+      svn_fs_fs__revision_file_t *rev_file = NULL;
 
-      svn_fs_fs__revision_file_t *rev_file;
-      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
-                                               scratch_pool, scratch_pool));
+      /* Reuse the revision file provided by *HINT, if it is given and
+       * actually the rev / pack file that we want. */
+      svn_revnum_t start_rev = svn_fs_fs__packed_base_rev(fs, rep->revision);
+      if (hint)
+        rev_file = *(svn_fs_fs__revision_file_t **)hint;
+
+      if (rev_file == NULL || rev_file->start_revision != start_rev)
+        SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rep->revision,
+                                                 scratch_pool, scratch_pool));
+
+      if (hint)
+        *hint = rev_file;
 
       /* This will auto-retry if there was a background pack. */
       SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rep->revision,
@@ -952,8 +960,6 @@ svn_fs_fs__check_rep(representation_t *rep,
                                               "%" APR_UINT64_T_FMT,
                                               rep->item_index),
                                  rep->revision);
-
-      SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
     }
   else
     {
@@ -1477,7 +1483,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
      because the block is unlikely to contain other data. */
   if (   rs->chunk_index == 0
       && SVN_IS_VALID_REVNUM(rs->revision)
-      && use_block_read(rs->sfile->fs, rs->revision)
+      && use_block_read(rs->sfile->fs)
       && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
@@ -2710,7 +2716,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
                                                scratch_pool, scratch_pool));
 
-      if (use_block_read(fs, rev))
+      if (use_block_read(fs))
         {
           /* 'block-read' will also provide us with the desired data */
           SVN_ERR(block_read((void **)changes, fs,
@@ -2721,7 +2727,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
         {
           /* Addressing is very different for old formats
            * (needs to read the revision trailer). */
-          if (svn_fs_fs__use_log_addressing(fs, rev))
+          if (svn_fs_fs__use_log_addressing(fs))
             SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
                                            revision_file, rev, NULL,
                                            SVN_FS_FS__ITEM_INDEX_CHANGES,

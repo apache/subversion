@@ -1833,11 +1833,19 @@ merge(svn_stringbuf_t *conflict_p,
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
     svn_boolean_t same;
+    apr_pool_t *scratch_pool;
 
     /* Get node revisions for our id's. */
-    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool));
-    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs, ancestor_id, pool));
-    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs, source_id, pool));
+    scratch_pool = svn_pool_create(pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool,
+                                        scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs, ancestor_id, pool,
+                                        scratch_pool));
+    svn_pool_clear(scratch_pool);
+    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs, source_id, pool,
+                                        scratch_pool));
+    svn_pool_destroy(scratch_pool);
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -4095,10 +4103,12 @@ stringify_node(dag_node_t *node,
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
    information for DAG nodes in revision REV, and trust the metadata
-   accuracy for nodes belonging to older revisions. */
+   accuracy for nodes belonging to older revisions.  To detect cycles,
+   provide all parent dag_node_t * in PARENT_NODES. */
 static svn_error_t *
 verify_node(dag_node_t *node,
             svn_revnum_t rev,
+            apr_array_header_t *parent_nodes,
             apr_pool_t *pool)
 {
   svn_boolean_t has_mergeinfo;
@@ -4108,6 +4118,18 @@ verify_node(dag_node_t *node,
   int pred_count;
   svn_node_kind_t kind;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  /* Detect (non-)DAG cycles. */
+  for (i = 0; i < parent_nodes->nelts; ++i)
+    {
+      dag_node_t *parent = APR_ARRAY_IDX(parent_nodes, i, dag_node_t *);
+      if (svn_fs_x__id_eq(svn_fs_x__dag_get_id(parent),
+                          svn_fs_x__dag_get_id(node)))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                "Node is its own direct or indirect parent '%s'",
+                                stringify_node(node, iterpool));
+    }
 
   /* Fetch some data. */
   SVN_ERR(svn_fs_x__dag_has_mergeinfo(&has_mergeinfo, node));
@@ -4159,8 +4181,8 @@ verify_node(dag_node_t *node,
   if (kind == svn_node_dir)
     {
       apr_array_header_t *entries;
-      int i;
       apr_int64_t children_mergeinfo = 0;
+      APR_ARRAY_PUSH(parent_nodes, dag_node_t*) = node;
 
       SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, pool));
 
@@ -4179,7 +4201,7 @@ verify_node(dag_node_t *node,
             {
               SVN_ERR(svn_fs_x__dag_get_node(&child, fs, dirent->id,
                                              iterpool));
-              SVN_ERR(verify_node(child, rev, iterpool));
+              SVN_ERR(verify_node(child, rev, parent_nodes, iterpool));
               SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&child_mergeinfo,
                                                         child));
             }
@@ -4201,6 +4223,10 @@ verify_node(dag_node_t *node,
                                  stringify_node(node, iterpool),
                                  mergeinfo_count, has_mergeinfo,
                                  children_mergeinfo);
+
+      /* If we don't make it here, there was an error / corruption.
+       * In that case, nobody will need PARENT_NODES anymore. */
+      apr_array_pop(parent_nodes);
     }
 
   svn_pool_destroy(iterpool);
@@ -4213,6 +4239,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
 {
   svn_fs_t *fs = root->fs;
   dag_node_t *root_dir;
+  apr_array_header_t *parent_nodes;
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
      (and elsewhere).  This code makes more thorough checks than the
@@ -4236,7 +4263,8 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
     }
 
   /* Recursively verify ROOT_DIR. */
-  SVN_ERR(verify_node(root_dir, root->rev, pool));
+  parent_nodes = apr_array_make(pool, 16, sizeof(dag_node_t *));
+  SVN_ERR(verify_node(root_dir, root->rev, parent_nodes, pool));
 
   /* Verify explicitly the predecessor of the root. */
   {

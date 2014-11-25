@@ -232,7 +232,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "null-list", svn_cl__null_list, {"ls"}, N_
     ("List directory entries in the repository.\n"
-     "usage: list [TARGET[@REV]...]\n"
+     "usage: null-list [TARGET[@REV]...]\n"
      "\n"
      "  List each TARGET file and the contents of each TARGET directory as\n"
      "  they exist in the repository.  If TARGET is a working copy path, the\n"
@@ -288,7 +288,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "null-info", svn_cl__null_info, {0}, N_
     ("Display information about a local or remote item.\n"
-     "usage: info [TARGET[@REV]...]\n"
+     "usage: null-info [TARGET[@REV]...]\n"
      "\n"
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"

@@ -228,13 +228,15 @@ stream_error_create(svn_fs_fs__packed_number_stream_t *stream,
                     const char *message)
 {
   const char *file_name;
-  apr_off_t offset = 0;
+  apr_off_t offset;
   SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                stream->pool));
-  SVN_ERR(svn_io_file_seek(stream->file, APR_CUR, &offset, stream->pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, stream->file, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
-                           (apr_uint64_t)offset);
+                           apr_psprintf(stream->pool,
+                                        "%" APR_UINT64_T_HEX_FMT,
+                                        (apr_uint64_t)offset));
 }
 
 /* Read up to MAX_NUMBER_PREFETCH numbers from the STREAM->NEXT_OFFSET in
@@ -283,7 +285,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   err = apr_file_read(stream->file, buffer, &read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
-      _("Can't read index file '%s' at offset 0x%" APR_UINT64_T_HEX_FMT));
+      _("Can't read index file '%s' at offset 0x%s"));
 
   /* if the last number is incomplete, trim it from the buffer */
   while (read > 0 && buffer[read-1] >= 0x80)
@@ -293,7 +295,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
    * at least *one* further number. */
   if SVN__PREDICT_FALSE(read == 0)
     return stream_error_create(stream, err,
-      _("Unexpected end of index file %s at offset 0x%"APR_UINT64_T_HEX_FMT));
+      _("Unexpected end of index file %s at offset 0x%s"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
@@ -1776,7 +1778,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
   svn_error_t *err = SVN_NO_ERROR;
   if (txn_id)
     {
-      if (svn_fs_fs__use_log_addressing(fs, txn_id->revision + 1))
+      if (svn_fs_fs__use_log_addressing(fs))
         {
           /* the txn is going to produce a rev with logical addressing.
              So, we need to get our info from the (proto) index file. */
@@ -1789,7 +1791,7 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
           *absolute_position = item_index;
         }
     }
-  else if (svn_fs_fs__use_log_addressing(fs, revision))
+  else if (svn_fs_fs__use_log_addressing(fs))
     {
       /* ordinary index lookup */
       SVN_ERR(l2p_index_lookup(absolute_position, fs, rev_file, revision,

@@ -637,13 +637,17 @@ patterning_copy(char *target, const char *source, apr_size_t len)
   const apr_size_t overlap = target - source;
   while (len > overlap)
     {
-      target = memcpy(target, source, overlap);
+      memcpy(target, source, overlap);
+      target += overlap;
       len -= overlap;
     }
 
   /* Copy any remaining source pattern. */
   if (len)
-    target = memcpy(target, source, len);
+    {
+      memcpy(target, source, len);
+      target += len;
+    }
 
   return target;
 }

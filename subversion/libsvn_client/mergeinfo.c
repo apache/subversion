@@ -224,7 +224,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   SVN_ERR(svn_wc__node_get_base(NULL, &base_revision, NULL, NULL, NULL, NULL,
                                 ctx->wc_ctx, local_abspath,
                                 TRUE /* ignore_enoent */,
-                                FALSE /* show_hidden */,
                                 scratch_pool, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
@@ -295,7 +294,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           SVN_ERR(svn_wc__node_get_base(NULL, &parent_base_rev, NULL, NULL,
                                         NULL, NULL,
                                         ctx->wc_ctx, local_abspath,
-                                        TRUE, FALSE,
+                                        TRUE /* ignore_enoent */,
                                         scratch_pool, scratch_pool));
 
           /* ### This checks the WORKING changed_rev, so invalid on replacement
