@@ -1612,7 +1612,6 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
     {
       if (same_repositories)
         {
-          svn_boolean_t sleep_needed = FALSE;
           const char *tmpdir_abspath, *tmp_abspath;
 
           /* Find a temporary location in which to check out the copy source. */
@@ -1641,14 +1640,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
 
-            err = svn_client__checkout_internal(&pair->src_revnum,
+            err = svn_client__checkout_internal(&pair->src_revnum, timestamp_sleep,
                                                 pair->src_original,
                                                 tmp_abspath,
                                                 &pair->src_peg_revision,
                                                 &pair->src_op_revision,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
-                                                &sleep_needed, ctx, pool);
+                                                ra_session, ctx, pool);
 
             ctx->notify_func2 = old_notify_func2;
             ctx->notify_baton2 = old_notify_baton2;
@@ -1741,7 +1740,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
       svn_wc_notify_t *notify = svn_wc_create_notify(
                                   dst_abspath, svn_wc_notify_add, pool);
       notify->kind = pair->src_kind;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;

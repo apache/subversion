@@ -126,6 +126,16 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_SHARD_SIZE           "fsfs-shard-size"
 
+/** Enable / disable the FSFS format 7 logical addressing feature for a
+ * newly created repository.
+ *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_LOG_ADDRESSING       "fsfs-log-addressing"
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
@@ -2249,13 +2259,13 @@ typedef svn_error_t *
  * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
- * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be @c FALSE.  Also, this
- * is a best-effort function which means that there is no guarantee that
- * @a processor gets called at all for some content.
+ * not be implemented for all data backends or not be applicable for certain
+ * content.  In those cases, @a *success will always be @c FALSE.  Also,
+ * this is a best-effort function which means that there is no guarantee
+ * that @a processor gets called at all.
  *
- * @note @a processor is expected to be relatively short function with
- * at most O(content size) runtime.
+ * @note @a processor is expected to be a relatively simple function with
+ * a runtime of O(content size) or less.
  *
  * @since New in 1.8.
  */
@@ -3032,6 +3042,9 @@ typedef struct svn_fs_fsfs_info_t {
    * @note Zero (0) if (but not iff) the format does not support packing. */
   svn_revnum_t min_unpacked_rev;
 
+  /* TRUE if logical addressing is enabled for this repository.
+   * FALSE if repository uses physical addressing. */
+  svn_boolean_t log_addressing;
   /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
 
   /* If you add fields here, check whether you need to extend svn_fs_info()

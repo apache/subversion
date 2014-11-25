@@ -214,6 +214,7 @@ fs_info(const void **fsfs_info,
   info->fs_type = SVN_FS_TYPE_FSFS;
   info->shard_size = ffd->max_files_per_dir;
   info->min_unpacked_rev = ffd->min_unpacked_rev;
+  info->log_addressing = ffd->use_log_addressing;
   *fsfs_info = info;
   return SVN_NO_ERROR;
 }
@@ -266,7 +267,7 @@ static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
-  ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
+  ffd->use_log_addressing = FALSE;
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;

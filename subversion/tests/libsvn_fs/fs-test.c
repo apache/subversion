@@ -1596,6 +1596,10 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_make_file(txn_root, "theta", pool));
     SVN_ERR(svn_test__set_file_contents
             (txn_root, "theta", "This is another file 'theta'.\n", pool));
+
+    /* TXN must actually be based upon revisions[4] (instead of HEAD). */
+    SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == revisions[4]);
+
     SVN_ERR(test_commit_txn(&failed_rev, txn, "/theta", pool));
     SVN_ERR(svn_fs_abort_txn(txn, pool));
 
@@ -1618,6 +1622,9 @@ merging_commit(const svn_test_opts_t *opts,
     SVN_ERR(svn_fs_begin_txn(&txn, fs, revisions[1], pool));
     SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
     SVN_ERR(svn_fs_delete(txn_root, "A/D/H", pool));
+
+    /* TXN must actually be based upon revisions[1] (instead of HEAD). */
+    SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == revisions[1]);
 
     /* We used to create the revision like this before fixing issue
        #2751 -- Directory prop mods reverted in overlapping commits scenario.
@@ -5562,11 +5569,11 @@ upgrade_while_committing(const svn_test_opts_t *opts,
   /* Upgrade filesystem, but keep existing svn_fs_t object. */
   SVN_ERR(svn_fs_upgrade(fs_path, pool));
 
-  /* Creating a new txn for the old svn_fs_t object shall fail. */
-  SVN_TEST_ASSERT_ANY_ERROR(svn_fs_begin_txn(&txn2, fs, head_rev, pool));
+  /* Creating a new txn for the old svn_fs_t should not fail. */
+  SVN_ERR(svn_fs_begin_txn(&txn2, fs, head_rev, pool));
 
-  /* Committing the already existing txn shall fail as well. */
-  SVN_TEST_ASSERT_ANY_ERROR(test_commit_txn(&head_rev, txn1, NULL, pool));
+  /* Committing the already existing txn should not fail. */
+  SVN_ERR(test_commit_txn(&head_rev, txn1, NULL, pool));
 
   /* Verify filesystem content. */
   SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,
@@ -5862,7 +5869,736 @@ purge_txn_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+compare_contents(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root1, *root2;
+  const char *original = "original contents";
+  svn_revnum_t rev;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
+  /* Two similar but different texts that yield the same MD5 digest. */
+  const char *evil_text1
+    = "\xd1\x31\xdd\x02\xc5\xe6\xee\xc4\x69\x3d\x9a\x06\x98\xaf\xf9\x5c"
+      "\x2f\xca\xb5\x87\x12\x46\x7e\xab\x40\x04\x58\x3e\xb8\xfb\x7f\x89"
+      "\x55\xad\x34\x06\x09\xf4\xb3\x02\x83\xe4\x88\x83\x25\x71\x41\x5a"
+      "\x08\x51\x25\xe8\xf7\xcd\xc9\x9f\xd9\x1d\xbd\xf2\x80\x37\x3c\x5b"
+      "\xd8\x82\x3e\x31\x56\x34\x8f\x5b\xae\x6d\xac\xd4\x36\xc9\x19\xc6"
+      "\xdd\x53\xe2\xb4\x87\xda\x03\xfd\x02\x39\x63\x06\xd2\x48\xcd\xa0"
+      "\xe9\x9f\x33\x42\x0f\x57\x7e\xe8\xce\x54\xb6\x70\x80\xa8\x0d\x1e"
+      "\xc6\x98\x21\xbc\xb6\xa8\x83\x93\x96\xf9\x65\x2b\x6f\xf7\x2a\x70";
+  const char *evil_text2
+    = "\xd1\x31\xdd\x02\xc5\xe6\xee\xc4\x69\x3d\x9a\x06\x98\xaf\xf9\x5c"
+      "\x2f\xca\xb5\x07\x12\x46\x7e\xab\x40\x04\x58\x3e\xb8\xfb\x7f\x89"
+      "\x55\xad\x34\x06\x09\xf4\xb3\x02\x83\xe4\x88\x83\x25\xf1\x41\x5a"
+      "\x08\x51\x25\xe8\xf7\xcd\xc9\x9f\xd9\x1d\xbd\x72\x80\x37\x3c\x5b"
+      "\xd8\x82\x3e\x31\x56\x34\x8f\x5b\xae\x6d\xac\xd4\x36\xc9\x19\xc6"
+      "\xdd\x53\xe2\x34\x87\xda\x03\xfd\x02\x39\x63\x06\xd2\x48\xcd\xa0"
+      "\xe9\x9f\x33\x42\x0f\x57\x7e\xe8\xce\x54\xb6\x70\x80\x28\x0d\x1e"
+      "\xc6\x98\x21\xbc\xb6\xa8\x83\x93\x96\xf9\x65\xab\x6f\xf7\x2a\x70";
+  svn_checksum_t *checksum1, *checksum2;
+
+  /* (path, rev) pairs to compare plus the expected API return values */
+  struct 
+    {
+      svn_revnum_t rev1;
+      const char *path1;
+      svn_revnum_t rev2;
+      const char *path2;
+
+      svn_boolean_t different;  /* result of svn_fs_*_different */
+      svn_tristate_t changed;   /* result of svn_fs_*_changed */
+    } to_compare[] =
+    {
+      /* same representation */
+      { 1, "foo", 2, "foo", FALSE, svn_tristate_false },
+      { 1, "foo", 2, "bar", FALSE, svn_tristate_false },
+      { 2, "foo", 2, "bar", FALSE, svn_tristate_false },
+
+      /* different content but MD5 check is not reliable */
+      { 3, "foo", 3, "bar", TRUE, svn_tristate_true },
+
+      /* different contents */
+      { 1, "foo", 3, "bar", TRUE, svn_tristate_true },
+      { 1, "foo", 3, "foo", TRUE, svn_tristate_true },
+      { 3, "foo", 4, "bar", TRUE, svn_tristate_true },
+      { 3, "foo", 4, "bar", TRUE, svn_tristate_true },
+      { 2, "bar", 3, "bar", TRUE, svn_tristate_true },
+      { 3, "bar", 4, "bar", TRUE, svn_tristate_true },
+
+      /* variations on the same theme: same content, possibly different rep */
+      { 4, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 1, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 2, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 1, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
+      { 2, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
+      { 2, "bar", 4, "bar", FALSE, svn_tristate_unknown }, 
+
+      /* EOL */
+      { 0 },
+    };
+
+  /* Same same, but different.
+   * Just checking that we actually have an MD5 collision. */
+  SVN_ERR(svn_checksum(&checksum1, svn_checksum_md5, evil_text1,
+                       strlen(evil_text1), pool));
+  SVN_ERR(svn_checksum(&checksum2, svn_checksum_md5, evil_text2,
+                       strlen(evil_text2), pool));
+  SVN_TEST_ASSERT(svn_checksum_match(checksum1, checksum1));
+  SVN_TEST_ASSERT(strcmp(evil_text1, evil_text2));
+
+  /* Now, build up our test repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-compare-contents",
+                              opts, pool));
+
+  /* Rev 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", original, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 1);
+  svn_pool_clear(iterpool);
+
+  /* Rev 2: copy that file. */
+  SVN_ERR(svn_fs_revision_root(&root1, fs, rev, iterpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_copy(root1, "foo", txn_root, "bar", iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 2);
+  svn_pool_clear(iterpool);
+
+  /* Rev 3: modify both files.
+   * The new contents differs for both files but has the same length and MD5.
+   */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", evil_text1, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "bar", evil_text2, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(evil_text1, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "bar", "prop",
+                                  svn_string_create(evil_text2, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 3);
+  svn_pool_clear(iterpool);
+
+  /* Rev 4: revert both file contents.
+   */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", original, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "bar", original, iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "foo", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "bar", "prop",
+                                  svn_string_create(original, iterpool),
+                                  iterpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
+  SVN_TEST_ASSERT(rev == 4);
+  svn_pool_clear(iterpool);
+
+  /* Perform all comparisons listed in TO_COMPARE. */
+  for (i = 0; to_compare[i].rev1 > 0; ++i)
+    {
+      svn_boolean_t text_different;
+      svn_boolean_t text_changed;
+      svn_boolean_t props_different;
+      svn_boolean_t props_changed;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_revision_root(&root1, fs, to_compare[i].rev1, iterpool));
+      SVN_ERR(svn_fs_revision_root(&root2, fs, to_compare[i].rev2, iterpool));
+
+      /* Compare node texts. */
+      SVN_ERR(svn_fs_contents_different(&text_different,
+                                        root1, to_compare[i].path1,
+                                        root2, to_compare[i].path2,
+                                        iterpool));
+      SVN_ERR(svn_fs_contents_changed(&text_changed,
+                                      root1, to_compare[i].path1,
+                                      root2, to_compare[i].path2,
+                                      iterpool));
+
+      /* Compare properties. */
+      SVN_ERR(svn_fs_props_different(&props_different,
+                                     root1, to_compare[i].path1,
+                                     root2, to_compare[i].path2,
+                                     iterpool));
+      SVN_ERR(svn_fs_props_changed(&props_changed,
+                                   root1, to_compare[i].path1,
+                                   root2, to_compare[i].path2,
+                                   iterpool));
+
+      /* Check results. */
+      SVN_TEST_ASSERT(text_different == to_compare[i].different);
+      SVN_TEST_ASSERT(props_different == to_compare[i].different);
+
+      switch (to_compare[i].changed)
+        {
+        case svn_tristate_true:
+          SVN_TEST_ASSERT(text_changed);
+          SVN_TEST_ASSERT(props_changed);
+          break;
+
+        case svn_tristate_false:
+          SVN_TEST_ASSERT(!text_changed);
+          SVN_TEST_ASSERT(!props_changed);
+          break;
+
+        default:
+          break;
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_path_change_create(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const svn_fs_id_t *id;
+  svn_fs_path_change2_t *change;
+
+  /* Build an empty test repo ... */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-path-change-create",
+                              opts, pool));
+
+  /* ... just to give us a valid ID. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_ERR(svn_fs_node_id(&id, root, "", pool));
+
+  /* Do what we came here for. */
+  change = svn_fs_path_change2_create(id, svn_fs_path_change_replace, pool);
+
+  SVN_TEST_ASSERT(change);
+  SVN_TEST_ASSERT(change->node_rev_id == id);
+  SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_replace);
+
+  /* All other fields should be "empty" / "unused". */
+  SVN_TEST_ASSERT(change->node_kind == svn_node_none);
+
+  SVN_TEST_ASSERT(change->text_mod == FALSE);
+  SVN_TEST_ASSERT(change->prop_mod == FALSE);
+  SVN_TEST_ASSERT(change->mergeinfo_mod == svn_tristate_unknown);
+
+  SVN_TEST_ASSERT(change->copyfrom_known == FALSE);
+  SVN_TEST_ASSERT(change->copyfrom_rev == SVN_INVALID_REVNUM);
+  SVN_TEST_ASSERT(change->copyfrom_path == NULL);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_node_created_info(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Test vectors. */
+  struct
+    {
+      svn_revnum_t rev;
+      const char *path;
+      svn_revnum_t crev;
+      const char *cpath;
+    } to_check[] =
+    {
+      /* New noderev only upon modification. */
+      { 1, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 2, "A/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "A/B/E/beta",  3, "/A/B/E/beta" },
+      { 4, "A/B/E/beta",  3, "/A/B/E/beta" },
+
+      /* Lazily copied node. */
+      { 2, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 3, "Z/B/E/beta",  1, "/A/B/E/beta" },
+      { 4, "Z/B/E/beta",  4, "/Z/B/E/beta" },
+
+      /* Bubble-up upon sub-tree change. */
+      { 2, "Z",  2, "/Z" },
+      { 3, "Z",  2, "/Z" },
+      { 4, "Z",  4, "/Z" },
+
+      { 0 }
+    };
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-created-path",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r2: copy a subtree */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, iterpool));
+  SVN_ERR(svn_fs_copy(root, "A", txn_root, "Z", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r3: touch node in copy source */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* r4: touch same relative node in copy target */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "Z/B/E/beta", "new", iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  /* Now ask for some 'node created' info. */
+  for (i = 0; to_check[i].rev > 0; ++i)
+    {
+      svn_revnum_t crev;
+      const char *cpath;
+
+      svn_pool_clear(iterpool);
+
+      /* Get created path and rev. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, to_check[i].rev, iterpool));
+      SVN_ERR(svn_fs_node_created_path(&cpath, root, to_check[i].path,
+                                       iterpool));
+      SVN_ERR(svn_fs_node_created_rev(&crev, root, to_check[i].path,
+                                      iterpool));
+
+      /* Compare the results with our expectations. */
+      SVN_TEST_STRING_ASSERT(cpath, to_check[i].cpath);
+
+      if (crev != to_check[i].crev)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "created rev mismatch for %s@%ld:\n"
+                                 "  expected '%ld'\n"
+                                 "     found '%ld",
+                                 to_check[i].path,
+                                 to_check[i].rev,
+                                 to_check[i].crev,
+                                 crev);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_print_modules(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  const char *expected, *module_name;
+  svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
+
+  /* Name of the providing module */
+  if (strcmp(opts->fs_type, "fsx") == 0)
+    module_name = "fs_x";
+  else if (strcmp(opts->fs_type, "fsfs") == 0)
+    module_name = "fs_fs";
+  else if (strcmp(opts->fs_type, "bdb") == 0)
+    module_name = "fs_base";
+  else
+    return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
+                             "don't know the module name for %s",
+                             opts->fs_type);
+
+  SVN_ERR(svn_fs_print_modules(modules, pool));
+
+  /* The requested FS type must be listed amongst the available modules. */
+  expected = apr_psprintf(pool, "* %s : ", module_name);
+  SVN_TEST_ASSERT(strstr(modules->data, expected));
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton to be used with process_file_contents. */
+typedef struct process_file_contents_baton_t
+{
+  const char *contents;
+  svn_boolean_t processed;
+} process_file_contents_baton_t;
+
+/* Implements svn_fs_process_contents_func_t.
+ * We flag the BATON as "processed" and compare the CONTENTS we've got to
+ * what we expect through the BATON.
+ */
+static svn_error_t *
+process_file_contents(const unsigned char *contents,
+                      apr_size_t len,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  process_file_contents_baton_t *b = baton;
+
+  SVN_TEST_ASSERT(strlen(b->contents) == len);
+  SVN_TEST_ASSERT(memcmp(b->contents, contents, len) == 0);
+  b->processed = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_zero_copy_processsing(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Start with a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-zero-copy-processing",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, iterpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, iterpool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, iterpool));
+  svn_pool_clear(iterpool);
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Prime the full-text cache by reading all file contents. */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_stream_t *stream;
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_file_contents(&stream, root, node->path, iterpool));
+        SVN_ERR(svn_stream_copy3(stream, svn_stream_buffered(iterpool),
+                                NULL, NULL, iterpool));
+      }
+
+  /* Now, try to get the data directly from cache
+   * (if the backend has caches). */
+  for (node = svn_test__greek_tree_nodes; node->path; node++)
+    if (node->contents)
+      {
+        svn_boolean_t success;
+
+        process_file_contents_baton_t baton;
+        baton.contents = node->contents;
+        baton.processed = FALSE;
+
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_fs_try_process_file_contents(&success, root, node->path,
+                                                process_file_contents, &baton,
+                                                iterpool));
+        SVN_TEST_ASSERT(success == baton.processed);
+      }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_dir_optimal_order(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t rev;
+  apr_hash_t *unordered;
+  apr_array_header_t *ordered;
+  int i;
+  apr_hash_index_t *hi;
+
+  /* Create a new repo and the greek tree in rev 1. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-dir-optimal-order",
+                              opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+
+  /* Call the API function we are interested in. */
+  SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+
+  /* Verify that all entries are returned. */
+  SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));
+  for (hi = apr_hash_first(pool, unordered); hi; hi = apr_hash_next(hi))
+    {
+      svn_boolean_t found = FALSE;
+      const char *name = apr_hash_this_key(hi);
+
+      /* Compare hash -> array because the array might contain the same
+       * entry more than once.  Since that can't happen in the hash, doing
+       * it in this direction ensures ORDERED won't contain duplicates.
+       */
+      for (i = 0; !found && i < ordered->nelts; ++i)
+        {
+          svn_fs_dirent_t *item = APR_ARRAY_IDX(ordered, i, svn_fs_dirent_t*);
+          if (strcmp(item->name, name) == 0)
+            {
+              found = TRUE;
+              SVN_TEST_ASSERT(item == apr_hash_this_val(hi));
+            }
+        }
+
+      SVN_TEST_ASSERT(found);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_config_files(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  apr_array_header_t *files;
+  int i;
+  const char *repo_name = "test-repo-config-files";
+
+  /* Create a empty and get its config files. */
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, pool));
+  SVN_ERR(svn_fs_info_config_files(&files, fs, pool, pool));
+
+  /* All files should exist and be below the repo. */
+  for (i = 0; i < files->nelts; ++i)
+    {
+      svn_node_kind_t kind;
+      const char *path = APR_ARRAY_IDX(files, i, const char*);
+
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+
+      SVN_TEST_ASSERT(kind == svn_node_file);
+      SVN_TEST_ASSERT(svn_dirent_is_ancestor(repo_name, path));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_delta_file_stream(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root1, *root2;
+  svn_revnum_t rev;
+
+  const char *old_content = "some content";
+  const char *new_content = "some more content";
+  svn_txdelta_window_handler_t delta_handler;
+  void *delta_baton;
+  svn_txdelta_stream_t *delta_stream;
+  svn_stringbuf_t *source = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *dest = svn_stringbuf_create_empty(pool);
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-delta-file-stream",
+                              opts, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", old_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  /* Revision 2: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", new_content, pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root1, fs, 1, pool));
+  SVN_ERR(svn_fs_revision_root(&root2, fs, 2, pool));
+
+  /* Test 1: Get delta against empty target. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       NULL, NULL, root1, "foo", pool));
+
+  svn_stringbuf_setempty(source);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  /* Test 2: Get delta against previous version. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root1, "foo", root2, "foo", pool));
+
+  svn_stringbuf_set(source, old_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(new_content, dest->data);
+
+  /* Test 3: Get reverse delta. */
+  SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
+                                       root2, "foo", root1, "foo", pool));
+
+  svn_stringbuf_set(source, new_content);
+  svn_stringbuf_setempty(dest);
+
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
+                    svn_stream_from_stringbuf(dest, pool),
+                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  SVN_ERR(svn_txdelta_send_txstream(delta_stream,
+                                    delta_handler,
+                                    delta_baton,
+                                    pool));
+  SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fs_merge(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root0, *root1;
+  svn_revnum_t rev;
+
+  /* Very basic test for svn_fs_merge because all the other interesting
+   * cases get tested implicitly with concurrent txn / commit tests.
+   * This API is just a thin layer around the internal merge function
+   * and we simply check that the plumbing between them works.
+   */
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-merge",
+                              opts, pool));
+  SVN_ERR(svn_fs_revision_root(&root0, fs, 0, pool));
+
+  /* Revision 1: create a file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+  SVN_ERR(svn_fs_revision_root(&root1, fs, rev, pool));
+
+  /* Merge-able txn: create another file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "bar", pool));
+
+  SVN_ERR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0, "/", pool));
+
+  /* Not merge-able: create the same file file. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_fs_merge(NULL, root1, "/", txn_root, "/", root0,
+                                     "/", pool), SVN_ERR_FS_CONFLICT);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fsfs_config_opts(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *fs_config;
+  svn_fs_t *fs;
+  const svn_fs_info_placeholder_t *fs_info;
+  const svn_fs_fsfs_info_t *fsfs_info;
+
+  /* Bail (with SKIP) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  /* Remove the test directory from previous runs. */
+  SVN_ERR(svn_io_remove_dir2("test-fsfs-config-opts", TRUE, NULL, NULL, pool));
+
+  /* Create the test directory and add it to the test cleanup list. */
+  SVN_ERR(svn_io_dir_make("test-fsfs-config-opts", APR_OS_DEFAULT, pool));
+  svn_test_add_dir_cleanup("test-fsfs-config-opts");
+
+  /* Create an FSFS filesystem with default config.*/
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
+  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/default", fs_config, pool));
+
+  /* Re-open FS to test the data on disk. */
+  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/default", NULL, pool, pool));
+
+  SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
+  SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
+  fsfs_info = (const void *) fs_info;
+
+  /* Check FSFS specific info. Don't check the SHARD_SIZE, because it depends
+   * on a compile-time constant and may be overridden. */
+  SVN_TEST_ASSERT(fsfs_info->log_addressing);
+  SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+
+  /* Create an FSFS filesystem with custom settings: disabled log-addressing
+   * and custom shard size (123). */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_LOG_ADDRESSING, "false");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "123");
+  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/custom", fs_config, pool));
+
+  /* Re-open FS to test the data on disk. */
+  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/custom", NULL, pool, pool));
+
+  SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
+  SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
+  fsfs_info = (const void *) fs_info;
+
+  /* Check FSFS specific info, including the SHARD_SIZE. */
+  SVN_TEST_ASSERT(fsfs_info->log_addressing == FALSE);
+  SVN_TEST_ASSERT(fsfs_info->shard_size == 123);
+  SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev == 0);
+
+  return SVN_NO_ERROR;
+}
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5968,6 +6704,26 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test deletion after replace in changed paths list"),
     SVN_TEST_OPTS_PASS(purge_txn_test,
                        "test purging transactions"),
+    SVN_TEST_OPTS_PASS(compare_contents,
+                       "compare contents of different nodes"),
+    SVN_TEST_OPTS_PASS(test_path_change_create,
+                       "test svn_fs_path_change2_create"),
+    SVN_TEST_OPTS_PASS(test_node_created_info,
+                       "test FS 'node created' info"),
+    SVN_TEST_OPTS_PASS(test_print_modules,
+                       "test FS module listing"),
+    SVN_TEST_OPTS_PASS(test_zero_copy_processsing,
+                       "test zero copy file processing"),
+    SVN_TEST_OPTS_PASS(test_dir_optimal_order,
+                       "test svn_fs_dir_optimal_order"),
+    SVN_TEST_OPTS_PASS(test_config_files,
+                       "get configuration files"),
+    SVN_TEST_OPTS_PASS(test_delta_file_stream,
+                       "get a delta stream on a file"),
+    SVN_TEST_OPTS_PASS(test_fs_merge,
+                       "get merging txns with newer revisions"),
+    SVN_TEST_OPTS_PASS(test_fsfs_config_opts,
+                       "test creating FSFS repository with different opts"),
     SVN_TEST_NULL
   };
 

@@ -51,7 +51,7 @@ extern "C" {
 typedef struct svn_fs_fs__large_change_info_t
 {
   /* size of the (deltified) representation */
-  apr_size_t size;
+  apr_uint64_t size;
 
   /* Revision of the representation. SVN_INVALID_REVNUM for unused entries. */
   svn_revnum_t revision;
@@ -70,7 +70,7 @@ typedef struct svn_fs_fs__largest_changes_t
   apr_size_t count;
 
   /* size of the smallest change */
-  apr_size_t min_size;
+  apr_uint64_t min_size;
 
   /* changes kept in this struct */
   svn_fs_fs__large_change_info_t **changes;
@@ -81,10 +81,10 @@ typedef struct svn_fs_fs__largest_changes_t
 typedef struct svn_fs_fs__histogram_line_t
 {
   /* number of item that fall into this bracket */
-  apr_int64_t count;
+  apr_uint64_t count;
 
   /* sum of values in this bracket */
-  apr_int64_t sum;
+  apr_uint64_t sum;
 } svn_fs_fs__histogram_line_t;
 
 /* A histogram of 64 bit integer values.
@@ -119,16 +119,16 @@ typedef struct svn_fs_fs__extension_info_t
 typedef struct svn_fs_fs__rep_pack_stats_t
 {
   /* number of representations */
-  apr_int64_t count;
+  apr_uint64_t count;
 
   /* total size after deltification (i.e. on disk size) */
-  apr_int64_t packed_size;
+  apr_uint64_t packed_size;
 
   /* total size after de-deltification (i.e. plain text size) */
-  apr_int64_t expanded_size;
+  apr_uint64_t expanded_size;
 
   /* total on-disk header size */
-  apr_int64_t overhead_size;
+  apr_uint64_t overhead_size;
 } svn_fs_fs__rep_pack_stats_t;
 
 /* Statistics we collect over a given set of representations.
@@ -146,11 +146,11 @@ typedef struct svn_fs_fs__representation_stats_t
   svn_fs_fs__rep_pack_stats_t shared;
 
   /* sum of all ref_counts */
-  apr_int64_t references;
+  apr_uint64_t references;
 
   /* sum of ref_count * expanded_size,
    * i.e. total plaintext content if there was no rep sharing */
-  apr_int64_t expanded_size;
+  apr_uint64_t expanded_size;
 } svn_fs_fs__representation_stats_t;
 
 /* Basic statistics we collect over a given set of noderevs.
@@ -158,10 +158,10 @@ typedef struct svn_fs_fs__representation_stats_t
 typedef struct svn_fs_fs__node_stats_t
 {
   /* number of noderev structs */
-  apr_int64_t count;
+  apr_uint64_t count;
 
   /* their total size on disk (structs only) */
-  apr_int64_t size;
+  apr_uint64_t size;
 } svn_fs_fs__node_stats_t;
 
 /* Comprises all the information needed to create the output of the
@@ -170,16 +170,16 @@ typedef struct svn_fs_fs__node_stats_t
 typedef struct svn_fs_fs__stats_t
 {
   /* sum total of all rev / pack file sizes in bytes */
-  apr_int64_t total_size;
+  apr_uint64_t total_size;
 
   /* number of revisions in the repository */
-  apr_int64_t revision_count;
+  apr_uint64_t revision_count;
 
   /* total number of changed paths */
-  apr_int64_t change_count;
+  apr_uint64_t change_count;
 
   /* sum of all changed path list sizes on disk in bytes */
-  apr_int64_t change_len;
+  apr_uint64_t change_len;
 
   /* stats on all representations */
   svn_fs_fs__representation_stats_t total_rep_stats;

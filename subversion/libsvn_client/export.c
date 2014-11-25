@@ -1581,7 +1581,7 @@ svn_client_export5(svn_revnum_t *result_rev,
         = svn_wc_create_notify(to_path,
                                svn_wc_notify_update_completed, pool);
       notify->revision = edit_revision;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   if (result_rev)

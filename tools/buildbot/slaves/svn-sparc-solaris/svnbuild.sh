@@ -28,9 +28,10 @@ SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_
 cd ../obj
 grep obj/subversion/tests /etc/mnttab > /dev/null || mount-tmpfs
 
-if [ $SVN_VER_MINOR -eq 8 ]; then
-  # A bug causes 1.8 --enable-optimize to add -flto which isn't supported
-  OPTIONS_1_8='--disable-optimize'
+# --enable-optimize adds -flto which breaks the 1.8 C tests because
+# they link main() from a library.
+if [ $SVN_VER_MINOR -gt 8 ]; then
+  OPTIMIZE_OPTION='--enable-optimize'
 fi
 
 echo "============ configure"
@@ -42,7 +43,7 @@ echo "============ configure"
   --with-sqlite=/export/home/wandisco/buildbot/sqlite-amalgamation-3071501/sqlite3.c \
   --enable-optimize \
   --disable-shared \
-  $OPTIONS_1_8 \
+  $OPTIMIZE_OPTION \
   || exit $?
 
 echo "============ make"

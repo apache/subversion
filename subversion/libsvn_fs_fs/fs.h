@@ -59,8 +59,6 @@ extern "C" {
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions in
                                                     repos w/o log addressing */
-#define PATH_TXNS_LA_DIR      "transactions-la"  /* Directory of transactions in
-                                                    repos with log addressing */
 #define PATH_NODE_ORIGINS_DIR "node-origins"     /* Lazy node-origin cache */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
@@ -191,7 +189,6 @@ extern "C" {
    per file.  On Windows apr implements the locking as per file handle
    locks, so we don't have to add our own mutex for just in-process
    synchronization. */
-/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
 #if APR_HAS_THREADS && !defined(WIN32)
 #define SVN_FS_FS__USE_LOCK_MUTEX 1
 #else
@@ -305,11 +302,9 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
-  /* The first revision that uses logical addressing.  SVN_INVALID_REVNUM
-     if there is no such revision (pre-f7 or non-sharded).  May be a
-     future revision if the current shard started with physical addressing
-     and is not complete, yet. */
-  svn_revnum_t min_log_addressing_rev;
+  /* If set, this FS is using logical addressing. Otherwise, it is using
+     physical addressing. */
+  svn_boolean_t use_log_addressing;
 
   /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
@@ -357,9 +352,6 @@ typedef struct fs_fs_data_t
   /* Fulltext cache; currently only used with memcached.  Maps from
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
-
-  /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
-  svn_cache__t *revprop_cache;
 
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
