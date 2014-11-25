@@ -130,6 +130,15 @@ Candidate changes:
    Votes:
      +1: philip, markphip
 
+ * r1641564
+   Fix issue 4185: file external not following history.
+   Justification:
+     Checkout/update fails, regression from 1.6.
+   Branch:
+     ^/subversion/branches/1.8.x-r1641564
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
