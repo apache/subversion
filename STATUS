@@ -77,18 +77,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1628431, r1628536, r1628540
-   Fix issue #4085, "external can shadow a versioned directory".
-   Justification:
-     Bug that can lead to a working copy which cannot be updated
-     until a directory shadowing an external, which was switched
-     to the external's location by the externals handling code,
-     is switched back to its original path.
-   Notes:
-     r1628536 is the fix, r1628431 and r1628540 correct the test.
-   Votes:
-     +1: stsp, philip
-
  * r1633126
    Improve performance of recorded timestamp fixups in svn cleanup
    Justification:
@@ -154,3 +142,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1628431, r1628536, r1628540
+   Fix issue #4085, "external can shadow a versioned directory".
+   Justification:
+     Bug that can lead to a working copy which cannot be updated
+     until a directory shadowing an external, which was switched
+     to the external's location by the externals handling code,
+     is switched back to its original path.
+   Notes:
+     r1628536 is the fix, r1628431 and r1628540 correct the test.
+   Votes:
+     +1: stsp, philip, rhuijben
