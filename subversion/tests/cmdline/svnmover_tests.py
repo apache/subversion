@@ -65,7 +65,7 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
                                                             *varargs)
   if errlines:
     raise svntest.main.SVNCommitFailure(str(errlines))
-  if len(outlines) != 1 or not _commit_re.match(outlines[0]):
+  if len(outlines) < 1 or not _commit_re.match(outlines[-1]):
     raise svntest.main.SVNLineUnequal(str(outlines))
 
   # Now, run 'svn log -vq -rHEAD'
@@ -409,7 +409,7 @@ def merges(sbox):
                            'merge', 'branches/br1', 'trunk', 'trunk@5')
 
   # a merge that makes changes, with conflicts
-  svntest.actions.run_and_verify_svnmover(None, [], svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svnmover(None, None, svntest.verify.AnyOutput,
                            '-U', repo_url,
                            'merge', 'trunk@6', 'branches/br1', 'trunk@3')
 
