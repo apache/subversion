@@ -77,6 +77,24 @@ check_lib_versions(void)
   return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
+static svn_boolean_t quiet = FALSE;
+
+/*  */
+static void
+notify(const char *fmt,
+       ...)
+{
+  va_list ap;
+
+  if (! quiet)
+    {
+      va_start(ap, fmt);
+      vprintf(fmt, ap);
+      va_end(ap);
+      printf("\n");
+    }
+}
+
 /* ====================================================================== */
 
 typedef struct mtcc_t
@@ -626,13 +644,13 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
       if (conflict)
         {
-          SVN_DBG(("merged: e%d => conflict", eid));
+          notify("!    <e%d> <conflict>", eid);
           had_conflict = TRUE;
         }
       else if (e_tgt && result)
         {
-          SVN_DBG(("merged: e%d => parent=e%d, name=%s, content=...",
-                   eid, result->parent_eid, result->name));
+          notify("M/V  <e%d> %s",
+                 eid, result->name);
 
           SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
                                     result->parent_eid, result->name,
@@ -640,12 +658,12 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
       else if (e_tgt)
         {
-          SVN_DBG(("merged: e%d => <deleted>", eid));
+          notify("D    <e%d> %s", eid, e_yca->name);
           SVN_ERR(svn_editor3_delete(editor, tgt->rev, tgt->branch, eid));
         }
       else if (result)
         {
-          SVN_DBG(("merged: e%d => <added>", eid));
+          notify("A    <e%d> %s", eid, result->name);
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -1281,6 +1299,7 @@ execute(const apr_array_header_t *actions,
                                     el_rev[1]->branch, parent_el_rev[1]->eid,
                                     path_name[1],
                                     iterpool));
+          notify("A+   (br) %s", action->path[1]);
           made_changes = TRUE;
           break;
         case ACTION_MKBRANCH:
@@ -1301,6 +1320,7 @@ execute(const apr_array_header_t *actions,
                                          parent_el_rev[0]->branch, new_eid,
                                          iterpool));
           }
+          notify("A    (br) %s", action->path[0]);
           made_changes = TRUE;
           break;
         case ACTION_BRANCHIFY:
@@ -1309,6 +1329,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR(svn_branch_branchify(editor,
                                        el_rev[0]->branch, el_rev[0]->eid,
                                        iterpool));
+          notify("R    (br) %s", action->path[0]);
           made_changes = TRUE;
           break;
         case ACTION_DISSOLVE:
@@ -1342,6 +1363,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mv", 1);
           SVN_ERR(do_move(editor, el_rev[0], parent_el_rev[1], path_name[1],
                           pool));
+          notify("V    %s (from %s)", action->path[1], action->path[0]);
           made_changes = TRUE;
           break;
         case ACTION_CP:
@@ -1355,6 +1377,7 @@ execute(const apr_array_header_t *actions,
                                         el_rev[0],
                                         parent_el_rev[1]->branch,
                                         parent_el_rev[1]->eid, path_name[1]));
+          notify("A+   %s (from %s)", action->path[1], action->path[0]);
           made_changes = TRUE;
           break;
         case ACTION_RM:
@@ -1379,6 +1402,7 @@ execute(const apr_array_header_t *actions,
                                     parent_el_rev[0]->eid, path_name[0],
                                     content));
           }
+          notify("A    %s", action->path[0]);
           made_changes = TRUE;
           break;
         case ACTION_PUT_FILE:
@@ -1429,6 +1453,7 @@ execute(const apr_array_header_t *actions,
                                         content));
               }
           }
+          notify("A    %s", action->path[1]);
           made_changes = TRUE;
           break;
         default:
@@ -1499,6 +1524,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
       "  -v [--verbose]         : display debugging messages\n"
+      "  -q [--quiet]           : suppress notifications\n"
       "  -m [--message] ARG     : use ARG as a log message\n"
       "  -F [--file] ARG        : read log message from file ARG\n"
       "  -u [--username] ARG    : commit the changes as username ARG\n"
@@ -1669,6 +1695,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   };
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
+    {"quiet", '-q', 0, ""},
     {"branch", 'b', 1, ""},
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
@@ -1731,6 +1758,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
         case 'v':
           svn__set_verbose(TRUE);
+          break;
+        case 'q':
+          quiet = TRUE;
           break;
         case 'm':
           SVN_ERR(svn_utf_cstring_to_utf8(&message, arg, pool));
