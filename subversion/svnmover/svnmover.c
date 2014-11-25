@@ -225,6 +225,30 @@ typedef enum action_code_t {
   ACTION_RM
 } action_code_t;
 
+typedef struct action_defn_t {
+  enum action_code_t code;
+  const char *name;
+  int num_args;
+} action_defn_t;
+
+static const action_defn_t action_defn[] =
+{
+  {ACTION_DIFF,             "diff", 2},
+  {ACTION_DIFF_E,           "diff-e", 2},
+  {ACTION_LIST_BRANCHES,    "ls-br", 0},
+  {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0},
+  {ACTION_BRANCH,           "branch", 2},
+  {ACTION_MKBRANCH,         "mkbranch", 1},
+  {ACTION_BRANCHIFY,        "branchify", 1},
+  {ACTION_DISSOLVE,         "dissolve", 1},
+  {ACTION_MERGE,            "merge", 3},
+  {ACTION_MV,               "mv", 2},
+  {ACTION_MKDIR,            "mkdir", 1},
+  {ACTION_PUT_FILE,         "put", 2},
+  {ACTION_CP,               "cp", 2},
+  {ACTION_RM,               "rm", 1},
+};
+
 struct action {
   action_code_t action;
 
@@ -233,8 +257,10 @@ struct action {
 
   /* action    path[0]  path[1]  path[2]
    * ------    -------  -------  -------
-   * list_br   path
+   * diff[-e]  left     right
+   * ls-br[-r]
    * branch    source   target
+   * mkbranch  path
    * branchify path
    * dissolve  path
    * merge     from     to       yca@rev
@@ -1940,66 +1966,33 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       const char *cp_from_rev = NULL;
 
       /* First, parse the action. */
-      if (! strcmp(action_string, "diff"))
-        action->action = ACTION_DIFF;
-      else if (! strcmp(action_string, "diff-e"))
-        action->action = ACTION_DIFF_E;
-      else if (! strcmp(action_string, "ls-br"))
-        action->action = ACTION_LIST_BRANCHES;
-      else if (! strcmp(action_string, "ls-br-r"))
-        action->action = ACTION_LIST_BRANCHES_R;
-      else if (! strcmp(action_string, "branch"))
-        action->action = ACTION_BRANCH;
-      else if (! strcmp(action_string, "mkbranch"))
-        action->action = ACTION_MKBRANCH;
-      else if (! strcmp(action_string, "branchify"))
-        action->action = ACTION_BRANCHIFY;
-      else if (! strcmp(action_string, "dissolve"))
-        action->action = ACTION_DISSOLVE;
-      else if (! strcmp(action_string, "merge"))
-        action->action = ACTION_MERGE;
-      else if (! strcmp(action_string, "mv"))
-        action->action = ACTION_MV;
-      else if (! strcmp(action_string, "cp"))
+      if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
+          || ! strcmp(action_string, "help"))
         {
-          action->action = ACTION_CP;
+          usage(stdout, pool);
+          return SVN_NO_ERROR;
+        }
+      for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
+        {
+          if (strcmp(action_string, action_defn[j].name) == 0)
+            {
+              action->action = action_defn[j].code;
+              num_url_args = action_defn[j].num_args;
+              break;
+            }
+        }
+      if (! action->action)
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 "'%s' is not an action",
+                                 action_string);
 
+      if (action->action == ACTION_CP)
+        {
           /* next argument is the copy source revision */
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient());
           cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
         }
-      else if (! strcmp(action_string, "mkdir"))
-        action->action = ACTION_MKDIR;
-      else if (! strcmp(action_string, "put"))
-        action->action = ACTION_PUT_FILE;
-      else if (! strcmp(action_string, "rm"))
-        action->action = ACTION_RM;
-      else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
-               || ! strcmp(action_string, "help"))
-        {
-          usage(stdout, pool);
-          return SVN_NO_ERROR;
-        }
-      else
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 "'%s' is not an action",
-                                 action_string);
-
-      /* How many URLs does this action expect? */
-      if (action->action == ACTION_RM
-          || action->action == ACTION_MKDIR
-          || action->action == ACTION_MKBRANCH
-          || action->action == ACTION_BRANCHIFY
-          || action->action == ACTION_DISSOLVE)
-        num_url_args = 1;
-      else if (action->action == ACTION_LIST_BRANCHES
-               || action->action == ACTION_LIST_BRANCHES_R)
-        num_url_args = 0;
-      else if (action->action == ACTION_MERGE)
-        num_url_args = 3;
-      else
-        num_url_args = 2;
 
       /* Parse the required number of URLs. */
       for (j = 0; j < num_url_args; ++j)
