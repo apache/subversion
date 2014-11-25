@@ -413,6 +413,79 @@ def merges(sbox):
                            '-U', repo_url,
                            'merge', 'trunk@6', 'branches/br1', 'trunk@3')
 
+@XFail()  # bug: in r7 'bar' is plain-added instead of copied.
+def merge_edits_with_move(sbox):
+  "merge_edits_with_move"
+  sbox_build_svnmover(sbox)
+  repo_url = sbox.repo_url
+
+  # ### This checks the traditional 'log' output, in which a move shows up
+  # as a delete and a set of adds.
+
+  # make a 'trunk' branch and a 'branches' directory
+  # (r2)
+  test_svnmover(repo_url, [
+                 'A /trunk',
+                 'A /branches',
+                ],
+                'mkbranch', 'trunk',
+                'mkdir', 'branches')
+
+  # create initial state in trunk
+  # (r3)
+  test_svnmover(repo_url + '/trunk', [
+                 'A /trunk/lib',
+                 'A /trunk/lib/foo',
+                 'A /trunk/lib/foo/x',
+                 'A /trunk/lib/foo/y',
+                ],
+                'mkdir', 'lib',
+                'mkdir', 'lib/foo',
+                'mkdir', 'lib/foo/x',
+                'mkdir', 'lib/foo/y')
+
+  # branch (r4)
+  test_svnmover(repo_url, [
+                 'A /branches/br1 (from /trunk:3)',
+                ],
+                'branch', 'trunk', 'branches/br1')
+
+  # on trunk: make edits under 'foo' (r5)
+  test_svnmover(repo_url + '/trunk', [
+                 'D /trunk/lib/foo/x',
+                 'D /trunk/lib/foo/y',
+                 'A /trunk/lib/foo/y2 (from /trunk/lib/foo/y:4)',
+                 'A /trunk/lib/foo/z',
+                ],
+                'rm', 'lib/foo/x',
+                'mv', 'lib/foo/y', 'lib/foo/y2',
+                'mkdir', 'lib/foo/z')
+
+  # on branch: move/rename 'foo' (r6)
+  test_svnmover(repo_url + '/branches/br1', [
+                 'A /branches/br1/bar (from /branches/br1/lib/foo:5)',
+                 'D /branches/br1/lib/foo',
+                ],
+                'mv', 'lib/foo', 'bar')
+
+  # merge the move to trunk (r7)
+  test_svnmover(repo_url, [
+                 'A /trunk/bar (from /trunk/lib/foo:6)',
+                 'A /trunk/bar/y2 (from /trunk/lib/foo/y2:6)',
+                 'A /trunk/bar/z (from /trunk/lib/foo/z:6)',
+                 'D /trunk/lib/foo',
+                ],
+                'merge', 'branches/br1@6', 'trunk', 'trunk@3')
+
+  # merge the edits in trunk (excluding the merge r7) to branch (r8)
+  test_svnmover(repo_url, [
+                 'D /branches/br1/bar/x',
+                 'D /branches/br1/bar/y',
+                 'A /branches/br1/bar/y2 (from /branches/br1/bar/y:7)',
+                 'A /branches/br1/bar/z',
+                ],
+                'merge', 'trunk@6', 'branches/br1', 'trunk@3')
+
 
 ######################################################################
 
@@ -420,6 +493,7 @@ test_list = [ None,
               basic_svnmover,
               nested_replaces,
               merges,
+              merge_edits_with_move,
             ]
 
 if __name__ == '__main__':
