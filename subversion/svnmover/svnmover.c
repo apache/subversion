@@ -279,16 +279,25 @@ static svn_error_t *
 family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                              svn_branch_family_t *family,
                              svn_boolean_t recursive,
+                             svn_boolean_t verbose,
                              apr_pool_t *scratch_pool)
 {
   apr_array_header_t *fam_branch_instances
     = svn_branch_family_get_branch_instances(rev_root, family, scratch_pool);
   int b;
 
-  printf("family %d (BIDs %d:%d, EIDs %d:%d)\n",
-         family->fid,
-         family->first_bid, family->next_bid,
-         family->first_eid, family->next_eid);
+  if (verbose)
+    {
+      printf("family %d (BIDs %d:%d, EIDs %d:%d)\n",
+             family->fid,
+             family->first_bid, family->next_bid,
+             family->first_eid, family->next_eid);
+    }
+  else
+    {
+      printf("branch roots in family %d:\n",
+             family->fid);
+    }
 
   for (b = 0; b < fam_branch_instances->nelts; b++)
     {
@@ -296,23 +305,31 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
         = APR_ARRAY_IDX(fam_branch_instances, b, svn_branch_instance_t *);
       int eid;
 
-      printf("  branch %d (root element %d -> '/%s')\n",
-             branch->sibling_defn->bid, branch->sibling_defn->root_eid,
-             svn_branch_get_root_rrpath(branch, scratch_pool));
-      for (eid = family->first_eid; eid < family->next_eid; eid++)
+      if (verbose)
         {
-          const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
-                                                            scratch_pool);
-
-          if (rrpath)
+          printf("  branch %d (root element %d -> '/%s')\n",
+                 branch->sibling_defn->bid, branch->sibling_defn->root_eid,
+                 svn_branch_get_root_rrpath(branch, scratch_pool));
+          for (eid = family->first_eid; eid < family->next_eid; eid++)
             {
-              const char *relpath
-                = svn_relpath_skip_ancestor(
-                    svn_branch_get_root_rrpath(branch, scratch_pool), rrpath);
+              const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
+                                                                scratch_pool);
 
-              printf("    e%d -> %s\n",
-                     eid, relpath[0] ? relpath : ".");
+              if (rrpath)
+                {
+                  const char *relpath
+                    = svn_relpath_skip_ancestor(
+                                                svn_branch_get_root_rrpath(branch, scratch_pool), rrpath);
+
+                  printf("    e%d -> %s\n",
+                         eid, relpath[0] ? relpath : ".");
+                }
             }
+        }
+      else
+        {
+          printf("  /%s\n",
+                 svn_branch_get_root_rrpath(branch, scratch_pool));
         }
     }
 
@@ -328,7 +345,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
             = APR_ARRAY_IDX(sub_families, f, svn_branch_family_t *);
 
           SVN_ERR(family_list_branch_instances(rev_root, sub_family, recursive,
-                                               scratch_pool));
+                                               verbose, scratch_pool));
         }
     }
 
@@ -1240,7 +1257,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(family_list_branch_instances(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
-                      FALSE, iterpool));
+                      FALSE, FALSE, iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES_R:
@@ -1252,7 +1269,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(family_list_branch_instances(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
-                      TRUE, iterpool));
+                      TRUE, TRUE, iterpool));
           }
           break;
         case ACTION_BRANCH:
