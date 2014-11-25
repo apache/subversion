@@ -489,16 +489,8 @@ switch_file_external(const char *local_abspath,
     void *switch_baton;
     svn_revnum_t revnum;
     apr_array_header_t *inherited_props;
-    const char *dir_abspath;
-    const char *target;
+    const char *target = svn_dirent_basename(local_abspath, scratch_pool);
 
-    svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
-
-    /* ### Why do we open a new session?  RA_SESSION is a valid
-       ### session -- the caller used it to call svn_ra_check_path on
-       ### this very URL, the caller also did the resolving and
-       ### reparenting that is repeated here. */
-    SVN_ERR(svn_ra_reparent(ra_session, switch_loc->url, scratch_pool));
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
                                        switch_loc->rev,
