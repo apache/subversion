@@ -135,6 +135,17 @@ Candidate changes:
     Votes:
       +1: philip, markphip
 
+ * r1641564
+   Fix issue 4185: file external not following history.
+   Justification:
+     Checkout/update fails, regression from 1.6.
+   Notes:
+     Failure was silent, notification occurred but file was not present in wc.
+   Branch:
+     ^/subversion/branches/1.7.x-r1641564
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
