@@ -126,15 +126,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1386594, 1386601, 1640730
-   Use sync Gnome Keyring API as our use of the async is not thread safe.
-    Justification:
-      Fix issue 3498: eclipse IDE crashes.
-    Notes:
-      r1640730 is the fix, r1386594 and r1386601 to avoid conflict.
-    Votes:
-      +1: philip, markphip
-
  * r1641564
    Fix issue 4185: file external not following history.
    Justification:
@@ -163,3 +154,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1386594, 1386601, 1640730
+   Use sync Gnome Keyring API as our use of the async is not thread safe.
+    Justification:
+      Fix issue 3498: eclipse IDE crashes.
+    Notes:
+      r1640730 is the fix, r1386594 and r1386601 to avoid conflict.
+    Votes:
+      +1: philip, markphip
+      +1: rhuijben (unable to test, but fix looks sane and simplifies code)
