@@ -1,0 +1,42 @@
+The contents of svn:mergeinfo has a significant impact on the performance
+of merges and may also require large amounts of storage.  A client-side
+tool shall remove redundant or obsolete mergeinfo and will reduce the
+number of individual ranges in the remainder.
+
+Features implemented:
+
+* analyze
+  Creates a report listing paths where mergeinfo can be removed entirely
+  and what makes it impossible to remove the mergeinfo from other nodes.
+  The user may then explicitly merge those sub-tree specific changes
+  and retry afterwards.
+
+* clear-obsoletes
+  Removes all mergeinfo for branches that don't exist in HEAD.
+
+* normalize
+  Removes all mergeinfo from a node, if *all* of it is either
+  - redundant with the parent contents
+    (same ranges for the respective branches)
+  - inoperative outside the respective sub-tree
+    (revisions marked as merged in the sub-node but not the parent
+     don't modify paths within the sub-node and outside in the same
+     revision)
+  - revisions listed for the parent only are inoperative on the sub-tree
+    (revisions marked as merged at the parent but not the sub-node did
+     not modify the sub-tree)
+  "parent" means the next higher node in the working copy that also
+  has mergeinfo on it.
+
+* combine-ranges
+  Combines neighboring ranges if they are compatible (same "inheritable"
+  flag) and the revisions in between are inoperative on the respective
+  path.
+
+TODO:
+
+* Proper documentation (docstrings etc.)
+* Progress output
+* Remove redundant code
+* Decide upon sub-command set / granularity
+* Verify that results are actually equivalent to original state
