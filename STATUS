@@ -44,8 +44,8 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-r1536854
    Votes:
      +1: stefan2
-     +0: breser (I'd be +1 if not for the unused function in svnadmin_tests.py;
-                 without r1640560)
+     +0 (without r1640560): breser (I'd be +1 if not for the unused function
+                                    in svnadmin_tests.py)
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
