@@ -68,25 +68,6 @@ Candidate changes:
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
 
- * r1625533, r1625537
-   Keep externals registrations on 'svn upgrade' (part of issue 4519)
-   Justification:
-     'svn upgrade' shouldn't destroy valid information.
-   Branch:
-     ^/subversion/branches/1.8.x-r1625533
-   Votes:
-     +1: rhuijben, philip
-
- * r1633126
-   Improve performance of recorded timestamp fixups in svn cleanup
-   Justification:
-     Fixing timestamps on a working copy with properly recorded timestamps
-     should not cost 10* the time of walking the working copy for status.
-   Branch:
-     ^/subversion/branches/1.8.x-r1633126
-   Votes:
-     +1: rhuijben, philip
-
  * r1637826
    Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
    Justification:
@@ -94,7 +75,7 @@ Candidate changes:
      to fix builds with libtool in a nonstandard location, if we
      then don't interpret said environment variables correctly.
    Votes:
-     +1: brane
+     +1: brane, stefan2
 
  * r1561419, r1561427, 1547489, r1560643, r1573744
    Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
@@ -111,15 +92,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1641564
-   Fix issue 4185: file external not following history.
-   Justification:
-     Checkout/update fails, regression from 1.6.
-   Branch:
-     ^/subversion/branches/1.8.x-r1641564
-   Votes:
-     +1: philip, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -135,3 +107,32 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1625533, r1625537
+   Keep externals registrations on 'svn upgrade' (part of issue 4519)
+   Justification:
+     'svn upgrade' shouldn't destroy valid information.
+   Branch:
+     ^/subversion/branches/1.8.x-r1625533
+   Votes:
+     +1: rhuijben, philip, stefan2
+
+ * r1633126
+   Improve performance of recorded timestamp fixups in svn cleanup
+   Justification:
+     Fixing timestamps on a working copy with properly recorded timestamps
+     should not cost 10* the time of walking the working copy for status.
+   Branch:
+     ^/subversion/branches/1.8.x-r1633126
+   Votes:
+     +1: rhuijben, philip, stefan2
+
+ * r1641564
+   Fix issue 4185: file external not following history.
+   Justification:
+     Checkout/update fails, regression from 1.6.
+   Branch:
+     ^/subversion/branches/1.8.x-r1641564
+   Votes:
+     +1: philip, rhuijben, stefan2
+
