@@ -3905,74 +3905,74 @@ msgstr "空的 L2P 索引页"
 
 #: ../libsvn_fs_fs/index.c:1066 ../libsvn_fs_x/index.c:1369
 msgid "Page exceeds L2P index page size"
-msgstr ""
+msgstr "页超出 L2P 索引页大小"
 
 #: ../libsvn_fs_fs/index.c:1125 ../libsvn_fs_x/index.c:1124
 #, c-format
 msgid "Revision %ld not covered by item index"
-msgstr ""
+msgstr "版本 %ld 没有被项目索引覆盖"
 
 #: ../libsvn_fs_fs/index.c:1151 ../libsvn_fs_x/index.c:1150
-#, fuzzy, c-format
+#,  c-format
 msgid "Item index %s exceeds l2p limit of %s for revision %ld"
-msgstr "“%s” 不是文件，版本 %ld"
+msgstr "项目索引 %s 超出 %s 的 L2P 限制，版本 %ld"
 
 #: ../libsvn_fs_fs/index.c:1358 ../libsvn_fs_x/index.c:1527
 msgid "L2P actual page size does not match page table value."
-msgstr ""
+msgstr "L2P 实际页大小与页表值不匹配"
 
 #: ../libsvn_fs_fs/index.c:1491 ../libsvn_fs_x/index.c:1570
-#, fuzzy, c-format
+#,  c-format
 msgid "Item index %s too large in revision %ld"
-msgstr "“%s” 不是文件，版本 %ld"
+msgstr "项目索引 %s 太大，版本 %ld"
 
 #: ../libsvn_fs_fs/index.c:1910 ../libsvn_fs_x/index.c:2148
-#, fuzzy, c-format
+#,  c-format
 msgid "Revision 0x%s too large, max = 0x%s"
-msgstr "解析 “%s” 时发现无效的版本号"
+msgstr "版本 0x%s 太大，最大值是 0x%s"
 
 #: ../libsvn_fs_fs/index.c:2203 ../libsvn_fs_x/index.c:2548
 msgid "Index offset and rev / pack file size do not match"
-msgstr ""
+msgstr "索引偏移与版本/打包文件大小不匹配"
 
 #: ../libsvn_fs_fs/index.c:2209 ../libsvn_fs_x/index.c:2554
 msgid "P2L index page size is not a power of two"
-msgstr ""
+msgstr "P2L 索引页大小不是2的幂"
 
 #: ../libsvn_fs_fs/index.c:2215 ../libsvn_fs_x/index.c:2560
 msgid "P2L page count does not match rev / pack file size"
-msgstr ""
+msgstr "P2L 页计数与版本/打包文件大小不匹配"
 
 #: ../libsvn_fs_fs/index.c:2395 ../libsvn_fs_x/index.c:2649
-#, fuzzy
+#,
 msgid "Invalid item type in P2L index"
-msgstr "无效的修改类型 %d"
+msgstr "在 P2L 索引中的项目类型非法"
 
 #: ../libsvn_fs_fs/index.c:2399 ../libsvn_fs_x/index.c:2702
 msgid "Changed path list must have item number 1"
-msgstr ""
+msgstr "路径修改列表必须具有项目 1"
 
 #: ../libsvn_fs_fs/index.c:2413 ../libsvn_fs_x/index.c:2659
 msgid "Invalid FNV1 checksum in P2L index"
-msgstr ""
+msgstr "在 P2L 索引中的 FNV1 校验和非法"
 
 #: ../libsvn_fs_fs/index.c:2422
 msgid "Empty regions must have item number 0 and checksum 0"
-msgstr ""
+msgstr "空区域必须具有项目 0 和校验和 0"
 
 #: ../libsvn_fs_fs/index.c:2492 ../libsvn_fs_x/index.c:2768
 msgid "P2L page description overlaps with next page description"
-msgstr ""
+msgstr "P2L 页描述与下页的描述重叠"
 
 #: ../libsvn_fs_fs/index.c:2608 ../libsvn_fs_x/index.c:2883
-#, fuzzy, c-format
+#,  c-format
 msgid "Offset %s too large in revision %ld"
-msgstr "“%s” 不是文件，版本 %ld"
+msgstr "偏移 %s 太大，版本 %ld"
 
 #: ../libsvn_fs_fs/index.c:2798 ../libsvn_fs_x/index.c:3086
-#, fuzzy, c-format
+#,  c-format
 msgid "Last P2L index entry extends beyond the last page in revision %ld."
-msgstr "“%s” 不是文件，版本 %ld"
+msgstr "最后的 P2L 索引入口延伸超出最后的页，版本 %ld."
 
 #: ../libsvn_fs_fs/lock.c:121 ../libsvn_fs_x/lock.c:121
 #, c-format
@@ -3995,19 +3995,19 @@ msgid "Lock failed: newer version of '%s' exists"
 msgstr "加锁失败: “%s”的新版本已经存在"
 
 #: ../libsvn_fs_fs/lock.c:1259 ../libsvn_fs_x/lock.c:1259
-#, fuzzy, c-format
+#,  c-format
 msgid "Failed to lock '%s'"
-msgstr "删除 mmap“%s”失败"
+msgstr "锁定“%s”失败"
 
 #: ../libsvn_fs_fs/lock.c:1347 ../libsvn_fs_x/lock.c:1347
-#, fuzzy, c-format
+#,  c-format
 msgid "Failed to unlock '%s'"
-msgstr "删除 mmap“%s”失败"
+msgstr "解锁“%s”失败"
 
 #: ../libsvn_fs_fs/low_level.c:97 ../libsvn_fs_x/low_level.c:99
-#, fuzzy
+#,
 msgid "Invalid character in revision number"
-msgstr "无效文件系统版本号"
+msgstr "版本数字中包含非法字符"
 
 #: ../libsvn_fs_fs/low_level.c:120
 #, c-format
@@ -4028,9 +4028,9 @@ msgstr "版本文件 (r%ld) 的最后一行缺少空白字符"
 #: ../libsvn_fs_fs/low_level.c:226 ../libsvn_fs_fs/low_level.c:235
 #: ../libsvn_fs_x/low_level.c:121 ../libsvn_fs_x/low_level.c:130
 #: ../libsvn_fs_x/low_level.c:139 ../libsvn_fs_x/low_level.c:148
-#, fuzzy
+#,
 msgid "Invalid revision footer"
-msgstr "无效的版本说明"
+msgstr "非法版本页脚"
 
 #: ../libsvn_fs_fs/low_level.c:293 ../libsvn_fs_fs/low_level.c:298
 #: ../libsvn_fs_fs/low_level.c:304 ../libsvn_fs_fs/low_level.c:321
@@ -4055,19 +4055,19 @@ msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 中有无效的 prop-mod 标志"
 
 #: ../libsvn_fs_fs/low_level.c:412 ../libsvn_fs_x/low_level.c:894
-#, fuzzy
+#,
 msgid "Invalid mergeinfo-mod flag in rev-file"
-msgstr "rev-file 中有无效的 prop-mod 标志"
+msgstr "rev-file 中有无效的 mergeinfo-mod 标志"
 
 #: ../libsvn_fs_fs/low_level.c:419 ../libsvn_fs_x/low_level.c:900
-#, fuzzy
+#,
 msgid "Invalid path in changes line"
-msgstr "无效的修改列表名称"
+msgstr "修改行中包含无效的路径"
 
 #: ../libsvn_fs_fs/low_level.c:439 ../libsvn_fs_x/low_level.c:923
-#, fuzzy
+#,
 msgid "Invalid copy-from path in changes line"
-msgstr "无效的配置取值"
+msgstr "修改行中包含无效的 copy-from 路径"
 
 #: ../libsvn_fs_fs/low_level.c:545 ../libsvn_fs_x/low_level.c:1024
 #, c-format
@@ -4110,9 +4110,9 @@ msgid "Missing cpath field in node-rev '%s'"
 msgstr "node-rev '%s' 中没有 cpath 字段"
 
 #: ../libsvn_fs_fs/low_level.c:920 ../libsvn_fs_x/low_level.c:484
-#, fuzzy, c-format
+#,  c-format
 msgid "Non-canonical cpath field in node-rev '%s'"
-msgstr "node-rev '%s' 中没有 cpath 字段"
+msgstr "node-rev '%s' 中包含非正则 cpath 字段"
 
 #: ../libsvn_fs_fs/low_level.c:945 ../libsvn_fs_x/low_level.c:511
 #, c-format
@@ -4125,9 +4125,9 @@ msgid "Malformed copyfrom line in node-rev '%s'"
 msgstr "node-rev '%s' 中的 copyfrom 行非法"
 
 #: ../libsvn_fs_fs/low_level.c:1168 ../libsvn_fs_x/low_level.c:722
-#, fuzzy, c-format
+#,  c-format
 msgid "Malformed representation header"
-msgstr "位于 %s 的修订版头非法"
+msgstr "非法展现头"
 
 #: ../libsvn_fs_fs/pack.c:1946
 #, c-format
@@ -4177,19 +4177,19 @@ msgid "Only SHA1 checksums can be used as keys in the rep_cache table.\n"
 msgstr "在表 rep_cache 中，只有 SHA1 校验和才能用作键。\n"
 
 #: ../libsvn_fs_fs/revprops.c:319 ../libsvn_fs_x/revprops.c:795
-#, fuzzy, c-format
+#,  c-format
 msgid "Packed revprop manifest for r%ld not properly terminated"
-msgstr "不能读取打包的 revprop"
+msgstr "r%ld 的打包的 revprop 清单没有正确结束"
 
 #: ../libsvn_fs_fs/revprops.c:361 ../libsvn_fs_x/revprops.c:837
 #, c-format
 msgid "Packed revprop manifest for r%ld has too many entries"
-msgstr ""
+msgstr "r%ld 的打包的 revprop 清单包含了太多的项目"
 
 #: ../libsvn_fs_fs/revprops.c:366 ../libsvn_fs_x/revprops.c:842
 #, c-format
 msgid "Packed revprop manifest for r%ld has too few entries"
-msgstr ""
+msgstr "r%ld 的打包的 revprop 清单包含的项目太少"
 
 #: ../libsvn_fs_fs/revprops.c:430 ../libsvn_fs_x/revprops.c:905
 #, c-format
@@ -4197,9 +4197,9 @@ msgid "Revprop pack for revision r%ld contains revprops for r%ld .. r%ld"
 msgstr ""
 
 #: ../libsvn_fs_fs/revprops.c:441 ../libsvn_fs_x/revprops.c:916
-#, fuzzy, c-format
+#,  c-format
 msgid "Revprop pack for revision r%ld starts at non-packed revisions r%ld"
-msgstr "起始版本 %ld 大于结束版本 %ld"
+msgstr "r%ld 的打包的 revprop 起始于非打包版本 r%ld"
 
 #: ../libsvn_fs_fs/revprops.c:450 ../libsvn_fs_x/revprops.c:925
 msgid "Header end not found"
@@ -4207,7 +4207,7 @@ msgstr "找不到 Header 的结束标记"
 
 #: ../libsvn_fs_fs/revprops.c:482 ../libsvn_fs_x/revprops.c:957
 msgid "Packed revprop size exceeds pack file size"
-msgstr ""
+msgstr "打包的 revprop 大小超出打包文件大小"
 
 #: ../libsvn_fs_fs/revprops.c:540 ../libsvn_fs_x/revprops.c:1015
 #, c-format
@@ -4215,14 +4215,14 @@ msgid "No such packed revision %ld"
 msgstr "没有此打包版本 %ld"
 
 #: ../libsvn_fs_fs/revprops.c:573 ../libsvn_fs_x/revprops.c:1056
-#, fuzzy, c-format
+#,  c-format
 msgid "Failed to read revprop pack file for r%ld"
-msgstr "无法找到版本 %ld 打包的版本属性"
+msgstr "读取 r%ld 的 revprop 打包文件失败"
 
 #: ../libsvn_fs_fs/revprops.c:580 ../libsvn_fs_x/revprops.c:1063
-#, fuzzy, c-format
+#,  c-format
 msgid "Revprop pack file for r%ld is corrupt"
-msgstr "版本库已损坏"
+msgstr "r%ld 的 revprop 打包文件损坏"
 
 #: ../libsvn_fs_fs/revprops.c:637 ../libsvn_fs_x/revprops.c:1136
 #, c-format
@@ -4232,7 +4232,7 @@ msgstr "无法找到版本 %ld 的版本属性"
 #: ../libsvn_fs_fs/revprops.c:862 ../libsvn_fs_x/revprops.c:1374
 #, c-format
 msgid "Packed file '%s' misses a tag"
-msgstr ""
+msgstr "打包文件 '%s' 缺少一个标签"
 
 #: ../libsvn_fs_fs/transaction.c:258 ../libsvn_fs_x/transaction.c:503
 #, c-format
