@@ -52,12 +52,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1542610, r1564576, r1568180
-   Add missing description to build.conf, to properly generate a version
-   resource (including icon) for this executable on Windows.
-   Votes:
-     +1: rhuijben, breser
-
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
    Justification:
@@ -82,24 +76,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1574868
-   Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
-     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
-     dump fail".
-   Justification:
-     A formatting error in what is essentially client-side metadata, albeit
-     with repository-side interpretation as well, should never prevent
-     dumping the repository. This issue only occurs when svnadmin is trying
-     to warn us of mergeinfo revisions that might be unexpected, so it is
-     not essential.
-   Notes:
-     There is a work-around, at least in theory: a dump starting from
-     revision 0 or 1 does not suffer from this problem.
-   Branch:
-     ^/subversion/branches/1.7.x-r1574868
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1594156
    Fix a problem with the Unix build that could result in linking to the wrong
    Subversion libraries at build time or at run time.
@@ -108,14 +84,14 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1594157
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stefan2
 
  * r1595431
    Use a proper intermediate directory when building with VS 2003-2008.
    Justification:
      Reported as a build problem by some of our usual dist signers.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1637826
    Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
@@ -124,18 +100,7 @@ Candidate changes:
      to fix builds with libtool in a nonstandard location, if we
      then don't interpret said environment variables correctly.
    Votes:
-     +1: brane
-
- * r1641564
-   Fix issue 4185: file external not following history.
-   Justification:
-     Checkout/update fails, regression from 1.6.
-   Notes:
-     Failure was silent, notification occurred but file was not present in wc.
-   Branch:
-     ^/subversion/branches/1.7.x-r1641564
-   Votes:
-     +1: philip, rhuijben
+     +1: brane, stefan2
 
 Veto-blocked changes:
 =====================
@@ -154,3 +119,39 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1542610, r1564576, r1568180
+   Add missing description to build.conf, to properly generate a version
+   resource (including icon) for this executable on Windows.
+   Votes:
+     +1: rhuijben, breser, stefan2
+
+ * r1574868
+   Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     A formatting error in what is essentially client-side metadata, albeit
+     with repository-side interpretation as well, should never prevent
+     dumping the repository. This issue only occurs when svnadmin is trying
+     to warn us of mergeinfo revisions that might be unexpected, so it is
+     not essential.
+   Notes:
+     There is a work-around, at least in theory: a dump starting from
+     revision 0 or 1 does not suffer from this problem.
+   Branch:
+     ^/subversion/branches/1.7.x-r1574868
+   Votes:
+     +1: julianfoad, rhuijben, stefan2
+
+ * r1641564
+   Fix issue 4185: file external not following history.
+   Justification:
+     Checkout/update fails, regression from 1.6.
+   Notes:
+     Failure was silent, notification occurred but file was not present in wc.
+   Branch:
+     ^/subversion/branches/1.7.x-r1641564
+   Votes:
+     +1: philip, rhuijben, stefan2
+
