@@ -3830,6 +3830,8 @@ msgid ""
 "Index stream header prefix mismatch.\n"
 "  expected: %s  found: %s"
 msgstr ""
+"索引头前缀不匹配\n"
+"  期望: %s  发现: %s"
 
 #: ../libsvn_fs_fs/index.c:603 ../libsvn_fs_x/index.c:561
 #, c-format
@@ -3844,7 +3846,7 @@ msgstr "文件偏移 0x%s 太大，最大值是 0x%s"
 #: ../libsvn_fs_fs/index.c:809 ../libsvn_fs_x/index.c:942
 #, c-format
 msgid "L2P index page size  %s exceeds current limit of 2G entries"
-msgstr ""
+msgstr "L2P 索引页大小 %s 超出当前 2G 的页限制"
 
 #: ../libsvn_fs_fs/index.c:870 ../libsvn_fs_x/index.c:1005
 #, c-format
@@ -3859,47 +3861,47 @@ msgstr "L2P 索引页计数 %d 大于当前 2G 的页限制"
 #: ../libsvn_fs_fs/index.c:994 ../libsvn_fs_fs/index.c:2197
 #: ../libsvn_fs_x/index.c:1296 ../libsvn_fs_x/index.c:2542
 msgid "Index rev / pack file revision numbers do not match"
-msgstr ""
+msgstr "索引版本与打包文件版本号不匹配"
 
 #: ../libsvn_fs_fs/index.c:1000 ../libsvn_fs_x/index.c:1309
 msgid "L2P index page size is not a power of two"
-msgstr ""
+msgstr "L2P 索引页大小不是2的幂"
 
 #: ../libsvn_fs_fs/index.c:1007 ../libsvn_fs_x/index.c:1303
 msgid "Invalid number of revisions in L2P index"
 msgstr "在 L2P 索引中，版本数字非法"
 
 #: ../libsvn_fs_fs/index.c:1013 ../libsvn_fs_x/index.c:1315
-#, fuzzy
+#,
 msgid "Fewer L2P index pages than revisions"
-msgstr "此版本的条目索引太大。"
+msgstr "L2P 索引页少于版本数目"
 
 #: ../libsvn_fs_fs/index.c:1016 ../libsvn_fs_x/index.c:1318
 msgid "L2P index page count implausibly large"
-msgstr ""
+msgstr "L2P 索引页数量难以置信的大"
 
 #: ../libsvn_fs_fs/index.c:1021 ../libsvn_fs_x/index.c:1323
 #, c-format
 msgid "Corrupt L2P index for r%ld only covers r%ld:%ld"
-msgstr ""
+msgstr "r%ld 的 L2P 索引损坏，只覆盖了 r%ld:%ld"
 
 #: ../libsvn_fs_fs/index.c:1040 ../libsvn_fs_x/index.c:1343
-#, fuzzy
+#,
 msgid "Revision with no L2P index pages"
-msgstr "索引中没有此版本。"
+msgstr "版本没有 L2P 索引页"
 
 #: ../libsvn_fs_fs/index.c:1045 ../libsvn_fs_x/index.c:1348
 msgid "L2P page table exceeded"
-msgstr ""
+msgstr "L2P 页表溢出"
 
 #: ../libsvn_fs_fs/index.c:1052 ../libsvn_fs_x/index.c:1355
-#, fuzzy
+#,
 msgid "Revisions do not cover the full L2P index page table"
-msgstr "索引中没有此版本。"
+msgstr "版本没有覆盖全部 L2P 索引页表"
 
 #: ../libsvn_fs_fs/index.c:1060 ../libsvn_fs_x/index.c:1363
 msgid "Empty L2P index page"
-msgstr ""
+msgstr "空的 L2P 索引页"
 
 #: ../libsvn_fs_fs/index.c:1066 ../libsvn_fs_x/index.c:1369
 msgid "Page exceeds L2P index page size"
