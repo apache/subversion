@@ -108,16 +108,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1633126
-   Improve performance of recorded timestamp fixups in svn cleanup
-   Justification:
-     Fixing timestamps on a working copy with properly recorded timestamps
-     should not cost 10* the time of walking the working copy for status.
-   Branch:
-     ^/subversion/branches/1.8.x-r1633126
-   Votes:
-     +1: rhuijben, philip, stefan2
-
  * r1641564
    Fix issue 4185: file external not following history.
    Justification:
