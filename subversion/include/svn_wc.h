@@ -907,13 +907,15 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  *
  * Allocate the table, keys, and values in @a pool.
  *
- * Use @a parent_directory only in constructing error strings.
+ * @a defining_directory is the path or URL of the directory on which
+ * the svn:externals property corresponding to @a desc is set.
+ * @a defining_directory is only used when constructing error strings.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
-                                    const char *parent_directory,
+                                    const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
