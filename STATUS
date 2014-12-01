@@ -120,12 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1542610, r1564576, r1568180
-   Add missing description to build.conf, to properly generate a version
-   resource (including icon) for this executable on Windows.
-   Votes:
-     +1: rhuijben, breser, stefan2
-
  * r1574868
    Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
@@ -154,4 +148,3 @@ Approved changes:
      ^/subversion/branches/1.7.x-r1641564
    Votes:
      +1: philip, rhuijben, stefan2
-
