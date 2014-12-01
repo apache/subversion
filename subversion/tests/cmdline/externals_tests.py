@@ -3166,6 +3166,7 @@ def pinned_externals(sbox):
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-rev'         : Item(contents="This is the file 'mu'.\n"),
 
     # And verifying X
     'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
