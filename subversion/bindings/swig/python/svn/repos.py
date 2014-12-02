@@ -285,3 +285,56 @@ class RevisionChangeCollector(ChangeCollector):
     if idx == -1:
       return parent_path + '/' + path
     return parent_path + path[idx:]
+
+
+class ParseFns3:
+    def __init__(self):
+        pass
+
+    def __del__(self):
+        pass
+
+    def _close_dumpstream(self):
+        # Does not correspond to a C method - called before finishing the
+        # parsing of the dump stream.
+        pass
+
+    def magic_header_record(self, version, pool=None):
+        pass
+
+    def uuid_record(self, uuid, pool=None):
+        pass
+
+    def new_revision_record(self, headers, pool=None):
+        return None # Returns revision_baton
+
+    def new_node_record(self, headers, revision_baton, pool=None):
+        return None # Returns node_baton
+
+    def set_revision_property(self, revision_baton, name, value):
+        pass
+
+    def set_node_property(self, node_baton, name, value):
+        pass
+
+    def delete_node_property(self, node_baton, name):
+        pass
+
+    def remove_node_props(self, node_baton):
+        pass
+
+    def set_fulltext(self, node_baton):
+        return None # Returns a writable stream
+
+    def apply_textdelta(self, node_baton):
+        return None # Returns delta window handler
+
+    def close_node(self, node_baton):
+        pass
+
+    def close_revision(self, revision_baton):
+        pass
+
+
+def make_parse_fns3(parse_fns3, pool=None):
+    return svn_swig_py_make_parse_fns3(parse_fns3, pool)

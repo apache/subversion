@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, setup_path
+import unittest, setup_path, os, sys
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -43,6 +43,42 @@ class ChangeReceiver(delta.Editor):
       if textdelta is not None:
         self.textdeltas.append(textdelta)
     return textdelta_handler
+
+class DumpStreamParser(repos.ParseFns3):
+  def __init__(self):
+    repos.ParseFns3.__init__(self)
+    self.ops = []
+  def magic_header_record(self, version, pool=None):
+    self.ops.append(("magic-header", version))
+  def uuid_record(self, uuid, pool=None):
+    self.ops.append(("uuid", uuid))
+  def new_revision_record(self, headers, pool=None):
+    rev = int(headers[repos.DUMPFILE_REVISION_NUMBER])
+    self.ops.append(("new-revision", rev))
+    return rev
+  def close_revision(self, revision_baton):
+    self.ops.append(("close-revision", revision_baton))
+  def new_node_record(self, headers, revision_baton, pool=None):
+    node = headers[repos.DUMPFILE_NODE_PATH]
+    self.ops.append(("new-node", revision_baton, node))
+    return (revision_baton, node)
+  def close_node(self, node_baton):
+    self.ops.append(("close-node", node_baton[0], node_baton[1]))
+  def set_revision_property(self, revision_baton, name, value):
+    self.ops.append(("set-revision-prop", revision_baton, name, value))
+  def set_node_property(self, node_baton, name, value):
+    self.ops.append(("set-node-prop", node_baton[0], node_baton[1], name, value))
+  def remove_node_props(self, node_baton):
+    self.ops.append(("remove-node-props", node_baton[0], node_baton[1]))
+  def delete_node_property(self, node_baton, name):
+    self.ops.append(("delete-node-prop", node_baton[0], node_baton[1], name))
+  def apply_textdelta(self, node_baton):
+    self.ops.append(("apply-textdelta", node_baton[0], node_baton[1]))
+    return None
+  def set_fulltext(self, node_baton):
+    self.ops.append(("set-fulltext", node_baton[0], node_baton[1]))
+    return None
+
 
 def _authz_callback(root, path, pool):
   "A dummy authz callback which always returns success."
@@ -139,6 +175,62 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     #        svn_repos_t objects, so the following call segfaults
     #repos.dump_fs2(None, None, None, 0, self.rev, 0, 0, None)
 
+  def test_parse_fns3(self):
+    self.cancel_calls = 0
+    def is_cancelled():
+      self.cancel_calls += 1
+      return None
+    dump_path = os.path.join(os.path.dirname(sys.argv[0]),
+        "trac/versioncontrol/tests/svnrepos.dump")
+    stream = open(dump_path)
+    dsp = DumpStreamParser()
+    ptr, baton = repos.make_parse_fns3(dsp)
+    repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)
+    stream.close()
+    self.assertEqual(self.cancel_calls, 76)
+    expected_list = [
+        ("magic-header", 2),
+        ('uuid', '92ea810a-adf3-0310-b540-bef912dcf5ba'),
+        ('new-revision', 0),
+        ('set-revision-prop', 0, 'svn:date', '2005-04-01T09:57:41.312767Z'),
+        ('close-revision', 0),
+        ('new-revision', 1),
+        ('set-revision-prop', 1, 'svn:log', 'Initial directory layout.'),
+        ('set-revision-prop', 1, 'svn:author', 'john'),
+        ('set-revision-prop', 1, 'svn:date', '2005-04-01T10:00:52.353248Z'),
+        ('new-node', 1, 'branches'),
+        ('remove-node-props', 1, 'branches'),
+        ('close-node', 1, 'branches'),
+        ('new-node', 1, 'tags'),
+        ('remove-node-props', 1, 'tags'),
+        ('close-node', 1, 'tags'),
+        ('new-node', 1, 'trunk'),
+        ('remove-node-props', 1, 'trunk'),
+        ('close-node', 1, 'trunk'),
+        ('close-revision', 1),
+        ('new-revision', 2),
+        ('set-revision-prop', 2, 'svn:log', 'Added README.'),
+        ('set-revision-prop', 2, 'svn:author', 'john'),
+        ('set-revision-prop', 2, 'svn:date', '2005-04-01T13:12:18.216267Z'),
+        ('new-node', 2, 'trunk/README.txt'),
+        ('remove-node-props', 2, 'trunk/README.txt'),
+        ('set-fulltext', 2, 'trunk/README.txt'),
+        ('close-node', 2, 'trunk/README.txt'),
+        ('close-revision', 2), ('new-revision', 3),
+        ('set-revision-prop', 3, 'svn:log', 'Fixed README.\n'),
+        ('set-revision-prop', 3, 'svn:author', 'kate'),
+        ('set-revision-prop', 3, 'svn:date', '2005-04-01T13:24:58.234643Z'),
+        ('new-node', 3, 'trunk/README.txt'),
+        ('remove-node-props', 3, 'trunk/README.txt'),
+        ('set-node-prop', 3, 'trunk/README.txt', 'svn:mime-type', 'text/plain'),
+        ('set-node-prop', 3, 'trunk/README.txt', 'svn:eol-style', 'native'),
+        ('set-fulltext', 3, 'trunk/README.txt'),
+        ('close-node', 3, 'trunk/README.txt'), ('close-revision', 3),
+        ]
+    # Compare only the first X nodes described in the expected list - otherwise
+    # the comparison list gets too long.
+    self.assertListEqual(dsp.ops[:len(expected_list)], expected_list)
+
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
     logs = []
@@ -176,6 +268,17 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                           editor.textdeltas[1].new_data]),
                      set(["This is a test.\n", "A test.\n"]))
     self.assertEqual(len(editor.textdeltas), 2)
+
+  def test_unnamed_editor(self):
+      """Test editor object without reference from interpreter"""
+      # Check that the delta.Editor object has proper lifetime. Without
+      # increment of the refcount in make_baton, the object was destroyed
+      # immediately because the interpreter does not hold a reference to it.
+      this_root = fs.revision_root(self.fs, self.rev)
+      prev_root = fs.revision_root(self.fs, self.rev-1)
+      e_ptr, e_baton = delta.make_editor(ChangeReceiver(this_root, prev_root))
+      repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
+              _authz_callback, 1, 1, 0, 0)
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""

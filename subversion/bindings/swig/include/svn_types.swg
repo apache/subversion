@@ -146,7 +146,8 @@
   /* svn_repos */
   svn_authz_t **,
   svn_repos_t **,
-  const svn_repos_parse_fns2_t **,
+  const svn_repos_parse_fns3_t **,
+  const svn_repos_parser_fns2_t **,
   const svn_repos_parser_fns_t **,
   void **parse_baton,
   void **revision_baton,
