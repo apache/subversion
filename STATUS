@@ -76,31 +76,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1594156
-   Fix a problem with the Unix build that could result in linking to the wrong
-   Subversion libraries at build time or at run time.
-   Justification:
-     Building and testing should Just Work as far as possible.
-   Branch:
-     ^/subversion/branches/1.7.x-r1594157
-   Votes:
-     +1: julianfoad, stefan2
 
- * r1595431
-   Use a proper intermediate directory when building with VS 2003-2008.
-   Justification:
-     Reported as a build problem by some of our usual dist signers.
-   Votes:
-     +1: rhuijben, stefan2
-
- * r1637826
-   Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
-   Justification:
-     Makes no sense to tell users to set environment variables
-     to fix builds with libtool in a nonstandard location, if we
-     then don't interpret said environment variables correctly.
-   Votes:
-     +1: brane, stefan2
 
 Veto-blocked changes:
 =====================
@@ -128,3 +104,29 @@ Approved changes:
      ^/subversion/branches/1.7.x-r1227815-conflict
    Votes:
      +1: rhuijben, julianfoad, philip
+
+ * r1594156
+   Fix a problem with the Unix build that could result in linking to the wrong
+   Subversion libraries at build time or at run time.
+   Justification:
+     Building and testing should Just Work as far as possible.
+   Branch:
+     ^/subversion/branches/1.7.x-r1594157
+   Votes:
+     +1: julianfoad, stefan2, breser
+
+ * r1595431
+   Use a proper intermediate directory when building with VS 2003-2008.
+   Justification:
+     Reported as a build problem by some of our usual dist signers.
+   Votes:
+     +1: rhuijben, stefan2, breser
+
+ * r1637826
+   Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
+   Justification:
+     Makes no sense to tell users to set environment variables
+     to fix builds with libtool in a nonstandard location, if we
+     then don't interpret said environment variables correctly.
+   Votes:
+     +1: brane, stefan2, breser
