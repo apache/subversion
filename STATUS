@@ -43,9 +43,7 @@ Candidate changes:
      should guarantee loadable dump files.
    Branch: ^/subversion/branches/1.8.x-r1536854
    Votes:
-     +1: stefan2
-     +0 (without r1640560): breser (I'd be +1 if not for the unused function
-                                    in svnadmin_tests.py)
+     +1: stefan2, breser
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -67,15 +65,6 @@ Candidate changes:
      +1: philip
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
-
- * r1637826
-   Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
-   Justification:
-     Makes no sense to tell users to set environment variables
-     to fix builds with libtool in a nonstandard location, if we
-     then don't interpret said environment variables correctly.
-   Votes:
-     +1: brane, stefan2
 
  * r1561419, r1561427, 1547489, r1560643, r1573744
    Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
@@ -107,3 +96,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1637826
+   Fix typos in LIBTOOL_M4 and LIBTOOL_CONFIG expansion in autogen.sh
+   Justification:
+     Makes no sense to tell users to set environment variables
+     to fix builds with libtool in a nonstandard location, if we
+     then don't interpret said environment variables correctly.
+   Votes:
+     +1: brane, stefan2, breser
