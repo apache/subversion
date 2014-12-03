@@ -287,7 +287,14 @@ typedef enum svn_repos_notify_warning_t
    *
    * @since New in 1.9.
    */
-  svn_repos_notify_warning_mergeinfo_collision
+  svn_repos_notify_warning_mergeinfo_collision,
+
+  /**
+   * Detected invalid mergeinfo.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_invalid_mergeinfo
 } svn_repos_notify_warning_t;
 
 /**

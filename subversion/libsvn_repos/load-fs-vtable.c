@@ -753,6 +753,67 @@ set_revision_property(void *baton,
 }
 
 
+/* Adjust mergeinfo:
+ *   - normalize line endings (if all CRLF, change to LF; but error if mixed);
+ *   - adjust revision numbers (see renumber_mergeinfo_revs());
+ *   - adjust paths (see prefix_mergeinfo_paths()).
+ */
+static svn_error_t *
+adjust_mergeinfo_property(struct revision_baton *rb,
+                          svn_string_t **new_value_p,
+                          const svn_string_t *old_value,
+                          apr_pool_t *result_pool)
+{
+  struct parse_baton *pb = rb->pb;
+  svn_string_t prop_val = *old_value;
+
+  /* Tolerate mergeinfo with "\r\n" line endings because some
+     dumpstream sources might contain as much.  If so normalize
+     the line endings to '\n' and make a notification to
+     PARSE_BATON->FEEDBACK_STREAM that we have made this
+     correction. */
+  if (strstr(prop_val.data, "\r"))
+    {
+      const char *prop_eol_normalized;
+
+      SVN_ERR(svn_subst_translate_cstring2(prop_val.data,
+                                           &prop_eol_normalized,
+                                           "\n",  /* translate to LF */
+                                           FALSE, /* no repair */
+                                           NULL,  /* no keywords */
+                                           FALSE, /* no expansion */
+                                           result_pool));
+      prop_val.data = prop_eol_normalized;
+      prop_val.len = strlen(prop_eol_normalized);
+
+      if (pb->notify_func)
+        {
+          /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
+          svn_repos_notify_t *notify
+                  = svn_repos_notify_create(
+                                svn_repos_notify_load_normalized_mergeinfo,
+                                pb->notify_pool);
+
+          pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
+          svn_pool_clear(pb->notify_pool);
+        }
+    }
+
+  /* Renumber mergeinfo as appropriate. */
+  SVN_ERR(renumber_mergeinfo_revs(new_value_p, &prop_val, rb,
+                                  result_pool));
+  if (pb->parent_dir)
+    {
+      /* Prefix the merge source paths with PB->parent_dir. */
+      /* ASSUMPTION: All source paths are included in the dump stream. */
+      SVN_ERR(prefix_mergeinfo_paths(new_value_p, *new_value_p,
+                                     pb->parent_dir, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 set_node_property(void *baton,
                   const char *name,
@@ -766,55 +827,42 @@ set_node_property(void *baton,
   if (rb->skipped)
     return SVN_NO_ERROR;
 
+  /* Adjust mergeinfo. If this fails, presumably because the mergeinfo
+     property has an ill-formed value, then we must not fail to load
+     the repository (at least if it's a simple load with no revision
+     offset adjustments, path changes, etc.) so just warn and leave it
+     as it is. */
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t prop_val = *value;
-      svn_string_t *renumbered_mergeinfo;
+      svn_string_t *new_value;
+      svn_error_t *err;
 
-      /* Tolerate mergeinfo with "\r\n" line endings because some
-         dumpstream sources might contain as much.  If so normalize
-         the line endings to '\n' and make a notification to
-         PARSE_BATON->FEEDBACK_STREAM that we have made this
-         correction. */
-      if (strstr(prop_val.data, "\r"))
+      err = adjust_mergeinfo_property(rb, &new_value, value, nb->pool);
+      if (err)
         {
-          const char *prop_eol_normalized;
-
-          SVN_ERR(svn_subst_translate_cstring2(prop_val.data,
-                                               &prop_eol_normalized,
-                                               "\n",  /* translate to LF */
-                                               FALSE, /* no repair */
-                                               NULL,  /* no keywords */
-                                               FALSE, /* no expansion */
-                                               nb->pool));
-          prop_val.data = prop_eol_normalized;
-          prop_val.len = strlen(prop_eol_normalized);
-
+          if (pb->validate_props)
+            {
+              return svn_error_quick_wrap(
+                       err,
+                       _("Invalid svn:mergeinfo value"));
+            }
           if (pb->notify_func)
             {
-              /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
               svn_repos_notify_t *notify
-                      = svn_repos_notify_create(
-                                    svn_repos_notify_load_normalized_mergeinfo,
-                                    pb->notify_pool);
+                = svn_repos_notify_create(svn_repos_notify_warning,
+                                          pb->notify_pool);
 
+              notify->warning = svn_repos_notify_warning_invalid_mergeinfo;
+              notify->warning_str = _("Invalid svn:mergeinfo value; "
+                                      "leaving unchanged");
               pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
               svn_pool_clear(pb->notify_pool);
             }
+          svn_error_clear(err);
         }
-
-      /* Renumber mergeinfo as appropriate. */
-      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, &prop_val, rb,
-                                      nb->pool));
-      value = renumbered_mergeinfo;
-      if (pb->parent_dir)
+      else
         {
-          /* Prefix the merge source paths with PB->parent_dir. */
-          /* ASSUMPTION: All source paths are included in the dump stream. */
-          svn_string_t *mergeinfo_val;
-          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value,
-                                         pb->parent_dir, nb->pool));
-          value = mergeinfo_val;
+          value = new_value;
         }
     }
 
