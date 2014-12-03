@@ -764,8 +764,10 @@ open_target_session(svn_ra_session_t **to_session_p,
 /*** `svnsync init' ***/
 
 /* Initialize the repository associated with RA session TO_SESSION,
- * using information found in BATON, while the repository is
- * locked.  Implements `with_locked_func_t' interface.
+ * using information found in BATON.
+ *
+ * Implements `with_locked_func_t' interface.  The caller has
+ * acquired a lock on the repository if locking is needed.
  */
 static svn_error_t *
 do_initialize(svn_ra_session_t *to_session,
@@ -1403,8 +1405,10 @@ replay_rev_finished(svn_revnum_t revision,
 }
 
 /* Synchronize the repository associated with RA session TO_SESSION,
- * using information found in BATON, while the repository is
- * locked.  Implements `with_locked_func_t' interface.
+ * using information found in BATON.
+ *
+ * Implements `with_locked_func_t' interface.  The caller has
+ * acquired a lock on the repository if locking is needed.
  */
 static svn_error_t *
 do_synchronize(svn_ra_session_t *to_session,
@@ -1597,8 +1601,10 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 /*** `svnsync copy-revprops' ***/
 
 /* Copy revision properties to the repository associated with RA
- * session TO_SESSION, using information found in BATON, while the
- * repository is locked.  Implements `with_locked_func_t' interface.
+ * session TO_SESSION, using information found in BATON.
+ *
+ * Implements `with_locked_func_t' interface.  The caller has
+ * acquired a lock on the repository if locking is needed.
  */
 static svn_error_t *
 do_copy_revprops(svn_ra_session_t *to_session,
