@@ -96,15 +96,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.7.x-r1227815-conflict
-   Fix compilation after backporting 1.7.x-r1574868 branch.
-   Justification:
-     1.7.x shouldn't cause compile errors.
-   Branch:
-     ^/subversion/branches/1.7.x-r1227815-conflict
-   Votes:
-     +1: rhuijben, julianfoad, philip
-
  * r1594156
    Fix a problem with the Unix build that could result in linking to the wrong
    Subversion libraries at build time or at run time.

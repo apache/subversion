@@ -518,7 +518,7 @@ dump_node(struct edit_baton *eb,
               /* An error in verifying the mergeinfo must not prevent dumping
                  the data. Ignore any such error. */
               svn_error_clear(verify_mergeinfo_revisions(
-                                eb->found_old_mergeinfo,
+                                &eb->found_old_mergeinfo,
                                 mergeinfo_str->data, eb->oldest_dumped_rev,
                                 eb->notify_func, eb->notify_baton,
                                 pool));
