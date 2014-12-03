@@ -273,7 +273,10 @@ typedef enum svn_repos_notify_warning_t
    * @see svn_fs.h:"Directory entry names and directory paths" */
   /* ### TODO(doxygen): make that a proper doxygen link */
   /* See svn_fs__path_valid(). */
-  svn_repos_notify_warning_invalid_fspath
+  svn_repos_notify_warning_invalid_fspath,
+
+  /* Found invalid mergeinfo */
+  svn_repos__notify_warning_invalid_mergeinfo
 
 } svn_repos_notify_warning_t;
 
