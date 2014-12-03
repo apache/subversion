@@ -1156,6 +1156,33 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.19
+(10 Dec 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.19
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * rm: display the proper URL in commit log editor (r1591123)
+    * diff: fix invalid read during suffix scanning (issue #4339)
+    * fix crash in eclipse IDE with GNOME Keyring (issue #3498)
+    * checkout/update: fix file externals failing to follow history and
+      subsequently silently failing (issue #4185)
+
+  - Server-side bugfixes:
+    * svnadmin dump: don't let invalid mergeinfo prevent a dump (issue #4476)
+
+ Developer-visible changes:
+  - General:
+    * properly generate a version resource when building on Windows (r1542610,
+      r1564576, r1568180)
+    * fix a problem with the unix build that could result in linking to the
+      wrong Subversion libraries at build or at run time (r1594157)
+    * use a proper intermediate directory when building with Visual Studio
+      2003-2008 (r1595431)
+    * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
+      during a unix build (r1637826)
+
+
 Version 1.7.18
 (11 Aug 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.18
