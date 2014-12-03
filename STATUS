@@ -96,16 +96,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1594156
-   Fix a problem with the Unix build that could result in linking to the wrong
-   Subversion libraries at build time or at run time.
-   Justification:
-     Building and testing should Just Work as far as possible.
-   Branch:
-     ^/subversion/branches/1.7.x-r1594157
-   Votes:
-     +1: julianfoad, stefan2, breser
-
  * r1595431
    Use a proper intermediate directory when building with VS 2003-2008.
    Justification:
