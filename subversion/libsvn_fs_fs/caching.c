@@ -699,13 +699,13 @@ remove_txn_cache_txn(void *baton_void)
   if (*baton->to_reset == baton->txn_cache)
     {
       /* This is equivalent to calling svn_fs_fs__reset_txn_caches(). */
-      *baton->to_reset  = NULL;
-
-      /* It's cleaned up now. Prevent double cleanup. */
-      apr_pool_cleanup_kill(baton->fs_pool,
-                            baton,
-                            remove_txn_cache_fs);
+      *baton->to_reset = NULL;
     }
+
+  /* It's cleaned up now. Prevent double cleanup. */
+  apr_pool_cleanup_kill(baton->fs_pool,
+                        baton,
+                        remove_txn_cache_fs);
 
   return  APR_SUCCESS;
 }
@@ -721,13 +721,13 @@ remove_txn_cache_fs(void *baton_void)
   if (*baton->to_reset == baton->txn_cache)
     {
      /* This is equivalent to calling svn_fs_fs__reset_txn_caches(). */
-      *baton->to_reset  = NULL;
-
-      /* It's cleaned up now. Prevent double cleanup. */
-      apr_pool_cleanup_kill(baton->txn_pool,
-                            baton,
-                            remove_txn_cache_txn);
+      *baton->to_reset = NULL;
     }
+
+  /* It's cleaned up now. Prevent double cleanup. */
+  apr_pool_cleanup_kill(baton->txn_pool,
+                        baton,
+                        remove_txn_cache_txn);
 
   return  APR_SUCCESS;
 }
