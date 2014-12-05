@@ -425,6 +425,49 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: support incomplete reads from streams (r1569631)
     * javahl: allow revert API to take a set of paths (r1571461)
 
+
+Version 1.8.11
+(15 Dec 2014, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.10
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * checkout/update: fix file externals failing to follow history and
+      subsequently silently failing (issue #4185)
+    * patch: don't skip targets in valid --git difs (r1592014, r1592034)
+    * diff: make property output in diffs stable (r1589360)
+    * diff: fix diff of local copied directory with props (r1619380, r1619393)
+    * diff: fix changelist filter for repos-WC and WC-WC (r1621978, r1621981)
+    * remove broken conflict resolver menu options that always error out
+      (r1620332)
+    * improve gpg-agent support (r1600331, r1600348, 1600368, r1600563,
+      r1600781)
+    * fix crash in eclipse IDE with GNOME Keyring (issue #3498)
+    * fix externals shadowing a versioned directory (issue #4085)
+    * fix problems working on unix file systems that don't support
+      permissions (r1612225)
+    * upgrade: keep external registrations (issue #4519)
+    * cleanup: iprove performance of recorded timestamp fixups (r1633126)
+    * translation updates for German
+
+  - Server-side bugfixes:
+    * disable revprop caching feature due to cache invalidation problems
+      (r1543594, r1619774, r1619105, r1619118, r1619153, r1619802)
+    * skip generating uniquifiers if rep-sharing is not supported (r1561426)
+    * mod_dav_svn: reject requests with missing repository paths (r1643409)
+    * mod_dav_svn: reject requests with invalid virtual transaction names
+      (r1643437)
+
+ Developer-visible changes:
+  - General:
+    * make sure all members of the repos layer notify struct are valid,
+      fixes crashes in API users using all members (r1616131)
+    * properly generate a version resource when building on Windows (r1542610,
+      r1564576, r1568180)
+    * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
+      during a unix build (r1637826)
+
+
 Version 1.8.10
 (11 Aug 2014, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.10
