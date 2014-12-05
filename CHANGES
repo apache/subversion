@@ -1157,7 +1157,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.19
-(10 Dec 2014, from /branches/1.7.x)
+(15 Dec 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.19
 
  User-visible changes:
@@ -1170,6 +1170,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.19
 
   - Server-side bugfixes:
     * svnadmin dump: don't let invalid mergeinfo prevent a dump (issue #4476)
+    * mod_dav_svn: reject requests with missing repository paths (r1643409)
+    * mod_dav_svn: reject requests with invalid virtual transaction names
+      (r1643437)
 
  Developer-visible changes:
   - General:
