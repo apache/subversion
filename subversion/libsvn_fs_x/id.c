@@ -482,7 +482,7 @@ svn_fs_x__id_deserialize(void *buffer,
                          svn_fs_id_t **in_out,
                          apr_pool_t *pool)
 {
-    fs_x__id_t *id;
+  fs_x__id_t *id;
 
   /* The id maybe all what is in the whole buffer.
    * Don't try to fixup the pointer in that case*/
