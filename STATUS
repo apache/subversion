@@ -64,6 +64,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1643074
+   Don't let invalid mergeinfo stop 'svnadmin load' from working.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     The presence of 'bad' metadata in a repository should not prevent
+     backing up and restoring from a backup, given that this data does not
+     make the repository totally unusable.
+   Notes:
+     The 'svnadmin dump' part of this issue is already approved for backport.
+     The 'svnsync' part of this issue is not yet fixed.
+   Branch:
+     ^/subversion/branches/1.7.x-r1643074
+   Votes:
+     +1: julianfoad
+
 
 
 Veto-blocked changes:
