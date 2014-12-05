@@ -51,10 +51,11 @@ svn_min__help(apr_getopt_t *os,
 
   char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
-     "Subversion command-line client.\n"
-     "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
-     "Type 'svn --version' to see the program version and RA modules\n"
-     "  or 'svn --version --quiet' to see just the version number.\n"
+     "Subversion svn:mergeinfo normalization and reduction tool.\n"
+     "Type 'svn-mergeinfo-normalizer help <subcommand>' for help on a specific\n"
+     "subcommand.  Type 'svn-mergeinfo-normalizer --version' to see the program\n"
+     "version and RA modules or 'svn-mergeinfo-normalizer --version --quiet'\n"
+     "to see just the version number.\n"
      "\n"
      "Most subcommands take file and/or directory arguments, recursing\n"
      "on the directories.  If no arguments are supplied to such a\n"

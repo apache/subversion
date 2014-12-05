@@ -722,12 +722,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                               SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
                               TRUE));
 
-  SVN_ERR(svn_client_args_to_target_array2(&opt_state.targets,
-                                           os, opt_state.targets,
-                                           ctx, FALSE, pool));
+  /* Get targets from command line - unless we are running "help".
+   * The help sub-command will do its own parsing. */
+  if (strcmp(subcommand->name, "help"))
+    {
+      SVN_ERR(svn_client_args_to_target_array2(&opt_state.targets,
+                                              os, opt_state.targets,
+                                              ctx, FALSE, pool));
 
-  /* Add "." if user passed 0 arguments. */
-  svn_opt_push_implicit_dot_target(opt_state.targets, pool);
+      /* Add "." if user passed 0 arguments. */
+      svn_opt_push_implicit_dot_target(opt_state.targets, pool);
+    }
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
