@@ -508,6 +508,9 @@ parse_vtxnstub_uri(dav_resource_combined *comb,
   if (parse_txnstub_uri(comb, path, label, use_checked_in))
     return TRUE;
 
+  if (!comb->priv.root.txn_name)
+    return TRUE;
+
   comb->priv.root.vtxn_name = comb->priv.root.txn_name;
   comb->priv.root.txn_name = dav_svn__get_txn(comb->priv.repos,
                                               comb->priv.root.vtxn_name);
@@ -574,6 +577,9 @@ parse_vtxnroot_uri(dav_resource_combined *comb,
   /* format: !svn/vtxr/TXN_NAME/[PATH] */
 
   if (parse_txnroot_uri(comb, path, label, use_checked_in))
+    return TRUE;
+
+  if (!comb->priv.root.txn_name)
     return TRUE;
 
   comb->priv.root.vtxn_name = comb->priv.root.txn_name;
@@ -921,6 +927,10 @@ prep_working(dav_resource_combined *comb)
      point. */
   if (txn_name == NULL)
     {
+      if (!comb->priv.root.activity_id)
+        return dav_svn__new_error(comb->res.pool, HTTP_BAD_REQUEST, 0,
+                                  "The request did not specify an activity ID");
+
       txn_name = dav_svn__get_txn(comb->priv.repos,
                                   comb->priv.root.activity_id);
       if (txn_name == NULL)
@@ -1031,8 +1041,13 @@ prep_working(dav_resource_combined *comb)
 static dav_error *
 prep_activity(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
-                                          comb->priv.root.activity_id);
+  const char *txn_name;
+
+  if (!comb->priv.root.activity_id)
+    return dav_svn__new_error(comb->res.pool, HTTP_BAD_REQUEST, 0,
+                              "The request did not specify an activity ID");
+
+  txn_name = dav_svn__get_txn(comb->priv.repos, comb->priv.root.activity_id);
 
   comb->priv.root.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
