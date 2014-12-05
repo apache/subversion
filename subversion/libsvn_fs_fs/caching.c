@@ -676,12 +676,44 @@ struct txn_cleanup_baton_t
 
   /* the position where to reset it */
   svn_cache__t **to_reset;
+
+  /* pool that TXN_CACHE was allocated in */
+  apr_pool_t *txn_pool;
+
+  /* pool that the FS containing the TO_RESET pointer was allocator */
+  apr_pool_t *fs_pool;
 };
 
-/* APR pool cleanup handler that will reset the cache pointer given in
-   BATON_VOID. */
+/* Forward declaration. */
 static apr_status_t
-remove_txn_cache(void *baton_void)
+remove_txn_cache_fs(void *baton_void);
+
+/* APR pool cleanup handler that will reset the cache pointer given in
+   BATON_VOID when the TXN_POOL gets cleaned up. */
+static apr_status_t
+remove_txn_cache_txn(void *baton_void)
+{
+  struct txn_cleanup_baton_t *baton = baton_void;
+
+  /* be careful not to hurt performance by resetting newer txn's caches. */
+  if (*baton->to_reset == baton->txn_cache)
+    {
+      /* This is equivalent to calling svn_fs_fs__reset_txn_caches(). */
+      *baton->to_reset  = NULL;
+
+      /* It's cleaned up now. Prevent double cleanup. */
+      apr_pool_cleanup_kill(baton->fs_pool,
+                            baton,
+                            remove_txn_cache_fs);
+    }
+
+  return  APR_SUCCESS;
+}
+
+/* APR pool cleanup handler that will reset the cache pointer given in
+   BATON_VOID when the FS_POOL gets cleaned up. */
+static apr_status_t
+remove_txn_cache_fs(void *baton_void)
 {
   struct txn_cleanup_baton_t *baton = baton_void;
 
@@ -690,18 +722,24 @@ remove_txn_cache(void *baton_void)
     {
      /* This is equivalent to calling svn_fs_fs__reset_txn_caches(). */
       *baton->to_reset  = NULL;
+
+      /* It's cleaned up now. Prevent double cleanup. */
+      apr_pool_cleanup_kill(baton->txn_pool,
+                            baton,
+                            remove_txn_cache_txn);
     }
 
   return  APR_SUCCESS;
 }
 
 /* This function sets / registers the required callbacks for a given
- * transaction-specific *CACHE object, if CACHE is not NULL and a no-op
- * otherwise. In particular, it will ensure that *CACHE gets reset to NULL
- * upon POOL destruction latest.
+ * transaction-specific *CACHE object in FS, if CACHE is not NULL and
+ * a no-op otherwise. In particular, it will ensure that *CACHE gets
+ * reset to NULL upon POOL or FS->POOL destruction latest.
  */
 static void
-init_txn_callbacks(svn_cache__t **cache,
+init_txn_callbacks(svn_fs_t *fs,
+                   svn_cache__t **cache,
                    apr_pool_t *pool)
 {
   if (*cache != NULL)
@@ -711,10 +749,20 @@ init_txn_callbacks(svn_cache__t **cache,
       baton = apr_palloc(pool, sizeof(*baton));
       baton->txn_cache = *cache;
       baton->to_reset = cache;
+      baton->txn_pool = pool;
+      baton->fs_pool = fs->pool;
 
+      /* If any of these pools gets cleaned, we must reset the cache.
+       * We don't know which one will get cleaned up first, so register
+       * cleanup actions for both and during the cleanup action, unregister
+       * the respective other action. */
       apr_pool_cleanup_register(pool,
                                 baton,
-                                remove_txn_cache,
+                                remove_txn_cache_txn,
+                                apr_pool_cleanup_null);
+      apr_pool_cleanup_register(fs->pool,
+                                baton,
+                                remove_txn_cache_fs,
                                 apr_pool_cleanup_null);
     }
 }
@@ -764,7 +812,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                        pool, pool));
 
   /* reset the transaction-specific cache if the pool gets cleaned up. */
-  init_txn_callbacks(&(ffd->txn_dir_cache), pool);
+  init_txn_callbacks(fs, &(ffd->txn_dir_cache), pool);
 
   return SVN_NO_ERROR;
 }
