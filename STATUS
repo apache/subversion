@@ -80,6 +80,12 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1640862, r1640873
+   Work with libtool 2.4.3
+   Justification:
+     libtool 2.4.3 is needed to build properly on OS X 10.10
+   Votes:
+     +1: breser
 
 
 Veto-blocked changes:
