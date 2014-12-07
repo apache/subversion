@@ -85,7 +85,7 @@ Candidate changes:
    Justification:
      libtool 2.4.3 is needed to build properly on OS X 10.10
    Votes:
-     +1: breser
+     +1: breser, brane
 
 
 Veto-blocked changes:
