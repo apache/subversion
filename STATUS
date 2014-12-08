@@ -85,14 +85,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1643810
-   Avoid unneeded memory growth in mod_dav resource walking (issue 4531)
-   Justification:
-     Some copy operations failed in certain user scenarios, with really huge
-     trees.
-   Votes:
-     +1: rhuijben, stsp
-
  * r1619380, r1619393
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
@@ -132,3 +124,13 @@ Approved changes:
      libtool 2.4.3 is needed to build properly on OS X 10.10
    Votes:
      +1: philip, brane, breser
+
+ * r1643810
+   Avoid unneeded memory growth in mod_dav resource walking (issue 4531)
+   Justification:
+     Some copy operations failed in certain user scenarios, with really huge
+     trees.
+   Notes:
+     This is working around a mod_dav inefficiency in recent 2.2/2.4.
+   Votes:
+     +1: rhuijben, stsp, philip
