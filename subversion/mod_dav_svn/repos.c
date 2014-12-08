@@ -4186,7 +4186,9 @@ typedef struct walker_ctx_t {
 
 
 static dav_error *
-do_walk(walker_ctx_t *ctx, int depth)
+do_walk(walker_ctx_t *ctx,
+        int depth,
+        apr_pool_t *scratch_pool)
 {
   const dav_walk_params *params = ctx->params;
   int isdir = ctx->res.collection;
@@ -4259,19 +4261,19 @@ do_walk(walker_ctx_t *ctx, int depth)
                            svn_log__get_dir(ctx->info.repos_path,
                                             ctx->info.root.rev,
                                             TRUE, FALSE, SVN_DIRENT_ALL,
-                                            params->pool));
+                                            scratch_pool));
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
-                            ctx->info.repos_path, params->pool);
+                            ctx->info.repos_path, scratch_pool);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not fetch collection members",
                                 params->pool);
 
   /* iterate over the children in this collection */
-  iterpool = svn_pool_create(params->pool);
-  for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -4324,7 +4326,7 @@ do_walk(walker_ctx_t *ctx, int depth)
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
-          err = do_walk(ctx, depth - 1);
+          err = do_walk(ctx, depth - 1, iterpool);
           if (err != NULL)
             return err;
 
@@ -4406,7 +4408,7 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
-  err = do_walk(&ctx, depth);
+  err = do_walk(&ctx, depth, params->pool);
   *response = ctx.wres.response;
 
   return err;
