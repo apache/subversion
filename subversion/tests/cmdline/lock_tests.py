@@ -2355,6 +2355,26 @@ def lock_commit_bump(sbox):
   svntest.actions.run_and_verify_info(expected_infos, 
                                       sbox.ospath('iota'))
 
+def copy_dir_with_locked_file(sbox):
+  "copy a directory containing a locked file"
+
+  sbox.build()
+  AA_url = sbox.repo_url + '/AA'
+  AA2_url = sbox.repo_url + '/AA2'
+  A_url = sbox.repo_url + '/A'
+  mu_url = A_url + '/mu'
+
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', mu_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', A_url, AA_url,
+                                     '-m', '')
+
+  expected_err = "svn: E160037: .*no matching lock-token available"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'mv', A_url, AA2_url,
+                                     '-m', '')
+
 
 ########################################################################
 # Run the tests
@@ -2420,6 +2440,7 @@ test_list = [ None,
               dav_lock_refresh,
               delete_locked_file_with_percent,
               lock_commit_bump,
+              copy_dir_with_locked_file,
             ]
 
 if __name__ == '__main__':

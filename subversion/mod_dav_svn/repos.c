@@ -4184,9 +4184,16 @@ typedef struct walker_ctx_t {
 
 } walker_ctx_t;
 
-
+/* Recursively walk a resource for walk().  When DEPTH != 0, recurse with
+   DEPTH-1 on child nodes. WALK_ROOT should be TRUE for the root and will be
+   FALSE for any descendants, to avoid unneeded work for every descendant
+   node.
+   */
 static dav_error *
-do_walk(walker_ctx_t *ctx, int depth)
+do_walk(walker_ctx_t *ctx,
+        int depth,
+        svn_boolean_t walk_root,
+        apr_pool_t *scratch_pool)
 {
   const dav_walk_params *params = ctx->params;
   int isdir = ctx->res.collection;
@@ -4250,28 +4257,31 @@ do_walk(walker_ctx_t *ctx, int depth)
   uri_len = ctx->uri->len;
   repos_len = ctx->repos_path->len;
 
-  /* Tell our logging subsystem that we're listing a directory.
+  if (walk_root)
+    {
+      /* Tell our logging subsystem that we're listing a directory.
 
-     Note: if we cared, we could look at the 'User-Agent:' request
-     header and distinguish an svn client ('svn ls') from a generic
-     DAV client.  */
-  dav_svn__operational_log(&ctx->info,
-                           svn_log__get_dir(ctx->info.repos_path,
-                                            ctx->info.root.rev,
-                                            TRUE, FALSE, SVN_DIRENT_ALL,
-                                            params->pool));
+      Note: if we cared, we could look at the 'User-Agent:' request
+         header and distinguish an svn client ('svn ls') from a generic
+         DAV client.  */
+      dav_svn__operational_log(&ctx->info,
+                               svn_log__get_dir(ctx->info.repos_path,
+                                                ctx->info.root.rev,
+                                                TRUE, FALSE, SVN_DIRENT_ALL,
+                                                scratch_pool));
+    }
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
-                            ctx->info.repos_path, params->pool);
+                            ctx->info.repos_path, scratch_pool);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not fetch collection members",
                                 params->pool);
 
   /* iterate over the children in this collection */
-  iterpool = svn_pool_create(params->pool);
-  for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -4312,7 +4322,10 @@ do_walk(walker_ctx_t *ctx, int depth)
         {
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)
-            return err;
+            {
+              svn_pool_destroy(iterpool);
+              return err;
+            }
         }
       else
         {
@@ -4324,9 +4337,12 @@ do_walk(walker_ctx_t *ctx, int depth)
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
-          err = do_walk(ctx, depth - 1);
+          err = do_walk(ctx, depth - 1, FALSE, iterpool);
           if (err != NULL)
-            return err;
+            {
+              svn_pool_destroy(iterpool);
+              return err;
+            }
 
           /* restore the data */
           ctx->res.collection = FALSE;
@@ -4406,7 +4422,7 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
-  err = do_walk(&ctx, depth);
+  err = do_walk(&ctx, depth, TRUE, params->pool);
   *response = ctx.wres.response;
 
   return err;
