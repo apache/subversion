@@ -101,6 +101,23 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
+ * r1619380, r1619393
+   Fix diff of a locally copied directory with props: it showed all props
+   as added instead of a diff against the copy-from props.
+   Justification:
+     Behaviour regression introduced in 1.8.0.
+   Notes:
+     r1619380 is the fix; r1619393 a test for it.
+     The test on trunk@1619393 is tweaked to account for a trunk bug in the
+     display of diff headers; the backport branch provides the correct
+     version for 1.8.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1619380
+   Votes:
+     +0: julianfoad (previously said +1 with the wrong branch mentioned)
+     +0: rhuijben (previously said +1 with the wrong branch mentioned)
+     +0: stefan2 (previously said +1 with the wrong branch mentioned)
+
 Veto-blocked changes:
 =====================
 
@@ -116,18 +133,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1619380, r1619393
-   Fix diff of a locally copied directory with props: it showed all props
-   as added instead of a diff against the copy-from props.
-   Justification:
-     Behaviour regression introduced in 1.8.0.
-   Notes:
-     r1619380 is the fix; r1619393 a test for it.
-     The test on trunk@1619393 is tweaked to account for a trunk bug in the
-     display of diff headers; the backport branch provides the correct
-     version for 1.8.x.
-   Branch:
-     ^/subversion/branches/1.8.x-r1611379
-   Votes:
-     +1: julianfoad, rhuijben, stefan2
