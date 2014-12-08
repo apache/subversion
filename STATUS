@@ -80,14 +80,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1640862, r1640873, r1643793
-   Work with libtool 2.4.3
-   Justification:
-     libtool 2.4.3 is needed to build properly on OS X 10.10
-   Votes:
-     +1: breser (without r1643793)
-     +1: philip, brane
-
  * r1643810
    Avoid unneeded memory growth in mod_dav resource walking (issue 4531)
    Justification:
@@ -113,3 +105,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1640862, r1640873, r1643793
+   Work with libtool 2.4.3
+   Justification:
+     libtool 2.4.3 is needed to build properly on OS X 10.10
+   Votes:
+     +1: philip, brane, breser
