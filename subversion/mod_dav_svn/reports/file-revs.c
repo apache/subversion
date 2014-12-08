@@ -149,7 +149,7 @@ file_rev_handler(void *baton,
                  apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
 
@@ -169,11 +169,11 @@ file_rev_handler(void *baton,
       const char *pname;
       const svn_string_t *pval;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
       pname = key;
       pval = val;
-      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, subpool));
+      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, iterpool));
     }
 
   /* Send file prop changes. */
@@ -181,17 +181,17 @@ file_rev_handler(void *baton,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       if (prop->value)
         SVN_ERR(send_prop(frb, "set-prop", prop->name, prop->value,
-                          subpool));
+                          iterpool));
       else
         {
           /* Property was removed. */
           SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
                                           "<S:remove-prop name=\"%s\"/>"
                                           DEBUG_CR,
-                                          apr_xml_quote_string(subpool,
+                                          apr_xml_quote_string(iterpool,
                                                                prop->name,
                                                                1)));
         }
@@ -223,7 +223,7 @@ file_rev_handler(void *baton,
     SVN_ERR(dav_svn__brigade_puts(frb->bb, frb->output,
                                   "</S:file-rev>" DEBUG_CR));
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
