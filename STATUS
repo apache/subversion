@@ -85,12 +85,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1640862, r1640873
+ * r1640862, r1640873, r1643793
    Work with libtool 2.4.3
    Justification:
      libtool 2.4.3 is needed to build properly on OS X 10.10
    Votes:
-     +1: breser, brane
+     +1: breser, brane (without r1643793)
+     +1: philip
 
 Veto-blocked changes:
 =====================
