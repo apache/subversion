@@ -4322,7 +4322,10 @@ do_walk(walker_ctx_t *ctx,
         {
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)
-            return err;
+            {
+              svn_pool_destroy(iterpool);
+              return err;
+            }
         }
       else
         {
@@ -4336,7 +4339,10 @@ do_walk(walker_ctx_t *ctx,
           /* recurse on this collection */
           err = do_walk(ctx, depth - 1, FALSE, iterpool);
           if (err != NULL)
-            return err;
+            {
+              svn_pool_destroy(iterpool);
+              return err;
+            }
 
           /* restore the data */
           ctx->res.collection = FALSE;
