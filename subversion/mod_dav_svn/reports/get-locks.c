@@ -66,7 +66,7 @@ send_get_lock_response(apr_hash_t *locks,
                        apr_bucket_brigade *bb,
                        apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
 
   /* start sending report */
@@ -76,15 +76,13 @@ send_get_lock_response(apr_hash_t *locks,
                          "\" xmlns:D=\"DAV:\">" DEBUG_CR));
 
   /* stream the locks */
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      void *val;
       const svn_lock_t *lock;
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, NULL, NULL, &val);
-      lock = val;
+      svn_pool_clear(iterpool);
+      lock = apr_hash_this_val(hi);
 
       /* Begin the <S:lock> tag, transmitting the path, token, and
          creation date. */
@@ -93,10 +91,10 @@ send_get_lock_response(apr_hash_t *locks,
                              "<S:path>%s</S:path>" DEBUG_CR
                              "<S:token>%s</S:token>" DEBUG_CR
                              "<S:creationdate>%s</S:creationdate>" DEBUG_CR,
-                             apr_xml_quote_string(subpool, lock->path, 1),
-                             apr_xml_quote_string(subpool, lock->token, 1),
+                             apr_xml_quote_string(iterpool, lock->path, 1),
+                             apr_xml_quote_string(iterpool, lock->token, 1),
                              svn_time_to_cstring(lock->creation_date,
-                                                 subpool)));
+                                                 iterpool)));
 
       /* Got expiration date?  Tell the client. */
       if (lock->expiration_date)
@@ -104,7 +102,7 @@ send_get_lock_response(apr_hash_t *locks,
                                "<S:expirationdate>%s</S:expirationdate>"
                                DEBUG_CR,
                                svn_time_to_cstring(lock->expiration_date,
-                                                   subpool)));
+                                                   iterpool)));
 
       /* Transmit the lock ownership information. */
       if (lock->owner)
@@ -114,7 +112,7 @@ send_get_lock_response(apr_hash_t *locks,
 
           if (svn_xml_is_xml_safe(lock->owner, strlen(lock->owner)))
             {
-              owner = apr_xml_quote_string(subpool, lock->owner, 1);
+              owner = apr_xml_quote_string(iterpool, lock->owner, 1);
             }
           else
             {
@@ -124,7 +122,7 @@ send_get_lock_response(apr_hash_t *locks,
               owner_string.data = lock->owner;
               owner_string.len = strlen(lock->owner);
               encoded_owner = svn_base64_encode_string2(&owner_string, TRUE,
-                                                        subpool);
+                                                        iterpool);
               owner = encoded_owner->data;
               owner_base64 = TRUE;
             }
@@ -142,7 +140,7 @@ send_get_lock_response(apr_hash_t *locks,
 
           if (svn_xml_is_xml_safe(lock->comment, strlen(lock->comment)))
             {
-              comment = apr_xml_quote_string(subpool, lock->comment, 1);
+              comment = apr_xml_quote_string(iterpool, lock->comment, 1);
             }
           else
             {
@@ -152,7 +150,7 @@ send_get_lock_response(apr_hash_t *locks,
               comment_string.data = lock->comment;
               comment_string.len = strlen(lock->comment);
               encoded_comment = svn_base64_encode_string2(&comment_string,
-                                                          TRUE, subpool);
+                                                          TRUE, iterpool);
               comment = encoded_comment->data;
               comment_base64 = TRUE;
             }
@@ -165,7 +163,7 @@ send_get_lock_response(apr_hash_t *locks,
       /* Okay, finish up this lock by closing the <S:lock> tag. */
       SVN_APR_ERR(ap_fprintf(output, bb, "</S:lock>" DEBUG_CR));
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   /* Finish the report */
   SVN_APR_ERR(ap_fprintf(output, bb, "</S:get-locks-report>" DEBUG_CR));
