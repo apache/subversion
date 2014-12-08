@@ -3479,6 +3479,32 @@ def switch_relative_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', wc)
 
+def pin_externals(sbox):
+  "test svn copy --pin-externals"
+
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Perform a repos->repos copy, pinning externals
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     repo_url + '/A',
+                                     repo_url + '/A_copy',
+                                     '-m', 'copy',
+                                     '--pin-externals')
+
+  # Create a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Perform a repos->wc copy, pinning externals
+
+  # Perform a wc->repos copy, pinning externals
+
+  # Perform a wc->wc copy, pinning externals
 
 ########################################################################
 # Run the tests
@@ -3538,6 +3564,7 @@ test_list = [ None,
               update_external_peg_rev,
               update_deletes_file_external,
               switch_relative_externals,
+              pin_externals,
              ]
 
 if __name__ == '__main__':

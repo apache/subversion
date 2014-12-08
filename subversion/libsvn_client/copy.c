@@ -973,9 +973,24 @@ path_driver_cb_func(void **dir_baton,
 
   if (path_info->externals)
     {
+      svn_boolean_t opened_dir = FALSE;
+
+      if (*dir_baton == NULL)
+        {
+          SVN_ERR(cb_baton->editor->open_directory(path, parent_baton,
+                                                   SVN_INVALID_REVNUM,
+                                                   pool, dir_baton));
+          opened_dir = TRUE;
+        }
+
       SVN_DBG(("New externals for %s: %s", path_info->dst_path, path_info->externals->data));
       SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton, SVN_PROP_EXTERNALS,
                                                 path_info->externals, pool));
+      if (opened_dir)
+        {
+          SVN_ERR(cb_baton->editor->close_directory(*dir_baton, pool));
+          *dir_baton = NULL;
+        }
     }
 
   return SVN_NO_ERROR;
