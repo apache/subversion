@@ -94,7 +94,7 @@ Candidate changes:
      Some copy operations failed in certain user scenarios, with really huge
      trees.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
