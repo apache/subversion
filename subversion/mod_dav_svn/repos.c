@@ -4184,10 +4184,15 @@ typedef struct walker_ctx_t {
 
 } walker_ctx_t;
 
-
+/* Recursively walk a resource for walk().  When DEPTH != 0, recurse with
+   DEPTH-1 on child nodes. WALK_ROOT should be TRUE for the root and will be
+   FALSE for any descendants, to avoid unneeded work for every descendant
+   node.
+   */
 static dav_error *
 do_walk(walker_ctx_t *ctx,
         int depth,
+        svn_boolean_t walk_root,
         apr_pool_t *scratch_pool)
 {
   const dav_walk_params *params = ctx->params;
@@ -4252,16 +4257,19 @@ do_walk(walker_ctx_t *ctx,
   uri_len = ctx->uri->len;
   repos_len = ctx->repos_path->len;
 
-  /* Tell our logging subsystem that we're listing a directory.
+  if (walk_root)
+    {
+      /* Tell our logging subsystem that we're listing a directory.
 
-     Note: if we cared, we could look at the 'User-Agent:' request
-     header and distinguish an svn client ('svn ls') from a generic
-     DAV client.  */
-  dav_svn__operational_log(&ctx->info,
-                           svn_log__get_dir(ctx->info.repos_path,
-                                            ctx->info.root.rev,
-                                            TRUE, FALSE, SVN_DIRENT_ALL,
-                                            scratch_pool));
+      Note: if we cared, we could look at the 'User-Agent:' request
+         header and distinguish an svn client ('svn ls') from a generic
+         DAV client.  */
+      dav_svn__operational_log(&ctx->info,
+                               svn_log__get_dir(ctx->info.repos_path,
+                                                ctx->info.root.rev,
+                                                TRUE, FALSE, SVN_DIRENT_ALL,
+                                                scratch_pool));
+    }
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
@@ -4326,7 +4334,7 @@ do_walk(walker_ctx_t *ctx,
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
-          err = do_walk(ctx, depth - 1, iterpool);
+          err = do_walk(ctx, depth - 1, FALSE, iterpool);
           if (err != NULL)
             return err;
 
@@ -4408,7 +4416,7 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
-  err = do_walk(&ctx, depth, params->pool);
+  err = do_walk(&ctx, depth, TRUE, params->pool);
   *response = ctx.wres.response;
 
   return err;
