@@ -93,6 +93,14 @@ Candidate changes:
      +1: breser, brane (without r1643793)
      +1: philip
 
+ * r1643810
+   Avoid unneeded memory growth in mod_dav resource walking (issue 4531)
+   Justification:
+     Some copy operations failed in certain user scenarios, with really huge
+     trees.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
