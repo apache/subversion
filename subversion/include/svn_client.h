@@ -4486,6 +4486,10 @@ typedef struct svn_client_copy_source_t
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a pin_externals is set, pin URLs in copied externals definitions
+ * to their last-changed revision unless they were already pinned to a
+ * particular revision.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4504,7 +4508,26 @@ typedef struct svn_client_copy_source_t
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_copy7(const apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 svn_boolean_t pin_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy7(), but cannot pin externals.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_client_copy6(const apr_array_header_t *sources,
