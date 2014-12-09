@@ -97,13 +97,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1643810
-   Avoid unneeded memory growth in mod_dav resource walking (issue 4531)
-   Justification:
-     Some copy operations failed in certain user scenarios, with really huge
-     trees.
-   Notes:
-     This is working around a mod_dav inefficiency in recent 2.2/2.4.
-   Votes:
-     +1: rhuijben, stsp, philip
