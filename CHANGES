@@ -1216,6 +1216,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.19
     * mod_dav_svn: reject requests with missing repository paths (r1643409)
     * mod_dav_svn: reject requests with invalid virtual transaction names
       (r1643437)
+    * mod_dav_svn: avoid unneeded memory growth in resource walking
+      (issue #4531)
 
  Developer-visible changes:
   - General:
@@ -1227,6 +1229,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.19
       2003-2008 (r1595431)
     * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
       during a unix build (r1637826)
+    * allow the use of libtool 2.4.3 (r1640862, r1640873, r1643793)
 
 
 Version 1.7.18
