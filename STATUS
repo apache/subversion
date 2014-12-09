@@ -64,6 +64,21 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+ * r1409804
+   Add a delimiter between the two chains in svn_error_compose_create().
+   Justification:
+     Allow users to tell where the second error chain starts -- avoids
+     misrepresentation that the first error is caused by the second.
+   Votes:
+     -0: rhuijben (I'm not sure if this should be in a patch release and the
+                   stacktrace where this refers to is maintainer only)
+     +1: danielsh (err->file and err->line are only in maintainer builds.
+                   this is about err->message which is valid in all builds)
+     -1: stsp (not a bug fix, changes output in a patch release)
+
  * r1643074
    Don't let invalid mergeinfo stop 'svnadmin load' from working.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
@@ -79,21 +94,9 @@ Candidate changes:
      ^/subversion/branches/1.7.x-r1643074
    Votes:
      +1: julianfoad
-
-Veto-blocked changes:
-=====================
-
- * r1409804
-   Add a delimiter between the two chains in svn_error_compose_create().
-   Justification:
-     Allow users to tell where the second error chain starts -- avoids
-     misrepresentation that the first error is caused by the second.
-   Votes:
-     -0: rhuijben (I'm not sure if this should be in a patch release and the
-                   stacktrace where this refers to is maintainer only)
-     +1: danielsh (err->file and err->line are only in maintainer builds.
-                   this is about err->message which is valid in all builds)
-     -1: stsp (not a bug fix, changes output in a patch release)
+     -1: breser (no changes on branch, attempt to merge something for this
+                 was mismerged on release branch in r1643189, the merge that
+                 was made broke swig-rb)
 
 Approved changes:
 =================
