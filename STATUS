@@ -93,7 +93,9 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.7.x-r1643074
    Votes:
-     +1: julianfoad
+     -1: julianfoad (I've now merged the changes onto the backport branch
+                     and am re-testing. breser reports it would still break
+                     swig-rb. Working on it...)
      -1: breser (no changes on branch, attempt to merge something for this
                  was mismerged on release branch in r1643189, the merge that
                  was made broke swig-rb)
