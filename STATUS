@@ -69,22 +69,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1643074
-   Don't let invalid mergeinfo stop 'svnadmin load' from working.
-     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
-     dump fail".
-   Justification:
-     The presence of 'bad' metadata in a repository should not prevent
-     backing up and restoring from a backup, given that this data does not
-     make the repository totally unusable.
-   Notes:
-     The 'svnadmin dump' part of this issue was already backported in v1.8.9.
-     The 'svnsync' part of this issue is not yet fixed.
-   Branch:
-     ^/subversion/branches/1.8.x-r1643074
-   Votes:
-     +1: julianfoad
-
  * r1619380, r1619393
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
@@ -114,6 +98,22 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
+
+ * r1643074
+   Don't let invalid mergeinfo stop 'svnadmin load' from working.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     The presence of 'bad' metadata in a repository should not prevent
+     backing up and restoring from a backup, given that this data does not
+     make the repository totally unusable.
+   Notes:
+     The 'svnadmin dump' part of this issue was already backported in v1.8.9.
+     The 'svnsync' part of this issue is not yet fixed.
+   Branch:
+     ^/subversion/branches/1.8.x-r1643074
+   Votes:
+     -1: julianfoad (breaks swig-rb; working on a fix...)
 
 Approved changes:
 =================
