@@ -271,6 +271,8 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is 16.\n"
         "                             "
+        "0 switches to dynamically sized caches.\n"
+        "                             "
         "[used for FSFS and FSX repositories only]")},
     {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1,
      N_("enable or disable caching of deltas between older\n"
