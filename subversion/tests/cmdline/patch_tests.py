@@ -4870,6 +4870,63 @@ def patch_hunk_avoid_reorder(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+@XFail()
+@Issue(4533)
+def patch_hunk_reorder(sbox):
+  """hunks that reorder"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n' 'MM\n' 'NN\n',
+                     truncate=True)
+  sbox.simple_commit()
+
+  # Two hunks match in opposite order
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -2,6 +2,7 @@\n",
+    " II\n",
+    " JJ\n",
+    " KK\n",
+    "+11111\n",
+    " LL\n",
+    " MM\n",
+    " NN\n",
+    "@@ -9,6 +10,7 @@\n",
+    " BB\n",
+    " CC\n",
+    " DD\n",
+    "+22222\n",
+    " EE\n",
+    " FF\n",
+    " GG\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -2,6 +2,7 @@ with offset 7\n',
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -7\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' '22222\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' '11111\n' 'LL\n' 'MM\n' 'NN\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -4924,6 +4981,7 @@ test_list = [ None,
               patch_with_custom_keywords,
               patch_git_rename,
               patch_hunk_avoid_reorder,
+              patch_hunk_reorder,
             ]
 
 if __name__ == '__main__':
