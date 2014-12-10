@@ -79,6 +79,11 @@ svn_repos__fs_type(const char **fs_type,
                    const char *repos_path,
                    apr_pool_t *pool);
 
+/* A private addition to svn_repos_notify_warning_t. */
+#define svn_repos__notify_warning_invalid_mergeinfo \
+    ((svn_repos_notify_warning_t)(-1))
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

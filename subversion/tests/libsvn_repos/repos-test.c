@@ -39,6 +39,8 @@
 
 #include "dir-delta-editor.h"
 
+#include "private/svn_repos_private.h"
+
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
