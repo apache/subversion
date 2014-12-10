@@ -40,6 +40,7 @@
 
 #include <apr_lib.h>
 
+#include "private/svn_repos_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
