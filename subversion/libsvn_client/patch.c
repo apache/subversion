@@ -48,6 +48,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_sorts_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -2139,6 +2140,30 @@ send_patch_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
+/* Implements the callback for svn_sort__array.  Puts hunks that match
+   before hunks that do not match, and puts hunks that match in order
+   based on postion matched. */
+static int
+sort_matched_hunks(const void *a, const void *b)
+{
+  const hunk_info_t *item1 = *((const hunk_info_t * const *)a);
+  const hunk_info_t *item2 = *((const hunk_info_t * const *)b);
+  svn_boolean_t matched1 = !item1->rejected && !item1->already_applied;
+  svn_boolean_t matched2 = !item2->rejected && !item2->already_applied;
+
+  if (matched1 && matched2)
+    {
+      /* Both match so use order matched in file. */
+      if (item1->matched_line > item2->matched_line)
+        return 1;
+    }
+  else if (matched2)
+    /* Only second matches, put it before first. */
+    return 1;
+
+  return -1;
+}
+
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
  * into temporary files, to be installed in the working copy later.
  * Return information about the patch target in *PATCH_TARGET, allocated
@@ -2219,6 +2244,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
     }
+
+  /* Hunks are applied in the order determined by the matched line and
+     this may be different from the order of the original lines. */
+  svn_sort__array(target->content->hunks, sort_matched_hunks);
 
   /* Apply or reject hunks. */
   for (i = 0; i < target->content->hunks->nelts; i++)
