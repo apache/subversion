@@ -2141,8 +2141,9 @@ send_patch_notification(const patch_target_t *target,
 }
 
 /* Implements the callback for svn_sort__array.  Puts hunks that match
-   before hunks that do not match, and puts hunks that match in order
-   based on postion matched. */
+   before hunks that do not match, puts hunks that match in order
+   based on postion matched, puts hunks that do not match in order
+   based on original position. */
 static int
 sort_matched_hunks(const void *a, const void *b)
 {
@@ -2160,6 +2161,13 @@ sort_matched_hunks(const void *a, const void *b)
   else if (matched2)
     /* Only second matches, put it before first. */
     return 1;
+  else
+    {
+      /* Neither matches, sort by original_start. */
+      if (svn_diff_hunk_get_original_start(item1->hunk)
+          > svn_diff_hunk_get_original_start(item2->hunk))
+        return 1;
+    }
 
   return -1;
 }
