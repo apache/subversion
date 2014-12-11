@@ -4938,7 +4938,7 @@ def patch_hunk_overlap(sbox):
                      'GG\n' 'HH\n' 'II\n', truncate=True)
   sbox.simple_commit()
 
-  # Two hunks that overlap when applied, GNU patch can apply both patches.
+  # Two hunks that overlap when applied, GNU patch can apply both hunks.
   unidiff_patch = [
     "Index: A/mu\n"
     "===================================================================\n",
