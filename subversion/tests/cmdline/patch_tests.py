@@ -4689,7 +4689,6 @@ def patch_git_rename(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
-@XFail()
 @Issue(4533)
 def patch_hunk_avoid_reorder(sbox):
   """avoid reordering hunks"""
@@ -4818,6 +4817,28 @@ def patch_hunk_avoid_reorder(sbox):
 
   sbox.simple_revert('A/mu')
 
+@XFail()
+@Issue(4533)
+def patch_hunk_avoid_reorder2(sbox):
+  """avoid reordering hunks 2"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n', truncate=True)
+  sbox.simple_commit()
+
+  # two hunks, first matches at offset +18, second matches at both -13
   # change patch so second hunk matches at both -12 and +19, we still
   # want the second match
   unidiff_patch = [
@@ -5034,6 +5055,7 @@ test_list = [ None,
               patch_with_custom_keywords,
               patch_git_rename,
               patch_hunk_avoid_reorder,
+              patch_hunk_avoid_reorder2,
               patch_hunk_reorder,
               patch_hunk_overlap,
             ]

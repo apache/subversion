@@ -1579,7 +1579,8 @@ match_existing_target(svn_boolean_t *match,
 /* Determine the line at which a HUNK applies to CONTENT of the TARGET
  * file, and return an appropriate hunk_info object in *HI, allocated from
  * RESULT_POOL. Use fuzz factor FUZZ. Set HI->FUZZ to FUZZ. If no correct
- * line can be determined, set HI->REJECTED to TRUE.
+ * line can be determined, set HI->REJECTED to TRUE.  PREVIOUS_OFFSET
+ * is the offset at which the previous matching hunk was applied, or zero.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * matching. IS_PROP_HUNK indicates whether the hunk patches file content
  * or a property.
@@ -1591,6 +1592,7 @@ static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_t *content,
               svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
+              apr_int64_t previous_offset,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1600,7 +1602,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   svn_linenum_t original_start;
   svn_boolean_t already_applied;
 
-  original_start = svn_diff_hunk_get_original_start(hunk);
+  original_start = svn_diff_hunk_get_original_start(hunk) + previous_offset;
   already_applied = FALSE;
 
   /* An original offset of zero means that this hunk wants to create
@@ -2200,6 +2202,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
+  apr_int64_t previous_offset = 0;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -2242,6 +2245,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, target->content, hunk, fuzz,
+                                previous_offset,
                                 ignore_whitespace,
                                 FALSE /* is_prop_hunk */,
                                 cancel_func, cancel_baton,
@@ -2249,6 +2253,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           fuzz++;
         }
       while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
+
+      if (hi->matched_line)
+        previous_offset
+          = hi->matched_line - svn_diff_hunk_get_original_start(hunk);
 
       APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
     }
@@ -2328,7 +2336,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           do
             {
               SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
-                                    hunk, fuzz,
+                                    hunk, fuzz, 0,
                                     ignore_whitespace,
                                     TRUE /* is_prop_hunk */,
                                     cancel_func, cancel_baton,
