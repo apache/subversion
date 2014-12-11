@@ -4870,7 +4870,6 @@ def patch_hunk_avoid_reorder(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
-@XFail()
 @Issue(4533)
 def patch_hunk_reorder(sbox):
   """hunks that reorder"""
@@ -4913,8 +4912,8 @@ def patch_hunk_reorder(sbox):
 
   expected_output = [
     'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -7\n',
     '>         applied hunk @@ -2,6 +2,7 @@ with offset 7\n',
-    '>         applied hunk @@ -9,6 +10,7 @@ with offset -7\n'
     ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=
