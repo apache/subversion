@@ -102,6 +102,15 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1644158, r1644530, r1644595, r1644599
+   Fix patch output for reordered hunks, part of issue 4533.
+   Justification:
+     Output is invalid, hunks replace the wrong bits of the file.
+   Branch:
+     ^/subversion/branches/1.8.x-r1644595
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
