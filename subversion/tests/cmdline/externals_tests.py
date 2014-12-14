@@ -2794,23 +2794,26 @@ def include_immediate_dir_externals(sbox):
 
 
 @Issue(4085)
-@XFail()
 def shadowing(sbox):
   "external shadows an existing dir"
 
-  sbox.build(read_only=True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # Setup external: /A/B/F as 'C' child of /A
   externals_prop = "^/A/B/F C\n"
+  change_external(sbox.ospath('A'), externals_prop, commit=False)
 
-  raised = False
-  try:
-    change_external(sbox.ospath('A'), externals_prop, commit=False)
-  except:
-    raised = True
-  if not raised:
-    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+  # An update errors out because the external is shadowed by an existing dir
+  svntest.main.run_svn("W205011: Error handling externals definition for '%s'"
+    % (sbox.wc_dir) + "/A/C", 'update', wc_dir)
+
+  # Remove the shadowed directory to unblock the external
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/A/C', '-m', 'remove A/C')
+
+  # The next update should fetch the external and not error out
+  sbox.simple_update()
+
 
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
@@ -3163,6 +3166,7 @@ def pinned_externals(sbox):
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-rev'         : Item(contents="This is the file 'mu'.\n"),
 
     # And verifying X
     'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
