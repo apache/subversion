@@ -204,10 +204,9 @@ file_diff(struct diff_baton *eb,
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, NULL, NULL,
                                      NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
-
 
   SVN_ERR(get_empty_file(eb, &empty_file, scratch_pool));
 

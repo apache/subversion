@@ -609,6 +609,24 @@ svn_client__get_diff_summarize_editor(const char *target,
                                       void **edit_baton,
                                       apr_pool_t *pool);
 
+/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
+   report a diff summary, i.e. only providing information about the changed
+   items without the text deltas.
+
+   TARGET is the target path, relative to the anchor, of the diff.
+
+   SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
+   created callbacks for each changed item.
+*/
+svn_error_t *
+svn_client__get_diff_summarize_callbacks(
+                        svn_wc_diff_callbacks4_t **callbacks,
+                        void **callback_baton,
+                        const char *target,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Copy Stuff ***/
@@ -929,7 +947,11 @@ svn_client__export_externals(apr_hash_t *externals,
 
 /* Perform status operations on each external in EXTERNAL_MAP, a const char *
    local_abspath of all externals mapping to the const char* defining_abspath.
-   All other options are the same as those passed to svn_client_status(). */
+   All other options are the same as those passed to svn_client_status().
+
+   If ANCHOR_ABSPATH and ANCHOR-RELPATH are not null, use them to provide
+   properly formatted relative paths
+ */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
                                apr_hash_t *external_map,
@@ -937,9 +959,11 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 /* Baton type for svn_wc__external_info_gatherer(). */
 typedef struct svn_client__external_func_baton_t

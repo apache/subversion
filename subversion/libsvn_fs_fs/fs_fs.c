@@ -78,6 +78,13 @@
 #define SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
+/* Finding a deltification base takes operations proportional to the
+   number of changes being skipped. To prevent exploding runtime
+   during commits, limit the deltification range to this value.
+   Should be a power of 2 minus one.
+   Values < 1 disable deltification. */
+#define SVN_FS_FS_MAX_DELTIFICATION_WALK 1023
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
@@ -5482,6 +5489,16 @@ choose_delta_base(representation_t **rep,
      you decrement a binary number.) */
   count = noderev->predecessor_count;
   count = count & (count - 1);
+
+  /* Finding the delta base over a very long distance can become extremely
+     expensive for very deep histories, possibly causing client timeouts etc.
+     OTOH, this is a rare operation and its gains are minimal. Lets simply
+     start deltification anew close every other 1000 changes or so.  */
+  if (noderev->predecessor_count - count > SVN_FS_FS_MAX_DELTIFICATION_WALK)
+    {
+      *rep = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* Walk back a number of predecessors equal to the difference
      between count and the original predecessor count.  (For example,

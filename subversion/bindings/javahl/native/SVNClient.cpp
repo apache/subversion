@@ -1138,7 +1138,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
         return;
 
     SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(subPool),
-                                path, pegRevision.revision(),
+                                intPath.c_str(), pegRevision.revision(),
                                 revision.revision(), ctx, subPool.getPool()),
                 );
 }

@@ -697,6 +697,42 @@ def check_log_chain(chain, revlist, path_counts=[]):
                             missing_revs, chain)
 
 
+def parse_diff(output):
+  """Return a set containing the various diff bits, broken up by file."""
+
+  diff_set = []
+  current_diff = []
+  for line in output:
+    if line.startswith('Index: ') and current_diff:
+      diff_set.append(current_diff)
+      current_diff = []
+    current_diff.append(line)
+  diff_set.append(current_diff)
+
+  return diff_set
+
+
+def setify(diff_list):
+  """Take a list of lists and make it a set of tuples."""
+  s = set()
+  for diff in diff_list:
+    s.add(tuple(diff))
+  return s
+
+
+def compare_diff_output(expected_diffs, output):
+  """Compare the diffs in EXPECTED_DIFFS (which is a Python set) with the
+  text in OUTPUT, remembering that there is no canonical ordering for diffs."""
+
+  diffs = parse_diff(output)
+  diffs = setify(diffs)
+  expected_diffs = setify(expected_diffs)
+
+  if diffs.issubset(expected_diffs) and diffs.issuperset(expected_diffs):
+    return
+
+  raise svntest.Failure("Diffs not equal")
+
 
 ######################################################################
 # Tests
@@ -2081,26 +2117,97 @@ def log_diff(sbox):
                                                               '-r10:8', 'A2')
   os.chdir(was_cwd)
 
-  r9diff = make_no_diff_deleted_header('A2/B/E/alpha', 8, 9) \
-           + make_diff_header('A2/B/E/beta', 'revision 8', 'revision 9') \
-           + [ "@@ -1 +1,2 @@\n",
-               " This is the file 'beta'.\n",
-               "+9\n",
-               "\ No newline at end of file\n",
-             ]
-  r8diff = make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8') \
-           + [ "@@ -0,0 +1 @@\n",
-               "+88\n",
-               "\ No newline at end of file\n",
-             ]
+  r9diff = [ make_no_diff_deleted_header('A2/B/E/alpha', 8, 9),
+              make_diff_header('A2/B/E/beta', 'revision 8', 'revision 9')
+               + [ "@@ -1 +1,2 @@\n",
+                   " This is the file 'beta'.\n",
+                   "+9\n",
+                   "\ No newline at end of file\n",
+                 ]
+           ]
+  r8diff = [ make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8')
+              + [ "@@ -0,0 +1 @@\n",
+                  "+88\n",
+                  "\ No newline at end of file\n",
+                ]
+           ]
   log_chain = parse_log_output(output, with_diffs=True)
   if len(log_chain) != 3:
     raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
-  svntest.verify.compare_and_display_lines(None, "diff for r9",
-                                           r9diff, log_chain[1]['diff_lines'])
-  svntest.verify.compare_and_display_lines(None, "diff for r8",
-                                           r8diff, log_chain[2]['diff_lines'])
+  compare_diff_output(r9diff, log_chain[1]['diff_lines'])
+  compare_diff_output(r8diff, log_chain[2]['diff_lines'])
 
+
+@Issue(4153)
+def log_diff_moved(sbox):
+  "log --diff on moved file"
+
+  sbox.build()
+
+  sbox.simple_move('A/mu', 'A/mu2')
+  svntest.main.file_append(sbox.ospath('A/mu2'), "now mu2\n")
+  sbox.simple_commit()
+  sbox.simple_move('A/mu2', 'A/mu3')
+  svntest.main.file_append(sbox.ospath('A/mu3'), "now mu3\n")
+  sbox.simple_commit()
+  
+  mu_at_1 = sbox.repo_url + '/A/mu@1'
+  mu3_at_3 = sbox.repo_url + '/A/mu3@3'
+
+  r1diff = [make_diff_header('mu', 'revision 0', 'revision 1')
+            + ["@@ -0,0 +1 @@\n",
+               "+This is the file 'mu'.\n"]]
+
+  # The mu2@2 and mu3@3 diffs show diffs relative to the copy source
+  r2diff = [make_diff_header('mu',
+                             '.../mu)\t(revision 1',
+                             '.../mu2)\t(revision 2')
+            + ["@@ -1 +1,2 @@\n",
+               " This is the file 'mu'.\n",
+               "+now mu2\n"]]
+
+  r3diff = [make_diff_header('mu2',
+                             '.../mu2)\t(revision 2',
+                             '.../mu3)\t(revision 3')
+            + ["@@ -1,2 +1,3 @@\n",
+               " This is the file 'mu'.\n",
+               " now mu2\n",
+               "+now mu3\n"]]
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu_at_1)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r1diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3:2', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 2:
+    raise SVNLogParseError("%d logs found, 2 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 3:
+    raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+  compare_diff_output(r1diff, log_chain[2]['diff_lines'])
 
 ########################################################################
 # Run the tests
@@ -2142,6 +2249,7 @@ test_list = [ None,
               log_with_unrelated_peg_and_operative_revs,
               log_on_nonexistent_path_and_valid_rev,
               log_diff,
+              log_diff_moved,
              ]
 
 if __name__ == '__main__':

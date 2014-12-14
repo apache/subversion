@@ -138,6 +138,7 @@ class JNIUtil
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
  private:
+  static void wrappedHandleSVNError(svn_error_t *err);
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
                                    std::string &buffer);

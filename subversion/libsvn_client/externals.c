@@ -464,7 +464,10 @@ switch_file_external(const char *local_abspath,
        ### information into the wrong working copy */
     const char *definition_abspath = svn_dirent_dirname(local_abspath,subpool);
 
-    /* Open an RA session to 'source' URL */
+    /* ### Why do we open a new session?  RA_SESSION is a valid
+       ### session -- the caller used it to call svn_ra_check_path on
+       ### this very URL, the caller also did the resolving and
+       ### reparenting that is repeated here. */
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                              &switch_rev_url,
                                              url, dir_abspath,
@@ -497,7 +500,7 @@ switch_file_external(const char *local_abspath,
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, svn_depth_unknown, url,
+                            target, svn_depth_unknown, switch_rev_url,
                             switch_editor, switch_baton, subpool));
 
   SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
@@ -916,7 +919,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   switch (local_kind)
     {
       case svn_node_dir:
-        SVN_ERR(switch_dir_external(local_abspath, new_url,
+        SVN_ERR(switch_dir_external(local_abspath, ra_session_url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
@@ -1302,17 +1305,19 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               const char *anchor_abspath,
+                               const char *anchor_relpath,
                                svn_client_status_func_t status_func,
                                void *status_baton,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(pool, external_map);
+  for (hi = apr_hash_first(scratch_pool, external_map);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -1321,6 +1326,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
       const char *defining_abspath = svn__apr_hash_index_val(hi);
       svn_node_kind_t kind;
       svn_opt_revision_t opt_rev;
+      const char *status_path;
 
       svn_pool_clear(iterpool);
 
@@ -1351,8 +1357,17 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                     svn_wc_notify_status_external,
                                     iterpool), iterpool);
 
+      status_path = local_abspath;
+      if (anchor_abspath)
+        {
+          status_path = svn_dirent_join(anchor_relpath,
+                           svn_dirent_skip_ancestor(anchor_abspath,
+                                                    status_path),
+                           iterpool);
+        }
+
       /* And then do the status. */
-      SVN_ERR(svn_client_status5(NULL, ctx, local_abspath, &opt_rev, depth,
+      SVN_ERR(svn_client_status5(NULL, ctx, status_path, &opt_rev, depth,
                                  get_all, update, no_ignore, FALSE, FALSE,
                                  NULL, status_func, status_baton,
                                  iterpool));

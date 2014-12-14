@@ -120,7 +120,7 @@ foreach my $path ( @files_added )
 		# Parse the complete list of property values of the file $path to extract
 		# the mime-type and eol-style
 		foreach my $prop (&read_from_process($svnlook, 'proplist', $repos, '-t',
-		                  $txn, '--verbose', $path))
+		                  $txn, '--verbose', '--', $path))
 			{
 				if ($prop =~ /^\s*svn:mime-type : (\S+)/)
 					{
@@ -187,7 +187,7 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe passed no arguments.\n";
     }
   print "Running @_\n";
-  my $pid = open(SAFE_READ, '-|');
+  my $pid = open(SAFE_READ, '-|', @_);
   unless (defined $pid)
     {
       die "$0: cannot fork: $!\n";

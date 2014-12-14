@@ -141,7 +141,7 @@ sub check {
                 return 1;
             } else {
                 my @keywords = get_svnkeywords($file);
-                my $fh = _pipe("$svnlook cat $flag $value $repos $file");
+                my $fh = _pipe($svnlook, qw/cat/, $flag, $value, $repos, '--', $file);
                 while (my $line = <$fh>) {
                     foreach my $keyword (@keywords) {
                         if ($line =~ m/$keyword/) {
@@ -168,7 +168,7 @@ sub file_is_binary {
         return 0;
     }
     if (has_svn_property($file, "svn:mime-type")) {
-        my ($mimetype) = read_from_process("$svnlook propget $flag $value $repos svn:mime-type $file");
+        my ($mimetype) = read_from_process($svnlook, qw/propget/, $flag, $value, $repos, 'svn:mime-type', '--', $file);
         chomp($mimetype);
         $mimetype =~ s/^\s*(.*)/$1/;
         if ($mimetype =~ m/^text\//) {
@@ -186,7 +186,7 @@ sub file_is_binary {
 # Return a list of svn:keywords on a file
 sub get_svnkeywords {
     my $file = shift;
-    my @lines = read_from_process("$svnlook propget $flag $value $repos svn:keywords $file");
+    my @lines = read_from_process($svnlook, qw/propget/, $flag, $value, $repos, 'svn:keywords', '--', $file);
     my @returnlines;
     foreach my $line (@lines) {
         $line =~ s/\s+/ /;
@@ -199,7 +199,7 @@ sub get_svnkeywords {
 sub has_svn_property {
     my $file = shift;
     my $keyword = shift;
-    my @proplist = read_from_process("$svnlook proplist $flag $value $repos $file");
+    my @proplist = read_from_process($svnlook, qw/proplist/, $flag, $value, $repos, '--', $file);
     foreach my $prop (@proplist) {
         chomp($prop);
         if ($prop =~ m/\b$keyword\b/) {
@@ -241,7 +241,7 @@ sub safe_read_from_pipe {
 # Return the filehandle as a glob so we can loop over it elsewhere.
 sub _pipe {
     local *SAFE_READ;
-    my $pid = open(SAFE_READ, '-|');
+    my $pid = open(SAFE_READ, '-|', @_);
     unless (defined $pid) {
         die "$0: cannot fork: $!\n";
     }

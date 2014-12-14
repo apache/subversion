@@ -1995,7 +1995,8 @@ main(int argc, const char *argv[])
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
-        opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        opt_state.changelist = utf8_opt_arg;
         if (opt_state.changelist[0] == '\0')
           {
             err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

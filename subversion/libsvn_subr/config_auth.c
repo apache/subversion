@@ -90,6 +90,7 @@ svn_config_read_auth_data(apr_hash_t **hash,
   if (kind == svn_node_file)
     {
       svn_stream_t *stream;
+      svn_string_t *stored_realm;
 
       SVN_ERR_W(svn_stream_open_readonly(&stream, auth_path, pool, pool),
                 _("Unable to open auth file for reading"));
@@ -99,6 +100,12 @@ svn_config_read_auth_data(apr_hash_t **hash,
       SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
                              svn_dirent_local_style(auth_path, pool)));
+
+      stored_realm = apr_hash_get(*hash, SVN_CONFIG_REALMSTRING_KEY,
+                                  APR_HASH_KEY_STRING);
+
+      if (!stored_realm || strcmp(stored_realm->data, realmstring) != 0)
+        *hash = NULL; /* Hash collision, or somebody tampering with storage */
 
       SVN_ERR(svn_stream_close(stream));
     }

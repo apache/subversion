@@ -376,7 +376,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
     return;
 
   char *tmp_path;
-  char *path = svn_relpath_dirname(err->file, err->pool);
+  char *path = svn_dirent_dirname(err->file, err->pool);
   while (tmp_path = strchr(path, '/'))
     *tmp_path = '.';
 
@@ -384,7 +384,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   if (isJavaExceptionThrown())
     return;
 
-  jstring jfileName = makeJString(svn_relpath_basename(err->file, err->pool));
+  jstring jfileName = makeJString(svn_dirent_basename(err->file, err->pool));
   if (isJavaExceptionThrown())
     return;
 
@@ -399,7 +399,7 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   env->DeleteLocalRef(jfileName);
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
 {
   std::string msg;
   assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
@@ -521,7 +521,16 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 #endif
 
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+}
 
+void JNIUtil::handleSVNError(svn_error_t *err)
+{
+  try {
+    wrappedHandleSVNError(err);
+  } catch (...) {
+    svn_error_clear(err);
+    throw;
+  }
   svn_error_clear(err);
 }
 
@@ -621,27 +630,41 @@ bool JNIUtil::isJavaExceptionThrown()
 const char *
 JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
 {
-  const char *msg;
+  const char *msg = NULL;
   JNIEnv *env = getEnv();
+  apr_pool_t *pool = in_pool.getPool();
   if (env->ExceptionCheck())
     {
       jthrowable t = env->ExceptionOccurred();
-      static jmethodID getMessage = 0;
-      if (getMessage == 0)
+      jclass cls = env->GetObjectClass(t);
+
+      jstring jclass_name;
+      {
+        jmethodID mid = env->GetMethodID(cls, "getClass", "()Ljava/lang/Class;");
+        jobject clsobj = env->CallObjectMethod(t, mid);
+        jclass basecls = env->GetObjectClass(clsobj);
+        mid = env->GetMethodID(basecls, "getName", "()Ljava/lang/String;");
+        jclass_name = (jstring) env->CallObjectMethod(clsobj, mid);
+      }
+
+      jstring jmessage;
+      {
+        jmethodID mid = env->GetMethodID(cls, "getMessage",
+                                         "()Ljava/lang/String;");
+        jmessage = (jstring) env->CallObjectMethod(t, mid);
+      }
+
+      JNIStringHolder class_name(jclass_name);
+      if (jmessage)
         {
-          jclass clazz = env->FindClass("java/lang/Throwable");
-          getMessage = env->GetMethodID(clazz, "getMessage",
-                                        "(V)Ljava/lang/String;");
-          env->DeleteLocalRef(clazz);
+          JNIStringHolder message(jmessage);
+          msg = apr_pstrcat(pool,
+                            static_cast<const char*>(class_name), ": ",
+                            static_cast<const char*>(message), NULL);
         }
-      jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
-      JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(in_pool.getPool());
+      else
+        msg = class_name.pstrdup(pool);
       // ### Conditionally add t.printStackTrace() to msg?
-    }
-  else
-    {
-      msg = NULL;
     }
   return msg;
 }

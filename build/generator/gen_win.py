@@ -382,13 +382,20 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
                                                             and x.install == 'bdb-test')]
 
+    # Don't build serf when we don't have it or for 1.3+
+    if not self.serf_lib or (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
+      install_targets = [x for x in install_targets if x.name != 'serf']      
+      
     # Drop the serf target if we don't have both serf and openssl
     if not self.serf_lib:
-      install_targets = [x for x in install_targets if x.name != 'serf']
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
     if self.without_neon:
       install_targets = [x for x in install_targets if x.name != 'neon']
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_neon']
+
+    # Don't build zlib if we have an already compiled serf
+    if self.serf_lib and (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
+      install_targets = [x for x in install_targets if x.name != 'zlib']
 
     # Drop the swig targets if we don't have swig
     if not self.swig_path and not self.swig_libdir:
@@ -712,7 +719,9 @@ class WinGeneratorBase(GeneratorBase):
 
     # Build ZLib as a dependency of Neon or Serf if we have it
     if self.zlib_path and (name == 'neon' or name == 'serf'):
-      depends.extend(self.sections['zlib'].get_targets())
+      # Don't add a dependency to zlib, when we don't build zlib.
+      if not self.serf_lib or (self.serf_ver_maj, self.serf_ver_min) < (1, 3):
+        depends.extend(self.sections['zlib'].get_targets())
 
     # To set the correct build order of the JavaHL targets, the javahl-javah
     # and libsvnjavahl targets are defined with extra dependencies in build.conf
@@ -942,6 +951,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.serf_lib:
       fakeincludes.append(self.apath(self.serf_path))
+      
+      if self.openssl_path and self.openssl_inc_dir:
+        fakeincludes.append(self.apath(self.openssl_inc_dir))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -993,7 +1005,13 @@ class WinGeneratorBase(GeneratorBase):
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
-      fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
+      if (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
+        fakelibdirs.append(self.apath(self.serf_path))
+        
+        if self.openssl_path and self.openssl_lib_dir:
+          fakelibdirs.append(self.apath(self.openssl_lib_dir))
+      else:
+        fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
     fakelibdirs.append(self.apath(self.apr_path, cfg))
     fakelibdirs.append(self.apath(self.apr_util_path, cfg))
@@ -1033,7 +1051,14 @@ class WinGeneratorBase(GeneratorBase):
       else:
         serflib = 'serf.lib'
 
-    zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+    if self.serf_lib and (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
+      # We don't build zlib ourselves, so use the standard name
+      # (zdll.lib would link to zlib.dll)
+      zlib = 'zlib.lib'
+    else:
+      # We compile zlib ourselves to these explicit (non-standard) names
+      zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+      
     sasllib = None
     if self.sasl_path:
       sasllib = 'libsasl.lib'
@@ -1080,6 +1105,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if self.serf_lib and dep.external_lib == '$(SVN_SERF_LIBS)':
         nondeplibs.append(serflib)
+        if (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
+          nondeplibs.append('ssleay32.lib')
+          nondeplibs.append('libeay32.lib')
 
       if dep.external_lib == '$(SVN_SASL_LIBS)':
         nondeplibs.append(sasllib)
@@ -1487,6 +1515,21 @@ class WinGeneratorBase(GeneratorBase):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (0, 3, 0)
+    
+    if self.openssl_path and os.path.exists(self.openssl_path):
+      version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
+      if os.path.isfile(version_path):
+        # We have an OpenSSL Source location (legacy handling)
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'inc32')
+        self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32dll')
+      elif os.path.isfile(os.path.join(self.openssl_path,
+                          'include/openssl/opensslv.h')):
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'include')
+        self.openssl_lib_dir = os.path.join(self.openssl_path, 'lib')
+      else:
+        print('WARNING: \'opensslv.h\' not found')
+        self.openssl_path = None
+    
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):

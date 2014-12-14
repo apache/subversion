@@ -3066,7 +3066,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
 
   /* ### Issue #3014: Return a specific error for broken pipes,
    * ### with a single element in the error chain. */
-  if (APR_STATUS_IS_EPIPE(status))
+  if (SVN__APR_STATUS_IS_EPIPE(status))
     return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
 
   if (name)
@@ -3250,17 +3250,8 @@ svn_io_write_unique(const char **tmp_path,
 
   err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
 
-  /* ### BH: Windows doesn't have the race condition between the write and the
-     ###     rename that other operating systems might have. So allow windows
-     ###     to decide when it wants to perform the disk synchronization using
-     ###     the normal file locking and journaling filesystem rules.
-
-     ### Note that this function doesn't handle the rename, so we aren't even
-     ### sure that we really have to sync. */
-#ifndef WIN32
-  if (!err && nbytes > 0)
+  if (!err)
     err = svn_io_file_flush_to_disk(new_file, pool);
-#endif
 
   return svn_error_trace(
                   svn_error_compose_create(err,
