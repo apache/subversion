@@ -2434,7 +2434,7 @@ static svn_error_t *
 read_dir_entries(apr_array_header_t *entries,
                  svn_stream_t *stream,
                  svn_boolean_t incremental,
-                 const svn_fs_id_t *id,
+                 const svn_fs_x__noderev_id_t *id,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -2482,8 +2482,8 @@ read_dir_entries(apr_array_header_t *entries,
       str = svn_cstring_tokenize(" ", &entry.val);
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                           _("Directory entry corrupt in '%s'"),
-                           svn_fs_x__id_unparse(id, scratch_pool)->data);
+                      _("Directory entry corrupt in '%s'"),
+                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
 
       if (strcmp(str, SVN_FS_X__KIND_FILE) == 0)
         {
@@ -2496,15 +2496,15 @@ read_dir_entries(apr_array_header_t *entries,
       else
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                           _("Directory entry corrupt in '%s'"),
-                           svn_fs_x__id_unparse(id, scratch_pool)->data);
+                      _("Directory entry corrupt in '%s'"),
+                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
         }
 
       str = svn_cstring_tokenize(" ", &entry.val);
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                           _("Directory entry corrupt in '%s'"),
-                           svn_fs_x__id_unparse(id, scratch_pool)->data);
+                      _("Directory entry corrupt in '%s'"),
+                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
 
       SVN_ERR(svn_fs_x__id_parse(&dirent->id, str, result_pool));
 
@@ -2543,6 +2543,7 @@ get_dir_contents(apr_array_header_t **entries,
                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *contents;
+  const svn_fs_x__noderev_id_t *id = svn_fs_x__id_noderev_id(noderev->id);
 
   *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
   if (noderev->data_rep
@@ -2556,7 +2557,7 @@ get_dir_contents(apr_array_header_t **entries,
          changes we've made in this transaction. */
       SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
                                        scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  noderev->id,
+      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2576,7 +2577,7 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
+      SVN_ERR(read_dir_entries(*entries, contents, FALSE,  id,
                                result_pool, scratch_pool));
     }
 
