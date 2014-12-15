@@ -1,0 +1,15 @@
+svn_fs_t combines node ID, branch ID and noderev ID.  FSX however,
+only needs the noderev ID to address noderevs.  So, incrementally
+push the usage of svn_fs_t up towards the interface layer.
+
+Once that is done, split the ID storage such that a noderev's ID
+field only contains the noderev ID and the other two ID are stored
+in a separate field.  This is data model normalization.
+
+Finally, update FSX's svn_fs_t implementation to fetch node and
+branch ID on demand instead of storing them in the struct itself.
+The resulting svn_fs_t should be only half the size of FSFS'. 
+
+This is a (hopefully) shor-tlived development branch that shall
+allow for small, incremental and potentially disruptive changes
+instead of few massive patches.
