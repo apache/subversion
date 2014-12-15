@@ -414,7 +414,7 @@ cache_lookup( fs_x_dag_cache_t *cache
    Return NULL otherwise.  Since the caller usually already knows the path
    length, provide it in PATH_LEN. */
 static dag_node_t *
-cache_lookup_last_path(fs_fs_dag_cache_t *cache,
+cache_lookup_last_path(fs_x_dag_cache_t *cache,
                        const char *path,
                        apr_size_t path_len)
 {
@@ -947,7 +947,7 @@ try_match_last_node(dag_node_t **node_p,
                     apr_size_t path_len,
                     apr_pool_t *scratch_pool)
 {
-  fs_fs_data_t *ffd = root->fs->fsap_data;
+  fs_x_data_t *ffd = root->fs->fsap_data;
 
   /* Optimistic lookup: if the last node returned from the cache applied to
      the same PATH, return it in NODE. */
@@ -955,15 +955,15 @@ try_match_last_node(dag_node_t **node_p,
     = cache_lookup_last_path(ffd->dag_node_cache, path, path_len);
 
   /* Did we get a bucket with a committed node? */
-  if (node && !svn_fs_fs__dag_check_mutable(node))
+  if (node && !svn_fs_x__dag_check_mutable(node))
     {
       /* Get the path&rev pair at which this node was created.
          This is repository location for which this node is _known_ to be
          the right lookup result irrespective of how we found it. */
       const char *created_path
-        = svn_fs_fs__dag_get_created_path(node);
+        = svn_fs_x__dag_get_created_path(node);
       svn_revnum_t revision;
-      SVN_ERR(svn_fs_fs__dag_get_revision(&revision, node, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_get_revision(&revision, node, scratch_pool));
 
       /* Is it an exact match? */
       if (revision == root->rev && strcmp(created_path, path) == 0)
