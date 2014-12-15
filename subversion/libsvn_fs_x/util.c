@@ -388,10 +388,9 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
-                            const svn_fs_id_t *fs_id,
+                            const svn_fs_x__noderev_id_t *id,
                             apr_pool_t *pool)
 {
-  const svn_fs_x__noderev_id_t *id = svn_fs_x__id_noderev_id(fs_id);
   const char *filename = svn_fs_x__noderev_id_unparse(id, pool)->data;
   apr_int64_t txn_id = svn_fs_x__get_txn_id(id->change_set);
 
@@ -405,14 +404,16 @@ svn_fs_x__path_txn_node_props(svn_fs_t *fs,
                               const svn_fs_id_t *id,
                               apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
+  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
+  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, noderev_id, pool),
                      PATH_EXT_PROPS, SVN_VA_NULL);
 }
 
 const char *
 svn_fs_x__path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
+  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
+  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, noderev_id, pool),
                      PATH_EXT_CHILDREN, SVN_VA_NULL);
 }
 

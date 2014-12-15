@@ -276,6 +276,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   svn_error_t *err;
   svn_boolean_t is_cached = FALSE;
   fs_x_data_t *ffd = fs->fsap_data;
+  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
   if (svn_fs_x__id_is_txn(id))
     {
@@ -284,7 +285,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       /* This is a transaction node-rev.  Its storage logic is very
          different from that of rev / pack files. */
       err = svn_io_file_open(&file,
-                             svn_fs_x__path_txn_node_rev(fs, id,
+                             svn_fs_x__path_txn_node_rev(fs, noderev_id,
                                                          scratch_pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                              scratch_pool);
@@ -310,7 +311,6 @@ get_node_revision_body(node_revision_t **noderev_p,
       svn_fs_x__revision_file_t *revision_file;
 
       /* noderevs in rev / pack files can be cached */
-      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
       svn_revnum_t revision = svn_fs_x__get_revnum(noderev_id->change_set);
       pair_cache_key_t key;
 
