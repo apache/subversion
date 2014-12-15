@@ -752,6 +752,7 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
                             apr_pool_t *pool)
 {
   apr_file_t *noderev_file;
+  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
@@ -761,7 +762,7 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
                              svn_fs_x__id_unparse(id, pool)->data);
 
   SVN_ERR(svn_io_file_open(&noderev_file,
-                           svn_fs_x__path_txn_node_rev(fs, id, pool),
+                           svn_fs_x__path_txn_node_rev(fs, noderev_id, pool),
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
@@ -3616,6 +3617,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
                                apr_pool_t *pool)
 {
   node_revision_t *noderev;
+  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
 
@@ -3641,7 +3643,8 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       SVN_ERR(svn_cache__set(ffd->dir_cache, key, NULL, pool));
     }
 
-  return svn_io_remove_file2(svn_fs_x__path_txn_node_rev(fs, id, pool),
+  return svn_io_remove_file2(svn_fs_x__path_txn_node_rev(fs, noderev_id,
+                                                         pool),
                              FALSE, pool);
 }
 
