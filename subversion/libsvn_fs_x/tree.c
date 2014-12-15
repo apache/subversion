@@ -203,6 +203,13 @@ struct fs_x_dag_cache_t
      Thus, remember the last hit location for optimistic lookup. */
   apr_size_t last_hit;
 
+  /* Position of the last bucket hit that actually had a DAG node in it.
+     LAST_HIT may refer to a bucket that matches path@rev but has not
+     its NODE element set, yet.
+     This value is a mere hint for optimistic lookup and any value is
+     valid (as long as it is < BUCKET_COUNT). */
+  apr_size_t last_non_empty;
+
   /* List of receiving pools that are still alive. */
   cache_lock_t *first_lock;
 };
@@ -338,6 +345,10 @@ cache_lookup( fs_x_dag_cache_t *cache
       && (result->path_len == path_len)
       && !memcmp(result->path, path, path_len))
     {
+      /* Remember the position of the last node we found in this cache. */
+      if (result->node)
+        cache->last_non_empty = cache->last_hit;
+
       return result;
     }
 
@@ -388,8 +399,36 @@ cache_lookup( fs_x_dag_cache_t *cache
 
       cache->insertions++;
     }
+  else if (result->node)
+    {
+      /* This bucket is valid & has a suitable DAG node in it.
+         Remember its location. */
+      cache->last_non_empty = bucket_index;
+    }
 
   return result;
+}
+
+/* Optimistic lookup using the last seen non-empty location in CACHE.
+   Return the node of that entry, if it is still in use and matches PATH.
+   Return NULL otherwise.  Since the caller usually already knows the path
+   length, provide it in PATH_LEN. */
+static dag_node_t *
+cache_lookup_last_path(fs_fs_dag_cache_t *cache,
+                       const char *path,
+                       apr_size_t path_len)
+{
+  cache_entry_t *result = &cache->buckets[cache->last_non_empty];
+  assert(strlen(path) == path_len);
+
+  if (   result->node
+      && (result->path_len == path_len)
+      && !memcmp(result->path, path, path_len))
+    {
+      return result->node;
+    }
+
+  return NULL;
 }
 
 /* 2nd level cache */
@@ -891,6 +930,56 @@ typedef enum open_path_flags_t {
   open_path_allow_null = 8
 } open_path_flags_t;
 
+/* Try a short-cut for the open_path() function using the last node accessed.
+ * If that ROOT is that nodes's "created rev" and PATH of PATH_LEN chars is
+ * its "created path", return the node in *NODE_P.  Set it to NULL otherwise.
+ *
+ * This function is used to support ra_serf-style access patterns where we
+ * are first asked for path@rev and then for path@c_rev of the same node.
+ * The shortcut works by ignoring the "rev" part of the cache key and then
+ * checking whether we got lucky.  Lookup and verification are both quick
+ * plus there are many early outs for common types of mismatch.
+ */
+static svn_error_t *
+try_match_last_node(dag_node_t **node_p,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_size_t path_len,
+                    apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = root->fs->fsap_data;
+
+  /* Optimistic lookup: if the last node returned from the cache applied to
+     the same PATH, return it in NODE. */
+  dag_node_t *node
+    = cache_lookup_last_path(ffd->dag_node_cache, path, path_len);
+
+  /* Did we get a bucket with a committed node? */
+  if (node && !svn_fs_fs__dag_check_mutable(node))
+    {
+      /* Get the path&rev pair at which this node was created.
+         This is repository location for which this node is _known_ to be
+         the right lookup result irrespective of how we found it. */
+      const char *created_path
+        = svn_fs_fs__dag_get_created_path(node);
+      svn_revnum_t revision;
+      SVN_ERR(svn_fs_fs__dag_get_revision(&revision, node, scratch_pool));
+
+      /* Is it an exact match? */
+      if (revision == root->rev && strcmp(created_path, path) == 0)
+        {
+          /* Cache it under its full path@rev access path. */
+          SVN_ERR(dag_node_cache_set(root, path, node, scratch_pool));
+
+          *node_p = node;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *node_p = NULL;
+  return SVN_NO_ERROR;
+}
+
 
 /* Open the node identified by PATH in ROOT, allocating in POOL.  Set
    *PARENT_PATH_P to a path from the node up to ROOT.  The resulting
@@ -938,20 +1027,55 @@ open_path(parent_path_t **parent_path_p,
      at the respective position and replacing that with a '/' in the next
      iteration.  This is correct as we assert() PATH to be canonical. */
   svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
+  apr_size_t path_len = path_so_far->len;
 
-  /* callers often traverse the tree in some path-based order.  That means
-     a sibling of PATH has been presently accessed.  Try to start the lookup
-     directly at the parent node, if the caller did not requested the full
-     parent chain. */
+  /* Callers often traverse the DAG in some path-based order or along the
+     history segments.  That allows us to try a few guesses about where to
+     find the next item.  This is only useful if the caller didn't request
+     the full parent chain. */
   assert(svn_fs__is_canonical_abspath(path));
   path_so_far->len = 0; /* "" */
   if (flags & open_path_node_only)
     {
-      const char *directory = svn_dirent_dirname(path, pool);
+      const char *directory;
+
+      /* First attempt: Assume that we access the DAG for the same path as
+         in the last lookup but for a different revision that happens to be
+         the last revision that touched the respective node.  This is a
+         common pattern when e.g. checking out over ra_serf.  Note that this
+         will only work for committed data as the revision info for nodes in
+         txns is bogus.
+
+         This shortcut is quick and will exit this function upon success.
+         So, try it first. */
+      if (!root->is_txn_root)
+        {
+          dag_node_t *node;
+          SVN_ERR(try_match_last_node(&node, root, path, path_len, iterpool));
+
+          /* Did the shortcut work? */
+          if (node)
+            {
+              /* Construct and return the result. */
+              svn_pool_destroy(iterpool);
+
+              parent_path = make_parent_path(node, 0, 0, pool);
+              parent_path->copy_inherit = copy_id_inherit_self;
+              *parent_path_p = parent_path;
+
+              return SVN_NO_ERROR;
+            }
+        }
+
+      /* Second attempt: Try starting the lookup immediately at the parent
+         node.  We will often have recently accessed either a sibling or
+         said parent DIRECTORY itself for the same revision. */
+      directory = svn_dirent_dirname(path, pool);
       if (directory[1] != 0) /* root nodes are covered anyway */
         {
           SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
-          /* did the shortcut work? */
+
+          /* Did the shortcut work? */
           if (here)
             {
               apr_size_t dirname_len = strlen(directory);
