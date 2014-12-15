@@ -4334,8 +4334,11 @@ verify_node(dag_node_t *node,
             }
           else
             {
+              const svn_fs_x__noderev_id_t *noderev_id
+                = svn_fs_x__id_noderev_id(dirent->id);
+
               SVN_ERR(svn_fs_x__get_mergeinfo_count(&child_mergeinfo, fs,
-                                                    dirent->id, iterpool));
+                                                    noderev_id, iterpool));
             }
 
           children_mergeinfo += child_mergeinfo;
