@@ -1706,8 +1706,10 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     apr_pool_t *pool)
 {
   representation_t *rep = parent_noderev->data_rep;
+  const svn_fs_x__noderev_id_t *parent_id
+    = svn_fs_x__id_noderev_id(parent_noderev->id);
   const char *filename
-    = svn_fs_x__path_txn_node_children(fs, parent_noderev->id, pool);
+    = svn_fs_x__path_txn_node_children(fs, parent_id, pool);
   apr_file_t *file;
   svn_stream_t *out;
   fs_x_data_t *ffd = fs->fsap_data;
@@ -2480,8 +2482,8 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
                        apr_hash_t *proplist,
                        apr_pool_t *pool)
 {
-  const char *filename
-    = svn_fs_x__path_txn_node_props(fs, noderev->id, pool);
+  const svn_fs_x__noderev_id_t *id = svn_fs_x__id_noderev_id(noderev->id);
+  const char *filename = svn_fs_x__path_txn_node_props(fs, id, pool);
   apr_file_t *file;
   svn_stream_t *out;
 
@@ -2498,8 +2500,7 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
       || svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
-      noderev->prop_rep->id.change_set
-        = svn_fs_x__id_noderev_id(noderev->id)->change_set;
+      noderev->prop_rep->id.change_set = id->change_set;
       SVN_ERR(allocate_item_index(&noderev->prop_rep->id.number, fs,
                                   svn_fs_x__id_txn_id(noderev->id), pool));
       SVN_ERR(svn_fs_x__put_node_revision(fs, noderev->id, noderev, FALSE,
@@ -3634,7 +3635,8 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
   /* Delete any mutable property representation. */
   if (noderev->prop_rep
       && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
-    SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_props(fs, id, pool),
+    SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_props(fs, noderev_id,
+                                                              pool),
                                 FALSE, pool));
 
   /* Delete any mutable data representation. */
@@ -3645,7 +3647,8 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       fs_x_data_t *ffd = fs->fsap_data;
       const svn_fs_x__id_part_t *key = svn_fs_x__id_noderev_id(id);
 
-      SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_children(fs, id,
+      SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_children(fs,
+                                                                   noderev_id,
                                                                    pool),
                                   FALSE, pool));
 
