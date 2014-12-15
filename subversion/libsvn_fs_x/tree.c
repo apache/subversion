@@ -1283,9 +1283,10 @@ make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
                       FALSE, pool));
 
-      child_id = svn_fs_x__dag_get_noderev_id(parent_path->node);
-      copyroot_id = svn_fs_x__dag_get_noderev_id(copyroot_node);
-      if (!svn_fs_x__id_part_eq(child_id, copyroot_id))
+      child_id = svn_fs_x__dag_get_id(parent_path->node);
+      copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
+      if (!svn_fs_x__id_part_eq(svn_fs_x__id_node_id(child_id),
+                                svn_fs_x__id_node_id(copyroot_id)))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
