@@ -36,7 +36,7 @@
 svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_id_t *id,
+                            const svn_fs_x__noderev_id_t *id,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 

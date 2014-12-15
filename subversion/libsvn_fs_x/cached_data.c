@@ -253,9 +253,10 @@ open_and_seek_representation(svn_fs_x__revision_file_t **file_p,
 
 
 static svn_error_t *
-err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
+err_dangling_id(svn_fs_t *fs,
+                const svn_fs_x__noderev_id_t *id)
 {
-  svn_string_t *id_str = svn_fs_x__id_unparse(id, fs->pool);
+  svn_string_t *id_str = svn_fs_x__noderev_id_unparse(id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      _("Reference to non-existent node '%s' in filesystem '%s'"),
@@ -269,23 +270,22 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
 static svn_error_t *
 get_node_revision_body(node_revision_t **noderev_p,
                        svn_fs_t *fs,
-                       const svn_fs_id_t *id,
+                       const svn_fs_x__noderev_id_t *id,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_boolean_t is_cached = FALSE;
   fs_x_data_t *ffd = fs->fsap_data;
-  const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
-  if (svn_fs_x__id_is_txn(id))
+  if (svn_fs_x__is_txn(id->change_set))
     {
       apr_file_t *file;
 
       /* This is a transaction node-rev.  Its storage logic is very
          different from that of rev / pack files. */
       err = svn_io_file_open(&file,
-                             svn_fs_x__path_txn_node_rev(fs, noderev_id,
+                             svn_fs_x__path_txn_node_rev(fs, id,
                                                          scratch_pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                              scratch_pool);
@@ -311,7 +311,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       svn_fs_x__revision_file_t *revision_file;
 
       /* noderevs in rev / pack files can be cached */
-      svn_revnum_t revision = svn_fs_x__get_revnum(noderev_id->change_set);
+      svn_revnum_t revision = svn_fs_x__get_revnum(id->change_set);
       pair_cache_key_t key;
 
       SVN_ERR(svn_fs_x__open_pack_or_rev_file(&revision_file, fs, revision,
@@ -324,7 +324,7 @@ get_node_revision_body(node_revision_t **noderev_p,
           apr_off_t offset;
           apr_uint32_t sub_item;
           SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, revision_file,
-                                        noderev_id, scratch_pool));
+                                        id, scratch_pool));
           key.revision = svn_fs_x__packed_base_rev(fs, revision);
           key.second = offset;
 
@@ -337,7 +337,7 @@ get_node_revision_body(node_revision_t **noderev_p,
         }
 
       key.revision = revision;
-      key.second = noderev_id->number;
+      key.second = id->number;
 
       /* Not found or not applicable. Try a noderev cache lookup.
        * If that succeeds, we are done here. */
@@ -353,13 +353,13 @@ get_node_revision_body(node_revision_t **noderev_p,
         }
 
       /* read the data from disk */
-      SVN_ERR(open_and_seek_revision(&revision_file, fs, noderev_id,
+      SVN_ERR(open_and_seek_revision(&revision_file, fs, id,
                                      scratch_pool));
 
       /* block-read will parse the whole block and will also return
          the one noderev that we need right now. */
       SVN_ERR(block_read((void **)noderev_p, fs,
-                         noderev_id,
+                         id,
                          revision_file,
                          result_pool,
                          scratch_pool));
@@ -372,23 +372,22 @@ get_node_revision_body(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_id_t *id,
+                            const svn_fs_x__noderev_id_t *id,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
-
   svn_error_t *err = get_node_revision_body(noderev_p, fs, id,
                                             result_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
-      svn_string_t *id_string = svn_fs_x__id_unparse(id, scratch_pool);
+      svn_string_t *id_string = svn_fs_x__noderev_id_unparse(id,
+                                                             scratch_pool);
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt node-revision '%s'",
                                id_string->data);
     }
 
-  SVN_ERR(dgb__log_access(fs, noderev_id, *noderev_p,
+  SVN_ERR(dgb__log_access(fs, id, *noderev_p,
                           SVN_FS_X__ITEM_TYPE_NODEREV, scratch_pool));
 
   return svn_error_trace(err);
@@ -402,6 +401,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               apr_pool_t *pool)
 {
   node_revision_t *noderev;
+  const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
   /* If we want a full acccess log, we need to provide full data and
      cannot take shortcuts here. */
@@ -411,7 +411,6 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
   if (! svn_fs_x__id_is_txn(id))
     {
       /* noderevs in rev / pack files can be cached */
-      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
       fs_x_data_t *ffd = fs->fsap_data;
       svn_revnum_t revision = svn_fs_x__get_revnum(noderev_id->change_set);
 
@@ -443,7 +442,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
 #endif
 
   /* fallback to the naive implementation handling all edge cases */
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, noderev_id, pool, pool));
   *count = noderev->mergeinfo_count;
 
   return SVN_NO_ERROR;
