@@ -76,6 +76,9 @@ typedef struct svn_fs_x__id_part_t
   apr_uint64_t number;
 } svn_fs_x__id_part_t;
 
+/* Noderevs are identified by part IDs like everything else in FSX. */
+typedef svn_fs_x__id_part_t svn_fs_x__noderev_id_t;
+
 
 /*** Operations on ID parts. ***/
 
@@ -86,6 +89,11 @@ svn_boolean_t svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t *part);
 /* Return TRUE, if all element values of *LHS and *RHS match. */
 svn_boolean_t svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
                                    const svn_fs_x__id_part_t *rhs);
+
+/* Convert ID into string form, allocated in POOL. */
+svn_string_t *
+svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
+                             apr_pool_t *pool);
 
 
 /*** ID accessor functions. ***/
@@ -101,7 +109,7 @@ const svn_fs_x__id_part_t *svn_fs_x__id_copy_id(const svn_fs_id_t *id);
 svn_fs_x__txn_id_t svn_fs_x__id_txn_id(const svn_fs_id_t *id);
 
 /* Get the "noderev id" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
+const svn_fs_x__noderev_id_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
 
 /* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
    transaction ID. */
