@@ -163,6 +163,18 @@ svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
   return svn_string_ncreate(string, p - string, pool);
 }
 
+void
+svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part)
+{
+  part->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+  part->number = 0;
+}
+
+svn_boolean_t
+svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part)
+{
+  return part->change_set != SVN_FS_X__INVALID_CHANGE_SET;
+}
 
 
 

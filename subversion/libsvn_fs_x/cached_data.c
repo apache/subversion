@@ -449,14 +449,15 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
 
 
 svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_id_t **root_id_p,
+svn_fs_x__rev_get_root(svn_fs_x__id_part_t *root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
-  *root_id_p = svn_fs_x__id_create_root(rev, result_pool);
+
+  root_id->change_set = svn_fs_x__change_set_by_rev(rev);
+  root_id->number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
   return SVN_NO_ERROR;
 }
