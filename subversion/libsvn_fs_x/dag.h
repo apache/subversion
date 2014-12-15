@@ -114,8 +114,19 @@ svn_error_t *svn_fs_x__dag_get_revision(svn_revnum_t *rev,
 
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const svn_fs_id_t *svn_fs_x__dag_get_id(const dag_node_t *node);
+const svn_fs_id_t *svn_fs_x__dag_get_id(dag_node_t *node);
 
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+const svn_fs_x__noderev_id_t *
+svn_fs_x__dag_get_noderev_id(const dag_node_t *node);
+
+/* Return the FS API node revision ID of NODE in *ID, allocated in
+   RESULT_POOL. */
+svn_error_t *
+svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
+                        dag_node_t *node,
+                        apr_pool_t *result_pool);
 
 /* Return the created path of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */

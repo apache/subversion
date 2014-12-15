@@ -95,6 +95,12 @@ svn_string_t *
 svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
                              apr_pool_t *pool);
 
+/* Set *PART to "unused". */
+void svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part);
+
+/* Return TRUE if *PART is belongs to either a revision or transaction. */
+svn_boolean_t svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part);
+
 
 /*** ID accessor functions. ***/
 

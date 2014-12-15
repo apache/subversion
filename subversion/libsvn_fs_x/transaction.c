@@ -1154,13 +1154,11 @@ svn_fs_x__paths_changed(apr_hash_t **changed_paths_p,
 static svn_error_t *
 create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 svn_fs_x__txn_id_t txn_id,
-                                svn_fs_id_t *src,
+                                svn_fs_x__id_part_t *src,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
-  const svn_fs_x__id_part_t *src_id = svn_fs_x__id_noderev_id(src);
-
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src_id, pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src, pool, pool));
 
   /* This must be a root node. */
   SVN_ERR_ASSERT(   svn_fs_x__id_node_id(noderev->id)->number == 0
@@ -1257,7 +1255,7 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
 {
   svn_fs_txn_t *txn;
   fs_txn_data_t *ftd;
-  svn_fs_id_t *root_id;
+  svn_fs_x__id_part_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
   ftd = apr_pcalloc(pool, sizeof(*ftd));
@@ -1273,8 +1271,8 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
   *txn_p = txn;
 
   /* Create a new root node for this transaction. */
-  SVN_ERR(svn_fs_x__rev_get_root(&root_id, fs, rev, pool, pool));
-  SVN_ERR(create_new_txn_noderev_from_rev(fs, ftd->txn_id, root_id, pool));
+  SVN_ERR(svn_fs_x__rev_get_root(&root_id, fs, rev, pool));
+  SVN_ERR(create_new_txn_noderev_from_rev(fs, ftd->txn_id, &root_id, pool));
 
   /* Create an empty rev file. */
   SVN_ERR(svn_io_file_create_empty(
