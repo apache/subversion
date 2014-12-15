@@ -1795,7 +1795,7 @@ svn_error_t *
 svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_x__txn_id_t txn_id,
                      const char *path,
-                     const svn_fs_id_t *id,
+                     const svn_fs_x__noderev_id_t *id,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
@@ -1809,13 +1809,29 @@ svn_fs_x__add_change(svn_fs_t *fs,
   svn_fs_path_change2_t *change;
   apr_hash_t *changes = apr_hash_make(pool);
 
+  const svn_fs_id_t *fs_id;
+  if (   svn_fs_x__is_txn(id->change_set)
+      && change_kind == svn_fs_path_change_delete)
+    {
+      /* There is no valid ID.  Provide a dummy. */
+      svn_fs_x__id_part_t dummy;
+      svn_fs_x__id_part_reset(&dummy);
+      fs_id = svn_fs_x__id_create(&dummy, &dummy, id, pool);
+    }
+  else
+    {
+      node_revision_t *noderev;
+      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
+      fs_id = noderev->id;
+    }
+
   /* Not using APR_BUFFERED to append change in one atomic write operation. */
   SVN_ERR(svn_io_file_open(&file,
                            svn_fs_x__path_txn_changes(fs, txn_id, pool),
                            APR_APPEND | APR_WRITE | APR_CREATE,
                            APR_OS_DEFAULT, pool));
 
-  change = svn_fs__path_change_create_internal(id, change_kind, pool);
+  change = svn_fs__path_change_create_internal(fs_id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
   change->mergeinfo_mod = mergeinfo_mod
