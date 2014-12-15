@@ -266,12 +266,7 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
   const fs_x__id_t *id_a = (const fs_x__id_t *)a;
   const fs_x__id_t *id_b = (const fs_x__id_t *)b;
 
-  if (a == b)
-    return TRUE;
-
-  return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id)
-      && svn_fs_x__id_part_eq(&id_a->copy_id, &id_b->copy_id)
-      && svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id);
+  return svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id);
 }
 
 
