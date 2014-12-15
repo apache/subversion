@@ -73,6 +73,17 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1544302, r1544303
+   Add HTTPd lock file configuration for testing against HTTPd 2.4+.
+   Justification:
+     Without this change, the davautocheck tests do not work on some
+     systems where HTTPd 2.4+ is the default; OSX 10.10 is one such case.
+   Notes:
+     As far as I'm concerned, this blocks 1.7.19 and 1.8.11 since the
+     tests won't run on a current version of a supported OS.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
