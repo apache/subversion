@@ -1237,7 +1237,8 @@ make_path_mutable(svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
+      const svn_fs_id_t *parent_id;
+      const svn_fs_x__noderev_id_t *child_id, *copyroot_id;
       svn_fs_x__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
       svn_fs_x__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
@@ -1282,10 +1283,9 @@ make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
                       FALSE, pool));
 
-      child_id = svn_fs_x__dag_get_id(parent_path->node);
-      copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
-      if (!svn_fs_x__id_part_eq(svn_fs_x__id_node_id(child_id),
-                                svn_fs_x__id_node_id(copyroot_id)))
+      child_id = svn_fs_x__dag_get_noderev_id(parent_path->node);
+      copyroot_id = svn_fs_x__dag_get_noderev_id(copyroot_node);
+      if (!svn_fs_x__id_part_eq(child_id, copyroot_id))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
@@ -1419,14 +1419,14 @@ svn_fs_x__node_id(const svn_fs_id_t **id_p,
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
       dag_node_t *root_dir = root->fsap_data;
-      *id_p = svn_fs_x__id_copy(svn_fs_x__dag_get_id(root_dir), pool);
+      SVN_ERR(svn_fs_x__dag_get_fs_id(id_p, root_dir, pool));
     }
   else
     {
       dag_node_t *node;
 
       SVN_ERR(get_dag(&node, root, path, FALSE, pool));
-      *id_p = svn_fs_x__id_copy(svn_fs_x__dag_get_id(node), pool);
+      SVN_ERR(svn_fs_x__dag_get_fs_id(id_p, node, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1828,7 +1828,7 @@ merge(svn_stringbuf_t *conflict_p,
       apr_int64_t *mergeinfo_increment_out,
       apr_pool_t *pool)
 {
-  const svn_fs_id_t *source_id, *target_id, *ancestor_id;
+  const svn_fs_x__noderev_id_t *source_id, *target_id, *ancestor_id;
   apr_array_header_t *s_entries, *t_entries, *a_entries;
   int i, s_idx = -1, t_idx = -1;
   svn_fs_t *fs;
@@ -1848,14 +1848,14 @@ merge(svn_stringbuf_t *conflict_p,
   /* We have the same fs, now check it. */
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  source_id   = svn_fs_x__dag_get_id(source);
-  target_id   = svn_fs_x__dag_get_id(target);
-  ancestor_id = svn_fs_x__dag_get_id(ancestor);
+  source_id   = svn_fs_x__dag_get_noderev_id(source);
+  target_id   = svn_fs_x__dag_get_noderev_id(target);
+  ancestor_id = svn_fs_x__dag_get_noderev_id(ancestor);
 
   /* It's improper to call this function with ancestor == target. */
-  if (svn_fs_x__id_eq(ancestor_id, target_id))
+  if (svn_fs_x__id_part_eq(ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_x__id_unparse(target_id, pool);
+      svn_string_t *id_str = svn_fs_x__noderev_id_unparse(target_id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
          _("Bad merge; target '%s' has id '%s', same as ancestor"),
@@ -1868,8 +1868,8 @@ merge(svn_stringbuf_t *conflict_p,
    * Either no change made in source, or same change as made in target.
    * Both mean nothing to merge here.
    */
-  if (svn_fs_x__id_eq(ancestor_id, source_id)
-      || (svn_fs_x__id_eq(source_id, target_id)))
+  if (svn_fs_x__id_part_eq(ancestor_id, source_id)
+      || (svn_fs_x__id_part_eq(source_id, target_id)))
     return SVN_NO_ERROR;
 
   /* Else proceed, knowing all three are distinct node revisions.
@@ -1961,16 +1961,13 @@ merge(svn_stringbuf_t *conflict_p,
 
     /* Get node revisions for our id's. */
     scratch_pool = svn_pool_create(pool);
-    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs,
-                                        svn_fs_x__id_noderev_id(target_id),
+    SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id,
                                         pool, scratch_pool));
     svn_pool_clear(scratch_pool);
-    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs,
-                                        svn_fs_x__id_noderev_id(ancestor_id),
+    SVN_ERR(svn_fs_x__get_node_revision(&anc_nr, fs, ancestor_id,
                                         pool, scratch_pool));
     svn_pool_clear(scratch_pool);
-    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs,
-                                        svn_fs_x__id_noderev_id(source_id),
+    SVN_ERR(svn_fs_x__get_node_revision(&src_nr, fs, source_id,
                                         pool, scratch_pool));
     svn_pool_destroy(scratch_pool);
 
@@ -2650,8 +2647,8 @@ copy_helper(svn_fs_root_t *from_root,
      happening at all), just do nothing an return successfully,
      proud that you saved yourself from a tiresome task. */
   if (to_parent_path->node &&
-      svn_fs_x__id_eq(svn_fs_x__dag_get_id(from_node),
-                      svn_fs_x__dag_get_id(to_parent_path->node)))
+      svn_fs_x__id_part_eq(svn_fs_x__dag_get_noderev_id(from_node),
+                           svn_fs_x__dag_get_noderev_id(to_parent_path->node)))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -4225,7 +4222,8 @@ stringify_node(dag_node_t *node,
                apr_pool_t *pool)
 {
   /* ### TODO: print some PATH@REV to it, too. */
-  return svn_fs_x__id_unparse(svn_fs_x__dag_get_id(node), pool)->data;
+  return svn_fs_x__noderev_id_unparse(svn_fs_x__dag_get_noderev_id(node),
+                                      pool)->data;
 }
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
@@ -4251,8 +4249,8 @@ verify_node(dag_node_t *node,
   for (i = 0; i < parent_nodes->nelts; ++i)
     {
       dag_node_t *parent = APR_ARRAY_IDX(parent_nodes, i, dag_node_t *);
-      if (svn_fs_x__id_eq(svn_fs_x__dag_get_id(parent),
-                          svn_fs_x__dag_get_id(node)))
+      if (svn_fs_x__id_part_eq(svn_fs_x__dag_get_noderev_id(parent),
+                               svn_fs_x__dag_get_noderev_id(node)))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                 "Node is its own direct or indirect parent '%s'",
                                 stringify_node(node, iterpool));
