@@ -1237,8 +1237,7 @@ make_path_mutable(svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      const svn_fs_id_t *parent_id;
-      const svn_fs_x__noderev_id_t *child_id, *copyroot_id;
+      const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
       svn_fs_x__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
       svn_fs_x__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
@@ -1382,7 +1381,7 @@ static svn_error_t *
 add_change(svn_fs_t *fs,
            svn_fs_x__txn_id_t txn_id,
            const char *path,
-           const svn_fs_id_t *noderev_id,
+           const svn_fs_x__noderev_id_t *noderev_id,
            svn_fs_path_change_kind_t change_kind,
            svn_boolean_t text_mod,
            svn_boolean_t prop_mod,
@@ -1697,7 +1696,7 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_id(parent_path->node),
+                    svn_fs_x__dag_get_noderev_id(parent_path->node),
                     svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                     svn_fs_x__dag_node_kind(parent_path->node),
                     SVN_INVALID_REVNUM, NULL, pool);
@@ -2516,7 +2515,7 @@ x_make_dir(svn_fs_root_t *root,
                              sub_dir, pool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
+  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_noderev_id(sub_dir),
                     svn_fs_path_change_add, FALSE, FALSE, FALSE,
                     svn_node_dir, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -2573,7 +2572,7 @@ x_delete_node(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_id(parent_path->node),
+                    svn_fs_x__dag_get_noderev_id(parent_path->node),
                     svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
                     SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -2704,7 +2703,7 @@ copy_helper(svn_fs_root_t *from_root,
       /* Make a record of this modification in the changes table. */
       SVN_ERR(get_dag(&new_node, to_root, to_path, TRUE, pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
-                         svn_fs_x__dag_get_id(new_node), kind, FALSE,
+                         svn_fs_x__dag_get_noderev_id(new_node), kind, FALSE,
                          FALSE, FALSE, svn_fs_x__dag_node_kind(from_node),
                          from_root->rev, from_canonpath, pool));
     }
@@ -2833,7 +2832,7 @@ x_make_file(svn_fs_root_t *root,
                              pool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
+  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_noderev_id(child),
                     svn_fs_path_change_add, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -3033,7 +3032,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
+                    svn_fs_x__dag_get_noderev_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -3168,7 +3167,7 @@ apply_text(void *baton, apr_pool_t *pool)
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
+                    svn_fs_x__dag_get_noderev_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
