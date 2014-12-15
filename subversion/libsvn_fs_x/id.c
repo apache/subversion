@@ -153,6 +153,17 @@ svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
   return lhs->change_set == rhs->change_set && lhs->number == rhs->number;
 }
 
+svn_string_t *
+svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
+                             apr_pool_t *pool)
+{
+  char string[2 * SVN_INT64_BUFFER_SIZE + 1];
+  char *p = part_unparse(string, id);
+
+  return svn_string_ncreate(string, p - string, pool);
+}
+
+
 
 
 /* Accessing ID Pieces.  */
@@ -184,8 +195,8 @@ svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 }
 
 
-const svn_fs_x__id_part_t *
-svn_fs_x__id_noderev_id(const svn_fs_id_t *fs_id)
+const svn_fs_x__noderev_id_t *
+svn_fs_x__id_noderev_id(const svn_fs_id_t* fs_id)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
