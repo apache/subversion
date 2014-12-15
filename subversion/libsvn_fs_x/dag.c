@@ -160,10 +160,11 @@ get_node_revision(node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       node_revision_t *noderev;
+      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(node->id);
       apr_pool_t *scratch_pool = svn_pool_create(node->node_pool);
 
       SVN_ERR(svn_fs_x__get_node_revision(&noderev, node->fs,
-                                          node->id, node->node_pool,
+                                          noderev_id, node->node_pool,
                                           scratch_pool));
       node->node_revision = noderev;
       svn_pool_destroy(scratch_pool);

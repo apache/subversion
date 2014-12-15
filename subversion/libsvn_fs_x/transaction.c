@@ -1158,8 +1158,9 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
+  const svn_fs_x__id_part_t *src_id = svn_fs_x__id_noderev_id(src);
 
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src, pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src_id, pool, pool));
 
   /* This must be a root node. */
   SVN_ERR_ASSERT(   svn_fs_x__id_node_id(noderev->id)->number == 0
@@ -1423,7 +1424,9 @@ svn_fs_x__get_txn(transaction_t **txn_p,
   SVN_ERR(get_txn_proplist(txn->proplist, fs, txn_id, pool));
   root_id = svn_fs_x__id_txn_create_root(txn_id, pool);
 
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, root_id, pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs,
+                                      svn_fs_x__id_noderev_id(root_id),
+                                      pool, pool));
 
   txn->root_id = svn_fs_x__id_copy(noderev->id, pool);
   txn->base_id = svn_fs_x__id_copy(noderev->predecessor_id, pool);
@@ -1913,10 +1916,12 @@ shards_spanned(int *spanned,
   iterpool = svn_pool_create(pool);
   while (walk-- && noderev->predecessor_count)
     {
+      const svn_fs_x__noderev_id_t *predecessor_id
+        = svn_fs_x__id_noderev_id(noderev->predecessor_id);
+
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs,
-                                          noderev->predecessor_id, pool,
-                                          iterpool));
+      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, predecessor_id,
+                                          pool, iterpool));
       shard = svn_fs_x__id_rev(noderev->id) / shard_size;
       if (shard != last_shard)
         {
@@ -2001,9 +2006,11 @@ choose_delta_base(representation_t **rep,
   iterpool = svn_pool_create(pool);
   while ((count++) < noderev->predecessor_count)
     {
+      const svn_fs_x__noderev_id_t *predecessor_id
+        = svn_fs_x__id_noderev_id(noderev->predecessor_id);
+
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_x__get_node_revision(&base, fs,
-                                          base->predecessor_id, pool,
+      SVN_ERR(svn_fs_x__get_node_revision(&base, fs, predecessor_id, pool,
                                           iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -2739,7 +2746,8 @@ validate_root_noderev(svn_fs_t *fs,
     /* Get /@HEAD's noderev. */
     SVN_ERR(svn_fs_x__revision_root(&head_revision, fs, head_revnum, pool));
     SVN_ERR(svn_fs_x__node_id(&head_root_id, head_revision, "/", pool));
-    SVN_ERR(svn_fs_x__get_node_revision(&head_root_noderev, fs, head_root_id,
+    SVN_ERR(svn_fs_x__get_node_revision(&head_root_noderev, fs,
+                                        svn_fs_x__id_noderev_id(head_root_id),
                                         pool, pool));
 
     head_predecessor_count = head_root_noderev->predecessor_count;
@@ -2842,7 +2850,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     return SVN_NO_ERROR;
 
   subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, subpool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs,
+                                      svn_fs_x__id_noderev_id(id),
+                                      pool, subpool));
 
   if (noderev->kind == svn_node_dir)
     {
@@ -3619,7 +3629,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
   node_revision_t *noderev;
   const svn_fs_x__noderev_id_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, noderev_id, pool, pool));
 
   /* Delete any mutable property representation. */
   if (noderev->prop_rep
