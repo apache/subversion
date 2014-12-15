@@ -2549,7 +2549,7 @@ get_dir_contents(apr_array_header_t **entries,
       && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
     {
       const char *filename
-        = svn_fs_x__path_txn_node_children(fs, noderev->id, scratch_pool);
+        = svn_fs_x__path_txn_node_children(fs, id, scratch_pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
@@ -2722,12 +2722,14 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
 {
   apr_hash_t *proplist;
   svn_stream_t *stream;
+  const svn_fs_x__noderev_id_t *noderev_id
+    = svn_fs_x__id_noderev_id(noderev->id);
 
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
     {
       const char *filename
-        = svn_fs_x__path_txn_node_props(fs, noderev->id, pool);
+        = svn_fs_x__path_txn_node_props(fs, noderev_id, pool);
       proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
