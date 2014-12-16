@@ -120,7 +120,7 @@ Candidate changes:
      As far as I'm concerned, this blocks 1.7.19 and 1.8.11 since the
      tests won't run on a current version of a supported OS.
    Votes:
-     +1: brane
+     +1: brane, breser
 
 Veto-blocked changes:
 =====================
