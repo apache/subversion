@@ -72,12 +72,11 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
                          void *baton,
                          apr_pool_t *pool);
 
-/* Store NODEREV as the node-revision for the node whose id is ID in
-   FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
-   necessary temporary allocation in POOL. */
+/* Store NODEREV as the node-revision in the transaction defined by NODEREV's
+   ID within FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do
+   any necessary temporary allocation in POOL. */
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
-                            const svn_fs_id_t *id,
                             node_revision_t *noderev,
                             svn_boolean_t fresh_txn_root,
                             apr_pool_t *pool);
