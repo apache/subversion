@@ -38,6 +38,8 @@
 
 /* Headers used to describe node-revision in the revision file. */
 #define HEADER_ID          "id"
+#define HEADER_NODE        "node"
+#define HEADER_COPY        "copy"
 #define HEADER_TYPE        "type"
 #define HEADER_COUNT       "count"
 #define HEADER_PROPS       "props"
@@ -404,6 +406,22 @@ auto_unescape_path(const char *path,
    return path;
 }
 
+/* Find entry HEADER_NAME in HEADERS and parse its value into *ID. */
+static svn_error_t *
+read_id_part(svn_fs_x__id_part_t *id,
+             apr_hash_t *headers,
+             const char *header_name)
+{
+  const char *value = svn_hash_gets(headers, header_name);
+  if (value == NULL)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Missing %s field in node-rev"),
+                             header_name);
+
+  SVN_ERR(svn_fs_x__id_part_parse(id, value));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_x__read_noderev(node_revision_t **noderev_p,
                        svn_stream_t *stream,
@@ -416,20 +434,20 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   const char *noderev_id;
 
   SVN_ERR(read_header_block(&headers, stream, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
 
   noderev = apr_pcalloc(result_pool, sizeof(*noderev));
 
+  /* for error messages later */
+  noderev_id = svn_hash_gets(headers, HEADER_ID);
+
   /* Read the node-rev id. */
-  value = svn_hash_gets(headers, HEADER_ID);
-  if (value == NULL)
-     /* ### More information: filename/offset coordinates */
-     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Missing id field in node-rev"));
+  SVN_ERR(read_id_part(&noderev->noderev_id, headers, HEADER_ID));
+  SVN_ERR(read_id_part(&noderev->node_id, headers, HEADER_NODE));
+  SVN_ERR(read_id_part(&noderev->copy_id, headers, HEADER_COPY));
 
-  SVN_ERR(svn_stream_close(stream));
-
-  SVN_ERR(svn_fs_x__id_parse(&noderev->id, value, result_pool));
-  noderev_id = value; /* for error messages later */
+  noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->copy_id,
+                                    &noderev->noderev_id, result_pool);
 
   /* Read the type. */
   value = svn_hash_gets(headers, HEADER_TYPE);
@@ -609,9 +627,20 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                         node_revision_t *noderev,
                         apr_pool_t *scratch_pool)
 {
+  svn_string_t *str_id;
+
+  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_noderev_id(noderev->id),
+                                     scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_ID ": %s\n",
-                            svn_fs_x__id_unparse(noderev->id,
-                                                 scratch_pool)->data));
+                            str_id->data));
+  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_node_id(noderev->id),
+                                     scratch_pool);
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_NODE ": %s\n",
+                            str_id->data));
+  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_copy_id(noderev->id),
+                                     scratch_pool);
+  SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPY ": %s\n",
+                            str_id->data));
 
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_TYPE ": %s\n",
                             (noderev->kind == svn_node_file) ?

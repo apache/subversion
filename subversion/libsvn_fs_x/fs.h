@@ -493,6 +493,15 @@ typedef struct node_revision_t
      for this node revision */
   const svn_fs_id_t *predecessor_id;
 
+  /* The ID of this noderev */
+  svn_fs_x__noderev_id_t noderev_id;
+
+  /* Identifier of the node that this noderev belongs to. */
+  svn_fs_x__id_part_t node_id;
+
+  /* Copy identifier of this line of history. */
+  svn_fs_x__id_part_t copy_id;
+
   /* If this node-rev is a copy, where was it copied from? */
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
