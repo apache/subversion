@@ -750,7 +750,7 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
     }
 
   /* Same path in same txn? */
-  if (svn_fs_x__id_eq(a->id, b->id))
+  if (svn_fs_x__id_part_eq(&a->noderev_id, &b->noderev_id))
     {
       *equal = TRUE;
       return SVN_NO_ERROR;

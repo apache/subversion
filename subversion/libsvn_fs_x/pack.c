@@ -717,10 +717,10 @@ copy_node_to_temp(pack_context_t *context,
    * It will not be stored in the final pack file. */
   sort_path = tweak_path_for_ordering(noderev->created_path, pool);
   path_order->path = svn_prefix_string__create(context->paths, sort_path);
-  path_order->node_id = *svn_fs_x__id_node_id(noderev->id);
-  path_order->revision = svn_fs_x__id_rev(noderev->id);
+  path_order->node_id = noderev->node_id;
+  path_order->revision = svn_fs_x__get_revnum(noderev->noderev_id.change_set);
   path_order->is_dir = noderev->kind == svn_node_dir;
-  path_order->noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
+  path_order->noderev_id = noderev->noderev_id;
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
   return SVN_NO_ERROR;

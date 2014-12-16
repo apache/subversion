@@ -2542,7 +2542,7 @@ get_dir_contents(apr_array_header_t **entries,
                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *contents;
-  const svn_fs_x__noderev_id_t *id = svn_fs_x__id_noderev_id(noderev->id);
+  const svn_fs_x__noderev_id_t *id = &noderev->noderev_id;
 
   *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
   if (noderev->data_rep
@@ -2594,11 +2594,11 @@ locate_dir_cache(svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  if (svn_fs_x__id_is_txn(noderev->id))
+  if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
     {
       /* data in txns must be addressed by ID since the representation has
          not been created, yet. */
-      *key = *svn_fs_x__id_noderev_id(noderev->id);
+      *key = noderev->noderev_id;
     }
   else
     {
@@ -2722,8 +2722,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
 {
   apr_hash_t *proplist;
   svn_stream_t *stream;
-  const svn_fs_x__noderev_id_t *noderev_id
-    = svn_fs_x__id_noderev_id(noderev->id);
+  const svn_fs_x__noderev_id_t *noderev_id = &noderev->noderev_id;
 
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
