@@ -210,7 +210,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
                        apr_pool_t *pool);
 
 /* Create a node revision in FS which is an immediate successor of
-   OLD_ID, whose contents are NEW_NR.  Set *NEW_ID_P to the new node
+   NEW_NODEREV's predecessor.  Set *NEW_ID_P to the new node
    revision's ID.  Use POOL for any temporary allocation.
 
    COPY_ID, if non-NULL, is a key into the `copies' table, and
@@ -226,7 +226,6 @@ svn_fs_x__set_contents(svn_stream_t **stream,
 svn_error_t *
 svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
                            svn_fs_t *fs,
-                           const svn_fs_id_t *old_idp,
                            node_revision_t *new_noderev,
                            const svn_fs_x__id_part_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
