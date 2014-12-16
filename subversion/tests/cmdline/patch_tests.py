@@ -5044,7 +5044,20 @@ def patch_delete_modified(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
-  # With modifed beta, we get a text conflict.
+  # Third application, with file present even though state is 'D', also skips
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+  expected_disk.add({'A/B/E/beta' : Item(contents='Modified')})
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Revert and modify beta, fourth application gives a text conflict.
   sbox.simple_revert('A/B/E/beta')
   sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
 
@@ -5059,9 +5072,7 @@ def patch_delete_modified(sbox):
     "@@ -1,1 +0,0 @@\n",
     "-This is the file 'beta'.\n",
   ]
-  expected_disk.add({'A/B/E/beta'
-                     : Item(contents='Modified'),
-                     'A/B/E/beta.svnpatch.rej'
+  expected_disk.add({'A/B/E/beta.svnpatch.rej'
                      : Item(contents=''.join(reject_file_contents))
                      })
   expected_status.tweak('A/B/E/beta', status='M ')

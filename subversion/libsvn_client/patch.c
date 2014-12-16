@@ -1710,7 +1710,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               modified_start = svn_diff_hunk_get_modified_start(hunk);
               if (modified_start == 0)
                 {
-                  /* Patch wants to delete the file. */
+                  /* Patch wants to delete the file.
+
+                     ### locally_deleted is always false here? */
                   already_applied = target->locally_deleted;
                 }
               else
