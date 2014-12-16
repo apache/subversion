@@ -438,6 +438,7 @@ make_entry(dag_node_t **child_p,
 {
   const svn_fs_id_t *new_node_id;
   node_revision_t new_noderev, *parent_noderev;
+  svn_fs_x__id_part_t copy_id;
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component(name))
@@ -469,10 +470,10 @@ make_entry(dag_node_t **child_p,
   new_noderev.copyfrom_rev = SVN_INVALID_REVNUM;
   new_noderev.copyfrom_path = NULL;
 
+  SVN_ERR(svn_fs_x__dag_get_copy_id(&copy_id, parent));
   SVN_ERR(svn_fs_x__create_node
           (&new_node_id, svn_fs_x__dag_get_fs(parent), &new_noderev,
-           svn_fs_x__id_copy_id(svn_fs_x__dag_get_id(parent)),
-           txn_id, pool));
+           &copy_id, txn_id, pool));
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR(svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
@@ -481,7 +482,7 @@ make_entry(dag_node_t **child_p,
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  return set_entry(parent, name, svn_fs_x__dag_get_id(*child_p),
+  return set_entry(parent, name, new_node_id,
                    new_noderev.kind, txn_id, pool);
 }
 
@@ -766,7 +767,7 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
   if (svn_fs_x__dag_check_mutable(cur_entry))
     {
       /* This has already been cloned */
-      new_node_id = svn_fs_x__dag_get_id(cur_entry);
+      SVN_ERR(svn_fs_x__dag_get_fs_id(&new_node_id, cur_entry, pool));
     }
   else
     {
@@ -1274,7 +1275,6 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
     {
       node_revision_t *from_noderev, *to_noderev;
       svn_fs_x__id_part_t copy_id;
-      const svn_fs_id_t *src_id = svn_fs_x__dag_get_id(from_node);
       svn_fs_t *fs = svn_fs_x__dag_get_fs(from_node);
 
       /* Make a copy of the original node revision. */
@@ -1286,7 +1286,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
-      to_noderev->predecessor_id = svn_fs_x__id_copy(src_id, pool);
+      to_noderev->predecessor_id = svn_fs_x__id_copy(from_noderev->id, pool);
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =
@@ -1304,7 +1304,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
     }
   else  /* don't preserve history */
     {
-      id = svn_fs_x__dag_get_id(from_node);
+      SVN_ERR(svn_fs_x__dag_get_fs_id(&id, from_node, pool));
     }
 
   /* Set the entry in to_node to the new id. */
