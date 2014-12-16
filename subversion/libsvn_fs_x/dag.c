@@ -285,10 +285,8 @@ svn_fs_x__dag_get_node(dag_node_t **node,
 }
 
 
-svn_error_t *
-svn_fs_x__dag_get_revision(svn_revnum_t *rev,
-                           dag_node_t *node,
-                           apr_pool_t *pool)
+svn_revnum_t
+svn_fs_x__dag_get_revision(const dag_node_t *node)
 {
   /* In the special case that this is an unmodified transaction root,
      we need to actually get the revision of the noderev's predecessor
@@ -299,9 +297,7 @@ svn_fs_x__dag_get_revision(svn_revnum_t *rev,
         : &node->id;
 
   /* Look up the committed revision from the Node-ID. */
-  *rev = svn_fs_x__get_revnum(correct_id->change_set);
-
-  return SVN_NO_ERROR;
+  return svn_fs_x__get_revnum(correct_id->change_set);
 }
 
 

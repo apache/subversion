@@ -104,12 +104,9 @@ svn_fs_t *svn_fs_x__dag_get_fs(dag_node_t *node);
 void svn_fs_x__dag_set_fs(dag_node_t *node, svn_fs_t *fs);
 
 
-/* Set *REV to NODE's revision number, allocating in POOL.  If NODE
-   has never been committed as part of a revision, set *REV to
-   SVN_INVALID_REVNUM.  */
-svn_error_t *svn_fs_x__dag_get_revision(svn_revnum_t *rev,
-                                        dag_node_t *node,
-                                        apr_pool_t *pool);
+/* Return NODE's revision number.  If NODE has never been committed as
+   part of a revision, set *REV to SVN_INVALID_REVNUM.  */
+svn_revnum_t svn_fs_x__dag_get_revision(const dag_node_t *node);
 
 
 /* Return the node revision ID of NODE.  The value returned is shared
