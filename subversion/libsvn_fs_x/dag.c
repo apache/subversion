@@ -621,8 +621,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
     }
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev->id,
-                                     noderev, FALSE, pool);
+  return svn_fs_x__put_node_revision(node->fs, noderev, FALSE, pool);
 }
 
 svn_error_t *
@@ -648,8 +647,7 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
   noderev->has_mergeinfo = has_mergeinfo;
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev->id,
-                                     noderev, FALSE, pool);
+  return svn_fs_x__put_node_revision(node->fs, noderev, FALSE, pool);
 }
 
 
@@ -1395,6 +1393,6 @@ svn_fs_x__dag_update_ancestry(dag_node_t *target,
   if (target_noderev->predecessor_count != -1)
     target_noderev->predecessor_count++;
 
-  return svn_fs_x__put_node_revision(target->fs, target_noderev->id,
-                                     target_noderev, FALSE, pool);
+  return svn_fs_x__put_node_revision(target->fs, target_noderev, FALSE,
+                                     pool);
 }
