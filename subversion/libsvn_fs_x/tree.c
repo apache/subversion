@@ -815,8 +815,8 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
                      parent_path_t *child,
                      apr_pool_t *pool)
 {
-  const svn_fs_id_t *child_id, *parent_id, *copyroot_id;
-  const svn_fs_x__id_part_t *child_copy_id, *parent_copy_id;
+  svn_fs_x__id_part_t child_copy_id, parent_copy_id;
+  svn_boolean_t related;
   const char *id_path = NULL;
   svn_fs_root_t *copyroot_root;
   dag_node_t *copyroot_node;
@@ -826,13 +826,11 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   SVN_ERR_ASSERT(child && child->parent);
 
   /* Initialize some convenience variables. */
-  child_id = svn_fs_x__dag_get_id(child->node);
-  parent_id = svn_fs_x__dag_get_id(child->parent->node);
-  child_copy_id = svn_fs_x__id_copy_id(child_id);
-  parent_copy_id = svn_fs_x__id_copy_id(parent_id);
+  SVN_ERR(svn_fs_x__dag_get_copy_id(&child_copy_id, child->node));
+  SVN_ERR(svn_fs_x__dag_get_copy_id(&parent_copy_id, child->parent->node));
 
   /* If this child is already mutable, we have nothing to do. */
-  if (svn_fs_x__id_is_txn(child_id))
+  if (svn_fs_x__dag_check_mutable(child->node))
     {
       *inherit_p = copy_id_inherit_self;
       *copy_src_path = NULL;
@@ -846,14 +844,14 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
 
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
-  if (svn_fs_x__id_part_is_root(child_copy_id))
+  if (svn_fs_x__id_part_is_root(&child_copy_id))
     return SVN_NO_ERROR;
 
   /* Compare the copy IDs of the child and its parent.  If they are
      the same, then the child is already on the same branch as the
      parent, and should use the same mutability copy ID that the
      parent will use. */
-  if (svn_fs_x__id_part_eq(child_copy_id, parent_copy_id))
+  if (svn_fs_x__id_part_eq(&child_copy_id, &parent_copy_id))
     return SVN_NO_ERROR;
 
   /* If the child is on the same branch that the parent is on, the
@@ -864,12 +862,12 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   SVN_ERR(svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
-                                      child->node));
+                                     child->node));
   SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, pool));
   SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path, FALSE, pool));
-  copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
 
-  if (svn_fs_x__id_compare(copyroot_id, child_id) == svn_fs_node_unrelated)
+  SVN_ERR(svn_fs_x__dag_related_node(&related, copyroot_node, child->node));
+  if (!related)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1237,7 +1235,6 @@ make_path_mutable(svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
       svn_fs_x__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
       svn_fs_x__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
@@ -1246,6 +1243,7 @@ make_path_mutable(svn_fs_root_t *root,
       svn_boolean_t is_parent_copyroot = FALSE;
       svn_fs_root_t *copyroot_root;
       dag_node_t *copyroot_node;
+      svn_boolean_t related;
 
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
@@ -1255,8 +1253,8 @@ make_path_mutable(svn_fs_root_t *root,
       switch (inherit)
         {
         case copy_id_inherit_parent:
-          parent_id = svn_fs_x__dag_get_id(parent_path->parent->node);
-          copy_id = *svn_fs_x__id_copy_id(parent_id);
+          SVN_ERR(svn_fs_x__dag_get_copy_id(&copy_id,
+                                            parent_path->parent->node));
           break;
 
         case copy_id_inherit_new:
@@ -1282,10 +1280,9 @@ make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
                       FALSE, pool));
 
-      child_id = svn_fs_x__dag_get_id(parent_path->node);
-      copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
-      if (!svn_fs_x__id_part_eq(svn_fs_x__id_node_id(child_id),
-                                svn_fs_x__id_node_id(copyroot_id)))
+      SVN_ERR(svn_fs_x__dag_related_node(&related, copyroot_node,
+                                         parent_path->node));
+      if (!related)
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
@@ -1438,7 +1435,6 @@ x_node_relation(svn_fs_node_relation_t *relation,
                 apr_pool_t *pool)
 {
   dag_node_t *node;
-  const svn_fs_id_t *id;
   svn_fs_x__id_part_t noderev_id_a, noderev_id_b, node_id_a, node_id_b;
 
   /* Root paths are a common special case. */
@@ -1475,14 +1471,12 @@ x_node_relation(svn_fs_node_relation_t *relation,
   /* We checked for all separations between ID spaces (repos, txn).
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(get_dag(&node, root_a, path_a, FALSE, pool));
-  id = svn_fs_x__dag_get_id(node);
-  noderev_id_a = *svn_fs_x__id_noderev_id(id);
-  node_id_a = *svn_fs_x__id_node_id(id);
+  noderev_id_a = *svn_fs_x__dag_get_noderev_id(node);
+  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_a, node));
 
   SVN_ERR(get_dag(&node, root_b, path_b, FALSE, pool));
-  id = svn_fs_x__dag_get_id(node);
-  noderev_id_b = *svn_fs_x__id_noderev_id(id);
-  node_id_b = *svn_fs_x__id_node_id(id);
+  noderev_id_b = *svn_fs_x__dag_get_noderev_id(node);
+  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
 
   if (svn_fs_x__id_part_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
@@ -2183,6 +2177,7 @@ merge_changes(dag_node_t *ancestor_node,
   dag_node_t *txn_root_node;
   svn_fs_t *fs = txn->fs;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(txn);
+  svn_boolean_t related;
   
   SVN_ERR(svn_fs_x__dag_txn_root(&txn_root_node, fs, txn_id, pool));
 
@@ -2192,8 +2187,8 @@ merge_changes(dag_node_t *ancestor_node,
                                           txn_id, pool));
     }
 
-  if (svn_fs_x__id_eq(svn_fs_x__dag_get_id(ancestor_node),
-                      svn_fs_x__dag_get_id(txn_root_node)))
+  SVN_ERR(svn_fs_x__dag_related_node(&related, ancestor_node, txn_root_node));
+  if (!related)
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.
@@ -3398,6 +3393,7 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
   const char *copy_dst_path;
   svn_fs_root_t *copy_dst_root;
   dag_node_t *copy_dst_node;
+  svn_boolean_t related;
 
   /* Initialize return values. */
   *root_p = NULL;
@@ -3424,8 +3420,9 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
     return SVN_NO_ERROR;
 
   copy_dst_node = copy_dst_parent_path->node;
-  if (! svn_fs_x__id_check_related(svn_fs_x__dag_get_id(copy_dst_node),
-                                   svn_fs_x__dag_get_id(parent_path->node)))
+  SVN_ERR(svn_fs_x__dag_related_node(&related, copy_dst_node,
+                                     parent_path->node));
+  if (!related)
     return SVN_NO_ERROR;
 
   /* One final check must be done here.  If you copy a directory and

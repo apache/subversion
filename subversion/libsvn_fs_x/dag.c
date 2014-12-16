@@ -86,7 +86,6 @@ svn_node_kind_t svn_fs_x__dag_node_kind(dag_node_t *node)
   return node->kind;
 }
 
-
 const svn_fs_id_t *
 svn_fs_x__dag_get_id(dag_node_t *node)
 {
@@ -99,6 +98,34 @@ svn_fs_x__dag_get_id(dag_node_t *node)
     }
 
   return id;
+}
+
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+svn_error_t *
+svn_fs_x__dag_get_node_id(svn_fs_x__id_part_t *node_id,
+                          dag_node_t *node)
+{
+  const svn_fs_id_t *id;
+
+  SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, node->node_pool));
+  *node_id = *svn_fs_x__id_node_id(id);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+svn_error_t *
+svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
+                          dag_node_t *node)
+{
+  const svn_fs_id_t *id;
+
+  SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, node->node_pool));
+  *copy_id = *svn_fs_x__id_copy_id(id);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -197,6 +224,22 @@ svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
   *id = svn_fs_x__id_copy(noderev->id, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return the node ID of NODE.  The value returned is shared with NODE,
+   and will be deallocated when NODE is.  */
+svn_error_t *
+svn_fs_x__dag_related_node(svn_boolean_t *same,
+                           dag_node_t *lhs,
+                           dag_node_t *rhs)
+{
+  svn_fs_x__id_part_t lhs_node, rhs_node;
+
+  SVN_ERR(svn_fs_x__dag_get_node_id(&lhs_node, lhs));
+  SVN_ERR(svn_fs_x__dag_get_node_id(&rhs_node, rhs));
+  *same = svn_fs_x__id_part_eq(&lhs_node, &rhs_node);
 
   return SVN_NO_ERROR;
 }
