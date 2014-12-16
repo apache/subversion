@@ -562,7 +562,7 @@ svn_fs_x__dag_set_proplist(dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
     {
-      svn_string_t *idstr = svn_fs_x__noderev_id_unparse(&node->id, pool);
+      svn_string_t *idstr = svn_fs_x__id_part_unparse(&node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set proplist on *immutable* node-revision %s",
@@ -587,7 +587,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
     {
-      svn_string_t *idstr = svn_fs_x__noderev_id_unparse(&node->id, pool);
+      svn_string_t *idstr = svn_fs_x__id_part_unparse(&node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't increment mergeinfo count on *immutable* node-revision %s",
@@ -603,7 +603,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
   noderev->mergeinfo_count += increment;
   if (noderev->mergeinfo_count < 0)
     {
-      svn_string_t *idstr = svn_fs_x__noderev_id_unparse(&node->id, pool);
+      svn_string_t *idstr = svn_fs_x__id_part_unparse(&node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          apr_psprintf(pool,
@@ -614,7 +614,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
     }
   if (noderev->mergeinfo_count > 1 && noderev->kind == svn_node_file)
     {
-      svn_string_t *idstr = svn_fs_x__noderev_id_unparse(&node->id, pool);
+      svn_string_t *idstr = svn_fs_x__id_part_unparse(&node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          apr_psprintf(pool,
@@ -639,7 +639,7 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
     {
-      svn_string_t *idstr = svn_fs_x__noderev_id_unparse(&node->id, pool);
+      svn_string_t *idstr = svn_fs_x__id_part_unparse(&node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set mergeinfo flag on *immutable* node-revision %s",
