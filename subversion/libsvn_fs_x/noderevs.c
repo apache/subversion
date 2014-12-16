@@ -450,6 +450,10 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
   SVN_ERR(get_id(&noderev->predecessor_id, container->ids,
                  binary_noderev->predecessor_id, pool));
 
+  noderev->noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
+  noderev->node_id = *svn_fs_x__id_node_id(noderev->id);
+  noderev->copy_id = *svn_fs_x__id_copy_id(noderev->id);
+
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
       noderev->copyfrom_path
