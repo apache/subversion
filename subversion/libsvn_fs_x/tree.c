@@ -1470,11 +1470,11 @@ x_node_relation(svn_fs_node_relation_t *relation,
   /* We checked for all separations between ID spaces (repos, txn).
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(get_dag(&node, root_a, path_a, FALSE, pool));
-  noderev_id_a = *svn_fs_x__dag_get_noderev_id(node);
+  noderev_id_a = *svn_fs_x__dag_get_id(node);
   SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_a, node));
 
   SVN_ERR(get_dag(&node, root_b, path_b, FALSE, pool));
-  noderev_id_b = *svn_fs_x__dag_get_noderev_id(node);
+  noderev_id_b = *svn_fs_x__dag_get_id(node);
   SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
 
   if (svn_fs_x__id_part_eq(&noderev_id_a, &noderev_id_b))
@@ -1691,7 +1691,7 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_noderev_id(parent_path->node),
+                    svn_fs_x__dag_get_id(parent_path->node),
                     svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                     svn_fs_x__dag_node_kind(parent_path->node),
                     SVN_INVALID_REVNUM, NULL, pool);
@@ -1843,9 +1843,9 @@ merge(svn_stringbuf_t *conflict_p,
   /* We have the same fs, now check it. */
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  source_id   = svn_fs_x__dag_get_noderev_id(source);
-  target_id   = svn_fs_x__dag_get_noderev_id(target);
-  ancestor_id = svn_fs_x__dag_get_noderev_id(ancestor);
+  source_id   = svn_fs_x__dag_get_id(source);
+  target_id   = svn_fs_x__dag_get_id(target);
+  ancestor_id = svn_fs_x__dag_get_id(ancestor);
 
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs_x__id_part_eq(ancestor_id, target_id))
@@ -2511,7 +2511,7 @@ x_make_dir(svn_fs_root_t *root,
                              sub_dir, pool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_noderev_id(sub_dir),
+  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
                     svn_fs_path_change_add, FALSE, FALSE, FALSE,
                     svn_node_dir, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -2568,7 +2568,7 @@ x_delete_node(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_noderev_id(parent_path->node),
+                    svn_fs_x__dag_get_id(parent_path->node),
                     svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
                     SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -2643,8 +2643,8 @@ copy_helper(svn_fs_root_t *from_root,
      happening at all), just do nothing an return successfully,
      proud that you saved yourself from a tiresome task. */
   if (to_parent_path->node &&
-      svn_fs_x__id_part_eq(svn_fs_x__dag_get_noderev_id(from_node),
-                           svn_fs_x__dag_get_noderev_id(to_parent_path->node)))
+      svn_fs_x__id_part_eq(svn_fs_x__dag_get_id(from_node),
+                           svn_fs_x__dag_get_id(to_parent_path->node)))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -2699,7 +2699,7 @@ copy_helper(svn_fs_root_t *from_root,
       /* Make a record of this modification in the changes table. */
       SVN_ERR(get_dag(&new_node, to_root, to_path, TRUE, pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
-                         svn_fs_x__dag_get_noderev_id(new_node), kind, FALSE,
+                         svn_fs_x__dag_get_id(new_node), kind, FALSE,
                          FALSE, FALSE, svn_fs_x__dag_node_kind(from_node),
                          from_root->rev, from_canonpath, pool));
     }
@@ -2828,7 +2828,7 @@ x_make_file(svn_fs_root_t *root,
                              pool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_noderev_id(child),
+  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
                     svn_fs_path_change_add, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -3028,7 +3028,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_noderev_id(tb->node),
+                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -3163,7 +3163,7 @@ apply_text(void *baton, apr_pool_t *pool)
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_noderev_id(tb->node),
+                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
 }
@@ -4220,7 +4220,7 @@ stringify_node(dag_node_t *node,
                apr_pool_t *pool)
 {
   /* ### TODO: print some PATH@REV to it, too. */
-  return svn_fs_x__noderev_id_unparse(svn_fs_x__dag_get_noderev_id(node),
+  return svn_fs_x__noderev_id_unparse(svn_fs_x__dag_get_id(node),
                                       pool)->data;
 }
 
@@ -4247,8 +4247,8 @@ verify_node(dag_node_t *node,
   for (i = 0; i < parent_nodes->nelts; ++i)
     {
       dag_node_t *parent = APR_ARRAY_IDX(parent_nodes, i, dag_node_t *);
-      if (svn_fs_x__id_part_eq(svn_fs_x__dag_get_noderev_id(parent),
-                               svn_fs_x__dag_get_noderev_id(node)))
+      if (svn_fs_x__id_part_eq(svn_fs_x__dag_get_id(parent),
+                               svn_fs_x__dag_get_id(node)))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                 "Node is its own direct or indirect parent '%s'",
                                 stringify_node(node, iterpool));

@@ -111,12 +111,8 @@ svn_revnum_t svn_fs_x__dag_get_revision(const dag_node_t *node);
 
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const svn_fs_id_t *svn_fs_x__dag_get_id(dag_node_t *node);
-
-/* Return the node revision ID of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
 const svn_fs_x__noderev_id_t *
-svn_fs_x__dag_get_noderev_id(const dag_node_t *node);
+svn_fs_x__dag_get_id(const dag_node_t *node);
 
 /* Return the node ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */

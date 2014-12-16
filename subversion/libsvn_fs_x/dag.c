@@ -86,20 +86,6 @@ svn_node_kind_t svn_fs_x__dag_node_kind(dag_node_t *node)
   return node->kind;
 }
 
-const svn_fs_id_t *
-svn_fs_x__dag_get_id(dag_node_t *node)
-{
-  const svn_fs_id_t *id;
-  svn_error_t *err = svn_fs_x__dag_get_fs_id(&id, node, node->node_pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-
-  return id;
-}
-
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
 svn_error_t *
@@ -130,7 +116,7 @@ svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
 
 
 const svn_fs_x__noderev_id_t *
-svn_fs_x__dag_get_noderev_id(const dag_node_t *node)
+svn_fs_x__dag_get_id(const dag_node_t *node)
 {
   return &node->id;
 }
@@ -247,7 +233,7 @@ svn_fs_x__dag_related_node(svn_boolean_t *same,
 
 svn_boolean_t svn_fs_x__dag_check_mutable(const dag_node_t *node)
 {
-  return svn_fs_x__is_txn(svn_fs_x__dag_get_noderev_id(node)->change_set);
+  return svn_fs_x__is_txn(svn_fs_x__dag_get_id(node)->change_set);
 }
 
 
