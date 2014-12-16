@@ -5001,6 +5001,74 @@ def patch_hunk_overlap(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_delete_modified(sbox):
+  """patch delete modified"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A patch that deletes beta.
+  unidiff_patch = [
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # First application deletes beta
+  expected_output = [
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/beta')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/beta', status='D ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Second application skips
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # With modifed beta, we get a text conflict.
+  sbox.simple_revert('A/B/E/beta')
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/B/E/beta'),
+    '>         rejected hunk @@ -1,1 +0,0 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_skip = wc.State('', { })
+  reject_file_contents = [
+    "--- A/B/E/beta\n",
+    "+++ A/B/E/beta\n",
+    "@@ -1,1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+  expected_disk.add({'A/B/E/beta'
+                     : Item(contents='Modified'),
+                     'A/B/E/beta.svnpatch.rej'
+                     : Item(contents=''.join(reject_file_contents))
+                     })
+  expected_status.tweak('A/B/E/beta', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -5058,6 +5126,7 @@ test_list = [ None,
               patch_hunk_avoid_reorder2,
               patch_hunk_reorder,
               patch_hunk_overlap,
+              patch_delete_modified,
             ]
 
 if __name__ == '__main__':
