@@ -793,7 +793,6 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
       noderev->created_path = svn_fspath__join(parent_path, name, pool);
 
       SVN_ERR(svn_fs_x__create_successor(&new_node_id, fs,
-                                         noderev->predecessor_id,
                                          noderev, copy_id, txn_id, pool));
 
       /* Replace the ID in the parent's ENTRY list with the ID which
@@ -1299,7 +1298,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
       /* Set the copyroot equal to our own id. */
       to_noderev->copyroot_path = NULL;
 
-      SVN_ERR(svn_fs_x__create_successor(&id, fs, src_id, to_noderev,
+      SVN_ERR(svn_fs_x__create_successor(&id, fs, to_noderev,
                                          &copy_id, txn_id, pool));
 
     }
