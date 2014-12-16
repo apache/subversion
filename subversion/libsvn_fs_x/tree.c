@@ -960,8 +960,7 @@ try_match_last_node(dag_node_t **node_p,
          the right lookup result irrespective of how we found it. */
       const char *created_path
         = svn_fs_x__dag_get_created_path(node);
-      svn_revnum_t revision;
-      SVN_ERR(svn_fs_x__dag_get_revision(&revision, node, scratch_pool));
+      svn_revnum_t revision = svn_fs_x__dag_get_revision(node);
 
       /* Is it an exact match? */
       if (revision == root->rev && strcmp(created_path, path) == 0)
@@ -1497,7 +1496,9 @@ svn_fs_x__node_created_rev(svn_revnum_t *revision,
   dag_node_t *node;
 
   SVN_ERR(get_dag(&node, root, path, FALSE, pool));
-  return svn_fs_x__dag_get_revision(revision, node, pool);
+  *revision = svn_fs_x__dag_get_revision(node);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3439,7 +3440,7 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
      created-rev is COPY_DST_REV, and that node-revision has no
      predecessors, then there is no relevant closest copy.
   */
-  SVN_ERR(svn_fs_x__dag_get_revision(&created_rev, copy_dst_node, pool));
+  created_rev = svn_fs_x__dag_get_revision(copy_dst_node);
   if (created_rev == copy_dst_rev)
     {
       const svn_fs_id_t *pred;
@@ -3517,7 +3518,7 @@ history_prev(svn_fs_history_t **prev_history,
   SVN_ERR(open_path(&parent_path, root, path, 0, FALSE, scratch_pool));
   node = parent_path->node;
   commit_path = svn_fs_x__dag_get_created_path(node);
-  SVN_ERR(svn_fs_x__dag_get_revision(&commit_rev, node, scratch_pool));
+  commit_rev = svn_fs_x__dag_get_revision(node);
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
@@ -3552,7 +3553,7 @@ history_prev(svn_fs_history_t **prev_history,
              predecessor. */
           SVN_ERR(svn_fs_x__dag_get_node(&node, fs, pred_id, scratch_pool));
           commit_path = svn_fs_x__dag_get_created_path(node);
-          SVN_ERR(svn_fs_x__dag_get_revision(&commit_rev, node, scratch_pool));
+          commit_rev = svn_fs_x__dag_get_revision(node);
         }
     }
 
