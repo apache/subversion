@@ -518,7 +518,8 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   if (value == NULL)
     {
       noderev->copyroot_path = noderev->created_path;
-      noderev->copyroot_rev = svn_fs_x__id_rev(noderev->id);
+      noderev->copyroot_rev
+        = svn_fs_x__get_revnum(noderev->noderev_id.change_set);
     }
   else
     {
@@ -629,16 +630,13 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
 {
   svn_string_t *str_id;
 
-  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_noderev_id(noderev->id),
-                                     scratch_pool);
+  str_id = svn_fs_x__id_part_unparse(&noderev->noderev_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_ID ": %s\n",
                             str_id->data));
-  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_node_id(noderev->id),
-                                     scratch_pool);
+  str_id = svn_fs_x__id_part_unparse(&noderev->node_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_NODE ": %s\n",
                             str_id->data));
-  str_id = svn_fs_x__id_part_unparse(svn_fs_x__id_copy_id(noderev->id),
-                                     scratch_pool);
+  str_id = svn_fs_x__id_part_unparse(&noderev->copy_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPY ": %s\n",
                             str_id->data));
 
@@ -678,8 +676,9 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                               auto_escape_path(noderev->copyfrom_path,
                                                scratch_pool)));
 
-  if ((noderev->copyroot_rev != svn_fs_x__id_rev(noderev->id)) ||
-      (strcmp(noderev->copyroot_path, noderev->created_path) != 0))
+  if (   (   noderev->copyroot_rev
+           != svn_fs_x__get_revnum(noderev->noderev_id.change_set))
+      || (strcmp(noderev->copyroot_path, noderev->created_path) != 0))
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPYROOT ": %ld"
                               " %s\n",
                               noderev->copyroot_rev,

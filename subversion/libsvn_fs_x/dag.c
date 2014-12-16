@@ -86,35 +86,6 @@ svn_node_kind_t svn_fs_x__dag_node_kind(dag_node_t *node)
   return node->kind;
 }
 
-/* Return the node revision ID of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_node_id(svn_fs_x__id_part_t *node_id,
-                          dag_node_t *node)
-{
-  const svn_fs_id_t *id;
-
-  SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, node->node_pool));
-  *node_id = *svn_fs_x__id_node_id(id);
-
-  return SVN_NO_ERROR;
-}
-
-/* Return the node revision ID of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
-                          dag_node_t *node)
-{
-  const svn_fs_id_t *id;
-
-  SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, node->node_pool));
-  *copy_id = *svn_fs_x__id_copy_id(id);
-
-  return SVN_NO_ERROR;
-}
-
-
 const svn_fs_x__noderev_id_t *
 svn_fs_x__dag_get_id(const dag_node_t *node)
 {
@@ -199,6 +170,31 @@ get_node_revision(node_revision_t **noderev_p,
   return SVN_NO_ERROR;
 }
 
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+svn_error_t *
+svn_fs_x__dag_get_node_id(svn_fs_x__id_part_t *node_id,
+                          dag_node_t *node)
+{
+  node_revision_t *noderev;
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  *node_id = noderev->node_id;
+  return SVN_NO_ERROR;
+}
+
+/* Return the node revision ID of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+svn_error_t *
+svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
+                          dag_node_t *node)
+{
+  node_revision_t *noderev;
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  *copy_id = noderev->copy_id;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
