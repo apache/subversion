@@ -153,9 +153,20 @@ svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
   return lhs->change_set == rhs->change_set && lhs->number == rhs->number;
 }
 
+svn_error_t *
+svn_fs_x__id_part_parse(svn_fs_x__id_part_t *part,
+                        const char *data)
+{
+  if (!part_parse(part, data))
+    return svn_error_createf(SVN_ERR_FS_MALFORMED_NODEREV_ID, NULL,
+                             "Malformed ID string");
+
+  return SVN_NO_ERROR;
+}
+
 svn_string_t *
-svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
-                             apr_pool_t *pool)
+svn_fs_x__id_part_unparse(const svn_fs_x__id_part_t *id,
+                          apr_pool_t *pool)
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = part_unparse(string, id);

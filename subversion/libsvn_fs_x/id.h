@@ -90,10 +90,16 @@ svn_boolean_t svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t *part);
 svn_boolean_t svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
                                    const svn_fs_x__id_part_t *rhs);
 
+/* Parse the NUL-terminated ID part at DATA and write the result into *PART.
+ */
+svn_error_t *
+svn_fs_x__id_part_parse(svn_fs_x__id_part_t *part,
+                        const char *data);
+
 /* Convert ID into string form, allocated in POOL. */
 svn_string_t *
-svn_fs_x__noderev_id_unparse(const svn_fs_x__noderev_id_t *id,
-                             apr_pool_t *pool);
+svn_fs_x__id_part_unparse(const svn_fs_x__id_part_t*id,
+                          apr_pool_t *pool);
 
 /* Set *PART to "unused". */
 void svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part);

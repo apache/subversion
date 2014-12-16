@@ -256,7 +256,7 @@ static svn_error_t *
 err_dangling_id(svn_fs_t *fs,
                 const svn_fs_x__noderev_id_t *id)
 {
-  svn_string_t *id_str = svn_fs_x__noderev_id_unparse(id, fs->pool);
+  svn_string_t *id_str = svn_fs_x__id_part_unparse(id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      _("Reference to non-existent node '%s' in filesystem '%s'"),
@@ -380,8 +380,7 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                                             result_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
-      svn_string_t *id_string = svn_fs_x__noderev_id_unparse(id,
-                                                             scratch_pool);
+      svn_string_t *id_string = svn_fs_x__id_part_unparse(id, scratch_pool);
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt node-revision '%s'",
                                id_string->data);
@@ -2483,7 +2482,7 @@ read_dir_entries(apr_array_header_t *entries,
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
 
       if (strcmp(str, SVN_FS_X__KIND_FILE) == 0)
         {
@@ -2497,14 +2496,14 @@ read_dir_entries(apr_array_header_t *entries,
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
         }
 
       str = svn_cstring_tokenize(" ", &entry.val);
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__noderev_id_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
 
       SVN_ERR(svn_fs_x__id_parse(&dirent->id, str, result_pool));
 

@@ -1850,7 +1850,7 @@ merge(svn_stringbuf_t *conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs_x__id_part_eq(ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_x__noderev_id_unparse(target_id, pool);
+      svn_string_t *id_str = svn_fs_x__id_part_unparse(target_id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
          _("Bad merge; target '%s' has id '%s', same as ancestor"),
@@ -4220,8 +4220,7 @@ stringify_node(dag_node_t *node,
                apr_pool_t *pool)
 {
   /* ### TODO: print some PATH@REV to it, too. */
-  return svn_fs_x__noderev_id_unparse(svn_fs_x__dag_get_id(node),
-                                      pool)->data;
+  return svn_fs_x__id_part_unparse(svn_fs_x__dag_get_id(node), pool)->data;
 }
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
