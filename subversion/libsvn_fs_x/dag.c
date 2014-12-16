@@ -148,23 +148,21 @@ static node_revision_t *
 copy_node_revision(node_revision_t *noderev,
                    apr_pool_t *pool)
 {
-  node_revision_t *nr = apr_pcalloc(pool, sizeof(*nr));
-  nr->kind = noderev->kind;
+  node_revision_t *nr = apr_pmemdup(pool, noderev, sizeof(*noderev));
+  nr->id = svn_fs_x__id_copy(noderev->id, pool);
+
   if (noderev->predecessor_id)
     nr->predecessor_id = svn_fs_x__id_copy(noderev->predecessor_id, pool);
-  nr->predecessor_count = noderev->predecessor_count;
   if (noderev->copyfrom_path)
     nr->copyfrom_path = apr_pstrdup(pool, noderev->copyfrom_path);
-  nr->copyfrom_rev = noderev->copyfrom_rev;
+
   nr->copyroot_path = apr_pstrdup(pool, noderev->copyroot_path);
-  nr->copyroot_rev = noderev->copyroot_rev;
   nr->data_rep = svn_fs_x__rep_copy(noderev->data_rep, pool);
   nr->prop_rep = svn_fs_x__rep_copy(noderev->prop_rep, pool);
-  nr->mergeinfo_count = noderev->mergeinfo_count;
-  nr->has_mergeinfo = noderev->has_mergeinfo;
 
   if (noderev->created_path)
     nr->created_path = apr_pstrdup(pool, noderev->created_path);
+
   return nr;
 }
 
@@ -1139,13 +1137,8 @@ svn_fs_x__dag_dup(const dag_node_t *node,
 
   /* Only copy cached node_revision_t for immutable nodes. */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
-    {
-      new_node->node_revision = copy_node_revision(node->node_revision, pool);
-      new_node->node_revision->id =
-          svn_fs_x__id_copy(node->node_revision->id, pool);
-      new_node->node_revision->is_fresh_txn_root =
-          node->node_revision->is_fresh_txn_root;
-    }
+    new_node->node_revision = copy_node_revision(node->node_revision, pool);
+
   new_node->node_pool = pool;
 
   return new_node;
@@ -1272,7 +1265,8 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
-      to_noderev->predecessor_id = svn_fs_x__id_copy(from_noderev->id, pool);
+      to_noderev->predecessor_id = to_noderev->id;
+      to_noderev->id = NULL;
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =
