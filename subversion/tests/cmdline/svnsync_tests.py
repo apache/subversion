@@ -573,6 +573,15 @@ def fd_leak_sync_from_serf_to_local(sbox):
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
 
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def mergeinfo_contains_r0(sbox):
+  "mergeinfo contains r0"
+  run_test(sbox, "mergeinfo-contains-r0.dump",
+           exp_dump_file_name="mergeinfo-contains-r0.expected.dump",
+           bypass_prop_validation=True)
+
 
 ########################################################################
 # Run the tests
@@ -609,6 +618,7 @@ test_list = [ None,
               descend_into_replace,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
+              mergeinfo_contains_r0,
              ]
 
 if __name__ == '__main__':
