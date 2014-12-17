@@ -212,10 +212,9 @@ svn_fs_x__set_contents(svn_stream_t **stream,
    NEW_NODEREV's predecessor.  Set *NEW_ID_P to the new node
    revision's ID.  Use POOL for any temporary allocation.
 
-   COPY_ID, if non-NULL, is a key into the `copies' table, and
+   COPY_ID, is a key into the `copies' table, and
    indicates that this new node is being created as the result of a
-   copy operation, and specifically which operation that was.  If
-   COPY_ID is NULL, then re-use the copy ID from the predecessor node.
+   copy operation, and specifically which operation that was.
 
    TXN_ID is the Subversion transaction under which this occurs.
 

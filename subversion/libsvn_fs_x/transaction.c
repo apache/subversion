@@ -2465,22 +2465,13 @@ svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool)
 {
-  const svn_fs_id_t *id;
-  apr_uint64_t number;
-  const svn_fs_x__id_part_t *node_id
-    = svn_fs_x__id_node_id(new_noderev->predecessor_id);
-
-  if (! copy_id)
-    copy_id = svn_fs_x__id_copy_id(new_noderev->predecessor_id);
-
-  SVN_ERR(allocate_item_index(&number, fs, txn_id, pool));
-  id = svn_fs_x__id_txn_create(node_id, copy_id, txn_id, number, pool);
-
-  new_noderev->id = id;
-  new_noderev->noderev_id = *svn_fs_x__id_noderev_id(id);
-  new_noderev->node_id = *node_id;
   new_noderev->copy_id = *copy_id;
+  new_noderev->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
+  SVN_ERR(allocate_item_index(&new_noderev->noderev_id.number, fs, txn_id,
+                              pool));
 
+  new_noderev->id = svn_fs_x__id_create(&new_noderev->node_id, copy_id,
+                                        &new_noderev->noderev_id, pool);
   if (! new_noderev->copyroot_path)
     {
       new_noderev->copyroot_path
@@ -2491,7 +2482,7 @@ svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
 
   SVN_ERR(svn_fs_x__put_node_revision(fs, new_noderev, FALSE, pool));
 
-  *new_id_p = id;
+  *new_id_p = new_noderev->id;
 
   return SVN_NO_ERROR;
 }

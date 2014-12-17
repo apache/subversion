@@ -771,6 +771,9 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
         noderev->predecessor_count++;
       noderev->created_path = svn_fspath__join(parent_path, name, pool);
 
+      if (copy_id == NULL)
+        copy_id = &noderev->copy_id;
+
       SVN_ERR(svn_fs_x__create_successor(&new_node_id, fs,
                                          noderev, copy_id, txn_id, pool));
 
