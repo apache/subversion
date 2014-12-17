@@ -560,7 +560,7 @@ def no_copy_overwrites(sbox):
   # Repeat the last command.  It should *fail* because A/D/H/G already exists.
   svntest.actions.run_and_verify_svn(
     "Whoa, I was able to overwrite a directory!",
-    None, svntest.verify.AnyOutput,
+    None, ".*'/A/D/H/G'.*",
     'cp', dirURL1, dirURL2,
     '-m', 'fooogle')
 
