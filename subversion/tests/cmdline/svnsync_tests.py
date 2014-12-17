@@ -209,7 +209,11 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   return dest_sbox
 
 def verify_mirror(dest_sbox, exp_dump_file_contents):
-  """Compare the contents of the DEST_SBOX repository with EXP_DUMP_FILE_CONTENTS."""
+  """Compare the contents of the mirror repository in DEST_SBOX with
+     EXP_DUMP_FILE_CONTENTS, by comparing the parsed dump stream content.
+
+     First remove svnsync rev-props from the DEST_SBOX repository.
+  """
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -249,12 +253,12 @@ or another dump file."""
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    exp_master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
-                                        exp_dump_file_name)).readlines()
+    exp_dump_file_contents = open(os.path.join(svnsync_tests_dir,
+                                  exp_dump_file_name), 'rb').readlines()
   else:
-    exp_master_dumpfile_contents = master_dumpfile_contents
+    exp_dump_file_contents = master_dumpfile_contents
 
-  verify_mirror(dest_sbox, exp_master_dumpfile_contents)
+  verify_mirror(dest_sbox, exp_dump_file_contents)
 
 
 
@@ -1031,6 +1035,15 @@ def copy_delete_unreadable_child(sbox):
                                      ["iota\n"], [],
                                      'ls', dest_url+'/branch@2')
 
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def mergeinfo_contains_r0(sbox):
+  "mergeinfo contains r0"
+  run_test(sbox, "mergeinfo-contains-r0.dump",
+           exp_dump_file_name="mergeinfo-contains-r0.expected.dump",
+           bypass_prop_validation=True)
+
 
 ########################################################################
 # Run the tests
@@ -1074,6 +1087,7 @@ test_list = [ None,
               delete_revprops,
               fd_leak_sync_from_serf_to_local,
               copy_delete_unreadable_child,
+              mergeinfo_contains_r0,
              ]
 serial_only = True
 
