@@ -163,8 +163,6 @@ remove_r0_mergeinfo(const svn_string_t **str,
   if (strcmp((*str)->data, new_str->data) != 0)
     {
       *was_changed = TRUE;
-      SVN_DBG(("mi normalized from: %s", (*str)->data));
-      SVN_DBG(("mi normalized to  : %s", new_str->data));
     }
 
   *str = svn_stringbuf__morph_into_string(new_str);
