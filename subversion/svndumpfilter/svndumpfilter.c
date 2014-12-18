@@ -795,6 +795,13 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
      a merge source revision.
 
      If the oldest rev is r0 then there is nothing to filter. */
+
+  /* ### This seems to cater only for use cases where the revisions being
+         processed are not following on from revisions that will already
+         exist in the destination repository. If the revisions being
+         processed do follow on, then we might want to keep the mergeinfo
+         that refers to those older revisions. */
+
   if (rb->pb->skip_missing_merge_sources && rb->pb->oldest_original_rev > 0)
     SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
       &mergeinfo, mergeinfo,
