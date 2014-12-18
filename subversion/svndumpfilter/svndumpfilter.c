@@ -791,8 +791,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
      start of all history.  E.g. if we dump -r100:400 then dumpfilter the
      result with --skip-missing-merge-sources, any mergeinfo with revision
      100 implies a change of -r99:100, but r99 is part of the history we
-     want filtered.  This is analogous to how r1 is always meaningless as
-     a merge source revision.
+     want filtered.
 
      If the oldest rev is r0 then there is nothing to filter. */
 
