@@ -612,7 +612,12 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
 }
 
 /* Return TRUE, if all ranges in RANGELIST are in ascending order and do
- * not overlap.  If this returns FALSE, you probaly want to qsort() the
+ * not overlap and are not adjacent.
+ *
+ * ### Can yield false negatives: ranges of differing inheritance are
+ * allowed to be adjacent.
+ *
+ * If this returns FALSE, you probaly want to qsort() the
  * ranges and then call svn_rangelist__combine_adjacent_ranges().
  */
 static svn_boolean_t
@@ -626,6 +631,20 @@ is_rangelist_normalized(svn_rangelist_t *rangelist)
       return FALSE;
 
   return TRUE;
+}
+
+svn_error_t *
+svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
+                            apr_pool_t *scratch_pool)
+{
+  if (! is_rangelist_normalized(rangelist))
+    {
+      svn_sort__array(rangelist, svn_sort_compare_ranges);
+
+      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -715,14 +734,9 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   /* Sort the rangelist, combine adjacent ranges into single ranges, and
      make sure there are no overlapping ranges.  Luckily, most data in
-     svn:mergeinfo will already be in normalized form and we can skip this.
+     svn:mergeinfo will already be in normalized form and this will be quick.
    */
-  if (! is_rangelist_normalized(rangelist))
-    {
-      svn_sort__array(rangelist, svn_sort_compare_ranges);
-
-      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
-    }
+  SVN_ERR(svn_rangelist__canonicalize(rangelist, scratch_pool));
 
   /* Handle any funky mergeinfo with relative merge source paths that
      might exist due to issue #3547.  It's possible that this issue allowed
@@ -1996,6 +2010,22 @@ svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
 
       svn_sort__array(rl, svn_sort_compare_ranges);
     }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__canonicalize_ranges(svn_mergeinfo_t mergeinfo,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *rl = apr_hash_this_val(hi);
+
+      SVN_ERR(svn_rangelist__canonicalize(rl, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 

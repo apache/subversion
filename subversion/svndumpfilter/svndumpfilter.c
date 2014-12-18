@@ -859,7 +859,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       svn_hash_sets(final_mergeinfo, merge_source, rangelist);
     }
 
-  SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
+  SVN_ERR(svn_mergeinfo__canonicalize_ranges(final_mergeinfo, subpool));
   SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
