@@ -806,6 +806,25 @@ def load_prop_change_in_non_deltas_dump(sbox):
                                           [], [], 0,
                                           '-q', 'load', sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def dump_mergeinfo_contains_r0(sbox):
+  "dump: mergeinfo that contains r0"
+  ### We pass the original dump file name as 'expected_dumpfile_name' because
+  ### run_dump_test is currently broken when we don't.
+  run_dump_test(sbox, "mergeinfo-contains-r0.dump",
+                bypass_prop_validation=True)
+
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4476)
+def load_mergeinfo_contains_r0(sbox):
+  "load: mergeinfo that contains r0"
+  run_load_test(sbox, "mergeinfo-contains-r0.dump",
+                expected_dumpfile_name="mergeinfo-contains-r0.expected.dump")
+
 
 ########################################################################
 # Run the tests
@@ -862,6 +881,8 @@ test_list = [ None,
               only_trunk_range_dump,
               only_trunk_A_range_dump,
               load_prop_change_in_non_deltas_dump,
+              dump_mergeinfo_contains_r0,
+              load_mergeinfo_contains_r0,
              ]
 
 if __name__ == '__main__':
