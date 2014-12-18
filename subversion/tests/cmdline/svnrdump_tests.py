@@ -70,12 +70,16 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
+def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile,
+                        bypass_prop_validation=False):
   """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
   by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
   SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
   re-dumped to do the match, which should generate the same dumpfile as
   dumping SVNRDUMP_SBOX."""
+
+  ### Note: The call from run_dump_test() passes the expected and actual
+  ### parameters in the opposite order to that implied by the parameter names.
 
   svnrdump_contents = svntest.actions.run_and_verify_dump(
                                                     svnrdump_sbox.repo_dir)
@@ -84,7 +88,8 @@ def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
   svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
   svntest.main.create_repos(svnadmin_sbox.repo_dir)
 
-  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile,
+                                      bypass_prop_validation)
 
   svnadmin_contents = svntest.actions.run_and_verify_dump(
                                                     svnadmin_sbox.repo_dir)
@@ -150,7 +155,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
       None)
 
   else:
-    compare_repos_dumps(sbox, svnadmin_dumpfile)
+    ### Note: This call passes the expected and actual parameters in the
+    ### opposite order to that implied by the parameter names.
+    compare_repos_dumps(sbox, svnrdump_dumpfile, bypass_prop_validation)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
