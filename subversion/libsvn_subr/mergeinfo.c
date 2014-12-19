@@ -99,9 +99,6 @@ parse_pathname(const char **input,
   if (!last_colon)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("Pathname not terminated by ':'"));
-  if (last_colon == *input)
-    return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                            _("No pathname preceding ':'"));
 
   /* Tolerate relative repository paths, but convert them to absolute.
      ### Efficiency?  1 string duplication here, 2 in canonicalize. */
