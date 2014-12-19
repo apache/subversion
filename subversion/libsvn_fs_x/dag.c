@@ -224,6 +224,21 @@ svn_fs_x__dag_related_node(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
+                                   dag_node_t *lhs,
+                                   dag_node_t *rhs)
+{
+  node_revision_t *lhs_noderev, *rhs_noderev;
+
+  SVN_ERR(get_node_revision(&lhs_noderev, lhs));
+  SVN_ERR(get_node_revision(&rhs_noderev, rhs));
+
+  *same = svn_fs_x__id_part_eq(&lhs_noderev->node_id, &rhs_noderev->node_id)
+       && svn_fs_x__id_part_eq(&lhs_noderev->copy_id, &rhs_noderev->copy_id);
+
+  return SVN_NO_ERROR;
+}
 
 svn_boolean_t svn_fs_x__dag_check_mutable(const dag_node_t *node)
 {
@@ -418,7 +433,6 @@ make_entry(dag_node_t **child_p,
 {
   const svn_fs_id_t *new_node_id;
   node_revision_t new_noderev, *parent_noderev;
-  svn_fs_x__id_part_t copy_id;
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component(name))
@@ -450,10 +464,9 @@ make_entry(dag_node_t **child_p,
   new_noderev.copyfrom_rev = SVN_INVALID_REVNUM;
   new_noderev.copyfrom_path = NULL;
 
-  SVN_ERR(svn_fs_x__dag_get_copy_id(&copy_id, parent));
   SVN_ERR(svn_fs_x__create_node
           (&new_node_id, svn_fs_x__dag_get_fs(parent), &new_noderev,
-           &copy_id, txn_id, pool));
+           &parent_noderev->copy_id, txn_id, pool));
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR(svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),

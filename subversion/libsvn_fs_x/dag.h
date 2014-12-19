@@ -139,6 +139,13 @@ svn_fs_x__dag_related_node(svn_boolean_t *same,
                            dag_node_t *lhs,
                            dag_node_t *rhs);
 
+/* Set *SAME to TRUE, if nodes LHS and RHS have the same node and copy IDs.
+ */
+svn_error_t *
+svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
+                                   dag_node_t *lhs,
+                                   dag_node_t *rhs);
+
 /* Return the created path of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
 const char *svn_fs_x__dag_get_created_path(dag_node_t *node);
