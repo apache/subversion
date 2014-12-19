@@ -363,8 +363,8 @@ test_expand(const svn_test_opts_t *opts,
   /* Get expanded "c". */
   svn_config_get(cfg, &val, "section1", "c", NULL);
 
-  /* This fails reliably with pool debugging enabled because the expanded
-     value of "c" was created in a temporary pool when expanding "g". */
+  /* With pool debugging enabled this ensures that the expanded value 
+     of "c" was not created in a temporary pool when expanding "g". */
   SVN_TEST_STRING_ASSERT(val, "bar");
 
   return SVN_NO_ERROR;
@@ -400,9 +400,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test parsing config file with BOM"),
     SVN_TEST_OPTS_PASS(test_read_only_mode,
                        "test r/o mode"),
-    SVN_TEST_OPTS_WIMP(test_expand,
-                       "test variable expansion",
-                       "expansion fails with pool debugging"),
+    SVN_TEST_OPTS_PASS(test_expand,
+                       "test variable expansion"),
     SVN_TEST_NULL
   };
 
