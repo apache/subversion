@@ -303,8 +303,8 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
   if (noderev->created_path)
     binary_noderev.created_path
       = svn_fs_x__string_table_builder_add(container->builder,
-                                            noderev->created_path,
-                                            0);
+                                           noderev->created_path,
+                                           0);
 
   binary_noderev.mergeinfo_count = noderev->mergeinfo_count;
   
@@ -880,11 +880,11 @@ svn_fs_x__noderevs_get_func(void **out,
   resolve_apr_array_header(&ids, container, &container->ids);
   resolve_apr_array_header(&reps, container, &container->reps);
   resolve_apr_array_header(&noderevs, container, &container->noderevs);
-  
+
   /* allocate result struct and fill it field by field */
   noderev = apr_pcalloc(pool, sizeof(*noderev));
   binary_noderev = &APR_ARRAY_IDX(&noderevs, idx, binary_noderev_t);
-  
+
   noderev->kind = (svn_node_kind_t)(binary_noderev->flags & NODEREV_KIND_MASK);
   SVN_ERR(get_id(&noderev->id, &ids, binary_noderev->id, pool));
   SVN_ERR(get_id(&noderev->predecessor_id, &ids,
