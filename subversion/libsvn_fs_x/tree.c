@@ -1750,12 +1750,13 @@ conflict_err(svn_stringbuf_t *conflict_path,
                            _("Conflict at '%s'"), path);
 }
 
-/* Compare the directory representations at nodes LHS and RHS and set
+/* Compare the directory representations at nodes LHS and RHS in FS and set
  * *CHANGED to TRUE, if at least one entry has been added or removed them.
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
 compare_dir_structure(svn_boolean_t *changed,
+                      svn_fs_t *fs,
                       dag_node_t *lhs,
                       dag_node_t *rhs,
                       apr_pool_t *pool)
@@ -1763,6 +1764,7 @@ compare_dir_structure(svn_boolean_t *changed,
   apr_array_header_t *lhs_entries;
   apr_array_header_t *rhs_entries;
   int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(svn_fs_x__dag_dir_entries(&lhs_entries, lhs, pool));
   SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, pool));
@@ -1776,18 +1778,37 @@ compare_dir_structure(svn_boolean_t *changed,
       svn_fs_dirent_t *rhs_entry
         = APR_ARRAY_IDX(rhs_entries, i, svn_fs_dirent_t *);
 
-      if (strcmp(lhs_entry->name, rhs_entry->name)
-          || !svn_fs_x__id_part_eq(svn_fs_x__id_node_id(lhs_entry->id),
-                                   svn_fs_x__id_node_id(rhs_entry->id))
-          || !svn_fs_x__id_part_eq(svn_fs_x__id_copy_id(lhs_entry->id),
-                                   svn_fs_x__id_copy_id(rhs_entry->id)))
+      if (strcmp(lhs_entry->name, rhs_entry->name) == 0)
         {
-          *changed = TRUE;
-          return SVN_NO_ERROR;
+          svn_boolean_t same_history;
+          dag_node_t *lhs_node, *rhs_node;
+
+          /* Unchanged entry? */
+          if (!svn_fs_x__id_eq(lhs_entry->id, rhs_entry->id))
+            continue;
+
+          /* We get here rarely. */
+          svn_pool_clear(iterpool);
+
+          /* Modified but not copied / replaced or anything? */
+          SVN_ERR(svn_fs_x__dag_get_node(&lhs_node, fs, lhs_entry->id, 
+                                         iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, rhs_entry->id,
+                                         iterpool));
+          SVN_ERR(svn_fs_x__dag_same_line_of_history(&same_history,
+                                                     lhs_node, rhs_node));
+          if (same_history)
+            continue;
         }
+
+      /* This is a different entry. */
+      *changed = TRUE;
+      break;
     }
 
+  svn_pool_destroy(iterpool);
   *changed = FALSE;
+
   return SVN_NO_ERROR;
 }
 
@@ -1983,7 +2004,7 @@ merge(svn_stringbuf_t *conflict_p,
            to its entries, i.e. there were no additions or removals.
            Those could cause update problems to the working copy. */
         svn_boolean_t changed;
-        SVN_ERR(compare_dir_structure(&changed, source, ancestor, pool));
+        SVN_ERR(compare_dir_structure(&changed, fs, source, ancestor, pool));
 
         if (changed)
           return conflict_err(conflict_p, target_path);
@@ -2058,6 +2079,7 @@ merge(svn_stringbuf_t *conflict_p,
           dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
           const char *new_tpath;
           apr_int64_t sub_mergeinfo_increment;
+          svn_boolean_t s_a_same, t_a_same;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
              double delete; if one of them is null, that's a delete versus
@@ -2077,16 +2099,21 @@ merge(svn_stringbuf_t *conflict_p,
                                                  a_entry->name,
                                                  iterpool));
 
+          /* Fetch DAG nodes to efficiently access ID parts. */
+          SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs,
+                                         s_entry->id, iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs,
+                                         t_entry->id, iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&a_ent_node, fs,
+                                         a_entry->id, iterpool));
+
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
-          if (!svn_fs_x__id_part_eq(svn_fs_x__id_node_id(s_entry->id),
-                                    svn_fs_x__id_node_id(a_entry->id))
-              || !svn_fs_x__id_part_eq(svn_fs_x__id_copy_id(s_entry->id),
-                                       svn_fs_x__id_copy_id(a_entry->id))
-              || !svn_fs_x__id_part_eq(svn_fs_x__id_node_id(t_entry->id),
-                                       svn_fs_x__id_node_id(a_entry->id))
-              || !svn_fs_x__id_part_eq(svn_fs_x__id_copy_id(t_entry->id),
-                                       svn_fs_x__id_copy_id(a_entry->id)))
+          SVN_ERR(svn_fs_x__dag_same_line_of_history(&s_a_same, s_ent_node,
+                                                     a_ent_node));
+          SVN_ERR(svn_fs_x__dag_same_line_of_history(&t_a_same, t_ent_node,
+                                                     a_ent_node));
+          if (!s_a_same || !t_a_same)
             return conflict_err(conflict_p,
                                 svn_fspath__join(target_path,
                                                  a_entry->name,
@@ -2095,12 +2122,6 @@ merge(svn_stringbuf_t *conflict_p,
           /* Direct modifications were made to the directory
              ANCESTOR-ENTRY in both SOURCE and TARGET.  Recursively
              merge these modifications. */
-          SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs,
-                                         s_entry->id, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs,
-                                         t_entry->id, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&a_ent_node, fs,
-                                         a_entry->id, iterpool));
           new_tpath = svn_fspath__join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
