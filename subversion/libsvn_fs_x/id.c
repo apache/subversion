@@ -42,7 +42,6 @@ typedef struct fs_x__id_t
   svn_fs_x__id_part_t node_id;
   svn_fs_x__id_part_t noderev_id;
 
-  apr_pool_t *pool; /* pool that was used to allocate this struct */
 } fs_x__id_t;
 
 
@@ -334,7 +333,6 @@ svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txn_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -351,7 +349,6 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -371,7 +368,6 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -393,7 +389,6 @@ svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -406,7 +401,6 @@ svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
   fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
   new_id->generic_id.fsap_data = new_id;
-  new_id->pool = pool;
 
   return (svn_fs_id_t *)new_id;
 }
@@ -424,7 +418,6 @@ id_parse(char *data,
   id = apr_pcalloc(pool, sizeof(*id));
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 
   /* Now, we basically just need to "split" this data on `.'
      characters.  We will use svn_cstring_tokenize, which will put
@@ -508,6 +501,5 @@ svn_fs_x__id_deserialize(void *buffer,
   /* the stored vtable is bogus at best -> set the right one */
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
-  id->pool = pool;
 }
 
