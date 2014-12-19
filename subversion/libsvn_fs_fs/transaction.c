@@ -3223,7 +3223,7 @@ verify_locks(svn_fs_t *fs,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_dirent_is_child(last_recursed->data, path, iterpool))
+          && svn_fspath__skip_ancestor(last_recursed->data, path))
         continue;
 
       /* What does it mean to succeed at lock verification for a given
