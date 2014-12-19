@@ -3191,7 +3191,7 @@ verify_locks(svn_fs_t *fs,
              apr_hash_t *changed_paths,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool;
   apr_array_header_t *changed_paths_sorted;
   svn_stringbuf_t *last_recursed = NULL;
   int i;
@@ -3204,6 +3204,7 @@ verify_locks(svn_fs_t *fs,
   /* Now, traverse the array of changed paths, verify locks.  Note
      that if we need to do a recursive verification a path, we'll skip
      over children of that path when we get to them. */
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < changed_paths_sorted->nelts; i++)
     {
       const svn_sort__item_t *item;
@@ -3211,7 +3212,7 @@ verify_locks(svn_fs_t *fs,
       svn_fs_path_change2_t *change;
       svn_boolean_t recurse = TRUE;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(changed_paths_sorted, i, svn_sort__item_t);
 
@@ -3222,7 +3223,7 @@ verify_locks(svn_fs_t *fs,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_dirent_is_child(last_recursed->data, path, subpool))
+          && svn_dirent_is_child(last_recursed->data, path, iterpool))
         continue;
 
       /* What does it mean to succeed at lock verification for a given
@@ -3237,7 +3238,7 @@ verify_locks(svn_fs_t *fs,
       if (change->change_kind == svn_fs_path_change_modify)
         recurse = FALSE;
       SVN_ERR(svn_fs_fs__allow_locked_operation(path, fs, recurse, TRUE,
-                                                subpool));
+                                                iterpool));
 
       /* If we just did a recursive check, remember the path we
          checked (so children can be skipped).  */
@@ -3249,7 +3250,7 @@ verify_locks(svn_fs_t *fs,
             svn_stringbuf_set(last_recursed, path);
         }
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
