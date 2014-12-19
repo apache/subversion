@@ -401,7 +401,7 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_read_only_mode,
                        "test r/o mode"),
     SVN_TEST_OPTS_WIMP(test_expand,
-                       "test r/o mode",
+                       "test variable expansion",
                        "expansion fails with pool debugging"),
     SVN_TEST_NULL
   };
