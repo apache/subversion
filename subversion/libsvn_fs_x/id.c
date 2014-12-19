@@ -40,7 +40,6 @@ typedef struct fs_x__id_t
 
   /* private members */
   svn_fs_x__id_part_t node_id;
-  svn_fs_x__id_part_t copy_id;
   svn_fs_x__id_part_t noderev_id;
 
   apr_pool_t *pool; /* pool that was used to allocate this struct */
@@ -200,15 +199,6 @@ svn_fs_x__id_node_id(const svn_fs_id_t *fs_id)
 }
 
 
-const svn_fs_x__id_part_t *
-svn_fs_x__id_copy_id(const svn_fs_id_t *fs_id)
-{
-  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-
-  return &id->copy_id;
-}
-
-
 svn_fs_x__txn_id_t
 svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 {
@@ -255,12 +245,10 @@ svn_string_t *
 svn_fs_x__id_unparse(const svn_fs_id_t *fs_id,
                      apr_pool_t *pool)
 {
-  char string[6 * SVN_INT64_BUFFER_SIZE + 10];
+  char string[4 * SVN_INT64_BUFFER_SIZE + 4];
   const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   char *p = part_unparse(string, &id->node_id);
-  *(p++) = '.';
-  p = part_unparse(p, &id->copy_id);
   *(p++) = '.';
   p = part_unparse(p, &id->noderev_id);
 
@@ -370,7 +358,6 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 
 svn_fs_id_t *
 svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
-                        const svn_fs_x__id_part_t *copy_id,
                         svn_fs_x__txn_id_t txn_id,
                         apr_uint64_t item,
                         apr_pool_t *pool)
@@ -378,7 +365,6 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   id->node_id = *node_id;
-  id->copy_id = *copy_id;
 
   id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
   id->noderev_id.number = item;
@@ -393,14 +379,16 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
 
 svn_fs_id_t *
 svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
-                    const svn_fs_x__id_part_t *copy_id,
                     const svn_fs_x__id_part_t *noderev_id,
                     apr_pool_t *pool)
 {
-  fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
+  fs_x__id_t *id;
+  if (!svn_fs_x__id_part_used(noderev_id))
+    return NULL;
+
+  id = apr_pcalloc(pool, sizeof(*id));
 
   id->node_id = *node_id;
-  id->copy_id = *copy_id;
   id->noderev_id = *noderev_id;
 
   id->generic_id.vtable = &id_vtable;
@@ -449,13 +437,6 @@ id_parse(char *data,
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->node_id, str))
-    return NULL;
-
-  /* Copy Id */
-  str = svn_cstring_tokenize(".", &data);
-  if (str == NULL)
-    return NULL;
-  if (! part_parse(&id->copy_id, str))
     return NULL;
 
   /* NodeRev Id */

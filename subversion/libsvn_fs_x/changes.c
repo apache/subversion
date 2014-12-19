@@ -80,7 +80,6 @@ typedef struct binary_change_t
   /* Relevant parts of the node revision ID of the change.
    * Empty, if REV_ID is not "used". */
   svn_fs_x__id_part_t node_id;
-  svn_fs_x__id_part_t copy_id;
   svn_fs_x__id_part_t noderev_id;
 
 } binary_change_t;
@@ -180,7 +179,6 @@ append_change(svn_fs_x__changes_t *changes,
   if (info->node_rev_id)
     {
       binary_change.node_id = *svn_fs_x__id_node_id(info->node_rev_id);
-      binary_change.copy_id = *svn_fs_x__id_copy_id(info->node_rev_id);
       binary_change.noderev_id = *svn_fs_x__id_noderev_id(info->node_rev_id);
     }
   else
@@ -275,7 +273,6 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
 
       if (binary_change->noderev_id.change_set != SVN_FS_X__INVALID_CHANGE_SET)
         info->node_rev_id = svn_fs_x__id_create(&binary_change->node_id,
-                                                &binary_change->copy_id,
                                                 &binary_change->noderev_id,
                                                 pool);
 
@@ -332,8 +329,6 @@ svn_fs_x__write_changes_container(svn_stream_t *stream,
   svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
   svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
   svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
-  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
-  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
   
   /* serialize offsets array */
   for (i = 0; i < changes->offsets->nelts; ++i)
@@ -354,8 +349,6 @@ svn_fs_x__write_changes_container(svn_stream_t *stream,
 
       svn_packed__add_int(changes_stream, change->node_id.change_set);
       svn_packed__add_uint(changes_stream, change->node_id.number);
-      svn_packed__add_int(changes_stream, change->copy_id.change_set);
-      svn_packed__add_uint(changes_stream, change->copy_id.number);
       svn_packed__add_int(changes_stream, change->noderev_id.change_set);
       svn_packed__add_uint(changes_stream, change->noderev_id.number);
     }
@@ -414,8 +407,6 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
 
       change.node_id.change_set = svn_packed__get_int(changes_stream);
       change.node_id.number = svn_packed__get_uint(changes_stream);
-      change.copy_id.change_set = svn_packed__get_int(changes_stream);
-      change.copy_id.number = svn_packed__get_uint(changes_stream);
       change.noderev_id.change_set = svn_packed__get_int(changes_stream);
       change.noderev_id.number = svn_packed__get_uint(changes_stream);
 
@@ -540,7 +531,6 @@ svn_fs_x__changes_get_list_func(void **out,
 
       if (binary_change->noderev_id.change_set != SVN_FS_X__INVALID_CHANGE_SET)
         info->node_rev_id = svn_fs_x__id_create(&binary_change->node_id,
-                                                &binary_change->copy_id,
                                                 &binary_change->noderev_id,
                                                 pool);
 

@@ -446,8 +446,8 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   SVN_ERR(read_id_part(&noderev->node_id, headers, HEADER_NODE));
   SVN_ERR(read_id_part(&noderev->copy_id, headers, HEADER_COPY));
 
-  noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->copy_id,
-                                    &noderev->noderev_id, result_pool);
+  noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
+                                    result_pool);
 
   /* Read the type. */
   value = svn_hash_gets(headers, HEADER_TYPE);

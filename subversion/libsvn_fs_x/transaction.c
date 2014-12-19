@@ -1641,7 +1641,7 @@ svn_fs_x__create_node(const svn_fs_id_t **id_p,
   SVN_ERR(allocate_item_index(&number, fs, txn_id, pool));
 
   /* Construct the ID object from all the above parts. */
-  id = svn_fs_x__id_txn_create(&node_id, copy_id, txn_id, number, pool);
+  id = svn_fs_x__id_txn_create(&node_id, txn_id, number, pool);
   noderev->id = id;
   noderev->copy_id = *copy_id;
   noderev->node_id = node_id;
@@ -1815,7 +1815,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
       /* There is no valid ID.  Provide a dummy. */
       svn_fs_x__id_part_t dummy;
       svn_fs_x__id_part_reset(&dummy);
-      fs_id = svn_fs_x__id_create(&dummy, &dummy, id, pool);
+      fs_id = svn_fs_x__id_create(&dummy, id, pool);
     }
   else
     {
@@ -2470,7 +2470,7 @@ svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
   SVN_ERR(allocate_item_index(&new_noderev->noderev_id.number, fs, txn_id,
                               pool));
 
-  new_noderev->id = svn_fs_x__id_create(&new_noderev->node_id, copy_id,
+  new_noderev->id = svn_fs_x__id_create(&new_noderev->node_id,
                                         &new_noderev->noderev_id, pool);
   if (! new_noderev->copyroot_path)
     {
@@ -2947,8 +2947,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset,
                                 noderev->noderev_id.number, pool));
-  new_id = svn_fs_x__id_create(&noderev->node_id, &noderev->copy_id,
-                               &noderev->noderev_id, pool);
+  new_id = svn_fs_x__id_create(&noderev->node_id,  &noderev->noderev_id,
+                               pool);
   noderev->id = new_id;
 
   if (ffd->rep_sharing_allowed)
