@@ -138,6 +138,15 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1646785, r1646786, r1646797
+   Fix a pool handling bug in config variable expansion.
+   Justification:
+     Using memory after free is undefined behaviour.
+   Branch:
+     ^/subversion/branches/1.8.x-r1646797
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
