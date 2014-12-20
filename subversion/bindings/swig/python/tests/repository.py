@@ -229,7 +229,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         ]
     # Compare only the first X nodes described in the expected list - otherwise
     # the comparison list gets too long.
-    self.assertListEqual(dsp.ops[:len(expected_list)], expected_list)
+    self.assertEqual(dsp.ops[:len(expected_list)], expected_list)
 
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
