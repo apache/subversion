@@ -107,7 +107,7 @@ Candidate changes:
    Justification:
      Using memory after free is undefined behaviour.
    Branch:
-     ^/subversion/branches/1.8.x-r1646797
+     ^/subversion/branches/1.7.x-r1646797
    Votes:
      +1: philip
 
