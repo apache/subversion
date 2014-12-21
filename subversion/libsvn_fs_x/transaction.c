@@ -1167,7 +1167,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Copying from transactions not allowed"));
 
-  noderev->predecessor_id = noderev->id;
+  noderev->predecessor_id = noderev->noderev_id;
   noderev->predecessor_count++;
   noderev->copyfrom_path = NULL;
   noderev->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -1427,7 +1427,8 @@ svn_fs_x__get_txn(transaction_t **txn_p,
                                       pool, pool));
 
   txn->root_id = svn_fs_x__id_copy(noderev->id, pool);
-  txn->base_id = svn_fs_x__id_copy(noderev->predecessor_id, pool);
+  txn->base_id = svn_fs_x__id_create(&noderev->node_id,
+                                     &noderev->predecessor_id, pool);
   txn->copies = NULL;
 
   *txn_p = txn;
@@ -1931,13 +1932,11 @@ shards_spanned(int *spanned,
   iterpool = svn_pool_create(pool);
   while (walk-- && noderev->predecessor_count)
     {
-      const svn_fs_x__noderev_id_t *predecessor_id
-        = svn_fs_x__id_noderev_id(noderev->predecessor_id);
+      svn_fs_x__id_part_t id = noderev->predecessor_id;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, predecessor_id,
-                                          pool, iterpool));
-      shard = svn_fs_x__get_revnum(predecessor_id->change_set) / shard_size;
+      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &id, pool, iterpool));
+      shard = svn_fs_x__get_revnum(id.change_set) / shard_size;
       if (shard != last_shard)
         {
           ++count;
@@ -2021,12 +2020,9 @@ choose_delta_base(representation_t **rep,
   iterpool = svn_pool_create(pool);
   while ((count++) < noderev->predecessor_count)
     {
-      const svn_fs_x__noderev_id_t *predecessor_id
-        = svn_fs_x__id_noderev_id(noderev->predecessor_id);
-
+      svn_fs_x__id_part_t id = noderev->predecessor_id;
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_x__get_node_revision(&base, fs, predecessor_id, pool,
-                                          iterpool));
+      SVN_ERR(svn_fs_x__get_node_revision(&base, fs, &id, pool, iterpool));
     }
   svn_pool_destroy(iterpool);
 
