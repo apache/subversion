@@ -512,8 +512,9 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    SVN_ERR(svn_fs_x__id_parse(&noderev->predecessor_id, value,
-                               result_pool));
+    SVN_ERR(svn_fs_x__id_part_parse(&noderev->predecessor_id, value));
+  else
+    svn_fs_x__id_part_reset(&noderev->predecessor_id);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -646,10 +647,10 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                             (noderev->kind == svn_node_file) ?
                             SVN_FS_X__KIND_FILE : SVN_FS_X__KIND_DIR));
 
-  if (noderev->predecessor_id)
+  if (svn_fs_x__id_part_used(&noderev->predecessor_id))
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PRED ": %s\n",
-                              svn_fs_x__id_unparse(noderev->predecessor_id,
-                                                   scratch_pool)->data));
+                          svn_fs_x__id_part_unparse(&noderev->predecessor_id,
+                                                    scratch_pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COUNT ": %d\n",
                             noderev->predecessor_count));

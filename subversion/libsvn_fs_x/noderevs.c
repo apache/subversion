@@ -266,21 +266,8 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
     = store_id(container->ids, container->ids_dict, &noderev->node_id);
   binary_noderev.copy_id
     = store_id(container->ids, container->ids_dict, &noderev->copy_id);
-
-  if (noderev->predecessor_id)
-    {
-      binary_noderev.predecessor_id
-        = store_id(container->ids, container->ids_dict,
-                  svn_fs_x__id_noderev_id(noderev->predecessor_id));
-    }
-  else
-    {
-      svn_fs_x__id_part_t unused;
-      svn_fs_x__id_part_reset(&unused);
-
-      binary_noderev.predecessor_id
-        = store_id(container->ids, container->ids_dict, &unused);
-    }
+  binary_noderev.predecessor_id
+    = store_id(container->ids, container->ids_dict, &noderev->predecessor_id);
 
   if (noderev->copyfrom_path)
     {
@@ -416,7 +403,6 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
 {
   node_revision_t *noderev;
   binary_noderev_t *binary_noderev;
-  svn_fs_x__id_part_t predecessor_id;
 
   /* CONTAINER must be in 'finalized' mode */
   SVN_ERR_ASSERT(container->builder == NULL);
@@ -441,14 +427,11 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
                  binary_noderev->node_id));
   SVN_ERR(get_id(&noderev->copy_id, container->ids,
                  binary_noderev->copy_id));
-  SVN_ERR(get_id(&predecessor_id, container->ids,
+  SVN_ERR(get_id(&noderev->predecessor_id, container->ids,
                  binary_noderev->predecessor_id));
 
   noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
                                     pool);
-  noderev->predecessor_id = svn_fs_x__id_create(&noderev->node_id,
-                                                &predecessor_id,
-                                                pool);
 
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
@@ -868,7 +851,6 @@ svn_fs_x__noderevs_get_func(void **out,
 {
   node_revision_t *noderev;
   binary_noderev_t *binary_noderev;
-  svn_fs_x__id_part_t predecessor_id;
 
   apr_array_header_t ids;
   apr_array_header_t reps;
@@ -894,13 +876,11 @@ svn_fs_x__noderevs_get_func(void **out,
   SVN_ERR(get_id(&noderev->noderev_id, &ids, binary_noderev->id));
   SVN_ERR(get_id(&noderev->node_id, &ids, binary_noderev->node_id));
   SVN_ERR(get_id(&noderev->copy_id, &ids, binary_noderev->copy_id));
-  SVN_ERR(get_id(&predecessor_id, &ids, binary_noderev->predecessor_id));
+  SVN_ERR(get_id(&noderev->predecessor_id, &ids,
+                 binary_noderev->predecessor_id));
 
   noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
                                     pool);
-  noderev->predecessor_id = svn_fs_x__id_create(&noderev->node_id,
-                                                &predecessor_id,
-                                                pool);
 
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {

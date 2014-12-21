@@ -152,10 +152,11 @@ const char *svn_fs_x__dag_get_created_path(dag_node_t *node);
 
 
 /* Set *ID_P to the node revision ID of NODE's immediate predecessor,
-   or NULL if NODE has no predecessor.
+   or NULL if NODE has no predecessor.  Allocate the ID in RESULT_POOL.
  */
 svn_error_t *svn_fs_x__dag_get_predecessor_id(const svn_fs_id_t **id_p,
-                                              dag_node_t *node);
+                                              dag_node_t *node,
+                                              apr_pool_t *result_pool);
 
 
 /* Set *COUNT to the number of predecessors NODE has (recursively), or

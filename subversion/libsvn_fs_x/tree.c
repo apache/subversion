@@ -3465,7 +3465,7 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
   if (created_rev == copy_dst_rev)
     {
       const svn_fs_id_t *pred;
-      SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node));
+      SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node, pool));
       if (! pred)
         return SVN_NO_ERROR;
     }
@@ -3566,7 +3566,8 @@ history_prev(svn_fs_history_t **prev_history,
              no predecessor, in which case we're all done!). */
           const svn_fs_id_t *pred_id;
 
-          SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node));
+          SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node,
+                                                   scratch_pool));
           if (! pred_id)
             return SVN_NO_ERROR;
 
@@ -4277,7 +4278,7 @@ verify_node(dag_node_t *node,
   /* Fetch some data. */
   SVN_ERR(svn_fs_x__dag_has_mergeinfo(&has_mergeinfo, node));
   SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_count, node));
-  SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node));
+  SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node, pool));
   SVN_ERR(svn_fs_x__dag_get_predecessor_count(&pred_count, node));
   kind = svn_fs_x__dag_node_kind(node);
 
@@ -4417,7 +4418,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
     const svn_fs_id_t *pred_id;
 
     /* Only r0 should have no predecessor. */
-    SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, root_dir));
+    SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, root_dir, pool));
     if (! root->is_txn_root && !!pred_id != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
