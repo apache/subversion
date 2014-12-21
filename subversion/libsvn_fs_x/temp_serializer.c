@@ -338,7 +338,6 @@ svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
                             sizeof(*noderev));
 
   /* serialize sub-structures */
-  svn_fs_x__id_serialize(context, &noderev->id);
   serialize_representation(context, &noderev->prop_rep);
   serialize_representation(context, &noderev->data_rep);
 
@@ -368,7 +367,6 @@ svn_fs_x__noderev_deserialize(void *buffer,
     return;
 
   /* fixup of sub-structures */
-  svn_fs_x__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id, pool);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->prop_rep);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->data_rep);
 
