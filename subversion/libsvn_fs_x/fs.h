@@ -486,9 +486,6 @@ typedef struct node_revision_t
   /* node kind */
   svn_node_kind_t kind;
 
-  /* The node-id for this node-rev. */
-  const svn_fs_id_t *id;
-
   /* Predecessor node revision id.  Will be "unused" if there is no
      predecessor for this node revision. */
   svn_fs_x__id_part_t predecessor_id;

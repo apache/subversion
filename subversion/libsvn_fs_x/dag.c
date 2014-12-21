@@ -120,7 +120,6 @@ copy_node_revision(node_revision_t *noderev,
                    apr_pool_t *pool)
 {
   node_revision_t *nr = apr_pmemdup(pool, noderev, sizeof(*noderev));
-  nr->id = svn_fs_x__id_copy(noderev->id, pool);
 
   if (noderev->copyfrom_path)
     nr->copyfrom_path = apr_pstrdup(pool, noderev->copyfrom_path);
@@ -201,7 +200,8 @@ svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
 {
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
-  *id = svn_fs_x__id_copy(noderev->id, result_pool);
+  *id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
+                            result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1276,7 +1276,6 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
       /* Create a successor with its predecessor pointing at the copy
          source. */
       to_noderev->predecessor_id = to_noderev->noderev_id;
-      to_noderev->id = NULL;
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =

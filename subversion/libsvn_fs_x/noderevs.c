@@ -430,9 +430,6 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
   SVN_ERR(get_id(&noderev->predecessor_id, container->ids,
                  binary_noderev->predecessor_id));
 
-  noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
-                                    pool);
-
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
       noderev->copyfrom_path
@@ -878,9 +875,6 @@ svn_fs_x__noderevs_get_func(void **out,
   SVN_ERR(get_id(&noderev->copy_id, &ids, binary_noderev->copy_id));
   SVN_ERR(get_id(&noderev->predecessor_id, &ids,
                  binary_noderev->predecessor_id));
-
-  noderev->id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
-                                    pool);
 
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
