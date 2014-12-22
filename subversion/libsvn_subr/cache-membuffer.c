@@ -2398,6 +2398,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
            * We better drop that.
            */
           drop_entry(cache, entry);
+
+          return err;
         }
       else
         {
