@@ -715,7 +715,7 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 #if APR_HAS_THREADS
 #  if USE_SIMPLE_MUTEX
 
-  return svn_mutex__unlock(cache->lock, SVN_NO_ERROR);
+  return svn_mutex__unlock(cache->lock, err);
 
 #  else
 
