@@ -293,29 +293,25 @@ add_change(svn_fs_fs__stats_t *stats,
   /* specific histograms by type */
   switch (kind)
     {
-      case unused_rep:        add_to_histogram(&stats->unused_rep_histogram,
-                                               rep_size);
-                              break;
-      case dir_property_rep:  add_to_histogram(&stats->dir_prop_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->dir_prop_histogram,
-                                              expanded_size);
-                              break;
-      case file_property_rep: add_to_histogram(&stats->file_prop_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->file_prop_histogram,
-                                               expanded_size);
-                              break;
-      case dir_rep:           add_to_histogram(&stats->dir_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->dir_histogram,
-                                               expanded_size);
-                              break;
-      case file_rep:          add_to_histogram(&stats->file_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->file_histogram,
-                                               expanded_size);
-                              break;
+      case unused_rep:
+        add_to_histogram(&stats->unused_rep_histogram, rep_size);
+        break;
+      case dir_property_rep:
+        add_to_histogram(&stats->dir_prop_rep_histogram, rep_size);
+        add_to_histogram(&stats->dir_prop_histogram, expanded_size);
+        break;
+      case file_property_rep: 
+        add_to_histogram(&stats->file_prop_rep_histogram, rep_size);
+        add_to_histogram(&stats->file_prop_histogram, expanded_size);
+        break;
+      case dir_rep:
+        add_to_histogram(&stats->dir_rep_histogram, rep_size);
+        add_to_histogram(&stats->dir_histogram, expanded_size);
+        break;
+      case file_rep:
+        add_to_histogram(&stats->file_rep_histogram, rep_size);
+        add_to_histogram(&stats->file_histogram, expanded_size);
+        break;
     }
 
   /* by extension */
