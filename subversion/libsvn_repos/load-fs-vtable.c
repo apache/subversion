@@ -1121,7 +1121,7 @@ close_revision(void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
+svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,
@@ -1130,6 +1130,9 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
                                svn_boolean_t validate_props,
                                enum svn_repos_load_uuid uuid_action,
                                const char *parent_dir,
+                               svn_boolean_t use_pre_commit_hook,
+                               svn_boolean_t use_post_commit_hook,
+                               svn_boolean_t ignore_dates,
                                svn_repos_notify_func_t notify_func,
                                void *notify_baton,
                                apr_pool_t *pool)
@@ -1175,6 +1178,9 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
   pb->last_rev_mapped = SVN_INVALID_REVNUM;
   pb->start_rev = start_rev;
   pb->end_rev = end_rev;
+  pb->use_pre_commit_hook = use_pre_commit_hook;
+  pb->use_post_commit_hook = use_post_commit_hook;
+  pb->ignore_dates = ignore_dates;
 
   *callbacks = parser;
   *parse_baton = pb;
@@ -1201,27 +1207,22 @@ svn_repos_load_fs5(svn_repos_t *repos,
 {
   const svn_repos_parse_fns3_t *parser;
   void *parse_baton;
-  struct parse_baton *pb;
 
   /* This is really simple. */
 
-  SVN_ERR(svn_repos_get_fs_build_parser4(&parser, &parse_baton,
+  SVN_ERR(svn_repos_get_fs_build_parser5(&parser, &parse_baton,
                                          repos,
                                          start_rev, end_rev,
                                          TRUE, /* look for copyfrom revs */
                                          validate_props,
                                          uuid_action,
                                          parent_dir,
+                                         use_pre_commit_hook,
+                                         use_post_commit_hook,
+                                         ignore_dates,
                                          notify_func,
                                          notify_baton,
                                          pool));
-
-  /* Heh.  We know this is a parse_baton.  This file made it.  So
-     cast away, and set our hook booleans.  */
-  pb = parse_baton;
-  pb->use_pre_commit_hook = use_pre_commit_hook;
-  pb->use_post_commit_hook = use_post_commit_hook;
-  pb->ignore_dates = ignore_dates;
 
   return svn_repos_parse_dumpstream3(dumpstream, parser, parse_baton, FALSE,
                                      cancel_func, cancel_baton, pool);
