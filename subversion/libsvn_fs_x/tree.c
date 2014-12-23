@@ -1773,10 +1773,8 @@ compare_dir_structure(svn_boolean_t *changed,
      entries one-by-one without binary lookup etc. */
   for (i = 0; i < lhs_entries->nelts; ++i)
     {
-      svn_fs_dirent_t *lhs_entry
-        = APR_ARRAY_IDX(lhs_entries, i, svn_fs_dirent_t *);
-      svn_fs_dirent_t *rhs_entry
-        = APR_ARRAY_IDX(rhs_entries, i, svn_fs_dirent_t *);
+      dirent_t *lhs_entry = APR_ARRAY_IDX(lhs_entries, i, dirent_t *);
+      dirent_t *rhs_entry = APR_ARRAY_IDX(rhs_entries, i, dirent_t *);
 
       if (strcmp(lhs_entry->name, rhs_entry->name) == 0)
         {
@@ -2022,10 +2020,10 @@ merge(svn_stringbuf_t *conflict_p,
   iterpool = svn_pool_create(pool);
   for (i = 0; i < a_entries->nelts; ++i)
     {
-      svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
+      dirent_t *s_entry, *t_entry, *a_entry;
       svn_pool_clear(iterpool);
 
-      a_entry = APR_ARRAY_IDX(a_entries, i, svn_fs_dirent_t *);
+      a_entry = APR_ARRAY_IDX(a_entries, i, dirent_t *);
       s_entry = svn_fs_x__find_dir_entry(s_entries, a_entry->name, &s_idx);
       t_entry = svn_fs_x__find_dir_entry(t_entries, a_entry->name, &t_idx);
 
@@ -2135,13 +2133,13 @@ merge(svn_stringbuf_t *conflict_p,
   /* For each entry E in source but not in ancestor */
   for (i = 0; i < s_entries->nelts; ++i)
     {
-      svn_fs_dirent_t *a_entry, *s_entry, *t_entry;
+      dirent_t *a_entry, *s_entry, *t_entry;
       dag_node_t *s_ent_node;
       apr_int64_t mergeinfo_s;
 
       svn_pool_clear(iterpool);
 
-      s_entry = APR_ARRAY_IDX(s_entries, i, svn_fs_dirent_t *);
+      s_entry = APR_ARRAY_IDX(s_entries, i, dirent_t *);
       a_entry = svn_fs_x__find_dir_entry(a_entries, s_entry->name, &s_idx);
       t_entry = svn_fs_x__find_dir_entry(t_entries, s_entry->name, &t_idx);
 
@@ -2469,8 +2467,14 @@ x_dir_entries(apr_hash_t **table_p,
   /* Convert directory array to hash. */
   for (i = 0; i < table->nelts; ++i)
     {
-      svn_fs_dirent_t *entry = APR_ARRAY_IDX(table, i, svn_fs_dirent_t *);
-      svn_hash_sets(hash, entry->name, entry);
+      dirent_t *entry = APR_ARRAY_IDX(table, i, dirent_t *);
+
+      svn_fs_dirent_t *api_dirent = apr_pcalloc(pool, sizeof(*api_dirent));
+      api_dirent->name = entry->name;
+      api_dirent->kind = entry->kind;
+      api_dirent->id = svn_fs_x__id_copy(entry->id, pool);
+
+      svn_hash_sets(hash, api_dirent->name, api_dirent);
     }
 
   *table_p = hash;
@@ -3779,7 +3783,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   SVN_ERR(svn_fs_x__dag_dir_entries(&entries, dir_dag, scratch_pool));
   for (i = 0; i < entries->nelts; ++i)
     {
-      svn_fs_dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
+      dirent_t *dirent = APR_ARRAY_IDX(entries, i, dirent_t *);
       const char *kid_path;
       dag_node_t *kid_dag;
       svn_boolean_t has_mergeinfo, go_down;
@@ -4333,8 +4337,7 @@ verify_node(dag_node_t *node,
       /* Compute CHILDREN_MERGEINFO. */
       for (i = 0; i < entries->nelts; ++i)
         {
-          svn_fs_dirent_t *dirent
-            = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
+          dirent_t *dirent = APR_ARRAY_IDX(entries, i, dirent_t *);
           dag_node_t *child;
           apr_int64_t child_mergeinfo;
 

@@ -378,7 +378,7 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_fs_dirent_t *dirent;
+  dirent_t *dirent;
 
   SVN_ERR(svn_fs_x__dag_dir_entry(&dirent, parent, name, result_pool,
                                   scratch_pool));
@@ -498,11 +498,11 @@ svn_fs_x__dag_dir_entries(apr_array_header_t **entries,
 }
 
 svn_error_t *
-svn_fs_x__dag_dir_entry(svn_fs_dirent_t **dirent,
-                         dag_node_t *node,
-                         const char* name,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+svn_fs_x__dag_dir_entry(dirent_t **dirent,
+                        dag_node_t *node,
+                        const char* name,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
@@ -838,7 +838,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
 {
   node_revision_t *parent_noderev;
   svn_fs_t *fs = parent->fs;
-  svn_fs_dirent_t *dirent;
+  dirent_t *dirent;
   svn_fs_id_t *id;
   apr_pool_t *subpool;
 
@@ -936,7 +936,7 @@ svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
       if (entries)
         for (i = 0; i < entries->nelts; ++i)
           SVN_ERR(svn_fs_x__dag_delete_if_mutable(fs,
-                        APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
+                        APR_ARRAY_IDX(entries, i, dirent_t *)->id,
                         pool));
     }
 

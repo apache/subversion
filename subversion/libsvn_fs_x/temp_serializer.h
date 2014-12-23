@@ -212,7 +212,7 @@ svn_fs_x__get_sharded_offset(void **out,
 
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #dirent_t within a serialized directory contents hash,
  * identified by its name (const char @a *baton).
  */
 svn_error_t *
@@ -234,12 +234,12 @@ typedef struct replace_baton_t
   const char *name;
 
   /** directory entry to insert instead */
-  svn_fs_dirent_t *new_entry;
+  dirent_t *new_entry;
 } replace_baton_t;
 
 /**
  * Implements #svn_cache__partial_setter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #dirent_t within a serialized directory contents hash,
  * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *
