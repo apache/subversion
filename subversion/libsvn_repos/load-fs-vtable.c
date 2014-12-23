@@ -84,9 +84,9 @@ struct parse_baton
      SVN_INVALID_REVNUM. */
   svn_revnum_t last_rev_mapped;
 
-  /* The oldest old revision loaded from the dump stream.  If no revisions
+  /* The oldest revision loaded from the dump stream.  If no revisions
      have been loaded yet, this is set to SVN_INVALID_REVNUM. */
-  svn_revnum_t oldest_old_rev;
+  svn_revnum_t oldest_dumpstream_rev;
 };
 
 struct revision_baton
@@ -248,15 +248,15 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
      Remove mergeinfo older than the oldest revision in the dump stream
      and adjust its revisions by the difference between the head rev of
      the target repository and the current dump stream rev. */
-  if (rb->pb->oldest_old_rev > 1)
+  if (rb->pb->oldest_dumpstream_rev > 1)
     {
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
         &predates_stream_mergeinfo, mergeinfo,
-        rb->pb->oldest_old_rev - 1, 0,
+        rb->pb->oldest_dumpstream_rev - 1, 0,
         TRUE, subpool, subpool));
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
         &mergeinfo, mergeinfo,
-        rb->pb->oldest_old_rev - 1, 0,
+        rb->pb->oldest_dumpstream_rev - 1, 0,
         FALSE, subpool, subpool));
       SVN_ERR(svn_mergeinfo__adjust_mergeinfo_rangelists(
         &predates_stream_mergeinfo, predates_stream_mergeinfo,
@@ -285,7 +285,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
             {
               range->start = rev_from_map;
             }
-          else if (range->start == pb->oldest_old_rev - 1)
+          else if (range->start == pb->oldest_dumpstream_rev - 1)
             {
               /* Since the start revision of svn_merge_range_t are not
                  inclusive there is one possible valid start revision that
@@ -300,7 +300,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  oldest rev from the load stream and subtract 1 to get the
                  renumbered, non-inclusive, start revision. */
               rev_from_map = get_revision_mapping(pb->rev_map,
-                                                  pb->oldest_old_rev);
+                                                  pb->oldest_dumpstream_rev);
               if (SVN_IS_VALID_REVNUM(rev_from_map))
                 range->start = rev_from_map - 1;
             }
@@ -325,8 +325,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
     }
 
   if (predates_stream_mergeinfo)
+    {
       SVN_ERR(svn_mergeinfo_merge2(final_mergeinfo, predates_stream_mergeinfo,
                                    subpool, subpool));
+    }
 
   SVN_ERR(svn_mergeinfo__canonicalize_ranges(final_mergeinfo, subpool));
 
@@ -505,8 +507,8 @@ new_revision_record(void **revision_baton,
         }
 
       /* Stash the oldest "old" revision committed from the load stream. */
-      if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
-        pb->oldest_old_rev = rb->rev;
+      if (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev))
+        pb->oldest_dumpstream_rev = rb->rev;
     }
 
   /* If we're skipping this revision, try to notify someone. */
@@ -760,8 +762,7 @@ adjust_mergeinfo_property(struct revision_baton *rb,
 
   /* Tolerate mergeinfo with "\r\n" line endings because some
      dumpstream sources might contain as much.  If so normalize
-     the line endings to '\n' and make a notification to
-     PARSE_BATON->FEEDBACK_STREAM that we have made this
+     the line endings to '\n' and notify that we have made this
      correction. */
   if (strstr(prop_val.data, "\r"))
     {
@@ -793,6 +794,7 @@ adjust_mergeinfo_property(struct revision_baton *rb,
   /* Renumber mergeinfo as appropriate. */
   SVN_ERR(renumber_mergeinfo_revs(new_value_p, &prop_val, rb,
                                   result_pool));
+
   if (pb->parent_dir)
     {
       /* Prefix the merge source paths with PB->parent_dir. */
@@ -1174,7 +1176,7 @@ svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
   pb->pool = pool;
   pb->notify_pool = svn_pool_create(pool);
   pb->rev_map = apr_hash_make(pool);
-  pb->oldest_old_rev = SVN_INVALID_REVNUM;
+  pb->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
   pb->last_rev_mapped = SVN_INVALID_REVNUM;
   pb->start_rev = start_rev;
   pb->end_rev = end_rev;
