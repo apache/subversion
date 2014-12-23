@@ -279,10 +279,6 @@ typedef struct fs_x_data_t
      e.g. memcached may be ignored as caching is an optional feature. */
   svn_boolean_t fail_stop;
 
-  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache__t *rev_root_id_cache;
-
   /* Caches native dag_node_t* instances and acts as a 1st level cache */
   fs_x_dag_cache_t *dag_node_cache;
 
