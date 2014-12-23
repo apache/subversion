@@ -288,7 +288,7 @@ typedef struct fs_x_data_t
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
-     names to (svn_fs_dirent_t *). */
+     names to (dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
@@ -530,6 +530,21 @@ typedef struct node_revision_t
   svn_boolean_t has_mergeinfo;
 
 } node_revision_t;
+
+
+/** The type of a directory entry.  */
+typedef struct dirent_t
+{
+
+  /** The name of this directory entry.  */
+  const char *name;
+
+  /** The node revision ID it names.  */
+  const svn_fs_id_t *id;
+
+  /** The node kind. */
+  svn_node_kind_t kind;
+} dirent_t;
 
 
 /*** Change ***/

@@ -27,6 +27,7 @@
 #include "svn_delta.h"
 #include "private/svn_cache.h"
 
+#include "fs.h"
 #include "id.h"
 
 #ifdef __cplusplus
@@ -296,7 +297,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
 
 /* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
-   and the values are svn_fs_dirent_t's.  The returned table (and elements)
+   and the values are dirent_t's.  The returned table (and elements)
    is allocated in POOL, which is also used for temporary allocations. */
 svn_error_t *svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
                                        dag_node_t *node,
@@ -309,7 +310,7 @@ svn_error_t *svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
    Otherwise, the *DIRENT will be set to NULL.
  */
 /* ### This function is currently only called from dag.c. */
-svn_error_t * svn_fs_x__dag_dir_entry(svn_fs_dirent_t **dirent,
+svn_error_t * svn_fs_x__dag_dir_entry(dirent_t **dirent,
                                       dag_node_t *node,
                                       const char* name,
                                       apr_pool_t *result_pool,
