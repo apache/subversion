@@ -878,6 +878,56 @@ set_revision_property(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Adjust mergeinfo:
+ *   - normalize line endings (if all CRLF, change to LF; but error if mixed);
+ *   - adjust revision numbers (see renumber_mergeinfo_revs());
+ *   - adjust paths (see prefix_mergeinfo_paths()).
+ */
+static svn_error_t *
+adjust_mergeinfo_property(struct revision_baton *rb,
+                          svn_string_t **new_value_p,
+                          const svn_string_t *old_value,
+                          apr_pool_t *result_pool)
+{
+  struct parse_baton *pb = rb->pb;
+  svn_string_t prop_val = *old_value;
+
+  /* Tolerate mergeinfo with "\r\n" line endings because some
+     dumpstream sources might contain as much.  If so normalize
+     the line endings to '\n' and notify that we have made this
+     correction. */
+  if (strstr(prop_val.data, "\r"))
+    {
+      const char *prop_eol_normalized;
+
+      SVN_ERR(svn_subst_translate_cstring2(prop_val.data,
+                                           &prop_eol_normalized,
+                                           "\n",  /* translate to LF */
+                                           FALSE, /* no repair */
+                                           NULL,  /* no keywords */
+                                           FALSE, /* no expansion */
+                                           result_pool));
+      prop_val.data = prop_eol_normalized;
+      prop_val.len = strlen(prop_eol_normalized);
+
+      /* ### TODO: notify? */
+    }
+
+  /* Renumber mergeinfo as appropriate. */
+  SVN_ERR(renumber_mergeinfo_revs(new_value_p, &prop_val, rb,
+                                  result_pool));
+
+  if (pb->parent_dir)
+    {
+      /* Prefix the merge source paths with PB->parent_dir. */
+      /* ASSUMPTION: All source paths are included in the dump stream. */
+      SVN_ERR(prefix_mergeinfo_paths(new_value_p, *new_value_p,
+                                     pb->parent_dir, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 set_node_property(void *baton,
                   const char *name,
@@ -889,46 +939,10 @@ set_node_property(void *baton,
 
   if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t *renumbered_mergeinfo;
-      svn_string_t prop_val;
+      svn_string_t *new_value;
 
-      /* Tolerate mergeinfo with "\r\n" line endings because some
-         dumpstream sources might contain as much.  If so normalize
-         the line endings to '\n' and make a notification to
-         PARSE_BATON->FEEDBACK_STREAM that we have made this
-         correction. */
-      if (strstr(value->data, "\r"))
-        {
-          const char *prop_eol_normalized;
-
-          SVN_ERR(svn_subst_translate_cstring2(value->data,
-                                               &prop_eol_normalized,
-                                               "\n",  /* translate to LF */
-                                               FALSE, /* no repair */
-                                               NULL,  /* no keywords */
-                                               FALSE, /* no expansion */
-                                               pool));
-          prop_val.data = prop_eol_normalized;
-          prop_val.len = strlen(prop_eol_normalized);
-          value = &prop_val;
-
-          /* ### TODO: notify? */
-        }
-
-      /* Renumber mergeinfo as appropriate. */
-      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, value,
-                                      nb->rb, pool));
-      value = renumbered_mergeinfo;
-
-      if (nb->rb->pb->parent_dir)
-        {
-          /* Prefix the merge source paths with PB->parent_dir. */
-          /* ASSUMPTION: All source paths are included in the dump stream. */
-          svn_string_t *mergeinfo_val;
-          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value,
-                                         nb->rb->pb->parent_dir, pool));
-          value = mergeinfo_val;
-        }
+      SVN_ERR(adjust_mergeinfo_property(nb->rb, &new_value, value, pool));
+      value = new_value;
     }
 
   SVN_ERR(svn_rdump__normalize_prop(name, &value, pool));
