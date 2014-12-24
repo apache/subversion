@@ -1173,9 +1173,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   noderev->copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* For the transaction root, the copyroot never changes. */
-
-  noderev->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
-  noderev->noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+  svn_fs_x__init_txn_root(&noderev->noderev_id, txn_id);
 
   return svn_fs_x__put_node_revision(fs, noderev, TRUE, pool);
 }
