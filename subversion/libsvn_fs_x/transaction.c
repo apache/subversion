@@ -1422,8 +1422,7 @@ svn_fs_x__get_txn(transaction_t **txn_p,
 
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &root_id, pool, pool));
 
-  txn->base_id = svn_fs_x__id_create(&noderev->node_id,
-                                     &noderev->predecessor_id, pool);
+  txn->base_rev = svn_fs_x__get_revnum(noderev->predecessor_id.change_set);
   txn->copies = NULL;
 
   *txn_p = txn;
@@ -3582,7 +3581,7 @@ svn_fs_x__open_txn(svn_fs_txn_t **txn_p,
 
   SVN_ERR(svn_fs_x__get_txn(&local_txn, fs, txn_id, pool));
 
-  txn->base_rev = svn_fs_x__id_rev(local_txn->base_id);
+  txn->base_rev = local_txn->base_rev;
 
   txn->vtable = &txn_vtable;
   txn->fsap_data = ftd;
@@ -3643,14 +3642,14 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 /*** Transactions ***/
 
 svn_error_t *
-svn_fs_x__get_txn_ids(const svn_fs_id_t **base_root_id_p,
-                      svn_fs_t *fs,
-                      svn_fs_x__txn_id_t txn_id,
-                      apr_pool_t *pool)
+svn_fs_x__get_base_rev(svn_revnum_t *revnum,
+                       svn_fs_t *fs,
+                       svn_fs_x__txn_id_t txn_id,
+                       apr_pool_t *pool)
 {
   transaction_t *txn;
   SVN_ERR(svn_fs_x__get_txn(&txn, fs, txn_id, pool));
-  *base_root_id_p = txn->base_id;
+  *revnum = txn->base_rev;
 
   return SVN_NO_ERROR;
 }

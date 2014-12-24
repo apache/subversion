@@ -300,10 +300,10 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in POOL.  */
 svn_error_t *
-svn_fs_x__get_txn_ids(const svn_fs_id_t **base_root_id_p,
-                      svn_fs_t *fs,
-                      svn_fs_x__txn_id_t txn_id,
-                      apr_pool_t *pool);
+svn_fs_x__get_base_rev(svn_revnum_t *revnum,
+                       svn_fs_t *fs,
+                       svn_fs_x__txn_id_t txn_id,
+                       apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
