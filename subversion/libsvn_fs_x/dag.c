@@ -700,11 +700,10 @@ svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  const svn_fs_id_t *root_id, *ignored;
+  svn_fs_x__noderev_id_t root_id;
 
-  SVN_ERR(svn_fs_x__get_txn_ids(&root_id, &ignored, fs, txn_id, pool));
-  return svn_fs_x__dag_get_node(node_p, fs, 
-                                svn_fs_x__id_noderev_id(root_id), pool);
+  svn_fs_x__init_txn_root(&root_id, txn_id);
+  return svn_fs_x__dag_get_node(node_p, fs, &root_id, pool);
 }
 
 
@@ -811,25 +810,11 @@ svn_fs_x__dag_clone_root(dag_node_t **root_p,
                          svn_fs_x__txn_id_t txn_id,
                          apr_pool_t *pool)
 {
-  const svn_fs_id_t *base_root_id, *root_id;
-
-  /* Get the node ID's of the root directories of the transaction and
-     its base revision.  */
-  SVN_ERR(svn_fs_x__get_txn_ids(&root_id, &base_root_id, fs, txn_id, pool));
-
-  /* Oh, give me a clone...
-     (If they're the same, we haven't cloned the transaction's root
-     directory yet.)  */
-  SVN_ERR_ASSERT(!svn_fs_x__id_eq(root_id, base_root_id));
-
-  /*
-   * (Sung to the tune of "Home, Home on the Range", with thanks to
-   * Randall Garrett and Isaac Asimov.)
-   */
+  svn_fs_x__noderev_id_t root_id;
+  svn_fs_x__init_txn_root(&root_id, txn_id);
 
   /* One way or another, root_id now identifies a cloned root node. */
-  return svn_fs_x__dag_get_node(root_p, fs, svn_fs_x__id_noderev_id(root_id),
-                                pool);
+  return svn_fs_x__dag_get_node(root_p, fs, &root_id, pool);
 }
 
 
