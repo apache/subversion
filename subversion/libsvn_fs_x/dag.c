@@ -374,12 +374,11 @@ static svn_error_t *
 dir_entry_id_from_node(svn_fs_x__noderev_id_t *id_p,
                        dag_node_t *parent,
                        const char *name,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   dirent_t *dirent;
 
-  SVN_ERR(svn_fs_x__dag_dir_entry(&dirent, parent, name, result_pool,
+  SVN_ERR(svn_fs_x__dag_dir_entry(&dirent, parent, name, scratch_pool,
                                   scratch_pool));
   if (dirent)
     *id_p = dirent->id;
@@ -1229,8 +1228,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
   svn_fs_x__noderev_id_t node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, scratch_pool));
   if (! svn_fs_x__id_part_used(&node_id))
     {
       *child_p = NULL;
