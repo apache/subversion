@@ -294,15 +294,13 @@ svn_fs_x__dag_get_revision(const dag_node_t *node)
 
 
 svn_error_t *
-svn_fs_x__dag_get_predecessor_id(const svn_fs_id_t **id_p,
-                                 dag_node_t *node,
-                                 apr_pool_t *result_pool)
+svn_fs_x__dag_get_predecessor_id(svn_fs_x__noderev_id_t *id_p,
+                                 dag_node_t *node)
 {
   node_revision_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
-  *id_p = svn_fs_x__id_create(&noderev->node_id, &noderev->predecessor_id,
-                              result_pool);
+  *id_p = noderev->predecessor_id;
 
   return SVN_NO_ERROR;
 }
