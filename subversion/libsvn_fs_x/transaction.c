@@ -1412,16 +1412,15 @@ svn_fs_x__get_txn(transaction_t **txn_p,
 {
   transaction_t *txn;
   node_revision_t *noderev;
+  svn_fs_x__noderev_id_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
   txn->proplist = apr_hash_make(pool);
 
   SVN_ERR(get_txn_proplist(txn->proplist, fs, txn_id, pool));
-  txn->root_id = svn_fs_x__id_txn_create_root(txn_id, pool);
+  svn_fs_x__init_txn_root(&root_id, txn_id);
 
-  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs,
-                                      svn_fs_x__id_noderev_id(txn->root_id),
-                                      pool, pool));
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &root_id, pool, pool));
 
   txn->base_id = svn_fs_x__id_create(&noderev->node_id,
                                      &noderev->predecessor_id, pool);
@@ -3644,16 +3643,15 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 /*** Transactions ***/
 
 svn_error_t *
-svn_fs_x__get_txn_ids(const svn_fs_id_t **root_id_p,
-                      const svn_fs_id_t **base_root_id_p,
+svn_fs_x__get_txn_ids(const svn_fs_id_t **base_root_id_p,
                       svn_fs_t *fs,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool)
 {
   transaction_t *txn;
   SVN_ERR(svn_fs_x__get_txn(&txn, fs, txn_id, pool));
-  *root_id_p = txn->root_id;
   *base_root_id_p = txn->base_id;
+
   return SVN_NO_ERROR;
 }
 

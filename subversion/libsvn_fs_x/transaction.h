@@ -289,7 +289,6 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, allocating from POOL.  Set
-   *ROOT_ID_P to the ID of the transaction's root directory.  Set
    *BASE_ROOT_ID_P to the ID of the root directory of the
    transaction's base revision.
 
@@ -301,8 +300,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in POOL.  */
 svn_error_t *
-svn_fs_x__get_txn_ids(const svn_fs_id_t **root_id_p,
-                      const svn_fs_id_t **base_root_id_p,
+svn_fs_x__get_txn_ids(const svn_fs_id_t **base_root_id_p,
                       svn_fs_t *fs,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool);
