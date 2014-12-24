@@ -427,9 +427,8 @@ typedef struct transaction_t
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
 
-  /* node revision id of the node which is the root of the revision
-     upon which this txn is base.  (unfinished only) */
-  const svn_fs_id_t *base_id;
+  /* revision upon which this txn is base.  (unfinished only) */
+  svn_revnum_t base_rev;
 
   /* copies list (const char * copy_ids), or NULL if there have been
      no copies in this transaction.  */
