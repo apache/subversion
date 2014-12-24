@@ -69,7 +69,7 @@ typedef struct dag_node_t dag_node_t;
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
-                       const svn_fs_id_t *id,
+                       const svn_fs_x__noderev_id_t *id,
                        apr_pool_t *pool);
 
 
@@ -327,7 +327,7 @@ svn_error_t * svn_fs_x__dag_dir_entry(dirent_t **dirent,
  */
 svn_error_t *svn_fs_x__dag_set_entry(dag_node_t *node,
                                      const char *entry_name,
-                                     const svn_fs_id_t *id,
+                                     const svn_fs_x__noderev_id_t *id,
                                      svn_node_kind_t kind,
                                      svn_fs_x__txn_id_t txn_id,
                                      apr_pool_t *pool);
@@ -390,7 +390,7 @@ svn_error_t *svn_fs_x__dag_delete(dag_node_t *parent,
    dangling, disconnected from all DAG trees.  It is assumed that
    callers of this interface know what in the world they are doing.  */
 svn_error_t *svn_fs_x__dag_remove_node(svn_fs_t *fs,
-                                       const svn_fs_id_t *id,
+                                       const svn_fs_x__noderev_id_t *id,
                                        apr_pool_t *pool);
 
 
@@ -400,7 +400,7 @@ svn_error_t *svn_fs_x__dag_remove_node(svn_fs_t *fs,
    node revision.  ID may refer to a file or directory, which may be
    mutable or immutable. */
 svn_error_t *svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                             const svn_fs_id_t *id,
+                                             const svn_fs_x__noderev_id_t *id,
                                              apr_pool_t *pool);
 
 

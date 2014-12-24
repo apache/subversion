@@ -540,7 +540,7 @@ typedef struct dirent_t
   const char *name;
 
   /** The node revision ID it names.  */
-  const svn_fs_id_t *id;
+  svn_fs_x__noderev_id_t id;
 
   /** The node kind. */
   svn_node_kind_t kind;
