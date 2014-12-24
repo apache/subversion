@@ -2505,7 +2505,7 @@ read_dir_entries(apr_array_header_t *entries,
                       _("Directory entry corrupt in '%s'"),
                       svn_fs_x__id_part_unparse(id, scratch_pool)->data);
 
-      SVN_ERR(svn_fs_x__id_parse(&dirent->id, str, result_pool));
+      SVN_ERR(svn_fs_x__id_part_parse(&dirent->id, str));
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
@@ -2702,10 +2702,8 @@ svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
       entry = svn_fs_x__find_dir_entry(entries, name, NULL);
       if (entry)
         {
-          entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));
+          entry_copy = apr_pmemdup(result_pool, entry, sizeof(*entry_copy));
           entry_copy->name = apr_pstrdup(result_pool, entry->name);
-          entry_copy->id = svn_fs_x__id_copy(entry->id, result_pool);
-          entry_copy->kind = entry->kind;
         }
 
       *dirent = entry_copy;

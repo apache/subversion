@@ -140,13 +140,11 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
                           apr_pool_t *pool);
 
 /* Create an entirely new mutable node in the filesystem FS, whose
-   node-revision is NODEREV.  Set *ID_P to the new node revision's ID.
-   Use POOL for any temporary allocation.  COPY_ID is the copy_id to
-   use in the node revision ID.  TXN_ID is the Subversion transaction
-   under which this occurs. */
+   node-revision is NODEREV.  COPY_ID is the copy_id to use in the
+   node revision ID.  TXN_ID is the Subversion transaction  under
+   which this occurs. */
 svn_error_t *
-svn_fs_x__create_node(const svn_fs_id_t **id_p,
-                      svn_fs_t *fs,
+svn_fs_x__create_node(svn_fs_t *fs,
                       node_revision_t *noderev,
                       const svn_fs_x__id_part_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
@@ -173,7 +171,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
                     node_revision_t *parent_noderev,
                     const char *name,
-                    const svn_fs_id_t *id,
+                    const svn_fs_x__noderev_id_t *id,
                     svn_node_kind_t kind,
                     apr_pool_t *pool);
 
@@ -209,8 +207,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
                        apr_pool_t *pool);
 
 /* Create a node revision in FS which is an immediate successor of
-   NEW_NODEREV's predecessor.  Set *NEW_ID_P to the new node
-   revision's ID.  Use POOL for any temporary allocation.
+   NEW_NODEREV's predecessor.  Use POOL for any temporary allocation.
 
    COPY_ID, is a key into the `copies' table, and
    indicates that this new node is being created as the result of a
@@ -222,8 +219,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
    contents will change frequently, and will avoid representing other
    nodes as deltas against this node's contents.  */
 svn_error_t *
-svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
-                           svn_fs_t *fs,
+svn_fs_x__create_successor(svn_fs_t *fs,
                            node_revision_t *new_noderev,
                            const svn_fs_x__id_part_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
@@ -288,7 +284,7 @@ svn_fs_x__txn_proplist(apr_hash_t **table_p,
    temporary allocations in POOL. */
 svn_error_t *
 svn_fs_x__delete_node_revision(svn_fs_t *fs,
-                               const svn_fs_id_t *id,
+                               const svn_fs_x__noderev_id_t *id,
                                apr_pool_t *pool);
 
 /* Retrieve information about the Subversion transaction SVN_TXN from

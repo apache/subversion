@@ -226,7 +226,6 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
                             (const void * const *)entry_p,
                             sizeof(dirent_t));
 
-  svn_fs_x__id_serialize(context, &entry->id);
   svn_temp_serializer__add_string(context, &entry->name);
 
   *length = (apr_uint32_t)(  svn_temp_serializer__get_length(context)
@@ -314,7 +313,6 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
 
       /* pointer fixup */
       svn_temp_deserializer__resolve(entry, (void **)&entry->name);
-      svn_fs_x__id_deserialize(entry, (svn_fs_id_t **)&entry->id, pool);
 
       /* add the entry to the hash */
       APR_ARRAY_PUSH(result, dirent_t *) = entry;
@@ -878,8 +876,6 @@ svn_fs_x__extract_dir_entry(void **out,
       memcpy(new_entry, source, size);
 
       svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
-      svn_fs_x__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id,
-                               pool);
       *(dirent_t **)out = new_entry;
     }
 

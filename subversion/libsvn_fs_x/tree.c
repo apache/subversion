@@ -1534,7 +1534,8 @@ node_kind(svn_node_kind_t *kind_p,
   SVN_ERR(svn_fs_x__node_id(&node_id, root, path, pool));
 
   /* Use the node id to get the real kind. */
-  SVN_ERR(svn_fs_x__dag_get_node(&node, root->fs, node_id, pool));
+  SVN_ERR(svn_fs_x__dag_get_node(&node, root->fs,
+                                 svn_fs_x__id_noderev_id(node_id), pool));
   *kind_p = svn_fs_x__dag_node_kind(node);
 
   return SVN_NO_ERROR;
@@ -1782,16 +1783,16 @@ compare_dir_structure(svn_boolean_t *changed,
           dag_node_t *lhs_node, *rhs_node;
 
           /* Unchanged entry? */
-          if (!svn_fs_x__id_eq(lhs_entry->id, rhs_entry->id))
+          if (!svn_fs_x__id_part_eq(&lhs_entry->id, &rhs_entry->id))
             continue;
 
           /* We get here rarely. */
           svn_pool_clear(iterpool);
 
           /* Modified but not copied / replaced or anything? */
-          SVN_ERR(svn_fs_x__dag_get_node(&lhs_node, fs, lhs_entry->id, 
+          SVN_ERR(svn_fs_x__dag_get_node(&lhs_node, fs, &lhs_entry->id, 
                                          iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, rhs_entry->id,
+          SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, &rhs_entry->id, 
                                          iterpool));
           SVN_ERR(svn_fs_x__dag_same_line_of_history(&same_history,
                                                      lhs_node, rhs_node));
@@ -2029,35 +2030,35 @@ merge(svn_stringbuf_t *conflict_p,
 
       /* No changes were made to this entry while the transaction was
          in progress, so do nothing to the target. */
-      if (s_entry && svn_fs_x__id_eq(a_entry->id, s_entry->id))
+      if (s_entry && svn_fs_x__id_part_eq(&a_entry->id, &s_entry->id))
         continue;
 
       /* A change was made to this entry while the transaction was in
          process, but the transaction did not touch this entry. */
-      else if (t_entry && svn_fs_x__id_eq(a_entry->id, t_entry->id))
+      else if (t_entry && svn_fs_x__id_part_eq(&a_entry->id, &t_entry->id))
         {
           apr_int64_t mergeinfo_start;
           apr_int64_t mergeinfo_end;
 
           dag_node_t *t_ent_node;
-          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs,
-                                         t_entry->id, iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs, &t_entry->id,
+                                         iterpool));
           SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_start,
-                                                      t_ent_node));
+                                                    t_ent_node));
           mergeinfo_increment -= mergeinfo_start;
 
           if (s_entry)
             {
               dag_node_t *s_ent_node;
-              SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs,
-                                             s_entry->id, iterpool));
+              SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs, &s_entry->id,
+                                             iterpool));
 
               SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_end,
                                                         s_ent_node));
               mergeinfo_increment += mergeinfo_end;
 
               SVN_ERR(svn_fs_x__dag_set_entry(target, a_entry->name,
-                                              s_entry->id,
+                                              &s_entry->id,
                                               s_entry->kind,
                                               txn_id,
                                               iterpool));
@@ -2098,12 +2099,12 @@ merge(svn_stringbuf_t *conflict_p,
                                                  iterpool));
 
           /* Fetch DAG nodes to efficiently access ID parts. */
-          SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs,
-                                         s_entry->id, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs,
-                                         t_entry->id, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&a_ent_node, fs,
-                                         a_entry->id, iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs, &s_entry->id,
+                                         iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&t_ent_node, fs, &t_entry->id,
+                                         iterpool));
+          SVN_ERR(svn_fs_x__dag_get_node(&a_ent_node, fs, &a_entry->id,
+                                         iterpool));
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
@@ -2154,13 +2155,13 @@ merge(svn_stringbuf_t *conflict_p,
                                              t_entry->name,
                                              iterpool));
 
-      SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs,
-                                     s_entry->id, iterpool));
+      SVN_ERR(svn_fs_x__dag_get_node(&s_ent_node, fs, &s_entry->id,
+                                     iterpool));
       SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_s, s_ent_node));
       mergeinfo_increment += mergeinfo_s;
 
       SVN_ERR(svn_fs_x__dag_set_entry
-              (target, s_entry->name, s_entry->id, s_entry->kind,
+              (target, s_entry->name, &s_entry->id, s_entry->kind,
                txn_id, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -2472,7 +2473,9 @@ x_dir_entries(apr_hash_t **table_p,
       svn_fs_dirent_t *api_dirent = apr_pcalloc(pool, sizeof(*api_dirent));
       api_dirent->name = entry->name;
       api_dirent->kind = entry->kind;
-      api_dirent->id = svn_fs_x__id_copy(entry->id, pool);
+
+      SVN_ERR(svn_fs_x__dag_get_node(&node, root->fs, &entry->id, pool));
+      SVN_ERR(svn_fs_x__dag_get_fs_id(&api_dirent->id, node, pool));
 
       svn_hash_sets(hash, api_dirent->name, api_dirent);
     }
@@ -3577,7 +3580,9 @@ history_prev(svn_fs_history_t **prev_history,
 
           /* Replace NODE and friends with the information from its
              predecessor. */
-          SVN_ERR(svn_fs_x__dag_get_node(&node, fs, pred_id, scratch_pool));
+          SVN_ERR(svn_fs_x__dag_get_node(&node, fs,
+                                         svn_fs_x__id_noderev_id(pred_id),
+                                         scratch_pool));
           commit_path = svn_fs_x__dag_get_created_path(node);
           commit_rev = svn_fs_x__dag_get_revision(node);
         }
@@ -3808,7 +3813,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
             {
-              svn_string_t *idstr = svn_fs_x__id_unparse(dirent->id, iterpool);
+              svn_string_t *idstr
+                = svn_fs_x__id_part_unparse(&dirent->id, iterpool);
               return svn_error_createf
                 (SVN_ERR_FS_CORRUPT, NULL,
                  _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
@@ -4298,7 +4304,9 @@ verify_node(dag_node_t *node,
     {
       dag_node_t *pred;
       int pred_pred_count;
-      SVN_ERR(svn_fs_x__dag_get_node(&pred, fs, pred_id, iterpool));
+      SVN_ERR(svn_fs_x__dag_get_node(&pred, fs,
+                                     svn_fs_x__id_noderev_id(pred_id),
+                                     iterpool));
       SVN_ERR(svn_fs_x__dag_get_predecessor_count(&pred_pred_count, pred));
       if (pred_pred_count+1 != pred_count)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -4344,9 +4352,9 @@ verify_node(dag_node_t *node,
           svn_pool_clear(iterpool);
 
           /* Compute CHILD_REV. */
-          if (svn_fs_x__id_rev(dirent->id) == rev)
+          if (svn_fs_x__get_revnum(dirent->id.change_set) == rev)
             {
-              SVN_ERR(svn_fs_x__dag_get_node(&child, fs, dirent->id,
+              SVN_ERR(svn_fs_x__dag_get_node(&child, fs, &dirent->id,
                                              iterpool));
               SVN_ERR(verify_node(child, rev, parent_nodes, iterpool));
               SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&child_mergeinfo,
@@ -4354,11 +4362,8 @@ verify_node(dag_node_t *node,
             }
           else
             {
-              const svn_fs_x__noderev_id_t *noderev_id
-                = svn_fs_x__id_noderev_id(dirent->id);
-
               SVN_ERR(svn_fs_x__get_mergeinfo_count(&child_mergeinfo, fs,
-                                                    noderev_id, iterpool));
+                                                    &dirent->id, iterpool));
             }
 
           children_mergeinfo += child_mergeinfo;

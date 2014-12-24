@@ -247,7 +247,7 @@ svn_boolean_t svn_fs_x__dag_check_mutable(const dag_node_t *node)
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
-                       const svn_fs_id_t *id,
+                       const svn_fs_x__noderev_id_t *id,
                        apr_pool_t *pool)
 {
   dag_node_t *new_node;
@@ -256,7 +256,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   /* Construct the node. */
   new_node = apr_pcalloc(pool, sizeof(*new_node));
   new_node->fs = fs;
-  new_node->id = *svn_fs_x__id_noderev_id(id);
+  new_node->id = *id;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = pool;
@@ -368,11 +368,10 @@ svn_fs_x__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
 
 /* Some of these are helpers for functions outside this section. */
 
-/* Set *ID_P to the node-id for entry NAME in PARENT.  If no such
-   entry, set *ID_P to NULL but do not error.  The node-id is
-   allocated in POOL. */
+/* Set *ID_P to the noderev-id for entry NAME in PARENT.  If no such
+   entry, set *ID_P to NULL but do not error. */
 static svn_error_t *
-dir_entry_id_from_node(const svn_fs_id_t **id_p,
+dir_entry_id_from_node(svn_fs_x__noderev_id_t *id_p,
                        dag_node_t *parent,
                        const char *name,
                        apr_pool_t *result_pool,
@@ -382,7 +381,10 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 
   SVN_ERR(svn_fs_x__dag_dir_entry(&dirent, parent, name, result_pool,
                                   scratch_pool));
-  *id_p = dirent ? dirent->id : NULL;
+  if (dirent)
+    *id_p = dirent->id;
+  else
+    svn_fs_x__id_part_reset(id_p);
 
   return SVN_NO_ERROR;
 }
@@ -399,7 +401,7 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 static svn_error_t *
 set_entry(dag_node_t *parent,
           const char *name,
-          const svn_fs_id_t *id,
+          const svn_fs_x__noderev_id_t *id,
           svn_node_kind_t kind,
           svn_fs_x__txn_id_t txn_id,
           apr_pool_t *pool)
@@ -431,7 +433,6 @@ make_entry(dag_node_t **child_p,
            svn_fs_x__txn_id_t txn_id,
            apr_pool_t *pool)
 {
-  const svn_fs_id_t *new_node_id;
   node_revision_t new_noderev, *parent_noderev;
 
   /* Make sure that NAME is a single path component. */
@@ -466,17 +467,17 @@ make_entry(dag_node_t **child_p,
   svn_fs_x__id_part_reset(&new_noderev.predecessor_id);
 
   SVN_ERR(svn_fs_x__create_node
-          (&new_node_id, svn_fs_x__dag_get_fs(parent), &new_noderev,
+          (svn_fs_x__dag_get_fs(parent), &new_noderev,
            &parent_noderev->copy_id, txn_id, pool));
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR(svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
-                                 new_node_id, pool));
+                                 &new_noderev.noderev_id, pool));
 
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  return set_entry(parent, name, new_node_id,
+  return set_entry(parent, name, &new_noderev.noderev_id,
                    new_noderev.kind, txn_id, pool);
 }
 
@@ -520,7 +521,7 @@ svn_fs_x__dag_dir_entry(dirent_t **dirent,
 svn_error_t *
 svn_fs_x__dag_set_entry(dag_node_t *node,
                         const char *entry_name,
-                        const svn_fs_id_t *id,
+                        const svn_fs_x__noderev_id_t *id,
                         svn_node_kind_t kind,
                         svn_fs_x__txn_id_t txn_id,
                         apr_pool_t *pool)
@@ -703,7 +704,8 @@ svn_fs_x__dag_txn_root(dag_node_t **node_p,
   const svn_fs_id_t *root_id, *ignored;
 
   SVN_ERR(svn_fs_x__get_txn_ids(&root_id, &ignored, fs, txn_id, pool));
-  return svn_fs_x__dag_get_node(node_p, fs, root_id, pool);
+  return svn_fs_x__dag_get_node(node_p, fs, 
+                                svn_fs_x__id_noderev_id(root_id), pool);
 }
 
 
@@ -716,7 +718,8 @@ svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
   const svn_fs_id_t *base_root_id, *ignored;
 
   SVN_ERR(svn_fs_x__get_txn_ids(&ignored, &base_root_id, fs, txn_id, pool));
-  return svn_fs_x__dag_get_node(node_p, fs, base_root_id, pool);
+  return svn_fs_x__dag_get_node(node_p, fs,
+                                svn_fs_x__id_noderev_id(base_root_id), pool);
 }
 
 
@@ -731,7 +734,7 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
                           apr_pool_t *pool)
 {
   dag_node_t *cur_entry; /* parent's current entry named NAME */
-  const svn_fs_id_t *new_node_id; /* node id we'll put into NEW_NODE */
+  const svn_fs_x__noderev_id_t *new_node_id; /* node id we'll put into NEW_NODE */
   svn_fs_t *fs = svn_fs_x__dag_get_fs(parent);
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -759,7 +762,7 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
   if (svn_fs_x__dag_check_mutable(cur_entry))
     {
       /* This has already been cloned */
-      SVN_ERR(svn_fs_x__dag_get_fs_id(&new_node_id, cur_entry, pool));
+      new_node_id = svn_fs_x__dag_get_id(cur_entry);
     }
   else
     {
@@ -787,8 +790,8 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
       if (copy_id == NULL)
         copy_id = &noderev->copy_id;
 
-      SVN_ERR(svn_fs_x__create_successor(&new_node_id, fs,
-                                         noderev, copy_id, txn_id, pool));
+      SVN_ERR(svn_fs_x__create_successor(fs, noderev, copy_id, txn_id, pool));
+      new_node_id = &noderev->noderev_id;
 
       /* Replace the ID in the parent's ENTRY list with the ID which
          refers to the mutable clone of this child. */
@@ -826,7 +829,8 @@ svn_fs_x__dag_clone_root(dag_node_t **root_p,
    */
 
   /* One way or another, root_id now identifies a cloned root node. */
-  return svn_fs_x__dag_get_node(root_p, fs, root_id, pool);
+  return svn_fs_x__dag_get_node(root_p, fs, svn_fs_x__id_noderev_id(root_id),
+                                pool);
 }
 
 
@@ -839,7 +843,6 @@ svn_fs_x__dag_delete(dag_node_t *parent,
   node_revision_t *parent_noderev;
   svn_fs_t *fs = parent->fs;
   dirent_t *dirent;
-  svn_fs_id_t *id;
   apr_pool_t *subpool;
 
   /* Make sure parent is a directory. */
@@ -877,13 +880,9 @@ svn_fs_x__dag_delete(dag_node_t *parent,
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry '%s'", name);
 
-  /* Copy the ID out of the subpool and release the rest of the
-     directory listing. */
-  id = svn_fs_x__id_copy(dirent->id, pool);
-  svn_pool_destroy(subpool);
-
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR(svn_fs_x__dag_delete_if_mutable(parent->fs, id, pool));
+  SVN_ERR(svn_fs_x__dag_delete_if_mutable(parent->fs, &dirent->id, pool));
+  svn_pool_destroy(subpool);
 
   /* Remove this entry from its parent's entries list. */
   return svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name,
@@ -893,7 +892,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
 
 svn_error_t *
 svn_fs_x__dag_remove_node(svn_fs_t *fs,
-                          const svn_fs_id_t *id,
+                          const svn_fs_x__noderev_id_t *id,
                           apr_pool_t *pool)
 {
   dag_node_t *node;
@@ -913,7 +912,7 @@ svn_fs_x__dag_remove_node(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                const svn_fs_id_t *id,
+                                const svn_fs_x__noderev_id_t *id,
                                 apr_pool_t *pool)
 {
   dag_node_t *node;
@@ -935,9 +934,11 @@ svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
       SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, pool));
       if (entries)
         for (i = 0; i < entries->nelts; ++i)
-          SVN_ERR(svn_fs_x__dag_delete_if_mutable(fs,
-                        APR_ARRAY_IDX(entries, i, dirent_t *)->id,
-                        pool));
+          {
+            const svn_fs_x__noderev_id_t *noderev_id
+              = &APR_ARRAY_IDX(entries, i, dirent_t *)->id;
+            SVN_ERR(svn_fs_x__dag_delete_if_mutable(fs, noderev_id, pool));
+          }
     }
 
   /* ... then delete the node itself, after deleting any mutable
@@ -1225,12 +1226,12 @@ svn_fs_x__dag_open(dag_node_t **child_p,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  const svn_fs_id_t *node_id;
+  svn_fs_x__noderev_id_t node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
   SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
                                  scratch_pool, scratch_pool));
-  if (! node_id)
+  if (! svn_fs_x__id_part_used(&node_id))
     {
       *child_p = NULL;
       return SVN_NO_ERROR;
@@ -1244,7 +1245,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
   /* Now get the node that was requested. */
   return svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
-                                node_id, result_pool);
+                                &node_id, result_pool);
 }
 
 
@@ -1258,7 +1259,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
                    svn_fs_x__txn_id_t txn_id,
                    apr_pool_t *pool)
 {
-  const svn_fs_id_t *id;
+  const svn_fs_x__noderev_id_t *id;
 
   if (preserve_history)
     {
@@ -1287,13 +1288,13 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
       /* Set the copyroot equal to our own id. */
       to_noderev->copyroot_path = NULL;
 
-      SVN_ERR(svn_fs_x__create_successor(&id, fs, to_noderev,
+      SVN_ERR(svn_fs_x__create_successor(fs, to_noderev,
                                          &copy_id, txn_id, pool));
-
+      id = &to_noderev->noderev_id;
     }
   else  /* don't preserve history */
     {
-      SVN_ERR(svn_fs_x__dag_get_fs_id(&id, from_node, pool));
+      id = svn_fs_x__dag_get_id(from_node);
     }
 
   /* Set the entry in to_node to the new id. */
