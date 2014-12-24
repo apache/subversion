@@ -711,9 +711,9 @@ svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
                             svn_fs_x__txn_id_t txn_id,
                             apr_pool_t *pool)
 {
-  const svn_fs_id_t *base_root_id, *ignored;
+  const svn_fs_id_t *base_root_id;
 
-  SVN_ERR(svn_fs_x__get_txn_ids(&ignored, &base_root_id, fs, txn_id, pool));
+  SVN_ERR(svn_fs_x__get_txn_ids(&base_root_id, fs, txn_id, pool));
   return svn_fs_x__dag_get_node(node_p, fs,
                                 svn_fs_x__id_noderev_id(base_root_id), pool);
 }
