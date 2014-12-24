@@ -107,6 +107,16 @@ void svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part);
 /* Return TRUE if *PART is belongs to either a revision or transaction. */
 svn_boolean_t svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part);
 
+/* Set *NODEREV_ID to the root node ID of transaction TXN_ID. */
+void
+svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
+                        svn_fs_x__txn_id_t txn_id);
+
+/* Set *NODEREV_ID to the root node ID of revision REV. */
+void
+svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
+                        svn_revnum_t rev);
+
 
 /*** ID accessor functions. ***/
 

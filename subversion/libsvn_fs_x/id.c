@@ -185,6 +185,22 @@ svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part)
   return part->change_set != SVN_FS_X__INVALID_CHANGE_SET;
 }
 
+void
+svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
+                        svn_fs_x__txn_id_t txn_id)
+{
+  noderev_id->change_set = svn_fs_x__change_set_by_txn(txn_id);
+  noderev_id->number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+}
+
+void
+svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
+                        svn_revnum_t rev)
+{
+  noderev_id->change_set = svn_fs_x__change_set_by_rev(rev);
+  noderev_id->number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+}
+
 
 
 /* Accessing ID Pieces.  */
