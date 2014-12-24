@@ -2730,16 +2730,13 @@ validate_root_noderev(svn_fs_t *fs,
 
   /* Compute HEAD_PREDECESSOR_COUNT. */
   {
-    svn_fs_root_t *head_revision;
-    const svn_fs_id_t *head_root_id;
+    svn_fs_x__noderev_id_t head_root_id;
     node_revision_t *head_root_noderev;
 
     /* Get /@HEAD's noderev. */
-    SVN_ERR(svn_fs_x__revision_root(&head_revision, fs, head_revnum, pool));
-    SVN_ERR(svn_fs_x__node_id(&head_root_id, head_revision, "/", pool));
+    svn_fs_x__init_rev_root(&head_root_id, head_revnum);
     SVN_ERR(svn_fs_x__get_node_revision(&head_root_noderev, fs,
-                                        svn_fs_x__id_noderev_id(head_root_id),
-                                        pool, pool));
+                                        &head_root_id, pool, pool));
 
     head_predecessor_count = head_root_noderev->predecessor_count;
   }
@@ -2786,8 +2783,8 @@ get_final_id(svn_fs_x__id_part_t *part,
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
-   pointer to the new node-id which will be allocated in POOL.
-   If this is a directory, copy all children as well.
+   pointer to the new noderev-id.  If this is a directory, copy all
+   children as well.
 
    START_NODE_ID and START_COPY_ID are
    the first available node and copy ids for this filesystem, for older
@@ -2811,7 +2808,7 @@ get_final_id(svn_fs_x__id_part_t *part,
 
    Temporary allocations are also from POOL. */
 static svn_error_t *
-write_final_rev(const svn_fs_id_t **new_id_p,
+write_final_rev(svn_fs_x__noderev_id_t *new_id_p,
                 apr_file_t *file,
                 svn_revnum_t rev,
                 svn_fs_t *fs,
@@ -2825,7 +2822,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 {
   node_revision_t *noderev;
   apr_off_t my_offset;
-  const svn_fs_id_t *new_id;
+  svn_fs_x__noderev_id_t new_id;
   svn_fs_x__id_part_t noderev_id;
   fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__get_txn_id(id->change_set);
@@ -2834,11 +2831,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   svn_stream_t *file_stream;
   apr_pool_t *subpool;
 
-  *new_id_p = NULL;
-
   /* Check to see if this is a transaction node. */
   if (txn_id == SVN_FS_X__INVALID_TXN_ID)
-    return SVN_NO_ERROR;
+    {
+      svn_fs_x__id_part_reset(new_id_p);
+      return SVN_NO_ERROR;
+    }
 
   subpool = svn_pool_create(pool);
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, subpool));
@@ -2860,8 +2858,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, &dirent->id,
                                   initial_offset, reps_to_cache, reps_hash,
                                   reps_pool, FALSE, subpool));
-          if (new_id && (svn_fs_x__id_rev(new_id) == rev))
-            dirent->id = *svn_fs_x__id_noderev_id(new_id);
+          if (   svn_fs_x__id_part_used(&new_id)
+              && (svn_fs_x__get_revnum(new_id.change_set) == rev))
+            dirent->id = new_id;
         }
 
       if (noderev->data_rep
@@ -2922,7 +2921,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset,
                                 noderev->noderev_id.number, pool));
-  new_id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id, pool);
+  new_id = noderev->noderev_id;
 
   if (ffd->rep_sharing_allowed)
     {
@@ -3281,7 +3280,7 @@ commit_body(void *baton, apr_pool_t *pool)
   fs_x_data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
-  const svn_fs_id_t *root_id, *new_root_id;
+  svn_fs_x__id_part_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
@@ -3334,9 +3333,8 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_x__get_file_offset(&initial_offset, proto_file, pool));
 
   /* Write out all the node-revisions and directory contents. */
-  root_id = svn_fs_x__id_txn_create_root(txn_id, pool);
-  SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs,
-                          svn_fs_x__id_noderev_id(root_id),
+  svn_fs_x__init_txn_root(&root_id, txn_id);
+  SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, &root_id,
                           initial_offset, cb->reps_to_cache, cb->reps_hash,
                           cb->reps_pool, TRUE, pool));
 
