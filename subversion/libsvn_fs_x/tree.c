@@ -1527,15 +1527,12 @@ node_kind(svn_node_kind_t *kind_p,
           const char *path,
           apr_pool_t *pool)
 {
-  const svn_fs_id_t *node_id;
   dag_node_t *node;
 
   /* Get the node id. */
-  SVN_ERR(svn_fs_x__node_id(&node_id, root, path, pool));
+  SVN_ERR(get_dag(&node, root, path, FALSE, pool));
 
   /* Use the node id to get the real kind. */
-  SVN_ERR(svn_fs_x__dag_get_node(&node, root->fs,
-                                 svn_fs_x__id_noderev_id(node_id), pool));
   *kind_p = svn_fs_x__dag_node_kind(node);
 
   return SVN_NO_ERROR;
@@ -3490,14 +3487,15 @@ x_node_origin_rev(svn_revnum_t *revision,
                   const char *path,
                   apr_pool_t *pool)
 {
-  const svn_fs_id_t *given_noderev_id;
-  const svn_fs_x__id_part_t *node_id;
+  svn_fs_x__id_part_t node_id;
+  dag_node_t *node;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
-  SVN_ERR(svn_fs_x__node_id(&given_noderev_id, root, path, pool));
-  node_id = svn_fs_x__id_node_id(given_noderev_id);
-  *revision = svn_fs_x__get_revnum(node_id->change_set);
+  SVN_ERR(get_dag(&node, root, path, FALSE, pool));
+  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id, node));
+
+  *revision = svn_fs_x__get_revnum(node_id.change_set);
 
   return SVN_NO_ERROR;
 }
