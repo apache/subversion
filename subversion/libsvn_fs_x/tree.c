@@ -3468,9 +3468,9 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
   created_rev = svn_fs_x__dag_get_revision(copy_dst_node);
   if (created_rev == copy_dst_rev)
     {
-      const svn_fs_id_t *pred;
-      SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node, pool));
-      if (! pred)
+      svn_fs_x__noderev_id_t pred;
+      SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node));
+      if (!svn_fs_x__id_part_used(&pred))
         return SVN_NO_ERROR;
     }
 
@@ -3569,18 +3569,15 @@ history_prev(svn_fs_history_t **prev_history,
           /* ... or we *have* reported on this revision, and must now
              progress toward this node's predecessor (unless there is
              no predecessor, in which case we're all done!). */
-          const svn_fs_id_t *pred_id;
+          svn_fs_x__noderev_id_t pred_id;
 
-          SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node,
-                                                   scratch_pool));
-          if (! pred_id)
+          SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node));
+          if (!svn_fs_x__id_part_used(&pred_id))
             return SVN_NO_ERROR;
 
           /* Replace NODE and friends with the information from its
              predecessor. */
-          SVN_ERR(svn_fs_x__dag_get_node(&node, fs,
-                                         svn_fs_x__id_noderev_id(pred_id),
-                                         scratch_pool));
+          SVN_ERR(svn_fs_x__dag_get_node(&node, fs, &pred_id, scratch_pool));
           commit_path = svn_fs_x__dag_get_created_path(node);
           commit_rev = svn_fs_x__dag_get_revision(node);
         }
@@ -4265,7 +4262,7 @@ verify_node(dag_node_t *node,
 {
   svn_boolean_t has_mergeinfo;
   apr_int64_t mergeinfo_count;
-  const svn_fs_id_t *pred_id;
+  svn_fs_x__noderev_id_t pred_id;
   svn_fs_t *fs = svn_fs_x__dag_get_fs(node);
   int pred_count;
   svn_node_kind_t kind;
@@ -4286,7 +4283,7 @@ verify_node(dag_node_t *node,
   /* Fetch some data. */
   SVN_ERR(svn_fs_x__dag_has_mergeinfo(&has_mergeinfo, node));
   SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_count, node));
-  SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node, pool));
+  SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node));
   SVN_ERR(svn_fs_x__dag_get_predecessor_count(&pred_count, node));
   kind = svn_fs_x__dag_node_kind(node);
 
@@ -4298,13 +4295,11 @@ verify_node(dag_node_t *node,
                              mergeinfo_count, stringify_node(node, iterpool));
 
   /* Issue #4129. (This check will explicitly catch non-root instances too.) */
-  if (pred_id)
+  if (svn_fs_x__id_part_used(&pred_id))
     {
       dag_node_t *pred;
       int pred_pred_count;
-      SVN_ERR(svn_fs_x__dag_get_node(&pred, fs,
-                                     svn_fs_x__id_noderev_id(pred_id),
-                                     iterpool));
+      SVN_ERR(svn_fs_x__dag_get_node(&pred, fs, &pred_id, iterpool));
       SVN_ERR(svn_fs_x__dag_get_predecessor_count(&pred_pred_count, pred));
       if (pred_pred_count+1 != pred_count)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -4421,28 +4416,30 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
 
   /* Verify explicitly the predecessor of the root. */
   {
-    const svn_fs_id_t *pred_id;
+    svn_fs_x__noderev_id_t pred_id;
+    svn_boolean_t has_predecessor;
 
     /* Only r0 should have no predecessor. */
-    SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, root_dir, pool));
-    if (! root->is_txn_root && !!pred_id != !!root->rev)
+    SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, root_dir));
+    has_predecessor = svn_fs_x__id_part_used(&pred_id);
+    if (!root->is_txn_root && has_predecessor != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
                                "unexpectedly '%s'",
                                root->rev,
-                               (pred_id
-                                ? svn_fs_x__id_unparse(pred_id, pool)->data
+                               (has_predecessor
+                                ? svn_fs_x__id_part_unparse(&pred_id, pool)->data
                                 : "(null)"));
-    if (root->is_txn_root && !pred_id)
+    if (root->is_txn_root && !has_predecessor)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "Transaction '%s''s root node's predecessor is "
                                "unexpectedly NULL",
                                root->txn);
 
     /* Check the predecessor's revision. */
-    if (pred_id)
+    if (has_predecessor)
       {
-        svn_revnum_t pred_rev = svn_fs_x__id_rev(pred_id);
+        svn_revnum_t pred_rev = svn_fs_x__get_revnum(pred_id.change_set);
         if (! root->is_txn_root && pred_rev+1 != root->rev)
           /* Issue #4129. */
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
