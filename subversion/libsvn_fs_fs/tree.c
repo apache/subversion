@@ -3877,12 +3877,14 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
     }
   else
     {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       prev_history = history;
 
       while (1)
         {
+          svn_pool_clear(iterpool);
           SVN_ERR(history_prev(&prev_history, prev_history, cross_copies,
-                               result_pool, scratch_pool));
+                               result_pool, iterpool));
 
           if (! prev_history)
             break;
@@ -3890,6 +3892,8 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
           if (fhd->is_interesting)
             break;
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   *prev_history_p = prev_history;
