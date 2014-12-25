@@ -361,7 +361,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   svn_error_t *svn_err = SVN_NO_ERROR;
   dav_error *dav_err;
 
-  dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
+  dav_err = dav_svn_get_repos_path2(r, conf->base_path, &repos_path, scratch_pool);
   if (dav_err)
     {
       ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
