@@ -90,15 +90,6 @@ svn_fs_x__txn_changes_fetch(apr_hash_t **changed_paths_p,
                             svn_fs_x__txn_id_t txn_id,
                             apr_pool_t *pool);
 
-/* Find the paths which were changed in revision REV of filesystem FS
-   and store them in *CHANGED_PATHS_P.  Get any temporary allocations
-   from POOL. */
-svn_error_t *
-svn_fs_x__paths_changed(apr_hash_t **changed_paths_p,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        apr_pool_t *pool);
-
 /* Create a new transaction in filesystem FS, based on revision REV,
    and store it in *TXN_P.  Allocate all necessary variables from
    POOL. */

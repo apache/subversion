@@ -786,7 +786,6 @@ read_change(change_t **change_p,
   svn_boolean_t eof = TRUE;
   change_t *change;
   char *str, *last_str, *kind_str;
-  svn_fs_path_change2_t *info;
 
   /* Default return value. */
   *change_p = NULL;
@@ -798,7 +797,6 @@ read_change(change_t **change_p,
     return SVN_NO_ERROR;
 
   change = apr_pcalloc(result_pool, sizeof(*change));
-  info = &change->info;
   last_str = line->data;
 
   /* Get the node-id of the change. */
@@ -807,8 +805,8 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  SVN_ERR(svn_fs_x__id_parse(&info->node_rev_id, str, result_pool));
-  if (info->node_rev_id == NULL)
+  SVN_ERR(svn_fs_x__id_parse(&change->node_rev_id, str, result_pool));
+  if (change->node_rev_id == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
@@ -820,7 +818,7 @@ read_change(change_t **change_p,
 
   /* Don't bother to check the format number before looking for
    * node-kinds: just read them if you find them. */
-  info->node_kind = svn_node_unknown;
+  change->node_kind = svn_node_unknown;
   kind_str = strchr(str, '-');
   if (kind_str)
     {
@@ -828,9 +826,9 @@ read_change(change_t **change_p,
       *kind_str = '\0';
       kind_str++;
       if (strcmp(kind_str, SVN_FS_X__KIND_FILE) == 0)
-        info->node_kind = svn_node_file;
+        change->node_kind = svn_node_file;
       else if (strcmp(kind_str, SVN_FS_X__KIND_DIR) == 0)
-        info->node_kind = svn_node_dir;
+        change->node_kind = svn_node_dir;
       else
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid changes line in rev-file"));
@@ -838,23 +836,23 @@ read_change(change_t **change_p,
 
   if (strcmp(str, ACTION_MODIFY) == 0)
     {
-      info->change_kind = svn_fs_path_change_modify;
+      change->change_kind = svn_fs_path_change_modify;
     }
   else if (strcmp(str, ACTION_ADD) == 0)
     {
-      info->change_kind = svn_fs_path_change_add;
+      change->change_kind = svn_fs_path_change_add;
     }
   else if (strcmp(str, ACTION_DELETE) == 0)
     {
-      info->change_kind = svn_fs_path_change_delete;
+      change->change_kind = svn_fs_path_change_delete;
     }
   else if (strcmp(str, ACTION_REPLACE) == 0)
     {
-      info->change_kind = svn_fs_path_change_replace;
+      change->change_kind = svn_fs_path_change_replace;
     }
   else if (strcmp(str, ACTION_RESET) == 0)
     {
-      info->change_kind = svn_fs_path_change_reset;
+      change->change_kind = svn_fs_path_change_reset;
     }
   else
     {
@@ -870,11 +868,11 @@ read_change(change_t **change_p,
 
   if (strcmp(str, FLAG_TRUE) == 0)
     {
-      info->text_mod = TRUE;
+      change->text_mod = TRUE;
     }
   else if (strcmp(str, FLAG_FALSE) == 0)
     {
-      info->text_mod = FALSE;
+      change->text_mod = FALSE;
     }
   else
     {
@@ -890,11 +888,11 @@ read_change(change_t **change_p,
 
   if (strcmp(str, FLAG_TRUE) == 0)
     {
-      info->prop_mod = TRUE;
+      change->prop_mod = TRUE;
     }
   else if (strcmp(str, FLAG_FALSE) == 0)
     {
-      info->prop_mod = FALSE;
+      change->prop_mod = FALSE;
     }
   else
     {
@@ -910,11 +908,11 @@ read_change(change_t **change_p,
 
   if (strcmp(str, FLAG_TRUE) == 0)
     {
-      info->mergeinfo_mod = svn_tristate_true;
+      change->mergeinfo_mod = svn_tristate_true;
     }
   else if (strcmp(str, FLAG_FALSE) == 0)
     {
-      info->mergeinfo_mod = svn_tristate_false;
+      change->mergeinfo_mod = svn_tristate_false;
     }
   else
     {
@@ -935,22 +933,22 @@ read_change(change_t **change_p,
 
   /* Read the next line, the copyfrom line. */
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
-  info->copyfrom_known = TRUE;
+  change->copyfrom_known = TRUE;
   if (eof || line->len == 0)
     {
-      info->copyfrom_rev = SVN_INVALID_REVNUM;
-      info->copyfrom_path = NULL;
+      change->copyfrom_rev = SVN_INVALID_REVNUM;
+      change->copyfrom_path = NULL;
     }
   else
     {
       last_str = line->data;
-      SVN_ERR(parse_revnum(&info->copyfrom_rev, (const char **)&last_str));
+      SVN_ERR(parse_revnum(&change->copyfrom_rev, (const char **)&last_str));
 
       if (!svn_fspath__is_canonical(last_str))
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid copy-from path in changes line"));
 
-      info->copyfrom_path = auto_unescape_path(last_str, result_pool);
+      change->copyfrom_path = auto_unescape_path(last_str, result_pool);
     }
 
   *change_p = change;
@@ -1020,8 +1018,7 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
    All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
-                   const char *path,
-                   svn_fs_path_change2_t *change,
+                   change_t *change,
                    apr_pool_t *scratch_pool)
 {
   const char *idstr;
@@ -1071,7 +1068,7 @@ write_change_entry(svn_stream_t *stream,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->mergeinfo_mod == svn_tristate_true
                                                ? FLAG_TRUE : FLAG_FALSE,
-                              auto_escape_path(path, scratch_pool));
+                              auto_escape_path(change->path.data, scratch_pool));
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
@@ -1115,16 +1112,13 @@ svn_fs_x__write_changes(svn_stream_t *stream,
   /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
     {
-      svn_fs_path_change2_t *change;
-      const char *path;
+      change_t *change;
 
       svn_pool_clear(iterpool);
-
       change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
-      path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
 
       /* Write out the new entry into the final rev-file. */
-      SVN_ERR(write_change_entry(stream, path, change, iterpool));
+      SVN_ERR(write_change_entry(stream, change, iterpool));
     }
 
   if (terminate_list)
