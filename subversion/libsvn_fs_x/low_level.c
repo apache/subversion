@@ -805,10 +805,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  SVN_ERR(svn_fs_x__id_parse(&change->node_rev_id, str, result_pool));
-  if (change->node_rev_id == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
+  SVN_ERR(svn_fs_x__id_part_parse(&change->noderev_id, str));
 
   /* Get the change type. */
   str = svn_cstring_tokenize(" ", &last_str);
@@ -1050,10 +1047,7 @@ write_change_entry(svn_stream_t *stream,
                                change->change_kind);
     }
 
-  if (change->node_rev_id)
-    idstr = svn_fs_x__id_unparse(change->node_rev_id, scratch_pool)->data;
-  else
-    idstr = ACTION_RESET;
+  idstr = svn_fs_x__id_part_unparse(&change->noderev_id, scratch_pool)->data;
 
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                  || change->node_kind == svn_node_file);

@@ -867,7 +867,6 @@ path_change_dup(const change_t *source,
   change_t *result = apr_pmemdup(result_pool, source, sizeof(*source));
   result->path.data = apr_pstrmemdup(result_pool, source->path.data,
                                      source->path.len);
-  result->node_rev_id = svn_fs_x__id_copy(source->node_rev_id, result_pool);
   if (source->copyfrom_path)
     result->copyfrom_path = apr_pstrdup(result_pool, source->copyfrom_path);
 
@@ -893,9 +892,9 @@ fold_change(apr_hash_t *changed_paths,
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
-      /* Sanity check:  only allow NULL node revision ID in the
+      /* Sanity check:  only allow unused node revision IDs in the
          `reset' case. */
-      if ((! change->node_rev_id)
+      if ((! svn_fs_x__id_part_used(&change->noderev_id))
            && (change->change_kind != svn_fs_path_change_reset))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -904,8 +903,9 @@ fold_change(apr_hash_t *changed_paths,
       /* Sanity check: we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if (change->node_rev_id
-          && (! svn_fs_x__id_eq(old_change->node_rev_id, change->node_rev_id))
+      if (svn_fs_x__id_part_used(&change->noderev_id)
+          && (! svn_fs_x__id_part_eq(&old_change->noderev_id,
+                                     &change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -1768,22 +1768,6 @@ svn_fs_x__add_change(svn_fs_t *fs,
   change_t change;
   apr_hash_t *changes = apr_hash_make(pool);
 
-  const svn_fs_id_t *fs_id;
-  if (   svn_fs_x__is_txn(id->change_set)
-      && change_kind == svn_fs_path_change_delete)
-    {
-      /* There is no valid ID.  Provide a dummy. */
-      svn_fs_x__id_part_t dummy;
-      svn_fs_x__id_part_reset(&dummy);
-      fs_id = svn_fs_x__id_create(&dummy, id, pool);
-    }
-  else
-    {
-      node_revision_t *noderev;
-      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
-      fs_id = svn_fs_x__id_create(&noderev->node_id, id, pool);
-    }
-
   /* Not using APR_BUFFERED to append change in one atomic write operation. */
   SVN_ERR(svn_io_file_open(&file,
                            svn_fs_x__path_txn_changes(fs, txn_id, pool),
@@ -1792,7 +1776,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
 
   change.path.data = path;
   change.path.len = strlen(path);
-  change.node_rev_id = fs_id;
+  change.noderev_id = *id;
   change.change_kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;

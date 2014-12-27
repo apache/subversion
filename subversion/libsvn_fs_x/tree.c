@@ -3291,16 +3291,32 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 /* Finding Changes */
 
 /* Copy CHANGE into a FS API object allocated in RESULT_POOL. */
-static svn_fs_path_change2_t *
-construct_fs_path_change(change_t *change,
-                         apr_pool_t *result_pool)
+static svn_error_t *
+construct_fs_path_change(svn_fs_path_change2_t **result_p,
+                         svn_fs_t *fs,
+                         change_t *change,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  const svn_fs_id_t *id
-    = change->node_rev_id;
-  svn_fs_path_change2_t *result
-    = svn_fs__path_change_create_internal(id, change->change_kind,
-                                          result_pool);
+  dag_node_t *node;
+  const svn_fs_id_t *id;
+  svn_fs_path_change2_t *result;
 
+  if (svn_fs_x__is_txn(change->noderev_id.change_set))
+    {
+      svn_fs_x__id_part_t dummy;
+      svn_fs_x__id_part_reset(&dummy);
+      id = svn_fs_x__id_create(&dummy, &change->noderev_id, result_pool);
+    }
+  else
+    {
+      SVN_ERR(svn_fs_x__dag_get_node(&node, fs, &change->noderev_id,
+                                     scratch_pool));
+      SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, result_pool));
+    }
+
+  result = svn_fs__path_change_create_internal(id, change->change_kind,
+                                               result_pool);
   result->text_mod = change->text_mod;
   result->prop_mod = change->prop_mod;
   result->node_kind = change->node_kind;
@@ -3311,7 +3327,9 @@ construct_fs_path_change(change_t *change,
 
   result->mergeinfo_mod = change->mergeinfo_mod;
 
-  return result;
+  *result_p = result;
+
+  return SVN_NO_ERROR;
 }
 
 /* Set *CHANGED_PATHS_P to a newly allocated hash containing
@@ -3324,6 +3342,7 @@ x_paths_changed(apr_hash_t **changed_paths_p,
                 apr_pool_t *pool)
 {
   apr_hash_t *changed_paths;
+  svn_fs_path_change2_t *path_change;
 
   if (root->is_txn_root)
     {
@@ -3335,9 +3354,11 @@ x_paths_changed(apr_hash_t **changed_paths_p,
            hi = apr_hash_next(hi))
         {
           change_t *change = apr_hash_this_val(hi);
+          SVN_ERR(construct_fs_path_change(&path_change, root->fs, change,
+                                           pool, pool));
           apr_hash_set(changed_paths,
                        apr_hash_this_key(hi), apr_hash_this_key_len(hi),
-                       construct_fs_path_change(change, pool));
+                       path_change);
         }
     }
   else
@@ -3351,8 +3372,10 @@ x_paths_changed(apr_hash_t **changed_paths_p,
       for (i = 0; i < changes->nelts; ++i)
         {
           change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+          SVN_ERR(construct_fs_path_change(&path_change, root->fs, change,
+                                           pool, pool));
           apr_hash_set(changed_paths, change->path.data, change->path.len,
-                      construct_fs_path_change(change, pool));
+                       path_change);
         }
     }
 

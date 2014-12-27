@@ -1075,8 +1075,6 @@ serialize_change(svn_temp_serializer__context_t *context,
                             sizeof(*change));
 
   /* serialize sub-structures */
-  svn_fs_x__id_serialize(context, &change->node_rev_id);
-
   svn_temp_serializer__add_string(context, &change->path.data);
   svn_temp_serializer__add_string(context, &change->copyfrom_path);
 
@@ -1102,10 +1100,6 @@ deserialize_change(void *buffer,
     return;
 
   /* fix-up of sub-structures */
-  svn_fs_x__id_deserialize(change,
-                           (svn_fs_id_t **)&change->node_rev_id,
-                           pool);
-
   svn_temp_deserializer__resolve(change, (void **)&change->path.data);
   svn_temp_deserializer__resolve(change, (void **)&change->copyfrom_path);
 }
