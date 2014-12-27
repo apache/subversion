@@ -2457,10 +2457,14 @@ x_dir_entries(apr_hash_t **table_p,
   apr_hash_t *hash = svn_hash__make(pool);
   apr_array_header_t *table;
   int i;
+  svn_fs_x__id_context_t *context = NULL;
 
   /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, FALSE, pool));
   SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, pool));
+
+  if (table->nelts)
+    context = svn_fs_x__id_create_context(root->fs, pool);
 
   /* Convert directory array to hash. */
   for (i = 0; i < table->nelts; ++i)
@@ -2470,9 +2474,7 @@ x_dir_entries(apr_hash_t **table_p,
       svn_fs_dirent_t *api_dirent = apr_pcalloc(pool, sizeof(*api_dirent));
       api_dirent->name = entry->name;
       api_dirent->kind = entry->kind;
-
-      SVN_ERR(svn_fs_x__dag_get_node(&node, root->fs, &entry->id, pool));
-      SVN_ERR(svn_fs_x__dag_get_fs_id(&api_dirent->id, node, pool));
+      api_dirent->id = svn_fs_x__id_create(context, &entry->id, pool);
 
       svn_hash_sets(hash, api_dirent->name, api_dirent);
     }
@@ -3290,33 +3292,20 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
-/* Copy CHANGE into a FS API object allocated in RESULT_POOL. */
+/* Copy CHANGE into a FS API object allocated in RESULT_POOL and return
+   it in *RESULT_P.  Pass CONTEXT to the ID API object being created. */
 static svn_error_t *
 construct_fs_path_change(svn_fs_path_change2_t **result_p,
-                         svn_fs_t *fs,
+                         svn_fs_x__id_context_t *context,
                          change_t *change,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+                         apr_pool_t *result_pool)
 {
-  dag_node_t *node;
-  const svn_fs_id_t *id;
-  svn_fs_path_change2_t *result;
+  const svn_fs_id_t *id
+    = svn_fs_x__id_create(context, &change->noderev_id, result_pool);
+  svn_fs_path_change2_t *result
+    = svn_fs__path_change_create_internal(id, change->change_kind,
+                                          result_pool);
 
-  if (svn_fs_x__is_txn(change->noderev_id.change_set))
-    {
-      svn_fs_x__id_part_t dummy;
-      svn_fs_x__id_part_reset(&dummy);
-      id = svn_fs_x__id_create(&dummy, &change->noderev_id, result_pool);
-    }
-  else
-    {
-      SVN_ERR(svn_fs_x__dag_get_node(&node, fs, &change->noderev_id,
-                                     scratch_pool));
-      SVN_ERR(svn_fs_x__dag_get_fs_id(&id, node, result_pool));
-    }
-
-  result = svn_fs__path_change_create_internal(id, change->change_kind,
-                                               result_pool);
   result->text_mod = change->text_mod;
   result->prop_mod = change->prop_mod;
   result->node_kind = change->node_kind;
@@ -3343,6 +3332,8 @@ x_paths_changed(apr_hash_t **changed_paths_p,
 {
   apr_hash_t *changed_paths;
   svn_fs_path_change2_t *path_change;
+  svn_fs_x__id_context_t *context
+    = svn_fs_x__id_create_context(root->fs, pool);
 
   if (root->is_txn_root)
     {
@@ -3354,8 +3345,8 @@ x_paths_changed(apr_hash_t **changed_paths_p,
            hi = apr_hash_next(hi))
         {
           change_t *change = apr_hash_this_val(hi);
-          SVN_ERR(construct_fs_path_change(&path_change, root->fs, change,
-                                           pool, pool));
+          SVN_ERR(construct_fs_path_change(&path_change, context, change,
+                                           pool));
           apr_hash_set(changed_paths,
                        apr_hash_this_key(hi), apr_hash_this_key_len(hi),
                        path_change);
@@ -3372,8 +3363,8 @@ x_paths_changed(apr_hash_t **changed_paths_p,
       for (i = 0; i < changes->nelts; ++i)
         {
           change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
-          SVN_ERR(construct_fs_path_change(&path_change, root->fs, change,
-                                           pool, pool));
+          SVN_ERR(construct_fs_path_change(&path_change, context, change,
+                                           pool));
           apr_hash_set(changed_paths, change->path.data, change->path.len,
                        path_change);
         }
