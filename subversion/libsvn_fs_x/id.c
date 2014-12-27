@@ -214,38 +214,12 @@ svn_fs_x__id_node_id(const svn_fs_id_t *fs_id)
 }
 
 
-svn_fs_x__txn_id_t
-svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
-{
-  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-
-  return svn_fs_x__get_txn_id(id->noderev_id.change_set);
-}
-
-
 const svn_fs_x__noderev_id_t *
 svn_fs_x__id_noderev_id(const svn_fs_id_t* fs_id)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return &id->noderev_id;
-}
-
-svn_revnum_t
-svn_fs_x__id_rev(const svn_fs_id_t *fs_id)
-{
-  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-
-  return svn_fs_x__get_revnum(id->noderev_id.change_set);
-}
-
-
-apr_uint64_t
-svn_fs_x__id_item(const svn_fs_id_t *fs_id)
-{
-  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-
-  return id->noderev_id.number;
 }
 
 svn_boolean_t
@@ -284,9 +258,9 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
 }
 
 
-svn_boolean_t
-svn_fs_x__id_check_related(const svn_fs_id_t *a,
-                           const svn_fs_id_t *b)
+static svn_boolean_t
+id_check_related(const svn_fs_id_t *a,
+                 const svn_fs_id_t *b)
 {
   const fs_x__id_t *id_a = (const fs_x__id_t *)a;
   const fs_x__id_t *id_b = (const fs_x__id_t *)b;
@@ -305,14 +279,14 @@ svn_fs_x__id_check_related(const svn_fs_id_t *a,
 }
 
 
-svn_fs_node_relation_t
-svn_fs_x__id_compare(const svn_fs_id_t *a,
-                     const svn_fs_id_t *b)
+static svn_fs_node_relation_t
+id_compare(const svn_fs_id_t *a,
+           const svn_fs_id_t *b)
 {
   if (svn_fs_x__id_eq(a, b))
     return svn_fs_node_same;
-  return (svn_fs_x__id_check_related(a, b) ? svn_fs_node_common_ancestor
-                                           : svn_fs_node_unrelated);
+  return (id_check_related(a, b) ? svn_fs_node_common_ancestor
+                                 : svn_fs_node_unrelated);
 }
 
 int
@@ -333,61 +307,8 @@ svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
 
 static id_vtable_t id_vtable = {
   svn_fs_x__id_unparse,
-  svn_fs_x__id_compare
+  id_compare
 };
-
-svn_fs_id_t *
-svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txn_id,
-                             apr_pool_t *pool)
-{
-  fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
-
-  /* node ID and copy ID are "0" */
-
-  id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
-  id->noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
-
-  id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = id;
-
-  return (svn_fs_id_t *)id;
-}
-
-svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
-                                      apr_pool_t *pool)
-{
-  fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
-
-  /* node ID and copy ID are "0" */
-
-  id->noderev_id.change_set = svn_fs_x__change_set_by_rev(revision);
-  id->noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
-
-  id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = id;
-
-  return (svn_fs_id_t *)id;
-}
-
-svn_fs_id_t *
-svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
-                        svn_fs_x__txn_id_t txn_id,
-                        apr_uint64_t item,
-                        apr_pool_t *pool)
-{
-  fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
-
-  id->node_id = *node_id;
-
-  id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
-  id->noderev_id.number = item;
-
-  id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = id;
-
-  return (svn_fs_id_t *)id;
-}
-
 
 svn_fs_id_t *
 svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,

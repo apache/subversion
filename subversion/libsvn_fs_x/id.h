@@ -107,6 +107,10 @@ void svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part);
 /* Return TRUE if *PART is belongs to either a revision or transaction. */
 svn_boolean_t svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part);
 
+/* Return 0 if A and B are equal, 1 if A is "greater than" B, -1 otherwise. */
+int svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
+                              const svn_fs_x__id_part_t *b);
+
 /* Set *NODEREV_ID to the root node ID of transaction TXN_ID. */
 void
 svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
@@ -123,20 +127,8 @@ svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
 /* Get the "node id" portion of ID. */
 const svn_fs_x__id_part_t *svn_fs_x__id_node_id(const svn_fs_id_t *id);
 
-/* Get the "txn id" portion of ID,
- * or SVN_FS_X__INVALID_TXN_ID if it is a permanent ID. */
-svn_fs_x__txn_id_t svn_fs_x__id_txn_id(const svn_fs_id_t *id);
-
 /* Get the "noderev id" portion of ID. */
 const svn_fs_x__noderev_id_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
-
-/* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
-   transaction ID. */
-svn_revnum_t svn_fs_x__id_rev(const svn_fs_id_t *id);
-
-/* Access the "item" portion of the ID, or 0 if it is a transaction
-   ID. */
-apr_uint64_t svn_fs_x__id_item(const svn_fs_id_t *id);
 
 /* Return TRUE, if this is a transaction ID. */
 svn_boolean_t svn_fs_x__id_is_txn(const svn_fs_id_t *id);
@@ -148,33 +140,6 @@ svn_string_t *svn_fs_x__id_unparse(const svn_fs_id_t *id,
 /* Return true if A and B are equal. */
 svn_boolean_t svn_fs_x__id_eq(const svn_fs_id_t *a,
                               const svn_fs_id_t *b);
-
-/* Return true if A and B are related. */
-svn_boolean_t svn_fs_x__id_check_related(const svn_fs_id_t *a,
-                                         const svn_fs_id_t *b);
-
-/* Return the noderev relationship between A and B. */
-svn_fs_node_relation_t svn_fs_x__id_compare(const svn_fs_id_t *a,
-                                            const svn_fs_id_t *b);
-
-/* Return 0 if A and B are equal, 1 if A is "greater than" B, -1 otherwise. */
-int svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
-                              const svn_fs_x__id_part_t *b);
-
-/* Create the txn root ID for transaction TXN_ID.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txnnum,
-                                          apr_pool_t *pool);
-
-/* Create the root ID for REVISION.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
-                                      apr_pool_t *pool);
-
-/* Create an ID within a transaction based on NODE_ID, TXN_ID and ITEM
-   number, allocated in POOL. */
-svn_fs_id_t *svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
-                                     svn_fs_x__txn_id_t txn_id,
-                                     apr_uint64_t item,
-                                     apr_pool_t *pool);
 
 /* Create a permanent ID based on NODE_ID and NODEREV_ID, allocated in
    POOL.  Return NULL, if the NODEREV_ID is "unused". */
