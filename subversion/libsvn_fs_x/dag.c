@@ -200,8 +200,8 @@ svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
 {
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
-  *id = svn_fs_x__id_create(&noderev->node_id, &noderev->noderev_id,
-                            result_pool);
+  *id = svn_fs_x__id_create(svn_fs_x__id_create_context(node->fs, result_pool),
+                            &noderev->noderev_id, result_pool);
 
   return SVN_NO_ERROR;
 }

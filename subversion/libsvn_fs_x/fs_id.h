@@ -29,11 +29,31 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Create a permanent ID based on NODE_ID and NODEREV_ID, allocated in
-   POOL.  Return NULL, if the NODEREV_ID is "unused". */
-svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
-                                 const svn_fs_x__id_part_t *noderev_id,
-                                 apr_pool_t *pool);
+/* Transparent FS access object to be used with FSX's implementation for
+   svn_fs_id_t.  It allows the ID object query data from the respective FS
+   to check for node relationships etc.  It also allows to re-open the repo
+   after the original svn_fs_t object got cleaned up, i.e. the ID object's
+   functionality does not depend on any other object's lifetime.
+
+   For efficiency, multiple svn_fs_id_t should share the same context.
+ */
+typedef struct svn_fs_x__id_context_t svn_fs_x__id_context_t;
+
+/* Return a context object for filesystem FS; construct it in RESULT_POOL. */
+svn_fs_x__id_context_t *
+svn_fs_x__id_create_context(svn_fs_t *fs,
+                            apr_pool_t *result_pool);
+
+/* Create a permanent ID based on NODEREV_ID, allocated in RESULT_POOL.
+   For complex requests, access the filesystem provided with CONTEXT.
+
+   For efficiency, CONTEXT should have been created in RESULT_POOL and be
+   shared between multiple ID instances allocated in the same pool.
+ */
+svn_fs_id_t *
+svn_fs_x__id_create(svn_fs_x__id_context_t *context,
+                    const svn_fs_x__id_part_t *noderev_id,
+                    apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }
