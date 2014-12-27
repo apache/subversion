@@ -124,60 +124,11 @@ svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
 
 /*** ID accessor functions. ***/
 
-/* Get the "node id" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_node_id(const svn_fs_id_t *id);
-
-/* Get the "noderev id" portion of ID. */
-const svn_fs_x__noderev_id_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
-
-/* Return TRUE, if this is a transaction ID. */
-svn_boolean_t svn_fs_x__id_is_txn(const svn_fs_id_t *id);
-
-/* Convert ID into string form, allocated in POOL. */
-svn_string_t *svn_fs_x__id_unparse(const svn_fs_id_t *id,
-                                   apr_pool_t *pool);
-
-/* Return true if A and B are equal. */
-svn_boolean_t svn_fs_x__id_eq(const svn_fs_id_t *a,
-                              const svn_fs_id_t *b);
-
 /* Create a permanent ID based on NODE_ID and NODEREV_ID, allocated in
    POOL.  Return NULL, if the NODEREV_ID is "unused". */
 svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
                                  const svn_fs_x__id_part_t *noderev_id,
                                  apr_pool_t *pool);
-
-/* Return a copy of ID, allocated from POOL. */
-svn_fs_id_t *svn_fs_x__id_copy(const svn_fs_id_t *id,
-                               apr_pool_t *pool);
-
-/* Return an ID in *ID_P resulting from parsing the string DATA, or an error
-   if DATA is an invalid ID string. *DATA will be modified / invalidated by
-   this call. */
-svn_error_t *
-svn_fs_x__id_parse(const svn_fs_id_t **id_p,
-                   char *data,
-                   apr_pool_t *pool);
-
-
-/* (de-)serialization support*/
-
-struct svn_temp_serializer__context_t;
-
-/**
- * Serialize an @a id within the serialization @a context.
- */
-void
-svn_fs_x__id_serialize(struct svn_temp_serializer__context_t *context,
-                        const svn_fs_id_t * const *id);
-
-/**
- * Deserialize an @a id within the @a buffer and associate it with @a pool.
- */
-void
-svn_fs_x__id_deserialize(void *buffer,
-                         svn_fs_id_t **id,
-                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

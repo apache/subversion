@@ -638,47 +638,6 @@ svn_fs_x__deserialize_properties(void **out,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_x__serialize_id(void **data,
-                       apr_size_t *data_len,
-                       void *in,
-                       apr_pool_t *pool)
-{
-  const svn_fs_id_t *id = in;
-  svn_stringbuf_t *serialized;
-
-  /* create an (empty) serialization context with plenty of buffer space */
-  svn_temp_serializer__context_t *context =
-      svn_temp_serializer__init(NULL, 0, 250, pool);
-
-  /* serialize the id */
-  svn_fs_x__id_serialize(context, &id);
-
-  /* return serialized data */
-  serialized = svn_temp_serializer__get(context);
-  *data = serialized->data;
-  *data_len = serialized->len;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__deserialize_id(void **out,
-                         void *data,
-                         apr_size_t data_len,
-                         apr_pool_t *pool)
-{
-  /* Copy the _full_ buffer as it also contains the sub-structures. */
-  svn_fs_id_t *id = (svn_fs_id_t *)data;
-
-  /* fixup of all pointers etc. */
-  svn_fs_x__id_deserialize(id, &id, pool);
-
-  /* done */
-  *out = id;
-  return SVN_NO_ERROR;
-}
-
 /** Caching node_revision_t objects. **/
 
 svn_error_t *
