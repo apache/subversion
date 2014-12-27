@@ -193,19 +193,6 @@ svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
-                        dag_node_t *node,
-                        apr_pool_t *result_pool)
-{
-  node_revision_t *noderev;
-  SVN_ERR(get_node_revision(&noderev, node));
-  *id = svn_fs_x__id_create(svn_fs_x__id_create_context(node->fs, result_pool),
-                            &noderev->noderev_id, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the node ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */
 svn_error_t *
