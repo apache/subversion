@@ -550,7 +550,7 @@ typedef struct change_t
   svn_string_t path;
 
   /* node revision id of changed path */
-  const svn_fs_id_t *node_rev_id;
+  svn_fs_x__noderev_id_t noderev_id;
 
   /* See svn_fs_path_change2_t for a description for the remaining elements.
    */
