@@ -3290,6 +3290,30 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
+/* Copy CHANGE into a FS API object allocated in RESULT_POOL. */
+static svn_fs_path_change2_t *
+construct_fs_path_change(change_t *change,
+                         apr_pool_t *result_pool)
+{
+  const svn_fs_id_t *id
+    = change->node_rev_id;
+  svn_fs_path_change2_t *result
+    = svn_fs__path_change_create_internal(id, change->change_kind,
+                                          result_pool);
+
+  result->text_mod = change->text_mod;
+  result->prop_mod = change->prop_mod;
+  result->node_kind = change->node_kind;
+
+  result->copyfrom_known = change->copyfrom_known;
+  result->copyfrom_rev = change->copyfrom_rev;
+  result->copyfrom_path = change->copyfrom_path;
+
+  result->mergeinfo_mod = change->mergeinfo_mod;
+
+  return result;
+}
+
 /* Set *CHANGED_PATHS_P to a newly allocated hash containing
    descriptions of the paths changed under ROOT.  The hash is keyed
    with const char * paths and has svn_fs_path_change2_t * values.  Use
@@ -3299,12 +3323,42 @@ x_paths_changed(apr_hash_t **changed_paths_p,
                 svn_fs_root_t *root,
                 apr_pool_t *pool)
 {
+  apr_hash_t *changed_paths;
+
   if (root->is_txn_root)
-    return svn_fs_x__txn_changes_fetch(changed_paths_p, root->fs,
-                                       root_txn_id(root), pool);
+    {
+      apr_hash_index_t *hi;
+      SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, root->fs,
+                                          root_txn_id(root), pool));
+      for (hi = apr_hash_first(pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          change_t *change = apr_hash_this_val(hi);
+          apr_hash_set(changed_paths,
+                       apr_hash_this_key(hi), apr_hash_this_key_len(hi),
+                       construct_fs_path_change(change, pool));
+        }
+    }
   else
-    return svn_fs_x__paths_changed(changed_paths_p, root->fs, root->rev,
-                                   pool);
+    {
+      apr_array_header_t *changes;
+      int i;
+
+      SVN_ERR(svn_fs_x__get_changes(&changes, root->fs, root->rev, pool));
+
+      changed_paths = svn_hash__make(pool);
+      for (i = 0; i < changes->nelts; ++i)
+        {
+          change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+          apr_hash_set(changed_paths, change->path.data, change->path.len,
+                      construct_fs_path_change(change, pool));
+        }
+    }
+
+  *changed_paths_p = changed_paths;
+
+  return SVN_NO_ERROR;
 }
 
 

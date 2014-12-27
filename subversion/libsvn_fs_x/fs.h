@@ -549,8 +549,22 @@ typedef struct change_t
   /* Path of the change. */
   svn_string_t path;
 
-  /* API compatible change description */
-  svn_fs_path_change2_t info;
+  /* node revision id of changed path */
+  const svn_fs_id_t *node_rev_id;
+
+  /* See svn_fs_path_change2_t for a description for the remaining elements.
+   */
+  svn_fs_path_change_kind_t change_kind;
+
+  svn_boolean_t text_mod;
+  svn_boolean_t prop_mod;
+  svn_node_kind_t node_kind;
+
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  svn_tristate_t mergeinfo_mod;
 } change_t;
 
 
