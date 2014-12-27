@@ -1,4 +1,4 @@
-/* id.h : interface to node ID functions, private to libsvn_fs_x
+/* id.h : interface to FSX-internal ID functions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -120,15 +120,6 @@ svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
 void
 svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
                         svn_revnum_t rev);
-
-
-/*** ID accessor functions. ***/
-
-/* Create a permanent ID based on NODE_ID and NODEREV_ID, allocated in
-   POOL.  Return NULL, if the NODEREV_ID is "unused". */
-svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
-                                 const svn_fs_x__id_part_t *noderev_id,
-                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

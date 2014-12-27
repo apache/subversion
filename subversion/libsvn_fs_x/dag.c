@@ -31,7 +31,7 @@
 #include "dag.h"
 #include "fs.h"
 #include "fs_x.h"
-#include "id.h"
+#include "fs_id.h"
 #include "cached_data.h"
 #include "transaction.h"
 

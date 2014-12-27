@@ -1,4 +1,4 @@
-/* id.c : operations on node-revision IDs
+/* id.c : implements FSX-internal ID functions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,28 +21,12 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "id.h"
 #include "index.h"
 #include "util.h"
 
-#include "../libsvn_fs/fs-loader.h"
-#include "private/svn_temp_serializer.h"
 #include "private/svn_string_private.h"
-
-
-typedef struct fs_x__id_t
-{
-  /* API visible part */
-  svn_fs_id_t generic_id;
-
-  /* private members */
-  svn_fs_x__id_part_t node_id;
-  svn_fs_x__id_part_t noderev_id;
-
-} fs_x__id_t;
 
 
 
@@ -201,49 +185,6 @@ svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
   noderev_id->number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 }
 
-
-
-/* Accessing ID Pieces.  */
-
-static svn_string_t *
-id_unparse(const svn_fs_id_t *fs_id,
-           apr_pool_t *pool)
-{
-  char string[4 * SVN_INT64_BUFFER_SIZE + 4];
-  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-
-  char *p = part_unparse(string, &id->node_id);
-  *(p++) = '.';
-  p = part_unparse(p, &id->noderev_id);
-
-  return svn_string_ncreate(string, p - string, pool);
-}
-
-
-/*** Comparing node IDs ***/
-
-static svn_fs_node_relation_t
-id_compare(const svn_fs_id_t *a,
-           const svn_fs_id_t *b)
-{
-  const fs_x__id_t *id_a = (const fs_x__id_t *)a;
-  const fs_x__id_t *id_b = (const fs_x__id_t *)b;
-
-  /* Quick check: same IDs? */
-  if (svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id))
-    return svn_fs_node_same;
-
-  /* Items from different txns are unrelated. */
-  if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
-      && svn_fs_x__is_txn(id_b->noderev_id.change_set)
-      && id_a->noderev_id.change_set != id_b->noderev_id.change_set)
-    return svn_fs_node_unrelated;
-
-  return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id)
-       ? svn_fs_node_common_ancestor
-       : svn_fs_node_unrelated;
-}
-
 int
 svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
                           const svn_fs_x__id_part_t *b)
@@ -254,33 +195,4 @@ svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
     return 1;
 
   return a->number < b->number ? -1 : a->number == b->number ? 0 : 1;
-}
-
-
-
-/* Creating ID's.  */
-
-static id_vtable_t id_vtable = {
-  id_unparse,
-  id_compare
-};
-
-svn_fs_id_t *
-svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
-                    const svn_fs_x__id_part_t *noderev_id,
-                    apr_pool_t *pool)
-{
-  fs_x__id_t *id;
-  if (!svn_fs_x__id_part_used(noderev_id))
-    return NULL;
-
-  id = apr_pcalloc(pool, sizeof(*id));
-
-  id->node_id = *node_id;
-  id->noderev_id = *noderev_id;
-
-  id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = id;
-
-  return (svn_fs_id_t *)id;
 }
