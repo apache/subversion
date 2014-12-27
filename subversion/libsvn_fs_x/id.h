@@ -57,13 +57,13 @@ svn_revnum_t svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set);
 
 /* Return the transaction ID that corresponds to CHANGE_SET.
    Will SVN_FS_X__INVALID_TXN_ID for revisions. */
-apr_int64_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
+svn_fs_x__txn_id_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
 
 /* Convert REVNUM into a change set number */
 svn_fs_x__change_set_t svn_fs_x__change_set_by_rev(svn_revnum_t revnum);
 
 /* Convert TXN_ID into a change set number */
-svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(apr_int64_t txn_id);
+svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(svn_fs_x__txn_id_t txn_id);
 
 /* A rev node ID in FSX consists of a 3 of sub-IDs ("parts") that consist
  * of a creation CHANGE_SET number and some revision-local counter value
