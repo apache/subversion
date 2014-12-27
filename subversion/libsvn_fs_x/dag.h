@@ -127,13 +127,6 @@ svn_error_t *
 svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
                           dag_node_t *node);
 
-/* Return the FS API node revision ID of NODE in *ID, allocated in
-   RESULT_POOL. */
-svn_error_t *
-svn_fs_x__dag_get_fs_id(const svn_fs_id_t **id,
-                        dag_node_t *node,
-                        apr_pool_t *result_pool);
-
 /* Set *SAME to TRUE, if nodes LHS and RHS have the same node ID. */
 svn_error_t *
 svn_fs_x__dag_related_node(svn_boolean_t *same,

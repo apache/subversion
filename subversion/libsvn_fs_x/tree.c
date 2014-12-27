@@ -1401,12 +1401,14 @@ add_change(svn_fs_t *fs,
 
 /* Get the id of a node referenced by path PATH in ROOT.  Return the
    id in *ID_P allocated in POOL. */
-svn_error_t *
-svn_fs_x__node_id(const svn_fs_id_t **id_p,
-                  svn_fs_root_t *root,
-                  const char *path,
-                  apr_pool_t *pool)
+static svn_error_t *
+x_node_id(const svn_fs_id_t **id_p,
+          svn_fs_root_t *root,
+          const char *path,
+          apr_pool_t *pool)
 {
+  const svn_fs_x__noderev_id_t *noderev_id;
+
   if ((! root->is_txn_root)
       && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
     {
@@ -1415,15 +1417,19 @@ svn_fs_x__node_id(const svn_fs_id_t **id_p,
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
       dag_node_t *root_dir = root->fsap_data;
-      SVN_ERR(svn_fs_x__dag_get_fs_id(id_p, root_dir, pool));
+      noderev_id = svn_fs_x__dag_get_id(root_dir);
     }
   else
     {
       dag_node_t *node;
 
       SVN_ERR(get_dag(&node, root, path, FALSE, pool));
-      SVN_ERR(svn_fs_x__dag_get_fs_id(id_p, node, pool));
+      noderev_id = svn_fs_x__dag_get_id(node);
     }
+
+  *id_p = svn_fs_x__id_create(svn_fs_x__id_create_context(root->fs, pool),
+                              noderev_id, pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -4204,7 +4210,7 @@ static root_vtable_t root_vtable = {
   x_paths_changed,
   svn_fs_x__check_path,
   x_node_history,
-  svn_fs_x__node_id,
+  x_node_id,
   x_node_relation,
   svn_fs_x__node_created_rev,
   x_node_origin_rev,
