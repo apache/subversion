@@ -1058,8 +1058,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"), dst_rel);
+        {
+          const char *path = svn_uri_skip_ancestor(repos_root,
+                                                   pair->dst_abspath_or_url,
+                                                   pool);
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                   _("Path '/%s' already exists"), path);
+        }
 
       /* More info for our INFO structure.  */
       info->src_path = src_rel;

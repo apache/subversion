@@ -70,12 +70,16 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
+def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile,
+                        bypass_prop_validation=False):
   """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
   by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
   SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
   re-dumped to do the match, which should generate the same dumpfile as
   dumping SVNRDUMP_SBOX."""
+
+  ### Note: The call from run_dump_test() passes the expected and actual
+  ### parameters in the opposite order to that implied by the parameter names.
 
   svnrdump_contents = svntest.actions.run_and_verify_dump(
                                                     svnrdump_sbox.repo_dir)
@@ -84,7 +88,8 @@ def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
   svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
   svntest.main.create_repos(svnadmin_sbox.repo_dir)
 
-  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile,
+                                      bypass_prop_validation)
 
   svnadmin_contents = svntest.actions.run_and_verify_dump(
                                                     svnadmin_sbox.repo_dir)
@@ -150,7 +155,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
       None)
 
   else:
-    compare_repos_dumps(sbox, svnadmin_dumpfile)
+    ### Note: This call passes the expected and actual parameters in the
+    ### opposite order to that implied by the parameter names.
+    compare_repos_dumps(sbox, svnrdump_dumpfile, bypass_prop_validation)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
@@ -799,6 +806,25 @@ def load_prop_change_in_non_deltas_dump(sbox):
                                           [], [], 0,
                                           '-q', 'load', sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def dump_mergeinfo_contains_r0(sbox):
+  "dump: mergeinfo that contains r0"
+  ### We pass the original dump file name as 'expected_dumpfile_name' because
+  ### run_dump_test is currently broken when we don't.
+  run_dump_test(sbox, "mergeinfo-contains-r0.dump",
+                bypass_prop_validation=True)
+
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4476)
+def load_mergeinfo_contains_r0(sbox):
+  "load: mergeinfo that contains r0"
+  run_load_test(sbox, "mergeinfo-contains-r0.dump",
+                expected_dumpfile_name="mergeinfo-contains-r0.expected.dump")
+
 
 ########################################################################
 # Run the tests
@@ -855,6 +881,8 @@ test_list = [ None,
               only_trunk_range_dump,
               only_trunk_A_range_dump,
               load_prop_change_in_non_deltas_dump,
+              dump_mergeinfo_contains_r0,
+              load_mergeinfo_contains_r0,
              ]
 
 if __name__ == '__main__':
