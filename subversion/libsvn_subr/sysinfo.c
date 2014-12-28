@@ -940,6 +940,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       if (!APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
+          CFRelease(resource);
           return NULL;
         }
       else
@@ -950,6 +951,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
           if (err)
             {
               svn_error_clear(err);
+              CFRelease(resource);
               return NULL;
             }
 
