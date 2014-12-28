@@ -2870,13 +2870,15 @@ fs_copied_from(svn_revnum_t *rev_p,
                apr_pool_t *pool)
 {
   dag_node_t *node;
+  const char *cpath;
 
   /* There is no cached entry, look it up the old-fashioned
       way. */
-  SVN_ERR(get_dag(&node, root, path, TRUE, pool));
+  SVN_ERR(get_dag(&node, root, path, FALSE, pool));
   SVN_ERR(svn_fs_fs__dag_get_copyfrom_rev(rev_p, node));
-  SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(path_p, node));
+  SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&cpath, node));
 
+  *path_p = apr_pstrdup(pool, cpath);
   return SVN_NO_ERROR;
 }
 
