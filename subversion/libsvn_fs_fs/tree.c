@@ -1559,8 +1559,8 @@ fs_node_created_path(const char **created_path,
 {
   dag_node_t *node;
 
-  SVN_ERR(get_dag(&node, root, path, TRUE, pool));
-  *created_path = svn_fs_fs__dag_get_created_path(node);
+  SVN_ERR(get_dag(&node, root, path, FALSE, pool));
+  *created_path = apr_pstrdup(pool, svn_fs_fs__dag_get_created_path(node));
 
   return SVN_NO_ERROR;
 }
@@ -1781,7 +1781,10 @@ fs_props_changed(svn_boolean_t *changed_p,
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
-  return get_dag(node, root, "/", TRUE, pool);
+  SVN_ERR(get_dag(node, root, "/", FALSE, pool));
+  *node = svn_fs_fs__dag_dup(*node, pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3984,6 +3987,9 @@ assemble_history(svn_fs_t *fs,
    POOL is used for temporary allocations, including the mergeinfo
    hashes passed to actions; RESULT_POOL is used for the mergeinfo added
    to RESULT_CATALOG.
+
+   Note that the DIR_DAG may become invalid as soon as another DAG node
+   is being fetched.
  */
 static svn_error_t *
 crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
@@ -3997,6 +4003,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  /* We won't need DIR_DAG after this call. */
   SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, scratch_pool));
   for (i = 0; i < entries->nelts; ++i)
     {
@@ -4007,9 +4014,11 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
       svn_pool_clear(iterpool);
 
+      /* This may invalidate DIR_DAG. */
       kid_path = svn_fspath__join(this_path, dirent->name, iterpool);
-      SVN_ERR(get_dag(&kid_dag, root, kid_path, TRUE, iterpool));
+      SVN_ERR(get_dag(&kid_dag, root, kid_path, FALSE, iterpool));
 
+      /* These are simple getters that won't invalidate KID_DAG. */
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag));
       SVN_ERR(svn_fs_fs__dag_has_descendants_with_mergeinfo(&go_down, kid_dag));
 
@@ -4021,6 +4030,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_string_t *mergeinfo_string;
           svn_error_t *err;
 
+          /* These is a simple getter that won't invalidate KID_DAG. */
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
           mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
@@ -4052,6 +4062,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
             }
         }
 
+      /* KID_DAG is still valid but may become invalid in this recursive call.
+       */
       if (go_down)
         SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
                                                   kid_path,
@@ -4254,7 +4266,9 @@ add_descendant_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
   dag_node_t *this_dag;
   svn_boolean_t go_down;
 
-  SVN_ERR(get_dag(&this_dag, root, path, TRUE, scratch_pool));
+  SVN_ERR(get_dag(&this_dag, root, path, FALSE, scratch_pool));
+
+  /* These is a simple getter that won't invalidate KID_DAG. */
   SVN_ERR(svn_fs_fs__dag_has_descendants_with_mergeinfo(&go_down,
                                                         this_dag));
   if (go_down)
