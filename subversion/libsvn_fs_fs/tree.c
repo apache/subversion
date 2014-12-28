@@ -3487,7 +3487,10 @@ fs_node_history(svn_fs_history_t **history_p,
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
    filesystem FS, and store the copyroot in *REV_P and *PATH_P.
-   Perform all allocations in POOL. */
+   Perform all allocations in POOL.
+
+   Note that *PATH_P will not be allocated in POOL but will be taken from
+   a DAG node in PARENT_PATH. */
 static svn_error_t *
 find_youngest_copyroot(svn_revnum_t *rev_p,
                        const char **path_p,
@@ -3552,7 +3555,7 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
      will indicate the target of the innermost copy affecting the
      node-rev. */
   SVN_ERR(find_youngest_copyroot(&copy_dst_rev, &copy_dst_path,
-                                 fs, parent_path, pool));
+                                 fs, parent_path, subpool));
   if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
     {
       svn_pool_destroy(subpool);
@@ -3608,7 +3611,7 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
 
   /* The copy destination checks out.  Return it. */
   *root_p = copy_dst_root;
-  *path_p = copy_dst_path;
+  *path_p = apr_pstrdup(pool, copy_dst_path);
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
