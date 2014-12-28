@@ -751,14 +751,14 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
                             apr_pool_t *pool)
 {
   apr_file_t *noderev_file;
-  const svn_fs_x__noderev_id_t *id = &noderev->noderev_id;
+  const svn_fs_x__id_t *id = &noderev->noderev_id;
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
   if (! svn_fs_x__is_txn(id->change_set))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Attempted to write to non-transaction '%s'"),
-                             svn_fs_x__id_part_unparse(id, pool)->data);
+                             svn_fs_x__id_unparse(id, pool)->data);
 
   SVN_ERR(svn_io_file_open(&noderev_file,
                            svn_fs_x__path_txn_node_rev(fs, id, pool),
@@ -825,7 +825,7 @@ unparse_dir_entry(dirent_t *dirent,
     = apr_psprintf(pool, "%s %s",
                    (dirent->kind == svn_node_file) ? SVN_FS_X__KIND_FILE
                                                    : SVN_FS_X__KIND_DIR,
-                   svn_fs_x__id_part_unparse(&dirent->id, pool)->data);
+                   svn_fs_x__id_unparse(&dirent->id, pool)->data);
 
   SVN_ERR(svn_stream_printf(stream, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
                             "V %" APR_SIZE_T_FMT "\n%s\n",
@@ -894,7 +894,7 @@ fold_change(apr_hash_t *changed_paths,
 
       /* Sanity check:  only allow unused node revision IDs in the
          `reset' case. */
-      if ((! svn_fs_x__id_part_used(&change->noderev_id))
+      if ((! svn_fs_x__id_used(&change->noderev_id))
            && (change->change_kind != svn_fs_path_change_reset))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -903,9 +903,8 @@ fold_change(apr_hash_t *changed_paths,
       /* Sanity check: we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if (svn_fs_x__id_part_used(&change->noderev_id)
-          && (! svn_fs_x__id_part_eq(&old_change->noderev_id,
-                                     &change->noderev_id))
+      if (svn_fs_x__id_used(&change->noderev_id)
+          && (!svn_fs_x__id_eq(&old_change->noderev_id, &change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -1127,7 +1126,7 @@ svn_fs_x__txn_changes_fetch(apr_hash_t **changed_paths_p,
 static svn_error_t *
 create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 svn_fs_x__txn_id_t txn_id,
-                                svn_fs_x__id_part_t *src,
+                                svn_fs_x__id_t *src,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -1227,7 +1226,7 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
 {
   svn_fs_txn_t *txn;
   fs_txn_data_t *ftd;
-  svn_fs_x__id_part_t root_id;
+  svn_fs_x__id_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
   ftd = apr_pcalloc(pool, sizeof(*ftd));
@@ -1386,7 +1385,7 @@ svn_fs_x__get_txn(transaction_t **txn_p,
 {
   transaction_t *txn;
   node_revision_t *noderev;
-  svn_fs_x__noderev_id_t root_id;
+  svn_fs_x__id_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
   txn->proplist = apr_hash_make(pool);
@@ -1554,7 +1553,7 @@ read_next_ids(apr_uint64_t *node_id,
    Node-ids are guaranteed to be unique to this transction, but may
    not necessarily be sequential.  Perform all allocations in POOL. */
 static svn_error_t *
-get_new_txn_node_id(svn_fs_x__id_part_t *node_id_p,
+get_new_txn_node_id(svn_fs_x__id_t *node_id_p,
                     svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
                     apr_pool_t *pool)
@@ -1573,7 +1572,7 @@ get_new_txn_node_id(svn_fs_x__id_part_t *node_id_p,
 }
 
 svn_error_t *
-svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
+svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
                           svn_fs_t *fs,
                           svn_fs_x__txn_id_t txn_id,
                           apr_pool_t *pool)
@@ -1594,7 +1593,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
 svn_error_t *
 svn_fs_x__create_node(svn_fs_t *fs,
                       node_revision_t *noderev,
-                      const svn_fs_x__id_part_t *copy_id,
+                      const svn_fs_x__id_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool)
 {
@@ -1662,7 +1661,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
                     node_revision_t *parent_noderev,
                     const char *name,
-                    const svn_fs_x__noderev_id_t *id,
+                    const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
                     apr_pool_t *pool)
 {
@@ -1708,7 +1707,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
   /* update directory cache */
     {
       /* build parameters: (name, new entry) pair */
-      const svn_fs_x__id_part_t *key = &(parent_noderev->noderev_id);
+      const svn_fs_x__id_t *key = &(parent_noderev->noderev_id);
       replace_baton_t baton;
 
       baton.name = name;
@@ -1754,7 +1753,7 @@ svn_error_t *
 svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_x__txn_id_t txn_id,
                      const char *path,
-                     const svn_fs_x__noderev_id_t *id,
+                     const svn_fs_x__id_t *id,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
@@ -1877,7 +1876,7 @@ shards_spanned(int *spanned,
   iterpool = svn_pool_create(pool);
   while (walk-- && noderev->predecessor_count)
     {
-      svn_fs_x__id_part_t id = noderev->predecessor_id;
+      svn_fs_x__id_t id = noderev->predecessor_id;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &id, pool, iterpool));
@@ -1965,7 +1964,7 @@ choose_delta_base(representation_t **rep,
   iterpool = svn_pool_create(pool);
   while ((count++) < noderev->predecessor_count)
     {
-      svn_fs_x__id_part_t id = noderev->predecessor_id;
+      svn_fs_x__id_t id = noderev->predecessor_id;
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_x__get_node_revision(&base, fs, &id, pool, iterpool));
     }
@@ -2334,7 +2333,7 @@ rep_write_contents_close(void *baton)
   if (!old_rep)
     {
       svn_fs_x__p2l_entry_t entry;
-      svn_fs_x__id_part_t noderev_id;
+      svn_fs_x__id_t noderev_id;
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
       noderev_id.number = rep->id.number;
 
@@ -2373,8 +2372,8 @@ set_representation(svn_stream_t **contents_p,
   if (! svn_fs_x__is_txn(noderev->noderev_id.change_set))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Attempted to write to non-transaction '%s'"),
-                             svn_fs_x__id_part_unparse(&noderev->noderev_id,
-                                                       pool)->data);
+                             svn_fs_x__id_unparse(&noderev->noderev_id,
+                                                  pool)->data);
 
   SVN_ERR(rep_write_get_baton(&wb, fs, noderev, pool));
 
@@ -2401,7 +2400,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
 svn_error_t *
 svn_fs_x__create_successor(svn_fs_t *fs,
                            node_revision_t *new_noderev,
-                           const svn_fs_x__id_part_t *copy_id,
+                           const svn_fs_x__id_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool)
 {
@@ -2429,7 +2428,7 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
                        apr_hash_t *proplist,
                        apr_pool_t *pool)
 {
-  const svn_fs_x__noderev_id_t *id = &noderev->noderev_id;
+  const svn_fs_x__id_t *id = &noderev->noderev_id;
   const char *filename = svn_fs_x__path_txn_node_props(fs, id, pool);
   apr_file_t *file;
   svn_stream_t *out;
@@ -2637,7 +2636,7 @@ write_container_delta_rep(representation_t *rep,
     }
   else
     {
-      svn_fs_x__id_part_t noderev_id;
+      svn_fs_x__id_t noderev_id;
 
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_fs_x__get_file_offset(&rep_end, file, scratch_pool));
@@ -2688,7 +2687,7 @@ validate_root_noderev(svn_fs_t *fs,
 
   /* Compute HEAD_PREDECESSOR_COUNT. */
   {
-    svn_fs_x__noderev_id_t head_root_id;
+    svn_fs_x__id_t head_root_id;
     node_revision_t *head_root_noderev;
 
     /* Get /@HEAD's noderev. */
@@ -2732,7 +2731,7 @@ validate_root_noderev(svn_fs_t *fs,
  * based on the REVISION.
  */
 static void
-get_final_id(svn_fs_x__id_part_t *part,
+get_final_id(svn_fs_x__id_t *part,
              svn_revnum_t revision)
 {
   if (!svn_fs_x__is_revision(part->change_set))
@@ -2766,11 +2765,11 @@ get_final_id(svn_fs_x__id_part_t *part,
 
    Temporary allocations are also from POOL. */
 static svn_error_t *
-write_final_rev(svn_fs_x__noderev_id_t *new_id_p,
+write_final_rev(svn_fs_x__id_t *new_id_p,
                 apr_file_t *file,
                 svn_revnum_t rev,
                 svn_fs_t *fs,
-                const svn_fs_x__noderev_id_t *id,
+                const svn_fs_x__id_t *id,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_hash_t *reps_hash,
@@ -2780,8 +2779,8 @@ write_final_rev(svn_fs_x__noderev_id_t *new_id_p,
 {
   node_revision_t *noderev;
   apr_off_t my_offset;
-  svn_fs_x__noderev_id_t new_id;
-  svn_fs_x__id_part_t noderev_id;
+  svn_fs_x__id_t new_id;
+  svn_fs_x__id_t noderev_id;
   fs_x_data_t *ffd = fs->fsap_data;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__get_txn_id(id->change_set);
   svn_fs_x__p2l_entry_t entry;
@@ -2792,7 +2791,7 @@ write_final_rev(svn_fs_x__noderev_id_t *new_id_p,
   /* Check to see if this is a transaction node. */
   if (txn_id == SVN_FS_X__INVALID_TXN_ID)
     {
-      svn_fs_x__id_part_reset(new_id_p);
+      svn_fs_x__id_reset(new_id_p);
       return SVN_NO_ERROR;
     }
 
@@ -2816,7 +2815,7 @@ write_final_rev(svn_fs_x__noderev_id_t *new_id_p,
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, &dirent->id,
                                   initial_offset, reps_to_cache, reps_hash,
                                   reps_pool, FALSE, subpool));
-          if (   svn_fs_x__id_part_used(&new_id)
+          if (   svn_fs_x__id_used(&new_id)
               && (svn_fs_x__get_revnum(new_id.change_set) == rev))
             dirent->id = new_id;
         }
@@ -2967,7 +2966,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
   apr_off_t offset;
   svn_stream_t *stream;
   svn_fs_x__p2l_entry_t entry;
-  svn_fs_x__id_part_t rev_item
+  svn_fs_x__id_t rev_item
     = {SVN_INVALID_REVNUM, SVN_FS_X__ITEM_INDEX_CHANGES};
 
   SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
@@ -3238,7 +3237,7 @@ commit_body(void *baton, apr_pool_t *pool)
   fs_x_data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
-  svn_fs_x__id_part_t root_id, new_root_id;
+  svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
@@ -3565,7 +3564,7 @@ svn_fs_x__txn_proplist(apr_hash_t **table_p,
 
 svn_error_t *
 svn_fs_x__delete_node_revision(svn_fs_t *fs,
-                               const svn_fs_x__noderev_id_t *id,
+                               const svn_fs_x__id_t *id,
                                apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -3583,7 +3582,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       && noderev->kind == svn_node_dir)
     {
       fs_x_data_t *ffd = fs->fsap_data;
-      const svn_fs_x__id_part_t *key = id;
+      const svn_fs_x__id_t *key = id;
 
       SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_children(fs, id,
                                                                    pool),

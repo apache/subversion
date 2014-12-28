@@ -327,7 +327,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
 static svn_error_t *
 read_rep_offsets(representation_t **rep_p,
                  char *string,
-                 const svn_fs_x__noderev_id_t *noderev_id,
+                 const svn_fs_x__id_t *noderev_id,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -342,7 +342,7 @@ read_rep_offsets(representation_t **rep_p,
       const svn_string_t *id_unparsed;
       const char *where;
 
-      id_unparsed = svn_fs_x__id_part_unparse(noderev_id, scratch_pool);
+      id_unparsed = svn_fs_x__id_unparse(noderev_id, scratch_pool);
       where = apr_psprintf(scratch_pool,
                            _("While reading representation offsets "
                              "for node-revision '%s':"),
@@ -408,7 +408,7 @@ auto_unescape_path(const char *path,
 
 /* Find entry HEADER_NAME in HEADERS and parse its value into *ID. */
 static svn_error_t *
-read_id_part(svn_fs_x__id_part_t *id,
+read_id_part(svn_fs_x__id_t *id,
              apr_hash_t *headers,
              const char *header_name)
 {
@@ -418,7 +418,7 @@ read_id_part(svn_fs_x__id_part_t *id,
                              _("Missing %s field in node-rev"),
                              header_name);
 
-  SVN_ERR(svn_fs_x__id_part_parse(id, value));
+  SVN_ERR(svn_fs_x__id_parse(id, value));
   return SVN_NO_ERROR;
 }
 
@@ -509,9 +509,9 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   /* Get the predecessor ID. */
   value = svn_hash_gets(headers, HEADER_PRED);
   if (value)
-    SVN_ERR(svn_fs_x__id_part_parse(&noderev->predecessor_id, value));
+    SVN_ERR(svn_fs_x__id_parse(&noderev->predecessor_id, value));
   else
-    svn_fs_x__id_part_reset(&noderev->predecessor_id);
+    svn_fs_x__id_reset(&noderev->predecessor_id);
 
   /* Get the copyroot. */
   value = svn_hash_gets(headers, HEADER_COPYROOT);
@@ -630,13 +630,13 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
 {
   svn_string_t *str_id;
 
-  str_id = svn_fs_x__id_part_unparse(&noderev->noderev_id, scratch_pool);
+  str_id = svn_fs_x__id_unparse(&noderev->noderev_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_ID ": %s\n",
                             str_id->data));
-  str_id = svn_fs_x__id_part_unparse(&noderev->node_id, scratch_pool);
+  str_id = svn_fs_x__id_unparse(&noderev->node_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_NODE ": %s\n",
                             str_id->data));
-  str_id = svn_fs_x__id_part_unparse(&noderev->copy_id, scratch_pool);
+  str_id = svn_fs_x__id_unparse(&noderev->copy_id, scratch_pool);
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COPY ": %s\n",
                             str_id->data));
 
@@ -644,10 +644,10 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                             (noderev->kind == svn_node_file) ?
                             SVN_FS_X__KIND_FILE : SVN_FS_X__KIND_DIR));
 
-  if (svn_fs_x__id_part_used(&noderev->predecessor_id))
+  if (svn_fs_x__id_used(&noderev->predecessor_id))
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_PRED ": %s\n",
-                          svn_fs_x__id_part_unparse(&noderev->predecessor_id,
-                                                    scratch_pool)->data));
+                              svn_fs_x__id_unparse(&noderev->predecessor_id,
+                                                   scratch_pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_COUNT ": %d\n",
                             noderev->predecessor_count));
@@ -805,7 +805,7 @@ read_change(change_t **change_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid changes line in rev-file"));
 
-  SVN_ERR(svn_fs_x__id_part_parse(&change->noderev_id, str));
+  SVN_ERR(svn_fs_x__id_parse(&change->noderev_id, str));
 
   /* Get the change type. */
   str = svn_cstring_tokenize(" ", &last_str);
@@ -1047,7 +1047,7 @@ write_change_entry(svn_stream_t *stream,
                                change->change_kind);
     }
 
-  idstr = svn_fs_x__id_part_unparse(&change->noderev_id, scratch_pool)->data;
+  idstr = svn_fs_x__id_unparse(&change->noderev_id, scratch_pool)->data;
 
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                  || change->node_kind == svn_node_file);

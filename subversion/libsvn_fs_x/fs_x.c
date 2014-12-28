@@ -708,7 +708,7 @@ svn_fs_x__file_text_rep_equal(representation_t *a,
 
   /* Same physical representation?  Note that these IDs are always up-to-date
      instead of e.g. being set lazily. */
-  if (svn_fs_x__id_part_eq(&a->id, &b->id))
+  if (svn_fs_x__id_eq(&a->id, &b->id))
     return TRUE;
 
   /* Contents are equal if the checksums match.  These are also always known.
@@ -750,7 +750,7 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
     }
 
   /* Same path in same txn? */
-  if (svn_fs_x__id_part_eq(&a->noderev_id, &b->noderev_id))
+  if (svn_fs_x__id_eq(&a->noderev_id, &b->noderev_id))
     {
       *equal = TRUE;
       return SVN_NO_ERROR;

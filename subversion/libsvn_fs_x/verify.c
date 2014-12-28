@@ -258,8 +258,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
         {
           apr_off_t offset;
           apr_uint32_t sub_item;
-          svn_fs_x__id_part_t l2p_item;
-          svn_fs_x__id_part_t *p2l_item;
+          svn_fs_x__id_t l2p_item;
+          svn_fs_x__id_t *p2l_item;
 
           l2p_item.change_set = svn_fs_x__change_set_by_rev(revision);
           l2p_item.number = k;
@@ -284,7 +284,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                      apr_off_t_toa(pool, offset),
                                      (long)sub_item, revision, (long)k);
 
-          if (!svn_fs_x__id_part_eq(&l2p_item, p2l_item))
+          if (!svn_fs_x__id_eq(&l2p_item, p2l_item))
             return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
                                      NULL,
                                      _("p2l index info LOG r%ld:i%ld"
@@ -373,7 +373,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
             {
               apr_off_t l2p_offset;
               apr_uint32_t sub_item;
-              svn_fs_x__id_part_t *p2l_item = &entry->items[k];
+              svn_fs_x__id_t *p2l_item = &entry->items[k];
               svn_revnum_t revision
                 = svn_fs_x__get_revnum(p2l_item->change_set);
 

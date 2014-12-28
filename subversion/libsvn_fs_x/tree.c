@@ -815,7 +815,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
                      parent_path_t *child,
                      apr_pool_t *pool)
 {
-  svn_fs_x__id_part_t child_copy_id, parent_copy_id;
+  svn_fs_x__id_t child_copy_id, parent_copy_id;
   svn_boolean_t related;
   const char *id_path = NULL;
   svn_fs_root_t *copyroot_root;
@@ -844,14 +844,14 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
 
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
-  if (svn_fs_x__id_part_is_root(&child_copy_id))
+  if (svn_fs_x__id_is_root(&child_copy_id))
     return SVN_NO_ERROR;
 
   /* Compare the copy IDs of the child and its parent.  If they are
      the same, then the child is already on the same branch as the
      parent, and should use the same mutability copy ID that the
      parent will use. */
-  if (svn_fs_x__id_part_eq(&child_copy_id, &parent_copy_id))
+  if (svn_fs_x__id_eq(&child_copy_id, &parent_copy_id))
     return SVN_NO_ERROR;
 
   /* If the child is on the same branch that the parent is on, the
@@ -1234,8 +1234,8 @@ make_path_mutable(svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      svn_fs_x__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
-      svn_fs_x__id_part_t *copy_id_ptr = &copy_id;
+      svn_fs_x__id_t copy_id = { SVN_INVALID_REVNUM, 0 };
+      svn_fs_x__id_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
       const char *clone_path, *copyroot_path;
       svn_revnum_t copyroot_rev;
@@ -1377,7 +1377,7 @@ static svn_error_t *
 add_change(svn_fs_t *fs,
            svn_fs_x__txn_id_t txn_id,
            const char *path,
-           const svn_fs_x__noderev_id_t *noderev_id,
+           const svn_fs_x__id_t *noderev_id,
            svn_fs_path_change_kind_t change_kind,
            svn_boolean_t text_mod,
            svn_boolean_t prop_mod,
@@ -1407,7 +1407,7 @@ x_node_id(const svn_fs_id_t **id_p,
           const char *path,
           apr_pool_t *pool)
 {
-  const svn_fs_x__noderev_id_t *noderev_id;
+  const svn_fs_x__id_t *noderev_id;
 
   if ((! root->is_txn_root)
       && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
@@ -1440,7 +1440,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
                 apr_pool_t *pool)
 {
   dag_node_t *node;
-  svn_fs_x__id_part_t noderev_id_a, noderev_id_b, node_id_a, node_id_b;
+  svn_fs_x__id_t noderev_id_a, noderev_id_b, node_id_a, node_id_b;
 
   /* Root paths are a common special case. */
   svn_boolean_t a_is_root_dir
@@ -1483,9 +1483,9 @@ x_node_relation(svn_fs_node_relation_t *relation,
   noderev_id_b = *svn_fs_x__dag_get_id(node);
   SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
 
-  if (svn_fs_x__id_part_eq(&noderev_id_a, &noderev_id_b))
+  if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
-  else if (svn_fs_x__id_part_eq(&node_id_a, &node_id_b))
+  else if (svn_fs_x__id_eq(&node_id_a, &node_id_b))
     *relation = svn_fs_node_common_ancestor;
   else
     *relation = svn_fs_node_unrelated;
@@ -1786,7 +1786,7 @@ compare_dir_structure(svn_boolean_t *changed,
           dag_node_t *lhs_node, *rhs_node;
 
           /* Unchanged entry? */
-          if (!svn_fs_x__id_part_eq(&lhs_entry->id, &rhs_entry->id))
+          if (!svn_fs_x__id_eq(&lhs_entry->id, &rhs_entry->id))
             continue;
 
           /* We get here rarely. */
@@ -1846,7 +1846,7 @@ merge(svn_stringbuf_t *conflict_p,
       apr_int64_t *mergeinfo_increment_out,
       apr_pool_t *pool)
 {
-  const svn_fs_x__noderev_id_t *source_id, *target_id, *ancestor_id;
+  const svn_fs_x__id_t *source_id, *target_id, *ancestor_id;
   apr_array_header_t *s_entries, *t_entries, *a_entries;
   int i, s_idx = -1, t_idx = -1;
   svn_fs_t *fs;
@@ -1871,9 +1871,9 @@ merge(svn_stringbuf_t *conflict_p,
   ancestor_id = svn_fs_x__dag_get_id(ancestor);
 
   /* It's improper to call this function with ancestor == target. */
-  if (svn_fs_x__id_part_eq(ancestor_id, target_id))
+  if (svn_fs_x__id_eq(ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_x__id_part_unparse(target_id, pool);
+      svn_string_t *id_str = svn_fs_x__id_unparse(target_id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
          _("Bad merge; target '%s' has id '%s', same as ancestor"),
@@ -1886,8 +1886,8 @@ merge(svn_stringbuf_t *conflict_p,
    * Either no change made in source, or same change as made in target.
    * Both mean nothing to merge here.
    */
-  if (svn_fs_x__id_part_eq(ancestor_id, source_id)
-      || (svn_fs_x__id_part_eq(source_id, target_id)))
+  if (svn_fs_x__id_eq(ancestor_id, source_id)
+      || (svn_fs_x__id_eq(source_id, target_id)))
     return SVN_NO_ERROR;
 
   /* Else proceed, knowing all three are distinct node revisions.
@@ -2033,12 +2033,12 @@ merge(svn_stringbuf_t *conflict_p,
 
       /* No changes were made to this entry while the transaction was
          in progress, so do nothing to the target. */
-      if (s_entry && svn_fs_x__id_part_eq(&a_entry->id, &s_entry->id))
+      if (s_entry && svn_fs_x__id_eq(&a_entry->id, &s_entry->id))
         continue;
 
       /* A change was made to this entry while the transaction was in
          process, but the transaction did not touch this entry. */
-      else if (t_entry && svn_fs_x__id_part_eq(&a_entry->id, &t_entry->id))
+      else if (t_entry && svn_fs_x__id_eq(&a_entry->id, &t_entry->id))
         {
           apr_int64_t mergeinfo_start;
           apr_int64_t mergeinfo_end;
@@ -2676,8 +2676,8 @@ copy_helper(svn_fs_root_t *from_root,
      happening at all), just do nothing an return successfully,
      proud that you saved yourself from a tiresome task. */
   if (to_parent_path->node &&
-      svn_fs_x__id_part_eq(svn_fs_x__dag_get_id(from_node),
-                           svn_fs_x__dag_get_id(to_parent_path->node)))
+      svn_fs_x__id_eq(svn_fs_x__dag_get_id(from_node),
+                      svn_fs_x__dag_get_id(to_parent_path->node)))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -3542,9 +3542,9 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
   created_rev = svn_fs_x__dag_get_revision(copy_dst_node);
   if (created_rev == copy_dst_rev)
     {
-      svn_fs_x__noderev_id_t pred;
+      svn_fs_x__id_t pred;
       SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node));
-      if (!svn_fs_x__id_part_used(&pred))
+      if (!svn_fs_x__id_used(&pred))
         return SVN_NO_ERROR;
     }
 
@@ -3561,7 +3561,7 @@ x_node_origin_rev(svn_revnum_t *revision,
                   const char *path,
                   apr_pool_t *pool)
 {
-  svn_fs_x__id_part_t node_id;
+  svn_fs_x__id_t node_id;
   dag_node_t *node;
 
   path = svn_fs__canonicalize_abspath(path, pool);
@@ -3643,10 +3643,10 @@ history_prev(svn_fs_history_t **prev_history,
           /* ... or we *have* reported on this revision, and must now
              progress toward this node's predecessor (unless there is
              no predecessor, in which case we're all done!). */
-          svn_fs_x__noderev_id_t pred_id;
+          svn_fs_x__id_t pred_id;
 
           SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, node));
-          if (!svn_fs_x__id_part_used(&pred_id))
+          if (!svn_fs_x__id_used(&pred_id))
             return SVN_NO_ERROR;
 
           /* Replace NODE and friends with the information from its
@@ -3883,7 +3883,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           if (!mergeinfo_string)
             {
               svn_string_t *idstr
-                = svn_fs_x__id_part_unparse(&dirent->id, iterpool);
+                = svn_fs_x__id_unparse(&dirent->id, iterpool);
               return svn_error_createf
                 (SVN_ERR_FS_CORRUPT, NULL,
                  _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
@@ -4321,7 +4321,7 @@ stringify_node(dag_node_t *node,
                apr_pool_t *pool)
 {
   /* ### TODO: print some PATH@REV to it, too. */
-  return svn_fs_x__id_part_unparse(svn_fs_x__dag_get_id(node), pool)->data;
+  return svn_fs_x__id_unparse(svn_fs_x__dag_get_id(node), pool)->data;
 }
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
@@ -4336,7 +4336,7 @@ verify_node(dag_node_t *node,
 {
   svn_boolean_t has_mergeinfo;
   apr_int64_t mergeinfo_count;
-  svn_fs_x__noderev_id_t pred_id;
+  svn_fs_x__id_t pred_id;
   svn_fs_t *fs = svn_fs_x__dag_get_fs(node);
   int pred_count;
   svn_node_kind_t kind;
@@ -4347,8 +4347,8 @@ verify_node(dag_node_t *node,
   for (i = 0; i < parent_nodes->nelts; ++i)
     {
       dag_node_t *parent = APR_ARRAY_IDX(parent_nodes, i, dag_node_t *);
-      if (svn_fs_x__id_part_eq(svn_fs_x__dag_get_id(parent),
-                               svn_fs_x__dag_get_id(node)))
+      if (svn_fs_x__id_eq(svn_fs_x__dag_get_id(parent),
+                          svn_fs_x__dag_get_id(node)))
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                 "Node is its own direct or indirect parent '%s'",
                                 stringify_node(node, iterpool));
@@ -4369,7 +4369,7 @@ verify_node(dag_node_t *node,
                              mergeinfo_count, stringify_node(node, iterpool));
 
   /* Issue #4129. (This check will explicitly catch non-root instances too.) */
-  if (svn_fs_x__id_part_used(&pred_id))
+  if (svn_fs_x__id_used(&pred_id))
     {
       dag_node_t *pred;
       int pred_pred_count;
@@ -4490,20 +4490,20 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
 
   /* Verify explicitly the predecessor of the root. */
   {
-    svn_fs_x__noderev_id_t pred_id;
+    svn_fs_x__id_t pred_id;
     svn_boolean_t has_predecessor;
 
     /* Only r0 should have no predecessor. */
     SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred_id, root_dir));
-    has_predecessor = svn_fs_x__id_part_used(&pred_id);
+    has_predecessor = svn_fs_x__id_used(&pred_id);
     if (!root->is_txn_root && has_predecessor != !!root->rev)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "r%ld's root node's predecessor is "
                                "unexpectedly '%s'",
                                root->rev,
                                (has_predecessor
-                                ? svn_fs_x__id_part_unparse(&pred_id, pool)->data
-                                : "(null)"));
+                                 ? svn_fs_x__id_unparse(&pred_id, pool)->data
+                                 : "(null)"));
     if (root->is_txn_root && !has_predecessor)
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "Transaction '%s''s root node's predecessor is "
