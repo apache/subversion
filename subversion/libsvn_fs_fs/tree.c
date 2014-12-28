@@ -1084,6 +1084,9 @@ open_path(parent_path_t **parent_path_p,
               parent_path->copy_inherit = copy_id_inherit_self;
               *parent_path_p = parent_path;
 
+              /* We did not use dag_node_cache_get(). Lock manually. */
+              lock_cache(ffd->dag_node_cache, pool);
+
               return SVN_NO_ERROR;
             }
         }
