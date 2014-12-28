@@ -948,7 +948,12 @@ typedef enum open_path_flags_t {
 
   /* The caller wants a NULL path object instead of an error if the
      path cannot be found. */
-  open_path_allow_null = 8
+  open_path_allow_null = 8,
+  
+  /* The caller wants a DAG nodes returned to be locked in the cache,
+     i.e. they shall remain valid until the caller's pool gets cleared.
+     This flag is implied if open_path_node_only is not set. */
+  open_path_needs_lock = 16
 } open_path_flags_t;
 
 /* Try a short-cut for the open_path() function using the last node accessed.
@@ -1050,6 +1055,12 @@ open_path(parent_path_t **parent_path_p,
   svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
   apr_size_t path_len = path_so_far->len;
 
+  /* We usually need to lock the DAG nodes returned in the cache because
+     there is more than one of them in the parent path returned.  Only if
+     we want a single node, we may consider not locking it in cache. */
+  svn_boolean_t need_lock_cache = (   !(flags & open_path_node_only)
+                                   || (flags & open_path_needs_lock));
+
   /* Callers often traverse the DAG in some path-based order or along the
      history segments.  That allows us to try a few guesses about where to
      find the next item.  This is only useful if the caller didn't request
@@ -1085,7 +1096,11 @@ open_path(parent_path_t **parent_path_p,
               *parent_path_p = parent_path;
 
               /* We did not use dag_node_cache_get(). Lock manually. */
-              lock_cache(ffd->dag_node_cache, pool);
+              if (need_lock_cache)
+                {
+                  fs_fs_data_t *ffd = fs->fsap_data;
+                  lock_cache(ffd->dag_node_cache, pool);
+                }
 
               return SVN_NO_ERROR;
             }
@@ -1097,7 +1112,8 @@ open_path(parent_path_t **parent_path_p,
       directory = svn_dirent_dirname(path, pool);
       if (directory[1] != 0) /* root nodes are covered anyway */
         {
-          SVN_ERR(dag_node_cache_get(&here, root, directory, TRUE, pool));
+          SVN_ERR(dag_node_cache_get(&here, root, directory, need_lock_cache,
+                                     pool));
 
           /* Did the shortcut work? */
           if (here)
@@ -1164,7 +1180,7 @@ open_path(parent_path_t **parent_path_p,
              complete path. */
           if (next || !(flags & open_path_uncached))
             SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far->data,
-                                       TRUE, pool));
+                                       need_lock_cache, pool));
           if (cached_node)
             child = cached_node;
           else
@@ -1374,11 +1390,13 @@ get_dag(dag_node_t **dag_node_p,
 
       if (! node)
         {
-          /* Call open_path with no flags, as we want this to return an
-           * error if the node for which we are searching doesn't exist. */
-          SVN_ERR(open_path(&parent_path, root, path,
-                            open_path_uncached | open_path_node_only,
-                            FALSE, pool));
+          /* Select the options (optimizations) for open_path. */
+          int flags = (  needs_lock_cache
+                       ? open_path_uncached | open_path_node_only
+                           | open_path_needs_lock
+                       : open_path_uncached | open_path_node_only);
+
+          SVN_ERR(open_path(&parent_path, root, path, flags, FALSE, pool));
           node = parent_path->node;
 
           /* No need to cache our find -- open_path() will do that for us. */
