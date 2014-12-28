@@ -125,7 +125,7 @@ svn_fs_x__get_txn(transaction_t **txn_p,
 /* Return the next available copy_id in *COPY_ID for the transaction
    TXN_ID in filesystem FS.  Allocate space in POOL. */
 svn_error_t *
-svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
+svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
                           svn_fs_t *fs,
                           svn_fs_x__txn_id_t txn_id,
                           apr_pool_t *pool);
@@ -137,7 +137,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
 svn_error_t *
 svn_fs_x__create_node(svn_fs_t *fs,
                       node_revision_t *noderev,
-                      const svn_fs_x__id_part_t *copy_id,
+                      const svn_fs_x__id_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool);
 
@@ -162,7 +162,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
                     node_revision_t *parent_noderev,
                     const char *name,
-                    const svn_fs_x__noderev_id_t *id,
+                    const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
                     apr_pool_t *pool);
 
@@ -178,7 +178,7 @@ svn_error_t *
 svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_x__txn_id_t txn_id,
                      const char *path,
-                     const svn_fs_x__noderev_id_t *id,
+                     const svn_fs_x__id_t *id,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
@@ -212,7 +212,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
 svn_error_t *
 svn_fs_x__create_successor(svn_fs_t *fs,
                            node_revision_t *new_noderev,
-                           const svn_fs_x__id_part_t *copy_id,
+                           const svn_fs_x__id_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool);
 
@@ -275,7 +275,7 @@ svn_fs_x__txn_proplist(apr_hash_t **table_p,
    temporary allocations in POOL. */
 svn_error_t *
 svn_fs_x__delete_node_revision(svn_fs_t *fs,
-                               const svn_fs_x__noderev_id_t *id,
+                               const svn_fs_x__id_t *id,
                                apr_pool_t *pool);
 
 /* Retrieve information about the Subversion transaction SVN_TXN from

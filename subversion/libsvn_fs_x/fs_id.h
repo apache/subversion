@@ -52,7 +52,7 @@ svn_fs_x__id_create_context(svn_fs_t *fs,
  */
 svn_fs_id_t *
 svn_fs_x__id_create(svn_fs_x__id_context_t *context,
-                    const svn_fs_x__id_part_t *noderev_id,
+                    const svn_fs_x__id_t *noderev_id,
                     apr_pool_t *result_pool);
 
 #ifdef __cplusplus

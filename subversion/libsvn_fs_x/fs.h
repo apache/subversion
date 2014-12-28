@@ -458,7 +458,7 @@ typedef struct representation_t
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Change set and item number where this representation is located. */
-  svn_fs_x__id_part_t id;
+  svn_fs_x__id_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -480,16 +480,16 @@ typedef struct node_revision_t
 
   /* Predecessor node revision id.  Will be "unused" if there is no
      predecessor for this node revision. */
-  svn_fs_x__id_part_t predecessor_id;
+  svn_fs_x__id_t predecessor_id;
 
   /* The ID of this noderev */
-  svn_fs_x__noderev_id_t noderev_id;
+  svn_fs_x__id_t noderev_id;
 
   /* Identifier of the node that this noderev belongs to. */
-  svn_fs_x__id_part_t node_id;
+  svn_fs_x__id_t node_id;
 
   /* Copy identifier of this line of history. */
-  svn_fs_x__id_part_t copy_id;
+  svn_fs_x__id_t copy_id;
 
   /* If this node-rev is a copy, where was it copied from? */
   const char *copyfrom_path;
@@ -536,7 +536,7 @@ typedef struct dirent_t
   const char *name;
 
   /** The node revision ID it names.  */
-  svn_fs_x__noderev_id_t id;
+  svn_fs_x__id_t id;
 
   /** The node kind. */
   svn_node_kind_t kind;
@@ -550,7 +550,7 @@ typedef struct change_t
   svn_string_t path;
 
   /* node revision id of changed path */
-  svn_fs_x__noderev_id_t noderev_id;
+  svn_fs_x__id_t noderev_id;
 
   /* See svn_fs_path_change2_t for a description for the remaining elements.
    */

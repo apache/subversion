@@ -77,7 +77,7 @@ svn_fs_x__change_set_by_txn(apr_int64_t txn_id)
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  * Return TRUE if no errors were detected. */
 static svn_boolean_t
-part_parse(svn_fs_x__id_part_t *part,
+part_parse(svn_fs_x__id_t *part,
            const char *data)
 {
   part->number = svn__base36toui64(&data, data);
@@ -101,7 +101,7 @@ part_parse(svn_fs_x__id_part_t *part,
  */
 static char *
 part_unparse(char *p,
-             const svn_fs_x__id_part_t *part)
+             const svn_fs_x__id_t *part)
 {
   p += svn__ui64tobase36(p, part->number);
   if (part->change_set >= 0)
@@ -123,21 +123,21 @@ part_unparse(char *p,
 /* Operations on ID parts */
 
 svn_boolean_t
-svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t* part)
+svn_fs_x__id_is_root(const svn_fs_x__id_t* part)
 {
   return part->change_set == 0 && part->number == 0;
 }
 
 svn_boolean_t
-svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
-                     const svn_fs_x__id_part_t *rhs)
+svn_fs_x__id_eq(const svn_fs_x__id_t *lhs,
+                const svn_fs_x__id_t *rhs)
 {
   return lhs->change_set == rhs->change_set && lhs->number == rhs->number;
 }
 
 svn_error_t *
-svn_fs_x__id_part_parse(svn_fs_x__id_part_t *part,
-                        const char *data)
+svn_fs_x__id_parse(svn_fs_x__id_t *part,
+                   const char *data)
 {
   if (!part_parse(part, data))
     return svn_error_createf(SVN_ERR_FS_MALFORMED_NODEREV_ID, NULL,
@@ -147,8 +147,8 @@ svn_fs_x__id_part_parse(svn_fs_x__id_part_t *part,
 }
 
 svn_string_t *
-svn_fs_x__id_part_unparse(const svn_fs_x__id_part_t *id,
-                          apr_pool_t *pool)
+svn_fs_x__id_unparse(const svn_fs_x__id_t *id,
+                     apr_pool_t *pool)
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = part_unparse(string, id);
@@ -157,20 +157,20 @@ svn_fs_x__id_part_unparse(const svn_fs_x__id_part_t *id,
 }
 
 void
-svn_fs_x__id_part_reset(svn_fs_x__id_part_t *part)
+svn_fs_x__id_reset(svn_fs_x__id_t *part)
 {
   part->change_set = SVN_FS_X__INVALID_CHANGE_SET;
   part->number = 0;
 }
 
 svn_boolean_t
-svn_fs_x__id_part_used(const svn_fs_x__id_part_t *part)
+svn_fs_x__id_used(const svn_fs_x__id_t *part)
 {
   return part->change_set != SVN_FS_X__INVALID_CHANGE_SET;
 }
 
 void
-svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
+svn_fs_x__init_txn_root(svn_fs_x__id_t *noderev_id,
                         svn_fs_x__txn_id_t txn_id)
 {
   noderev_id->change_set = svn_fs_x__change_set_by_txn(txn_id);
@@ -178,7 +178,7 @@ svn_fs_x__init_txn_root(svn_fs_x__noderev_id_t *noderev_id,
 }
 
 void
-svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
+svn_fs_x__init_rev_root(svn_fs_x__id_t *noderev_id,
                         svn_revnum_t rev)
 {
   noderev_id->change_set = svn_fs_x__change_set_by_rev(rev);
@@ -186,8 +186,8 @@ svn_fs_x__init_rev_root(svn_fs_x__noderev_id_t *noderev_id,
 }
 
 int
-svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
-                          const svn_fs_x__id_part_t *b)
+svn_fs_x__id_compare(const svn_fs_x__id_t *a,
+                     const svn_fs_x__id_t *b)
 {
   if (a->change_set < b->change_set)
     return -1;

@@ -79,7 +79,7 @@ typedef struct binary_change_t
 
   /* Relevant parts of the node revision ID of the change.
    * Empty, if REV_ID is not "used". */
-  svn_fs_x__id_part_t noderev_id;
+  svn_fs_x__id_t noderev_id;
 
 } binary_change_t;
 

@@ -52,7 +52,7 @@
 static svn_error_t *
 block_read(void **result,
            svn_fs_t *fs,
-           const svn_fs_x__id_part_t *id,
+           const svn_fs_x__id_t *id,
            svn_fs_x__revision_file_t *revision_file,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool);
@@ -68,7 +68,7 @@ block_read(void **result,
  */
 static svn_error_t *
 dgb__log_access(svn_fs_t *fs,
-                const svn_fs_x__id_part_t *id,
+                const svn_fs_x__id_t *id,
                 void *item,
                 apr_uint32_t item_type,
                 apr_pool_t *scratch_pool)
@@ -194,7 +194,7 @@ aligned_seek(svn_fs_t *fs,
 static svn_error_t *
 open_and_seek_revision(svn_fs_x__revision_file_t **file,
                        svn_fs_t *fs,
-                       const svn_fs_x__id_part_t *id,
+                       const svn_fs_x__id_t *id,
                        apr_pool_t *pool)
 {
   svn_fs_x__revision_file_t *rev_file;
@@ -254,9 +254,9 @@ open_and_seek_representation(svn_fs_x__revision_file_t **file_p,
 
 static svn_error_t *
 err_dangling_id(svn_fs_t *fs,
-                const svn_fs_x__noderev_id_t *id)
+                const svn_fs_x__id_t *id)
 {
-  svn_string_t *id_str = svn_fs_x__id_part_unparse(id, fs->pool);
+  svn_string_t *id_str = svn_fs_x__id_unparse(id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      _("Reference to non-existent node '%s' in filesystem '%s'"),
@@ -270,7 +270,7 @@ err_dangling_id(svn_fs_t *fs,
 static svn_error_t *
 get_node_revision_body(node_revision_t **noderev_p,
                        svn_fs_t *fs,
-                       const svn_fs_x__noderev_id_t *id,
+                       const svn_fs_x__id_t *id,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -372,7 +372,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_x__noderev_id_t *id,
+                            const svn_fs_x__id_t *id,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -380,7 +380,7 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                                             result_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
-      svn_string_t *id_string = svn_fs_x__id_part_unparse(id, scratch_pool);
+      svn_string_t *id_string = svn_fs_x__id_unparse(id, scratch_pool);
       return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                "Corrupt node-revision '%s'",
                                id_string->data);
@@ -396,7 +396,7 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               svn_fs_t *fs,
-                              const svn_fs_x__noderev_id_t *id,
+                              const svn_fs_x__id_t *id,
                               apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -448,7 +448,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
 
 
 svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_x__id_part_t *root_id,
+svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_pool_t *scratch_pool)
@@ -490,7 +490,7 @@ typedef struct rep_state_t
                     /* Caches un-deltified windows. May be NULL. */
   svn_cache__t *combined_cache;
                     /* ID addressing the representation */
-  svn_fs_x__id_part_t rep_id;
+  svn_fs_x__id_t rep_id;
                     /* length of the header at the start of the rep.
                        0 iff this is rep is stored in a container
                        (i.e. does not have a header) */
@@ -2431,7 +2431,7 @@ static svn_error_t *
 read_dir_entries(apr_array_header_t *entries,
                  svn_stream_t *stream,
                  svn_boolean_t incremental,
-                 const svn_fs_x__noderev_id_t *id,
+                 const svn_fs_x__id_t *id,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -2480,7 +2480,7 @@ read_dir_entries(apr_array_header_t *entries,
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_unparse(id, scratch_pool)->data);
 
       if (strcmp(str, SVN_FS_X__KIND_FILE) == 0)
         {
@@ -2494,16 +2494,16 @@ read_dir_entries(apr_array_header_t *entries,
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_unparse(id, scratch_pool)->data);
         }
 
       str = svn_cstring_tokenize(" ", &entry.val);
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                       _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_part_unparse(id, scratch_pool)->data);
+                      svn_fs_x__id_unparse(id, scratch_pool)->data);
 
-      SVN_ERR(svn_fs_x__id_part_parse(&dirent->id, str));
+      SVN_ERR(svn_fs_x__id_parse(&dirent->id, str));
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
@@ -2540,7 +2540,7 @@ get_dir_contents(apr_array_header_t **entries,
                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *contents;
-  const svn_fs_x__noderev_id_t *id = &noderev->noderev_id;
+  const svn_fs_x__id_t *id = &noderev->noderev_id;
 
   *entries = apr_array_make(result_pool, 16, sizeof(dirent_t *));
   if (noderev->data_rep
@@ -2587,7 +2587,7 @@ get_dir_contents(apr_array_header_t **entries,
  */
 static svn_cache__t *
 locate_dir_cache(svn_fs_t *fs,
-                 svn_fs_x__id_part_t *key,
+                 svn_fs_x__id_t *key,
                  node_revision_t *noderev,
                  apr_pool_t *pool)
 {
@@ -2624,7 +2624,7 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_fs_x__id_part_t key;
+  svn_fs_x__id_t key;
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, scratch_pool);
@@ -2670,7 +2670,7 @@ svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
   svn_boolean_t found = FALSE;
 
   /* find the cache we may use */
-  svn_fs_x__id_part_t key;
+  svn_fs_x__id_t key;
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, scratch_pool);
   if (cache)
     {
@@ -2718,7 +2718,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
 {
   apr_hash_t *proplist;
   svn_stream_t *stream;
-  const svn_fs_x__noderev_id_t *noderev_id = &noderev->noderev_id;
+  const svn_fs_x__id_t *noderev_id = &noderev->noderev_id;
 
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
@@ -2781,7 +2781,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   fs_x_data_t *ffd = fs->fsap_data;
   apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  svn_fs_x__id_part_t id;
+  svn_fs_x__id_t id;
   id.change_set = svn_fs_x__change_set_by_rev(rev);
   id.number = SVN_FS_X__ITEM_INDEX_CHANGES;
 
@@ -3168,7 +3168,7 @@ block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
 static svn_error_t *
 block_read(void **result,
            svn_fs_t *fs,
-           const svn_fs_x__id_part_t *id,
+           const svn_fs_x__id_t *id,
            svn_fs_x__revision_file_t *revision_file,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -3218,8 +3218,7 @@ block_read(void **result,
           /* the item / container we were looking for? */
           is_wanted =    entry->offset == wanted_offset
                       && entry->item_count >= wanted_sub_item
-                      && svn_fs_x__id_part_eq(entry->items + wanted_sub_item,
-                                              id);
+                      && svn_fs_x__id_eq(entry->items + wanted_sub_item, id);
           is_result = result && is_wanted;
 
           /* select the pool that we want the item to be allocated in */

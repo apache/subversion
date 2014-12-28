@@ -60,7 +60,7 @@ typedef struct binary_representation_t
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Location of this representation. */
-  svn_fs_x__id_part_t id;
+  svn_fs_x__id_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -177,7 +177,7 @@ svn_fs_x__noderevs_create(int initial_count,
   noderevs->paths = NULL;
 
   noderevs->ids
-    = apr_array_make(pool, 2 * initial_count, sizeof(svn_fs_x__id_part_t));
+    = apr_array_make(pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
   noderevs->reps
     = apr_array_make(pool, 2 * initial_count, sizeof(binary_representation_t));
   noderevs->noderevs
@@ -192,19 +192,19 @@ svn_fs_x__noderevs_create(int initial_count,
 static int
 store_id(apr_array_header_t *ids,
          apr_hash_t *dict,
-         const svn_fs_x__id_part_t *id)
+         const svn_fs_x__id_t *id)
 {
   int idx;
   void *idx_void;
 
-  if (!svn_fs_x__id_part_used(id))
+  if (!svn_fs_x__id_used(id))
     return 0;
 
   idx_void = apr_hash_get(dict, &id, sizeof(id));
   idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
-      APR_ARRAY_PUSH(ids, svn_fs_x__id_part_t) = *id;
+      APR_ARRAY_PUSH(ids, svn_fs_x__id_t) = *id;
       idx = ids->nelts;
       apr_hash_set(dict, ids->elts + (idx-1) * ids->elt_size,
                    ids->elt_size, (void*)(apr_uintptr_t)idx);
@@ -331,14 +331,14 @@ svn_fs_x__noderevs_estimate_size(const svn_fs_x__noderevs_t *container)
 /* Set *ID to the ID part stored at index IDX in IDS.
  */
 static svn_error_t *
-get_id(svn_fs_x__id_part_t *id,
+get_id(svn_fs_x__id_t *id,
        const apr_array_header_t *ids,
        int idx)
 {
   /* handle NULL IDs  */
   if (idx == 0)
     {
-      svn_fs_x__id_part_reset(id);
+      svn_fs_x__id_reset(id);
       return SVN_NO_ERROR;
     }
 
@@ -349,7 +349,7 @@ get_id(svn_fs_x__id_part_t *id,
                              idx, ids->nelts);
 
   /* Return the requested ID. */
-  *id = APR_ARRAY_IDX(ids, idx - 1, svn_fs_x__id_part_t);
+  *id = APR_ARRAY_IDX(ids, idx - 1, svn_fs_x__id_t);
 
   return SVN_NO_ERROR;
 }
@@ -574,8 +574,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
   /* serialize ids array */
   for (i = 0; i < container->ids->nelts; ++i)
     {
-      svn_fs_x__id_part_t *id = &APR_ARRAY_IDX(container->ids, i,
-                                               svn_fs_x__id_part_t);
+      svn_fs_x__id_t *id = &APR_ARRAY_IDX(container->ids, i, svn_fs_x__id_t);
 
       svn_packed__add_int(ids_stream, id->change_set);
       svn_packed__add_uint(ids_stream, id->number);
@@ -716,15 +715,15 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(ids_stream));
   noderevs->ids
-    = apr_array_make(result_pool, (int)count, sizeof(svn_fs_x__id_part_t));
+    = apr_array_make(result_pool, (int)count, sizeof(svn_fs_x__id_t));
   for (i = 0; i < count; ++i)
     {
-      svn_fs_x__id_part_t id;
+      svn_fs_x__id_t id;
 
       id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.number = svn_packed__get_uint(ids_stream);
 
-      APR_ARRAY_PUSH(noderevs->ids, svn_fs_x__id_part_t) = id;
+      APR_ARRAY_PUSH(noderevs->ids, svn_fs_x__id_t) = id;
     }
 
   /* read rep arrays */

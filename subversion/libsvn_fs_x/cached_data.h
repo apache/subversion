@@ -36,7 +36,7 @@
 svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_x__noderev_id_t *id,
+                            const svn_fs_x__id_t *id,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
@@ -45,13 +45,13 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               svn_fs_t *fs,
-                              const svn_fs_x__noderev_id_t *id,
+                              const svn_fs_x__id_t *id,
                               apr_pool_t *pool);
 
 /* Set *ROOT_ID to the noderev ID for the root of revision REV in
    filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_x__id_part_t *root_id,
+svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_pool_t *scratch_pool);

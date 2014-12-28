@@ -41,7 +41,7 @@ typedef struct fs_x__id_t
   /* Private members.
      This addresses the DAG node identified by this ID object.
      If it refers to a TXN, it may become . */
-  svn_fs_x__id_part_t noderev_id;
+  svn_fs_x__id_t noderev_id;
 
 } fs_x__id_t;
 
@@ -197,7 +197,7 @@ id_unparse(const svn_fs_id_t *fs_id,
            apr_pool_t *pool)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-  return svn_fs_x__id_part_unparse(&id->noderev_id, pool);
+  return svn_fs_x__id_unparse(&id->noderev_id, pool);
 }
 
 /* Implement id_vtable_t.compare.
@@ -216,7 +216,7 @@ id_compare(const svn_fs_id_t *a,
   svn_boolean_t same_node;
 
   /* Quick check: same IDs? */
-  if (svn_fs_x__id_part_eq(&id_a->noderev_id, &id_b->noderev_id))
+  if (svn_fs_x__id_eq(&id_a->noderev_id, &id_b->noderev_id))
     return svn_fs_node_same;
 
   /* Items from different txns are unrelated. */
@@ -233,7 +233,7 @@ id_compare(const svn_fs_id_t *a,
   noderev_b = get_noderev(id_b);
 
   if (noderev_a && noderev_b)
-    same_node = svn_fs_x__id_part_eq(&noderev_a->node_id, &noderev_b->node_id);
+    same_node = svn_fs_x__id_eq(&noderev_a->node_id, &noderev_b->node_id);
   else
     same_node = FALSE;
 
@@ -286,13 +286,13 @@ svn_fs_x__id_create_context(svn_fs_t *fs,
 
 svn_fs_id_t *
 svn_fs_x__id_create(svn_fs_x__id_context_t *context,
-                    const svn_fs_x__id_part_t *noderev_id,
+                    const svn_fs_x__id_t *noderev_id,
                     apr_pool_t *result_pool)
 {
   fs_x__id_t *id;
 
   /* Special case: NULL IDs */
-  if (!svn_fs_x__id_part_used(noderev_id))
+  if (!svn_fs_x__id_used(noderev_id))
     return NULL;
 
   /* In theory, the CONTEXT might not be owned by POOL.  It's FS might even

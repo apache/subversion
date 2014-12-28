@@ -69,7 +69,7 @@ typedef struct dag_node_t dag_node_t;
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
-                       const svn_fs_x__noderev_id_t *id,
+                       const svn_fs_x__id_t *id,
                        apr_pool_t *pool);
 
 
@@ -112,19 +112,19 @@ svn_revnum_t svn_fs_x__dag_get_revision(const dag_node_t *node);
 
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const svn_fs_x__noderev_id_t *
+const svn_fs_x__id_t *
 svn_fs_x__dag_get_id(const dag_node_t *node);
 
 /* Return the node ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */
 svn_error_t *
-svn_fs_x__dag_get_node_id(svn_fs_x__id_part_t *node_id,
+svn_fs_x__dag_get_node_id(svn_fs_x__id_t *node_id,
                           dag_node_t *node);
 
 /* Return the copy ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */
 svn_error_t *
-svn_fs_x__dag_get_copy_id(svn_fs_x__id_part_t *copy_id,
+svn_fs_x__dag_get_copy_id(svn_fs_x__id_t *copy_id,
                           dag_node_t *node);
 
 /* Set *SAME to TRUE, if nodes LHS and RHS have the same node ID. */
@@ -147,7 +147,7 @@ const char *svn_fs_x__dag_get_created_path(dag_node_t *node);
 
 /* Set *ID_P to the node revision ID of NODE's immediate predecessor.
  */
-svn_error_t *svn_fs_x__dag_get_predecessor_id(svn_fs_x__noderev_id_t *id_p,
+svn_error_t *svn_fs_x__dag_get_predecessor_id(svn_fs_x__id_t *id_p,
                                               dag_node_t *node);
 
 
@@ -318,7 +318,7 @@ svn_error_t * svn_fs_x__dag_dir_entry(dirent_t **dirent,
  */
 svn_error_t *svn_fs_x__dag_set_entry(dag_node_t *node,
                                      const char *entry_name,
-                                     const svn_fs_x__noderev_id_t *id,
+                                     const svn_fs_x__id_t *id,
                                      svn_node_kind_t kind,
                                      svn_fs_x__txn_id_t txn_id,
                                      apr_pool_t *pool);
@@ -347,7 +347,7 @@ svn_error_t *svn_fs_x__dag_clone_child(dag_node_t **child_p,
                                        dag_node_t *parent,
                                        const char *parent_path,
                                        const char *name,
-                                       const svn_fs_x__id_part_t *copy_id,
+                                       const svn_fs_x__id_t *copy_id,
                                        svn_fs_x__txn_id_t txn_id,
                                        svn_boolean_t is_parent_copyroot,
                                        apr_pool_t *pool);
@@ -377,7 +377,7 @@ svn_error_t *svn_fs_x__dag_delete(dag_node_t *parent,
    node revision.  ID may refer to a file or directory, which may be
    mutable or immutable. */
 svn_error_t *svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                             const svn_fs_x__noderev_id_t *id,
+                                             const svn_fs_x__id_t *id,
                                              apr_pool_t *pool);
 
 
