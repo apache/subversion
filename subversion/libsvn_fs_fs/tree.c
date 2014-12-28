@@ -1760,6 +1760,7 @@ fs_props_changed(svn_boolean_t *changed_p,
                  apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Check that roots are in the same fs. */
   if (root1->fs != root2->fs)
@@ -1767,10 +1768,13 @@ fs_props_changed(svn_boolean_t *changed_p,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Cannot compare property value between two different filesystems"));
 
-  SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
-  SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_fs__dag_things_different(changed_p, NULL,
-                                         node1, node2, strict, pool);
+  SVN_ERR(get_dag(&node1, root1, path1, TRUE, subpool));
+  SVN_ERR(get_dag(&node2, root2, path2, TRUE, subpool));
+  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
+                                          node1, node2, strict, subpool));
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2829,15 +2833,18 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
-  SVN_ERR(check_newline(to_path, pool));
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  return svn_error_trace(copy_helper(from_root,
-                                     svn_fs__canonicalize_abspath(from_path,
-                                                                  pool),
-                                     to_root,
-                                     svn_fs__canonicalize_abspath(to_path,
-                                                                  pool),
-                                     TRUE, pool));
+  SVN_ERR(check_newline(to_path, subpool));
+  SVN_ERR(copy_helper(from_root,
+                      svn_fs__canonicalize_abspath(from_path, subpool),
+                      to_root, 
+                      svn_fs__canonicalize_abspath(to_path, subpool),
+                      TRUE, subpool));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2850,12 +2857,19 @@ fs_revision_link(svn_fs_root_t *from_root,
                  const char *path,
                  apr_pool_t *pool)
 {
+  apr_pool_t *subpool;
+
   if (! to_root->is_txn_root)
     return SVN_FS__NOT_TXN(to_root);
 
-  path = svn_fs__canonicalize_abspath(path, pool);
-  return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                     FALSE, pool));
+  subpool = svn_pool_create(pool);
+
+  path = svn_fs__canonicalize_abspath(path, subpool);
+  SVN_ERR(copy_helper(from_root, path, to_root, path, FALSE, subpool));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3309,6 +3323,7 @@ fs_contents_changed(svn_boolean_t *changed_p,
                     apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Check that roots are in the same fs. */
   if (root1->fs != root2->fs)
@@ -3320,21 +3335,24 @@ fs_contents_changed(svn_boolean_t *changed_p,
   {
     svn_node_kind_t kind;
 
-    SVN_ERR(svn_fs_fs__check_path(&kind, root1, path1, pool));
+    SVN_ERR(svn_fs_fs__check_path(&kind, root1, path1, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
 
-    SVN_ERR(svn_fs_fs__check_path(&kind, root2, path2, pool));
+    SVN_ERR(svn_fs_fs__check_path(&kind, root2, path2, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
   }
 
-  SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
-  SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_fs__dag_things_different(NULL, changed_p,
-                                         node1, node2, strict, pool);
+  SVN_ERR(get_dag(&node1, root1, path1, TRUE, subpool));
+  SVN_ERR(get_dag(&node2, root2, path2, TRUE, subpool));
+  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p,
+                                          node1, node2, strict, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3350,16 +3368,20 @@ fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                          apr_pool_t *pool)
 {
   dag_node_t *source_node, *target_node;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (source_root && source_path)
-    SVN_ERR(get_dag(&source_node, source_root, source_path, TRUE, pool));
+    SVN_ERR(get_dag(&source_node, source_root, source_path, TRUE, subpool));
   else
     source_node = NULL;
-  SVN_ERR(get_dag(&target_node, target_root, target_path, TRUE, pool));
+  SVN_ERR(get_dag(&target_node, target_root, target_path, TRUE, subpool));
 
   /* Create a delta stream that turns the source into the target.  */
-  return svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
-                                              target_node, pool);
+  SVN_ERR(svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
+                                               target_node, pool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
