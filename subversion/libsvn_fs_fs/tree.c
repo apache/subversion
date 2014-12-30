@@ -1076,8 +1076,12 @@ open_path(parent_path_t **parent_path_p,
 
           if (flags & open_path_node_only)
             {
-              /* Shortcut: the caller only wants the final DAG node. */
-              parent_path->node = svn_fs_fs__dag_copy_into_pool(child, pool);
+              /* Shortcut: the caller only wants the final DAG node.
+                 Make sure CHILD, which will become HERE, and the node
+                 we will ultimately return survive the cleanup of
+                 ITERPOOL. */
+              child = svn_fs_fs__dag_copy_into_pool(child, pool);
+              parent_path->node = child;
             }
           else
             {
