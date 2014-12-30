@@ -1378,7 +1378,7 @@ get_dag(dag_node_t **dag_node_p,
         }
     }
 
-  *dag_node_p = node;
+  *dag_node_p = svn_fs_fs__dag_copy_into_pool(node, pool);
   return SVN_NO_ERROR;
 }
 
