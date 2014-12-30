@@ -1105,6 +1105,15 @@ svn_fs_fs__dag_dup(const dag_node_t *node,
   return new_node;
 }
 
+dag_node_t *
+svn_fs_fs__dag_copy_into_pool(dag_node_t *node,
+                              apr_pool_t *pool)
+{
+  return (node->node_pool == pool
+            ? node
+            : svn_fs_fs__dag_dup(node, pool));
+}
+
 svn_error_t *
 svn_fs_fs__dag_serialize(void **data,
                          apr_size_t *data_len,
