@@ -1020,15 +1020,12 @@ open_path(parent_path_t **parent_path_p,
       path_so_far->len += strlen(entry) + 1;
       path_so_far->data[path_so_far->len] = '\0';
 
-      if (*entry == '\0')
-        {
-          /* Given the behavior of svn_fs__next_entry_name(), this
-             happens when the path either starts or ends with a slash.
-             In either case, we stay put: the current directory stays
-             the same, and we add nothing to the parent path. */
-          child = here;
-        }
-      else
+      /* Given the behavior of svn_fs__next_entry_name(), ENTRY may be an
+         empty string when the path either starts or ends with a slash.
+         In either case, we stay put: the current directory stays the
+         same, and we add nothing to the parent path.  We only need to
+         process non-empty path segments. */
+      if (*entry != '\0')
         {
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
@@ -1076,12 +1073,8 @@ open_path(parent_path_t **parent_path_p,
 
           if (flags & open_path_node_only)
             {
-              /* Shortcut: the caller only wants the final DAG node.
-                 Make sure CHILD, which will become HERE, and the node
-                 we will ultimately return survive the cleanup of
-                 ITERPOOL. */
-              child = svn_fs_fs__dag_copy_into_pool(child, pool);
-              parent_path->node = child;
+              /* Shortcut: the caller only wants the final DAG node. */
+              parent_path->node = svn_fs_fs__dag_copy_into_pool(child, pool);
             }
           else
             {
@@ -1112,7 +1105,10 @@ open_path(parent_path_t **parent_path_p,
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
-      here = child;
+
+      /* The NODE in PARENT_PATH equals CHILD but lives in POOL, i.e.
+       * it will survive the cleanup of ITERPOOL.*/
+      here = parent_path->node;
     }
 
   svn_pool_destroy(iterpool);
