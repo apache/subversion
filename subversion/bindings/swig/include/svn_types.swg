@@ -807,20 +807,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Callback: svn_cancel_func_t
 */
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
-  $1 = svn_swig_py_cancel_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
+%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
+                  svn_swig_py_cancel_func,
+                  svn_swig_pl_cancel_func,
+                  svn_swig_rb_cancel_func)
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton)
-{
-  $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
 %typemap(argout) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   svn_swig_rb_set_baton($result, (VALUE)$2);
