@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 301;
+use Test::More tests => 302;
 use strict;
 
 # shut up about variables that are only used once.
@@ -1141,11 +1141,21 @@ $svn_error = $ctx->log5($reposurl,
               undef, # revprops
               sub { });
 # TEST
-isa_ok($svn_error, '_p_svn_error_t');
+isa_ok($svn_error, '_p_svn_error_t', 'return of a cancelled operation');
 # TEST
-is($svn_error->message, $cancel_msg, 'operation was cancelled');
+is($svn_error->apr_err, $SVN::Error::CANCELLED, "SVN_ERR_CANCELLED");
+{
+    # If we're running a debug build, $svn_error may be the top of a
+    # chain of svn_error_t's (all with message "traced call"), we need 
+    # to get to the bottom svn_error_t to check for the original message.
+    my $chained = $svn_error;
+    $chained = $chained->child while $chained->child;
+    # TEST
+    is($chained->message, $cancel_msg, 'cancellation message');
+}
+
 $svn_error->clear(); # don't leak this
-$ctx->cancel(undef); # reset callback
+$ctx->cancel(undef); # reset cancel callback
 
 
 SKIP: {
