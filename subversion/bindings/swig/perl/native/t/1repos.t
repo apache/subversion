@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -20,16 +20,18 @@
 #
 #
 
-use Test::More tests => 6;
+use strict;
+use warnings;
+
+use Test::More tests => 8;
 use File::Temp qw(tempdir);
 use File::Path qw(rmtree);
-use strict;
+use File::Spec;
 
-require SVN::Core;
-require SVN::Repos;
-require SVN::Fs;
-require SVN::Delta;
-use File::Path;
+use SVN::Core;
+use SVN::Repos;
+use SVN::Fs;
+use SVN::Delta;
 
 my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
@@ -106,6 +108,26 @@ ok($main::something_destroyed, 'callback properly destroyed');
 
 # TEST
 cmp_ok($fs->youngest_rev, '==', 3);
+
+open my $dump_fh, ">", File::Spec->devnull or die "open file sink: $!";
+
+my $feedback;
+open my $feedback_fh, ">", \$feedback or die "open string: $!";
+
+my $cancel_cb_called = 0;
+$repos->dump_fs2($dump_fh, $feedback_fh,
+                 0, $SVN::Core::INVALID_REVNUM,     # start_rev, end_rev
+                 0, 0,                              # incremental, deltify
+                 sub { $cancel_cb_called++; 0 });
+# TEST
+ok($cancel_cb_called, 'cancel callback was called');
+# TEST
+is($feedback, <<'...', 'dump feedback');
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+* Dumped revision 3.
+...
 
 END {
 diag "cleanup";
