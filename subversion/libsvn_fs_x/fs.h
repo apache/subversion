@@ -208,14 +208,14 @@ typedef struct svn_fs_x__dag_cache_t svn_fs_x__dag_cache_t;
 
    Note: Cache keys should be 16 bytes for best performance and there
          should be no padding. */
-typedef struct pair_cache_key_t
+typedef struct svn_fs_x__pair_cache_key_t
 {
   /* The object's revision.  Use the 64 data type to prevent padding. */
   apr_int64_t revision;
 
   /* Sub-address: item index, revprop generation, packed flag, etc. */
   apr_int64_t second;
-} pair_cache_key_t;
+} svn_fs_x__pair_cache_key_t;
 
 /* Key type that identifies a representation / rep header. */
 typedef struct representation_cache_key_t
