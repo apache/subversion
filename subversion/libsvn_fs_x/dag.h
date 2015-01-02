@@ -81,6 +81,12 @@ dag_node_t *
 svn_fs_x__dag_dup(const dag_node_t *node,
                   apr_pool_t *pool);
 
+/* If NODE has been allocated in POOL, return NODE.  Otherwise, return
+   a copy created in POOL with svn_fs_fs__dag_dup. */
+dag_node_t *
+svn_fs_x__dag_copy_into_pool(dag_node_t *node,
+                             apr_pool_t *pool);
+
 /* Serialize a DAG node, except don't try to preserve the 'fs' member.
    Implements svn_cache__serialize_func_t */
 svn_error_t *
