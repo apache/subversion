@@ -81,7 +81,7 @@ svn_error_t *svn_fs_x__revision_proplist(apr_hash_t **proplist,
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_x__file_length(svn_filesize_t *length,
-                                   node_revision_t *noderev,
+                                   svn_fs_x__noderev_t *noderev,
                                    apr_pool_t *pool);
 
 /* Return TRUE if the representations in A and B have equal contents, else
@@ -95,8 +95,8 @@ svn_boolean_t svn_fs_x__file_text_rep_equal(svn_fs_x__representation_t *a,
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
                                       svn_fs_t *fs,
-                                      node_revision_t *a,
-                                      node_revision_t *b,
+                                      svn_fs_x__noderev_t *a,
+                                      svn_fs_x__noderev_t *b,
                                       svn_boolean_t strict,
                                       apr_pool_t *scratch_pool);
 
@@ -111,7 +111,7 @@ svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
    of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
    available, put all NULL into CHECKSUM. */
 svn_error_t *svn_fs_x__file_checksum(svn_checksum_t **checksum,
-                                     node_revision_t *noderev,
+                                     svn_fs_x__noderev_t *noderev,
                                      svn_checksum_kind_t kind,
                                      apr_pool_t *pool);
 

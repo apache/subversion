@@ -34,7 +34,7 @@
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any
    allocations in POOL. */
 svn_error_t *
-svn_fs_x__get_node_revision(node_revision_t **noderev_p,
+svn_fs_x__get_node_revision(svn_fs_x__noderev_t **noderev_p,
                             svn_fs_t *fs,
                             const svn_fs_x__id_t *id,
                             apr_pool_t *result_pool,
@@ -109,7 +109,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
 svn_error_t *
 svn_fs_x__try_process_file_contents(svn_boolean_t *success,
                                     svn_fs_t *fs,
-                                    node_revision_t *noderev,
+                                    svn_fs_x__noderev_t *noderev,
                                     svn_fs_process_contents_func_t processor,
                                     void* baton,
                                     apr_pool_t *pool);
@@ -120,8 +120,8 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
-                                node_revision_t *source,
-                                node_revision_t *target,
+                                svn_fs_x__noderev_t *source,
+                                svn_fs_x__noderev_t *target,
                                 apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_array_header_t of dirent structs that contain
@@ -131,7 +131,7 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 svn_error_t *
 svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
                            svn_fs_t *fs,
-                           node_revision_t *noderev,
+                           svn_fs_x__noderev_t *noderev,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -151,7 +151,7 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
 svn_error_t *
 svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
                                  svn_fs_t *fs,
-                                 node_revision_t *noderev,
+                                 svn_fs_x__noderev_t *noderev,
                                  const char *name,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
@@ -162,7 +162,7 @@ svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
 svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist,
                        svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *pool);
 
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.

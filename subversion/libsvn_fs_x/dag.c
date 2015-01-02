@@ -69,7 +69,7 @@ struct dag_node_t
      this yourself, but you're probably better off just calling
      `get_node_revision' and `set_node_revision', which take care of
      things for you.  */
-  node_revision_t *node_revision;
+  svn_fs_x__noderev_t *node_revision;
 
   /* The pool to allocate NODE_REVISION in. */
   apr_pool_t *node_pool;
@@ -115,11 +115,11 @@ svn_fs_x__dag_set_fs(dag_node_t *node, svn_fs_t *fs)
 
 /* Dup NODEREV and all associated data into POOL.
    Leaves the id and is_fresh_txn_root fields as zero bytes. */
-static node_revision_t *
-copy_node_revision(node_revision_t *noderev,
+static svn_fs_x__noderev_t *
+copy_node_revision(svn_fs_x__noderev_t *noderev,
                    apr_pool_t *pool)
 {
-  node_revision_t *nr = apr_pmemdup(pool, noderev, sizeof(*noderev));
+  svn_fs_x__noderev_t *nr = apr_pmemdup(pool, noderev, sizeof(*noderev));
 
   if (noderev->copyfrom_path)
     nr->copyfrom_path = apr_pstrdup(pool, noderev->copyfrom_path);
@@ -147,13 +147,13 @@ copy_node_revision(node_revision_t *noderev,
    changes that never got committed.  It's probably best not to change
    the structure at all.  */
 static svn_error_t *
-get_node_revision(node_revision_t **noderev_p,
+get_node_revision(svn_fs_x__noderev_t **noderev_p,
                   dag_node_t *node)
 {
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
-      node_revision_t *noderev;
+      svn_fs_x__noderev_t *noderev;
       apr_pool_t *scratch_pool = svn_pool_create(node->node_pool);
 
       SVN_ERR(svn_fs_x__get_node_revision(&noderev, node->fs, &node->id,
@@ -173,7 +173,7 @@ svn_error_t *
 svn_fs_x__dag_get_node_id(svn_fs_x__id_t *node_id,
                           dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
 
   *node_id = noderev->node_id;
@@ -186,7 +186,7 @@ svn_error_t *
 svn_fs_x__dag_get_copy_id(svn_fs_x__id_t *copy_id,
                           dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
 
   *copy_id = noderev->copy_id;
@@ -214,7 +214,7 @@ svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
                                    dag_node_t *lhs,
                                    dag_node_t *rhs)
 {
-  node_revision_t *lhs_noderev, *rhs_noderev;
+  svn_fs_x__noderev_t *lhs_noderev, *rhs_noderev;
 
   SVN_ERR(get_node_revision(&lhs_noderev, lhs));
   SVN_ERR(get_node_revision(&rhs_noderev, rhs));
@@ -238,7 +238,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
                        apr_pool_t *pool)
 {
   dag_node_t *new_node;
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Construct the node. */
   new_node = apr_pcalloc(pool, sizeof(*new_node));
@@ -284,7 +284,7 @@ svn_error_t *
 svn_fs_x__dag_get_predecessor_id(svn_fs_x__id_t *id_p,
                                  dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
   *id_p = noderev->predecessor_id;
@@ -297,7 +297,7 @@ svn_error_t *
 svn_fs_x__dag_get_predecessor_count(int *count,
                                     dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
   *count = noderev->predecessor_count;
@@ -308,7 +308,7 @@ svn_error_t *
 svn_fs_x__dag_get_mergeinfo_count(apr_int64_t *count,
                                   dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
   *count = noderev->mergeinfo_count;
@@ -319,7 +319,7 @@ svn_error_t *
 svn_fs_x__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
                             dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
   *has_mergeinfo = noderev->has_mergeinfo;
@@ -330,7 +330,7 @@ svn_error_t *
 svn_fs_x__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
                                              dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   if (node->kind != svn_node_dir)
     {
@@ -390,7 +390,7 @@ set_entry(dag_node_t *parent,
           svn_fs_x__txn_id_t txn_id,
           apr_pool_t *pool)
 {
-  node_revision_t *parent_noderev;
+  svn_fs_x__noderev_t *parent_noderev;
 
   /* Get the parent's node-revision. */
   SVN_ERR(get_node_revision(&parent_noderev, parent));
@@ -417,7 +417,7 @@ make_entry(dag_node_t **child_p,
            svn_fs_x__txn_id_t txn_id,
            apr_pool_t *pool)
 {
-  node_revision_t new_noderev, *parent_noderev;
+  svn_fs_x__noderev_t new_noderev, *parent_noderev;
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component(name))
@@ -471,7 +471,7 @@ svn_fs_x__dag_dir_entries(apr_array_header_t **entries,
                           dag_node_t *node,
                           apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   SVN_ERR(get_node_revision(&noderev, node));
 
@@ -489,7 +489,7 @@ svn_fs_x__dag_dir_entry(dirent_t **dirent,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
 
   if (noderev->kind != svn_node_dir)
@@ -534,7 +534,7 @@ svn_fs_x__dag_get_proplist(apr_hash_t **proplist_p,
                            dag_node_t *node,
                            apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   apr_hash_t *proplist = NULL;
 
   SVN_ERR(get_node_revision(&noderev, node));
@@ -552,7 +552,7 @@ svn_fs_x__dag_set_proplist(dag_node_t *node,
                            apr_hash_t *proplist,
                            apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
@@ -577,7 +577,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
                                         apr_int64_t increment,
                                         apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
@@ -628,7 +628,7 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
                                  svn_boolean_t has_mergeinfo,
                                  apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_x__dag_check_mutable(node))
@@ -751,7 +751,7 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
     }
   else
     {
-      node_revision_t *noderev, *parent_noderev;
+      svn_fs_x__noderev_t *noderev, *parent_noderev;
 
       /* Go get a fresh NODE-REVISION for current child node. */
       SVN_ERR(get_node_revision(&noderev, cur_entry));
@@ -811,7 +811,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
                      svn_fs_x__txn_id_t txn_id,
                      apr_pool_t *pool)
 {
-  node_revision_t *parent_noderev;
+  svn_fs_x__noderev_t *parent_noderev;
   svn_fs_t *fs = parent->fs;
   dirent_t *dirent;
   apr_pool_t *subpool;
@@ -933,7 +933,7 @@ svn_fs_x__dag_get_contents(svn_stream_t **contents_p,
                            dag_node_t *file,
                            apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   svn_stream_t *contents;
 
   /* Make sure our node is a file. */
@@ -961,8 +961,8 @@ svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                     dag_node_t *target,
                                     apr_pool_t *pool)
 {
-  node_revision_t *src_noderev;
-  node_revision_t *tgt_noderev;
+  svn_fs_x__noderev_t *src_noderev;
+  svn_fs_x__noderev_t *tgt_noderev;
 
   /* Make sure our nodes are files. */
   if ((source && source->kind != svn_node_file)
@@ -991,7 +991,7 @@ svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
                                         void* baton,
                                         apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Go get fresh node-revisions for the nodes. */
   SVN_ERR(get_node_revision(&noderev, node));
@@ -1007,7 +1007,7 @@ svn_fs_x__dag_file_length(svn_filesize_t *length,
                           dag_node_t *file,
                           apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1028,7 +1028,7 @@ svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
                             svn_checksum_kind_t kind,
                             apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   if (file->kind != svn_node_file)
     return svn_error_createf
@@ -1046,7 +1046,7 @@ svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
                               dag_node_t *file,
                               apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   svn_stream_t *ws;
 
   /* Make sure our node is a file. */
@@ -1102,7 +1102,7 @@ svn_fs_x__dag_dup(const dag_node_t *node,
   dag_node_t *new_node = apr_pmemdup(pool, node, sizeof(*new_node));
   new_node->created_path = apr_pstrdup(pool, node->created_path);
 
-  /* Only copy cached node_revision_t for immutable nodes. */
+  /* Only copy cached svn_fs_x__noderev_t for immutable nodes. */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
     new_node->node_revision = copy_node_revision(node->node_revision, pool);
   else
@@ -1229,7 +1229,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
 
   if (preserve_history)
     {
-      node_revision_t *from_noderev, *to_noderev;
+      svn_fs_x__noderev_t *from_noderev, *to_noderev;
       svn_fs_x__id_t copy_id;
       svn_fs_t *fs = svn_fs_x__dag_get_fs(from_node);
 
@@ -1280,7 +1280,7 @@ svn_fs_x__dag_things_different(svn_boolean_t *props_changed,
                                svn_boolean_t strict,
                                apr_pool_t *pool)
 {
-  node_revision_t *noderev1, *noderev2;
+  svn_fs_x__noderev_t *noderev1, *noderev2;
   svn_fs_t *fs;
   svn_boolean_t same;
 
@@ -1316,7 +1316,7 @@ svn_fs_x__dag_get_copyroot(svn_revnum_t *rev,
                            const char **path,
                            dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node));
@@ -1331,7 +1331,7 @@ svn_error_t *
 svn_fs_x__dag_get_copyfrom_rev(svn_revnum_t *rev,
                                dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node));
@@ -1345,7 +1345,7 @@ svn_error_t *
 svn_fs_x__dag_get_copyfrom_path(const char **path,
                                 dag_node_t *node)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
   SVN_ERR(get_node_revision(&noderev, node));
@@ -1360,7 +1360,7 @@ svn_fs_x__dag_update_ancestry(dag_node_t *target,
                               dag_node_t *source,
                               apr_pool_t *pool)
 {
-  node_revision_t *source_noderev, *target_noderev;
+  svn_fs_x__noderev_t *source_noderev, *target_noderev;
 
   if (! svn_fs_x__dag_check_mutable(target))
     return svn_error_createf

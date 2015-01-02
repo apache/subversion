@@ -77,7 +77,7 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
    any necessary temporary allocation in POOL. */
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
-                            node_revision_t *noderev,
+                            svn_fs_x__noderev_t *noderev,
                             svn_boolean_t fresh_txn_root,
                             apr_pool_t *pool);
 
@@ -136,7 +136,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
    which this occurs. */
 svn_error_t *
 svn_fs_x__create_node(svn_fs_t *fs,
-                      node_revision_t *noderev,
+                      svn_fs_x__noderev_t *noderev,
                       const svn_fs_x__id_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool);
@@ -160,7 +160,7 @@ svn_fs_x__abort_txn(svn_fs_txn_t *txn,
 svn_error_t *
 svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
-                    node_revision_t *parent_noderev,
+                    svn_fs_x__noderev_t *parent_noderev,
                     const char *name,
                     const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
@@ -194,7 +194,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__set_contents(svn_stream_t **stream,
                        svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *pool);
 
 /* Create a node revision in FS which is an immediate successor of
@@ -211,7 +211,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
    nodes as deltas against this node's contents.  */
 svn_error_t *
 svn_fs_x__create_successor(svn_fs_t *fs,
-                           node_revision_t *new_noderev,
+                           svn_fs_x__noderev_t *new_noderev,
                            const svn_fs_x__id_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool);
@@ -220,7 +220,7 @@ svn_fs_x__create_successor(svn_fs_t *fs,
    filesystem FS.  Perform any temporary allocations in POOL. */
 svn_error_t *
 svn_fs_x__set_proplist(svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_hash_t *proplist,
                        apr_pool_t *pool);
 

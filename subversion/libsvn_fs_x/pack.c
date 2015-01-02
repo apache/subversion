@@ -675,7 +675,7 @@ copy_node_to_temp(pack_context_t *context,
 {
   path_order_t *path_order = apr_pcalloc(context->info_pool,
                                          sizeof(*path_order));
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   const char *sort_path;
   apr_off_t source_offset = entry->offset;
 
@@ -1090,7 +1090,7 @@ store_nodes(pack_context_t *context,
   apr_size_t pack_savings = 0;
   for (i = 0; i < node_parts->nelts; ++i)
     {
-      node_revision_t *noderev;
+      svn_fs_x__noderev_t *noderev;
       svn_fs_x__p2l_entry_t *entry
         = APR_ARRAY_IDX(node_parts, i, svn_fs_x__p2l_entry_t *);
 

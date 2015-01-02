@@ -71,7 +71,7 @@ typedef struct binary_representation_t
   svn_filesize_t expanded_size;
 } binary_representation_t;
 
-/* Our internal representation of a node_revision_t.
+/* Our internal representation of a svn_fs_x__noderev_t.
  * 
  * We will store path strings in a string container and reference them
  * from here.  Similarly, IDs and representations are being stored in
@@ -250,7 +250,7 @@ store_representation(apr_array_header_t *reps,
 
 apr_size_t
 svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
-                       node_revision_t *noderev)
+                       svn_fs_x__noderev_t *noderev)
 {
   binary_noderev_t binary_noderev = { 0 };
 
@@ -396,12 +396,12 @@ get_representation(svn_fs_x__representation_t **rep,
 }
 
 svn_error_t *
-svn_fs_x__noderevs_get(node_revision_t **noderev_p,
+svn_fs_x__noderevs_get(svn_fs_x__noderev_t **noderev_p,
                        const svn_fs_x__noderevs_t *container,
                        apr_size_t idx,
                        apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   binary_noderev_t *binary_noderev;
 
   /* CONTAINER must be in 'finalized' mode */
@@ -845,7 +845,7 @@ svn_fs_x__noderevs_get_func(void **out,
                             void *baton,
                             apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   binary_noderev_t *binary_noderev;
 
   apr_array_header_t ids;

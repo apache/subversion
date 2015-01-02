@@ -33,7 +33,7 @@
  *
  * In its serialized form, the svn_fs_x__noderevs_t container extracts
  * most of that redundancy and the run-time representation is also much
- * smaller than sum of the respective node_revision_t objects.
+ * smaller than sum of the respective svn_fs_x__noderev_t objects.
  *
  * As with other containers, this one has two modes: 'construction', in
  * which you may add data to it, and 'getter' in which there is only r/o
@@ -47,7 +47,7 @@ typedef struct svn_fs_x__noderevs_t svn_fs_x__noderevs_t;
 /* Create and populate noderev containers. */
 
 /* Create and return a new noderevs container with an initial capacity of
- * INITIAL_COUNT node_revision_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__noderev_t objects.  Allocate the result in POOL.
  */
 svn_fs_x__noderevs_t *
 svn_fs_x__noderevs_create(int initial_count,
@@ -58,7 +58,7 @@ svn_fs_x__noderevs_create(int initial_count,
  */
 apr_size_t
 svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
-                       node_revision_t *noderev);
+                       svn_fs_x__noderev_t *noderev);
 
 /* Return a rough estimate in bytes for the serialized representation
  * of CONTAINER.
@@ -72,7 +72,7 @@ svn_fs_x__noderevs_estimate_size(const svn_fs_x__noderevs_t *container);
  * the result in POOL and return it in *NODEREV_P.
  */
 svn_error_t *
-svn_fs_x__noderevs_get(node_revision_t **noderev_p,
+svn_fs_x__noderevs_get(svn_fs_x__noderev_t **noderev_p,
                        const svn_fs_x__noderevs_t *container,
                        apr_size_t idx,
                        apr_pool_t *pool);
@@ -116,7 +116,7 @@ svn_fs_x__deserialize_noderevs_container(void **out,
                                           apr_pool_t *pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__noderevs_t,
- * setting *OUT to the node_revision_t selected by the apr_uint32_t index
+ * setting *OUT to the svn_fs_x__noderev_t selected by the apr_uint32_t index
  * passed in as *BATON.  This function is similar to svn_fs_x__noderevs_get
  * but operates on the cache serialized representation of the container.
  */

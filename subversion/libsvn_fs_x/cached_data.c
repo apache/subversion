@@ -98,7 +98,7 @@ dgb__log_access(svn_fs_t *fs,
   /* construct description if possible */
   if (item_type == SVN_FS_X__ITEM_TYPE_NODEREV && item != NULL)
     {
-      node_revision_t *node = item;
+      svn_fs_x__noderev_t *node = item;
       const char *data_rep
         = node->data_rep
         ? apr_psprintf(scratch_pool, " d=%ld/%" APR_UINT64_T_FMT,
@@ -268,7 +268,7 @@ err_dangling_id(svn_fs_t *fs,
    See svn_fs_x__get_node_revision, which wraps this and adds another
    error. */
 static svn_error_t *
-get_node_revision_body(node_revision_t **noderev_p,
+get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
                        svn_fs_t *fs,
                        const svn_fs_x__id_t *id,
                        apr_pool_t *result_pool,
@@ -370,7 +370,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 }
 
 svn_error_t *
-svn_fs_x__get_node_revision(node_revision_t **noderev_p,
+svn_fs_x__get_node_revision(svn_fs_x__noderev_t **noderev_p,
                             svn_fs_t *fs,
                             const svn_fs_x__id_t *id,
                             apr_pool_t *result_pool,
@@ -399,7 +399,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               const svn_fs_x__id_t *id,
                               apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* If we want a full acccess log, we need to provide full data and
      cannot take shortcuts here. */
@@ -2226,7 +2226,7 @@ cache_access_wrapper(void **out,
 svn_error_t *
 svn_fs_x__try_process_file_contents(svn_boolean_t *success,
                                     svn_fs_t *fs,
-                                    node_revision_t *noderev,
+                                    svn_fs_x__noderev_t *noderev,
                                     svn_fs_process_contents_func_t processor,
                                     void* baton,
                                     apr_pool_t *pool)
@@ -2302,7 +2302,7 @@ delta_read_md5_digest(void *baton)
  */
 static svn_txdelta_stream_t *
 get_storaged_delta_stream(rep_state_t *rep_state,
-                          node_revision_t *target,
+                          svn_fs_x__noderev_t *target,
                           apr_pool_t *pool)
 {
   /* Create the delta read baton. */
@@ -2317,8 +2317,8 @@ get_storaged_delta_stream(rep_state_t *rep_state,
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
-                                node_revision_t *source,
-                                node_revision_t *target,
+                                svn_fs_x__noderev_t *source,
+                                svn_fs_x__noderev_t *target,
                                 apr_pool_t *pool)
 {
   svn_stream_t *source_stream, *target_stream;
@@ -2535,7 +2535,7 @@ read_dir_entries(apr_array_header_t *entries,
 static svn_error_t *
 get_dir_contents(apr_array_header_t **entries,
                  svn_fs_t *fs,
-                 node_revision_t *noderev,
+                 svn_fs_x__noderev_t *noderev,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -2588,7 +2588,7 @@ get_dir_contents(apr_array_header_t **entries,
 static svn_cache__t *
 locate_dir_cache(svn_fs_t *fs,
                  svn_fs_x__id_t *key,
-                 node_revision_t *noderev,
+                 svn_fs_x__noderev_t *noderev,
                  apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -2620,7 +2620,7 @@ locate_dir_cache(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
                            svn_fs_t *fs,
-                           node_revision_t *noderev,
+                           svn_fs_x__noderev_t *noderev,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -2662,7 +2662,7 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
 svn_error_t *
 svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
                                  svn_fs_t *fs,
-                                 node_revision_t *noderev,
+                                 svn_fs_x__noderev_t *noderev,
                                  const char *name,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
@@ -2713,7 +2713,7 @@ svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
 svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist_p,
                        svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *pool)
 {
   apr_hash_t *proplist;
@@ -3026,7 +3026,7 @@ block_read_changes_container(apr_array_header_t **changes,
 }
 
 static svn_error_t *
-block_read_noderev(node_revision_t **noderev_p,
+block_read_noderev(svn_fs_x__noderev_t **noderev_p,
                    svn_fs_t *fs,
                    svn_fs_x__revision_file_t *rev_file,
                    svn_fs_x__p2l_entry_t* entry,
@@ -3071,7 +3071,7 @@ block_read_noderev(node_revision_t **noderev_p,
 }
 
 static svn_error_t *
-block_read_noderevs_container(node_revision_t **noderev_p,
+block_read_noderevs_container(svn_fs_x__noderev_t **noderev_p,
                               svn_fs_t *fs,
                               svn_fs_x__revision_file_t *rev_file,
                               svn_fs_x__p2l_entry_t* entry,
@@ -3253,7 +3253,7 @@ block_read(void **result,
 
                   case SVN_FS_X__ITEM_TYPE_NODEREV:
                     if (ffd->node_revision_cache || is_result)
-                      SVN_ERR(block_read_noderev((node_revision_t **)&item,
+                      SVN_ERR(block_read_noderev((svn_fs_x__noderev_t **)&item,
                                                  fs, revision_file,
                                                  entry, &key, is_result,
                                                  pool, iterpool));
@@ -3276,7 +3276,7 @@ block_read(void **result,
 
                   case SVN_FS_X__ITEM_TYPE_NODEREVS_CONT:
                     SVN_ERR(block_read_noderevs_container
-                                            ((node_revision_t **)&item,
+                                            ((svn_fs_x__noderev_t **)&item,
                                              fs, revision_file,
                                              entry, wanted_sub_item,
                                              is_result, pool, iterpool));

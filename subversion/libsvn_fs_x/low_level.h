@@ -100,7 +100,7 @@ svn_fs_x__unparse_representation(svn_fs_x__representation_t *rep,
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
    allocated in RESULT_POOL. */
 svn_error_t *
-svn_fs_x__read_noderev(node_revision_t **noderev,
+svn_fs_x__read_noderev(svn_fs_x__noderev_t **noderev,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
@@ -109,7 +109,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev,
    Temporary allocations are from SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__write_noderev(svn_stream_t *outfile,
-                        node_revision_t *noderev,
+                        svn_fs_x__noderev_t *noderev,
                         apr_pool_t *scratch_pool);
 
 /* This type enumerates all forms of representations that we support. */

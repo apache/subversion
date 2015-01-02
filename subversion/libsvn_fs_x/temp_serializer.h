@@ -41,7 +41,7 @@ svn_fs_x__combine_number_and_string(apr_int64_t number,
  */
 void
 svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
-                            node_revision_t * const *noderev_p);
+                            svn_fs_x__noderev_t * const *noderev_p);
 
 /**
  * Deserialize a @a noderev_p within the @a buffer and associate it with
@@ -49,7 +49,7 @@ svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
  */
 void
 svn_fs_x__noderev_deserialize(void *buffer,
-                              node_revision_t **noderev_p,
+                              svn_fs_x__noderev_t **noderev_p,
                               apr_pool_t *pool);
 
 /**
@@ -147,7 +147,7 @@ svn_fs_x__deserialize_properties(void **out,
                                  apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for #node_revision_t
+ * Implements #svn_cache__serialize_func_t for #svn_fs_x__noderev_t
  */
 svn_error_t *
 svn_fs_x__serialize_node_revision(void **buffer,
@@ -156,7 +156,7 @@ svn_fs_x__serialize_node_revision(void **buffer,
                                   apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for #node_revision_t
+ * Implements #svn_cache__deserialize_func_t for #svn_fs_x__noderev_t
  */
 svn_error_t *
 svn_fs_x__deserialize_node_revision(void **item,
