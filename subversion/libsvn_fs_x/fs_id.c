@@ -163,10 +163,10 @@ get_aux_pool(const fs_x__id_t *id)
 /* Return the noderev structure identified by ID.  Returns NULL for invalid
    IDs or inaccessible repositories.  The caller should clear the auxiliary
    pool before returning to its respective caller. */
-static node_revision_t *
+static svn_fs_x__noderev_t *
 get_noderev(const fs_x__id_t *id)
 {
-  node_revision_t *result = NULL;
+  svn_fs_x__noderev_t *result = NULL;
 
   svn_fs_x__id_context_t *context = id->generic_id.fsap_data;
   svn_fs_t *fs = get_fs(context);
@@ -212,7 +212,7 @@ id_compare(const svn_fs_id_t *a,
 {
   const fs_x__id_t *id_a = (const fs_x__id_t *)a;
   const fs_x__id_t *id_b = (const fs_x__id_t *)b;
-  node_revision_t *noderev_a, *noderev_b;
+  svn_fs_x__noderev_t *noderev_a, *noderev_b;
   svn_boolean_t same_node;
 
   /* Quick check: same IDs? */

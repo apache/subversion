@@ -324,9 +324,9 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
 
 void
 svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
-                            node_revision_t * const *noderev_p)
+                            svn_fs_x__noderev_t * const *noderev_p)
 {
-  const node_revision_t *noderev = *noderev_p;
+  const svn_fs_x__noderev_t *noderev = *noderev_p;
   if (noderev == NULL)
     return;
 
@@ -350,10 +350,10 @@ svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
 
 void
 svn_fs_x__noderev_deserialize(void *buffer,
-                              node_revision_t **noderev_p,
+                              svn_fs_x__noderev_t **noderev_p,
                               apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* fixup the reference to the representation itself,
    * if this is part of a parent structure. */
@@ -638,7 +638,7 @@ svn_fs_x__deserialize_properties(void **out,
   return SVN_NO_ERROR;
 }
 
-/** Caching node_revision_t objects. **/
+/** Caching svn_fs_x__noderev_t objects. **/
 
 svn_error_t *
 svn_fs_x__serialize_node_revision(void **buffer,
@@ -647,7 +647,7 @@ svn_fs_x__serialize_node_revision(void **buffer,
                                   apr_pool_t *pool)
 {
   svn_stringbuf_t *serialized;
-  node_revision_t *noderev = item;
+  svn_fs_x__noderev_t *noderev = item;
 
   /* create an (empty) serialization context with plenty of (initial)
    * buffer space. */
@@ -674,7 +674,7 @@ svn_fs_x__deserialize_node_revision(void **item,
                                     apr_pool_t *pool)
 {
   /* Copy the _full_ buffer as it also contains the sub-structures. */
-  node_revision_t *noderev = (node_revision_t *)buffer;
+  svn_fs_x__noderev_t *noderev = (svn_fs_x__noderev_t *)buffer;
 
   /* fixup of all pointers etc. */
   svn_fs_x__noderev_deserialize(noderev, &noderev, pool);

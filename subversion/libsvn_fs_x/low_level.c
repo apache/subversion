@@ -423,13 +423,13 @@ read_id_part(svn_fs_x__id_t *id,
 }
 
 svn_error_t *
-svn_fs_x__read_noderev(node_revision_t **noderev_p,
+svn_fs_x__read_noderev(svn_fs_x__noderev_t **noderev_p,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   apr_hash_t *headers;
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   char *value;
   const char *noderev_id;
 
@@ -625,7 +625,7 @@ svn_fs_x__unparse_representation(svn_fs_x__representation_t *rep,
 
 svn_error_t *
 svn_fs_x__write_noderev(svn_stream_t *outfile,
-                        node_revision_t *noderev,
+                        svn_fs_x__noderev_t *noderev,
                         apr_pool_t *scratch_pool)
 {
   svn_string_t *str_id;

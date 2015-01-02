@@ -746,7 +746,7 @@ purge_shared_txn(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
-                            node_revision_t *noderev,
+                            svn_fs_x__noderev_t *noderev,
                             svn_boolean_t fresh_txn_root,
                             apr_pool_t *pool)
 {
@@ -780,7 +780,7 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
  */
 static svn_error_t *
 store_sha1_rep_mapping(svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -1129,7 +1129,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 svn_fs_x__id_t *src,
                                 apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src, pool, pool));
 
   /* This must be a root node. */
@@ -1384,7 +1384,7 @@ svn_fs_x__get_txn(svn_fs_x__transaction_t **txn_p,
                   apr_pool_t *pool)
 {
   svn_fs_x__transaction_t *txn;
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   svn_fs_x__id_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
@@ -1592,7 +1592,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
 
 svn_error_t *
 svn_fs_x__create_node(svn_fs_t *fs,
-                      node_revision_t *noderev,
+                      svn_fs_x__noderev_t *noderev,
                       const svn_fs_x__id_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool)
@@ -1659,7 +1659,7 @@ svn_fs_x__abort_txn(svn_fs_txn_t *txn,
 svn_error_t *
 svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
-                    node_revision_t *parent_noderev,
+                    svn_fs_x__noderev_t *parent_noderev,
                     const char *name,
                     const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
@@ -1819,7 +1819,7 @@ struct rep_write_baton
   svn_filesize_t rep_size;
 
   /* The node revision for which we're writing out info. */
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
 
   /* Actual output file. */
   apr_file_t *file;
@@ -1863,7 +1863,7 @@ rep_write_contents(void *baton,
 static svn_error_t *
 shards_spanned(int *spanned,
                svn_fs_t *fs,
-               node_revision_t *noderev,
+               svn_fs_x__noderev_t *noderev,
                int walk,
                apr_pool_t *pool)
 {
@@ -1901,7 +1901,7 @@ shards_spanned(int *spanned,
 static svn_error_t *
 choose_delta_base(svn_fs_x__representation_t **rep,
                   svn_fs_t *fs,
-                  node_revision_t *noderev,
+                  svn_fs_x__noderev_t *noderev,
                   svn_boolean_t props,
                   apr_pool_t *pool)
 {
@@ -1912,7 +1912,7 @@ choose_delta_base(svn_fs_x__representation_t **rep,
    * skip-delta bits for the high-order bits and are linear in the low-order
    * bits.) */
   int walk;
-  node_revision_t *base;
+  svn_fs_x__noderev_t *base;
   svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool;
 
@@ -2057,7 +2057,7 @@ rep_write_cleanup(void *data)
 static svn_error_t *
 rep_write_get_baton(struct rep_write_baton **wb_p,
                     svn_fs_t *fs,
-                    node_revision_t *noderev,
+                    svn_fs_x__noderev_t *noderev,
                     apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -2364,7 +2364,7 @@ rep_write_contents_close(void *baton)
 static svn_error_t *
 set_representation(svn_stream_t **contents_p,
                    svn_fs_t *fs,
-                   node_revision_t *noderev,
+                   svn_fs_x__noderev_t *noderev,
                    apr_pool_t *pool)
 {
   struct rep_write_baton *wb;
@@ -2387,7 +2387,7 @@ set_representation(svn_stream_t **contents_p,
 svn_error_t *
 svn_fs_x__set_contents(svn_stream_t **stream,
                        svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *pool)
 {
   if (noderev->kind != svn_node_file)
@@ -2399,7 +2399,7 @@ svn_fs_x__set_contents(svn_stream_t **stream,
 
 svn_error_t *
 svn_fs_x__create_successor(svn_fs_t *fs,
-                           node_revision_t *new_noderev,
+                           svn_fs_x__noderev_t *new_noderev,
                            const svn_fs_x__id_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool)
@@ -2424,7 +2424,7 @@ svn_fs_x__create_successor(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__set_proplist(svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_hash_t *proplist,
                        apr_pool_t *pool)
 {
@@ -2540,7 +2540,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
                           collection_writer_t writer,
                           svn_fs_t *fs,
                           svn_fs_x__txn_id_t txn_id,
-                          node_revision_t *noderev,
+                          svn_fs_x__noderev_t *noderev,
                           apr_hash_t *reps_hash,
                           apr_uint32_t item_type,
                           svn_revnum_t final_revision,
@@ -2676,7 +2676,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
  */
 static svn_error_t *
 validate_root_noderev(svn_fs_t *fs,
-                      node_revision_t *root_noderev,
+                      svn_fs_x__noderev_t *root_noderev,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
@@ -2688,7 +2688,7 @@ validate_root_noderev(svn_fs_t *fs,
   /* Compute HEAD_PREDECESSOR_COUNT. */
   {
     svn_fs_x__id_t head_root_id;
-    node_revision_t *head_root_noderev;
+    svn_fs_x__noderev_t *head_root_noderev;
 
     /* Get /@HEAD's noderev. */
     svn_fs_x__init_rev_root(&head_root_id, head_revnum);
@@ -2777,7 +2777,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
                 svn_boolean_t at_root,
                 apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   apr_off_t my_offset;
   svn_fs_x__id_t new_id;
   svn_fs_x__id_t noderev_id;
@@ -3566,7 +3566,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
                                const svn_fs_x__id_t *id,
                                apr_pool_t *pool)
 {
-  node_revision_t *noderev;
+  svn_fs_x__noderev_t *noderev;
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool, pool));
 
   /* Delete any mutable property representation. */

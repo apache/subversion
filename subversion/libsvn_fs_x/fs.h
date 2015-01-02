@@ -473,7 +473,7 @@ typedef struct svn_fs_x__representation_t
 /*** Node-Revision ***/
 /* If you add fields to this, check to see if you need to change
  * copy_node_revision in dag.c. */
-typedef struct node_revision_t
+typedef struct svn_fs_x__noderev_t
 {
   /* node kind */
   svn_node_kind_t kind;
@@ -525,7 +525,7 @@ typedef struct node_revision_t
   /* Does this node itself have svn:mergeinfo? */
   svn_boolean_t has_mergeinfo;
 
-} node_revision_t;
+} svn_fs_x__noderev_t;
 
 
 /** The type of a directory entry.  */

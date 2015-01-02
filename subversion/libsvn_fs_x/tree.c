@@ -79,7 +79,7 @@
    them concurrently on disk!  (Why is the DAG node cache safer than
    the root DAG node?  When cloning transaction DAG nodes in and out
    of the cache, all of the possibly-mutable data from the
-   node_revision_t inside the dag_node_t is dropped.)  Additionally,
+   svn_fs_x__noderev_t inside the dag_node_t is dropped.)  Additionally,
    revisions are immutable enough that their DAG node cache can be
    kept in the FS object and shared among multiple revision root
    objects.
@@ -1855,7 +1855,7 @@ merge(svn_stringbuf_t *conflict_p,
      happening), the merge should fail.  See issue #2751.
   */
   {
-    node_revision_t *tgt_nr, *anc_nr, *src_nr;
+    svn_fs_x__noderev_t *tgt_nr, *anc_nr, *src_nr;
     svn_boolean_t same;
     apr_pool_t *scratch_pool;
 
