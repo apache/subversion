@@ -85,14 +85,14 @@ svn_fs_x__txn_get_id(svn_fs_txn_t *txn)
    txn_list_lock mutex).  If the transaction does not exist in the list,
    then create a new transaction object and return it (if CREATE_NEW is
    true) or return NULL (otherwise). */
-static fs_x_shared_txn_data_t *
+static svn_fs_x__shared_txn_data_t *
 get_shared_txn(svn_fs_t *fs,
                svn_fs_x__txn_id_t txn_id,
                svn_boolean_t create_new)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   fs_x_shared_data_t *ffsd = ffd->shared;
-  fs_x_shared_txn_data_t *txn;
+  svn_fs_x__shared_txn_data_t *txn;
 
   for (txn = ffsd->txns; txn; txn = txn->next)
     if (txn->txn_id == txn_id)
@@ -137,7 +137,7 @@ free_shared_txn(svn_fs_t *fs, svn_fs_x__txn_id_t txn_id)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   fs_x_shared_data_t *ffsd = ffd->shared;
-  fs_x_shared_txn_data_t *txn, *prev = NULL;
+  svn_fs_x__shared_txn_data_t *txn, *prev = NULL;
 
   for (txn = ffsd->txns; txn; prev = txn, txn = txn->next)
     if (txn->txn_id == txn_id)
@@ -495,7 +495,7 @@ unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const struct unlock_proto_rev_baton *b = baton;
   apr_file_t *lockfile = b->lockcookie;
-  fs_x_shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, FALSE);
+  svn_fs_x__shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, FALSE);
   apr_status_t apr_err;
 
   if (!txn)
@@ -557,7 +557,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const struct get_writable_proto_rev_baton *b = baton;
   void **lockcookie = b->lockcookie;
-  fs_x_shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, TRUE);
+  svn_fs_x__shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, TRUE);
 
   /* First, ensure that no thread in this process (including this one)
      is currently writing to this transaction's proto-rev file. */
