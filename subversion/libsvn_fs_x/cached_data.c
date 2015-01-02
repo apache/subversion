@@ -2388,14 +2388,14 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   return SVN_NO_ERROR;
 }
 
-/* Return TRUE when all dirent_t* in ENTRIES are already sorted
+/* Return TRUE when all svn_fs_x__dirent_t* in ENTRIES are already sorted
    by their respective name. */
 static svn_boolean_t
 sorted(apr_array_header_t *entries)
 {
   int i;
 
-  const dirent_t * const *dirents = (const void *)entries->elts;
+  const svn_fs_x__dirent_t * const *dirents = (const void *)entries->elts;
   for (i = 0; i < entries->nelts-1; ++i)
     if (strcmp(dirents[i]->name, dirents[i+1]->name) > 0)
       return FALSE;
@@ -2407,8 +2407,8 @@ sorted(apr_array_header_t *entries)
 static int
 compare_dirents(const void *a, const void *b)
 {
-  const dirent_t *lhs = *((const dirent_t * const *) a);
-  const dirent_t *rhs = *((const dirent_t * const *) b);
+  const svn_fs_x__dirent_t *lhs = *((const svn_fs_x__dirent_t * const *) a);
+  const svn_fs_x__dirent_t *rhs = *((const svn_fs_x__dirent_t * const *) b);
 
   return strcmp(lhs->name, rhs->name);
 }
@@ -2417,7 +2417,7 @@ compare_dirents(const void *a, const void *b)
 static int
 compare_dirent_name(const void *a, const void *b)
 {
-  const dirent_t *lhs = *((const dirent_t * const *) a);
+  const svn_fs_x__dirent_t *lhs = *((const svn_fs_x__dirent_t * const *) a);
   const char *rhs = b;
 
   return strcmp(lhs->name, rhs);
@@ -2445,7 +2445,7 @@ read_dir_entries(apr_array_header_t *entries,
   while (1)
     {
       svn_hash__entry_t entry;
-      dirent_t *dirent;
+      svn_fs_x__dirent_t *dirent;
       char *str;
 
       svn_pool_clear(iterpool);
@@ -2510,7 +2510,7 @@ read_dir_entries(apr_array_header_t *entries,
       if (incremental)
         apr_hash_set(hash, entry.key, entry.keylen, dirent);
       else
-        APR_ARRAY_PUSH(entries, dirent_t *) = dirent;
+        APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
     }
 
   /* Convert container to a sorted array. */
@@ -2518,7 +2518,7 @@ read_dir_entries(apr_array_header_t *entries,
     {
       apr_hash_index_t *hi;
       for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
-        APR_ARRAY_PUSH(entries, dirent_t *) = apr_hash_this_val(hi);
+        APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = apr_hash_this_val(hi);
     }
 
   if (!sorted(entries))
@@ -2531,7 +2531,7 @@ read_dir_entries(apr_array_header_t *entries,
 
 /* Fetch the contents of a directory into ENTRIES.  Values are stored
    as filename to string mappings; further conversion is necessary to
-   convert them into dirent_t values. */
+   convert them into svn_fs_x__dirent_t values. */
 static svn_error_t *
 get_dir_contents(apr_array_header_t **entries,
                  svn_fs_t *fs,
@@ -2542,7 +2542,7 @@ get_dir_contents(apr_array_header_t **entries,
   svn_stream_t *contents;
   const svn_fs_x__id_t *id = &noderev->noderev_id;
 
-  *entries = apr_array_make(result_pool, 16, sizeof(dirent_t *));
+  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_x__dirent_t *));
   if (noderev->data_rep
       && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
     {
@@ -2649,18 +2649,18 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
   return SVN_NO_ERROR;
 }
 
-dirent_t *
+svn_fs_x__dirent_t *
 svn_fs_x__find_dir_entry(apr_array_header_t *entries,
                          const char *name,
                          int *hint)
 {
-  dirent_t **result
+  svn_fs_x__dirent_t **result
     = svn_sort__array_lookup(entries, name, hint, compare_dirent_name);
   return result ? *result : NULL;
 }
 
 svn_error_t *
-svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
+svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
                                  svn_fs_x__noderev_t *noderev,
                                  const char *name,
@@ -2688,8 +2688,8 @@ svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
   if (! found)
     {
       apr_array_header_t *entries;
-      dirent_t *entry;
-      dirent_t *entry_copy = NULL;
+      svn_fs_x__dirent_t *entry;
+      svn_fs_x__dirent_t *entry_copy = NULL;
 
       /* read the dir from the file system. It will probably be put it
          into the cache for faster lookup in future calls. */

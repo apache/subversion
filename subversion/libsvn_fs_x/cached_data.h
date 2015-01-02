@@ -139,7 +139,7 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
    entry exists, return NULL.  If HINT is not NULL, set *HINT to the array
    index of the entry returned.  Successive calls in a linear scan scenario
    will be faster called with the same HINT variable. */
-dirent_t *
+svn_fs_x__dirent_t *
 svn_fs_x__find_dir_entry(apr_array_header_t *entries,
                          const char *name,
                          int *hint);
@@ -149,7 +149,7 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
    be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
-svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
+svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
                                  svn_fs_x__noderev_t *noderev,
                                  const char *name,
