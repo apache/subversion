@@ -102,8 +102,9 @@ svn_error_t *svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
 
 
 /* Return a copy of the representation REP allocated from POOL. */
-svn_fs_x__representation_t *svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
-                                     apr_pool_t *pool);
+svn_fs_x__representation_t *
+svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
+                   apr_pool_t *pool);
 
 
 /* Return the recorded checksum of type KIND for the text representation
