@@ -140,11 +140,11 @@ extern "C" {
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
    allocated in their own subpool of the common pool. */
-typedef struct fs_x_shared_txn_data_t
+typedef struct svn_fs_x__shared_txn_data_t
 {
   /* The next transaction in the list, or NULL if there is no following
      transaction. */
-  struct fs_x_shared_txn_data_t *next;
+  struct svn_fs_x__shared_txn_data_t *next;
 
   /* ID of this transaction. */
   svn_fs_x__txn_id_t txn_id;
@@ -158,7 +158,7 @@ typedef struct fs_x_shared_txn_data_t
   /* The pool in which this object has been allocated; a subpool of the
      common pool. */
   apr_pool_t *pool;
-} fs_x_shared_txn_data_t;
+} svn_fs_x__shared_txn_data_t;
 
 /* Private FSX-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
@@ -169,11 +169,11 @@ typedef struct fs_x_shared_data_t
      currently active, or NULL if none are.  All access to this list,
      including the contents of the objects stored in it, is synchronised
      under TXN_LIST_LOCK. */
-  fs_x_shared_txn_data_t *txns;
+  svn_fs_x__shared_txn_data_t *txns;
 
   /* A free transaction object, or NULL if there is no free object.
      Access to this object is synchronised under TXN_LIST_LOCK. */
-  fs_x_shared_txn_data_t *free_txn;
+  svn_fs_x__shared_txn_data_t *free_txn;
 
   /* The following lock must be taken out in reverse order of their
      declaration here.  Any subset may be acquired and held at any given
