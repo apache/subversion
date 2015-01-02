@@ -91,7 +91,7 @@ get_shared_txn(svn_fs_t *fs,
                svn_boolean_t create_new)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
+  svn_fs_x__shared_data_t *ffsd = ffd->shared;
   svn_fs_x__shared_txn_data_t *txn;
 
   for (txn = ffsd->txns; txn; txn = txn->next)
@@ -136,7 +136,7 @@ static void
 free_shared_txn(svn_fs_t *fs, svn_fs_x__txn_id_t txn_id)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
+  svn_fs_x__shared_data_t *ffsd = ffd->shared;
   svn_fs_x__shared_txn_data_t *txn, *prev = NULL;
 
   for (txn = ffsd->txns; txn; prev = txn, txn = txn->next)
@@ -173,7 +173,7 @@ with_txnlist_lock(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
+  svn_fs_x__shared_data_t *ffsd = ffd->shared;
 
   SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
                        body(fs, baton, pool));
@@ -327,7 +327,7 @@ init_lock_baton(with_lock_baton_t *baton,
                 lock_id_t lock_id)
 {
   fs_x_data_t *ffd = baton->fs->fsap_data;
-  fs_x_shared_data_t *ffsd = ffd->shared;
+  svn_fs_x__shared_data_t *ffsd = ffd->shared;
 
   switch (lock_id)
     {

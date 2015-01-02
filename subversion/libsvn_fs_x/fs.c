@@ -66,7 +66,7 @@ x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
   fs_x_data_t *ffd = fs->fsap_data;
   const char *key;
   void *val;
-  fs_x_shared_data_t *ffsd;
+  svn_fs_x__shared_data_t *ffsd;
   apr_status_t status;
 
   /* Note that we are allocating a small amount of long-lived data for
