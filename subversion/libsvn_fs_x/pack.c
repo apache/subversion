@@ -1224,7 +1224,7 @@ write_reps_containers(pack_context_t *context,
   /* copy all items in strict order */
   for (i = entries->nelts-1; i >= 0; --i)
     {
-      representation_t representation = { 0 };
+      svn_fs_x__representation_t representation = { 0 };
       svn_stringbuf_t *contents;
       svn_stream_t *stream;
       apr_size_t list_index;

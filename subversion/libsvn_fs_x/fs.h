@@ -440,7 +440,7 @@ typedef struct svn_fs_x__transaction_t
 /*** Representation ***/
 /* If you add fields to this, check to see if you need to change
  * svn_fs_x__rep_copy. */
-typedef struct representation_t
+typedef struct svn_fs_x__representation_t
 {
   /* Checksums digests for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
@@ -467,7 +467,7 @@ typedef struct representation_t
   /* The size of the fulltext of the representation. */
   svn_filesize_t expanded_size;
 
-} representation_t;
+} svn_fs_x__representation_t;
 
 
 /*** Node-Revision ***/
@@ -506,11 +506,11 @@ typedef struct node_revision_t
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
-  representation_t *prop_rep;
+  svn_fs_x__representation_t *prop_rep;
 
   /* representation for this node's data.  may be NULL if there is
      no data. */
-  representation_t *data_rep;
+  svn_fs_x__representation_t *data_rep;
 
   /* path at which this node first came into existence.  */
   const char *created_path;

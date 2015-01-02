@@ -141,7 +141,7 @@ svn_error_t *
 svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              svn_revnum_t start,
                              svn_revnum_t end,
-                             svn_error_t *(*walker)(representation_t *,
+                             svn_error_t *(*walker)(svn_fs_x__representation_t *,
                                                     void *,
                                                     svn_fs_t *,
                                                     apr_pool_t *),
@@ -183,7 +183,7 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      representation_t *rep;
+      svn_fs_x__representation_t *rep;
       const char *sha1_digest;
       svn_error_t *err;
       svn_checksum_t *checksum;
@@ -200,7 +200,7 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
             return svn_error_compose_create(err, svn_sqlite__reset(stmt));
         }
 
-      /* Construct a representation_t. */
+      /* Construct a svn_fs_x__representation_t. */
       rep = apr_pcalloc(iterpool, sizeof(*rep));
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
       err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
@@ -234,7 +234,7 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
    If you extend this function, check the callsite to see if you have
    to make it not-ignore additional error codes.  */
 svn_error_t *
-svn_fs_x__get_rep_reference(representation_t **rep,
+svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
                             svn_fs_t *fs,
                             svn_checksum_t *checksum,
                             apr_pool_t *pool)
@@ -291,7 +291,7 @@ svn_fs_x__get_rep_reference(representation_t **rep,
 
 svn_error_t *
 svn_fs_x__set_rep_reference(svn_fs_t *fs,
-                            representation_t *rep,
+                            svn_fs_x__representation_t *rep,
                             apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -322,7 +322,7 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     {
-      representation_t *old_rep;
+      svn_fs_x__representation_t *old_rep;
 
       if (err->apr_err != SVN_ERR_SQLITE_CONSTRAINT)
         return svn_error_trace(err);

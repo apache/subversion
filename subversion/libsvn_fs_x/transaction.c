@@ -1665,7 +1665,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_node_kind_t kind,
                     apr_pool_t *pool)
 {
-  representation_t *rep = parent_noderev->data_rep;
+  svn_fs_x__representation_t *rep = parent_noderev->data_rep;
   const char *filename
     = svn_fs_x__path_txn_node_children(fs, &parent_noderev->noderev_id, pool);
   apr_file_t *file;
@@ -1899,7 +1899,7 @@ shards_spanned(int *spanned,
    base representation will be returned.  Perform temporary allocations
    in *POOL. */
 static svn_error_t *
-choose_delta_base(representation_t **rep,
+choose_delta_base(svn_fs_x__representation_t **rep,
                   svn_fs_t *fs,
                   node_revision_t *noderev,
                   svn_boolean_t props,
@@ -2063,7 +2063,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   struct rep_write_baton *b;
   apr_file_t *file;
-  representation_t *base_rep;
+  svn_fs_x__representation_t *base_rep;
   svn_stream_t *source;
   svn_txdelta_window_handler_t wh;
   void *whb;
@@ -2145,14 +2145,14 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
-   representation_t*), otherwise pass in NULL for REPS_HASH.
+   svn_fs_x__representation_t*), otherwise pass in NULL for REPS_HASH.
    Use RESULT_POOL for *OLD_REP  allocations and SCRATCH_POOL for temporaries.
    The lifetime of *OLD_REP is limited by both, RESULT_POOL and REP lifetime.
  */
 static svn_error_t *
-get_shared_rep(representation_t **old_rep,
+get_shared_rep(svn_fs_x__representation_t **old_rep,
                svn_fs_t *fs,
-               representation_t *rep,
+               svn_fs_x__representation_t *rep,
                apr_hash_t *reps_hash,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
@@ -2249,7 +2249,7 @@ get_shared_rep(representation_t **old_rep,
  * Use POOL for allocations.
  */
 static svn_error_t *
-digests_final(representation_t *rep,
+digests_final(svn_fs_x__representation_t *rep,
               const svn_checksum_ctx_t *md5_ctx,
               const svn_checksum_ctx_t *sha1_ctx,
               apr_pool_t *pool)
@@ -2273,8 +2273,8 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
-  representation_t *rep;
-  representation_t *old_rep;
+  svn_fs_x__representation_t *rep;
+  svn_fs_x__representation_t *old_rep;
   apr_off_t offset;
   apr_int64_t txn_id;
 
@@ -2534,7 +2534,7 @@ write_directory_to_stream(svn_stream_t *stream,
    Perform temporary allocations in SCRATCH_POOL.
  */
 static svn_error_t *
-write_container_delta_rep(representation_t *rep,
+write_container_delta_rep(svn_fs_x__representation_t *rep,
                           apr_file_t *file,
                           void *collection,
                           collection_writer_t writer,
@@ -2552,8 +2552,8 @@ write_container_delta_rep(representation_t *rep,
 
   svn_stream_t *file_stream;
   svn_stream_t *stream;
-  representation_t *base_rep;
-  representation_t *old_rep;
+  svn_fs_x__representation_t *base_rep;
+  svn_fs_x__representation_t *old_rep;
   svn_fs_x__p2l_entry_t entry;
   svn_stream_t *source;
   svn_fs_x__rep_header_t header = { 0 };
@@ -2887,7 +2887,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
           && svn_fs_x__get_revnum(noderev->data_rep->id.change_set) == rev)
         {
           SVN_ERR_ASSERT(reps_to_cache && reps_pool);
-          APR_ARRAY_PUSH(reps_to_cache, representation_t *)
+          APR_ARRAY_PUSH(reps_to_cache, svn_fs_x__representation_t *)
             = svn_fs_x__rep_copy(noderev->data_rep, reps_pool);
         }
 
@@ -2895,11 +2895,11 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
           && svn_fs_x__get_revnum(noderev->prop_rep->id.change_set) == rev)
         {
           /* Add new property reps to hash and on-disk cache. */
-          representation_t *copy
+          svn_fs_x__representation_t *copy
             = svn_fs_x__rep_copy(noderev->prop_rep, reps_pool);
 
           SVN_ERR_ASSERT(reps_to_cache && reps_pool);
-          APR_ARRAY_PUSH(reps_to_cache, representation_t *) = copy;
+          APR_ARRAY_PUSH(reps_to_cache, svn_fs_x__representation_t *) = copy;
 
           apr_hash_set(reps_hash,
                         copy->sha1_digest,
@@ -3389,7 +3389,7 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Add the representations in REPS_TO_CACHE (an array of representation_t *)
+/* Add the representations in REPS_TO_CACHE (an array of svn_fs_x__representation_t *)
  * to the rep-cache database of FS. */
 static svn_error_t *
 write_reps_to_cache(svn_fs_t *fs,
@@ -3400,7 +3400,7 @@ write_reps_to_cache(svn_fs_t *fs,
 
   for (i = 0; i < reps_to_cache->nelts; i++)
     {
-      representation_t *rep = APR_ARRAY_IDX(reps_to_cache, i, representation_t *);
+      svn_fs_x__representation_t *rep = APR_ARRAY_IDX(reps_to_cache, i, svn_fs_x__representation_t *);
 
       /* FALSE because we don't care if another parallel commit happened to
        * collide with us.  (Non-parallel collisions will not be detected.) */
@@ -3425,7 +3425,7 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      cb.reps_to_cache = apr_array_make(pool, 5, sizeof(representation_t *));
+      cb.reps_to_cache = apr_array_make(pool, 5, sizeof(svn_fs_x__representation_t *));
       cb.reps_hash = apr_hash_make(pool);
       cb.reps_pool = pool;
     }

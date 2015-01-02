@@ -81,7 +81,7 @@ svn_fs_x__unparse_footer(apr_off_t l2p_offset,
    into *REP_P.  TEXT will be invalidated by this call.  Allocate *REP_P in
    RESULT_POOL and use SCRATCH_POOL for temporaries. */
 svn_error_t *
-svn_fs_x__parse_representation(representation_t **rep_p,
+svn_fs_x__parse_representation(svn_fs_x__representation_t **rep_p,
                                svn_stringbuf_t *text,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
@@ -92,7 +92,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
  * If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
  * Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 svn_stringbuf_t *
-svn_fs_x__unparse_representation(representation_t *rep,
+svn_fs_x__unparse_representation(svn_fs_x__representation_t *rep,
                                  svn_boolean_t mutable_rep_truncated,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);

@@ -219,7 +219,7 @@ open_and_seek_revision(svn_fs_x__revision_file_t **file,
 static svn_error_t *
 open_and_seek_transaction(svn_fs_x__revision_file_t **file,
                           svn_fs_t *fs,
-                          representation_t *rep,
+                          svn_fs_x__representation_t *rep,
                           apr_pool_t *pool)
 {
   apr_off_t offset;
@@ -241,7 +241,7 @@ open_and_seek_transaction(svn_fs_x__revision_file_t **file,
 static svn_error_t *
 open_and_seek_representation(svn_fs_x__revision_file_t **file_p,
                              svn_fs_t *fs,
-                             representation_t *rep,
+                             svn_fs_x__representation_t *rep,
                              apr_pool_t *pool)
 {
   if (svn_fs_x__is_revision(rep->id.change_set))
@@ -592,7 +592,7 @@ static svn_error_t *
 create_rep_state_body(rep_state_t **rep_state,
                       svn_fs_x__rep_header_t **rep_header,
                       shared_file_t **shared_file,
-                      representation_t *rep,
+                      svn_fs_x__representation_t *rep,
                       svn_fs_t *fs,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -778,7 +778,7 @@ static svn_error_t *
 create_rep_state(rep_state_t **rep_state,
                  svn_fs_x__rep_header_t **rep_header,
                  shared_file_t **shared_file,
-                 representation_t *rep,
+                 svn_fs_x__representation_t *rep,
                  svn_fs_t *fs,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -808,7 +808,7 @@ create_rep_state(rep_state_t **rep_state,
 }
 
 svn_error_t *
-svn_fs_x__check_rep(representation_t *rep,
+svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
                     svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
 {
@@ -852,7 +852,7 @@ svn_fs_x__check_rep(representation_t *rep,
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
-                           representation_t *rep,
+                           svn_fs_x__representation_t *rep,
                            svn_fs_t *fs,
                            apr_pool_t *scratch_pool)
 {
@@ -873,7 +873,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
    * extreme cases. */
-  representation_t base_rep = *rep;
+  svn_fs_x__representation_t base_rep = *rep;
 
   /* re-use open files between iterations */
   shared_file_t *file_hint = NULL;
@@ -939,7 +939,7 @@ struct rep_read_baton
   svn_fs_t *fs;
 
   /* Representation to read. */
-  representation_t rep;
+  svn_fs_x__representation_t rep;
 
   /* If not NULL, this is the base for the first delta window in rs_list */
   svn_stringbuf_t *base_window;
@@ -1231,10 +1231,10 @@ build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
                rep_state_t **src_state,
                svn_fs_t *fs,
-               representation_t *first_rep,
+               svn_fs_x__representation_t *first_rep,
                apr_pool_t *pool)
 {
-  representation_t rep;
+  svn_fs_x__representation_t rep;
   rep_state_t *rs = NULL;
   svn_fs_x__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
@@ -1310,7 +1310,7 @@ build_rep_list(apr_array_header_t **list,
 static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
-                   representation_t *rep,
+                   svn_fs_x__representation_t *rep,
                    svn_fs_x__pair_cache_key_t fulltext_cache_key,
                    apr_pool_t *pool)
 {
@@ -2142,7 +2142,7 @@ rep_read_contents(void *baton,
 svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
-                       representation_t *rep,
+                       svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
                        apr_pool_t *pool)
 {
@@ -2231,7 +2231,7 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
                                     void* baton,
                                     apr_pool_t *pool)
 {
-  representation_t *rep = noderev->data_rep;
+  svn_fs_x__representation_t *rep = noderev->data_rep;
   if (rep)
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -2734,7 +2734,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
   else if (noderev->prop_rep)
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
-      representation_t *rep = noderev->prop_rep;
+      svn_fs_x__representation_t *rep = noderev->prop_rep;
       svn_fs_x__pair_cache_key_t key = { 0 };
 
       key.revision = svn_fs_x__get_revnum(rep->id.change_set);

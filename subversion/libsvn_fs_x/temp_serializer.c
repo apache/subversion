@@ -134,9 +134,9 @@ deserialize_svn_string(void *buffer, svn_string_t **string)
  */
 static void
 serialize_representation(svn_temp_serializer__context_t *context,
-                         representation_t * const *representation)
+                         svn_fs_x__representation_t * const *representation)
 {
-  const representation_t * rep = *representation;
+  const svn_fs_x__representation_t * rep = *representation;
   if (rep == NULL)
     return;
 

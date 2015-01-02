@@ -238,12 +238,12 @@ read_header_block(apr_hash_t **headers,
 }
 
 svn_error_t *
-svn_fs_x__parse_representation(representation_t **rep_p,
+svn_fs_x__parse_representation(svn_fs_x__representation_t **rep_p,
                                svn_stringbuf_t *text,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  representation_t *rep;
+  svn_fs_x__representation_t *rep;
   char *str;
   apr_int64_t val;
   char *string = text->data;
@@ -325,7 +325,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
 /* Wrap read_rep_offsets_body(), extracting its TXN_ID from our NODEREV_ID,
    and adding an error message. */
 static svn_error_t *
-read_rep_offsets(representation_t **rep_p,
+read_rep_offsets(svn_fs_x__representation_t **rep_p,
                  char *string,
                  const svn_fs_x__id_t *noderev_id,
                  apr_pool_t *result_pool,
@@ -595,7 +595,7 @@ format_digest(const unsigned char *digest,
 }
 
 svn_stringbuf_t *
-svn_fs_x__unparse_representation(representation_t *rep,
+svn_fs_x__unparse_representation(svn_fs_x__representation_t *rep,
                                  svn_boolean_t mutable_rep_truncated,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)

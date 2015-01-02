@@ -86,8 +86,8 @@ svn_error_t *svn_fs_x__file_length(svn_filesize_t *length,
 
 /* Return TRUE if the representations in A and B have equal contents, else
    return FALSE. */
-svn_boolean_t svn_fs_x__file_text_rep_equal(representation_t *a,
-                                            representation_t *b);
+svn_boolean_t svn_fs_x__file_text_rep_equal(svn_fs_x__representation_t *a,
+                                            svn_fs_x__representation_t *b);
 
 /* Set *EQUAL to TRUE if the property representations in A and B within FS
    have equal contents, else set it to FALSE.  If STRICT is not set, allow
@@ -102,7 +102,7 @@ svn_error_t *svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
 
 
 /* Return a copy of the representation REP allocated from POOL. */
-representation_t *svn_fs_x__rep_copy(representation_t *rep,
+svn_fs_x__representation_t *svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
                                      apr_pool_t *pool);
 
 

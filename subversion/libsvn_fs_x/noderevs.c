@@ -51,7 +51,7 @@
 
 /* Our internal representation of an representation.
  */
-typedef struct binary_representation_t
+typedef struct binary_svn_fs_x__representation_t
 {
   /* Checksums digests for the contents produced by this representation.
      If has_sha1 is FALSE, sha1_digest is not being used. */
@@ -69,7 +69,7 @@ typedef struct binary_representation_t
   /* The size of the fulltext of the representation. If this is 0,
    * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
-} binary_representation_t;
+} binary_svn_fs_x__representation_t;
 
 /* Our internal representation of a node_revision_t.
  * 
@@ -151,14 +151,14 @@ struct svn_fs_x__noderevs_t
   /* During construction, maps a full binary_id_t to an index into IDS */
   apr_hash_t *ids_dict;
 
-  /* During construction, maps a full binary_representation_t to an index
+  /* During construction, maps a full binary_svn_fs_x__representation_t to an index
    * into REPS. */
   apr_hash_t *reps_dict;
 
   /* array of binary_id_t */
   apr_array_header_t *ids;
 
-  /* array of binary_representation_t */
+  /* array of binary_svn_fs_x__representation_t */
   apr_array_header_t *reps;
 
   /* array of binary_noderev_t. */
@@ -179,7 +179,7 @@ svn_fs_x__noderevs_create(int initial_count,
   noderevs->ids
     = apr_array_make(pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
   noderevs->reps
-    = apr_array_make(pool, 2 * initial_count, sizeof(binary_representation_t));
+    = apr_array_make(pool, 2 * initial_count, sizeof(binary_svn_fs_x__representation_t));
   noderevs->noderevs
     = apr_array_make(pool, initial_count, sizeof(binary_noderev_t));
 
@@ -219,9 +219,9 @@ store_id(apr_array_header_t *ids,
 static int
 store_representation(apr_array_header_t *reps,
                      apr_hash_t *dict,
-                     const representation_t *rep)
+                     const svn_fs_x__representation_t *rep)
 {
-  binary_representation_t binary_rep = { 0 };
+  binary_svn_fs_x__representation_t binary_rep = { 0 };
   int idx;
   void *idx_void;
 
@@ -239,7 +239,7 @@ store_representation(apr_array_header_t *reps,
   idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
-      APR_ARRAY_PUSH(reps, binary_representation_t) = binary_rep;
+      APR_ARRAY_PUSH(reps, binary_svn_fs_x__representation_t) = binary_rep;
       idx = reps->nelts;
       apr_hash_set(dict, reps->elts + (idx-1) * reps->elt_size,
                    reps->elt_size, (void*)(apr_uintptr_t)idx);
@@ -354,16 +354,16 @@ get_id(svn_fs_x__id_t *id,
   return SVN_NO_ERROR;
 }
 
-/* Create a representation_t in *REP, allocated in POOL based on the
+/* Create a svn_fs_x__representation_t in *REP, allocated in POOL based on the
  * representation stored at index IDX in REPS.
  */
 static svn_error_t *
-get_representation(representation_t **rep,
+get_representation(svn_fs_x__representation_t **rep,
                    const apr_array_header_t *reps,
                    int idx,
                    apr_pool_t *pool)
 {
-  binary_representation_t *binary_rep;
+  binary_svn_fs_x__representation_t *binary_rep;
 
   /* handle NULL representations  */
   if (idx == 0)
@@ -380,7 +380,7 @@ get_representation(representation_t **rep,
                              idx, reps->nelts);
 
   /* no translation required. Just duplicate the info */
-  binary_rep = &APR_ARRAY_IDX(reps, idx - 1, binary_representation_t);
+  binary_rep = &APR_ARRAY_IDX(reps, idx - 1, binary_svn_fs_x__representation_t);
 
   *rep = apr_pcalloc(pool, sizeof(**rep));
   (*rep)->has_sha1 = binary_rep->has_sha1;
@@ -515,8 +515,8 @@ write_reps(svn_packed__int_stream_t *rep_stream,
   int i;
   for (i = 0; i < reps->nelts; ++i)
     {
-      binary_representation_t *rep
-        = &APR_ARRAY_IDX(reps, i, binary_representation_t);
+      binary_svn_fs_x__representation_t *rep
+        = &APR_ARRAY_IDX(reps, i, binary_svn_fs_x__representation_t);
 
       svn_packed__add_uint(rep_stream, rep->has_sha1);
 
@@ -616,7 +616,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a representation_t array in POOL and return it in *REPS_P.
+/* Allocate a svn_fs_x__representation_t array in POOL and return it in *REPS_P.
  * Deserialize the data in REP_STREAM and DIGEST_STREAM and store the
  * resulting representations into the *REPS_P.
  */
@@ -633,11 +633,11 @@ read_reps(apr_array_header_t **reps_p,
   apr_size_t count
     = svn_packed__int_count(svn_packed__first_int_substream(rep_stream));
   apr_array_header_t *reps
-    = apr_array_make(pool, (int)count, sizeof(binary_representation_t));
+    = apr_array_make(pool, (int)count, sizeof(binary_svn_fs_x__representation_t));
 
   for (i = 0; i < count; ++i)
     {
-      binary_representation_t rep;
+      binary_svn_fs_x__representation_t rep;
 
       rep.has_sha1 = (svn_boolean_t)svn_packed__get_uint(rep_stream);
 
@@ -672,7 +672,7 @@ read_reps(apr_array_header_t **reps_p,
           memcpy(rep.sha1_digest, bytes, sizeof(rep.sha1_digest));
         }
 
-      APR_ARRAY_PUSH(reps, binary_representation_t) = rep;
+      APR_ARRAY_PUSH(reps, binary_svn_fs_x__representation_t) = rep;
     }
 
   *reps_p = reps;

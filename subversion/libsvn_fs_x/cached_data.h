@@ -59,7 +59,7 @@ svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
 /* Verify that representation REP in FS can be accessed.
    Do any allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__check_rep(representation_t *rep,
+svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
                     svn_fs_t *fs,
                     apr_pool_t *scratch_pool);
 
@@ -70,7 +70,7 @@ svn_fs_x__check_rep(representation_t *rep,
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
-                           representation_t *rep,
+                           svn_fs_x__representation_t *rep,
                            svn_fs_t *fs,
                            apr_pool_t *scratch_pool);
 
@@ -82,7 +82,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
 svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
-                       representation_t *rep,
+                       svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
                        apr_pool_t *pool);
 

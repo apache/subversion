@@ -58,7 +58,7 @@ typedef struct verify_walker_baton_t
 /* Used by svn_fs_x__verify().
    Implements svn_fs_x__walk_rep_reference().walker.  */
 static svn_error_t *
-verify_walker(representation_t *rep,
+verify_walker(svn_fs_x__representation_t *rep,
               void *baton,
               svn_fs_t *fs,
               apr_pool_t *scratch_pool)
