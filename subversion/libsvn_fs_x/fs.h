@@ -233,7 +233,7 @@ typedef struct svn_fs_x__representation_cache_key_t
 /* Key type that identifies a txdelta window.
 
    Note: Cache keys should require no padding. */
-typedef struct window_cache_key_t
+typedef struct svn_fs_x__window_cache_key_t
 {
   /* The object's revision.  Use the 64 data type to prevent padding. */
   apr_int64_t revision;
@@ -243,7 +243,7 @@ typedef struct window_cache_key_t
 
   /* Item index of the representation */
   apr_uint64_t item_index;
-} window_cache_key_t;
+} svn_fs_x__window_cache_key_t;
 
 /* Private (non-shared) FSX-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
@@ -311,11 +311,11 @@ typedef struct fs_x_data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is window_cache_key_t */
+  /* Cache for txdelta_window_t objects; the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
-     the key is window_cache_key_t */
+     the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
   /* Cache for svn_fs_x__rep_header_t objects;

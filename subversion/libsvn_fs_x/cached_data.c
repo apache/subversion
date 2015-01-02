@@ -999,8 +999,8 @@ struct rep_read_baton
 
 /* Set window key in *KEY to address the window described by RS.
    For convenience, return the KEY. */
-static window_cache_key_t *
-get_window_key(window_cache_key_t *key, rep_state_t *rs)
+static svn_fs_x__window_cache_key_t *
+get_window_key(svn_fs_x__window_cache_key_t *key, rep_state_t *rs)
 {
   svn_revnum_t revision = svn_fs_x__get_revnum(rs->rep_id.change_set);
   assert(revision <= APR_UINT32_MAX);
@@ -1079,7 +1079,7 @@ get_cached_window_sizes(window_sizes_t **sizes,
     }
   else
     {
-      window_cache_key_t key = { 0 };
+      svn_fs_x__window_cache_key_t key = { 0 };
       SVN_ERR(svn_cache__get_partial((void **)sizes,
                                      is_cached,
                                      rs->window_cache,
@@ -1109,7 +1109,7 @@ get_cached_window(svn_txdelta_window_t **window_p,
     {
       /* ask the cache for the desired txdelta window */
       svn_fs_x__txdelta_cached_window_t *cached_window;
-      window_cache_key_t key = { 0 };
+      svn_fs_x__window_cache_key_t key = { 0 };
       get_window_key(&key, rs);
       key.chunk_index = chunk_index;
       SVN_ERR(svn_cache__get((void **) &cached_window,
@@ -1146,7 +1146,7 @@ set_cached_window(svn_txdelta_window_t *window,
     {
       /* store the window and the first offset _past_ it */
       svn_fs_x__txdelta_cached_window_t cached_window;
-      window_cache_key_t key = {0};
+      svn_fs_x__window_cache_key_t key = {0};
 
       cached_window.window = window;
       cached_window.start_offset = start_offset - rs->start;
@@ -1183,7 +1183,7 @@ get_cached_combined_window(svn_stringbuf_t **window_p,
   else
     {
       /* ask the cache for the desired txdelta window */
-      window_cache_key_t key = { 0 };
+      svn_fs_x__window_cache_key_t key = { 0 };
       return svn_cache__get((void **)window_p,
                             is_cached,
                             rs->combined_cache,
@@ -1206,7 +1206,7 @@ set_cached_combined_window(svn_stringbuf_t *window,
     {
       /* but key it with the start offset because that is the known state
        * when we will look it up */
-      window_cache_key_t key = { 0 };
+      svn_fs_x__window_cache_key_t key = { 0 };
       return svn_cache__set(rs->combined_cache,
                             get_window_key(&key, rs),
                             window,
