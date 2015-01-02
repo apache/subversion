@@ -592,7 +592,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            svn_fs_x__serialize_txdelta_window,
                            svn_fs_x__deserialize_txdelta_window,
-                           sizeof(window_cache_key_t),
+                           sizeof(svn_fs_x__window_cache_key_t),
                            apr_pstrcat(pool, prefix, "TXDELTA_WINDOW",
                                        SVN_VA_NULL),
                            SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
@@ -606,7 +606,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
                            NULL, NULL,
-                           sizeof(window_cache_key_t),
+                           sizeof(svn_fs_x__window_cache_key_t),
                            apr_pstrcat(pool, prefix, "COMBINED_WINDOW",
                                        SVN_VA_NULL),
                            SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
