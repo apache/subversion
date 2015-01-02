@@ -27,11 +27,14 @@ use Test::More tests => 8;
 use File::Temp qw(tempdir);
 use File::Path qw(rmtree);
 use File::Spec;
+use POSIX qw(locale_h);
 
 use SVN::Core;
 use SVN::Repos;
 use SVN::Fs;
 use SVN::Delta;
+
+setlocale(LC_ALL, "C");
 
 my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
