@@ -163,7 +163,7 @@ typedef struct svn_fs_x__shared_txn_data_t
 /* Private FSX-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
-typedef struct fs_x_shared_data_t
+typedef struct svn_fs_x__shared_data_t
 {
   /* A list of shared transaction objects for each transaction that is
      currently active, or NULL if none are.  All access to this list,
@@ -199,7 +199,7 @@ typedef struct fs_x_shared_data_t
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
   apr_pool_t *common_pool;
-} fs_x_shared_data_t;
+} svn_fs_x__shared_data_t;
 
 /* Data structure for the 1st level DAG node cache. */
 typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
@@ -372,7 +372,7 @@ typedef struct fs_x_data_t
   svn_boolean_t has_write_lock;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
-  fs_x_shared_data_t *shared;
+  svn_fs_x__shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
