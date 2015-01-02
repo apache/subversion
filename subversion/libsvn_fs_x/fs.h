@@ -326,8 +326,8 @@ typedef struct svn_fs_x__data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *noderevs_container_cache;
 
-  /* Cache for change lists as APR arrays of change_t * objects; the key
-     is the revision */
+  /* Cache for change lists as APR arrays of svn_fs_x__change_t * objects;
+     the key is the revision */
   svn_cache__t *changes_cache;
 
   /* Cache for change_list_t containers;
@@ -544,7 +544,7 @@ typedef struct svn_fs_x__dirent_t
 
 
 /*** Change ***/
-typedef struct change_t
+typedef struct svn_fs_x__change_t
 {
   /* Path of the change. */
   svn_string_t path;
@@ -565,7 +565,7 @@ typedef struct change_t
   const char *copyfrom_path;
 
   svn_tristate_t mergeinfo_mod;
-} change_t;
+} svn_fs_x__change_t;
 
 
 #ifdef __cplusplus

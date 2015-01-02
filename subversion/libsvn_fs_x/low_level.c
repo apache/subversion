@@ -777,14 +777,14 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
    the resulting change in *CHANGE_P.  If there is no next record,
    store NULL there.  Perform all allocations from POOL. */
 static svn_error_t *
-read_change(change_t **change_p,
+read_change(svn_fs_x__change_t **change_p,
             svn_stream_t *stream,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line;
   svn_boolean_t eof = TRUE;
-  change_t *change;
+  svn_fs_x__change_t *change;
   char *str, *last_str, *kind_str;
 
   /* Default return value. */
@@ -959,7 +959,7 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  change_t *change;
+  svn_fs_x__change_t *change;
   apr_pool_t *iterpool;
 
   /* Pre-allocate enough room for most change lists.
@@ -970,13 +970,13 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
      respective two-power by just a few bytes (leaves room array and APR
      node overhead for large enough M).
    */
-  *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
+  *changes = apr_array_make(result_pool, 63, sizeof(svn_fs_x__change_t *));
 
   SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   while (change)
     {
-      APR_ARRAY_PUSH(*changes, change_t*) = change;
+      APR_ARRAY_PUSH(*changes, svn_fs_x__change_t*) = change;
       SVN_ERR(read_change(&change, stream, result_pool, iterpool));
       svn_pool_clear(iterpool);
     }
@@ -992,7 +992,7 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
                                      void *change_receiver_baton,
                                      apr_pool_t *scratch_pool)
 {
-  change_t *change;
+  svn_fs_x__change_t *change;
   apr_pool_t *iterpool;
 
   iterpool = svn_pool_create(scratch_pool);
@@ -1015,7 +1015,7 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
    All temporary allocations are in SCRATCH_POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
-                   change_t *change,
+                   svn_fs_x__change_t *change,
                    apr_pool_t *scratch_pool)
 {
   const char *idstr;
@@ -1106,7 +1106,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
   /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
     {
-      change_t *change;
+      svn_fs_x__change_t *change;
 
       svn_pool_clear(iterpool);
       change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;

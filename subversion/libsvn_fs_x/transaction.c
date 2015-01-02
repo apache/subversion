@@ -860,11 +860,11 @@ unparse_dir_entries(apr_array_header_t *entries,
 
 /* Return a deep copy of SOURCE and allocate it in RESULT_POOL.
  */
-static change_t *
-path_change_dup(const change_t *source,
+static svn_fs_x__change_t *
+path_change_dup(const svn_fs_x__change_t *source,
                 apr_pool_t *result_pool)
 {
-  change_t *result = apr_pmemdup(result_pool, source, sizeof(*source));
+  svn_fs_x__change_t *result = apr_pmemdup(result_pool, source, sizeof(*source));
   result->path.data = apr_pstrmemdup(result_pool, source->path.data,
                                      source->path.len);
   if (source->copyfrom_path)
@@ -874,17 +874,17 @@ path_change_dup(const change_t *source,
 }
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
-   change_t CHANGED_PATHS, collapsing multiple changes into a
+   svn_fs_x__change_t CHANGED_PATHS, collapsing multiple changes into a
    single summarical (is that real word?) change per path.  DELETIONS is
-   also a path->change_t hash and contains all the deletions
+   also a path->svn_fs_x__change_t hash and contains all the deletions
    that got turned into a replacement. */
 static svn_error_t *
 fold_change(apr_hash_t *changed_paths,
             apr_hash_t *deletions,
-            const change_t *change)
+            const svn_fs_x__change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get(changed_paths);
-  change_t *old_change, *new_change;
+  svn_fs_x__change_t *old_change, *new_change;
   const svn_string_t *path = &change->path;
 
   if ((old_change = apr_hash_get(changed_paths, path->data, path->len)))
@@ -1026,7 +1026,7 @@ typedef struct process_changes_baton_t
    data. Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 process_changes(void *baton_p,
-                change_t *change,
+                svn_fs_x__change_t *change,
                 apr_pool_t *scratch_pool)
 {
   process_changes_baton_t *baton = baton_p;
@@ -1764,7 +1764,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   apr_file_t *file;
-  change_t change;
+  svn_fs_x__change_t change;
   apr_hash_t *changes = apr_hash_make(pool);
 
   /* Not using APR_BUFFERED to append change in one atomic write operation. */
@@ -3068,7 +3068,7 @@ verify_locks(svn_fs_t *fs,
     {
       const svn_sort__item_t *item;
       const char *path;
-      change_t *change;
+      svn_fs_x__change_t *change;
       svn_boolean_t recurse = TRUE;
 
       svn_pool_clear(iterpool);

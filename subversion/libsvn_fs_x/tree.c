@@ -3226,7 +3226,7 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 static svn_error_t *
 construct_fs_path_change(svn_fs_path_change2_t **result_p,
                          svn_fs_x__id_context_t *context,
-                         change_t *change,
+                         svn_fs_x__change_t *change,
                          apr_pool_t *result_pool)
 {
   const svn_fs_id_t *id
@@ -3273,7 +3273,7 @@ x_paths_changed(apr_hash_t **changed_paths_p,
            hi;
            hi = apr_hash_next(hi))
         {
-          change_t *change = apr_hash_this_val(hi);
+          svn_fs_x__change_t *change = apr_hash_this_val(hi);
           SVN_ERR(construct_fs_path_change(&path_change, context, change,
                                            pool));
           apr_hash_set(changed_paths,
@@ -3291,7 +3291,7 @@ x_paths_changed(apr_hash_t **changed_paths_p,
       changed_paths = svn_hash__make(pool);
       for (i = 0; i < changes->nelts; ++i)
         {
-          change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+          svn_fs_x__change_t *change = APR_ARRAY_IDX(changes, i, svn_fs_x__change_t *);
           SVN_ERR(construct_fs_path_change(&path_change, context, change,
                                            pool));
           apr_hash_set(changed_paths, change->path.data, change->path.len,

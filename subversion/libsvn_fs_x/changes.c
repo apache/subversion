@@ -134,7 +134,7 @@ svn_fs_x__changes_create(apr_size_t initial_count,
  */
 static svn_error_t *
 append_change(svn_fs_x__changes_t *changes,
-              change_t *change)
+              svn_fs_x__change_t *change)
 {
   binary_change_t binary_change = { 0 };
   svn_boolean_t is_txn_id;
@@ -193,7 +193,7 @@ svn_fs_x__changes_append_list(apr_size_t *list_index,
 
   /* simply append the list and all changes */
   for (i = 0; i < list->nelts; ++i)
-    append_change(changes, APR_ARRAY_IDX(list, i, change_t *));
+    append_change(changes, APR_ARRAY_IDX(list, i, svn_fs_x__change_t *));
 
   /* terminate the list by storing the next changes offset */
   APR_ARRAY_PUSH(changes->offsets, int) = changes->changes->nelts;
@@ -245,14 +245,14 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
 
   /* construct result */
-  *list = apr_array_make(pool, last - first, sizeof(change_t*));
+  *list = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t*));
   for (i = first; i < last; ++i)
     {
       const binary_change_t *binary_change
         = &APR_ARRAY_IDX(changes->changes, i, binary_change_t);
 
-      /* convert BINARY_CHANGE into a standard FSX change_t */
-      change_t *change = apr_pcalloc(pool, sizeof(*change));
+      /* convert BINARY_CHANGE into a standard FSX svn_fs_x__change_t */
+      svn_fs_x__change_t *change = apr_pcalloc(pool, sizeof(*change));
       change->path.data = svn_fs_x__string_table_get(changes->paths,
                                                      binary_change->path,
                                                      &change->path.len,
@@ -278,7 +278,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
                                         pool);
 
       /* add it to the result */
-      APR_ARRAY_PUSH(*list, change_t*) = change;
+      APR_ARRAY_PUSH(*list, svn_fs_x__change_t*) = change;
     }
 
   return SVN_NO_ERROR;
@@ -495,14 +495,14 @@ svn_fs_x__changes_get_list_func(void **out,
   last = offsets[idx+1];
 
   /* construct result */
-  list = apr_array_make(pool, last - first, sizeof(change_t*));
+  list = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t*));
 
   for (i = first; i < last; ++i)
     {
       const binary_change_t *binary_change = &changes[i];
 
-      /* convert BINARY_CHANGE into a standard FSX change_t */
-      change_t *change = apr_pcalloc(pool, sizeof(*change));
+      /* convert BINARY_CHANGE into a standard FSX svn_fs_x__change_t */
+      svn_fs_x__change_t *change = apr_pcalloc(pool, sizeof(*change));
       change->path.data
         = svn_fs_x__string_table_get_func(paths, binary_change->path,
                                           &change->path.len, pool);
@@ -526,7 +526,7 @@ svn_fs_x__changes_get_list_func(void **out,
                                             pool);
 
       /* add it to the result */
-      APR_ARRAY_PUSH(list, change_t*) = change;
+      APR_ARRAY_PUSH(list, svn_fs_x__change_t*) = change;
     }
 
   *out = list;
