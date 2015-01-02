@@ -817,7 +817,7 @@ store_sha1_rep_mapping(svn_fs_t *fs,
 }
 
 static svn_error_t *
-unparse_dir_entry(dirent_t *dirent,
+unparse_dir_entry(svn_fs_x__dirent_t *dirent,
                   svn_stream_t *stream,
                   apr_pool_t *pool)
 {
@@ -845,10 +845,10 @@ unparse_dir_entries(apr_array_header_t *entries,
   int i;
   for (i = 0; i < entries->nelts; ++i)
     {
-      dirent_t *dirent;
+      svn_fs_x__dirent_t *dirent;
 
       svn_pool_clear(iterpool);
-      dirent = APR_ARRAY_IDX(entries, i, dirent_t *);
+      dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
       SVN_ERR(unparse_dir_entry(dirent, stream, iterpool));
     }
 
@@ -1731,7 +1731,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
   /* Append an incremental hash entry for the entry change. */
   if (id)
     {
-      dirent_t entry;
+      svn_fs_x__dirent_t entry;
       entry.name = name;
       entry.id = *id;
       entry.kind = kind;
@@ -2504,7 +2504,7 @@ write_hash_to_stream(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Implement collection_writer_t writing the dirent_t* array given
+/* Implement collection_writer_t writing the svn_fs_x__dirent_t* array given
    as BATON. */
 static svn_error_t *
 write_directory_to_stream(svn_stream_t *stream,
@@ -2809,7 +2809,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
                                          subpool));
       for (i = 0; i < entries->nelts; ++i)
         {
-          dirent_t *dirent = APR_ARRAY_IDX(entries, i, dirent_t *);
+          svn_fs_x__dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, &dirent->id,
