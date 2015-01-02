@@ -23,6 +23,7 @@
 #ifndef SVN_LIBSVN_FS__TEMP_SERIALIZER_H
 #define SVN_LIBSVN_FS__TEMP_SERIALIZER_H
 
+#include "private/svn_temp_serializer.h"
 #include "fs.h"
 
 /**
@@ -146,24 +147,6 @@ svn_fs_x__deserialize_properties(void **out,
                                  apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
- */
-svn_error_t *
-svn_fs_x__serialize_id(void **data,
-                       apr_size_t *data_len,
-                       void *in,
-                       apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__deserialize_func_t for #svn_fs_id_t
- */
-svn_error_t *
-svn_fs_x__deserialize_id(void **out,
-                         void *data,
-                         apr_size_t data_len,
-                         apr_pool_t *pool);
-
-/**
  * Implements #svn_cache__serialize_func_t for #node_revision_t
  */
 svn_error_t *
@@ -212,7 +195,7 @@ svn_fs_x__get_sharded_offset(void **out,
 
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #dirent_t within a serialized directory contents hash,
  * identified by its name (const char @a *baton).
  */
 svn_error_t *
@@ -234,12 +217,12 @@ typedef struct replace_baton_t
   const char *name;
 
   /** directory entry to insert instead */
-  svn_fs_dirent_t *new_entry;
+  dirent_t *new_entry;
 } replace_baton_t;
 
 /**
  * Implements #svn_cache__partial_setter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #dirent_t within a serialized directory contents hash,
  * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *

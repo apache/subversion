@@ -36,7 +36,7 @@
 svn_error_t *
 svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_id_t *id,
+                            const svn_fs_x__id_t *id,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
@@ -45,16 +45,15 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
 svn_error_t *
 svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               svn_fs_t *fs,
-                              const svn_fs_id_t *id,
+                              const svn_fs_x__id_t *id,
                               apr_pool_t *pool);
 
-/* Set *ROOT_ID to the node-id for the root of revision REV in
-   filesystem FS.  Do any allocations in POOL. */
+/* Set *ROOT_ID to the noderev ID for the root of revision REV in
+   filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
+svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.
@@ -140,7 +139,7 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
    entry exists, return NULL.  If HINT is not NULL, set *HINT to the array
    index of the entry returned.  Successive calls in a linear scan scenario
    will be faster called with the same HINT variable. */
-svn_fs_dirent_t *
+dirent_t *
 svn_fs_x__find_dir_entry(apr_array_header_t *entries,
                          const char *name,
                          int *hint);
@@ -150,7 +149,7 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
    be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
-svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+svn_fs_x__rep_contents_dir_entry(dirent_t **dirent,
                                  svn_fs_t *fs,
                                  node_revision_t *noderev,
                                  const char *name,

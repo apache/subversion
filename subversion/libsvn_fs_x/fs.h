@@ -279,10 +279,6 @@ typedef struct fs_x_data_t
      e.g. memcached may be ignored as caching is an optional feature. */
   svn_boolean_t fail_stop;
 
-  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache__t *rev_root_id_cache;
-
   /* Caches native dag_node_t* instances and acts as a 1st level cache */
   fs_x_dag_cache_t *dag_node_cache;
 
@@ -292,7 +288,7 @@ typedef struct fs_x_data_t
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
-     names to (svn_fs_dirent_t *). */
+     names to (dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
@@ -431,12 +427,8 @@ typedef struct transaction_t
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
 
-  /* node revision id of the root node.  */
-  const svn_fs_id_t *root_id;
-
-  /* node revision id of the node which is the root of the revision
-     upon which this txn is base.  (unfinished only) */
-  const svn_fs_id_t *base_id;
+  /* revision upon which this txn is base.  (unfinished only) */
+  svn_revnum_t base_rev;
 
   /* copies list (const char * copy_ids), or NULL if there have been
      no copies in this transaction.  */
@@ -466,7 +458,7 @@ typedef struct representation_t
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Change set and item number where this representation is located. */
-  svn_fs_x__id_part_t id;
+  svn_fs_x__id_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -486,12 +478,18 @@ typedef struct node_revision_t
   /* node kind */
   svn_node_kind_t kind;
 
-  /* The node-id for this node-rev. */
-  const svn_fs_id_t *id;
+  /* Predecessor node revision id.  Will be "unused" if there is no
+     predecessor for this node revision. */
+  svn_fs_x__id_t predecessor_id;
 
-  /* predecessor node revision id, or NULL if there is no predecessor
-     for this node revision */
-  const svn_fs_id_t *predecessor_id;
+  /* The ID of this noderev */
+  svn_fs_x__id_t noderev_id;
+
+  /* Identifier of the node that this noderev belongs to. */
+  svn_fs_x__id_t node_id;
+
+  /* Copy identifier of this line of history. */
+  svn_fs_x__id_t copy_id;
 
   /* If this node-rev is a copy, where was it copied from? */
   const char *copyfrom_path;
@@ -530,14 +528,43 @@ typedef struct node_revision_t
 } node_revision_t;
 
 
+/** The type of a directory entry.  */
+typedef struct dirent_t
+{
+
+  /** The name of this directory entry.  */
+  const char *name;
+
+  /** The node revision ID it names.  */
+  svn_fs_x__id_t id;
+
+  /** The node kind. */
+  svn_node_kind_t kind;
+} dirent_t;
+
+
 /*** Change ***/
 typedef struct change_t
 {
   /* Path of the change. */
   svn_string_t path;
 
-  /* API compatible change description */
-  svn_fs_path_change2_t info;
+  /* node revision id of changed path */
+  svn_fs_x__id_t noderev_id;
+
+  /* See svn_fs_path_change2_t for a description for the remaining elements.
+   */
+  svn_fs_path_change_kind_t change_kind;
+
+  svn_boolean_t text_mod;
+  svn_boolean_t prop_mod;
+  svn_node_kind_t node_kind;
+
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  svn_tristate_t mergeinfo_mod;
 } change_t;
 
 

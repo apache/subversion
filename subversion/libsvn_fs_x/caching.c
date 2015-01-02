@@ -405,27 +405,6 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                               apr_pool_cleanup_null);
 #endif
 
-  /* Make the cache for revision roots.  For the vast majority of
-   * commands, this is only going to contain a few entries (svnadmin
-   * dump/verify is an exception here), so to reduce overhead let's
-   * try to keep it to just one page.  I estimate each entry has about
-   * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
-   * id_private_t + 3 strings for value, and the cache_entry); the
-   * default pool size is 8192, so about a hundred should fit
-   * comfortably. */
-  SVN_ERR(create_cache(&(ffd->rev_root_id_cache),
-                       NULL,
-                       membuffer,
-                       1, 100,
-                       svn_fs_x__serialize_id,
-                       svn_fs_x__deserialize_id,
-                       sizeof(svn_revnum_t),
-                       apr_pstrcat(pool, prefix, "RRI", SVN_VA_NULL),
-                       0,
-                       fs,
-                       no_handler,
-                       fs->pool, pool));
-
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
   SVN_ERR(create_cache(&(ffd->rev_node_cache),
@@ -451,7 +430,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        1024, 8,
                        svn_fs_x__serialize_dir_entries,
                        svn_fs_x__deserialize_dir_entries,
-                       sizeof(svn_fs_x__id_part_t),
+                       sizeof(svn_fs_x__id_t),
                        apr_pstrcat(pool, prefix, "DIR", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                        fs,

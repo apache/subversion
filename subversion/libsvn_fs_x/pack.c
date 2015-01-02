@@ -101,7 +101,7 @@ typedef struct path_order_t
   svn_prefix_string__t *path;
 
   /* node ID for this PATH in REVISION */
-  svn_fs_x__id_part_t node_id;
+  svn_fs_x__id_t node_id;
 
   /* when this change happened */
   svn_revnum_t revision;
@@ -113,10 +113,10 @@ typedef struct path_order_t
   apr_int64_t expanded_size;
 
   /* item ID of the noderev linked to the change. May be (0, 0). */
-  svn_fs_x__id_part_t noderev_id;
+  svn_fs_x__id_t noderev_id;
 
   /* item ID of the representation containing the new data. May be (0, 0). */
-  svn_fs_x__id_part_t rep_id;
+  svn_fs_x__id_t rep_id;
 } path_order_t;
 
 /* Represents a reference from item FROM to item TO.  FROM may be a noderev
@@ -125,8 +125,8 @@ typedef struct path_order_t
  */
 typedef struct reference_t
 {
-  svn_fs_x__id_part_t to;
-  svn_fs_x__id_part_t from;
+  svn_fs_x__id_t to;
+  svn_fs_x__id_t from;
 } reference_t;
 
 /* This structure keeps track of all the temporary data and status that
@@ -530,7 +530,7 @@ add_item_rep_mapping(pack_context_t *context,
  */
 static svn_fs_x__p2l_entry_t *
 get_item(pack_context_t *context,
-         const svn_fs_x__id_part_t *id,
+         const svn_fs_x__id_t *id,
          svn_boolean_t reset)
 {
   svn_fs_x__p2l_entry_t *result = NULL;
@@ -717,10 +717,10 @@ copy_node_to_temp(pack_context_t *context,
    * It will not be stored in the final pack file. */
   sort_path = tweak_path_for_ordering(noderev->created_path, pool);
   path_order->path = svn_prefix_string__create(context->paths, sort_path);
-  path_order->node_id = *svn_fs_x__id_node_id(noderev->id);
-  path_order->revision = svn_fs_x__id_rev(noderev->id);
+  path_order->node_id = noderev->node_id;
+  path_order->revision = svn_fs_x__get_revnum(noderev->noderev_id.change_set);
   path_order->is_dir = noderev->kind == svn_node_dir;
-  path_order->noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
+  path_order->noderev_id = noderev->noderev_id;
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
   return SVN_NO_ERROR;
@@ -774,7 +774,7 @@ compare_path_order(const path_order_t * const * lhs_p,
     return diff;
 
   /* reverse order on node (i.e. latest first) */
-  diff = svn_fs_x__id_part_compare(&rhs->node_id, &lhs->node_id);
+  diff = svn_fs_x__id_compare(&rhs->node_id, &lhs->node_id);
   if (diff)
     return diff;
 
@@ -794,8 +794,8 @@ compare_references(const reference_t * const * lhs_p,
   const reference_t * lhs = *lhs_p;
   const reference_t * rhs = *rhs_p;
 
-  int diff = svn_fs_x__id_part_compare(&lhs->to, &rhs->to);
-  return diff ? diff : svn_fs_x__id_part_compare(&lhs->from, &rhs->from);
+  int diff = svn_fs_x__id_compare(&lhs->to, &rhs->to);
+  return diff ? diff : svn_fs_x__id_compare(&lhs->from, &rhs->from);
 }
 
 /* Order the data collected in CONTEXT such that we can place them in the
@@ -878,7 +878,7 @@ find_first_reference(pack_context_t *context,
       reference_t *reference
         = APR_ARRAY_IDX(context->references, current, reference_t *);
 
-      if (svn_fs_x__id_part_compare(&reference->to, item->items) < 0)
+      if (svn_fs_x__id_compare(&reference->to, item->items) < 0)
         lower = current + 1;
       else
         upper = current - 1;
@@ -899,7 +899,7 @@ is_reference_match(pack_context_t *context,
     return FALSE;
 
   reference = APR_ARRAY_IDX(context->references, idx, reference_t *);
-  return svn_fs_x__id_part_eq(&reference->to, item->items);
+  return svn_fs_x__id_eq(&reference->to, item->items);
 }
 
 /* Starting at IDX in CONTEXT->PATH_ORDER, select all representations and
@@ -936,8 +936,7 @@ select_reps(pack_context_t *context,
       path_order_t *current_path
         = APR_ARRAY_IDX(path_order, idx, path_order_t *);
 
-      if (!svn_fs_x__id_part_eq(&start_path->node_id,
-                                 &current_path->node_id))
+      if (!svn_fs_x__id_eq(&start_path->node_id, &current_path->node_id))
         break;
 
       APR_ARRAY_IDX(path_order, idx, path_order_t *) = NULL;
@@ -1036,7 +1035,7 @@ write_nodes_container(pack_context_t *context,
   container_entry->type = SVN_FS_X__ITEM_TYPE_NODEREVS_CONT;
   container_entry->item_count = items->nelts;
   container_entry->items = apr_palloc(context->info_pool,
-      sizeof(svn_fs_x__id_part_t) * container_entry->item_count);
+      sizeof(svn_fs_x__id_t) * container_entry->item_count);
 
   for (i = 0; i < items->nelts; ++i)
     container_entry->items[i]
@@ -1185,7 +1184,7 @@ write_reps_container(pack_context_t *context,
   container_entry.size = offset - container_entry.offset;
   container_entry.type = SVN_FS_X__ITEM_TYPE_REPS_CONT;
   container_entry.item_count = sub_items->nelts;
-  container_entry.items = (svn_fs_x__id_part_t *)sub_items->elts;
+  container_entry.items = (svn_fs_x__id_t *)sub_items->elts;
 
   context->pack_offset = offset;
   APR_ARRAY_PUSH(new_entries, svn_fs_x__p2l_entry_t *)
@@ -1217,7 +1216,7 @@ write_reps_containers(pack_context_t *context,
   svn_fs_x__reps_builder_t *container
     = svn_fs_x__reps_builder_create(context->fs, container_pool);
   apr_array_header_t *sub_items
-    = apr_array_make(pool, 64, sizeof(svn_fs_x__id_part_t));
+    = apr_array_make(pool, 64, sizeof(svn_fs_x__id_t));
   svn_fs_x__revision_file_t *file;
 
   SVN_ERR(svn_fs_x__wrap_temp_rev_file(&file, context->fs, temp_file, pool));
@@ -1283,7 +1282,7 @@ write_reps_containers(pack_context_t *context,
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
       block_left -= entry->size;
 
-      APR_ARRAY_PUSH(sub_items, svn_fs_x__id_part_t) = entry->items[0];
+      APR_ARRAY_PUSH(sub_items, svn_fs_x__id_t) = entry->items[0];
 
       svn_pool_clear(iterpool);
     }
@@ -1499,7 +1498,7 @@ write_changes_container(pack_context_t *context,
   container_entry.size = offset - container_entry.offset;
   container_entry.type = SVN_FS_X__ITEM_TYPE_CHANGES_CONT;
   container_entry.item_count = sub_items->nelts;
-  container_entry.items = (svn_fs_x__id_part_t *)sub_items->elts;
+  container_entry.items = (svn_fs_x__id_t *)sub_items->elts;
 
   context->pack_offset = offset;
   APR_ARRAY_PUSH(new_entries, svn_fs_x__p2l_entry_t *)
@@ -1531,7 +1530,7 @@ write_changes_containers(pack_context_t *context,
   svn_fs_x__changes_t *container
     = svn_fs_x__changes_create(1000, container_pool);
   apr_array_header_t *sub_items
-    = apr_array_make(pool, 64, sizeof(svn_fs_x__id_part_t));
+    = apr_array_make(pool, 64, sizeof(svn_fs_x__id_t));
   apr_array_header_t *new_entries
     = apr_array_make(context->info_pool, 16, entries->elt_size);
   svn_stream_t *temp_stream
@@ -1597,7 +1596,7 @@ write_changes_containers(pack_context_t *context,
       block_left -= estimated_size;
       estimated_addition += estimated_size;
 
-      APR_ARRAY_PUSH(sub_items, svn_fs_x__id_part_t) = entry->items[0];
+      APR_ARRAY_PUSH(sub_items, svn_fs_x__id_t) = entry->items[0];
 
       svn_pool_clear(iterpool);
     }

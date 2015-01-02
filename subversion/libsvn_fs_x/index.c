@@ -2063,7 +2063,7 @@ svn_fs_x__p2l_proto_index_add_entry(apr_file_t *proto_index,
   /* Add sub-items. */
   for (i = 0; i < entry->item_count; ++i)
     {
-      const svn_fs_x__id_part_t *sub_item = &entry->items[i];
+      const svn_fs_x__id_t *sub_item = &entry->items[i];
 
       /* Make sure all signed elements of ENTRY have non-negative values.
        *
@@ -2128,7 +2128,7 @@ read_p2l_sub_items_from_proto_index(apr_file_t *proto_index,
   for (i = 0; i < entry->item_count; ++i)
     {
       apr_uint64_t revision;
-      svn_fs_x__id_part_t *sub_item = &entry->items[i];
+      svn_fs_x__id_t *sub_item = &entry->items[i];
 
       SVN_ERR(read_uint64_from_proto_index(proto_index, &revision,
                                            eof, scratch_pool));
@@ -2954,7 +2954,7 @@ append_p2l_entries(apr_array_header_t *entries,
       /* Copy the items of that entries. */
       if (entry->item_count)
         {
-          const svn_fs_x__id_part_t *items
+          const svn_fs_x__id_t *items
             = resolve_ptr
             ? svn_temp_deserializer__ptr(page_entries->elts,
                                          (const void * const *)&entry->items)
@@ -3241,7 +3241,7 @@ get_p2l_entry_from_cached_page(const void *data,
       svn_fs_x__p2l_entry_t *result
         = apr_pmemdup(result_pool, entry, sizeof(*result));
       result->items
-        = (svn_fs_x__id_part_t *)svn_temp_deserializer__ptr(entries->elts,
+        = (svn_fs_x__id_t *)svn_temp_deserializer__ptr(entries->elts,
                                      (const void *const *)&entry->items);
       return result;
     }
@@ -3338,7 +3338,7 @@ typedef struct p2l_item_lookup_baton_t
 } p2l_item_lookup_baton_t;
 
 /* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
- * the svn_fs_x__id_part_t for the item described 2l_item_lookup_baton_t
+ * the svn_fs_x__id_t for the item described 2l_item_lookup_baton_t
  * *BATON.  *OUT will be NULL if there is no matching index entry or the
  * sub-item is out of range.
  */
@@ -3366,7 +3366,7 @@ p2l_item_lookup_func(void **out,
 }
 
 svn_error_t *
-svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
+svn_fs_x__p2l_item_lookup(svn_fs_x__id_t **item,
                           svn_fs_t *fs,
                           svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
@@ -3464,7 +3464,7 @@ svn_fs_x__item_offset(apr_off_t *absolute_position,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
                       svn_fs_x__revision_file_t *rev_file,
-                      const svn_fs_x__id_part_t *item_id,
+                      const svn_fs_x__id_t *item_id,
                       apr_pool_t *scratch_pool)
 {
   if (svn_fs_x__is_txn(item_id->change_set))
@@ -3583,15 +3583,15 @@ typedef struct sub_item_ordered_t
 
   /* Array of pointers into ENTRY->ITEMS, sorted by their revision member
    * _descending_ order.  May be NULL if ENTRY->ITEM_COUNT < 2. */
-  svn_fs_x__id_part_t **order;
+  svn_fs_x__id_t **order;
 } sub_item_ordered_t;
 
 /* implements compare_fn_t. Place LHS before RHS, if the latter is younger.
  * Used to sort sub_item_ordered_t::order
  */
 static int
-compare_sub_items(const svn_fs_x__id_part_t * const * lhs,
-                  const svn_fs_x__id_part_t * const * rhs)
+compare_sub_items(const svn_fs_x__id_t * const * lhs,
+                  const svn_fs_x__id_t * const * rhs)
 {
   return (*lhs)->change_set < (*rhs)->change_set
        ? 1
@@ -3605,8 +3605,8 @@ static int
 compare_p2l_info_rev(const sub_item_ordered_t * lhs,
                      const sub_item_ordered_t * rhs)
 {
-  svn_fs_x__id_part_t *lhs_part;
-  svn_fs_x__id_part_t *rhs_part;
+  svn_fs_x__id_t *lhs_part;
+  svn_fs_x__id_t *rhs_part;
   
   assert(lhs != rhs);
   if (lhs->entry->item_count == 0)
@@ -3697,7 +3697,7 @@ svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
   /* write index entries */
   for (i = 0; i < count; ++i)
     {
-      svn_fs_x__id_part_t *sub_item;
+      svn_fs_x__id_t *sub_item;
       sub_item_ordered_t *ordered = svn_priority_queue__peek(queue);
 
       if (ordered->entry->item_count > 0)
