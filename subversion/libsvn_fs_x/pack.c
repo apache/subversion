@@ -251,7 +251,7 @@ initialize_pack_context(pack_context_t *context,
                         void *cancel_baton,
                         apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *temp_dir;
   int max_revs = MIN(ffd->max_files_per_dir, max_items);
 
@@ -414,7 +414,7 @@ copy_file_data(pack_context_t *context,
       /* use streaming copies for larger data blocks.  That may require
        * the allocation of larger buffers and we should make sure that
        * this extra memory is released asap. */
-      fs_x_data_t *ffd = context->fs->fsap_data;
+      svn_fs_x__data_t *ffd = context->fs->fsap_data;
       apr_pool_t *copypool = svn_pool_create(pool);
       char *buffer = apr_palloc(copypool, ffd->block_size);
 
@@ -816,7 +816,7 @@ sort_reps(pack_context_t *context)
 static apr_ssize_t
 get_block_left(pack_context_t *context)
 {
-  fs_x_data_t *ffd = context->fs->fsap_data;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
   return ffd->block_size - (context->pack_offset % ffd->block_size);
 }
 
@@ -829,7 +829,7 @@ static svn_error_t *
 auto_pad_block(pack_context_t *context,
                apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = context->fs->fsap_data;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
   
   /* This is the maximum number of bytes "wasted" that way per block.
    * Larger items will cross the block boundaries. */
@@ -1378,7 +1378,7 @@ copy_reps_from_temp(pack_context_t *context,
                     apr_file_t *temp_file,
                     apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = context->fs->fsap_data;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
 
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_pool_t *container_pool = svn_pool_create(pool);
@@ -1694,7 +1694,7 @@ static svn_error_t *
 pack_range(pack_context_t *context,
            apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = context->fs->fsap_data;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
   apr_pool_t *revpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -1820,7 +1820,7 @@ static svn_error_t *
 append_revision(pack_context_t *context,
                 apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = context->fs->fsap_data;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_fs_x__revision_file_t *rev_file;
@@ -1992,7 +1992,7 @@ svn_fs_x__get_packed_offset(apr_off_t *rev_offset,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
   svn_revnum_t shard;
@@ -2118,7 +2118,7 @@ pack_shard(const char *revs_dir,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *rev_shard_path, *rev_pack_file_dir;
   const char *revprops_shard_path, *revprops_pack_file_dir;
 
@@ -2234,7 +2234,7 @@ pack_body(void *baton,
           apr_pool_t *pool)
 {
   struct pack_baton *pb = baton;
-  fs_x_data_t *ffd = pb->fs->fsap_data;
+  svn_fs_x__data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
   apr_int64_t i;
   svn_revnum_t youngest;

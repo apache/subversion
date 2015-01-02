@@ -118,7 +118,7 @@ recover_body(void *baton, apr_pool_t *pool)
 {
   struct recover_baton *b = baton;
   svn_fs_t *fs = b->fs;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;

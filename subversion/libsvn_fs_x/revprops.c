@@ -61,7 +61,7 @@ svn_fs_x__upgrade_pack_revprops(svn_fs_t *fs,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *revprops_shard_path;
   const char *revprops_pack_file_dir;
   apr_int64_t shard;
@@ -113,7 +113,7 @@ svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                         void *cancel_baton,
                                         apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *revprops_shard_path;
   apr_int64_t shard;
   apr_int64_t first_unpacked_shard
@@ -194,7 +194,7 @@ static svn_error_t *
 close_revprop_generation_file(svn_fs_t *fs,
                               apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   if (ffd->revprop_generation_file)
     {
       SVN_ERR(svn_io_file_close(ffd->revprop_generation_file, scratch_pool));
@@ -216,7 +216,7 @@ open_revprop_generation_file(svn_fs_t *fs,
                              svn_boolean_t read_only,
                              apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_int32_t flags = read_only ? APR_READ : (APR_READ | APR_WRITE);
 
   /* Close the current file handle if it has insufficient rights. */
@@ -299,7 +299,7 @@ read_revprop_generation_file(apr_int64_t *current,
                              svn_fs_t *fs,
                              apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   char buf[CHECKSUMMED_NUMBER_BUFFER_LEN];
   apr_size_t len;
@@ -354,7 +354,7 @@ write_revprop_generation_file(svn_fs_t *fs,
                               apr_int64_t current,
                               apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *buffer;
   apr_off_t offset = 0;
 
@@ -424,7 +424,7 @@ static svn_boolean_t
 has_revprop_cache(svn_fs_t *fs,
                   apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_error_t *error;
 
   /* is the cache (still) enabled? */
@@ -472,7 +472,7 @@ revprop_generation_fixup(void *void_baton,
                          apr_pool_t *scratch_pool)
 {
   revprop_generation_upgrade_t *baton = void_baton;
-  fs_x_data_t *ffd = baton->fs->fsap_data;
+  svn_fs_x__data_t *ffd = baton->fs->fsap_data;
   assert(ffd->has_write_lock);
 
   /* Make sure we don't operate on stale OS buffers. */
@@ -507,7 +507,7 @@ read_revprop_generation(apr_int64_t *generation,
                         apr_pool_t *scratch_pool)
 {
   apr_int64_t current = 0;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* read the current revprop generation number */
   SVN_ERR(read_revprop_generation_file(&current, fs, scratch_pool));
@@ -562,7 +562,7 @@ begin_revprop_change(apr_int64_t *generation,
                      svn_fs_t *fs,
                      apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   SVN_ERR_ASSERT(ffd->has_write_lock);
 
   /* Close and re-open to make sure we read the latest data. */
@@ -589,7 +589,7 @@ end_revprop_change(svn_fs_t *fs,
                    apr_int64_t generation,
                    apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   SVN_ERR_ASSERT(ffd->has_write_lock);
   SVN_ERR_ASSERT(generation % 2);
 
@@ -678,7 +678,7 @@ parse_revprop(apr_hash_t **properties,
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
   if (has_revprop_cache(fs, pool))
     {
-      fs_x_data_t *ffd = fs->fsap_data;
+      svn_fs_x__data_t *ffd = fs->fsap_data;
       svn_fs_x__pair_cache_key_t key = { 0 };
 
       key.revision = revision;
@@ -755,7 +755,7 @@ get_revprop_packname(svn_fs_t *fs,
                      apr_pool_t *pool,
                      apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
   int idx, rev_count;
@@ -859,7 +859,7 @@ same_shard(svn_fs_t *fs,
            svn_revnum_t r1,
            svn_revnum_t r2)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
@@ -1078,7 +1078,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_boolean_t bypass_cache,
                                 apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_int64_t generation = 0;
 
   /* not found, yet */
@@ -1281,7 +1281,7 @@ repack_revprops(svn_fs_t *fs,
                 svn_stream_t *file_stream,
                 apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   int i;
 
@@ -1409,7 +1409,7 @@ write_packed_revprop(const char **final_path,
                      apr_hash_t *proplist,
                      apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   packed_revprops_t *revprops;
   apr_int64_t generation = 0;
   svn_stream_t *stream;
@@ -1614,7 +1614,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
                                    svn_revnum_t revision,
                                    apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */

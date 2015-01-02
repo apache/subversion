@@ -324,7 +324,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                          void *cancel_baton,
                          apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
@@ -570,7 +570,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
@@ -732,7 +732,7 @@ verify_metadata_consistency(svn_fs_t *fs,
                             apr_pool_t *pool)
 {
   svn_error_t *err;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t revision, next_revision;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -806,7 +806,7 @@ svn_fs_x__verify(svn_fs_t *fs,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */
