@@ -1024,9 +1024,9 @@ svn_fs_x__deserialize_rep_header(void **out,
  */
 static void
 serialize_change(svn_temp_serializer__context_t *context,
-                 change_t * const *change_p)
+                 svn_fs_x__change_t * const *change_p)
 {
-  const change_t * change = *change_p;
+  const svn_fs_x__change_t * change = *change_p;
   if (change == NULL)
     return;
 
@@ -1048,10 +1048,10 @@ serialize_change(svn_temp_serializer__context_t *context,
  */
 static void
 deserialize_change(void *buffer,
-                   change_t **change_p,
+                   svn_fs_x__change_t **change_p,
                    apr_pool_t *pool)
 {
-  change_t * change;
+  svn_fs_x__change_t * change;
 
   /* fix-up of the pointer to the struct in question */
   svn_temp_deserializer__resolve(buffer, (void **)change_p);
@@ -1065,7 +1065,7 @@ deserialize_change(void *buffer,
   svn_temp_deserializer__resolve(change, (void **)&change->copyfrom_path);
 }
 
-/* Auxiliary structure representing the content of a change_t array.
+/* Auxiliary structure representing the content of a svn_fs_x__change_t array.
    This structure is much easier to (de-)serialize than an APR array.
  */
 typedef struct changes_data_t
@@ -1074,7 +1074,7 @@ typedef struct changes_data_t
   int count;
 
   /* reference to the changes */
-  change_t **changes;
+  svn_fs_x__change_t **changes;
 } changes_data_t;
 
 svn_error_t *
@@ -1092,7 +1092,7 @@ svn_fs_x__serialize_changes(void **data,
   /* initialize our auxiliary data structure and link it to the
    * array elements */
   changes.count = array->nelts;
-  changes.changes = (change_t **)array->elts;
+  changes.changes = (svn_fs_x__change_t **)array->elts;
 
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&changes,
@@ -1102,7 +1102,7 @@ svn_fs_x__serialize_changes(void **data,
 
   svn_temp_serializer__push(context,
                             (const void * const *)&changes.changes,
-                            changes.count * sizeof(change_t*));
+                            changes.count * sizeof(svn_fs_x__change_t*));
 
   for (i = 0; i < changes.count; ++i)
     serialize_change(context, &changes.changes[i]);
@@ -1126,7 +1126,7 @@ svn_fs_x__deserialize_changes(void **out,
 {
   int i;
   changes_data_t *changes = (changes_data_t *)data;
-  apr_array_header_t *array = apr_array_make(pool, 0, sizeof(change_t *));
+  apr_array_header_t *array = apr_array_make(pool, 0, sizeof(svn_fs_x__change_t *));
 
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(changes, (void**)&changes->changes);
@@ -1134,7 +1134,7 @@ svn_fs_x__deserialize_changes(void **out,
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
     deserialize_change(changes->changes,
-                       (change_t **)&changes->changes[i],
+                       (svn_fs_x__change_t **)&changes->changes[i],
                        pool);
 
   /* Use the changes buffer as the array's data buffer

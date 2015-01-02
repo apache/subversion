@@ -251,7 +251,7 @@ svn_fs_x__deserialize_rep_header(void **out,
 
 /**
  * Implements #svn_cache__serialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * #svn_fs_x__change_t *.
  */
 svn_error_t *
 svn_fs_x__serialize_changes(void **data,
@@ -261,7 +261,7 @@ svn_fs_x__serialize_changes(void **data,
 
 /**
  * Implements #svn_cache__deserialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * #svn_fs_x__change_t *.
  */
 svn_error_t *
 svn_fs_x__deserialize_changes(void **out,

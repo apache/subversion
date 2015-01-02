@@ -181,7 +181,7 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
  */
 typedef svn_error_t *(*svn_fs_x__change_receiver_t)(
   void *baton,
-  change_t *change,
+  svn_fs_x__change_t *change,
   apr_pool_t *scratch_pool);
 
 /* Read all the changes from STREAM and invoke CHANGE_RECEIVER on each change.
