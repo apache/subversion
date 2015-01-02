@@ -1659,8 +1659,10 @@ compare_dir_structure(svn_boolean_t *changed,
      entries one-by-one without binary lookup etc. */
   for (i = 0; i < lhs_entries->nelts; ++i)
     {
-      svn_fs_x__dirent_t *lhs_entry = APR_ARRAY_IDX(lhs_entries, i, svn_fs_x__dirent_t *);
-      svn_fs_x__dirent_t *rhs_entry = APR_ARRAY_IDX(rhs_entries, i, svn_fs_x__dirent_t *);
+      svn_fs_x__dirent_t *lhs_entry
+        = APR_ARRAY_IDX(lhs_entries, i, svn_fs_x__dirent_t *);
+      svn_fs_x__dirent_t *rhs_entry
+        = APR_ARRAY_IDX(rhs_entries, i, svn_fs_x__dirent_t *);
 
       if (strcmp(lhs_entry->name, rhs_entry->name) == 0)
         {
@@ -2357,7 +2359,8 @@ x_dir_entries(apr_hash_t **table_p,
   /* Convert directory array to hash. */
   for (i = 0; i < table->nelts; ++i)
     {
-      svn_fs_x__dirent_t *entry = APR_ARRAY_IDX(table, i, svn_fs_x__dirent_t *);
+      svn_fs_x__dirent_t *entry
+        = APR_ARRAY_IDX(table, i, svn_fs_x__dirent_t *);
 
       svn_fs_dirent_t *api_dirent = apr_pcalloc(pool, sizeof(*api_dirent));
       api_dirent->name = entry->name;
