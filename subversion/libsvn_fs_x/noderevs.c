@@ -616,9 +616,9 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a svn_fs_x__representation_t array in POOL and return it in *REPS_P.
- * Deserialize the data in REP_STREAM and DIGEST_STREAM and store the
- * resulting representations into the *REPS_P.
+/* Allocate a svn_fs_x__representation_t array in POOL and return it in
+ * REPS_P.  Deserialize the data in REP_STREAM and DIGEST_STREAM and store
+ * the resulting representations into the *REPS_P.
  */
 static svn_error_t *
 read_reps(apr_array_header_t **reps_p,

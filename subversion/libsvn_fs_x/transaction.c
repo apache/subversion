@@ -3389,8 +3389,8 @@ commit_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Add the representations in REPS_TO_CACHE (an array of svn_fs_x__representation_t *)
- * to the rep-cache database of FS. */
+/* Add the representations in REPS_TO_CACHE (an array of
+ * svn_fs_x__representation_t *) to the rep-cache database of FS. */
 static svn_error_t *
 write_reps_to_cache(svn_fs_t *fs,
                     const apr_array_header_t *reps_to_cache,
@@ -3400,7 +3400,8 @@ write_reps_to_cache(svn_fs_t *fs,
 
   for (i = 0; i < reps_to_cache->nelts; i++)
     {
-      svn_fs_x__representation_t *rep = APR_ARRAY_IDX(reps_to_cache, i, svn_fs_x__representation_t *);
+      svn_fs_x__representation_t *rep
+        = APR_ARRAY_IDX(reps_to_cache, i, svn_fs_x__representation_t *);
 
       /* FALSE because we don't care if another parallel commit happened to
        * collide with us.  (Non-parallel collisions will not be detected.) */
@@ -3425,7 +3426,8 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      cb.reps_to_cache = apr_array_make(pool, 5, sizeof(svn_fs_x__representation_t *));
+      cb.reps_to_cache = apr_array_make(pool, 5,
+                                        sizeof(svn_fs_x__representation_t *));
       cb.reps_hash = apr_hash_make(pool);
       cb.reps_pool = pool;
     }
