@@ -218,7 +218,7 @@ typedef struct svn_fs_x__pair_cache_key_t
 } svn_fs_x__pair_cache_key_t;
 
 /* Key type that identifies a representation / rep header. */
-typedef struct representation_cache_key_t
+typedef struct svn_fs_x__representation_cache_key_t
 {
   /* Revision that contains the representation */
   svn_revnum_t revision;
@@ -228,7 +228,7 @@ typedef struct representation_cache_key_t
 
   /* Item index of the representation */
   apr_uint64_t item_index;
-} representation_cache_key_t;
+} svn_fs_x__representation_cache_key_t;
 
 /* Key type that identifies a txdelta window.
 
