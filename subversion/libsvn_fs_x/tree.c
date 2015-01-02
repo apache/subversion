@@ -163,7 +163,7 @@ enum { BUCKET_COUNT = 256 };
    exceeds a certain threshold, the pool will be cleared and the cache
    with it.
  */
-struct fs_x_dag_cache_t
+struct svn_fs_x__dag_cache_t
 {
   /* fixed number of (possibly empty) cache entries */
   cache_entry_t buckets[BUCKET_COUNT];
@@ -186,10 +186,10 @@ struct fs_x_dag_cache_t
   apr_size_t last_non_empty;
 };
 
-fs_x_dag_cache_t*
+svn_fs_x__dag_cache_t*
 svn_fs_x__create_dag_cache(apr_pool_t *pool)
 {
-  fs_x_dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
   result->pool = svn_pool_create(pool);
 
   return result;
@@ -198,7 +198,7 @@ svn_fs_x__create_dag_cache(apr_pool_t *pool)
 /* Clears the CACHE at regular intervals (destroying all cached nodes)
  */
 static void
-auto_clear_dag_cache(fs_x_dag_cache_t* cache)
+auto_clear_dag_cache(svn_fs_x__dag_cache_t* cache)
 {
   if (cache->insertions > BUCKET_COUNT)
     {
@@ -214,7 +214,7 @@ auto_clear_dag_cache(fs_x_dag_cache_t* cache)
    may then set it to the corresponding DAG node allocated in CACHE->POOL.
  */
 static cache_entry_t *
-cache_lookup( fs_x_dag_cache_t *cache
+cache_lookup( svn_fs_x__dag_cache_t *cache
             , svn_revnum_t revision
             , const char *path)
 {
@@ -302,7 +302,7 @@ cache_lookup( fs_x_dag_cache_t *cache
    Return NULL otherwise.  Since the caller usually already knows the path
    length, provide it in PATH_LEN. */
 static dag_node_t *
-cache_lookup_last_path(fs_x_dag_cache_t *cache,
+cache_lookup_last_path(svn_fs_x__dag_cache_t *cache,
                        const char *path,
                        apr_size_t path_len)
 {

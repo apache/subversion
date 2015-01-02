@@ -33,7 +33,7 @@ extern "C" {
 
 /* In POOL, create an instance of a DAG node 1st level cache.
    The POOL will be cleared at regular intervals. */
-fs_x_dag_cache_t*
+svn_fs_x__dag_cache_t*
 svn_fs_x__create_dag_cache(apr_pool_t *pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
