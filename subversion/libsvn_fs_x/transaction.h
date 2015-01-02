@@ -117,7 +117,7 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
 svn_error_t *
-svn_fs_x__get_txn(transaction_t **txn_p,
+svn_fs_x__get_txn(svn_fs_x__transaction_t **txn_p,
                   svn_fs_t *fs,
                   svn_fs_x__txn_id_t txn_id,
                   apr_pool_t *pool);

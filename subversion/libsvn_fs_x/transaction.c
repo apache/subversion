@@ -1378,12 +1378,12 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
 }
 
 svn_error_t *
-svn_fs_x__get_txn(transaction_t **txn_p,
+svn_fs_x__get_txn(svn_fs_x__transaction_t **txn_p,
                   svn_fs_t *fs,
                   svn_fs_x__txn_id_t txn_id,
                   apr_pool_t *pool)
 {
-  transaction_t *txn;
+  svn_fs_x__transaction_t *txn;
   node_revision_t *noderev;
   svn_fs_x__id_t root_id;
 
@@ -3512,7 +3512,7 @@ svn_fs_x__open_txn(svn_fs_txn_t **txn_p,
   svn_fs_txn_t *txn;
   fs_txn_data_t *ftd;
   svn_node_kind_t kind;
-  transaction_t *local_txn;
+  svn_fs_x__transaction_t *local_txn;
   svn_fs_x__txn_id_t txn_id;
 
   SVN_ERR(svn_fs_x__txn_by_name(&txn_id, name));
@@ -3603,7 +3603,7 @@ svn_fs_x__get_base_rev(svn_revnum_t *revnum,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  transaction_t *txn;
+  svn_fs_x__transaction_t *txn;
   SVN_ERR(svn_fs_x__get_txn(&txn, fs, txn_id, pool));
   *revnum = txn->base_rev;
 

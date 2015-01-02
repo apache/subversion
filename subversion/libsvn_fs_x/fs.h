@@ -421,7 +421,7 @@ typedef struct svn_fs_x__data_t
 
 
 /*** Filesystem Transaction ***/
-typedef struct transaction_t
+typedef struct svn_fs_x__transaction_t
 {
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
@@ -434,7 +434,7 @@ typedef struct transaction_t
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
-} transaction_t;
+} svn_fs_x__transaction_t;
 
 
 /*** Representation ***/
