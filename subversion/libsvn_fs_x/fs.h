@@ -202,7 +202,7 @@ typedef struct svn_fs_x__shared_data_t
 } svn_fs_x__shared_data_t;
 
 /* Data structure for the 1st level DAG node cache. */
-typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
+typedef struct svn_fs_x__dag_cache_t svn_fs_x__dag_cache_t;
 
 /* Key type for all caches that use revision + offset / counter as key.
 
@@ -280,7 +280,7 @@ typedef struct fs_x_data_t
   svn_boolean_t fail_stop;
 
   /* Caches native dag_node_t* instances and acts as a 1st level cache */
-  fs_x_dag_cache_t *dag_node_cache;
+  svn_fs_x__dag_cache_t *dag_node_cache;
 
   /* DAG node cache for immutable nodes.  Maps (revision, fspath)
      to (dag_node_t *). This is the 2nd level cache for DAG nodes. */
