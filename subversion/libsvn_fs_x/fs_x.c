@@ -693,8 +693,8 @@ svn_fs_x__file_length(svn_filesize_t *length,
 }
 
 svn_boolean_t
-svn_fs_x__file_text_rep_equal(representation_t *a,
-                              representation_t *b)
+svn_fs_x__file_text_rep_equal(svn_fs_x__representation_t *a,
+                              svn_fs_x__representation_t *b)
 {
   svn_boolean_t a_empty = a == NULL || a->expanded_size == 0;
   svn_boolean_t b_empty = b == NULL || b->expanded_size == 0;
@@ -725,8 +725,8 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
                          svn_boolean_t strict,
                          apr_pool_t *scratch_pool)
 {
-  representation_t *rep_a = a->prop_rep;
-  representation_t *rep_b = b->prop_rep;
+  svn_fs_x__representation_t *rep_a = a->prop_rep;
+  svn_fs_x__representation_t *rep_b = b->prop_rep;
   apr_hash_t *proplist_a;
   apr_hash_t *proplist_b;
 
@@ -810,11 +810,11 @@ svn_fs_x__file_checksum(svn_checksum_t **checksum,
   return SVN_NO_ERROR;
 }
 
-representation_t *
-svn_fs_x__rep_copy(representation_t *rep,
+svn_fs_x__representation_t *
+svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
                    apr_pool_t *pool)
 {
-  representation_t *rep_new;
+  svn_fs_x__representation_t *rep_new;
 
   if (rep == NULL)
     return NULL;
