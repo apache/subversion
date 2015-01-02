@@ -1105,6 +1105,8 @@ svn_fs_x__dag_dup(const dag_node_t *node,
   /* Only copy cached node_revision_t for immutable nodes. */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
     new_node->node_revision = copy_node_revision(node->node_revision, pool);
+  else
+    new_node->node_revision = NULL;
 
   new_node->node_pool = pool;
 
