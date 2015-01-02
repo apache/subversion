@@ -679,7 +679,7 @@ parse_revprop(apr_hash_t **properties,
   if (has_revprop_cache(fs, pool))
     {
       fs_x_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key = { 0 };
+      svn_fs_x__pair_cache_key_t key = { 0 };
 
       key.revision = revision;
       key.second = generation;
@@ -1091,7 +1091,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   if (!bypass_cache && has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key = { 0 };
+      svn_fs_x__pair_cache_key_t key = { 0 };
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 

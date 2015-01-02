@@ -1280,7 +1280,7 @@ get_l2p_header_body(l2p_header_t **header,
   apr_array_header_t *expanded_values
     = apr_array_make(scratch_pool, 16, sizeof(apr_uint64_t));
 
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
 
@@ -1403,7 +1403,7 @@ get_l2p_page_info(l2p_page_info_baton_t *baton,
   void *dummy = NULL;
 
   /* try to find the info in the cache */
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = base_revision(fs, baton->revision);
   key.second = svn_fs_x__is_packed_rev(fs, baton->revision);
   SVN_ERR(svn_cache__get_partial((void**)&dummy, &is_cached,
@@ -1439,7 +1439,7 @@ get_l2p_header(l2p_header_t **header,
   svn_boolean_t is_cached = FALSE;
 
   /* first, try cache lookop */
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->l2p_header_cache,
@@ -1671,7 +1671,7 @@ get_l2p_page_table(apr_array_header_t *pages,
   svn_boolean_t is_cached = FALSE;
   l2p_page_table_baton_t baton;
 
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = base_revision(fs, revision);
   key.second = svn_fs_x__is_packed_rev(fs, revision);
 
@@ -2517,7 +2517,7 @@ get_p2l_header(p2l_header_t **header,
   svn_boolean_t is_cached = FALSE;
 
   /* look for the header data in our cache */
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
 
@@ -2601,7 +2601,7 @@ get_p2l_page_info(p2l_page_info_baton_t *baton,
   void *dummy = NULL;
 
   /* look for the header data in our cache */
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = base_revision(fs, baton->revision);
   key.second = svn_fs_x__is_packed_rev(fs, baton->revision);
 
@@ -3438,7 +3438,7 @@ svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
   apr_off_t *offset_p;
 
   /* look for the header data in our cache */
-  pair_cache_key_t key;
+  svn_fs_x__pair_cache_key_t key;
   key.revision = base_revision(fs, revision);
   key.second = svn_fs_x__is_packed_rev(fs, revision);
 
