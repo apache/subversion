@@ -311,7 +311,8 @@ typedef struct svn_fs_x__data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is svn_fs_x__window_cache_key_t */
+  /* Cache for txdelta_window_t objects;
+   * the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
