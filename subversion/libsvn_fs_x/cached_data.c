@@ -620,7 +620,7 @@ create_rep_state_body(rep_state_t **rep_state,
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (revision / ffd->max_files_per_dir));
 
-  representation_cache_key_t key;
+  svn_fs_x__representation_cache_key_t key;
   key.revision = revision;
   key.is_packed = revision < ffd->min_unpacked_rev;
   key.item_index = rep->id.number;
@@ -1721,7 +1721,7 @@ static svn_error_t *
 read_rep_header(svn_fs_x__rep_header_t **rep_header,
                 svn_fs_t *fs,
                 svn_stream_t *stream,
-                representation_cache_key_t *key,
+                svn_fs_x__representation_cache_key_t *key,
                 apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
@@ -1751,7 +1751,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
                                     svn_fs_x__p2l_entry_t* entry,
                                     apr_pool_t *pool)
 {
-  representation_cache_key_t key = { 0 };
+  svn_fs_x__representation_cache_key_t key = { 0 };
   rep_state_t rs = { 0 };
   svn_fs_x__rep_header_t *rep_header;
   
@@ -2850,7 +2850,7 @@ block_read_contents(svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
-  representation_cache_key_t header_key = { 0 };
+  svn_fs_x__representation_cache_key_t header_key = { 0 };
   rep_state_t rs = { 0 };
   svn_filesize_t fulltext_len;
   svn_fs_x__rep_header_t *rep_header;
