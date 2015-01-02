@@ -1640,22 +1640,23 @@ x_change_node_prop(svn_fs_root_t *root,
   apr_hash_t *proplist;
   svn_fs_x__txn_id_t txn_id;
   svn_boolean_t mergeinfo_mod = FALSE;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
   txn_id = root_txn_id(root);
 
-  path = svn_fs__canonicalize_abspath(path, pool);
-  SVN_ERR(open_path(&parent_path, root, path, 0, TRUE, pool));
+  path = svn_fs__canonicalize_abspath(path, subpool);
+  SVN_ERR(open_path(&parent_path, root, path, 0, TRUE, subpool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, FALSE, FALSE,
-                                             pool));
+                                             subpool));
 
-  SVN_ERR(make_path_mutable(root, parent_path, path, pool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, parent_path->node, pool));
+  SVN_ERR(make_path_mutable(root, parent_path, path, subpool));
+  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, parent_path->node, subpool));
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
   if ((! proplist) && (! value))
@@ -1663,7 +1664,7 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
-    proplist = apr_hash_make(pool);
+    proplist = apr_hash_make(subpool);
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
@@ -1678,9 +1679,9 @@ x_change_node_prop(svn_fs_root_t *root,
 
       if (increment != 0)
         {
-          SVN_ERR(increment_mergeinfo_up_tree(parent_path, increment, pool));
+          SVN_ERR(increment_mergeinfo_up_tree(parent_path, increment, subpool));
           SVN_ERR(svn_fs_x__dag_set_has_mergeinfo(parent_path->node,
-                                                  (value != NULL), pool));
+                                                  (value != NULL), subpool));
         }
 
       mergeinfo_mod = TRUE;
@@ -1691,14 +1692,17 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_x__dag_set_proplist(parent_path->node, proplist,
-                                     pool));
+                                     subpool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_id(parent_path->node),
-                    svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
-                    svn_fs_x__dag_node_kind(parent_path->node),
-                    SVN_INVALID_REVNUM, NULL, pool);
+  SVN_ERR(add_change(root->fs, txn_id, path,
+                     svn_fs_x__dag_get_id(parent_path->node),
+                     svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
+                     svn_fs_x__dag_node_kind(parent_path->node),
+                     SVN_INVALID_REVNUM, NULL, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1716,6 +1720,7 @@ x_props_changed(svn_boolean_t *changed_p,
                 apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Check that roots are in the same fs. */
   if (root1->fs != root2->fs)
@@ -1723,10 +1728,13 @@ x_props_changed(svn_boolean_t *changed_p,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Cannot compare property value between two different filesystems"));
 
-  SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
-  SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
-                                        strict, pool);
+  SVN_ERR(get_dag(&node1, root1, path1, TRUE, subpool));
+  SVN_ERR(get_dag(&node2, root2, path2, TRUE, subpool));
+  SVN_ERR(svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
+                                         strict, subpool));
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2512,17 +2520,18 @@ x_make_dir(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
   svn_fs_x__txn_id_t txn_id = root_txn_id(root);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  path = svn_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
-                    TRUE, pool));
+                    TRUE, subpool));
 
   /* Check (recursively) to see if some lock is 'reserving' a path at
      that location, or even some child-path; if so, check that we can
      use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, TRUE, FALSE,
-                                             pool));
+                                             subpool));
 
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
@@ -2530,23 +2539,26 @@ x_make_dir(svn_fs_root_t *root,
     return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Create the subdirectory.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
   SVN_ERR(svn_fs_x__dag_make_dir(&sub_dir,
                                  parent_path->parent->node,
                                  parent_path_path(parent_path->parent,
-                                                  pool),
+                                                  subpool),
                                  parent_path->entry,
                                  txn_id,
-                                 pool));
+                                 subpool));
 
   /* Add this directory to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool),
-                             sub_dir, pool));
+  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
+                             sub_dir, subpool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
-                    svn_fs_path_change_add, FALSE, FALSE, FALSE,
-                    svn_node_dir, SVN_INVALID_REVNUM, NULL, pool);
+  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
+                     svn_fs_path_change_add, FALSE, FALSE, FALSE,
+                     svn_node_dir, SVN_INVALID_REVNUM, NULL, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2561,13 +2573,14 @@ x_delete_node(svn_fs_root_t *root,
   svn_fs_x__txn_id_t txn_id;
   apr_int64_t mergeinfo_count = 0;
   svn_node_kind_t kind;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
 
   txn_id = root_txn_id(root);
-  path = svn_fs__canonicalize_abspath(path, pool);
-  SVN_ERR(open_path(&parent_path, root, path, 0, TRUE, pool));
+  path = svn_fs__canonicalize_abspath(path, subpool);
+  SVN_ERR(open_path(&parent_path, root, path, 0, TRUE, subpool));
   kind = svn_fs_x__dag_node_kind(parent_path->node);
 
   /* We can't remove the root of the filesystem.  */
@@ -2579,31 +2592,35 @@ x_delete_node(svn_fs_root_t *root,
      check that we can use the existing lock(s). */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, TRUE, FALSE,
-                                             pool));
+                                             subpool));
 
   /* Make the parent directory mutable, and do the deletion.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
   SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_count,
                                             parent_path->node));
   SVN_ERR(svn_fs_x__dag_delete(parent_path->parent->node,
                                parent_path->entry,
-                               txn_id, pool));
+                               txn_id, subpool));
 
   /* Remove this node and any children from the path cache. */
-  SVN_ERR(dag_node_cache_invalidate(root, parent_path_path(parent_path, pool),
-                                    pool));
+  SVN_ERR(dag_node_cache_invalidate(root, parent_path_path(parent_path,
+                                                           subpool),
+                                    subpool));
 
   /* Update mergeinfo counts for parents */
   if (mergeinfo_count > 0)
     SVN_ERR(increment_mergeinfo_up_tree(parent_path->parent,
                                         -mergeinfo_count,
-                                        pool));
+                                        subpool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path,
-                    svn_fs_x__dag_get_id(parent_path->node),
-                    svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
-                    SVN_INVALID_REVNUM, NULL, pool);
+  SVN_ERR(add_change(root->fs, txn_id, path,
+                     svn_fs_x__dag_get_id(parent_path->node),
+                     svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
+                     SVN_INVALID_REVNUM, NULL, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2767,13 +2784,17 @@ x_copy(svn_fs_root_t *from_root,
        const char *to_path,
        apr_pool_t *pool)
 {
-  return svn_error_trace(copy_helper(from_root,
-                                     svn_fs__canonicalize_abspath(from_path,
-                                                                  pool),
-                                     to_root,
-                                     svn_fs__canonicalize_abspath(to_path,
-                                                                  pool),
-                                     TRUE, pool));
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(copy_helper(from_root,
+                      svn_fs__canonicalize_abspath(from_path, subpool),
+                      to_root, 
+                      svn_fs__canonicalize_abspath(to_path, subpool),
+                      TRUE, subpool));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2786,12 +2807,19 @@ x_revision_link(svn_fs_root_t *from_root,
                 const char *path,
                 apr_pool_t *pool)
 {
+  apr_pool_t *subpool;
+
   if (! to_root->is_txn_root)
     return SVN_FS__NOT_TXN(to_root);
 
-  path = svn_fs__canonicalize_abspath(path, pool);
-  return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                     FALSE, pool));
+  subpool = svn_pool_create(pool);
+
+  path = svn_fs__canonicalize_abspath(path, subpool);
+  SVN_ERR(copy_helper(from_root, path, to_root, path, FALSE, subpool));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2830,10 +2858,11 @@ x_make_file(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *child;
   svn_fs_x__txn_id_t txn_id = root_txn_id(root);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  path = svn_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
-                    TRUE, pool));
+                    TRUE, subpool));
 
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
@@ -2844,26 +2873,29 @@ x_make_file(svn_fs_root_t *root,
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, FALSE, FALSE,
-                                             pool));
+                                             subpool));
 
   /* Create the file.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
   SVN_ERR(svn_fs_x__dag_make_file(&child,
                                   parent_path->parent->node,
                                   parent_path_path(parent_path->parent,
-                                                   pool),
+                                                   subpool),
                                   parent_path->entry,
                                   txn_id,
-                                  pool));
+                                  subpool));
 
   /* Add this file to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool), child,
-                             pool));
+  SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
+                             child, subpool));
 
   /* Make a record of this modification in the changes table. */
-  return add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
-                    svn_fs_path_change_add, TRUE, FALSE, FALSE,
-                    svn_node_file, SVN_INVALID_REVNUM, NULL, pool);
+  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
+                     svn_fs_path_change_add, TRUE, FALSE, FALSE,
+                     svn_node_file, SVN_INVALID_REVNUM, NULL, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3024,7 +3056,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Now, make sure this path is mutable. */
   SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, pool));
-  tb->node = parent_path->node;
+  tb->node = svn_fs_x__dag_dup(parent_path->node, tb->pool);
 
   if (tb->base_checksum)
     {
@@ -3079,6 +3111,7 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                   svn_checksum_t *result_checksum,
                   apr_pool_t *pool)
 {
+  apr_pool_t *subpool = svn_pool_create(pool);
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3087,10 +3120,12 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_textdelta(tb, pool));
+  SVN_ERR(apply_textdelta(tb, subpool));
 
   *contents_p = window_consumer;
   *contents_baton_p = tb;
+
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -3183,11 +3218,11 @@ apply_text(void *baton, apr_pool_t *pool)
 
   /* Now, make sure this path is mutable. */
   SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, pool));
-  tb->node = parent_path->node;
+  tb->node = svn_fs_x__dag_dup(parent_path->node, tb->pool);
 
   /* Make a writable stream for replacing the file's text. */
   SVN_ERR(svn_fs_x__dag_get_edit_stream(&(tb->file_stream), tb->node,
-                                         tb->pool));
+                                        tb->pool));
 
   /* Create a 'returnable' stream which writes to the file_stream. */
   tb->stream = svn_stream_create(tb, tb->pool);
@@ -3212,6 +3247,7 @@ x_apply_text(svn_stream_t **contents_p,
              svn_checksum_t *result_checksum,
              apr_pool_t *pool)
 {
+  apr_pool_t *subpool = svn_pool_create(pool);
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3219,9 +3255,11 @@ x_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_text(tb, pool));
+  SVN_ERR(apply_text(tb, subpool));
 
   *contents_p = tb->stream;
+
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -3241,6 +3279,7 @@ x_contents_changed(svn_boolean_t *changed_p,
                    apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Check that roots are in the same fs. */
   if (root1->fs != root2->fs)
@@ -3252,21 +3291,24 @@ x_contents_changed(svn_boolean_t *changed_p,
   {
     svn_node_kind_t kind;
 
-    SVN_ERR(svn_fs_x__check_path(&kind, root1, path1, pool));
+    SVN_ERR(svn_fs_x__check_path(&kind, root1, path1, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
 
-    SVN_ERR(svn_fs_x__check_path(&kind, root2, path2, pool));
+    SVN_ERR(svn_fs_x__check_path(&kind, root2, path2, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
   }
 
-  SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
-  SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
-                                        strict, pool);
+  SVN_ERR(get_dag(&node1, root1, path1, TRUE, subpool));
+  SVN_ERR(get_dag(&node2, root2, path2, TRUE, subpool));
+  SVN_ERR(svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
+                                         strict, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3282,16 +3324,20 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                         apr_pool_t *pool)
 {
   dag_node_t *source_node, *target_node;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (source_root && source_path)
-    SVN_ERR(get_dag(&source_node, source_root, source_path, TRUE, pool));
+    SVN_ERR(get_dag(&source_node, source_root, source_path, TRUE, subpool));
   else
     source_node = NULL;
-  SVN_ERR(get_dag(&target_node, target_root, target_path, TRUE, pool));
+  SVN_ERR(get_dag(&target_node, target_root, target_path, TRUE, subpool));
 
   /* Create a delta stream that turns the source into the target.  */
-  return svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
-                                             target_node, pool);
+  SVN_ERR(svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
+                                              target_node, pool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3440,7 +3486,10 @@ x_node_history(svn_fs_history_t **history_p,
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
    filesystem FS, and store the copyroot in *REV_P and *PATH_P.
-   Perform all allocations in POOL. */
+   Perform all allocations in POOL.
+
+   Note that *PATH_P will not be allocated in POOL but will be taken from
+   a DAG node in PARENT_PATH. */
 static svn_error_t *
 find_youngest_copyroot(svn_revnum_t *rev_p,
                        const char **path_p,
@@ -3494,36 +3543,47 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
   svn_fs_root_t *copy_dst_root;
   dag_node_t *copy_dst_node;
   svn_boolean_t related;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Initialize return values. */
   *root_p = NULL;
   *path_p = NULL;
 
-  path = svn_fs__canonicalize_abspath(path, pool);
-  SVN_ERR(open_path(&parent_path, root, path, 0, FALSE, pool));
+  path = svn_fs__canonicalize_abspath(path, subpool);
+  SVN_ERR(open_path(&parent_path, root, path, 0, FALSE, subpool));
 
   /* Find the youngest copyroot in the path of this node-rev, which
      will indicate the target of the innermost copy affecting the
      node-rev. */
   SVN_ERR(find_youngest_copyroot(&copy_dst_rev, &copy_dst_path,
-                                 fs, parent_path, pool));
+                                 fs, parent_path, subpool));
   if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   /* It is possible that this node was created from scratch at some
      revision between COPY_DST_REV and REV.  Make sure that PATH
      exists as of COPY_DST_REV and is related to this node-rev. */
   SVN_ERR(svn_fs_x__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
   SVN_ERR(open_path(&copy_dst_parent_path, copy_dst_root, path,
-                    open_path_node_only | open_path_allow_null, FALSE, pool));
+                    open_path_node_only | open_path_allow_null, FALSE,
+                    subpool));
   if (copy_dst_parent_path == NULL)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   copy_dst_node = copy_dst_parent_path->node;
   SVN_ERR(svn_fs_x__dag_related_node(&related, copy_dst_node,
                                      parent_path->node));
   if (!related)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
 
   /* One final check must be done here.  If you copy a directory and
      create a new entity somewhere beneath that directory in the same
@@ -3545,12 +3605,17 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
       svn_fs_x__id_t pred;
       SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node));
       if (!svn_fs_x__id_used(&pred))
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
     }
 
   /* The copy destination checks out.  Return it. */
   *root_p = copy_dst_root;
-  *path_p = copy_dst_path;
+  *path_p = apr_pstrdup(pool, copy_dst_path);
+
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -3759,12 +3824,14 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
     }
   else
     {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       prev_history = history;
 
       while (1)
         {
+          svn_pool_clear(iterpool);
           SVN_ERR(history_prev(&prev_history, prev_history, cross_copies,
-                               result_pool, scratch_pool));
+                               result_pool, iterpool));
 
           if (! prev_history)
             break;
@@ -3772,6 +3839,8 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
           if (fhd->is_interesting)
             break;
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   *prev_history_p = prev_history;
