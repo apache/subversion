@@ -3050,43 +3050,40 @@ verify_locks(svn_fs_t *fs,
              apr_hash_t *changed_paths,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
   apr_array_header_t *changed_paths_sorted;
   svn_stringbuf_t *last_recursed = NULL;
   int i;
 
   /* Make an array of the changed paths, and sort them depth-first-ily.  */
-  changed_paths_sorted = apr_array_make(pool,
-                                        apr_hash_count(changed_paths) + 1,
-                                        sizeof(const char *));
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-    {
-      APR_ARRAY_PUSH(changed_paths_sorted, const char *) =
-        apr_hash_this_key(hi);
-    }
-  svn_sort__array(changed_paths_sorted, svn_sort_compare_paths);
+  changed_paths_sorted = svn_sort__hash(changed_paths,
+                                        svn_sort_compare_items_as_paths,
+                                        pool);
 
   /* Now, traverse the array of changed paths, verify locks.  Note
      that if we need to do a recursive verification a path, we'll skip
      over children of that path when we get to them. */
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < changed_paths_sorted->nelts; i++)
     {
+      const svn_sort__item_t *item;
       const char *path;
       change_t *change;
       svn_boolean_t recurse = TRUE;
 
-      svn_pool_clear(subpool);
-      path = APR_ARRAY_IDX(changed_paths_sorted, i, const char *);
+      svn_pool_clear(iterpool);
+
+      item = &APR_ARRAY_IDX(changed_paths_sorted, i, svn_sort__item_t);
+
+      /* Fetch the change associated with our path.  */
+      path = item->key;
+      change = item->value;
 
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_dirent_is_child(last_recursed->data, path, subpool))
+          && svn_fspath__skip_ancestor(last_recursed->data, path))
         continue;
-
-      /* Fetch the change associated with our path.  */
-      change = svn_hash_gets(changed_paths, path);
 
       /* What does it mean to succeed at lock verification for a given
          path?  For an existing file or directory getting modified
@@ -3100,7 +3097,7 @@ verify_locks(svn_fs_t *fs,
       if (change->change_kind == svn_fs_path_change_modify)
         recurse = FALSE;
       SVN_ERR(svn_fs_x__allow_locked_operation(path, fs, recurse, TRUE,
-                                               subpool));
+                                               iterpool));
 
       /* If we just did a recursive check, remember the path we
          checked (so children can be skipped).  */
@@ -3112,7 +3109,7 @@ verify_locks(svn_fs_t *fs,
             svn_stringbuf_set(last_recursed, path);
         }
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
