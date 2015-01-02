@@ -247,7 +247,8 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   /* calculate sizes */
   int count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
-  apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_x__dirent_t*);
+  apr_size_t entries_len =   (count + over_provision)
+                           * sizeof(svn_fs_x__dirent_t*);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
 
   /* copy the hash entries to an auxiliary struct of known layout */
@@ -868,7 +869,8 @@ slowly_replace_dir_entry(void **data,
     {
       /* Replace ENTRY with / insert the NEW_ENTRY */
       if (entry)
-        APR_ARRAY_IDX(dir, idx, svn_fs_x__dirent_t *) = replace_baton->new_entry;
+        APR_ARRAY_IDX(dir, idx, svn_fs_x__dirent_t *)
+          = replace_baton->new_entry;
       else
         svn_sort__array_insert(dir, &replace_baton->new_entry, idx);
     }

@@ -294,7 +294,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
 
 /* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
-   and the values are svn_fs_x__dirent_t's.  The returned table (and elements)
+   and the values are svn_fs_x__dirent_t. The returned table (and elements)
    is allocated in POOL, which is also used for temporary allocations. */
 svn_error_t *svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
                                        dag_node_t *node,
