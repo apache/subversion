@@ -1,4 +1,4 @@
-/* id.h : interface to node ID functions, private to libsvn_fs_x
+/* id.h : interface to FSX-internal ID functions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -57,137 +57,65 @@ svn_revnum_t svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set);
 
 /* Return the transaction ID that corresponds to CHANGE_SET.
    Will SVN_FS_X__INVALID_TXN_ID for revisions. */
-apr_int64_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
+svn_fs_x__txn_id_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
 
 /* Convert REVNUM into a change set number */
 svn_fs_x__change_set_t svn_fs_x__change_set_by_rev(svn_revnum_t revnum);
 
 /* Convert TXN_ID into a change set number */
-svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(apr_int64_t txn_id);
+svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(svn_fs_x__txn_id_t txn_id);
 
-/* A rev node ID in FSX consists of a 3 of sub-IDs ("parts") that consist
- * of a creation CHANGE_SET number and some revision-local counter value
- * (NUMBER).
+/* An ID in FSX consists of a creation CHANGE_SET number and some changeset-
+ * local counter value (NUMBER).
  */
-typedef struct svn_fs_x__id_part_t
+typedef struct svn_fs_x__id_t
 {
   svn_fs_x__change_set_t change_set;
 
   apr_uint64_t number;
-} svn_fs_x__id_part_t;
+} svn_fs_x__id_t;
 
 
 /*** Operations on ID parts. ***/
 
 /* Return TRUE, if both elements of the PART is 0, i.e. this is the default
  * value if e.g. no copies were made of this node. */
-svn_boolean_t svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t *part);
+svn_boolean_t svn_fs_x__id_is_root(const svn_fs_x__id_t *part);
 
 /* Return TRUE, if all element values of *LHS and *RHS match. */
-svn_boolean_t svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
-                                   const svn_fs_x__id_part_t *rhs);
+svn_boolean_t svn_fs_x__id_eq(const svn_fs_x__id_t *lhs,
+                              const svn_fs_x__id_t *rhs);
 
-
-/*** ID accessor functions. ***/
-
-/* Get the "node id" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_node_id(const svn_fs_id_t *id);
-
-/* Get the "copy id" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_copy_id(const svn_fs_id_t *id);
-
-/* Get the "txn id" portion of ID,
- * or SVN_FS_X__INVALID_TXN_ID if it is a permanent ID. */
-svn_fs_x__txn_id_t svn_fs_x__id_txn_id(const svn_fs_id_t *id);
-
-/* Get the "noderev id" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
-
-/* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
-   transaction ID. */
-svn_revnum_t svn_fs_x__id_rev(const svn_fs_id_t *id);
-
-/* Access the "item" portion of the ID, or 0 if it is a transaction
-   ID. */
-apr_uint64_t svn_fs_x__id_item(const svn_fs_id_t *id);
-
-/* Return TRUE, if this is a transaction ID. */
-svn_boolean_t svn_fs_x__id_is_txn(const svn_fs_id_t *id);
+/* Parse the NUL-terminated ID part at DATA and write the result into *PART.
+ */
+svn_error_t *
+svn_fs_x__id_parse(svn_fs_x__id_t *part,
+                   const char *data);
 
 /* Convert ID into string form, allocated in POOL. */
-svn_string_t *svn_fs_x__id_unparse(const svn_fs_id_t *id,
-                                   apr_pool_t *pool);
+svn_string_t *
+svn_fs_x__id_unparse(const svn_fs_x__id_t*id,
+                     apr_pool_t *pool);
 
-/* Return true if A and B are equal. */
-svn_boolean_t svn_fs_x__id_eq(const svn_fs_id_t *a,
-                              const svn_fs_id_t *b);
+/* Set *PART to "unused". */
+void svn_fs_x__id_reset(svn_fs_x__id_t *part);
 
-/* Return true if A and B are related. */
-svn_boolean_t svn_fs_x__id_check_related(const svn_fs_id_t *a,
-                                         const svn_fs_id_t *b);
-
-/* Return the noderev relationship between A and B. */
-svn_fs_node_relation_t svn_fs_x__id_compare(const svn_fs_id_t *a,
-                                            const svn_fs_id_t *b);
+/* Return TRUE if *PART is belongs to either a revision or transaction. */
+svn_boolean_t svn_fs_x__id_used(const svn_fs_x__id_t *part);
 
 /* Return 0 if A and B are equal, 1 if A is "greater than" B, -1 otherwise. */
-int svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
-                              const svn_fs_x__id_part_t *b);
+int svn_fs_x__id_compare(const svn_fs_x__id_t *a,
+                         const svn_fs_x__id_t *b);
 
-/* Create the txn root ID for transaction TXN_ID.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txnnum,
-                                          apr_pool_t *pool);
-
-/* Create the root ID for REVISION.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
-                                      apr_pool_t *pool);
-
-/* Create an ID within a transaction based on NODE_ID, COPY_ID, TXN_ID
-   and ITEM number, allocated in POOL. */
-svn_fs_id_t *svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
-                                     const svn_fs_x__id_part_t *copy_id,
-                                     svn_fs_x__txn_id_t txn_id,
-                                     apr_uint64_t item,
-                                     apr_pool_t *pool);
-
-/* Create a permanent ID based on NODE_ID, COPY_ID and NODEREV_ID,
-   allocated in POOL. */
-svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
-                                 const svn_fs_x__id_part_t *copy_id,
-                                 const svn_fs_x__id_part_t *noderev_id,
-                                 apr_pool_t *pool);
-
-/* Return a copy of ID, allocated from POOL. */
-svn_fs_id_t *svn_fs_x__id_copy(const svn_fs_id_t *id,
-                               apr_pool_t *pool);
-
-/* Return an ID in *ID_P resulting from parsing the string DATA, or an error
-   if DATA is an invalid ID string. *DATA will be modified / invalidated by
-   this call. */
-svn_error_t *
-svn_fs_x__id_parse(const svn_fs_id_t **id_p,
-                   char *data,
-                   apr_pool_t *pool);
-
-
-/* (de-)serialization support*/
-
-struct svn_temp_serializer__context_t;
-
-/**
- * Serialize an @a id within the serialization @a context.
- */
+/* Set *NODEREV_ID to the root node ID of transaction TXN_ID. */
 void
-svn_fs_x__id_serialize(struct svn_temp_serializer__context_t *context,
-                        const svn_fs_id_t * const *id);
+svn_fs_x__init_txn_root(svn_fs_x__id_t *noderev_id,
+                        svn_fs_x__txn_id_t txn_id);
 
-/**
- * Deserialize an @a id within the @a buffer and associate it with @a pool.
- */
+/* Set *NODEREV_ID to the root node ID of revision REV. */
 void
-svn_fs_x__id_deserialize(void *buffer,
-                         svn_fs_id_t **id,
-                         apr_pool_t *pool);
+svn_fs_x__init_rev_root(svn_fs_x__id_t *noderev_id,
+                        svn_revnum_t rev);
 
 #ifdef __cplusplus
 }

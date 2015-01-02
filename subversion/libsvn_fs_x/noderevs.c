@@ -49,16 +49,6 @@
 /* the noderev has copy-root path and revision */
 #define NODEREV_HAS_CPATH    0x00040
 
-/* Our internal representation of an id
- * (basically, strip off the txn_id and the fs-agnostic header)
- */
-typedef struct binary_id_t
-{
-  svn_fs_x__id_part_t node_id;
-  svn_fs_x__id_part_t copy_id;
-  svn_fs_x__id_part_t noderev_id;
-} binary_id_t;
-
 /* Our internal representation of an representation.
  */
 typedef struct binary_representation_t
@@ -70,7 +60,7 @@ typedef struct binary_representation_t
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Location of this representation. */
-  svn_fs_x__id_part_t id;
+  svn_fs_x__id_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -93,8 +83,14 @@ typedef struct binary_noderev_t
   /* node type and presence indicators */
   apr_uint32_t flags;
 
-  /* Index+1 of the node-id for this node-rev. */
+  /* Index+1 of the noderev-id for this node-rev. */
   int id;
+
+  /* Index+1 of the node-id for this node-rev. */
+  int node_id;
+
+  /* Index+1 of the copy-id for this node-rev. */
+  int copy_id;
 
   /* Index+1 of the predecessor node revision id, or 0 if there is no
      predecessor for this node revision */
@@ -156,19 +152,14 @@ struct svn_fs_x__noderevs_t
   apr_hash_t *ids_dict;
 
   /* During construction, maps a full binary_representation_t to an index
-   * into DATA_REPS. */
-  apr_hash_t *data_reps_dict;
-
-  /* During construction, maps a full binary_representation_t to an index
-   * into PROP_REPS. */
-  apr_hash_t *prop_reps_dict;
+   * into REPS. */
+  apr_hash_t *reps_dict;
 
   /* array of binary_id_t */
   apr_array_header_t *ids;
 
-  /* arrays of binary_representation_t */
-  apr_array_header_t *data_reps;
-  apr_array_header_t *prop_reps;
+  /* array of binary_representation_t */
+  apr_array_header_t *reps;
 
   /* array of binary_noderev_t. */
   apr_array_header_t *noderevs;
@@ -182,16 +173,13 @@ svn_fs_x__noderevs_create(int initial_count,
 
   noderevs->builder = svn_fs_x__string_table_builder_create(pool);
   noderevs->ids_dict = svn_hash__make(pool);
-  noderevs->data_reps_dict = svn_hash__make(pool);
-  noderevs->prop_reps_dict = svn_hash__make(pool);
+  noderevs->reps_dict = svn_hash__make(pool);
   noderevs->paths = NULL;
 
   noderevs->ids
-    = apr_array_make(pool, initial_count, sizeof(binary_id_t));
-  noderevs->data_reps
-    = apr_array_make(pool, initial_count, sizeof(binary_representation_t));
-  noderevs->prop_reps
-    = apr_array_make(pool, initial_count, sizeof(binary_representation_t));
+    = apr_array_make(pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
+  noderevs->reps
+    = apr_array_make(pool, 2 * initial_count, sizeof(binary_representation_t));
   noderevs->noderevs
     = apr_array_make(pool, initial_count, sizeof(binary_noderev_t));
 
@@ -204,24 +192,19 @@ svn_fs_x__noderevs_create(int initial_count,
 static int
 store_id(apr_array_header_t *ids,
          apr_hash_t *dict,
-         const svn_fs_id_t *id)
+         const svn_fs_x__id_t *id)
 {
-  binary_id_t bin_id = { { 0 } };
   int idx;
   void *idx_void;
 
-  if (id == NULL)
+  if (!svn_fs_x__id_used(id))
     return 0;
-  
-  bin_id.node_id = *svn_fs_x__id_node_id(id);
-  bin_id.copy_id = *svn_fs_x__id_copy_id(id);
-  bin_id.noderev_id = *svn_fs_x__id_noderev_id(id);
 
-  idx_void = apr_hash_get(dict, &bin_id, sizeof(bin_id));
+  idx_void = apr_hash_get(dict, &id, sizeof(id));
   idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
-      APR_ARRAY_PUSH(ids, binary_id_t) = bin_id;
+      APR_ARRAY_PUSH(ids, svn_fs_x__id_t) = *id;
       idx = ids->nelts;
       apr_hash_set(dict, ids->elts + (idx-1) * ids->elt_size,
                    ids->elt_size, (void*)(apr_uintptr_t)idx);
@@ -278,9 +261,13 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
                        | (int)noderev->kind;
 
   binary_noderev.id
-    = store_id(container->ids, container->ids_dict, noderev->id);
+    = store_id(container->ids, container->ids_dict, &noderev->noderev_id);
+  binary_noderev.node_id
+    = store_id(container->ids, container->ids_dict, &noderev->node_id);
+  binary_noderev.copy_id
+    = store_id(container->ids, container->ids_dict, &noderev->copy_id);
   binary_noderev.predecessor_id
-    = store_id(container->ids, container->ids_dict, noderev->predecessor_id);
+    = store_id(container->ids, container->ids_dict, &noderev->predecessor_id);
 
   if (noderev->copyfrom_path)
     {
@@ -301,19 +288,18 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
     }
 
   binary_noderev.predecessor_count = noderev->predecessor_count;
-  binary_noderev.prop_rep = store_representation(container->prop_reps,
-                                                 container->prop_reps_dict,
+  binary_noderev.prop_rep = store_representation(container->reps,
+                                                 container->reps_dict,
                                                  noderev->prop_rep);
-  if (noderev->data_rep)
-    binary_noderev.data_rep = store_representation(container->data_reps,
-                                                   container->data_reps_dict,
-                                                   noderev->data_rep);
+  binary_noderev.data_rep = store_representation(container->reps,
+                                                 container->reps_dict,
+                                                 noderev->data_rep);
 
   if (noderev->created_path)
     binary_noderev.created_path
       = svn_fs_x__string_table_builder_add(container->builder,
-                                            noderev->created_path,
-                                            0);
+                                           noderev->created_path,
+                                           0);
 
   binary_noderev.mergeinfo_count = noderev->mergeinfo_count;
   
@@ -331,49 +317,39 @@ svn_fs_x__noderevs_estimate_size(const svn_fs_x__noderevs_t *container)
 
   /* string table code makes its own prediction,
    * noderevs should be < 16 bytes each,
-   * ids < 10 bytes each,
+   * id parts < 4 bytes each,
    * data representations < 40 bytes each,
    * property representations < 30 bytes each,
    * some static overhead should be assumed */
   return svn_fs_x__string_table_builder_estimate_size(container->builder)
        + container->noderevs->nelts * 16
-       + container->ids->nelts * 10
-       + container->data_reps->nelts * 40
-       + container->prop_reps->nelts * 30
+       + container->ids->nelts * 4
+       + container->reps->nelts * 40
        + 100;
 }
 
-/* Create an svn_fs_id_t in *ID, allocated in POOL based on the id stored
- * at index IDX in IDS.
+/* Set *ID to the ID part stored at index IDX in IDS.
  */
 static svn_error_t *
-get_id(const svn_fs_id_t **id,
+get_id(svn_fs_x__id_t *id,
        const apr_array_header_t *ids,
-       int idx,
-       apr_pool_t *pool)
+       int idx)
 {
-  binary_id_t *binary_id;
-
   /* handle NULL IDs  */
   if (idx == 0)
     {
-      *id = NULL;
+      svn_fs_x__id_reset(id);
       return SVN_NO_ERROR;
     }
 
   /* check for corrupted data */
   if (idx < 0 || idx > ids->nelts)
     return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                             _("Node revision ID index %d" 
-                               " exceeds container size %d"),
+                             _("ID part index %d exceeds container size %d"),
                              idx, ids->nelts);
 
-  /* create a svn_fs_id_t from stored info */
-  binary_id = &APR_ARRAY_IDX(ids, idx - 1, binary_id_t);
-  *id = svn_fs_x__id_create(&binary_id->node_id,
-                            &binary_id->copy_id,
-                            &binary_id->noderev_id,
-                            pool);
+  /* Return the requested ID. */
+  *id = APR_ARRAY_IDX(ids, idx - 1, svn_fs_x__id_t);
 
   return SVN_NO_ERROR;
 }
@@ -427,7 +403,7 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
 {
   node_revision_t *noderev;
   binary_noderev_t *binary_noderev;
-  
+
   /* CONTAINER must be in 'finalized' mode */
   SVN_ERR_ASSERT(container->builder == NULL);
   SVN_ERR_ASSERT(container->paths);
@@ -444,11 +420,15 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
   /* allocate result struct and fill it field by field */
   noderev = apr_pcalloc(pool, sizeof(*noderev));
   binary_noderev = &APR_ARRAY_IDX(container->noderevs, idx, binary_noderev_t);
-  
+
   noderev->kind = (svn_node_kind_t)(binary_noderev->flags & NODEREV_KIND_MASK);
-  SVN_ERR(get_id(&noderev->id, container->ids, binary_noderev->id, pool));
+  SVN_ERR(get_id(&noderev->noderev_id, container->ids, binary_noderev->id));
+  SVN_ERR(get_id(&noderev->node_id, container->ids,
+                 binary_noderev->node_id));
+  SVN_ERR(get_id(&noderev->copy_id, container->ids,
+                 binary_noderev->copy_id));
   SVN_ERR(get_id(&noderev->predecessor_id, container->ids,
-                 binary_noderev->predecessor_id, pool));
+                 binary_noderev->predecessor_id));
 
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
@@ -482,9 +462,9 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
 
   noderev->predecessor_count = binary_noderev->predecessor_count;
 
-  SVN_ERR(get_representation(&noderev->prop_rep, container->prop_reps,
+  SVN_ERR(get_representation(&noderev->prop_rep, container->reps,
                              binary_noderev->prop_rep, pool));
-  SVN_ERR(get_representation(&noderev->data_rep, container->data_reps,
+  SVN_ERR(get_representation(&noderev->data_rep, container->reps,
                              binary_noderev->data_rep, pool));
 
   if (binary_noderev->flags & NODEREV_HAS_CPATH)
@@ -574,40 +554,34 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     = svn_packed__create_int_stream(root, FALSE, FALSE);
   svn_packed__int_stream_t *ids_stream
     = svn_packed__create_int_substream(structs_stream, FALSE, FALSE);
-  svn_packed__int_stream_t *data_reps_stream
-    = create_rep_stream(structs_stream);
-  svn_packed__int_stream_t *prop_reps_stream
+  svn_packed__int_stream_t *reps_stream
     = create_rep_stream(structs_stream);
   svn_packed__int_stream_t *noderevs_stream
     = svn_packed__create_int_substream(structs_stream, FALSE, FALSE);
   svn_packed__byte_stream_t *digests_stream
     = svn_packed__create_bytes_stream(root);
 
-  /* structure the CHANGES_STREAM such we can extract much of the redundancy
-   * from the binary_change_t structs */
-  for (i = 0; i < 3 * 2; ++i)
+  /* structure the IDS_STREAM such we can extract much of the redundancy
+   * from the svn_fs_x__ip_part_t structs */
+  for (i = 0; i < 2; ++i)
     svn_packed__create_int_substream(ids_stream, TRUE, FALSE);
 
+  /* Same storing binary_noderev_t in the NODEREVS_STREAM */
   svn_packed__create_int_substream(noderevs_stream, FALSE, FALSE);
-  for (i = 0; i < 11; ++i)
+  for (i = 0; i < 13; ++i)
     svn_packed__create_int_substream(noderevs_stream, TRUE, FALSE);
 
   /* serialize ids array */
   for (i = 0; i < container->ids->nelts; ++i)
     {
-      binary_id_t *id = &APR_ARRAY_IDX(container->ids, i, binary_id_t);
+      svn_fs_x__id_t *id = &APR_ARRAY_IDX(container->ids, i, svn_fs_x__id_t);
 
-      svn_packed__add_int(ids_stream, id->node_id.change_set);
-      svn_packed__add_uint(ids_stream, id->node_id.number);
-      svn_packed__add_int(ids_stream, id->copy_id.change_set);
-      svn_packed__add_uint(ids_stream, id->copy_id.number);
-      svn_packed__add_int(ids_stream, id->noderev_id.change_set);
-      svn_packed__add_uint(ids_stream, id->noderev_id.number);
+      svn_packed__add_int(ids_stream, id->change_set);
+      svn_packed__add_uint(ids_stream, id->number);
     }
 
   /* serialize rep arrays */
-  write_reps(data_reps_stream, digests_stream, container->data_reps);
-  write_reps(prop_reps_stream, digests_stream, container->prop_reps);
+  write_reps(reps_stream, digests_stream, container->reps);
 
   /* serialize noderevs array */
   for (i = 0; i < container->noderevs->nelts; ++i)
@@ -618,6 +592,8 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
       svn_packed__add_uint(noderevs_stream, noderev->flags);
 
       svn_packed__add_uint(noderevs_stream, noderev->id);
+      svn_packed__add_uint(noderevs_stream, noderev->node_id);
+      svn_packed__add_uint(noderevs_stream, noderev->copy_id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_count);
 
@@ -719,8 +695,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *structs_stream;
   svn_packed__int_stream_t *ids_stream;
-  svn_packed__int_stream_t *data_reps_stream;
-  svn_packed__int_stream_t *prop_reps_stream;
+  svn_packed__int_stream_t *reps_stream;
   svn_packed__int_stream_t *noderevs_stream;
   svn_packed__byte_stream_t *digests_stream;
 
@@ -732,34 +707,27 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
   /* get streams */
   structs_stream = svn_packed__first_int_stream(root);
   ids_stream = svn_packed__first_int_substream(structs_stream);
-  data_reps_stream = svn_packed__next_int_stream(ids_stream);
-  prop_reps_stream = svn_packed__next_int_stream(data_reps_stream);
-  noderevs_stream = svn_packed__next_int_stream(prop_reps_stream);
+  reps_stream = svn_packed__next_int_stream(ids_stream);
+  noderevs_stream = svn_packed__next_int_stream(reps_stream);
   digests_stream = svn_packed__first_byte_stream(root);
 
   /* read ids array */
   count
     = svn_packed__int_count(svn_packed__first_int_substream(ids_stream));
   noderevs->ids
-    = apr_array_make(result_pool, (int)count, sizeof(binary_id_t));
+    = apr_array_make(result_pool, (int)count, sizeof(svn_fs_x__id_t));
   for (i = 0; i < count; ++i)
     {
-      binary_id_t id;
+      svn_fs_x__id_t id;
 
-      id.node_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
-      id.node_id.number = svn_packed__get_uint(ids_stream);
-      id.copy_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
-      id.copy_id.number = svn_packed__get_uint(ids_stream);
-      id.noderev_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
-      id.noderev_id.number = svn_packed__get_uint(ids_stream);
+      id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.number = svn_packed__get_uint(ids_stream);
 
-      APR_ARRAY_PUSH(noderevs->ids, binary_id_t) = id;
+      APR_ARRAY_PUSH(noderevs->ids, svn_fs_x__id_t) = id;
     }
 
   /* read rep arrays */
-  SVN_ERR(read_reps(&noderevs->data_reps, data_reps_stream, digests_stream,
-                    result_pool));
-  SVN_ERR(read_reps(&noderevs->prop_reps, prop_reps_stream, digests_stream,
+  SVN_ERR(read_reps(&noderevs->reps, reps_stream, digests_stream,
                     result_pool));
 
   /* read noderevs array */
@@ -774,6 +742,8 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
       noderev.flags = (apr_uint32_t)svn_packed__get_uint(noderevs_stream);
 
       noderev.id = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.node_id = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.copy_id = (int)svn_packed__get_uint(noderevs_stream);
       noderev.predecessor_id = (int)svn_packed__get_uint(noderevs_stream);
       noderev.predecessor_count = (int)svn_packed__get_uint(noderevs_stream);
 
@@ -806,8 +776,7 @@ svn_fs_x__serialize_noderevs_container(void **data,
   svn_stringbuf_t *serialized;
   apr_size_t size
     = noderevs->ids->elt_size * noderevs->ids->nelts
-    + noderevs->data_reps->elt_size * noderevs->data_reps->nelts
-    + noderevs->prop_reps->elt_size * noderevs->prop_reps->nelts
+    + noderevs->reps->elt_size * noderevs->reps->nelts
     + noderevs->noderevs->elt_size * noderevs->noderevs->nelts
     + 10 * noderevs->noderevs->elt_size
     + 100;
@@ -819,8 +788,7 @@ svn_fs_x__serialize_noderevs_container(void **data,
   /* serialize sub-structures */
   svn_fs_x__serialize_string_table(context, &noderevs->paths);
   svn_fs_x__serialize_apr_array(context, &noderevs->ids);
-  svn_fs_x__serialize_apr_array(context, &noderevs->data_reps);
-  svn_fs_x__serialize_apr_array(context, &noderevs->prop_reps);
+  svn_fs_x__serialize_apr_array(context, &noderevs->reps);
   svn_fs_x__serialize_apr_array(context, &noderevs->noderevs);
 
   /* return the serialized result */
@@ -843,8 +811,7 @@ svn_fs_x__deserialize_noderevs_container(void **out,
   /* de-serialize sub-structures */
   svn_fs_x__deserialize_string_table(noderevs, &noderevs->paths);
   svn_fs_x__deserialize_apr_array(noderevs, &noderevs->ids, pool);
-  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->data_reps, pool);
-  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->prop_reps, pool);
+  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->reps, pool);
   svn_fs_x__deserialize_apr_array(noderevs, &noderevs->noderevs, pool);
 
   /* done */
@@ -880,10 +847,9 @@ svn_fs_x__noderevs_get_func(void **out,
 {
   node_revision_t *noderev;
   binary_noderev_t *binary_noderev;
-  
+
   apr_array_header_t ids;
-  apr_array_header_t data_reps;
-  apr_array_header_t prop_reps;
+  apr_array_header_t reps;
   apr_array_header_t noderevs;
 
   apr_uint32_t idx = *(apr_uint32_t *)baton;
@@ -895,18 +861,19 @@ svn_fs_x__noderevs_get_func(void **out,
                          (const void *const *)&container->paths);
 
   resolve_apr_array_header(&ids, container, &container->ids);
-  resolve_apr_array_header(&data_reps, container, &container->data_reps);
-  resolve_apr_array_header(&prop_reps, container, &container->prop_reps);
+  resolve_apr_array_header(&reps, container, &container->reps);
   resolve_apr_array_header(&noderevs, container, &container->noderevs);
-  
+
   /* allocate result struct and fill it field by field */
   noderev = apr_pcalloc(pool, sizeof(*noderev));
   binary_noderev = &APR_ARRAY_IDX(&noderevs, idx, binary_noderev_t);
-  
+
   noderev->kind = (svn_node_kind_t)(binary_noderev->flags & NODEREV_KIND_MASK);
-  SVN_ERR(get_id(&noderev->id, &ids, binary_noderev->id, pool));
+  SVN_ERR(get_id(&noderev->noderev_id, &ids, binary_noderev->id));
+  SVN_ERR(get_id(&noderev->node_id, &ids, binary_noderev->node_id));
+  SVN_ERR(get_id(&noderev->copy_id, &ids, binary_noderev->copy_id));
   SVN_ERR(get_id(&noderev->predecessor_id, &ids,
-                 binary_noderev->predecessor_id, pool));
+                 binary_noderev->predecessor_id));
 
   if (binary_noderev->flags & NODEREV_HAS_COPYFROM)
     {
@@ -940,9 +907,9 @@ svn_fs_x__noderevs_get_func(void **out,
 
   noderev->predecessor_count = binary_noderev->predecessor_count;
 
-  SVN_ERR(get_representation(&noderev->prop_rep, &prop_reps,
+  SVN_ERR(get_representation(&noderev->prop_rep, &reps,
                              binary_noderev->prop_rep, pool));
-  SVN_ERR(get_representation(&noderev->data_rep, &data_reps,
+  SVN_ERR(get_representation(&noderev->data_rep, &reps,
                              binary_noderev->data_rep, pool));
 
   if (binary_noderev->flags & NODEREV_HAS_CPATH)

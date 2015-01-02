@@ -77,7 +77,7 @@ typedef struct svn_fs_x__p2l_entry_t
   apr_uint32_t item_count;
 
   /* List of items in that block / container */
-  svn_fs_x__id_part_t *items;
+  svn_fs_x__id_t *items;
 } svn_fs_x__p2l_entry_t;
 
 /* Return a (deep) copy of ENTRY, allocated in POOL.
@@ -220,7 +220,7 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Use the phys-to-log mapping files in FS to return the svn_fs_x__id_part_t
+/* Use the phys-to-log mapping files in FS to return the svn_fs_x__id_t
  * for the SUB_ITEM of the container starting at global OFFSET in the rep /
  * pack file containing REVISION in *ITEM, allocated in RESULT_POOL.  Sets
  * *ITEM to NULL if no element starts at exactly that offset or if it
@@ -229,7 +229,7 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
+svn_fs_x__p2l_item_lookup(svn_fs_x__id_t **item,
                           svn_fs_t *fs,
                           svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
@@ -254,7 +254,7 @@ svn_fs_x__item_offset(apr_off_t *absolute_position,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
                       svn_fs_x__revision_file_t *rev_file,
-                      const svn_fs_x__id_part_t *item_id,
+                      const svn_fs_x__id_t *item_id,
                       apr_pool_t *scratch_pool);
 
 /* Use the log-to-phys indexes in FS to determine the maximum item indexes

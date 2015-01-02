@@ -72,12 +72,11 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
                          void *baton,
                          apr_pool_t *pool);
 
-/* Store NODEREV as the node-revision for the node whose id is ID in
-   FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
-   necessary temporary allocation in POOL. */
+/* Store NODEREV as the node-revision in the transaction defined by NODEREV's
+   ID within FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do
+   any necessary temporary allocation in POOL. */
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
-                            const svn_fs_id_t *id,
                             node_revision_t *noderev,
                             svn_boolean_t fresh_txn_root,
                             apr_pool_t *pool);
@@ -90,15 +89,6 @@ svn_fs_x__txn_changes_fetch(apr_hash_t **changed_paths_p,
                             svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
                             apr_pool_t *pool);
-
-/* Find the paths which were changed in revision REV of filesystem FS
-   and store them in *CHANGED_PATHS_P.  Get any temporary allocations
-   from POOL. */
-svn_error_t *
-svn_fs_x__paths_changed(apr_hash_t **changed_paths_p,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        apr_pool_t *pool);
 
 /* Create a new transaction in filesystem FS, based on revision REV,
    and store it in *TXN_P.  Allocate all necessary variables from
@@ -135,21 +125,19 @@ svn_fs_x__get_txn(transaction_t **txn_p,
 /* Return the next available copy_id in *COPY_ID for the transaction
    TXN_ID in filesystem FS.  Allocate space in POOL. */
 svn_error_t *
-svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
+svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
                           svn_fs_t *fs,
                           svn_fs_x__txn_id_t txn_id,
                           apr_pool_t *pool);
 
 /* Create an entirely new mutable node in the filesystem FS, whose
-   node-revision is NODEREV.  Set *ID_P to the new node revision's ID.
-   Use POOL for any temporary allocation.  COPY_ID is the copy_id to
-   use in the node revision ID.  TXN_ID is the Subversion transaction
-   under which this occurs. */
+   node-revision is NODEREV.  COPY_ID is the copy_id to use in the
+   node revision ID.  TXN_ID is the Subversion transaction  under
+   which this occurs. */
 svn_error_t *
-svn_fs_x__create_node(const svn_fs_id_t **id_p,
-                      svn_fs_t *fs,
+svn_fs_x__create_node(svn_fs_t *fs,
                       node_revision_t *noderev,
-                      const svn_fs_x__id_part_t *copy_id,
+                      const svn_fs_x__id_t *copy_id,
                       svn_fs_x__txn_id_t txn_id,
                       apr_pool_t *pool);
 
@@ -174,12 +162,12 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
                     node_revision_t *parent_noderev,
                     const char *name,
-                    const svn_fs_id_t *id,
+                    const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
                     apr_pool_t *pool);
 
 /* Add a change to the changes record for filesystem FS in transaction
-   TXN_ID.  Mark path PATH, having node-id ID, as changed according to
+   TXN_ID.  Mark path PATH, having noderev-id ID, as changed according to
    the type in CHANGE_KIND.  If the text representation was changed set
    TEXT_MOD to TRUE, and likewise for PROP_MOD as well as MERGEINFO_MOD.
    If this change was the result of a copy, set COPYFROM_REV and
@@ -190,7 +178,7 @@ svn_error_t *
 svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_x__txn_id_t txn_id,
                      const char *path,
-                     const svn_fs_id_t *id,
+                     const svn_fs_x__id_t *id,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
@@ -210,13 +198,11 @@ svn_fs_x__set_contents(svn_stream_t **stream,
                        apr_pool_t *pool);
 
 /* Create a node revision in FS which is an immediate successor of
-   OLD_ID, whose contents are NEW_NR.  Set *NEW_ID_P to the new node
-   revision's ID.  Use POOL for any temporary allocation.
+   NEW_NODEREV's predecessor.  Use POOL for any temporary allocation.
 
-   COPY_ID, if non-NULL, is a key into the `copies' table, and
+   COPY_ID, is a key into the `copies' table, and
    indicates that this new node is being created as the result of a
-   copy operation, and specifically which operation that was.  If
-   COPY_ID is NULL, then re-use the copy ID from the predecessor node.
+   copy operation, and specifically which operation that was.
 
    TXN_ID is the Subversion transaction under which this occurs.
 
@@ -224,11 +210,9 @@ svn_fs_x__set_contents(svn_stream_t **stream,
    contents will change frequently, and will avoid representing other
    nodes as deltas against this node's contents.  */
 svn_error_t *
-svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
-                           svn_fs_t *fs,
-                           const svn_fs_id_t *old_idp,
+svn_fs_x__create_successor(svn_fs_t *fs,
                            node_revision_t *new_noderev,
-                           const svn_fs_x__id_part_t *copy_id,
+                           const svn_fs_x__id_t *copy_id,
                            svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool);
 
@@ -291,12 +275,11 @@ svn_fs_x__txn_proplist(apr_hash_t **table_p,
    temporary allocations in POOL. */
 svn_error_t *
 svn_fs_x__delete_node_revision(svn_fs_t *fs,
-                               const svn_fs_id_t *id,
+                               const svn_fs_x__id_t *id,
                                apr_pool_t *pool);
 
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, allocating from POOL.  Set
-   *ROOT_ID_P to the ID of the transaction's root directory.  Set
    *BASE_ROOT_ID_P to the ID of the root directory of the
    transaction's base revision.
 
@@ -308,11 +291,10 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in POOL.  */
 svn_error_t *
-svn_fs_x__get_txn_ids(const svn_fs_id_t **root_id_p,
-                      const svn_fs_id_t **base_root_id_p,
-                      svn_fs_t *fs,
-                      svn_fs_x__txn_id_t txn_id,
-                      apr_pool_t *pool);
+svn_fs_x__get_base_rev(svn_revnum_t *revnum,
+                       svn_fs_t *fs,
+                       svn_fs_x__txn_id_t txn_id,
+                       apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
