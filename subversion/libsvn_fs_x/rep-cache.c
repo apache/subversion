@@ -61,7 +61,7 @@ open_rep_cache(void *baton,
                apr_pool_t *pool)
 {
   svn_fs_t *fs = baton;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__db_t *sdb;
   const char *db_path;
   int version;
@@ -118,7 +118,7 @@ svn_error_t *
 svn_fs_x__open_rep_cache(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
                                            open_rep_cache, fs, pool);
   return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
@@ -150,7 +150,7 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              void *cancel_baton,
                              apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int iterations = 0;
@@ -239,7 +239,7 @@ svn_fs_x__get_rep_reference(representation_t **rep,
                             svn_checksum_t *checksum,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -294,7 +294,7 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
                             representation_t *rep,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
   svn_checksum_t checksum;
@@ -351,7 +351,7 @@ svn_fs_x__del_rep_reference(svn_fs_t *fs,
                             svn_revnum_t youngest,
                             apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
 
   if (! ffd->rep_cache_db)
@@ -369,7 +369,7 @@ svn_error_t *
 svn_fs_x__lock_rep_cache(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));

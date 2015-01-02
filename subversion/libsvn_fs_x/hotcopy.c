@@ -297,7 +297,7 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
   const char *src_subdir_packed_shard;
   svn_revnum_t revprop_rev;
   apr_pool_t *iterpool;
-  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
 
   /* Copy the packed shard. */
   src_subdir = svn_dirent_join(src_fs->path, PATH_REVS_DIR, scratch_pool);
@@ -477,8 +477,8 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
                                         svn_fs_t *dst_fs,
                                         apr_pool_t *pool)
 {
-  fs_x_data_t *src_ffd = src_fs->fsap_data;
-  fs_x_data_t *dst_ffd = dst_fs->fsap_data;
+  svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
+  svn_fs_x__data_t *dst_ffd = dst_fs->fsap_data;
 
   /* We only support incremental hotcopy between the same format. */
   if (src_ffd->format != dst_ffd->format)
@@ -552,7 +552,7 @@ hotcopy_revisions(svn_fs_t *src_fs,
                   void* cancel_baton,
                   apr_pool_t *pool)
 {
-  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
   int max_files_per_dir = src_ffd->max_files_per_dir;
   svn_revnum_t src_min_unpacked_rev;
   svn_revnum_t dst_min_unpacked_rev;
@@ -887,7 +887,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                           const char *dst_path,
                           apr_pool_t *pool)
 {
-  fs_x_data_t *src_ffd = src_fs->fsap_data;
+  svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
 
   /* Create the DST_FS repository with the same layout as SRC_FS. */
   SVN_ERR(svn_fs_x__create_file_tree(dst_fs, dst_path, src_ffd->format,

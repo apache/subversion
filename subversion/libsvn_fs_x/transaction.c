@@ -90,7 +90,7 @@ get_shared_txn(svn_fs_t *fs,
                svn_fs_x__txn_id_t txn_id,
                svn_boolean_t create_new)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__shared_data_t *ffsd = ffd->shared;
   svn_fs_x__shared_txn_data_t *txn;
 
@@ -135,7 +135,7 @@ get_shared_txn(svn_fs_t *fs,
 static void
 free_shared_txn(svn_fs_t *fs, svn_fs_x__txn_id_t txn_id)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__shared_data_t *ffsd = ffd->shared;
   svn_fs_x__shared_txn_data_t *txn, *prev = NULL;
 
@@ -172,7 +172,7 @@ with_txnlist_lock(svn_fs_t *fs,
                   const void *baton,
                   apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__shared_data_t *ffsd = ffd->shared;
 
   SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
@@ -196,7 +196,7 @@ get_lock_on_filesystem(const char *lock_filename,
 static apr_status_t
 reset_lock_flag(void *baton_void)
 {
-  fs_x_data_t *ffd = baton_void;
+  svn_fs_x__data_t *ffd = baton_void;
   ffd->has_write_lock = FALSE;
   return APR_SUCCESS;
 }
@@ -266,7 +266,7 @@ with_some_lock_file(with_lock_baton_t *baton)
   if (!err)
     {
       svn_fs_t *fs = baton->fs;
-      fs_x_data_t *ffd = fs->fsap_data;
+      svn_fs_x__data_t *ffd = fs->fsap_data;
 
       if (baton->is_global_lock)
         {
@@ -326,7 +326,7 @@ static void
 init_lock_baton(with_lock_baton_t *baton,
                 lock_id_t lock_id)
 {
-  fs_x_data_t *ffd = baton->fs->fsap_data;
+  svn_fs_x__data_t *ffd = baton->fs->fsap_data;
   svn_fs_x__shared_data_t *ffsd = ffd->shared;
 
   switch (lock_id)
@@ -783,7 +783,7 @@ store_sha1_rep_mapping(svn_fs_t *fs,
                        node_revision_t *noderev,
                        apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* if rep sharing has been enabled and the noderev has a data rep and
    * its SHA-1 is known, store the rep struct under its SHA1. */
@@ -1670,7 +1670,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
     = svn_fs_x__path_txn_node_children(fs, &parent_noderev->noderev_id, pool);
   apr_file_t *file;
   svn_stream_t *out;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   if (!rep || !svn_fs_x__is_txn(rep->id.change_set))
@@ -1867,7 +1867,7 @@ shards_spanned(int *spanned,
                int walk,
                apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   int shard_size = ffd->max_files_per_dir;
   apr_pool_t *iterpool;
 
@@ -1913,7 +1913,7 @@ choose_delta_base(representation_t **rep,
    * bits.) */
   int walk;
   node_revision_t *base;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool;
 
   /* If we have no predecessors, or that one is empty, then use the empty
@@ -2060,7 +2060,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                     node_revision_t *noderev,
                     apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   struct rep_write_baton *b;
   apr_file_t *file;
   representation_t *base_rep;
@@ -2158,7 +2158,7 @@ get_shared_rep(representation_t **old_rep,
                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
@@ -2546,7 +2546,7 @@ write_container_delta_rep(representation_t *rep,
                           svn_revnum_t final_revision,
                           apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_txdelta_window_handler_t diff_wh;
   void *diff_whb;
 
@@ -2781,7 +2781,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   apr_off_t my_offset;
   svn_fs_x__id_t new_id;
   svn_fs_x__id_t noderev_id;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__get_txn_id(id->change_set);
   svn_fs_x__p2l_entry_t entry;
   svn_fs_x__change_set_t change_set = svn_fs_x__change_set_by_rev(rev);
@@ -3007,10 +3007,10 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
                                             apr_pool_t *pool)
 {
 #ifdef SVN_DEBUG
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_t *ft; /* fs++ == ft */
   svn_fs_root_t *root;
-  fs_x_data_t *ft_ffd;
+  svn_fs_x__data_t *ft_ffd;
   apr_hash_t *fs_config;
 
   SVN_ERR_ASSERT(ffd->svn_fs_open_);
@@ -3231,7 +3231,7 @@ static svn_error_t *
 commit_body(void *baton, apr_pool_t *pool)
 {
   struct commit_baton *cb = baton;
-  fs_x_data_t *ffd = cb->fs->fsap_data;
+  svn_fs_x__data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   svn_fs_x__id_t root_id, new_root_id;
@@ -3417,7 +3417,7 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
                  apr_pool_t *pool)
 {
   struct commit_baton cb;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
@@ -3578,7 +3578,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       && svn_fs_x__is_txn(noderev->data_rep->id.change_set)
       && noderev->kind == svn_node_dir)
     {
-      fs_x_data_t *ffd = fs->fsap_data;
+      svn_fs_x__data_t *ffd = fs->fsap_data;
       const svn_fs_x__id_t *key = id;
 
       SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_children(fs, id,

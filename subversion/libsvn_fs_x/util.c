@@ -55,7 +55,7 @@ are likely some errors because of that.
 svn_boolean_t
 svn_fs_x__is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return (rev < ffd->min_unpacked_rev);
 }
@@ -64,7 +64,7 @@ svn_fs_x__is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 svn_boolean_t
 svn_fs_x__is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* rev 0 will not be packed */
   return (rev < ffd->min_unpacked_rev) && (rev != 0);
@@ -73,7 +73,7 @@ svn_fs_x__is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 svn_revnum_t
 svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return rev < ffd->min_unpacked_rev
        ? rev - (rev % ffd->max_files_per_dir)
@@ -83,7 +83,7 @@ svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
 svn_revnum_t
 svn_fs_x__pack_size(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return rev < ffd->min_unpacked_rev ? ffd->max_files_per_dir : 1;
 }
@@ -141,7 +141,7 @@ const char *
 svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
                           apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   assert(svn_fs_x__is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
@@ -154,7 +154,7 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
 const char *
 svn_fs_x__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld",
                                                  rev / ffd->max_files_per_dir),
@@ -186,7 +186,7 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
                               apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
@@ -199,7 +199,7 @@ svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
@@ -465,7 +465,7 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 svn_error_t *
 svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
 }
 

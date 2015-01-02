@@ -157,7 +157,7 @@ svn_fs_x__write_format(svn_fs_t *fs,
 {
   svn_stringbuf_t *sb;
   const char *path = svn_fs_x__path_format(fs, pool);
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_X__FORMAT_NUMBER);
 
@@ -231,7 +231,7 @@ verify_block_size(apr_int64_t block_size,
  * and set the respective values in FFD.  Use pools as usual.
  */
 static svn_error_t *
-read_config(fs_x_data_t *ffd,
+read_config(svn_fs_x__data_t *ffd,
             const char *fs_path,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
@@ -513,7 +513,7 @@ static svn_error_t *
 read_uuid(svn_fs_t *fs,
           apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_file_t *uuid_file;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
@@ -542,7 +542,7 @@ svn_error_t *
 svn_fs_x__read_format_file(svn_fs_t *fs,
                            apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
 
   /* Read info from format file. */
@@ -559,7 +559,7 @@ svn_fs_x__read_format_file(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   fs->path = apr_pstrdup(fs->pool, path);
 
   /* Read the FS format file. */
@@ -633,7 +633,7 @@ svn_fs_x__youngest_rev(svn_revnum_t *youngest_p,
                        svn_fs_t *fs,
                        apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   SVN_ERR(svn_fs_x__read_current(youngest_p, fs, pool));
   ffd->youngest_rev_cache = *youngest_p;
 
@@ -645,7 +645,7 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
                                  apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   if (! SVN_IS_VALID_REVNUM(rev))
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
@@ -930,7 +930,7 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
                            int shard_size,
                            apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(fs->pool, path);
   ffd->format = format;
@@ -994,7 +994,7 @@ svn_fs_x__create(svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   int format = SVN_FS_X__FORMAT_NUMBER;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(fs->pool, path);
   /* See if compatibility with older versions was explicitly requested. */
@@ -1040,7 +1040,7 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *instance_id,
                    apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *uuid_path = svn_fs_x__path_uuid(fs, pool);
   svn_stringbuf_t *contents = svn_stringbuf_create_empty(pool);
 
@@ -1180,7 +1180,7 @@ svn_fs_x__info_format(int *fs_format,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   *fs_format = ffd->format;
   *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
 

@@ -63,7 +63,7 @@
 static svn_error_t *
 x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *key;
   void *val;
   svn_fs_x__shared_data_t *ffsd;
@@ -203,7 +203,7 @@ x_info(const void **fsx_info,
        apr_pool_t *result_pool,
        apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_fsx_info_t *info = apr_palloc(result_pool, sizeof(*info));
   info->fs_type = SVN_FS_TYPE_FSX;
   info->shard_size = ffd->max_files_per_dir;
@@ -272,7 +272,7 @@ static fs_vtable_t fs_vtable = {
 static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
-  fs_x_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
+  svn_fs_x__data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;
@@ -558,7 +558,7 @@ x_set_svn_fs_open(svn_fs_t *fs,
                                                apr_pool_t *,
                                                apr_pool_t *))
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   ffd->svn_fs_open_ = svn_fs_open_;
   return SVN_NO_ERROR;
 }

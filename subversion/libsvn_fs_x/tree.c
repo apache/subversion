@@ -343,7 +343,7 @@ locate_cache(svn_cache__t **cache,
     }
   else
     {
-      fs_x_data_t *ffd = root->fs->fsap_data;
+      svn_fs_x__data_t *ffd = root->fs->fsap_data;
 
       if (cache)
         *cache = ffd->rev_node_cache;
@@ -373,7 +373,7 @@ dag_node_cache_get(dag_node_t **node_p,
     {
       /* immutable DAG node. use the global caches for it */
 
-      fs_x_data_t *ffd = root->fs->fsap_data;
+      svn_fs_x__data_t *ffd = root->fs->fsap_data;
       cache_entry_t *bucket;
 
       auto_clear_dag_cache(ffd->dag_node_cache);
@@ -825,7 +825,7 @@ try_match_last_node(dag_node_t **node_p,
                     apr_size_t path_len,
                     apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = root->fs->fsap_data;
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
 
   /* Optimistic lookup: if the last node returned from the cache applied to
      the same PATH, return it in NODE. */
@@ -2158,7 +2158,7 @@ svn_fs_x__commit_txn(const char **conflict_p,
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
   svn_fs_t *fs = txn->fs;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* Limit memory usage when the repository has a high commit rate and
      needs to run the following while loop multiple times.  The memory
@@ -4001,7 +4001,7 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = rev_root->fs->fsap_data;
+  svn_fs_x__data_t *ffd = rev_root->fs->fsap_data;
   const char *cache_key;
   svn_boolean_t found = FALSE;
   svn_stringbuf_t *mergeinfo_exists;

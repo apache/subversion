@@ -247,7 +247,7 @@ typedef struct svn_fs_x__window_cache_key_t
 
 /* Private (non-shared) FSX-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
-typedef struct fs_x_data_t
+typedef struct svn_fs_x__data_t
 {
   /* The format number of this FS. */
   int format;
@@ -417,7 +417,7 @@ typedef struct fs_x_data_t
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
-} fs_x_data_t;
+} svn_fs_x__data_t;
 
 
 /*** Filesystem Transaction ***/
