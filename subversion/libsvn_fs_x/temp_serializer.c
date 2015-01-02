@@ -1126,7 +1126,8 @@ svn_fs_x__deserialize_changes(void **out,
 {
   int i;
   changes_data_t *changes = (changes_data_t *)data;
-  apr_array_header_t *array = apr_array_make(pool, 0, sizeof(svn_fs_x__change_t *));
+  apr_array_header_t *array = apr_array_make(pool, 0,
+                                             sizeof(svn_fs_x__change_t *));
 
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(changes, (void**)&changes->changes);

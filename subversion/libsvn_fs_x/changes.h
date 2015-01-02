@@ -39,7 +39,8 @@
  * access to the data.
  */
 
-/* An opaque collection of change lists (apr_array_header_t * of svn_fs_x__change_t*).
+/* An opaque collection of change lists (apr_array_header_t * of
+ * svn_fs_x__change_t *).
  */
 typedef struct svn_fs_x__changes_t svn_fs_x__changes_t;
 

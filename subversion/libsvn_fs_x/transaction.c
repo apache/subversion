@@ -864,9 +864,11 @@ static svn_fs_x__change_t *
 path_change_dup(const svn_fs_x__change_t *source,
                 apr_pool_t *result_pool)
 {
-  svn_fs_x__change_t *result = apr_pmemdup(result_pool, source, sizeof(*source));
-  result->path.data = apr_pstrmemdup(result_pool, source->path.data,
-                                     source->path.len);
+  svn_fs_x__change_t *result
+    = apr_pmemdup(result_pool, source, sizeof(*source));
+  result->path.data
+    = apr_pstrmemdup(result_pool, source->path.data, source->path.len);
+
   if (source->copyfrom_path)
     result->copyfrom_path = apr_pstrdup(result_pool, source->copyfrom_path);
 

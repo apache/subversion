@@ -3291,7 +3291,8 @@ x_paths_changed(apr_hash_t **changed_paths_p,
       changed_paths = svn_hash__make(pool);
       for (i = 0; i < changes->nelts; ++i)
         {
-          svn_fs_x__change_t *change = APR_ARRAY_IDX(changes, i, svn_fs_x__change_t *);
+          svn_fs_x__change_t *change = APR_ARRAY_IDX(changes, i,
+                                                     svn_fs_x__change_t *);
           SVN_ERR(construct_fs_path_change(&path_change, context, change,
                                            pool));
           apr_hash_set(changed_paths, change->path.data, change->path.len,
