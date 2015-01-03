@@ -329,7 +329,7 @@ static const apr_getopt_option_t options_table[] =
         "                             identical")},
 
     {"metadata-only", svnadmin__metadata_only, 0,
-     N_("verify metadata only (ignored for BDB),"
+     N_("verify metadata only (ignored for BDB),\n"
         "                             checking against external corruption in\n"
         "                             Subversion 1.9+ format repositories.\n")},
 
@@ -358,14 +358,16 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     } },
 
   {"delrevprop", subcommand_delrevprop, {0}, N_
-   ("usage: svnadmin delrevprop REPOS_PATH -r REVISION NAME\n\n"
-    "Delete the property NAME on revision REVISION. Use\n"
-    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
-    "the revision property-related hooks (for example, if you want an email\n"
-    "notification sent from your post-revprop-change hook).\n\n"
+   ("usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
+    "                   2. svnadmin delrevprop REPO_PATH -t TXN NAME\n\n"
+    "1. Delete the property NAME on revision REVISION.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "irreversibly destroy the previous value of the property.\n"),
-   {'r', svnadmin__use_pre_revprop_change_hook,
+    "irreversibly destroy the previous value of the property.\n\n"
+    "2. Delete the property NAME on transaction TXN.\n"),
+   {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
   {"deltify", subcommand_deltify, {0}, N_
@@ -497,14 +499,16 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', svnadmin__bypass_hooks} },
 
   {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
-    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
-    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
-    "the revision property-related hooks (for example, if you want an email\n"
-    "notification sent from your post-revprop-change hook).\n\n"
+   ("usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+    "                   2. svnadmin setrevprop REPOS_PATH -t TXN NAME FILE\n\n"
+    "1. Set the property NAME on revision REVISION to the contents of FILE.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "overwrite the previous value of the property.\n"),
-   {'r', svnadmin__use_pre_revprop_change_hook,
+    "overwrite the previous value of the property.\n\n"
+    "2. Set the property NAME on transaction TXN to the contents of FILE.\n"),
+   {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
   {"setuuid", subcommand_setuuid, {0}, N_
@@ -1609,7 +1613,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 /* A helper for the 'setrevprop' and 'setlog' commands.  Expects
-   OPT_STATE->use_pre_revprop_change_hook and
+   OPT_STATE->txn_id, OPT_STATE->use_pre_revprop_change_hook and
    OPT_STATE->use_post_revprop_change_hook to be set appropriately.
    If FILENAME is NULL, delete property PROP_NAME.  */
 static svn_error_t *
@@ -1640,9 +1644,16 @@ set_revprop(const char *prop_name, const char *filename,
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
-  /* If we are bypassing the hooks system, we just hit the filesystem
-     directly. */
-  SVN_ERR(svn_repos_fs_change_rev_prop4(
+  if (opt_state->txn_id)
+    {
+      svn_fs_t *fs = svn_repos_fs(repos);
+      svn_fs_txn_t *txn;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_change_txn_prop(txn, prop_name, prop_value, pool));
+    }
+  else
+    SVN_ERR(svn_repos_fs_change_rev_prop4(
               repos, opt_state->start_revision.value.number,
               NULL, prop_name, NULL, prop_value,
               opt_state->use_pre_revprop_change_hook,
@@ -1667,7 +1678,21 @@ subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   filename = APR_ARRAY_IDX(args, 1, const char *);
   SVN_ERR(target_arg_to_dirent(&filename, filename, pool));
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
+  if (opt_state->txn_id)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--revision (-r) and --transaction (-t) "
+                                   "are mutually exclusive"));
+
+      if (opt_state->use_pre_revprop_change_hook
+          || opt_state->use_post_revprop_change_hook)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Calling hooks is incompatible with "
+                                   "--transaction (-t)"));
+    }
+  else if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Missing revision"));
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
@@ -2002,6 +2027,11 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %ld/%ld\n"),
                                        shards_packed, shards_full));
           }
+
+        if (fsfs_info->log_addressing)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: yes\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: no\n")));
       }
   }
 
@@ -2348,7 +2378,21 @@ subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(parse_args(&args, os, 1, 1, pool));
   prop_name = APR_ARRAY_IDX(args, 0, const char *);
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
+  if (opt_state->txn_id)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--revision (-r) and --transaction (-t) "
+                                   "are mutually exclusive"));
+
+      if (opt_state->use_pre_revprop_change_hook
+          || opt_state->use_post_revprop_change_hook)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Calling hooks is incompatible with "
+                                   "--transaction (-t)"));
+    }
+  else if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Missing revision"));
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)

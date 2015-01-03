@@ -55,6 +55,16 @@ svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
       && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
 }
 
+svn_revnum_t
+svn_fs_fs__packed_base_rev(svn_fs_t *fs,
+                           svn_revnum_t revision)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return (revision < ffd->min_unpacked_rev)
+       ? (revision - (revision % ffd->max_files_per_dir))
+       : revision;
+}
+
 const char *
 svn_fs_fs__path_txn_current(svn_fs_t *fs,
                             apr_pool_t *pool)
@@ -224,15 +234,21 @@ combine_txn_id_string(const svn_fs_fs__id_part_t *txn_id,
 }
 
 const char *
+svn_fs_fs__path_txns_dir(svn_fs_t *fs,
+                         apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                         const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool)
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
-  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              combine_txn_id_string(txn_id, PATH_EXT_TXN,
-                                                    pool),
-                              SVN_VA_NULL);
+  return svn_dirent_join(svn_fs_fs__path_txns_dir(fs, pool),
+                         combine_txn_id_string(txn_id, PATH_EXT_TXN, pool),
+                         pool);
 }
 
 const char*
@@ -263,16 +279,22 @@ svn_fs_fs__path_txn_item_index(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_proto_revs(svn_fs_t *fs,
+                               apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id, PATH_EXT_REV,
-                                                      pool),
-                                SVN_VA_NULL);
+    return svn_dirent_join(svn_fs_fs__path_txn_proto_revs(fs, pool),
+                           combine_txn_id_string(txn_id, PATH_EXT_REV, pool),
+                           pool);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV, pool);
@@ -286,11 +308,10 @@ svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                combine_txn_id_string(txn_id,
-                                                      PATH_EXT_REV_LOCK,
-                                                      pool),
-                                SVN_VA_NULL);
+    return svn_dirent_join(svn_fs_fs__path_txn_proto_revs(fs, pool),
+                           combine_txn_id_string(txn_id, PATH_EXT_REV_LOCK,
+                                                 pool),
+                           pool);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV_LOCK, pool);
@@ -387,7 +408,7 @@ svn_fs_fs__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
+  SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
@@ -429,7 +450,6 @@ svn_fs_fs__read_current(svn_revnum_t *rev,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content;
-  const char *str;
 
   SVN_ERR(svn_fs_fs__read_content(&content,
                                   svn_fs_fs__path_current(fs, pool),
@@ -437,16 +457,20 @@ svn_fs_fs__read_current(svn_revnum_t *rev,
 
   if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
-      SVN_ERR(svn_revnum_parse(rev, content->data, &str));
-      if (*str != '\n')
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Corrupt 'current' file"));
+      /* When format 1 and 2 filesystems are upgraded, the 'current' file is
+         left intact.  As a consequence, there is a window when a filesystem
+         has a new format, but this file still contains the IDs left from an
+         old format, i.e. looks like "359 j5 v\n".  Do not be too strict here
+         and only expect a parseable revision number. */
+      SVN_ERR(svn_revnum_parse(rev, content->data, NULL));
 
       *next_node_id = 0;
       *next_copy_id = 0;
     }
   else
     {
+      const char *str;
+
       SVN_ERR(svn_revnum_parse(rev, content->data, &str));
       if (*str != ' ')
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -663,10 +687,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
 }
 
 svn_boolean_t
-svn_fs_fs__use_log_addressing(svn_fs_t *fs,
-                              svn_revnum_t rev)
+svn_fs_fs__use_log_addressing(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return ffd->min_log_addressing_rev != SVN_INVALID_REVNUM
-      && ffd->min_log_addressing_rev <= rev;
+  return ffd->use_log_addressing;
 }

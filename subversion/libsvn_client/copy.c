@@ -1058,8 +1058,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"), dst_rel);
+        {
+          const char *path = svn_uri_skip_ancestor(repos_root,
+                                                   pair->dst_abspath_or_url,
+                                                   pool);
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                   _("Path '/%s' already exists"), path);
+        }
 
       /* More info for our INFO structure.  */
       info->src_path = src_rel;
@@ -1101,12 +1106,15 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item = svn_client_commit_item3_create(pool);
           item->url = svn_path_url_add_component2(top_url, info->dst_path,
                                                   pool);
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD
+                              | SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+          item->copyfrom_url = info->src_url;
+          item->copyfrom_rev = info->src_revnum;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
           if (is_move && (! info->resurrection))
             {
-              item = apr_pcalloc(pool, sizeof(*item));
+              item = svn_client_commit_item3_create(pool);
               item->url = svn_path_url_add_component2(top_url, info->src_path,
                                                       pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
@@ -1609,7 +1617,6 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
     {
       if (same_repositories)
         {
-          svn_boolean_t sleep_needed = FALSE;
           const char *tmpdir_abspath, *tmp_abspath;
 
           /* Find a temporary location in which to check out the copy source. */
@@ -1638,14 +1645,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
 
-            err = svn_client__checkout_internal(&pair->src_revnum,
+            err = svn_client__checkout_internal(&pair->src_revnum, timestamp_sleep,
                                                 pair->src_original,
                                                 tmp_abspath,
                                                 &pair->src_peg_revision,
                                                 &pair->src_op_revision,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
-                                                &sleep_needed, ctx, pool);
+                                                ra_session, ctx, pool);
 
             ctx->notify_func2 = old_notify_func2;
             ctx->notify_baton2 = old_notify_baton2;
@@ -1738,7 +1745,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
       svn_wc_notify_t *notify = svn_wc_create_notify(
                                   dst_abspath, svn_wc_notify_add, pool);
       notify->kind = pair->src_kind;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;

@@ -264,8 +264,6 @@ HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 "$HTTPD" -v 1>/dev/null 2>&1 \
   || fail "HTTPD '$HTTPD' doesn't start properly"
 
-say "Using '$HTTPD'..."
-
 HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
   || fail "Could not find htpasswd or htpasswd2"
 [ -x $HTPASSWD ] \

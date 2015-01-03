@@ -44,6 +44,7 @@
 #include "rep-cache.h"
 #include "revprops.h"
 #include "transaction.h"
+#include "util.h"
 #include "verify.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
@@ -213,6 +214,7 @@ fs_info(const void **fsfs_info,
   info->fs_type = SVN_FS_TYPE_FSFS;
   info->shard_size = ffd->max_files_per_dir;
   info->min_unpacked_rev = ffd->min_unpacked_rev;
+  info->log_addressing = ffd->use_log_addressing;
   *fsfs_info = info;
   return SVN_NO_ERROR;
 }
@@ -265,7 +267,7 @@ static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
-  ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
+  ffd->use_log_addressing = FALSE;
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
@@ -348,20 +350,53 @@ fs_open_for_recovery(svn_fs_t *fs,
                      apr_pool_t *pool,
                      apr_pool_t *common_pool)
 {
+  svn_error_t * err;
+  svn_revnum_t youngest_rev;
+  apr_pool_t * subpool = svn_pool_create(pool);
+
   /* Recovery for FSFS is currently limited to recreating the 'current'
      file from the latest revision. */
 
   /* The only thing we have to watch out for is that the 'current' file
-     might not exist.  So we'll try to create it here unconditionally,
-     and just ignore any errors that might indicate that it's already
-     present. (We'll need it to exist later anyway as a source for the
-     new file's permissions). */
+     might not exist or contain garbage.  So we'll try to read it here
+     and provide or replace the existing file if we couldn't read it.
+     (We'll also need it to exist later anyway as a source for the new
+     file's permissions). */
 
-  /* Use a partly-filled fs pointer first to create 'current'.  This will fail
-     if 'current' already exists, but we don't care about that. */
+  /* Use a partly-filled fs pointer first to create 'current'. */
   fs->path = apr_pstrdup(fs->pool, path);
-  svn_error_clear(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                                     "0 1 1\n", pool));
+
+  SVN_ERR(initialize_fs_struct(fs));
+
+  /* Figure out the repo format and check that we can even handle it. */
+  SVN_ERR(svn_fs_fs__read_format_file(fs, subpool));
+
+  /* Now, read 'current' and try to patch it if necessary. */
+  err = svn_fs_fs__youngest_rev(&youngest_rev, fs, subpool);
+  if (err)
+    {
+      const char *file_path;
+
+      /* 'current' file is missing or contains garbage.  Since we are trying
+       * to recover from whatever problem there is, being picky about the
+       * error code here won't do us much good.  If there is a persistent
+       * problem that we can't fix, it will show up when we try rewrite the
+       * file a few lines further below and we will report the failure back
+       * to the caller.
+       *
+       * Start recovery with HEAD = 0. */
+      svn_error_clear(err);
+      file_path = svn_fs_fs__path_current(fs, subpool);
+
+      /* Best effort to ensure the file exists and is valid.
+       * This may fail for r/o filesystems etc. */
+      SVN_ERR(svn_io_remove_file2(file_path, TRUE, subpool));
+      SVN_ERR(svn_io_file_create_empty(file_path, subpool));
+      SVN_ERR(svn_fs_fs__write_current(fs, 0, 1, 1, subpool));
+    }
+
+  uninitialize_fs_struct(fs);
+  svn_pool_destroy(subpool);
 
   /* Now open the filesystem properly by calling the vtable method directly. */
   return fs_open(fs, path, common_pool_lock, pool, common_pool);
@@ -496,7 +531,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 }
 
 static const svn_version_t *

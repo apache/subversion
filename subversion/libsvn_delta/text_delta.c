@@ -637,13 +637,17 @@ patterning_copy(char *target, const char *source, apr_size_t len)
   const apr_size_t overlap = target - source;
   while (len > overlap)
     {
-      target = memcpy(target, source, overlap);
+      memcpy(target, source, overlap);
+      target += overlap;
       len -= overlap;
     }
 
   /* Copy any remaining source pattern. */
   if (len)
-    target = memcpy(target, source, len);
+    {
+      memcpy(target, source, len);
+      target += len;
+    }
 
   return target;
 }
@@ -655,6 +659,11 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
 {
   const svn_txdelta_op_t *op;
   apr_size_t tpos = 0;
+
+  /* Nothing to do for empty buffers.
+   * This check allows for NULL TBUF in that case. */
+  if (*tlen == 0)
+    return;
 
   for (op = window->ops; op < window->ops + window->num_ops; op++)
     {

@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Read the 'format' file of fsx filesystem FS and store its info in FS.
+ * Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_fs_x__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool);
+
 /* Open the fsx filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations.
 
@@ -51,15 +56,6 @@ svn_error_t *svn_fs_x__youngest_rev(svn_revnum_t *youngest,
                                     svn_fs_t *fs,
                                     apr_pool_t *pool);
 
-/* For revision REV in fileysystem FS, open the revision (or packed rev)
-   file and seek to the start of the revision.  Return it in *FILE, and
-   use POOL for allocations. */
-svn_error_t *
-svn_fs_x__open_pack_or_rev_file(apr_file_t **file,
-                                svn_fs_t *fs,
-                                svn_revnum_t rev,
-                                apr_pool_t *pool);
-
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
    revision number, else return success. */
@@ -85,13 +81,13 @@ svn_error_t *svn_fs_x__revision_proplist(apr_hash_t **proplist,
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_x__file_length(svn_filesize_t *length,
-                                   node_revision_t *noderev,
+                                   svn_fs_x__noderev_t *noderev,
                                    apr_pool_t *pool);
 
 /* Return TRUE if the representations in A and B have equal contents, else
    return FALSE. */
-svn_boolean_t svn_fs_x__file_text_rep_equal(representation_t *a,
-                                            representation_t *b);
+svn_boolean_t svn_fs_x__file_text_rep_equal(svn_fs_x__representation_t *a,
+                                            svn_fs_x__representation_t *b);
 
 /* Set *EQUAL to TRUE if the property representations in A and B within FS
    have equal contents, else set it to FALSE.  If STRICT is not set, allow
@@ -99,24 +95,42 @@ svn_boolean_t svn_fs_x__file_text_rep_equal(representation_t *a,
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
                                       svn_fs_t *fs,
-                                      node_revision_t *a,
-                                      node_revision_t *b,
+                                      svn_fs_x__noderev_t *a,
+                                      svn_fs_x__noderev_t *b,
                                       svn_boolean_t strict,
                                       apr_pool_t *scratch_pool);
 
 
 /* Return a copy of the representation REP allocated from POOL. */
-representation_t *svn_fs_x__rep_copy(representation_t *rep,
-                                     apr_pool_t *pool);
+svn_fs_x__representation_t *
+svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
+                   apr_pool_t *pool);
 
 
 /* Return the recorded checksum of type KIND for the text representation
    of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
    available, put all NULL into CHECKSUM. */
 svn_error_t *svn_fs_x__file_checksum(svn_checksum_t **checksum,
-                                     node_revision_t *noderev,
+                                     svn_fs_x__noderev_t *noderev,
                                      svn_checksum_kind_t kind,
                                      apr_pool_t *pool);
+
+/* Under the repository db PATH, create a FSFS repository with FORMAT,
+ * the given SHARD_SIZE.  If not supported by the respective format,
+ * the latter two parameters will be ignored.  FS will be updated.
+ *
+ * The only file not being written is the 'format' file.  This allows
+ * callers such as hotcopy to modify the contents before turning the
+ * tree into an accessible repository.
+ *
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_x__create_file_tree(svn_fs_t *fs,
+                           const char *path,
+                           int format,
+                           int shard_size,
+                           apr_pool_t *pool);
 
 /* Create a fs_x fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.
@@ -127,11 +141,12 @@ svn_error_t *svn_fs_x__create(svn_fs_t *fs,
                               const char *path,
                               apr_pool_t *pool);
 
-/* Set the uuid of repository FS to UUID, if UUID is not NULL;
-   otherwise, set the uuid of FS to a newly generated UUID.  Perform
-   temporary allocations in POOL. */
+/* Set the uuid of repository FS to UUID and the instance ID to INSTANCE_ID.
+   If any of them is NULL, use a newly generated UUID / ID instead.
+   Perform temporary allocations in POOL. */
 svn_error_t *svn_fs_x__set_uuid(svn_fs_t *fs,
                                 const char *uuid,
+                                const char *instance_id,
                                 apr_pool_t *pool);
 
 /* Set *PATH to the path of REV in FS, whether in a pack file or not.

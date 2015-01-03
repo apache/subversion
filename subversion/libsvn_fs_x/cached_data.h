@@ -34,44 +34,45 @@
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any
    allocations in POOL. */
 svn_error_t *
-svn_fs_x__get_node_revision(node_revision_t **noderev_p,
+svn_fs_x__get_node_revision(svn_fs_x__noderev_t **noderev_p,
                             svn_fs_t *fs,
-                            const svn_fs_id_t *id,
-                            apr_pool_t *pool);
+                            const svn_fs_x__id_t *id,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *COUNT to the value of the mergeinfo_count member of the node-
    revision for the node ID in FS.  Do any allocations in POOL. */
 svn_error_t *
 svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               svn_fs_t *fs,
-                              const svn_fs_id_t *id,
+                              const svn_fs_x__id_t *id,
                               apr_pool_t *pool);
 
-/* Set *ROOT_ID to the node-id for the root of revision REV in
-   filesystem FS.  Do any allocations in POOL. */
+/* Set *ROOT_ID to the noderev ID for the root of revision REV in
+   filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_id_t **root_id,
+svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 /* Verify that representation REP in FS can be accessed.
-   Do any allocations in POOL. */
+   Do any allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__check_rep(representation_t *rep,
+svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
                     svn_fs_t *fs,
-                    apr_pool_t *pool);
+                    apr_pool_t *scratch_pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The
    number of reps (including REP) in the chain will be returned in
    *CHAIN_LENGTH.  *SHARD_COUNT will be set to the number of shards
-   accessed.  Do any allocations in POOL. */
+   accessed.  Do any allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__rep_chain_length(int *chain_length,
                            int *shard_count,
-                           representation_t *rep,
+                           svn_fs_x__representation_t *rep,
                            svn_fs_t *fs,
-                           apr_pool_t *pool);
+                           apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
@@ -81,7 +82,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
 svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
-                       representation_t *rep,
+                       svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
                        apr_pool_t *pool);
 
@@ -95,8 +96,7 @@ svn_error_t *
 svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
                                     svn_filesize_t *expanded_len,
                                     svn_fs_t *fs,
-                                    apr_file_t *file,
-                                    svn_stream_t *stream,
+                                    svn_fs_x__revision_file_t *rev_file,
                                     svn_fs_x__p2l_entry_t* entry,
                                     apr_pool_t *pool);
 
@@ -109,7 +109,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
 svn_error_t *
 svn_fs_x__try_process_file_contents(svn_boolean_t *success,
                                     svn_fs_t *fs,
-                                    node_revision_t *noderev,
+                                    svn_fs_x__noderev_t *noderev,
                                     svn_fs_process_contents_func_t processor,
                                     void* baton,
                                     apr_pool_t *pool);
@@ -120,8 +120,8 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
-                                node_revision_t *source,
-                                node_revision_t *target,
+                                svn_fs_x__noderev_t *source,
+                                svn_fs_x__noderev_t *target,
                                 apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_array_header_t of dirent structs that contain
@@ -131,7 +131,7 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 svn_error_t *
 svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
                            svn_fs_t *fs,
-                           node_revision_t *noderev,
+                           svn_fs_x__noderev_t *noderev,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -139,7 +139,7 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
    entry exists, return NULL.  If HINT is not NULL, set *HINT to the array
    index of the entry returned.  Successive calls in a linear scan scenario
    will be faster called with the same HINT variable. */
-svn_fs_dirent_t *
+svn_fs_x__dirent_t *
 svn_fs_x__find_dir_entry(apr_array_header_t *entries,
                          const char *name,
                          int *hint);
@@ -149,9 +149,9 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
    be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
-svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
-                                 node_revision_t *noderev,
+                                 svn_fs_x__noderev_t *noderev,
                                  const char *name,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
@@ -162,7 +162,7 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
 svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist,
                        svn_fs_t *fs,
-                       node_revision_t *noderev,
+                       svn_fs_x__noderev_t *noderev,
                        apr_pool_t *pool);
 
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.

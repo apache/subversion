@@ -138,7 +138,12 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {
-  return apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  svn_client_commit_item3_t *item = apr_pcalloc(pool, sizeof(*item));
+
+  item->revision = SVN_INVALID_REVNUM;
+  item->copyfrom_rev = SVN_INVALID_REVNUM;
+
+  return item;
 }
 
 svn_client_commit_item3_t *
@@ -195,7 +200,6 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                 NULL,
                                 wc_ctx, wc_abspath,
                                 TRUE /* ignore_enoent */,
-                                TRUE /* show_hidden */,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
     {

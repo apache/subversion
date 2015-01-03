@@ -54,12 +54,17 @@ svn_opt_subcommand_t
   subcommand__load_index,
   subcommand__stats;
 
+
 /* Check that the filesystem at PATH is an FSFS repository and then open it.
  * Return the filesystem in *FS, allocated in POOL. */
 svn_error_t *
 open_fs(svn_fs_t **fs,
         const char *path,
         apr_pool_t *pool);
+
+/* Our cancellation callback. */
+svn_error_t *
+check_cancel(void *baton);
 
 #ifdef __cplusplus
 }

@@ -72,6 +72,16 @@ setup_cancellation_signals(void (*handler)(int signum))
 }
 
 
+svn_error_t *
+check_cancel(void *baton)
+{
+  if (cancelled)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
+  else
+    return SVN_NO_ERROR;
+}
+
+
 /* Custom filesystem warning function. */
 static void
 warning_func(void *baton,
@@ -176,9 +186,9 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"load-index", subcommand__load_index, {0}, N_
    ("usage: svnfsfs load-index REPOS_PATH\n\n"
-    "Read the index contents to console.  The format is the same as produced by the\n"
-    "dump command, except that checksum as well as header are optional and will be\n"
-    "ignored.  The data must cover the full revision / pack file;  the revision\n"
+    "Read index contents from console.  The format is the same as produced by the\n"
+    "dump-index command, except that checksum as well as header are optional and will\n"
+    "be ignored.  The data must cover the full revision / pack file;  the revision\n"
     "number is automatically extracted from input stream.  No ordering is required.\n"),
    {'M'} },
 
@@ -469,7 +479,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  /* Configure FSFS caches for maximum efficiency with svnadmin.
+  /* Configure FSFS caches for maximum efficiency with svnfsfs.
    * Also, apply the respective command line parameters, if given. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();
@@ -490,7 +500,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
           err = svn_error_quick_wrap(err,
-                                     _("Try 'svnadmin help' for more info"));
+                                     _("Try 'svnfsfs help' for more info"));
         }
       return err;
     }
@@ -506,7 +516,7 @@ main(int argc, const char *argv[])
   svn_error_t *err;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svnadmin", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnfsfs", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a separate mutexless allocator,

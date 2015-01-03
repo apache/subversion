@@ -1690,7 +1690,7 @@ svn_repos_delete(const char *path,
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
 
   /* ...then blow away everything else.  */
-  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 }
 
 

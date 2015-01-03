@@ -51,7 +51,7 @@ svn_error_t *
 svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              svn_revnum_t start,
                              svn_revnum_t end,
-                             svn_error_t *(*walker)(representation_t *rep,
+                             svn_error_t *(*walker)(svn_fs_x__representation_t *rep,
                                                     void *walker_baton,
                                                     svn_fs_t *fs,
                                                     apr_pool_t *scratch_pool),
@@ -65,7 +65,7 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
    opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if
    a reference beyond HEAD is detected. */
 svn_error_t *
-svn_fs_x__get_rep_reference(representation_t **rep,
+svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
                             svn_fs_t *fs,
                             svn_checksum_t *checksum,
                             apr_pool_t *pool);
@@ -77,7 +77,7 @@ svn_fs_x__get_rep_reference(representation_t **rep,
    If the rep cache database has not been opened, this may be a no op. */
 svn_error_t *
 svn_fs_x__set_rep_reference(svn_fs_t *fs,
-                            representation_t *rep,
+                            svn_fs_x__representation_t *rep,
                             apr_pool_t *pool);
 
 /* Delete from the cache all reps corresponding to revisions younger

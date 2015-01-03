@@ -920,7 +920,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->md5_checksum)))
                 return svn_error_create(SVN_ERR_FS_CORRUPT,
                         svn_checksum_mismatch_err(rep->md5_checksum,
-                             args->rb->sha1_checksum, trail->pool,
+                             args->rb->md5_checksum, trail->pool,
                              _("MD5 checksum mismatch on representation '%s'"),
                              args->rb->rep_key),
                         NULL);

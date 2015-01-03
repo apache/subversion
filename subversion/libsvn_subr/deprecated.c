@@ -1504,3 +1504,33 @@ svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
   svn_auth__get_gpg_agent_simple_provider(provider, pool);
 }
 #endif /* !WIN32 */
+
+svn_error_t *
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  return svn_error_trace(svn_cmdline_create_auth_baton2(ab,
+                                                        non_interactive,
+                                                        auth_username,
+                                                        auth_password,
+                                                        config_dir,
+                                                        no_auth_cache,
+                                                        trust_server_cert,
+                                                        FALSE,
+                                                        FALSE,
+                                                        FALSE,
+                                                        FALSE,
+                                                        cfg,
+                                                        cancel_func,
+                                                        cancel_baton,
+                                                        pool));
+}

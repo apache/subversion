@@ -471,6 +471,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
   svn_node_kind_t kind;
   svn_wc__db_status_t status;
   apr_hash_t *changelist_hash = NULL;
+  const char *changelist = NULL;
 
   SVN_ERR_ASSERT(walk_depth >= svn_depth_empty
                  && walk_depth <= svn_depth_infinity);
@@ -483,14 +484,17 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               changelist_hash ? &changelist : NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   SVN_ERR(convert_db_kind_to_node_kind(&kind, db_kind, status, show_hidden));
 
-  if (svn_wc__internal_changelist_match(db, local_abspath,
-                                        changelist_hash, scratch_pool))
-    SVN_ERR(walk_callback(local_abspath, kind, walk_baton, scratch_pool));
+  if (!changelist_hash
+      || (changelist && svn_hash_gets(changelist_hash, changelist)))
+    {
+      SVN_ERR(walk_callback(local_abspath, kind, walk_baton, scratch_pool));
+    }
 
   if (db_kind == svn_node_file
       || status == svn_wc__db_status_not_present
@@ -632,7 +636,6 @@ svn_wc__node_get_base(svn_node_kind_t *kind,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       svn_boolean_t ignore_enoent,
-                      svn_boolean_t show_hidden,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -652,9 +655,8 @@ svn_wc__node_get_base(svn_node_kind_t *kind,
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
     return svn_error_trace(err);
   else if (err
-           || (!err && !show_hidden
-               && (status != svn_wc__db_status_normal
-                   && status != svn_wc__db_status_incomplete)))
+           || (status != svn_wc__db_status_normal
+               && status != svn_wc__db_status_incomplete))
     {
       if (!ignore_enoent)
         {

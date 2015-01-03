@@ -907,13 +907,15 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  *
  * Allocate the table, keys, and values in @a pool.
  *
- * Use @a parent_directory only in constructing error strings.
+ * @a defining_directory is the path or URL of the directory on which
+ * the svn:externals property corresponding to @a desc is set.
+ * @a defining_directory is only used when constructing error strings.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
-                                    const char *parent_directory,
+                                    const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
@@ -5167,6 +5169,12 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  *   ### seems to be not a set of changes but rather the new complete set of
  *   ### props.  And it's renamed to 'new_dav_cache' inside; why?
  *
+ * If @a is_committed is @c TRUE, the node will be processed as committed. This
+ * turns the node and its implied descendants as the new unmodified state at
+ * the new specified revision. Unless @a recurse is TRUE, changes on
+ * descendants are not committed as changes directly. In this case they should
+ * be queueud as their own changes.
+ *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
@@ -5204,7 +5212,25 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * Temporary allocations will be performed in @a scratch_pool, and persistent
  * allocations will use the same pool as @a queue used when it was created.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t recurse,
+                        svn_boolean_t is_committed,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *sha1_checksum,
+                        apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_queue_committed4, but with is_committed always
+ * TRUE.
+ *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
@@ -7190,7 +7216,7 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * the copy/move source (even if the copy-/move-here replaces a locally
  * deleted file).
  *
- * If @a local_abspath refers to an unversioned or non-existing path, return
+ * If @a local_abspath refers to an unversioned or non-existent path, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
  * @a contents may not be @c NULL (unlike @a *contents).
  *
@@ -8175,7 +8201,17 @@ typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
 
 
 /**
- * ### TODO: Doc string, please.
+ * Beginning at @a local_abspath, crawl to @a depth to discover every path in
+ * or under @a local_abspath which belongs to one of the changelists in @a
+ * changelist_filter (an array of <tt>const char *</tt> changelist names).
+ * If @a changelist_filter is @c NULL, discover paths with any changelist.
+ * Call @a callback_func (with @a callback_baton) each time a
+ * changelist-having path is discovered.
+ *
+ * @a local_abspath is a local WC path.
+ *
+ * If @a cancel_func is not @c NULL, invoke it passing @a cancel_baton
+ * during the recursive walk.
  *
  * @since New in 1.7.
  */
