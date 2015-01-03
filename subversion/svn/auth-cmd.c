@@ -293,7 +293,6 @@ svn_error_t *
 svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *config_path;
   struct walk_credentials_baton_t b;
 
@@ -301,11 +300,17 @@ svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   b.show_passwords = opt_state->show_passwords;
   b.list = !opt_state->remove;
   b.delete = opt_state->remove;
+  b.patterns = apr_array_make(pool, 1, sizeof(const char *));
+  for (; os->ind < os->argc; os->ind++)
+    {
+      /* The apr_getopt targets are still in native encoding. */
+      const char *raw_target = os->argv[os->ind];
+      const char *utf8_target;
 
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&b.patterns, os,
-                                                      opt_state->targets,
-                                                      ctx, FALSE,
-                                                      pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_target,
+                                      raw_target, pool));
+      APR_ARRAY_PUSH(b.patterns, const char *) = utf8_target;
+    }
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
                                           opt_state->config_dir, NULL,

@@ -940,6 +940,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       if (!APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
+          CFRelease(resource);
           return NULL;
         }
       else
@@ -950,6 +951,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
           if (err)
             {
               svn_error_clear(err);
+              CFRelease(resource);
               return NULL;
             }
 
@@ -1042,16 +1044,17 @@ release_name_from_version(const char *osver)
   /* See http://en.wikipedia.org/wiki/History_of_OS_X#Release_timeline */
   switch(num)
     {
-    case 0: return "Cheetah";
-    case 1: return "Puma";
-    case 2: return "Jaguar";
-    case 3: return "Panther";
-    case 4: return "Tiger";
-    case 5: return "Leopard";
-    case 6: return "Snow Leopard";
-    case 7: return "Lion";
-    case 8: return "Mountain Lion";
-    case 9: return "Mavericks";
+    case  0: return "Cheetah";
+    case  1: return "Puma";
+    case  2: return "Jaguar";
+    case  3: return "Panther";
+    case  4: return "Tiger";
+    case  5: return "Leopard";
+    case  6: return "Snow Leopard";
+    case  7: return "Lion";
+    case  8: return "Mountain Lion";
+    case  9: return "Mavericks";
+    case 10: return "Yosemite";
     }
 
   return NULL;

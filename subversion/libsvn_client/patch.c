@@ -48,6 +48,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_sorts_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -1578,7 +1579,8 @@ match_existing_target(svn_boolean_t *match,
 /* Determine the line at which a HUNK applies to CONTENT of the TARGET
  * file, and return an appropriate hunk_info object in *HI, allocated from
  * RESULT_POOL. Use fuzz factor FUZZ. Set HI->FUZZ to FUZZ. If no correct
- * line can be determined, set HI->REJECTED to TRUE.
+ * line can be determined, set HI->REJECTED to TRUE.  PREVIOUS_OFFSET
+ * is the offset at which the previous matching hunk was applied, or zero.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * matching. IS_PROP_HUNK indicates whether the hunk patches file content
  * or a property.
@@ -1590,6 +1592,7 @@ static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_t *content,
               svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
+              apr_int64_t previous_offset,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1599,7 +1602,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   svn_linenum_t original_start;
   svn_boolean_t already_applied;
 
-  original_start = svn_diff_hunk_get_original_start(hunk);
+  original_start = svn_diff_hunk_get_original_start(hunk) + previous_offset;
   already_applied = FALSE;
 
   /* An original offset of zero means that this hunk wants to create
@@ -1707,7 +1710,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               modified_start = svn_diff_hunk_get_modified_start(hunk);
               if (modified_start == 0)
                 {
-                  /* Patch wants to delete the file. */
+                  /* Patch wants to delete the file.
+
+                     ### locally_deleted is always false here? */
                   already_applied = target->locally_deleted;
                 }
               else
@@ -2017,7 +2022,7 @@ send_hunk_notification(const hunk_info_t *hi,
   notify->hunk_fuzz = hi->fuzz;
   notify->prop_name = prop_name;
 
-  (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+  ctx->notify_func2(ctx->notify_baton2, notify, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2079,7 +2084,7 @@ send_patch_notification(const patch_target_t *target,
         notify->prop_state = svn_wc_notify_state_changed;
     }
 
-  (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+  ctx->notify_func2(ctx->notify_baton2, notify, pool);
 
   if (action == svn_wc_notify_patch)
     {
@@ -2133,10 +2138,42 @@ send_patch_notification(const patch_target_t *target,
       notify = svn_wc_create_notify(target->local_abspath,
                                     svn_wc_notify_delete, pool);
       notify->kind = svn_node_file;
-      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
 
   return SVN_NO_ERROR;
+}
+
+/* Implements the callback for svn_sort__array.  Puts hunks that match
+   before hunks that do not match, puts hunks that match in order
+   based on postion matched, puts hunks that do not match in order
+   based on original position. */
+static int
+sort_matched_hunks(const void *a, const void *b)
+{
+  const hunk_info_t *item1 = *((const hunk_info_t * const *)a);
+  const hunk_info_t *item2 = *((const hunk_info_t * const *)b);
+  svn_boolean_t matched1 = !item1->rejected && !item1->already_applied;
+  svn_boolean_t matched2 = !item2->rejected && !item2->already_applied;
+
+  if (matched1 && matched2)
+    {
+      /* Both match so use order matched in file. */
+      if (item1->matched_line > item2->matched_line)
+        return 1;
+    }
+  else if (matched2)
+    /* Only second matches, put it before first. */
+    return 1;
+  else
+    {
+      /* Neither matches, sort by original_start. */
+      if (svn_diff_hunk_get_original_start(item1->hunk)
+          > svn_diff_hunk_get_original_start(item2->hunk))
+        return 1;
+    }
+
+  return -1;
 }
 
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
@@ -2167,6 +2204,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
+  apr_int64_t previous_offset = 0;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -2209,6 +2247,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, target->content, hunk, fuzz,
+                                previous_offset,
                                 ignore_whitespace,
                                 FALSE /* is_prop_hunk */,
                                 cancel_func, cancel_baton,
@@ -2217,8 +2256,16 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
       while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
 
+      if (hi->matched_line)
+        previous_offset
+          = hi->matched_line - svn_diff_hunk_get_original_start(hunk);
+
       APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
     }
+
+  /* Hunks are applied in the order determined by the matched line and
+     this may be different from the order of the original lines. */
+  svn_sort__array(target->content->hunks, sort_matched_hunks);
 
   /* Apply or reject hunks. */
   for (i = 0; i < target->content->hunks->nelts; i++)
@@ -2291,7 +2338,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           do
             {
               SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
-                                    hunk, fuzz,
+                                    hunk, fuzz, 0,
                                     ignore_whitespace,
                                     TRUE /* is_prop_hunk */,
                                     cancel_func, cancel_baton,

@@ -55,7 +55,7 @@ SVN-fs-dump-format-version: <N>\n
 -------------------------------------------------------------------
 
 where <N> is replaced by the dump format version. Except where 
-specified, the descriptions in this document aapply to all
+specified, the descriptions in this document apply to all
 versions of the format.
 
 Versions 2 and later may have a UUID record following the version
@@ -168,7 +168,7 @@ this document.
 
 The Text-content-{md5,sha1} and Text-copy-source-{md5,sha1} lines are
 hash integrity checks and will be present only if Text-content-length
-and the copfyrom pair (respectively) are also present. A decoder may
+and the copyfrom pair (respectively) are also present. A decoder may
 use them to verify that the source content they refer to has not been
 corrupted.
 
@@ -449,7 +449,7 @@ Notice that this file has no properties.
 Version 3 format is a delta dump; text changes are represented 
 as diffs against the original file, and properties as incremental
 changes to a persistent set (that is, a property section does not
-necessarily implcitly clear the property set on a path before the
+necessarily implicitly clear the property set on a path before the
 new property settings are evaluated).
 
 This change is a space optimization. It requires additional 

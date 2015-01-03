@@ -55,7 +55,7 @@ are likely some errors because of that.
 svn_boolean_t
 svn_fs_x__is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return (rev < ffd->min_unpacked_rev);
 }
@@ -64,7 +64,7 @@ svn_fs_x__is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
 svn_boolean_t
 svn_fs_x__is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* rev 0 will not be packed */
   return (rev < ffd->min_unpacked_rev) && (rev != 0);
@@ -73,7 +73,7 @@ svn_fs_x__is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 svn_revnum_t
 svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return rev < ffd->min_unpacked_rev
        ? rev - (rev % ffd->max_files_per_dir)
@@ -83,7 +83,7 @@ svn_fs_x__packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
 svn_revnum_t
 svn_fs_x__pack_size(svn_fs_t *fs, svn_revnum_t rev)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return rev < ffd->min_unpacked_rev ? ffd->max_files_per_dir : 1;
 }
@@ -141,7 +141,7 @@ const char *
 svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
                           apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   assert(svn_fs_x__is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
@@ -154,7 +154,7 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
 const char *
 svn_fs_x__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld",
                                                  rev / ffd->max_files_per_dir),
@@ -172,24 +172,6 @@ svn_fs_x__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-svn_fs_x__path_l2p_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
-svn_fs_x__path_p2l_index(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
-                      svn_fs_x__path_rev_absolute(fs, rev, pool));
-}
-
-const char *
 svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *pool)
@@ -204,7 +186,7 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
                               apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
@@ -217,7 +199,7 @@ svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
@@ -270,11 +252,18 @@ combine_txn_id_string(svn_fs_x__txn_id_t txn_id,
 }
 
 const char *
+svn_fs_x__path_txns_dir(svn_fs_t *fs,
+                        apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+}
+
+const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txns_dir(fs, pool),
                               combine_txn_id_string(txn_id, PATH_EXT_TXN,
                                                     pool),
                               SVN_VA_NULL);
@@ -359,6 +348,13 @@ svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 const char *
+svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
+                              apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool);
+}
+
+const char *
 svn_fs_x__path_txn_item_index(svn_fs_t *fs,
                               svn_fs_x__txn_id_t txn_id,
                               apr_pool_t *pool)
@@ -372,7 +368,7 @@ svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              svn_fs_x__txn_id_t txn_id,
                              apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
                               combine_txn_id_string(txn_id, PATH_EXT_REV,
                                                     pool),
                               SVN_VA_NULL);
@@ -383,7 +379,7 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   svn_fs_x__txn_id_t txn_id,
                                   apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
                               combine_txn_id_string(txn_id,
                                                     PATH_EXT_REV_LOCK,
                                                     pool),
@@ -392,22 +388,20 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
-                            const svn_fs_id_t *id,
+                            const svn_fs_x__id_t *id,
                             apr_pool_t *pool)
 {
-  char *filename = (char *)svn_fs_x__id_unparse(id, pool)->data;
-  *strrchr(filename, '.') = '\0';
+  const char *filename = svn_fs_x__id_unparse(id, pool)->data;
+  apr_int64_t txn_id = svn_fs_x__get_txn_id(id->change_set);
 
-  return svn_dirent_join(svn_fs_x__path_txn_dir(fs, svn_fs_x__id_txn_id(id),
-                                                pool),
-                         apr_psprintf(pool, PATH_PREFIX_NODE "%s",
-                                      filename),
+  return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
+                         apr_psprintf(pool, PATH_PREFIX_NODE "%s", filename),
                          pool);
 }
 
 const char *
 svn_fs_x__path_txn_node_props(svn_fs_t *fs,
-                              const svn_fs_id_t *id,
+                              const svn_fs_x__id_t *id,
                               apr_pool_t *pool)
 {
   return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
@@ -415,7 +409,9 @@ svn_fs_x__path_txn_node_props(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_x__path_txn_node_children(svn_fs_t *fs,
+                                 const svn_fs_x__id_t *id,
+                                 apr_pool_t *pool)
 {
   return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
                      PATH_EXT_CHILDREN, SVN_VA_NULL);
@@ -462,14 +458,14 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
+  SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
 }
 
@@ -492,6 +488,24 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
 
   SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
                               final_path /* copy_perms */, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__read_current(svn_revnum_t *rev,
+                       svn_fs_t *fs,
+                       apr_pool_t *pool)
+{
+  const char *str;
+  svn_stringbuf_t *content;
+  SVN_ERR(svn_fs_x__read_content(&content,
+                                 svn_fs_x__path_current(fs, pool),
+                                 pool));
+  SVN_ERR(svn_revnum_parse(rev, content->data, &str));
+  if (*str != '\n')
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Corrupt 'current' file"));
 
   return SVN_NO_ERROR;
 }

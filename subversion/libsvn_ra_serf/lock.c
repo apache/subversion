@@ -315,6 +315,19 @@ run_locks(svn_ra_serf__session_t *sess,
                   && !SVN_ERR_IS_UNLOCK_ERROR(err)
                   && !SVN_ERR_IS_LOCK_ERROR(err))
                 {
+                  /* If the error that we are going to report is just about the
+                     POST unlock hook, we should first report that the operation
+                     succeeded, or the repository and working copy will be
+                     out of sync... */
+
+                  if (lock_func &&
+                      err->apr_err == SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED)
+                    {
+                      err = svn_error_compose_create(
+                                  err, lock_func(lock_baton, ctx->path, locking,
+                                                 NULL, NULL, ctx->pool));
+                    }
+
                   return svn_error_trace(err); /* Don't go through callbacks */
                 }
 
@@ -399,11 +412,11 @@ create_lock_body(serf_bucket_t **body_bkt,
                                     SVN_VA_NULL);
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "exclusive", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "write", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 
   if (ctx->lock->comment)

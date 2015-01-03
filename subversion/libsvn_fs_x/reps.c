@@ -401,7 +401,7 @@ svn_fs_x__reps_builder_create(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
-                        representation_t *rep,
+                        svn_fs_x__representation_t *rep,
                         int priority,
                         apr_pool_t *scratch_pool)
 {

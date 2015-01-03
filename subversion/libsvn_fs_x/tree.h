@@ -33,7 +33,7 @@ extern "C" {
 
 /* In POOL, create an instance of a DAG node 1st level cache.
    The POOL will be cleared at regular intervals. */
-fs_x_dag_cache_t*
+svn_fs_x__dag_cache_t*
 svn_fs_x__create_dag_cache(apr_pool_t *pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
@@ -66,13 +66,6 @@ svn_fs_x__check_path(svn_node_kind_t *kind_p,
                      svn_fs_root_t *root,
                      const char *path,
                      apr_pool_t *pool);
-
-/* Implement root_vtable_t.node_id(). */
-svn_error_t *
-svn_fs_x__node_id(const svn_fs_id_t **id_p,
-                  svn_fs_root_t *root,
-                  const char *path,
-                  apr_pool_t *pool);
 
 /* Set *REVISION to the revision in which PATH under ROOT was created.
    Use POOL for any temporary allocations.  If PATH is in an

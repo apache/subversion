@@ -31,6 +31,8 @@
 #include "private/svn_io_private.h"
 #include "svn_private_config.h"
 
+/* Initialize the *FILE structure for REVISION in filesystem FS.  Set its
+ * pool member to the provided POOL. */
 static void
 init_revision_file(svn_fs_fs__revision_file_t *file,
                    svn_fs_t *fs,
@@ -40,9 +42,7 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   file->is_packed = svn_fs_fs__is_packed_rev(fs, revision);
-  file->start_revision = revision < ffd->min_unpacked_rev
-                       ? revision - (revision % ffd->max_files_per_dir)
-                       : revision;
+  file->start_revision = svn_fs_fs__packed_base_rev(fs, revision);
 
   file->file = NULL;
   file->stream = NULL;
@@ -50,7 +50,9 @@ init_revision_file(svn_fs_fs__revision_file_t *file,
   file->l2p_stream = NULL;
   file->block_size = ffd->block_size;
   file->l2p_offset = -1;
+  file->l2p_checksum = NULL;
   file->p2l_offset = -1;
+  file->p2l_checksum = NULL;
   file->footer_offset = -1;
   file->pool = pool;
 }
@@ -176,6 +178,7 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
 
               /* We failed for the first time. Refresh cache & retry. */
               SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, scratch_pool));
+              file->start_revision = svn_fs_fs__packed_base_rev(fs, rev);
 
               retry = TRUE;
             }
@@ -253,8 +256,10 @@ svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file)
       footer->data[footer->len] = '\0';
 
       /* Extract index locations. */
-      SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->p2l_offset,
-                                      footer, file->start_revision));
+      SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->l2p_checksum,
+                                      &file->p2l_offset, &file->p2l_checksum,
+                                      footer, file->start_revision,
+                                      file->pool));
       file->footer_offset = filesize - footer_length - 1;
     }
 

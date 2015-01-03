@@ -203,20 +203,20 @@ typedef apr_uint64_t entry_key_t[2];
  */
 typedef struct entry_tag_t
 {
-  /* MD5 checksum over the serialized the item data.
+  /* MD5 checksum over the serialized item data.
    */
-  unsigned char content_hash [APR_MD5_DIGESTSIZE];
+  unsigned char content_hash[APR_MD5_DIGESTSIZE];
 
   /* Hash value of the svn_cache_t instance that wrote the item
    * (i.e. a combination of type and repository)
    */
-  unsigned char prefix_hash [APR_MD5_DIGESTSIZE];
+  unsigned char prefix_hash[APR_MD5_DIGESTSIZE];
 
   /* Note that this only covers the variable part of the key,
    * i.e. it will be different from the full key hash used for
    * cache indexing.
    */
-  unsigned char key_hash [APR_MD5_DIGESTSIZE];
+  unsigned char key_hash[APR_MD5_DIGESTSIZE];
 
   /* Last letters from of the key in human readable format
    * (ends with the type identifier, e.g. "DAG")
@@ -715,7 +715,7 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 #if APR_HAS_THREADS
 #  if USE_SIMPLE_MUTEX
 
-  return svn_mutex__unlock(cache->lock, SVN_NO_ERROR);
+  return svn_mutex__unlock(cache->lock, err);
 
 #  else
 
@@ -2398,6 +2398,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
            * We better drop that.
            */
           drop_entry(cache, entry);
+
+          return err;
         }
       else
         {

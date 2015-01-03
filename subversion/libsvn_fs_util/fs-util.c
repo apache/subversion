@@ -199,6 +199,7 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
   change->node_rev_id = node_rev_id;
   change->change_kind = change_kind;
   change->mergeinfo_mod = svn_tristate_unknown;
+  change->copyfrom_rev = SVN_INVALID_REVNUM;
 
   return change;
 }

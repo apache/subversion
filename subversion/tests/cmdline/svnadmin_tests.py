@@ -32,6 +32,7 @@ import shutil
 import sys
 import threading
 import time
+import gzip
 
 logger = logging.getLogger()
 
@@ -86,12 +87,6 @@ def check_hotcopy_fsfs_fsx(src, dst):
                                 "source" % src_dirent)
       # Compare all files in this directory
       for src_file in src_files:
-        # Exclude temporary files
-        if src_file == 'rev-prop-atomics.shm':
-          continue
-        if src_file == 'rev-prop-atomics.mutex':
-          continue
-
         # Ignore auto-created empty lock files as they may or may not
         # be present and are neither required by nor do they harm to
         # the destination repository.
@@ -143,7 +138,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
         # the hotcopy destination (i.e. a fresh cache generation)
         if src_file == 'revprop-generation':
           f2 = open(dst_path, 'r')
-          revprop_gen = int(f2.read().strip())
+          revprop_gen = int(f2.read().strip().split()[1])
           if revprop_gen != 0:
               raise svntest.Failure("Hotcopy destination has non-zero " +
                                     "revprop generation")
@@ -392,7 +387,9 @@ def set_changed_path_list(sbox, revision, changes):
     footer_length = ord(contents[length-1]);
     footer = contents[length - footer_length - 1:length-1]
     l2p_offset = long(footer.split(' ')[0])
-    p2l_offset = long(footer.split(' ')[1])
+    l2p_checksum = footer.split(' ')[1]
+    p2l_offset = long(footer.split(' ')[2])
+    p2l_checksum = footer.split(' ')[3]
 
     idx = FSFS_Index(sbox, revision)
     (offset, item_len, item_type) = idx.get_item(1)
@@ -405,7 +402,8 @@ def set_changed_path_list(sbox, revision, changes):
     file_len = body_len + len(changes) + 1
     p2l_offset += file_len - l2p_offset
 
-    header = str(file_len) + ' ' + str(p2l_offset)
+    header = str(file_len) + ' ' + l2p_checksum + ' ' \
+           + str(p2l_offset) + ' ' + p2l_checksum
     header += chr(len(header))
     header = '\n' + indexes + header
 
@@ -2928,6 +2926,49 @@ def freeze_same_uuid(sbox):
                                           sys.executable, '-c', 'True')
 
 
+@Skip(svntest.main.is_fs_type_fsx)
+def upgrade(sbox):
+  "upgrade --compatible-version=1.3"
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "upgrade",
+                                          sbox.repo_dir)
+  # Does the repository work after upgrade?
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                     'Committed revision 2.\n'], [], 'mkdir',
+                                     '-m', svntest.main.make_log_msg(),
+                                     sbox.repo_url + '/dir')
+
+def load_txdelta(sbox):
+  "exercising svn_txdelta_target on BDB"
+
+  test_create(sbox)
+
+  # This dumpfile produced a BDB repository that generated cheksum
+  # mismatches on read caused by the improper handling of
+  # svn_txdelta_target ops.  The bug was fixed by r1640832.
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'load_txdelta.dump.gz')
+  dumpfile = gzip.open(dumpfile_location).read()
+
+  load_dumpstream(sbox, dumpfile)
+
+  # Verify would fail with a checksum mismatch:
+  # * Error verifying revision 14.
+  # svnadmin: E200014: MD5 checksum mismatch on representation 'r':
+  #    expected:  5182e8876ed894dc7fe28f6ff5b2fee6
+  #      actual:  5121f82875508863ad70daa8244e6947
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin verify' is unexpected.", None, output, None,
+    ".*Verified revision *"):
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -2980,6 +3021,8 @@ test_list = [ None,
               fsfs_hotcopy_progress_with_revprop_changes,
               fsfs_hotcopy_progress_old,
               freeze_same_uuid,
+              upgrade,
+              load_txdelta,
              ]
 
 if __name__ == '__main__':

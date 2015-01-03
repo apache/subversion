@@ -150,6 +150,7 @@ switch_dir_external(const char *local_abspath,
                     const svn_opt_revision_t *revision,
                     const char *defining_abspath,
                     svn_boolean_t *timestamp_sleep,
+                    svn_ra_session_t *ra_session,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
@@ -168,6 +169,36 @@ switch_dir_external(const char *local_abspath,
 
   if (revision->kind == svn_opt_revision_number)
     external_rev = revision->value.number;
+
+  /* 
+   * The code below assumes existing versioned paths are *not* part of
+   * the external's defining working copy.
+   * The working copy library does not support registering externals
+   * on top of existing BASE nodes and will error out if we try.
+   * So if the external target is part of the defining working copy's
+   * BASE tree, don't attempt to create the external. Doing so would
+   * leave behind a switched path instead of an external (since the
+   * switch succeeds but registration of the external in the DB fails).
+   * The working copy then cannot be updated until the path is switched back.
+   * See issue #4085.
+   */
+  SVN_ERR(svn_wc__node_get_base(&kind, NULL, NULL,
+                                &repos_root_url, &repos_uuid,
+                                NULL, ctx->wc_ctx, local_abspath,
+                                TRUE, /* ignore_enoent */
+                                pool, pool));
+  if (kind != svn_node_unknown)
+    {
+      const char *wcroot_abspath;
+      const char *defining_wcroot_abspath;
+
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                 local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_wcroot(&defining_wcroot_abspath, ctx->wc_ctx,
+                                 defining_abspath, pool, pool));
+      if (strcmp(wcroot_abspath, defining_wcroot_abspath) == 0)
+        return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+    }
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
@@ -195,12 +226,12 @@ switch_dir_external(const char *local_abspath,
              externals definition, perform an update. */
           if (strcmp(node_url, url) == 0)
             {
-              SVN_ERR(svn_client__update_internal(NULL, local_abspath,
+              SVN_ERR(svn_client__update_internal(NULL, timestamp_sleep,
+                                                  local_abspath,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE, TRUE,
                                                   FALSE, TRUE,
-                                                  timestamp_sleep,
-                                                  ctx, subpool));
+                                                  ra_session, ctx, subpool));
               svn_pool_destroy(subpool);
               goto cleanup;
             }
@@ -317,9 +348,11 @@ switch_dir_external(const char *local_abspath,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
+  SVN_ERR(svn_client__checkout_internal(NULL, timestamp_sleep,
+                                        url, local_abspath, peg_revision,
                                         revision, svn_depth_infinity,
-                                        FALSE, FALSE, timestamp_sleep,
+                                        FALSE, FALSE,
+                                        ra_session,
                                         ctx, pool));
 
   SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
@@ -346,14 +379,15 @@ switch_dir_external(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Try to update a file external at LOCAL_ABSPATH to URL at REVISION using a
-   access baton that has a write lock.  Use SCRATCH_POOL for temporary
+/* Try to update a file external at LOCAL_ABSPATH to SWITCH_LOC. This function
+   assumes caller has a write lock in CTX.  Use SCRATCH_POOL for temporary
    allocations, and use the client context CTX. */
 static svn_error_t *
 switch_file_external(const char *local_abspath,
-                     const char *url,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
+                     const svn_client__pathrev_t *switch_loc,
+                     const char *record_url,
+                     const svn_opt_revision_t *record_peg_revision,
+                     const svn_opt_revision_t *record_revision,
                      const char *def_dir_abspath,
                      svn_ra_session_t *ra_session,
                      svn_client_ctx_t *ctx,
@@ -430,7 +464,8 @@ switch_file_external(const char *local_abspath,
               SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
              _("The file external from '%s' cannot overwrite the existing "
                "versioned item at '%s'"),
-             url, svn_dirent_local_style(local_abspath, scratch_pool));
+             switch_loc->url,
+             svn_dirent_local_style(local_abspath, scratch_pool));
         }
     }
   else
@@ -452,25 +487,17 @@ switch_file_external(const char *local_abspath,
     void *report_baton;
     const svn_delta_editor_t *switch_editor;
     void *switch_baton;
-    svn_client__pathrev_t *switch_loc;
     svn_revnum_t revnum;
     apr_array_header_t *inherited_props;
-    const char *dir_abspath;
-    const char *target;
+    const char *target = svn_dirent_basename(local_abspath, scratch_pool);
 
-    svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
-
-    /* Open an RA session to 'source' URL */
-    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
-                                              url, dir_abspath,
-                                              peg_revision, revision,
-                                              ctx, scratch_pool));
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
                                        switch_loc->rev,
                                        scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, scratch_pool),
+    SVN_ERR(svn_ra_reparent(ra_session,
+                            svn_uri_dirname(switch_loc->url, scratch_pool),
                             scratch_pool));
 
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
@@ -484,7 +511,9 @@ switch_file_external(const char *local_abspath,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
                                              def_dir_abspath,
-                                             url, peg_revision, revision,
+                                             record_url,
+                                             record_peg_revision,
+                                             record_revision,
                                              ctx->cancel_func,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
@@ -495,7 +524,7 @@ switch_file_external(const char *local_abspath,
      invalid revnum, that means RA will use the latest revision. */
     SVN_ERR(svn_ra_do_switch3(ra_session, &reporter, &report_baton,
                               switch_loc->rev,
-                              target, svn_depth_unknown, url,
+                              target, svn_depth_unknown, switch_loc->url,
                               FALSE /* send_copyfrom */,
                               TRUE /* ignore_ancestry */,
                               switch_editor, switch_baton,
@@ -518,7 +547,7 @@ switch_file_external(const char *local_abspath,
           = svn_wc_notify_state_inapplicable;
         notify->lock_state = svn_wc_notify_lock_state_inapplicable;
         notify->revision = revnum;
-        (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+        ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
       }
   }
 
@@ -631,7 +660,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
       notify->kind = kind;
       notify->err = err;
 
-      (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
         {
@@ -641,7 +670,7 @@ handle_external_item_removal(const svn_client_ctx_t *ctx,
           notify->kind = svn_node_dir;
           notify->err = err;
 
-          (ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
 
@@ -662,10 +691,10 @@ handle_external_item_change(svn_client_ctx_t *ctx,
                             const char *local_abspath,
                             const char *old_defining_abspath,
                             const svn_wc_external_item2_t *new_item,
+                            svn_ra_session_t *ra_session,
                             svn_boolean_t *timestamp_sleep,
                             apr_pool_t *scratch_pool)
 {
-  svn_ra_session_t *ra_session;
   svn_client__pathrev_t *new_loc;
   const char *new_url;
   svn_node_kind_t ext_kind;
@@ -686,12 +715,39 @@ handle_external_item_change(svn_client_ctx_t *ctx,
                                                 scratch_pool, scratch_pool));
 
   /* Determine if the external is a file or directory. */
-  /* Get the RA connection. */
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &new_loc,
-                                            new_url, NULL,
-                                            &(new_item->peg_revision),
-                                            &(new_item->revision), ctx,
-                                            scratch_pool));
+  /* Get the RA connection, if needed. */
+  if (ra_session)
+    {
+      svn_error_t *err = svn_ra_reparent(ra_session, new_url, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+            {
+              svn_error_clear(err);
+              ra_session = NULL;
+            }
+          else
+            return svn_error_trace(err);
+        }
+      else
+        {
+          SVN_ERR(svn_client__resolve_rev_and_url(&new_loc,
+                                                  ra_session, new_url,
+                                                  &(new_item->peg_revision),
+                                                  &(new_item->revision), ctx,
+                                                  scratch_pool));
+
+          SVN_ERR(svn_ra_reparent(ra_session, new_loc->url, scratch_pool));
+        }
+    }
+
+  if (!ra_session)
+    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &new_loc,
+                                              new_url, NULL,
+                                              &(new_item->peg_revision),
+                                              &(new_item->revision), ctx,
+                                              scratch_pool));
 
   SVN_ERR(svn_ra_check_path(ra_session, "", new_loc->rev, &ext_kind,
                             scratch_pool));
@@ -715,7 +771,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
   /* First notify that we're about to handle an external. */
   if (ctx->notify_func2)
     {
-      (*ctx->notify_func2)(
+      ctx->notify_func2(
          ctx->notify_baton2,
          svn_wc_create_notify(local_abspath,
                               svn_wc_notify_update_external,
@@ -739,7 +795,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
-                                    timestamp_sleep, ctx,
+                                    timestamp_sleep, ra_session, ctx,
                                     scratch_pool));
         break;
       case svn_node_file:
@@ -797,6 +853,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
           }
 
         SVN_ERR(switch_file_external(local_abspath,
+                                     new_loc,
                                      new_url,
                                      &new_item->peg_revision,
                                      &new_item->revision,
@@ -847,6 +904,7 @@ handle_externals_change(svn_client_ctx_t *ctx,
                         apr_hash_t *old_externals,
                         svn_depth_t ambient_depth,
                         svn_depth_t requested_depth,
+                        svn_ra_session_t *ra_session,
                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *new_desc;
@@ -915,7 +973,7 @@ handle_externals_change(svn_client_ctx_t *ctx,
                                                   local_abspath, url,
                                                   target_abspath,
                                                   old_defining_abspath,
-                                                  new_item,
+                                                  new_item, ra_session,
                                                   timestamp_sleep,
                                                   iterpool),
                       iterpool));
@@ -938,6 +996,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
                              const char *target_abspath,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
+                             svn_ra_session_t *ra_session,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
 {
@@ -987,7 +1046,7 @@ svn_client__handle_externals(apr_hash_t *externals_new,
                                       local_abspath,
                                       desc_text, old_external_defs,
                                       ambient_depth, requested_depth,
-                                      iterpool));
+                                      ra_session, iterpool));
     }
 
   /* Remove the remaining externals */

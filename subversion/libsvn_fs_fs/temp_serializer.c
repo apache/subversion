@@ -205,7 +205,7 @@ static svn_temp_serializer__context_t *
 serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
 {
   dir_data_t dir_data;
-  apr_size_t i = 0;
+  int i = 0;
   svn_temp_serializer__context_t *context;
 
   /* calculate sizes */
