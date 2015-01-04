@@ -292,6 +292,8 @@ svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 
 /**
  * Chop @a nbytes bytes off the start of @a str, but not more than @a str->len.
+ *
+ * @since New in 1.10.
  */
 void
 svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes);
