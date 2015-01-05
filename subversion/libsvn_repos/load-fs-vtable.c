@@ -31,11 +31,9 @@
 #include "svn_string.h"
 #include "svn_props.h"
 #include "repos.h"
-#include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
 #include "svn_subst.h"
-#include "svn_ctype.h"
 #include "svn_dirent_uri.h"
 
 #include <apr_lib.h>
@@ -343,6 +341,12 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 /** vtable for doing commits to a fs **/
 
 
+/* Make a node baton, parsing the relevant HEADERS.
+ *
+ * If RB->pb->parent_dir:
+ *   prefix it to NB->path
+ *   prefix it to NB->copyfrom_path (if present)
+ */
 static svn_error_t *
 make_node_baton(struct node_baton **node_baton_p,
                 apr_hash_t *headers,
@@ -429,6 +433,10 @@ make_node_baton(struct node_baton **node_baton_p,
   return SVN_NO_ERROR;
 }
 
+/* Make a revision baton, parsing the relevant HEADERS.
+ *
+ * Set RB->skipped iff the revision number is outside the range given in PB.
+ */
 static struct revision_baton *
 make_revision_baton(apr_hash_t *headers,
                     struct parse_baton *pb,
@@ -535,7 +543,11 @@ new_revision_record(void **revision_baton,
 
 
 
-/* Factorized helper func for new_node_record() */
+/* Perform a copy or a plain add.
+ *
+ * For a copy, also adjust the copy-from rev, check any copy-source checksum,
+ * and send a notification.
+ */
 static svn_error_t *
 maybe_add_with_history(struct node_baton *nb,
                        struct revision_baton *rb,
