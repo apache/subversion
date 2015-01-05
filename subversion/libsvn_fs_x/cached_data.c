@@ -2588,8 +2588,7 @@ get_dir_contents(apr_array_header_t **entries,
 static svn_cache__t *
 locate_dir_cache(svn_fs_t *fs,
                  svn_fs_x__id_t *key,
-                 svn_fs_x__noderev_t *noderev,
-                 apr_pool_t *pool)
+                 svn_fs_x__noderev_t *noderev)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
@@ -2627,7 +2626,7 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
   svn_fs_x__id_t key;
 
   /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, scratch_pool);
+  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
   if (cache)
     {
       svn_boolean_t found;
@@ -2671,7 +2670,7 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
 
   /* find the cache we may use */
   svn_fs_x__id_t key;
-  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, scratch_pool);
+  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
   if (cache)
     {
       /* Cache lookup. */
