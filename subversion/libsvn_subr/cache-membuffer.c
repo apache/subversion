@@ -557,9 +557,9 @@ struct svn_membuffer_t
    */
   cache_level_t l2;
 
+
   /* Number of used dictionary entries, i.e. number of cached items.
-   * In conjunction with hit_count, this is used calculate the average
-   * hit count as part of the randomized LFU algorithm.
+   * Purely statistical information that may be used for profiling only.
    */
   apr_uint32_t used_entries;
 
