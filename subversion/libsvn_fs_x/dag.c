@@ -1100,13 +1100,18 @@ svn_fs_x__dag_dup(const dag_node_t *node,
 {
   /* Allocate our new node. */
   dag_node_t *new_node = apr_pmemdup(pool, node, sizeof(*new_node));
-  new_node->created_path = apr_pstrdup(pool, node->created_path);
 
   /* Only copy cached svn_fs_x__noderev_t for immutable nodes. */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
-    new_node->node_revision = copy_node_revision(node->node_revision, pool);
+    {
+      new_node->node_revision = copy_node_revision(node->node_revision, pool);
+      new_node->created_path = new_node->node_revision->created_path;
+    }
   else
-    new_node->node_revision = NULL;
+    {
+      new_node->node_revision = NULL;
+      new_node->created_path = apr_pstrdup(pool, node->created_path);
+    }
 
   new_node->node_pool = pool;
 
@@ -1140,17 +1145,19 @@ svn_fs_x__dag_serialize(void **data,
 
   /* for mutable nodes, we will _never_ cache the noderev */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
-    svn_fs_x__noderev_serialize(context, &node->node_revision);
+    {
+      svn_fs_x__noderev_serialize(context, &node->node_revision);
+    }
   else
-    svn_temp_serializer__set_null(context,
-                                  (const void * const *)&node->node_revision);
+    {
+      svn_temp_serializer__set_null(context,
+                                    (const void * const *)&node->node_revision);
+      svn_temp_serializer__add_string(context, &node->created_path);
+    }
 
   /* The deserializer will use its own pool. */
   svn_temp_serializer__set_null(context,
                                 (const void * const *)&node->node_pool);
-
-  /* serialize other sub-structures */
-  svn_temp_serializer__add_string(context, &node->created_path);
 
   /* return serialized data */
   serialized = svn_temp_serializer__get(context);
@@ -1178,7 +1185,10 @@ svn_fs_x__dag_deserialize(void **out,
   svn_fs_x__noderev_deserialize(node, &node->node_revision, pool);
   node->node_pool = pool;
 
-  svn_temp_deserializer__resolve(node, (void**)&node->created_path);
+  if (node->node_revision)
+    node->created_path = node->node_revision->created_path;
+  else
+    svn_temp_deserializer__resolve(node, (void**)&node->created_path);
 
   /* return result */
   *out = node;
