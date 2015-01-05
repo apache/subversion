@@ -3363,17 +3363,12 @@ x_node_history(svn_fs_history_t **history_p,
 }
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
-   filesystem FS, and store the copyroot in *REV_P and *PATH_P.
-   Perform all allocations in POOL.
-
-   Note that *PATH_P will not be allocated in POOL but will be taken from
-   a DAG node in PARENT_PATH. */
+   filesystem FS, and store the copyroot in *REV_P and *PATH_P. */
 static svn_error_t *
 find_youngest_copyroot(svn_revnum_t *rev_p,
                        const char **path_p,
                        svn_fs_t *fs,
-                       parent_path_t *parent_path,
-                       apr_pool_t *pool)
+                       parent_path_t *parent_path)
 {
   svn_revnum_t rev_mine;
   svn_revnum_t rev_parent = SVN_INVALID_REVNUM;
@@ -3383,7 +3378,7 @@ find_youngest_copyroot(svn_revnum_t *rev_p,
   /* First find our parent's youngest copyroot. */
   if (parent_path->parent)
     SVN_ERR(find_youngest_copyroot(&rev_parent, &path_parent, fs,
-                                   parent_path->parent, pool));
+                                   parent_path->parent));
 
   /* Find our copyroot. */
   SVN_ERR(svn_fs_x__dag_get_copyroot(&rev_mine, &path_mine,
@@ -3434,7 +3429,7 @@ svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
      will indicate the target of the innermost copy affecting the
      node-rev. */
   SVN_ERR(find_youngest_copyroot(&copy_dst_rev, &copy_dst_path,
-                                 fs, parent_path, subpool));
+                                 fs, parent_path));
   if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
     {
       svn_pool_destroy(subpool);
@@ -3603,7 +3598,7 @@ history_prev(svn_fs_history_t **prev_history,
   /* Find the youngest copyroot in the path of this node, including
      itself. */
   SVN_ERR(find_youngest_copyroot(&copyroot_rev, &copyroot_path, fs,
-                                 parent_path, scratch_pool));
+                                 parent_path));
 
   /* Initialize some state variables. */
   src_path = NULL;
