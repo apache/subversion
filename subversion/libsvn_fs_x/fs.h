@@ -476,9 +476,6 @@ typedef struct svn_fs_x__representation_t
  * copy_node_revision in dag.c. */
 typedef struct svn_fs_x__noderev_t
 {
-  /* node kind */
-  svn_node_kind_t kind;
-
   /* Predecessor node revision id.  Will be "unused" if there is no
      predecessor for this node revision. */
   svn_fs_x__id_t predecessor_id;
@@ -501,6 +498,9 @@ typedef struct svn_fs_x__noderev_t
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
+  /* node kind */
+  svn_node_kind_t kind;
+
   /* number of predecessors this node revision has (recursively), or
      -1 if not known (for backward compatibility). */
   int predecessor_count;
@@ -519,12 +519,12 @@ typedef struct svn_fs_x__noderev_t
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
 
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
+
   /* Number of nodes with svn:mergeinfo properties that are
      descendants of this node (including it itself) */
   apr_int64_t mergeinfo_count;
-
-  /* Does this node itself have svn:mergeinfo? */
-  svn_boolean_t has_mergeinfo;
 
 } svn_fs_x__noderev_t;
 
