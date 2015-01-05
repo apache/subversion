@@ -863,7 +863,7 @@ write_revision_zero(svn_fs_t *fs,
                "2d2977d1c96f487abe4a1e202dd03b4e\n"
                "cpath: /\n"
                "\n\n",
-               0x8b, subpool));
+               0x87, subpool));
 
   /* Construct the index P2L contents: describe the 3 items we have.
      Be sure to create them in on-disk order. */
@@ -881,7 +881,7 @@ write_revision_zero(svn_fs_t *fs,
 
   entry = apr_pcalloc(subpool, sizeof(*entry));
   entry->offset = 0x1d;
-  entry->size = 0x6d;
+  entry->size = 0x69;
   entry->type = SVN_FS_X__ITEM_TYPE_NODEREV;
   entry->item_count = 1;
   entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
@@ -890,7 +890,7 @@ write_revision_zero(svn_fs_t *fs,
   APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
 
   entry = apr_pcalloc(subpool, sizeof(*entry));
-  entry->offset = 0x1d + 0x6d;
+  entry->offset = 0x1d + 0x69;
   entry->size = 1;
   entry->type = SVN_FS_X__ITEM_TYPE_CHANGES;
   entry->item_count = 1;
