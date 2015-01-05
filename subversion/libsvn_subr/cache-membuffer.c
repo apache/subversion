@@ -563,13 +563,6 @@ struct svn_membuffer_t
    */
   apr_uint32_t used_entries;
 
-  /* Sum of (read) hit counts of all used dictionary entries.
-   * In conjunction used_entries used_entries, this is used calculate
-   * the average hit count as part of the randomized LFU algorithm.
-   */
-  apr_uint64_t hit_count;
-
-
   /* Total number of calls to membuffer_cache_get.
    * Purely statistical information that may be used for profiling only.
    * Updates are not synchronized and values may be nonsensicle on some
@@ -1027,7 +1020,6 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  cache->hit_count -= entry->hit_count;
   cache->data_used -= entry->size;
 
   /* extend the insertion window, if the entry happens to border it
@@ -1163,7 +1155,6 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 
   if (hits_removed)
     {
-      cache->hit_count -= hits_removed;
       entry->hit_count -= hits_removed;
     }
   else
@@ -1795,7 +1786,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].max_entry_size = max_entry_size;
 
       c[seg].used_entries = 0;
-      c[seg].hit_count = 0;
       c[seg].total_reads = 0;
       c[seg].total_writes = 0;
       c[seg].total_hits = 0;
@@ -2071,12 +2061,10 @@ static svn_error_t *
 increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 {
   /* To minimize the memory footprint of the cache index, we limit local
-   * hit counters to 32 bits.  These may overflow and we must make sure that
-   * the global sums are still the sum of all local counters. */
-  if (++entry->hit_count == 0)
-    cache->hit_count -= APR_UINT32_MAX;
-  else
-    cache->hit_count++;
+   * hit counters to 32 bits.  These may overflow but we don't really
+   * care because at worst, ENTRY will be dropped from cache once every
+   * few billion hits. */
+  ++entry->hit_count;
 
   /* That one is for stats only. */
   cache->total_hits++;
