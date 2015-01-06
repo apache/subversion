@@ -41,12 +41,13 @@ svn_fs_x__get_node_revision(svn_fs_x__noderev_t **noderev_p,
                             apr_pool_t *scratch_pool);
 
 /* Set *COUNT to the value of the mergeinfo_count member of the node-
-   revision for the node ID in FS.  Do any allocations in POOL. */
+   revision for the node ID in FS.  Do temporary allocations in SCRATCH_POOL.
+ */
 svn_error_t *
 svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               svn_fs_t *fs,
                               const svn_fs_x__id_t *id,
-                              apr_pool_t *pool);
+                              apr_pool_t *scratch_pool);
 
 /* Set *ROOT_ID to the noderev ID for the root of revision REV in
    filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
@@ -90,7 +91,7 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
  * by ENTRY in FS and return the result in PACKED_LEN and EXPANDED_LEN,
  * respectively.  FILE must point to the start of the representation and
  * STREAM must be a stream defined on top of FILE.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
@@ -98,13 +99,13 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
                                     svn_fs_t *fs,
                                     svn_fs_x__revision_file_t *rev_file,
                                     svn_fs_x__p2l_entry_t* entry,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /* Attempt to fetch the text representation of node-revision NODEREV as
    seen in filesystem FS and pass it along with the BATON to the PROCESSOR.
    Set *SUCCESS only of the data could be provided and the processing
    had been called.
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__try_process_file_contents(svn_boolean_t *success,
@@ -112,7 +113,7 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
                                     svn_fs_x__noderev_t *noderev,
                                     svn_fs_process_contents_func_t processor,
                                     void* baton,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE into
    the contents of the file TARGET, allocated in POOL.
