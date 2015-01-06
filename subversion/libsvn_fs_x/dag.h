@@ -319,19 +319,6 @@ svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
                           dag_node_t *node,
                           apr_pool_t *pool);
 
-/* Fetches the NODE's entries and returns a copy of the entry selected
-   by the key value given in NAME and set *DIRENT to a copy of that
-   entry. If such entry was found, the copy will be allocated in
-   RESULT_POOL.  Temporary data will be used in SCRATCH_POOL.
-   Otherwise, the *DIRENT will be set to NULL.
- */
-/* ### This function is currently only called from dag.c. */
-svn_error_t * svn_fs_x__dag_dir_entry(svn_fs_x__dirent_t **dirent,
-                                      dag_node_t *node,
-                                      const char* name,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
-
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
    mutable or immutable node.  If ENTRY_NAME does not exist, it will
