@@ -43,15 +43,16 @@
 #include "private/svn_subr_private.h"
 
 /* Take the ORIGINAL string and replace all occurrences of ":" without
- * limiting the key space.  Allocate the result in POOL.
+ * limiting the key space.  Allocate the result in RESULT_POOL.
  */
 static const char *
 normalize_key_part(const char *original,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   apr_size_t i;
   apr_size_t len = strlen(original);
-  svn_stringbuf_t *normalized = svn_stringbuf_create_ensure(len, pool);
+  svn_stringbuf_t *normalized = svn_stringbuf_create_ensure(len,
+                                                            result_pool);
 
   for (i = 0; i < len; ++i)
     {
@@ -73,15 +74,14 @@ normalize_key_part(const char *original,
    according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
    to use.
 
-   Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
-   for temporary allocations. */
+   Allocate CACHE_NAMESPACE in RESULT_POOL. */
 static svn_error_t *
 read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
             svn_boolean_t *cache_revprops,
             svn_fs_t *fs,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool)
 {
   /* No cache namespace by default.  I.e. all FS instances share the
    * cached data.  If you specify different namespaces, the data will
@@ -97,7 +97,7 @@ read_config(const char **cache_namespace,
     = normalize_key_part(svn_hash__get_cstring(fs->config,
                                                SVN_FS_CONFIG_FSFS_CACHE_NS,
                                                ""),
-                         pool);
+                         result_pool);
 
   /* don't cache text deltas by default.
    * Once we reconstructed the fulltexts from the deltas,
