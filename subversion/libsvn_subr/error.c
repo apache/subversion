@@ -425,10 +425,8 @@ svn_error_purge_tracing(svn_error_t *err)
       if (! err)
         return svn_error_create(
                  SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
-                 svn_error_compose_create(
-                   svn_error__malfunction(TRUE, __FILE__, __LINE__,
-                                          NULL /* ### say something? */),
-                   err),
+                 svn_error__malfunction(TRUE, __FILE__, __LINE__,
+                                        NULL /* ### say something? */),
                  NULL);
 
       /* Copy the current error except for its child error pointer
