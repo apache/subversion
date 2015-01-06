@@ -84,11 +84,10 @@ svn_fs_x__revision_proplist(apr_hash_t **proplist,
                             apr_pool_t *pool);
 
 /* Set *LENGTH to the be fulltext length of the node revision
-   specified by NODEREV.  Use POOL for temporary allocations. */
+   specified by NODEREV. */
 svn_error_t *
 svn_fs_x__file_length(svn_filesize_t *length,
-                      svn_fs_x__noderev_t *noderev,
-                      apr_pool_t *pool);
+                      svn_fs_x__noderev_t *noderev);
 
 /* Return TRUE if the representations in A and B have equal contents, else
    return FALSE. */

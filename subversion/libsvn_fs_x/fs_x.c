@@ -681,8 +681,7 @@ svn_fs_x__revision_proplist(apr_hash_t **proplist_p,
 
 svn_error_t *
 svn_fs_x__file_length(svn_filesize_t *length,
-                      svn_fs_x__noderev_t *noderev,
-                      apr_pool_t *pool)
+                      svn_fs_x__noderev_t *noderev)
 {
   if (noderev->data_rep)
     *length = noderev->data_rep->expanded_size;

@@ -998,8 +998,7 @@ svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
 
 svn_error_t *
 svn_fs_x__dag_file_length(svn_filesize_t *length,
-                          dag_node_t *file,
-                          apr_pool_t *pool)
+                          dag_node_t *file)
 {
   svn_fs_x__noderev_t *noderev;
 
@@ -1012,7 +1011,7 @@ svn_fs_x__dag_file_length(svn_filesize_t *length,
   /* Go get a fresh node-revision for FILE, and . */
   SVN_ERR(get_node_revision(&noderev, file));
 
-  return svn_fs_x__file_length(length, noderev, pool);
+  return svn_fs_x__file_length(length, noderev);
 }
 
 

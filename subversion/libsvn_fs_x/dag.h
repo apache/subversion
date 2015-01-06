@@ -492,13 +492,10 @@ svn_fs_x__dag_finalize_edits(dag_node_t *file,
 
 
 /* Set *LENGTH to the length of the contents of FILE.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_file_length(svn_filesize_t *length,
-                          dag_node_t *file,
-                          apr_pool_t *pool);
+                          dag_node_t *file);
 
 /* Put the recorded checksum of type KIND for FILE into CHECKSUM, allocating
    from RESULT_POOL.

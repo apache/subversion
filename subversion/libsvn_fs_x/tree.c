@@ -2790,7 +2790,7 @@ x_file_length(svn_filesize_t *length_p,
   SVN_ERR(get_dag(&file, root, path, pool));
 
   /* Now fetch its length */
-  return svn_fs_x__dag_file_length(length_p, file, pool);
+  return svn_fs_x__dag_file_length(length_p, file);
 }
 
 
