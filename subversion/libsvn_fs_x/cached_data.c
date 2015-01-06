@@ -547,7 +547,8 @@ auto_open_shared_file(shared_file_t *file)
 /* Set RS->START to the begin of the representation raw in RS->SFILE->RFILE,
    if that hasn't been done yet.  Use POOL for temporary allocations. */
 static svn_error_t*
-auto_set_start_offset(rep_state_t *rs, apr_pool_t *pool)
+auto_set_start_offset(rep_state_t *rs,
+                      apr_pool_t *pool)
 {
   if (rs->start == -1)
     {
@@ -564,7 +565,8 @@ auto_set_start_offset(rep_state_t *rs, apr_pool_t *pool)
    if the diff version is still unknown.  Use POOL for temporary allocations.
  */
 static svn_error_t*
-auto_read_diff_version(rep_state_t *rs, apr_pool_t *pool)
+auto_read_diff_version(rep_state_t *rs,
+                       apr_pool_t *pool)
 {
   if (rs->ver == -1)
     {
@@ -1000,7 +1002,8 @@ struct rep_read_baton
 /* Set window key in *KEY to address the window described by RS.
    For convenience, return the KEY. */
 static svn_fs_x__window_cache_key_t *
-get_window_key(svn_fs_x__window_cache_key_t *key, rep_state_t *rs)
+get_window_key(svn_fs_x__window_cache_key_t *key,
+               rep_state_t *rs)
 {
   svn_revnum_t revision = svn_fs_x__get_revnum(rs->rep_id.change_set);
   assert(revision <= APR_UINT32_MAX);
@@ -1577,7 +1580,8 @@ get_combined_window(svn_stringbuf_t **result,
  * based on its size SIZE.  The decision depends on the cache used by RB.
  */
 static svn_boolean_t
-fulltext_size_is_cachable(svn_fs_x__data_t *ffd, svn_filesize_t size)
+fulltext_size_is_cachable(svn_fs_x__data_t *ffd,
+                          svn_filesize_t size)
 {
   return (size < APR_SIZE_MAX)
       && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
@@ -2270,7 +2274,8 @@ struct delta_read_baton
 
 /* This implements the svn_txdelta_next_window_fn_t interface. */
 static svn_error_t *
-delta_read_next_window(svn_txdelta_window_t **window, void *baton,
+delta_read_next_window(svn_txdelta_window_t **window,
+                       void *baton,
                        apr_pool_t *pool)
 {
   struct delta_read_baton *drb = baton;
@@ -2405,7 +2410,8 @@ sorted(apr_array_header_t *entries)
 
 /* Compare the names of the two dirents given in **A and **B. */
 static int
-compare_dirents(const void *a, const void *b)
+compare_dirents(const void *a,
+                const void *b)
 {
   const svn_fs_x__dirent_t *lhs = *((const svn_fs_x__dirent_t * const *) a);
   const svn_fs_x__dirent_t *rhs = *((const svn_fs_x__dirent_t * const *) b);
@@ -2415,7 +2421,8 @@ compare_dirents(const void *a, const void *b)
 
 /* Compare the name of the dirents given in **A with the C string in *B. */
 static int
-compare_dirent_name(const void *a, const void *b)
+compare_dirent_name(const void *a,
+                    const void *b)
 {
   const svn_fs_x__dirent_t *lhs = *((const svn_fs_x__dirent_t * const *) a);
   const char *rhs = b;
