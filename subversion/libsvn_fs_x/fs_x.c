@@ -845,43 +845,31 @@ write_revision_zero(svn_fs_t *fs,
   svn_fs_x__revision_file_t *rev_file;
   const char *l2p_proto_index, *p2l_proto_index;
 
-  /* Write a skeleton r0 with no indexes. */
-  SVN_ERR(svn_io_file_create_binary
-              (path_revision_zero,
-               "DELTA\nSVN\1" /* txdelta v1 */
-                 "\0\0\4\2\5" /* sview offset, sview len,
-                                 tview len, instr len, newlen */
-                 "\1\x84"     /* 1 instr byte, new 4 bytes */
-                 "\4END\n"    /* 4 new bytes, E, N, D, \n */
-                 "ENDREP\n"
-               "id: 2+0\n"
-               "node: 0+0\n"
-               "copy: 0+0\n"
-               "type: dir\n"
-               "count: 0\n"
-               "text: 0 3 16 4 "
-               "2d2977d1c96f487abe4a1e202dd03b4e\n"
-               "cpath: /\n"
-               "\n\n",
-               0x87, subpool));
+  /* Construct a skeleton r0 with no indexes. */
+  svn_string_t *noderev_str = svn_string_create("id: 2+0\n"
+                                                "node: 0+0\n"
+                                                "copy: 0+0\n"
+                                                "type: dir\n"
+                                                "count: 0\n"
+                                                "cpath: /\n"
+                                                "\n",
+                                                subpool);
+  svn_string_t *changes_str = svn_string_create("\n",
+                                                subpool);
+  svn_string_t *r0 = svn_string_createf(subpool, "%s%s",
+                                        noderev_str->data,
+                                        changes_str->data);
+
+  /* Write skeleton r0 to disk. */
+  SVN_ERR(svn_io_file_create(path_revision_zero, r0->data, subpool));
 
   /* Construct the index P2L contents: describe the 3 items we have.
      Be sure to create them in on-disk order. */
-  index_entries = apr_array_make(subpool, 3, sizeof(entry));
+  index_entries = apr_array_make(subpool, 2, sizeof(entry));
 
   entry = apr_pcalloc(subpool, sizeof(*entry));
   entry->offset = 0;
-  entry->size = 0x1d;
-  entry->type = SVN_FS_X__ITEM_TYPE_DIR_REP;
-  entry->item_count = 1;
-  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
-  entry->items[0].change_set = 0;
-  entry->items[0].number = SVN_FS_X__ITEM_INDEX_FIRST_USER;
-  APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
-
-  entry = apr_pcalloc(subpool, sizeof(*entry));
-  entry->offset = 0x1d;
-  entry->size = 0x69;
+  entry->size = (apr_off_t)noderev_str->len;
   entry->type = SVN_FS_X__ITEM_TYPE_NODEREV;
   entry->item_count = 1;
   entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
@@ -890,8 +878,8 @@ write_revision_zero(svn_fs_t *fs,
   APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
 
   entry = apr_pcalloc(subpool, sizeof(*entry));
-  entry->offset = 0x1d + 0x69;
-  entry->size = 1;
+  entry->offset = (apr_off_t)noderev_str->len;
+  entry->size = (apr_off_t)changes_str->len;
   entry->type = SVN_FS_X__ITEM_TYPE_CHANGES;
   entry->item_count = 1;
   entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
