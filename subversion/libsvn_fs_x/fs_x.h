@@ -223,12 +223,12 @@ svn_fs_x__ensure_dir_exists(const char *path,
                             apr_pool_t *pool);
 
 /* Initialize all session-local caches in FS according to the global
-   cache settings. Use POOL for temporary allocations.
+   cache settings. Use SCRATCH_POOL for temporary allocations.
 
    Please note that it is permissible for this function to set some
    or all of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_x__initialize_caches(svn_fs_t *fs,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 #endif
