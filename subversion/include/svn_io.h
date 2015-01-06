@@ -682,17 +682,33 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
                                    const char *file3,
                                    apr_pool_t *scratch_pool);
 
-/** Create file at utf8-encoded @a file with contents @a contents.
- * @a file must not already exist.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by the null-terminated string @a contents.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a contents
+ * is null, create an empty file.
+ *
  * Use @a pool for memory allocations.
+ *
+ * @since 
  */
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
-/** Create file at utf8-encoded @a file with contents @a contents
- * of @a length bytes.  @a file must not already exist.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by @a contents of @a length bytes.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a length is
+ * zero, create an empty file; in this case @a contents may be null.
+ *
  * Use @a pool for memory allocations.
  *
  * @since New in 1.9.
@@ -703,7 +719,11 @@ svn_io_file_create_bytes(const char *file,
                          apr_size_t length,
                          apr_pool_t *pool);
 
-/** Create empty file at utf8-encoded @a file, which must not already exist.
+/** Create an empty file at utf8-encoded path @a file.
+ * 
+ * @a file must not already exist. If an error occurs while
+ * closing the file, attempt to delete the file before returning the error.
+ *
  * Use @a pool for memory allocations.
  *
  * @since New in 1.9.
