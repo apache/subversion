@@ -315,7 +315,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * New api svn_io_file_aligned_seek() (r1502539)
     * ra_svn: fix svn_ra_get_log*() to apply limit when server can't (r1503043)
     * svn_client_commit6: notify which path prevents a mv commit (r1503662)
-    * New apis svn_io_file_create_empty() and svn_io_file_create_binary()
+    * New apis svn_io_file_create_empty() and svn_io_file_create_bytes()
       (r1505006)
     * New api svn_ver_check_list2() (r1502267)
     * svn_fs_paths_changed() gains support for moves (r1525448)
