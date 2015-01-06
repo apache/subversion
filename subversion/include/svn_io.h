@@ -691,17 +691,17 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
-/** Create file at utf8-encoded @a file with binary contents @a contents
+/** Create file at utf8-encoded @a file with contents @a contents
  * of @a length bytes.  @a file must not already exist.
  * Use @a pool for memory allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_io_file_create_binary(const char *file,
-                          const char *contents,
-                          apr_size_t length,
-                          apr_pool_t *pool);
+svn_io_file_create_bytes(const char *file,
+                         const void *contents,
+                         apr_size_t length,
+                         apr_pool_t *pool);
 
 /** Create empty file at utf8-encoded @a file, which must not already exist.
  * Use @a pool for memory allocations.
