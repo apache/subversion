@@ -863,7 +863,7 @@ write_revision_zero(svn_fs_t *fs,
   /* Write skeleton r0 to disk. */
   SVN_ERR(svn_io_file_create(path_revision_zero, r0->data, subpool));
 
-  /* Construct the index P2L contents: describe the 3 items we have.
+  /* Construct the index P2L contents: describe the 2 items we have.
      Be sure to create them in on-disk order. */
   index_entries = apr_array_make(subpool, 2, sizeof(entry));
 
