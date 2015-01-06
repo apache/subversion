@@ -47,11 +47,12 @@ typedef struct svn_fs_x__changes_t svn_fs_x__changes_t;
 /* Create and populate changes containers. */
 
 /* Create and return a new changes container with an initial capacity of
- * INITIAL_COUNT svn_fs_x__change_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__change_t objects.
+ * Allocate the result in RESULT_POOL.
  */
 svn_fs_x__changes_t *
 svn_fs_x__changes_create(apr_size_t initial_count,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Start a new change list CHANGES (implicitly terminating the previous one)
  * and return its index in *LIST_INDEX.  Append all changes from LIST to

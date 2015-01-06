@@ -102,19 +102,19 @@ struct svn_fs_x__changes_t
   apr_array_header_t *offsets;
 };
 
-/* Create and return a new container object, allocated in POOL and with
- * and initial capacity of INITIAL_COUNT changes.  The PATH and BUILDER
+/* Create and return a new container object, allocated in RESULT_POOL with
+ * an initial capacity of INITIAL_COUNT changes.  The PATH and BUILDER
  * members must be initialized by the caller afterwards.
  */
 static svn_fs_x__changes_t *
 changes_create_body(apr_size_t initial_count,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
-  svn_fs_x__changes_t *changes = apr_pcalloc(pool, sizeof(*changes));
+  svn_fs_x__changes_t *changes = apr_pcalloc(result_pool, sizeof(*changes));
 
-  changes->changes = apr_array_make(pool, (int)initial_count,
+  changes->changes = apr_array_make(result_pool, (int)initial_count,
                                     sizeof(binary_change_t));
-  changes->offsets = apr_array_make(pool, 16, sizeof(int));
+  changes->offsets = apr_array_make(result_pool, 16, sizeof(int));
   APR_ARRAY_PUSH(changes->offsets, int) = 0;
 
   return changes;
@@ -122,10 +122,11 @@ changes_create_body(apr_size_t initial_count,
 
 svn_fs_x__changes_t *
 svn_fs_x__changes_create(apr_size_t initial_count,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
-  svn_fs_x__changes_t *changes = changes_create_body(initial_count, pool);
-  changes->builder = svn_fs_x__string_table_builder_create(pool);
+  svn_fs_x__changes_t *changes = changes_create_body(initial_count,
+                                                     result_pool);
+  changes->builder = svn_fs_x__string_table_builder_create(result_pool);
 
   return changes;
 }
