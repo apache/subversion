@@ -61,7 +61,9 @@
    instances.  The caller is responsible of ensuring that serialization.
    Use COMMON_POOL for process-wide and POOL for temporary allocations. */
 static svn_error_t *
-x_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
+x_serialized_init(svn_fs_t *fs,
+                  apr_pool_t *common_pool,
+                  apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *key;
