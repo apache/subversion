@@ -366,9 +366,16 @@ dir_entry_id_from_node(svn_fs_x__id_t *id_p,
                        apr_pool_t *scratch_pool)
 {
   svn_fs_x__dirent_t *dirent;
+  svn_fs_x__noderev_t *noderev;
 
-  SVN_ERR(svn_fs_x__dag_dir_entry(&dirent, parent, name, scratch_pool,
-                                  scratch_pool));
+  SVN_ERR(get_node_revision(&noderev, parent));
+  if (noderev->kind != svn_node_dir)
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                            _("Can't get entries of non-directory"));
+
+  /* Get a dirent hash for this directory. */
+  SVN_ERR(svn_fs_x__rep_contents_dir_entry(&dirent, parent->fs, noderev,
+                                           name, scratch_pool, scratch_pool));
   if (dirent)
     *id_p = dirent->id;
   else
@@ -484,25 +491,6 @@ svn_fs_x__dag_dir_entries(apr_array_header_t **entries,
                             _("Can't get entries of non-directory"));
 
   return svn_fs_x__rep_contents_dir(entries, node->fs, noderev, pool, pool);
-}
-
-svn_error_t *
-svn_fs_x__dag_dir_entry(svn_fs_x__dirent_t **dirent,
-                        dag_node_t *node,
-                        const char* name,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  svn_fs_x__noderev_t *noderev;
-  SVN_ERR(get_node_revision(&noderev, node));
-
-  if (noderev->kind != svn_node_dir)
-    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                            _("Can't get entries of non-directory"));
-
-  /* Get a dirent hash for this directory. */
-  return svn_fs_x__rep_contents_dir_entry(dirent, node->fs, noderev, name,
-                                          result_pool, scratch_pool);
 }
 
 
