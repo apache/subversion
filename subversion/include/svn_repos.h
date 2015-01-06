@@ -3340,11 +3340,17 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * @a end_rev).  They refer to dump stream revision numbers rather than
  * committed revision numbers.
  *
- * If @a use_history is set, then the parser will require relative
- * 'copyfrom' history to exist in the repository when it encounters
- * nodes that are added-with-history.
- * ### What does 'require relative copyfrom history to exist' mean?
- * ### What happens if @a use_history is false?
+ * If @a use_history is true, then when the parser encounters a node that
+ * is added-with-history, it will require 'copy-from' history to exist in
+ * the repository at the relative (adjusted) copy-from revision and path.
+ * It will perform a copy from that source location, and will fail if no
+ * suitable source exists there. If @a use_history is false, then it will
+ * instead convert every copy to a plain add.
+ *
+ * ### The 'use_history=FALSE' case is unused and untested in Subversion.
+ *     It seems to me it would not work with a deltas dumpfile (a driver
+ *     that calls the @c apply_textdelta method), as it would not have
+ *     access to the delta base text.
  *
  * If @a use_pre_commit_hook is set, call the repository's pre-commit
  * hook before committing each loaded revision.
