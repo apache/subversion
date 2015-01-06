@@ -3146,6 +3146,31 @@ def basic_youngest(sbox):
                                            'youngest', path)
 
 
+# With 'svn mkdir --parents' the target directory may already exist on disk.
+# In that case it was wrongly performing a recursive 'add' on its contents.
+def mkdir_parents_target_exists_on_disk(sbox):
+  "mkdir parents target exists on disk"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Y_path = sbox.ospath('Y')
+  Y_Z_path = sbox.ospath('Y/Z')
+
+  os.mkdir(Y_path)
+  os.mkdir(Y_Z_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '--parents', Y_path)
+
+  # Y should be added, and Z should not. There was a regression in which Z
+  # was also added.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -3215,6 +3240,7 @@ test_list = [ None,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
               basic_youngest,
+              mkdir_parents_target_exists_on_disk,
              ]
 
 if __name__ == '__main__':
