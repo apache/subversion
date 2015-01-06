@@ -65,27 +65,27 @@ extern "C" {
 typedef struct dag_node_t dag_node_t;
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
-   allocating in POOL.  */
+   allocating in RESULT_POOL.  */
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
                        const svn_fs_x__id_t *id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 
 /* Return a new dag_node_t object referring to the same node as NODE,
-   allocated in POOL.  If you're trying to build a structure in a
+   allocated in RESULT_POOL.  If you're trying to build a structure in a
    pool that wants to refer to dag nodes that may have been allocated
    elsewhere, you can call this function and avoid inter-pool pointers. */
 dag_node_t *
 svn_fs_x__dag_dup(const dag_node_t *node,
-                  apr_pool_t *pool);
+                  apr_pool_t *result_pool);
 
 /* If NODE has been allocated in POOL, return NODE.  Otherwise, return
-   a copy created in POOL with svn_fs_fs__dag_dup. */
+   a copy created in RESULT_POOL with svn_fs_fs__dag_dup. */
 dag_node_t *
 svn_fs_x__dag_copy_into_pool(dag_node_t *node,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool);
 
 /* Serialize a DAG node, except don't try to preserve the 'fs' member.
    Implements svn_cache__serialize_func_t */
@@ -286,12 +286,12 @@ svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
 /* Clone the root directory of TXN_ID in FS, and update the
    `transactions' table entry to point to it, unless this has been
    done already.  In either case, set *ROOT_P to a reference to the
-   root directory clone.  Allocate *ROOT_P in POOL.  */
+   root directory clone.  Allocate *ROOT_P in RESULT_POOL.  */
 svn_error_t *
 svn_fs_x__dag_clone_root(dag_node_t **root_p,
                          svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 
 
@@ -514,18 +514,16 @@ svn_fs_x__dag_file_length(svn_filesize_t *length,
                           apr_pool_t *pool);
 
 /* Put the recorded checksum of type KIND for FILE into CHECKSUM, allocating
-   from POOL.
+   from RESULT_POOL.
 
    If no stored checksum is available, do not calculate the checksum,
    just put NULL into CHECKSUM.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
                             dag_node_t *file,
                             svn_checksum_kind_t kind,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 /* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a
    reference to the new node, allocated in POOL.  The new file's
