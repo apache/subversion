@@ -115,23 +115,24 @@ svn_fs_x__dag_set_fs(dag_node_t *node,
 }
 
 
-/* Dup NODEREV and all associated data into POOL.
+/* Dup NODEREV and all associated data into RESULT_POOL.
    Leaves the id and is_fresh_txn_root fields as zero bytes. */
 static svn_fs_x__noderev_t *
 copy_node_revision(svn_fs_x__noderev_t *noderev,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
-  svn_fs_x__noderev_t *nr = apr_pmemdup(pool, noderev, sizeof(*noderev));
+  svn_fs_x__noderev_t *nr = apr_pmemdup(result_pool, noderev,
+                                        sizeof(*noderev));
 
   if (noderev->copyfrom_path)
-    nr->copyfrom_path = apr_pstrdup(pool, noderev->copyfrom_path);
+    nr->copyfrom_path = apr_pstrdup(result_pool, noderev->copyfrom_path);
 
-  nr->copyroot_path = apr_pstrdup(pool, noderev->copyroot_path);
-  nr->data_rep = svn_fs_x__rep_copy(noderev->data_rep, pool);
-  nr->prop_rep = svn_fs_x__rep_copy(noderev->prop_rep, pool);
+  nr->copyroot_path = apr_pstrdup(result_pool, noderev->copyroot_path);
+  nr->data_rep = svn_fs_x__rep_copy(noderev->data_rep, result_pool);
+  nr->prop_rep = svn_fs_x__rep_copy(noderev->prop_rep, result_pool);
 
   if (noderev->created_path)
-    nr->created_path = apr_pstrdup(pool, noderev->created_path);
+    nr->created_path = apr_pstrdup(result_pool, noderev->created_path);
 
   return nr;
 }
@@ -238,23 +239,23 @@ svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
                        const svn_fs_x__id_t *id,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   dag_node_t *new_node;
   svn_fs_x__noderev_t *noderev;
 
   /* Construct the node. */
-  new_node = apr_pcalloc(pool, sizeof(*new_node));
+  new_node = apr_pcalloc(result_pool, sizeof(*new_node));
   new_node->fs = fs;
   new_node->id = *id;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
-  new_node->node_pool = pool;
+  new_node->node_pool = result_pool;
   SVN_ERR(get_node_revision(&noderev, new_node));
 
   /* Initialize the KIND and CREATED_PATH attributes */
   new_node->kind = noderev->kind;
-  new_node->created_path = apr_pstrdup(pool, noderev->created_path);
+  new_node->created_path = apr_pstrdup(result_pool, noderev->created_path);
 
   if (noderev->is_fresh_txn_root)
     new_node->fresh_root_predecessor_id = noderev->predecessor_id;
@@ -686,12 +687,12 @@ svn_error_t *
 svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   svn_fs_x__id_t root_id;
 
   svn_fs_x__init_txn_root(&root_id, txn_id);
-  return svn_fs_x__dag_get_node(node_p, fs, &root_id, pool);
+  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool);
 }
 
 
@@ -798,13 +799,13 @@ svn_error_t *
 svn_fs_x__dag_clone_root(dag_node_t **root_p,
                          svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
   svn_fs_x__id_t root_id;
   svn_fs_x__init_txn_root(&root_id, txn_id);
 
   /* One way or another, root_id now identifies a cloned root node. */
-  return svn_fs_x__dag_get_node(root_p, fs, &root_id, pool);
+  return svn_fs_x__dag_get_node(root_p, fs, &root_id, result_pool);
 }
 
 
@@ -1031,7 +1032,7 @@ svn_error_t *
 svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
                             dag_node_t *file,
                             svn_checksum_kind_t kind,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
   svn_fs_x__noderev_t *noderev;
 
@@ -1042,7 +1043,7 @@ svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
 
   SVN_ERR(get_node_revision(&noderev, file));
 
-  return svn_fs_x__file_checksum(checksum, noderev, kind, pool);
+  return svn_fs_x__file_checksum(checksum, noderev, kind, result_pool);
 }
 
 
@@ -1102,35 +1103,36 @@ svn_fs_x__dag_finalize_edits(dag_node_t *file,
 
 dag_node_t *
 svn_fs_x__dag_dup(const dag_node_t *node,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
   /* Allocate our new node. */
-  dag_node_t *new_node = apr_pmemdup(pool, node, sizeof(*new_node));
+  dag_node_t *new_node = apr_pmemdup(result_pool, node, sizeof(*new_node));
 
   /* Only copy cached svn_fs_x__noderev_t for immutable nodes. */
   if (node->node_revision && !svn_fs_x__dag_check_mutable(node))
     {
-      new_node->node_revision = copy_node_revision(node->node_revision, pool);
+      new_node->node_revision = copy_node_revision(node->node_revision,
+                                                   result_pool);
       new_node->created_path = new_node->node_revision->created_path;
     }
   else
     {
       new_node->node_revision = NULL;
-      new_node->created_path = apr_pstrdup(pool, node->created_path);
+      new_node->created_path = apr_pstrdup(result_pool, node->created_path);
     }
 
-  new_node->node_pool = pool;
+  new_node->node_pool = result_pool;
 
   return new_node;
 }
 
 dag_node_t *
 svn_fs_x__dag_copy_into_pool(dag_node_t *node,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool)
 {
-  return (node->node_pool == pool
+  return (node->node_pool == result_pool
             ? node
-            : svn_fs_x__dag_dup(node, pool));
+            : svn_fs_x__dag_dup(node, result_pool));
 }
 
 svn_error_t *
