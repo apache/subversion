@@ -81,13 +81,13 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
 
 /* I/O interface. */
 
-/* Write a serialized representation of CHANGES to STREAM.  Use POOL for
- * temporary allocations.
+/* Write a serialized representation of CHANGES to STREAM.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_changes_container(svn_stream_t *stream,
                                   const svn_fs_x__changes_t *changes,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /* Read a changes container from its serialized representation in STREAM.
  * Allocate the result in RESULT_POOL and return it in *CHANGES_P.  Use
