@@ -81,7 +81,8 @@ struct dag_node_t
 
 
 /* Trivial helper/accessor functions. */
-svn_node_kind_t svn_fs_x__dag_node_kind(dag_node_t *node)
+svn_node_kind_t
+svn_fs_x__dag_node_kind(dag_node_t *node)
 {
   return node->kind;
 }
@@ -107,7 +108,8 @@ svn_fs_x__dag_get_fs(dag_node_t *node)
 }
 
 void
-svn_fs_x__dag_set_fs(dag_node_t *node, svn_fs_t *fs)
+svn_fs_x__dag_set_fs(dag_node_t *node,
+                     svn_fs_t *fs)
 {
   node->fs = fs;
 }
@@ -225,7 +227,8 @@ svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t svn_fs_x__dag_check_mutable(const dag_node_t *node)
+svn_boolean_t
+svn_fs_x__dag_check_mutable(const dag_node_t *node)
 {
   return svn_fs_x__is_txn(svn_fs_x__dag_get_id(node)->change_set);
 }
