@@ -82,7 +82,7 @@ extern "C" {
 
 /** Version tag: a string describing the version.
  *
- * This tag remains " (dev build)" in the repository so that we can
+ * This tag remains " (under development)" in the repository so that we can
  * always see from "svn --version" that the software has been built
  * from the repository rather than a "blessed" distribution.
  *
