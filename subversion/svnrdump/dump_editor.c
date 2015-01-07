@@ -351,8 +351,7 @@ do_dump_newlines(struct dump_edit_baton *eb,
 /*
  * Write out a node record for PATH of type KIND under EB->FS_ROOT.
  * ACTION describes what is happening to the node (see enum
- * svn_node_action). Write record to writable EB->STREAM, using
- * EB->BUFFER to write in chunks.
+ * svn_node_action). Write record to writable EB->STREAM.
  *
  * If the node was itself copied, IS_COPY is TRUE and the
  * path/revision of the copy source are in COPYFROM_PATH/COPYFROM_REV.
