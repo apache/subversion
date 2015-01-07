@@ -426,10 +426,6 @@ struct edit_baton
      revisions older than OLDEST_DUMPED_REV. */
   svn_boolean_t *found_old_mergeinfo;
 
-  /* reusable buffer for writing file contents */
-  char buffer[SVN__STREAM_CHUNK_SIZE];
-  apr_size_t bufsize;
-
   /* Structure allows us to verify the paths currently being dumped.
      If NULL, validity checks are being skipped. */
   path_tracker_t *path_tracker;
@@ -693,7 +689,6 @@ extract_mergeinfo_paths(void *baton, const void *key, apr_ssize_t klen,
 struct filter_mergeinfo_paths_baton
 {
   apr_hash_t *paths;
-  svn_membuf_t buffer;
 };
 
 /* Compare two sets of denormalized paths from mergeinfo entries,
@@ -800,7 +795,6 @@ check_mergeinfo_normalization(const char *path,
       normalized_paths = extract_baton.result;
 
       filter_baton.paths = added_paths;
-      filter_baton.buffer = extract_baton.buffer;
       SVN_ERR(svn_iter_apr_hash(NULL, oldinfo,
                                 filter_mergeinfo_paths,
                                 &filter_baton, pool));
@@ -826,7 +820,7 @@ check_mergeinfo_normalization(const char *path,
 
    Write out a node record for PATH of type KIND under EB->FS_ROOT.
    ACTION describes what is happening to the node (see enum svn_node_action).
-   Write record to writable EB->STREAM, using EB->BUFFER to write in chunks.
+   Write record to writable EB->STREAM.
 
    If the node was itself copied, IS_COPY is TRUE and the
    path/revision of the copy source are in CMP_PATH/CMP_REV.  If
@@ -1651,7 +1645,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
   eb->oldest_dumped_rev = oldest_dumped_rev;
-  eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
   eb->fs = fs;
