@@ -70,32 +70,28 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile,
+def compare_repos_dumps(sbox, other_dumpfile,
                         bypass_prop_validation=False):
-  """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
-  by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
-  SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
+  """Compare two dumpfiles, one created from SBOX, and other given
+  by OTHER_DUMPFILE.  The dumpfiles do not need to match linewise, as the
+  OTHER_DUMPFILE contents will first be loaded into a repository and then
   re-dumped to do the match, which should generate the same dumpfile as
-  dumping SVNRDUMP_SBOX."""
+  dumping SBOX."""
 
-  ### Note: The call from run_dump_test() passes the expected and actual
-  ### parameters in the opposite order to that implied by the parameter names.
 
-  svnrdump_contents = svntest.actions.run_and_verify_dump(
-                                                    svnrdump_sbox.repo_dir)
+  sbox_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
-  svnadmin_sbox = svnrdump_sbox.clone_dependent()
-  svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
-  svntest.main.create_repos(svnadmin_sbox.repo_dir)
-
-  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile,
+  # Load and dump the other dumpfile (using svnadmin)
+  other_sbox = sbox.clone_dependent()
+  svntest.main.safe_rmtree(other_sbox.repo_dir)
+  svntest.main.create_repos(other_sbox.repo_dir)
+  svntest.actions.run_and_verify_load(other_sbox.repo_dir, other_dumpfile,
                                       bypass_prop_validation)
+  other_dumpfile = svntest.actions.run_and_verify_dump(other_sbox.repo_dir)
 
-  svnadmin_contents = svntest.actions.run_and_verify_dump(
-                                                    svnadmin_sbox.repo_dir)
-
+  ### This call kind-of assumes EXPECTED is first and ACTUAL is second.
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
+    "Dump files", "DUMP", other_dumpfile, sbox_dumpfile)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False,
@@ -116,11 +112,10 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Load the specified dump file into the sbox repository using
   # svnadmin load
-  svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
+  original_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                         dumpfile_name),
                            'rb').readlines()
-
-  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile,
+  svntest.actions.run_and_verify_load(sbox.repo_dir, original_dumpfile,
                                       bypass_prop_validation)
 
   repo_url = sbox.repo_url
@@ -134,29 +129,28 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                               [], 0, *opts)
 
   if expected_dumpfile_name:
-    svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
+    expected_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
     # Compare the output from stdout
     if ignore_base_checksums:
-      svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+      expected_dumpfile = [l for l in expected_dumpfile
                                     if not l.startswith('Text-delta-base-md5')]
       svnrdump_dumpfile = [l for l in svnrdump_dumpfile
                                     if not l.startswith('Text-delta-base-md5')]
-    svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+    expected_dumpfile = [l for l in expected_dumpfile
                                   if not mismatched_headers_re.match(l)]
     svnrdump_dumpfile = [l for l in svnrdump_dumpfile
                                   if not mismatched_headers_re.match(l)]
 
-    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
+    expected_dumpfile = svntest.verify.UnorderedOutput(expected_dumpfile)
 
     svntest.verify.compare_and_display_lines(
-      "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+      "Dump files", "DUMP", expected_dumpfile, svnrdump_dumpfile,
       None)
 
   else:
-    ### Note: This call passes the expected and actual parameters in the
-    ### opposite order to that implied by the parameter names.
+    # The expected dumpfile is the result of dumping SBOX.
     compare_repos_dumps(sbox, svnrdump_dumpfile, bypass_prop_validation)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
@@ -176,36 +170,37 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Load the specified dump file into the sbox repository using
   # svnrdump load
-  svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+  original_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                         dumpfile_name),
                            'rb').readlines()
 
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
-  uuid = svnrdump_dumpfile[2].split(' ')[1][:-1]
+  uuid = original_dumpfile[2].split(' ')[1][:-1]
   svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
-  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
+  svntest.actions.run_and_verify_svnrdump(original_dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', sbox.repo_url)
 
-  # Create a dump file using svnadmin dump
-  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
+  # Re-dump the rdump-loaded repo using svnadmin dump
+  resulted_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
                                                           expect_deltas)
 
   if expected_dumpfile_name:
-    svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+    expected_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
 
     # Compare the output from stdout
     svntest.verify.compare_and_display_lines(
-      "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+      "Dump files", "DUMP", expected_dumpfile, resulted_dumpfile)
 
   else:
-    compare_repos_dumps(sbox, svnrdump_dumpfile)
+    expected_dumpfile = original_dumpfile
+    compare_repos_dumps(sbox, expected_dumpfile)
 
 ######################################################################
 # Tests
