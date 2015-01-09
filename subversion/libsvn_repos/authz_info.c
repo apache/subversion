@@ -32,11 +32,11 @@
 
 
 svn_boolean_t
-svn_authz__get_acl_access(svn_repos_authz_access_t *access_p,
+svn_authz__get_acl_access(authz_access_t *access_p,
                           const authz_acl_t *acl,
                           const char *user, const char *repos)
 {
-  svn_repos_authz_access_t access;
+  authz_access_t access;
   svn_boolean_t has_access;
   int i;
 
@@ -59,7 +59,7 @@ svn_authz__get_acl_access(svn_repos_authz_access_t *access_p,
 
   /* Get the access rights for all authenticated users. */
   has_access = acl->has_authn_access;
-  access = (has_access ? acl->authn_access : svn_authz_none);
+  access = (has_access ? acl->authn_access : authz_access_none);
 
   /* Scan the ACEs in the ACL and merge the access rights. */
   for (i = 0; i < acl->user_access->nelts; ++i)
@@ -150,7 +150,7 @@ svn_authz__get_global_rights(authz_rights_t *rights_p,
     }
 
   /* Fall-through: return the implicit rights, i.e., none. */
-  rights_p->min_access = svn_authz_none;
-  rights_p->max_access = svn_authz_none;
+  rights_p->min_access = authz_access_none;
+  rights_p->max_access = authz_access_none;
   return FALSE;
 }

@@ -60,16 +60,60 @@ extern "C" {
 typedef struct authz_user_rules_t authz_user_rules_t;
 
 
+/* Access rights in an ACL.
+ *
+ * This enum is different from and incompatible with
+ * svn_repos_authz_access_t, because it has different semantics and
+ * encodes rights that are not and should never be exposed in the
+ * public API.
+ */
+typedef enum authz_access_t
+{
+  /*
+   * Individual access flags
+   */
+
+  /* TODO: Future extension for lookup/traverse access.
+  authz_access_lookup_flag = 0x10, */
+
+  /* Read access allows listing directory entries, reading file
+     contents and reading properties of files and directories. */
+  authz_access_read_flag = 0x20,
+
+  /* Write access allows adding, removing and renaming directory
+     entries, modifying file contents and adding, removing and
+     modifying properties of files and directories. */
+  authz_access_write_flag = 0x40,
+
+  /*
+   * Combined access flags
+   */
+
+  /* No access. */
+  authz_access_none = 0,
+
+
+  /* TODO: Lookup access is a synonym for the lookup flag.
+  authz_access_lookup = authz_access_lookup_flag, */
+
+  /* Read access (TODO: implies lookup access). */
+  authz_access_read = authz_access_read_flag /* TODO: | authz_access_lookup */,
+
+  /* Write access implies read (TODO: and lookup) access. */
+  authz_access_write = authz_access_write_flag | authz_access_read
+} authz_access_t;
+
+
 /* Accumulated rights for (user, repository). */
 typedef struct authz_rights_t
 {
   /* The lowest level of access that the user has to every
      path in the repository. */
-  svn_repos_authz_access_t min_access;
+  authz_access_t min_access;
 
   /* The highest level of access that the user has to
      any path in the repository. */
-  svn_repos_authz_access_t max_access;
+  authz_access_t max_access;
 } authz_rights_t;
 
 
@@ -207,11 +251,11 @@ typedef struct authz_acl_t
 
   /* Access rights for anonymous users */
   svn_boolean_t has_anon_access;
-  svn_repos_authz_access_t anon_access;
+  authz_access_t anon_access;
 
   /* Access rights for authenticated users */
   svn_boolean_t has_authn_access;
-  svn_repos_authz_access_t authn_access;
+  authz_access_t authn_access;
 
   /* All other user- or group-specific access rights.
      Aliases are replaced with their definitions, rules for the same
@@ -236,7 +280,7 @@ typedef struct authz_ace_t
   svn_boolean_t inverted;
 
   /* The access rights defined by this ACE. */
-  svn_repos_authz_access_t access;
+  authz_access_t access;
 } authz_ace_t;
 
 
@@ -281,7 +325,7 @@ svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b);
  * the user in this repository.
  */
 svn_boolean_t
-svn_authz__get_acl_access(svn_repos_authz_access_t *access,
+svn_authz__get_acl_access(authz_access_t *access,
                           const authz_acl_t *acl,
                           const char *user, const char *repos);
 
