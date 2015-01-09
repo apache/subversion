@@ -501,8 +501,7 @@ typedef struct svn_fs_x__noderev_t
   /* node kind */
   svn_node_kind_t kind;
 
-  /* number of predecessors this node revision has (recursively), or
-     -1 if not known (for backward compatibility). */
+  /* number of predecessors this node revision has (recursively). */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if
