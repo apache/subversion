@@ -170,6 +170,15 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1650531
+   Fix a redirect handling bug in 'svn log' over HTTP. 
+   Justification:
+     Redirects should work.
+   Notes:
+     Merge with --accept tc
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
