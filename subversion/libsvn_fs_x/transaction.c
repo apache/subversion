@@ -2712,9 +2712,8 @@ validate_root_noderev(svn_fs_t *fs,
      to a repository that has triggered the bug somewhere in its root
      noderev's history.
    */
-  if (root_noderev->predecessor_count != -1
-      && (root_noderev->predecessor_count - head_predecessor_count)
-         != (rev - head_revnum))
+  if ((root_noderev->predecessor_count - head_predecessor_count)
+      != (rev - head_revnum))
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("predecessor count for "

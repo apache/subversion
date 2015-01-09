@@ -163,8 +163,7 @@ svn_fs_x__dag_get_predecessor_id(svn_fs_x__id_t *id_p,
                                  dag_node_t *node);
 
 
-/* Set *COUNT to the number of predecessors NODE has (recursively), or
-   -1 if not known.
+/* Set *COUNT to the number of predecessors NODE has (recursively).
  */
 /* ### This function is currently only used by 'verify'. */
 svn_error_t *
