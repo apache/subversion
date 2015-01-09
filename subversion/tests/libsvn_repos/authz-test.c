@@ -65,13 +65,13 @@ print_group(void *baton,
 
 
 static const char *
-access_string(svn_repos_authz_access_t access)
+access_string(authz_access_t access)
 {
-  switch (access & (svn_authz_read | svn_authz_write))
+  switch (access & authz_access_write)
     {
-    case svn_authz_none: return ""; break;
-    case svn_authz_read: return "r"; break;
-    case svn_authz_write: return "w"; break;
+    case authz_access_none: return ""; break;
+    case authz_access_read_flag: return "r"; break;
+    case authz_access_write_flag: return "w"; break;
     default:
       return "rw";
     }
@@ -225,9 +225,9 @@ test_authz_parse(const svn_test_opts_t *opts,
   for (i = 0; i < authz->acls->nelts; ++i)
     {
       authz_acl_t *acl = &APR_ARRAY_IDX(authz->acls, i, authz_acl_t);
-      const svn_repos_authz_access_t all_access =
+      const authz_access_t all_access =
         (acl->anon_access & acl->authn_access);
-      svn_repos_authz_access_t access;
+      authz_access_t access;
       svn_boolean_t has_access =
         svn_authz__get_acl_access(&access, acl, check_user, check_repo);
       int j;

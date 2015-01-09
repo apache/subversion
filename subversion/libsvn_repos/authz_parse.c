@@ -161,8 +161,8 @@ static const char authn_access_token[] = "$authenticated";
    empty and are later bitwise-and'ed with actual rights. */
 static void init_rights(authz_rights_t *rights)
 {
-  rights->min_access = svn_authz_read | svn_authz_write;
-  rights->max_access = svn_authz_none;
+  rights->min_access = authz_access_write;
+  rights->max_access = authz_access_none;
  }
 
 /* Initialize a global rights structure.
@@ -187,9 +187,9 @@ insert_default_acl(ctor_baton_t *cb)
   acl->acl.rule.repos = interned_empty_string;
   acl->acl.rule.len = 0;
   acl->acl.rule.path = NULL;
-  acl->acl.anon_access = svn_authz_none;
+  acl->acl.anon_access = authz_access_none;
   acl->acl.has_anon_access = TRUE;
-  acl->acl.authn_access = svn_authz_none;
+  acl->acl.authn_access = authz_access_none;
   acl->acl.has_authn_access = TRUE;
   acl->acl.user_access = NULL;
   acl->aces = svn_hash__make(cb->parser_pool);
@@ -761,9 +761,9 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
     }
 
   acl.acl.sequence_number = cb->parsed_acls->nelts;
-  acl.acl.anon_access = svn_authz_none;
+  acl.acl.anon_access = authz_access_none;
   acl.acl.has_anon_access = FALSE;
-  acl.acl.authn_access = svn_authz_none;
+  acl.acl.authn_access = authz_access_none;
   acl.acl.has_authn_access = FALSE;
   acl.acl.user_access = NULL;
 
@@ -821,7 +821,7 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
   const svn_boolean_t inverted = (*name == '~');
   svn_boolean_t anonymous = FALSE;
   svn_boolean_t authenticated = FALSE;
-  svn_repos_authz_access_t access = svn_authz_none;
+  authz_access_t access = authz_access_none;
   authz_ace_t *ace;
   int i;
 
@@ -895,11 +895,11 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
       switch (access_code)
         {
         case 'r':
-          access |= svn_authz_read;
+          access |= authz_access_read_flag;
           break;
 
         case 'w':
-          access |= svn_authz_write;
+          access |= authz_access_write_flag;
           break;
 
         default:
@@ -913,7 +913,7 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
     }
 
   /* We do not support write-only access. */
-  if ((access & svn_authz_write) && !(access & svn_authz_read))
+  if ((access & authz_access_write_flag) && !(access & authz_access_read_flag))
     return svn_error_createf(
         SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
         _("Write-only access entry '%s' of rule [%s] is not valid"),
@@ -1174,7 +1174,7 @@ array_insert_ace(void *baton,
 /* Update accumulated RIGHTS from ACCESS. */
 static void
 update_rights(authz_rights_t *rights,
-              svn_repos_authz_access_t access)
+              authz_access_t access)
 {
   rights->min_access &= access;
   rights->max_access |= access;
@@ -1185,7 +1185,7 @@ update_rights(authz_rights_t *rights,
 static void
 update_global_rights(authz_global_rights_t *gr,
                      const char *repos,
-                     svn_repos_authz_access_t access)
+                     authz_access_t access)
 {
   update_rights(&gr->all_repos_rights, access);
   if (0 == strcmp(repos, AUTHZ_ANY_REPOSITORY))
@@ -1218,7 +1218,7 @@ update_user_rights(void *baton,
   const authz_acl_t *const acl = baton;
   const char *const user = key;
   authz_global_rights_t *const gr = value;
-  svn_repos_authz_access_t access;
+  authz_access_t access;
   svn_boolean_t has_access =
     svn_authz__get_acl_access(&access, acl, user, acl->rule.repos);
 

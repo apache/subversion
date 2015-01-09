@@ -62,7 +62,7 @@ typedef struct access_t
   int sequence_number;
 
   /* Access rights of the respective user as defined by the rule set. */
-  svn_repos_authz_access_t rights;
+  authz_access_t rights;
 } access_t;
 
 /* Use this to indicate that no sequence ID has been assigned.
@@ -81,11 +81,11 @@ typedef struct limited_rights_t
 
   /* Minimal access rights that the user has on this or any other node in 
    * the sub-tree. */
-  svn_repos_authz_access_t min_rights;
+  authz_access_t min_rights;
 
   /* Maximal access rights that the user has on this or any other node in 
    * the sub-tree. */
-  svn_repos_authz_access_t max_rights;
+  authz_access_t max_rights;
 
 } limited_rights_t;
 
@@ -699,7 +699,7 @@ create_user_authz(svn_authz_t *authz,
   if (!has_local_rule(&root->rights))
     {
       root->rights.access.sequence_number = 0;
-      root->rights.access.rights = svn_authz_none;
+      root->rights.access.rights = authz_access_none;
     }
 
   /* Calculate recursive rights etc. */
@@ -707,8 +707,8 @@ create_user_authz(svn_authz_t *authz,
   finalize_up_tree(root, &root->rights.access, root, subpool);
 
   svn_pool_clear(subpool);
-  var_rights.max_rights = svn_authz_none;
-  var_rights.min_rights = svn_authz_read | svn_authz_write;
+  var_rights.max_rights = authz_access_none;
+  var_rights.min_rights = authz_access_write;
   finalize_down_tree(root, var_rights, subpool);
 
   /* Done. */
@@ -983,7 +983,7 @@ next_segment(svn_stringbuf_t *segment,
 static svn_boolean_t
 lookup(lookup_state_t *state,
        const char *path,
-       svn_repos_authz_access_t required,
+       authz_access_t required,
        svn_boolean_t recursive,
        apr_pool_t *scratch_pool)
 {
@@ -1028,14 +1028,14 @@ lookup(lookup_state_t *state,
       /* Initial state for this segment. */
       apr_array_clear(state->next);
       state->rights.access.sequence_number = NO_SEQUENCE_NUMBER;
-      state->rights.access.rights = svn_authz_none;
+      state->rights.access.rights = authz_access_none;
 
       /* These init values ensure that the first node's value will be used
        * when combined with them.  If there is no first node,
        * state->access.sequence_number remains unchanged and we will use
        * the parent's (i.e. inherited) access rights. */
-      state->rights.min_rights = svn_authz_read | svn_authz_write;
-      state->rights.max_rights = svn_authz_none;
+      state->rights.min_rights = authz_access_write;
+      state->rights.max_rights = authz_access_none;
 
       /* Update the PARENT_PATH member in STATE to match the nodes in
        * CURRENT at the end of this iteration, i.e. if and when NEXT
@@ -1504,6 +1504,10 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
                              svn_boolean_t *access_granted,
                              apr_pool_t *pool)
 {
+  const authz_access_t required =
+    ((required_access & svn_authz_read ? authz_access_read_flag : 0)
+     | (required_access & svn_authz_write ? authz_access_write_flag : 0));
+
   /* Pick or create the suitable pre-filtered path rule tree. */
   authz_user_rules_t *rules = get_filtered_tree(
       authz,
@@ -1513,19 +1517,23 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
     {
-      svn_repos_authz_access_t required = required_access & ~svn_authz_recursive;
-      *access_granted = (rules->root->rights.max_rights & required) == required;
+      *access_granted =
+        ((rules->root->rights.max_rights & required) == required);
       return SVN_NO_ERROR;
     }
+  else
+    {
+      const svn_boolean_t recursive =
+        !!(required_access & svn_authz_recursive);
 
-  /* Sanity check. */
-  SVN_ERR_ASSERT(path[0] == '/');
+      /* Sanity check. */
+      SVN_ERR_ASSERT(path[0] == '/');
 
-  /* Determine the granted access for the requested path.
-   * PATH does not need to be normalized for lockup(). */
-  *access_granted = lookup(rules->lookup_state, path,
-                           required_access & ~svn_authz_recursive,
-                           required_access & svn_authz_recursive, pool);
+      /* Determine the granted access for the requested path.
+       * PATH does not need to be normalized for lockup(). */
+      *access_granted = lookup(rules->lookup_state, path,
+                               required, recursive, pool);
+    }
 
   return SVN_NO_ERROR;
 }

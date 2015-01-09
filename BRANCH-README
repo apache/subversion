@@ -2,6 +2,10 @@ This branch (^/subversion/branches/authzperf) will be used to build a better
 search engine. Er ... that is, reimplement svn_authz_t & co. so that it
 allows much faster authz resolving and avoids the many full authz file scans.
 
+The new authz implementation on this branch will also be used for
+implementing lookup access rights (a.k.a. directory traversal rights),
+which are implicit in current released and trunk authz semantics.
+
 More information may be found here:
 https://wiki.apache.org/subversion/AuthzImprovements
 
@@ -9,6 +13,7 @@ TODO:
 
 * implement precedence rules
 * remove no-op escape sequences from wildcard rule segments
+* implement lookup access rights
 
 DONE:
 
@@ -31,3 +36,5 @@ DONE:
 * rewrite the filtered rules generator to use svn_authz_tng_t
 * rename svn_authz_tng_t to svn_authz_t
 * implement wildcard escaping in glob rules
+* in the implementation, replace the public access rights enum
+  with a private variant, in preparation for adding lookup access rights.
