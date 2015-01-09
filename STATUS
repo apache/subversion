@@ -170,6 +170,13 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1650481, r1650489
+   Case-insensitive HTTP header name detection as required by HTTP RFC.
+   Justification:
+     v2 protocol fails if proxy modifies SVN-Me-Resource to Svn-me-resource.
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
