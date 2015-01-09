@@ -38,25 +38,34 @@ svn_fs_x__create_dag_cache(apr_pool_t *pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate the structure in POOL. */
-svn_error_t *svn_fs_x__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs,
-                                     svn_revnum_t rev, apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__revision_root(svn_fs_root_t **root_p,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *pool);
 
 /* Does nothing, but included for Subversion 1.0.x compatibility. */
-svn_error_t *svn_fs_x__deltify(svn_fs_t *fs, svn_revnum_t rev,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__deltify(svn_fs_t *fs,
+                  svn_revnum_t rev,
+                  apr_pool_t *pool);
 
 /* Commit the transaction TXN as a new revision.  Return the new
    revision in *NEW_REV.  If the transaction conflicts with other
    changes return SVN_ERR_FS_CONFLICT and set *CONFLICT_P to a string
    that details the cause of the conflict. */
-svn_error_t *svn_fs_x__commit_txn(const char **conflict_p,
-                                  svn_revnum_t *new_rev, svn_fs_txn_t *txn,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__commit_txn(const char **conflict_p,
+                     svn_revnum_t *new_rev,
+                     svn_fs_txn_t *txn,
+                     apr_pool_t *pool);
 
 /* Set ROOT_P to the root directory of transaction TXN.  Allocate the
    structure in POOL. */
-svn_error_t *svn_fs_x__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__txn_root(svn_fs_root_t **root_p,
+                   svn_fs_txn_t *txn,
+                   apr_pool_t *pool);
 
 
 /* Set KIND_P to the node kind of the node at PATH in ROOT.

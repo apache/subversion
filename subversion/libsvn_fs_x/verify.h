@@ -30,13 +30,14 @@
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
  * Use POOL for temporary allocations. */
-svn_error_t *svn_fs_x__verify(svn_fs_t *fs,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
-                              svn_fs_progress_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__verify(svn_fs_t *fs,
+                 svn_revnum_t start,
+                 svn_revnum_t end,
+                 svn_fs_progress_notify_func_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
 
 #endif

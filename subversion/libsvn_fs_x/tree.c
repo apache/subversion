@@ -97,27 +97,32 @@ typedef struct fs_txn_root_data_t
 } fs_txn_root_data_t;
 
 /* Declared here to resolve the circular dependencies. */
-static svn_error_t * get_dag(dag_node_t **dag_node_p,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_pool_t *pool);
+static svn_error_t *
+get_dag(dag_node_t **dag_node_p,
+        svn_fs_root_t *root,
+        const char *path,
+        apr_pool_t *pool);
 
-static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
-                                         dag_node_t *root_dir,
-                                         apr_pool_t *pool);
+static svn_fs_root_t *
+make_revision_root(svn_fs_t *fs,
+                   svn_revnum_t rev,
+                   dag_node_t *root_dir,
+                   apr_pool_t *pool);
 
-static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
-                                  svn_fs_t *fs,
-                                  svn_fs_x__txn_id_t txn_id,
-                                  svn_revnum_t base_rev,
-                                  apr_uint32_t flags,
-                                  apr_pool_t *pool);
+static svn_error_t *
+make_txn_root(svn_fs_root_t **root_p,
+              svn_fs_t *fs,
+              svn_fs_x__txn_id_t txn_id,
+              svn_revnum_t base_rev,
+              apr_uint32_t flags,
+              apr_pool_t *pool);
 
-static svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
-                                   const char **path_p,
-                                   svn_fs_root_t *root,
-                                   const char *path,
-                                   apr_pool_t *pool);
+static svn_error_t *
+x_closest_copy(svn_fs_root_t **root_p,
+               const char **path_p,
+               svn_fs_root_t *root,
+               const char *path,
+               apr_pool_t *pool);
 
 
 /*** Node Caching ***/
@@ -3402,12 +3407,12 @@ find_youngest_copyroot(svn_revnum_t *rev_p,
 }
 
 
-static
-svn_error_t *x_closest_copy(svn_fs_root_t **root_p,
-                            const char **path_p,
-                            svn_fs_root_t *root,
-                            const char *path,
-                            apr_pool_t *pool)
+static svn_error_t *
+x_closest_copy(svn_fs_root_t **root_p,
+               const char **path_p,
+               svn_fs_root_t *root,
+               const char *path,
+               apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
   parent_path_t *parent_path, *copy_dst_parent_path;

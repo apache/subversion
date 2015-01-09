@@ -428,7 +428,8 @@ x_upgrade(svn_fs_t *fs,
 }
 
 static svn_error_t *
-x_verify(svn_fs_t *fs, const char *path,
+x_verify(svn_fs_t *fs,
+         const char *path,
          svn_revnum_t start,
          svn_revnum_t end,
          svn_fs_progress_notify_func_t notify_func,
@@ -597,7 +598,8 @@ static fs_library_vtable_t library_vtable = {
 
 svn_error_t *
 svn_fs_x__init(const svn_version_t *loader_version,
-               fs_library_vtable_t **vtable, apr_pool_t* common_pool)
+               fs_library_vtable_t **vtable,
+               apr_pool_t* common_pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
