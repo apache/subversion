@@ -226,7 +226,9 @@ capabilities_headers_iterator_callback(void *baton,
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
-  else if (strncmp(key, "SVN", 3) == 0)
+  else if (!svn_ctype_casecmp(key[0], 'S')
+           && !svn_ctype_casecmp(key[1], 'V')
+           && !svn_ctype_casecmp(key[2], 'N'))
     {
       /* If we've not yet seen any information about supported POST
          requests, we'll initialize the list/hash with "create-txn"
