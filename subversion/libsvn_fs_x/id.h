@@ -45,25 +45,31 @@ typedef apr_int64_t svn_fs_x__change_set_t;
 
 /* Return TRUE iff the CHANGE_SET refers to a revision
    (will return FALSE for SVN_INVALID_REVNUM). */
-svn_boolean_t svn_fs_x__is_revision(svn_fs_x__change_set_t change_set);
+svn_boolean_t
+svn_fs_x__is_revision(svn_fs_x__change_set_t change_set);
 
 /* Return TRUE iff the CHANGE_SET refers to a transaction
    (will return FALSE for SVN_FS_X__INVALID_TXN_ID). */
-svn_boolean_t svn_fs_x__is_txn(svn_fs_x__change_set_t change_set);
+svn_boolean_t
+svn_fs_x__is_txn(svn_fs_x__change_set_t change_set);
 
 /* Return the revision number that corresponds to CHANGE_SET.
    Will SVN_INVALID_REVNUM for transactions. */
-svn_revnum_t svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set);
+svn_revnum_t
+svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set);
 
 /* Return the transaction ID that corresponds to CHANGE_SET.
    Will SVN_FS_X__INVALID_TXN_ID for revisions. */
-svn_fs_x__txn_id_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
+svn_fs_x__txn_id_t
+svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
 
 /* Convert REVNUM into a change set number */
-svn_fs_x__change_set_t svn_fs_x__change_set_by_rev(svn_revnum_t revnum);
+svn_fs_x__change_set_t
+svn_fs_x__change_set_by_rev(svn_revnum_t revnum);
 
 /* Convert TXN_ID into a change set number */
-svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(svn_fs_x__txn_id_t txn_id);
+svn_fs_x__change_set_t
+svn_fs_x__change_set_by_txn(svn_fs_x__txn_id_t txn_id);
 
 /* An ID in FSX consists of a creation CHANGE_SET number and some changeset-
  * local counter value (NUMBER).
@@ -80,11 +86,13 @@ typedef struct svn_fs_x__id_t
 
 /* Return TRUE, if both elements of the PART is 0, i.e. this is the default
  * value if e.g. no copies were made of this node. */
-svn_boolean_t svn_fs_x__id_is_root(const svn_fs_x__id_t *part);
+svn_boolean_t
+svn_fs_x__id_is_root(const svn_fs_x__id_t *part);
 
 /* Return TRUE, if all element values of *LHS and *RHS match. */
-svn_boolean_t svn_fs_x__id_eq(const svn_fs_x__id_t *lhs,
-                              const svn_fs_x__id_t *rhs);
+svn_boolean_t
+svn_fs_x__id_eq(const svn_fs_x__id_t *lhs,
+                const svn_fs_x__id_t *rhs);
 
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  */
@@ -98,14 +106,17 @@ svn_fs_x__id_unparse(const svn_fs_x__id_t*id,
                      apr_pool_t *pool);
 
 /* Set *PART to "unused". */
-void svn_fs_x__id_reset(svn_fs_x__id_t *part);
+void
+svn_fs_x__id_reset(svn_fs_x__id_t *part);
 
 /* Return TRUE if *PART is belongs to either a revision or transaction. */
-svn_boolean_t svn_fs_x__id_used(const svn_fs_x__id_t *part);
+svn_boolean_t
+svn_fs_x__id_used(const svn_fs_x__id_t *part);
 
 /* Return 0 if A and B are equal, 1 if A is "greater than" B, -1 otherwise. */
-int svn_fs_x__id_compare(const svn_fs_x__id_t *a,
-                         const svn_fs_x__id_t *b);
+int
+svn_fs_x__id_compare(const svn_fs_x__id_t *a,
+                     const svn_fs_x__id_t *b);
 
 /* Set *NODEREV_ID to the root node ID of transaction TXN_ID. */
 void

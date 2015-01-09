@@ -39,13 +39,14 @@ svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
  * not re-copy data which already exists in DST_FS.  Indicate progress via
  * the optional NOTIFY_FUNC callback using NOTIFY_BATON.  Use POOL for
  * temporary allocations. */
-svn_error_t * svn_fs_x__hotcopy(svn_fs_t *src_fs,
-                                svn_fs_t *dst_fs,
-                                svn_boolean_t incremental,
-                                svn_fs_hotcopy_notify_t notify_func,
-                                void *notify_baton,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_fs_x__hotcopy(svn_fs_t *src_fs,
+                  svn_fs_t *dst_fs,
+                  svn_boolean_t incremental,
+                  svn_fs_hotcopy_notify_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool);
 
 #endif
