@@ -179,6 +179,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1596882
+   Fix build with Ruby 2.
+   Justification:
+     Move along with the times! And should fix buildbot failures
+     according to jamessan, who submitted the patch.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
