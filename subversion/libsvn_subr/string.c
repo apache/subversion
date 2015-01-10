@@ -655,23 +655,18 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
   if (count == 0)
     return;
 
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + count > str->data && bytes < str->data + str->blocksize)
-    {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pmemdup(str->pool, bytes, count);
-      svn_stringbuf_insert(str, pos, temp, count);
-    }
-  else
-    {
-      if (pos > str->len)
-        pos = str->len;
+    bytes = apr_pmemdup(str->pool, bytes, count);
 
-      svn_stringbuf_ensure(str, str->len + count);
-      memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
-      memcpy(str->data + pos, bytes, count);
+  if (pos > str->len)
+    pos = str->len;
 
-      str->len += count;
-    }
+  svn_stringbuf_ensure(str, str->len + count);
+  memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
+  memcpy(str->data + pos, bytes, count);
+
+  str->len += count;
 }
 
 void
@@ -703,32 +698,27 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
       return;
     }
 
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + new_count > str->data && bytes < str->data + str->blocksize)
+    bytes = apr_pmemdup(str->pool, bytes, new_count);
+
+  if (pos > str->len)
+    pos = str->len;
+  if (pos + old_count > str->len)
+    old_count = str->len - pos;
+
+  if (old_count < new_count)
     {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pmemdup(str->pool, bytes, new_count);
-      svn_stringbuf_replace(str, pos, old_count, temp, new_count);
+      apr_size_t delta = new_count - old_count;
+      svn_stringbuf_ensure(str, str->len + delta);
     }
-  else
-    {
-      if (pos > str->len)
-        pos = str->len;
-      if (pos + old_count > str->len)
-        old_count = str->len - pos;
 
-      if (old_count < new_count)
-        {
-          apr_size_t delta = new_count - old_count;
-          svn_stringbuf_ensure(str, str->len + delta);
-        }
+  if (old_count != new_count)
+    memmove(str->data + pos + new_count, str->data + pos + old_count,
+            str->len - pos - old_count + 1);
 
-      if (old_count != new_count)
-        memmove(str->data + pos + new_count, str->data + pos + old_count,
-                str->len - pos - old_count + 1);
-
-      memcpy(str->data + pos, bytes, new_count);
-      str->len += new_count - old_count;
-    }
+  memcpy(str->data + pos, bytes, new_count);
+  str->len += new_count - old_count;
 }
 
 
