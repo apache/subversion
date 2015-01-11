@@ -103,24 +103,26 @@ verify_rep_cache(svn_fs_t *fs,
                  void *notify_baton,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   svn_boolean_t exists;
 
   /* rep-cache verification. */
-  SVN_ERR(svn_fs_x__exists_rep_cache(&exists, fs, pool));
+  SVN_ERR(svn_fs_x__exists_rep_cache(&exists, fs, scratch_pool));
   if (exists)
     {
       /* provide a baton to allow the reuse of open file handles between
          iterations (saves 2/3 of OS level file operations). */
-      verify_walker_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
+      verify_walker_baton_t *baton
+        = apr_pcalloc(scratch_pool, sizeof(*baton));
+
       baton->last_notified_revision = SVN_INVALID_REVNUM;
       baton->notify_func = notify_func;
       baton->notify_baton = notify_baton;
 
       /* tell the user that we are now ready to do *something* */
       if (notify_func)
-        notify_func(SVN_INVALID_REVNUM, notify_baton, pool);
+        notify_func(SVN_INVALID_REVNUM, notify_baton, scratch_pool);
 
       /* Do not attempt to walk the rep-cache database if its file does
          not exist,  since doing so would create it --- which may confuse
@@ -128,7 +130,7 @@ verify_rep_cache(svn_fs_t *fs,
       SVN_ERR(svn_fs_x__walk_rep_reference(fs, start, end,
                                            verify_walker, baton,
                                            cancel_func, cancel_baton,
-                                           pool));
+                                           scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -224,7 +226,7 @@ verify_index_checksums(svn_fs_t *fs,
 /* Verify that for all log-to-phys index entries for revisions START to
  * START + COUNT-1 in FS there is a consistent entry in the phys-to-log
  * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
- * intervals. Use POOL for allocations.
+ * intervals. Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 compare_l2p_to_p2l_index(svn_fs_t *fs,
@@ -232,19 +234,19 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                          svn_revnum_t count,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   svn_revnum_t i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *max_ids;
 
   /* common file access structure */
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool,
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, scratch_pool,
                                           iterpool));
 
   /* determine the range of items to check for each revision */
-  SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, pool,
+  SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, scratch_pool,
                                     iterpool));
 
   /* check all items in all revisions if the given range */
@@ -281,7 +283,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                      _("p2l index entry not found for "
                                        "PHYS o%s:s%ld returned by "
                                        "l2p index for LOG r%ld:i%ld"),
-                                     apr_off_t_toa(pool, offset),
+                                     apr_off_t_toa(scratch_pool, offset),
                                      (long)sub_item, revision, (long)k);
 
           if (!svn_fs_x__id_eq(&l2p_item, p2l_item))
@@ -311,7 +313,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
 /* Verify that for all phys-to-log index entries for revisions START to
  * START + COUNT-1 in FS there is a consistent entry in the log-to-phys
  * index.  If given, invoke CANCEL_FUNC with CANCEL_BATON at regular
- * intervals. Use POOL for allocations.
+ * intervals. Use SCRATCH_POOL for temporary allocations.
  *
  * Please note that we can only check on pack / rev file granularity and
  * must only be called for a single rev / pack file.
@@ -322,21 +324,21 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                          svn_revnum_t count,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
 
   /* common file access structure */
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool,
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, scratch_pool,
                                           iterpool));
 
   /* get the size of the rev / pack file as covered by the P2L index */
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
-                                       pool));
+                                       scratch_pool));
 
   /* for all offsets in the file, get the P2L index entries and check
      them against the L2P index */
@@ -355,7 +357,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                  NULL,
                                  _("p2l does not cover offset %s"
                                    " for revision %ld"),
-                                  apr_off_t_toa(pool, offset), start);
+                                  apr_off_t_toa(scratch_pool, offset), start);
 
       /* process all entries (and later continue with the next block) */
       last_entry
@@ -386,11 +388,13 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                          _("l2p index entry PHYS o%s:s%ld "
                                            "does not match p2l index value "
                                            "LOG r%ld:i%ld for PHYS o%s:s%ld"),
-                                         apr_off_t_toa(pool, l2p_offset),
+                                         apr_off_t_toa(scratch_pool,
+                                                       l2p_offset),
                                          (long)sub_item,
                                          revision,
                                          (long)p2l_item->number,
-                                         apr_off_t_toa(pool, entry->offset),
+                                         apr_off_t_toa(scratch_pool,
+                                                       entry->offset),
                                          (long)k);
             }
         }
@@ -411,13 +415,13 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
  * Must be a multiple of 8. */
 #define STREAM_THRESHOLD 4096
 
-/* Verify that the next SIZE bytes read from FILE are NUL.
- * SIZE must not exceed STREAM_THRESHOLD.  Use POOL for allocations.
+/* Verify that the next SIZE bytes read from FILE are NUL.  SIZE must not
+ * exceed STREAM_THRESHOLD.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 expect_buffer_nul(apr_file_t *file,
                   apr_off_t size,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   union
   {
@@ -430,7 +434,8 @@ expect_buffer_nul(apr_file_t *file,
 
   /* read the whole data block; error out on failure */
   data.chunks[(size - 1)/ sizeof(apr_uint64_t)] = 0;
-  SVN_ERR(svn_io_file_read_full2(file, data.buffer, size, NULL, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(file, data.buffer, size, NULL, NULL,
+                                 scratch_pool));
 
   /* chunky check */
   for (i = 0; i < size / sizeof(apr_uint64_t); ++i)
@@ -444,57 +449,59 @@ expect_buffer_nul(apr_file_t *file,
         const char *file_name;
         apr_off_t offset;
 
-        SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
-        SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
+        SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
+        SVN_ERR(svn_fs_x__get_file_offset(&offset, file, scratch_pool));
         offset -= size - i;
 
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Empty section in file %s contains "
                                    "non-NUL data at offset %s"),
-                                 file_name, apr_off_t_toa(pool, offset));
+                                 file_name,
+                                 apr_off_t_toa(scratch_pool, offset));
       }
 
   return SVN_NO_ERROR;
 }
 
 /* Verify that the next SIZE bytes read from FILE are NUL.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 read_all_nul(apr_file_t *file,
              apr_off_t size,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   for (; size >= STREAM_THRESHOLD; size -= STREAM_THRESHOLD)
-    SVN_ERR(expect_buffer_nul(file, STREAM_THRESHOLD, pool));
+    SVN_ERR(expect_buffer_nul(file, STREAM_THRESHOLD, scratch_pool));
 
   if (size)
-    SVN_ERR(expect_buffer_nul(file, size, pool));
+    SVN_ERR(expect_buffer_nul(file, size, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Compare the ACTUAL checksum with the one expected by ENTRY.
  * Return an error in case of mismatch.  Use the name of FILE
- * in error message.  Allocate data in POOL.
+ * in error message.  Allocate temporary data in SCRATCH_POOL.
  */
 static svn_error_t *
 expected_checksum(apr_file_t *file,
                   svn_fs_x__p2l_entry_t *entry,
                   apr_uint32_t actual,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   if (actual != entry->fnv1_checksum)
     {
       const char *file_name;
 
-      SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
-      SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
+      SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
+      SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("Checksum mismatch in item at offset %s of "
                                  "length %s bytes in file %s"),
-                               apr_off_t_toa(pool, entry->offset),
-                               apr_off_t_toa(pool, entry->size), file_name);
+                               apr_off_t_toa(scratch_pool, entry->offset),
+                               apr_off_t_toa(scratch_pool, entry->size),
+                               file_name);
     }
 
   return SVN_NO_ERROR;
@@ -502,37 +509,38 @@ expected_checksum(apr_file_t *file,
 
 /* Verify that the FNV checksum over the next ENTRY->SIZE bytes read
  * from FILE will match ENTRY's expected checksum.  SIZE must not
- * exceed STREAM_THRESHOLD.  Use POOL for allocations.
+ * exceed STREAM_THRESHOLD.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 expected_buffered_checksum(apr_file_t *file,
                            svn_fs_x__p2l_entry_t *entry,
-                           apr_pool_t *pool)
+                           apr_pool_t *scratch_pool)
 {
   unsigned char buffer[STREAM_THRESHOLD];
   SVN_ERR_ASSERT(entry->size <= STREAM_THRESHOLD);
 
   SVN_ERR(svn_io_file_read_full2(file, buffer, (apr_size_t)entry->size,
-                                 NULL, NULL, pool));
+                                 NULL, NULL, scratch_pool));
   SVN_ERR(expected_checksum(file, entry,
                             svn__fnv1a_32x4(buffer, (apr_size_t)entry->size),
-                            pool));
+                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Verify that the FNV checksum over the next ENTRY->SIZE bytes read from
- * FILE will match ENTRY's expected checksum.  Use POOL for allocations.
+ * FILE will match ENTRY's expected checksum.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 expected_streamed_checksum(apr_file_t *file,
                            svn_fs_x__p2l_entry_t *entry,
-                           apr_pool_t *pool)
+                           apr_pool_t *scratch_pool)
 {
   unsigned char buffer[STREAM_THRESHOLD];
   svn_checksum_t *checksum;
   svn_checksum_ctx_t *context
-    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, scratch_pool);
   apr_off_t size = entry->size;
 
   while (size > 0)
@@ -541,15 +549,15 @@ expected_streamed_checksum(apr_file_t *file,
                          ? sizeof(buffer)
                          : (apr_size_t)size;
       SVN_ERR(svn_io_file_read_full2(file, buffer, to_read, NULL, NULL,
-                                     pool));
+                                     scratch_pool));
       SVN_ERR(svn_checksum_update(context, buffer, to_read));
       size -= to_read;
     }
 
-  SVN_ERR(svn_checksum_final(&checksum, context, pool));
+  SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
   SVN_ERR(expected_checksum(file, entry,
                             ntohl(*(const apr_uint32_t *)checksum->digest),
-                            pool));
+                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -557,7 +565,7 @@ expected_streamed_checksum(apr_file_t *file,
 /* Verify that for all phys-to-log index entries for revisions START to
  * START + COUNT-1 in FS match the actual pack / rev file contents.
  * If given, invoke CANCEL_FUNC with CANCEL_BATON at regular intervals.
- * Use POOL for allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  *
  * Please note that we can only check on pack / rev file granularity and
  * must only be called for a single rev / pack file.
@@ -568,32 +576,35 @@ compare_p2l_to_rev(svn_fs_t *fs,
                    svn_revnum_t count,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
   svn_fs_x__revision_file_t *rev_file;
 
   /* open the pack / rev file that is covered by the p2l index */
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, pool,
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, scratch_pool,
                                           iterpool));
 
   /* check file size vs. range covered by index */
   SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
-                                       pool));
+                                       scratch_pool));
 
   if (rev_file->l2p_offset != max_offset)
     return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT, NULL,
                              _("File size of %s for revision r%ld does "
                                "not match p2l index size of %s"),
-                             apr_off_t_toa(pool, rev_file->l2p_offset), start,
-                             apr_off_t_toa(pool, max_offset));
+                             apr_off_t_toa(scratch_pool,
+                                           rev_file->l2p_offset),
+                             start,
+                             apr_off_t_toa(scratch_pool,
+                                           max_offset));
 
   SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,
-                                   pool));
+                                   scratch_pool));
 
   /* for all offsets in the file, get the P2L index entries and check
      them against the L2P index */
@@ -636,24 +647,25 @@ compare_p2l_to_rev(svn_fs_t *fs,
                                        " is non-contiguous between offsets "
                                        " %s and %s"),
                                      start,
-                                     apr_off_t_toa(pool, offset),
-                                     apr_off_t_toa(pool, entry->offset));
+                                     apr_off_t_toa(scratch_pool, offset),
+                                     apr_off_t_toa(scratch_pool,
+                                                   entry->offset));
 
           /* empty sections must contain NUL bytes only */
           if (entry->type == SVN_FS_X__ITEM_TYPE_UNUSED)
             {
               /* skip filler entry at the end of the p2l index */
               if (entry->offset != max_offset)
-                SVN_ERR(read_all_nul(rev_file->file, entry->size, pool));
+                SVN_ERR(read_all_nul(rev_file->file, entry->size, iterpool));
             }
           else
             {
               if (entry->size < STREAM_THRESHOLD)
                 SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
-                                                   pool));
+                                                   scratch_pool));
               else
                 SVN_ERR(expected_streamed_checksum(rev_file->file, entry,
-                                                   pool));
+                                                   scratch_pool));
             }
 
           /* advance offset */
@@ -681,10 +693,10 @@ verify_revprops(svn_fs_t *fs,
                 svn_revnum_t end,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   svn_revnum_t revision;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   for (revision = start; revision < end; ++revision)
     {
@@ -729,12 +741,12 @@ verify_metadata_consistency(svn_fs_t *fs,
                             void *notify_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t revision, next_revision;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   for (revision = start; revision <= end; revision = next_revision)
     {
@@ -773,7 +785,7 @@ verify_metadata_consistency(svn_fs_t *fs,
          Make sure, we operate on up-to-date information. */
       if (err)
         SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                                                fs, pool));
+                                                fs, scratch_pool));
 
       /* retry the whole shard if it got packed in the meantime */
       if (err && count != svn_fs_x__pack_size(fs, revision))
@@ -804,7 +816,7 @@ svn_fs_x__verify(svn_fs_t *fs,
                  void *notify_baton,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
@@ -814,18 +826,19 @@ svn_fs_x__verify(svn_fs_t *fs,
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     end = youngest;
-  SVN_ERR(svn_fs_x__ensure_revision_exists(start, fs, pool));
-  SVN_ERR(svn_fs_x__ensure_revision_exists(end, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(start, fs, scratch_pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(end, fs, scratch_pool));
 
   /* log/phys index consistency.  We need to check them first to make
      sure we can access the rev / pack files in format7. */
   SVN_ERR(verify_metadata_consistency(fs, start, end,
                                       notify_func, notify_baton,
-                                      cancel_func, cancel_baton, pool));
+                                      cancel_func, cancel_baton,
+                                      scratch_pool));
 
   /* rep cache consistency */
   SVN_ERR(verify_rep_cache(fs, start, end, notify_func, notify_baton,
-                            cancel_func, cancel_baton, pool));
+                            cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
