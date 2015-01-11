@@ -76,13 +76,15 @@
 /* Check that BUF, a nul-terminated buffer of text from format file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.
 
-   Uses POOL for temporary allocation. */
+   Uses SCRATCH_POOL for temporary allocation. */
 static svn_error_t *
-check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
-                                 const char *path, apr_pool_t *pool)
+check_format_file_buffer_numeric(const char *buf,
+                                 apr_off_t offset,
+                                 const char *path,
+                                 apr_pool_t *scratch_pool)
 {
   return svn_fs_x__check_file_buffer_numeric(buf, offset, path, "Format",
-                                             pool);
+                                             scratch_pool);
 }
 
 /* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
@@ -102,45 +104,51 @@ check_format(int format)
      SVN_FS_X__FORMAT_NUMBER, format);
 }
 
+/* Read the format file at PATH and set *PFORMAT to the format version found
+ * and *MAX_FILES_PER_DIR to the shard size.  Use SCRATCH_POOL for temporary
+ * allocations. */
 static svn_error_t *
-read_format(int *pformat, int *max_files_per_dir,
-            const char *path, apr_pool_t *pool)
+read_format(int *pformat,
+            int *max_files_per_dir,
+            const char *path,
+            apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
   svn_stringbuf_t *content;
   svn_stringbuf_t *buf;
   svn_boolean_t eos = FALSE;
 
-  SVN_ERR(svn_stringbuf_from_file2(&content, path, pool));
-  stream = svn_stream_from_stringbuf(content, pool);
-  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&content, path, scratch_pool));
+  stream = svn_stream_from_stringbuf(content, scratch_pool);
+  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, scratch_pool));
   if (buf->len == 0 && eos)
     {
       /* Return a more useful error message. */
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                                _("Can't read first line of format file '%s'"),
-                               svn_dirent_local_style(path, pool));
+                               svn_dirent_local_style(path, scratch_pool));
     }
 
   /* Check that the first line contains only digits. */
-  SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
+  SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, scratch_pool));
   SVN_ERR(svn_cstring_atoi(pformat, buf->data));
 
   /* Check that we support this format at all */
   SVN_ERR(check_format(*pformat));
 
   /* Read any options. */
-  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, scratch_pool));
   if (!eos && strncmp(buf->data, "layout sharded ", 15) == 0)
     {
       /* Check that the argument is numeric. */
-      SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path, pool));
+      SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path,
+                                               scratch_pool));
       SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf->data + 15));
     }
   else
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                   _("'%s' contains invalid filesystem format option '%s'"),
-                  svn_dirent_local_style(path, pool), buf->data);
+                  svn_dirent_local_style(path, scratch_pool), buf->data);
 
   return SVN_NO_ERROR;
 }
@@ -149,20 +157,21 @@ read_format(int *pformat, int *max_files_per_dir,
    to a new format file in PATH, possibly expecting to overwrite a
    previously existing file.
 
-   Use POOL for temporary allocation. */
+   Use SCRATCH_POOL for temporary allocation. */
 svn_error_t *
 svn_fs_x__write_format(svn_fs_t *fs,
                        svn_boolean_t overwrite,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *sb;
-  const char *path = svn_fs_x__path_format(fs, pool);
+  const char *path = svn_fs_x__path_format(fs, scratch_pool);
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
   SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_X__FORMAT_NUMBER);
 
-  sb = svn_stringbuf_createf(pool, "%d\n", ffd->format);
-  svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
+  sb = svn_stringbuf_createf(scratch_pool, "%d\n", ffd->format);
+  svn_stringbuf_appendcstr(sb, apr_psprintf(scratch_pool,
+                                            "layout sharded %d\n",
                                             ffd->max_files_per_dir));
 
   /* svn_io_write_version_file() does a load of magic to allow it to
@@ -171,16 +180,16 @@ svn_fs_x__write_format(svn_fs_t *fs,
   if (! overwrite)
     {
       /* Create the file */
-      SVN_ERR(svn_io_file_create(path, sb->data, pool));
+      SVN_ERR(svn_io_file_create(path, sb->data, scratch_pool));
     }
   else
     {
       SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
-                                  NULL /* copy_perms_path */, pool));
+                                  NULL /* copy_perms_path */, scratch_pool));
     }
 
   /* And set the perms to make it read only */
-  return svn_io_set_file_read_only(path, FALSE, pool);
+  return svn_io_set_file_read_only(path, FALSE, scratch_pool);
 }
 
 /* Check that BLOCK_SIZE is a valid block / page size, i.e. it is within
@@ -325,9 +334,11 @@ read_config(svn_fs_x__data_t *ffd,
   return SVN_NO_ERROR;
 }
 
+/* Write FS' initial configuration file.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 write_config(svn_fs_t *fs,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
 #define NL APR_EOL_STR
   static const char * const fsx_conf_contents =
@@ -504,8 +515,9 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
 ;
 #undef NL
-  return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                            fsx_conf_contents, pool);
+  return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG,
+                                            scratch_pool),
+                            fsx_conf_contents, scratch_pool);
 }
 
 /* Read FS's UUID file and store the data in the FS struct. */
@@ -557,25 +569,27 @@ svn_fs_x__read_format_file(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_x__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
+svn_fs_x__open(svn_fs_t *fs,
+               const char *path,
+               apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   fs->path = apr_pstrdup(fs->pool, path);
 
   /* Read the FS format file. */
-  SVN_ERR(svn_fs_x__read_format_file(fs, pool));
+  SVN_ERR(svn_fs_x__read_format_file(fs, scratch_pool));
 
   /* Read in and cache the repository uuid. */
-  SVN_ERR(read_uuid(fs, pool));
+  SVN_ERR(read_uuid(fs, scratch_pool));
 
   /* Read the min unpacked revision. */
-  SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, pool));
+  SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, scratch_pool));
 
   /* Read the configuration file. */
-  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
 
   return svn_error_trace(svn_fs_x__read_current(&ffd->youngest_rev_cache,
-                                                fs, pool));
+                                                fs, scratch_pool));
 }
 
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
@@ -589,16 +603,25 @@ struct upgrade_baton_t
   void *cancel_baton;
 };
 
+/* Upgrade the FS given in upgrade_baton_t *)BATON to the latest format
+ * version.  Apply options an invoke callback from that BATON.
+ * Temporary allocations are to be made from SCRATCH_POOL.
+ *
+ * At the moment, this is a simple placeholder as we don't support upgrades
+ * from experimental FSX versions.
+ */
 static svn_error_t *
-upgrade_body(void *baton, apr_pool_t *pool)
+upgrade_body(void *baton,
+             apr_pool_t *scratch_pool)
 {
   struct upgrade_baton_t *upgrade_baton = baton;
   svn_fs_t *fs = upgrade_baton->fs;
   int format, max_files_per_dir;
-  const char *format_path = svn_fs_x__path_format(fs, pool);
+  const char *format_path = svn_fs_x__path_format(fs, scratch_pool);
 
   /* Read the FS format number and max-files-per-dir setting. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
+  SVN_ERR(read_format(&format, &max_files_per_dir, format_path,
+                      scratch_pool));
 
   /* If we're already up-to-date, there's nothing else to be done here. */
   if (format == SVN_FS_X__FORMAT_NUMBER)
@@ -615,7 +638,7 @@ svn_fs_x__upgrade(svn_fs_t *fs,
                   void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   struct upgrade_baton_t baton;
   baton.fs = fs;
@@ -624,17 +647,18 @@ svn_fs_x__upgrade(svn_fs_t *fs,
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
   
-  return svn_fs_x__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
+  return svn_fs_x__with_all_locks(fs, upgrade_body, (void *)&baton,
+                                  scratch_pool);
 }
 
 
 svn_error_t *
 svn_fs_x__youngest_rev(svn_revnum_t *youngest_p,
                        svn_fs_t *fs,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  SVN_ERR(svn_fs_x__read_current(youngest_p, fs, pool));
+  SVN_ERR(svn_fs_x__read_current(youngest_p, fs, scratch_pool));
   ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
@@ -643,7 +667,7 @@ svn_fs_x__youngest_rev(svn_revnum_t *youngest_p,
 svn_error_t *
 svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
@@ -657,7 +681,7 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
   if (rev <= ffd->youngest_rev_cache)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_x__read_current(&ffd->youngest_rev_cache, fs, pool));
+  SVN_ERR(svn_fs_x__read_current(&ffd->youngest_rev_cache, fs, scratch_pool));
 
   /* Check again. */
   if (rev <= ffd->youngest_rev_cache)
@@ -915,7 +939,7 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
                            const char *path,
                            int format,
                            int shard_size,
-                           apr_pool_t *pool)
+                           apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
@@ -926,50 +950,57 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
   ffd->max_files_per_dir = shard_size;
 
   /* Create the revision data directories. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_rev_shard(fs, 0, pool),
-                                      pool));
+  SVN_ERR(svn_io_make_dir_recursively(
+                              svn_fs_x__path_rev_shard(fs, 0, scratch_pool),
+                              scratch_pool));
 
   /* Create the revprops directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_revprops_shard(fs, 0,
-                                                                    pool),
-                                      pool));
+  SVN_ERR(svn_io_make_dir_recursively(
+                         svn_fs_x__path_revprops_shard(fs, 0, scratch_pool),
+                         scratch_pool));
 
   /* Create the transaction directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_txns_dir(fs, pool),
-                                      pool));
+  SVN_ERR(svn_io_make_dir_recursively(
+                                  svn_fs_x__path_txns_dir(fs, scratch_pool),
+                                  scratch_pool));
 
   /* Create the protorevs directory. */
-  SVN_ERR(svn_io_make_dir_recursively(svn_fs_x__path_txn_proto_revs(fs, pool),
-                                      pool));
+  SVN_ERR(svn_io_make_dir_recursively(
+                            svn_fs_x__path_txn_proto_revs(fs, scratch_pool),
+                            scratch_pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_current(fs, pool), pool));
-  SVN_ERR(svn_fs_x__write_current(fs, 0, pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_current(fs, scratch_pool),
+                                   scratch_pool));
+  SVN_ERR(svn_fs_x__write_current(fs, 0, scratch_pool));
 
   /* Create the 'uuid' file. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, pool), pool));
-  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, NULL, pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, scratch_pool),
+                                   scratch_pool));
+  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, NULL, scratch_pool));
 
   /* Create the fsfs.conf file. */
-  SVN_ERR(write_config(fs, pool));
-  SVN_ERR(read_config(ffd, fs->path, fs->pool, pool));
+  SVN_ERR(write_config(fs, scratch_pool));
+  SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
 
   /* Add revision 0. */
-  SVN_ERR(write_revision_zero(fs, pool));
+  SVN_ERR(write_revision_zero(fs, scratch_pool));
 
   /* Create the min unpacked rev file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_min_unpacked_rev(fs, pool),
-                             "0\n", pool));
+  SVN_ERR(svn_io_file_create(
+                          svn_fs_x__path_min_unpacked_rev(fs, scratch_pool),
+                          "0\n", scratch_pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, pool),
-                             "0\n", pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_txn_current_lock(fs, pool),
-                                   pool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_txn_current(fs, scratch_pool),
+                             "0\n", scratch_pool));
+  SVN_ERR(svn_io_file_create_empty(
+                          svn_fs_x__path_txn_current_lock(fs, scratch_pool),
+                          scratch_pool));
 
   /* Initialize the revprop caching info. */
-  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, scratch_pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
@@ -978,7 +1009,7 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__create(svn_fs_t *fs,
                  const char *path,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   int format = SVN_FS_X__FORMAT_NUMBER;
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -989,7 +1020,7 @@ svn_fs_x__create(svn_fs_t *fs,
     {
       svn_version_t *compatible_version;
       SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
-                                         pool));
+                                         scratch_pool));
 
       /* select format number */
       switch(compatible_version->minor)
@@ -1012,10 +1043,10 @@ svn_fs_x__create(svn_fs_t *fs,
   /* Actual FS creation. */
   SVN_ERR(svn_fs_x__create_file_tree(fs, path, format,
                                      SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR,
-                                     pool));
+                                     scratch_pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(svn_fs_x__write_format(fs, FALSE, pool));
+  SVN_ERR(svn_fs_x__write_format(fs, FALSE, scratch_pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
@@ -1025,17 +1056,17 @@ svn_error_t *
 svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *uuid,
                    const char *instance_id,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  const char *uuid_path = svn_fs_x__path_uuid(fs, pool);
-  svn_stringbuf_t *contents = svn_stringbuf_create_empty(pool);
+  const char *uuid_path = svn_fs_x__path_uuid(fs, scratch_pool);
+  svn_stringbuf_t *contents = svn_stringbuf_create_empty(scratch_pool);
 
   if (! uuid)
-    uuid = svn_uuid_generate(pool);
+    uuid = svn_uuid_generate(scratch_pool);
 
   if (! instance_id)
-    instance_id = svn_uuid_generate(pool);
+    instance_id = svn_uuid_generate(scratch_pool);
 
   svn_stringbuf_appendcstr(contents, uuid);
   svn_stringbuf_appendcstr(contents, "\n");
@@ -1045,8 +1076,9 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
   SVN_ERR(svn_io_write_atomic(uuid_path, contents->data, contents->len,
-                              svn_fs_x__path_current(fs, pool) /* perms */,
-                              pool));
+                              /* perms */
+                              svn_fs_x__path_current(fs, scratch_pool),
+                              scratch_pool));
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
   ffd->instance_id = apr_pstrdup(fs->pool, instance_id);
@@ -1061,9 +1093,9 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__ensure_dir_exists(const char *path,
                             const char *fs_path,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
-  svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
+  svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, scratch_pool);
   if (err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       svn_error_clear(err);
@@ -1073,7 +1105,7 @@ svn_fs_x__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_io_copy_perms(fs_path, path, pool);
+  return svn_io_copy_perms(fs_path, path, scratch_pool);
 }
 
 
@@ -1110,12 +1142,13 @@ struct change_rev_prop_baton {
    write lock.  This implements the svn_fs_x__with_write_lock()
    'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
 static svn_error_t *
-change_rev_prop_body(void *baton, apr_pool_t *pool)
+change_rev_prop_body(void *baton,
+                     apr_pool_t *scratch_pool)
 {
   struct change_rev_prop_baton *cb = baton;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs_x__revision_proplist(&table, cb->fs, cb->rev, pool));
+  SVN_ERR(svn_fs_x__revision_proplist(&table, cb->fs, cb->rev, scratch_pool));
 
   if (cb->old_value_p)
     {
@@ -1135,7 +1168,8 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
     }
   svn_hash_sets(table, cb->name, cb->value);
 
-  return svn_fs_x__set_revision_proplist(cb->fs, cb->rev, table, pool);
+  return svn_fs_x__set_revision_proplist(cb->fs, cb->rev, table,
+                                         scratch_pool);
 }
 
 svn_error_t *
@@ -1144,7 +1178,7 @@ svn_fs_x__change_rev_prop(svn_fs_t *fs,
                           const char *name,
                           const svn_string_t *const *old_value_p,
                           const svn_string_t *value,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   struct change_rev_prop_baton cb;
 
@@ -1156,7 +1190,8 @@ svn_fs_x__change_rev_prop(svn_fs_t *fs,
   cb.old_value_p = old_value_p;
   cb.value = value;
 
-  return svn_fs_x__with_write_lock(fs, change_rev_prop_body, &cb, pool);
+  return svn_fs_x__with_write_lock(fs, change_rev_prop_body, &cb,
+                                   scratch_pool);
 }
 
 
