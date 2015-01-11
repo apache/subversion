@@ -538,16 +538,16 @@ write_reps(svn_packed__int_stream_t *rep_stream,
 svn_error_t *
 svn_fs_x__write_noderevs_container(svn_stream_t *stream,
                                    const svn_fs_x__noderevs_t *container,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
   int i;
 
   string_table_t *paths = container->paths
                         ? container->paths
                         : svn_fs_x__string_table_create(container->builder,
-                                                        pool);
+                                                        scratch_pool);
 
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   /* one common top-level stream for all arrays. One sub-stream */
   svn_packed__int_stream_t *structs_stream
@@ -610,8 +610,8 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     }
 
   /* write to disk */
-  SVN_ERR(svn_fs_x__write_string_table(stream, paths, pool));
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_fs_x__write_string_table(stream, paths, scratch_pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
   
   return SVN_NO_ERROR;
 }
