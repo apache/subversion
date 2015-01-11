@@ -79,13 +79,13 @@ svn_fs_x__noderevs_get(svn_fs_x__noderev_t **noderev_p,
 
 /* I/O interface. */
 
-/* Write a serialized representation of CONTAINER to STREAM.  Use POOL for
- * temporary allocations.
+/* Write a serialized representation of CONTAINER to STREAM.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_noderevs_container(svn_stream_t *stream,
-                                    const svn_fs_x__noderevs_t *container,
-                                    apr_pool_t *pool);
+                                   const svn_fs_x__noderevs_t *container,
+                                   apr_pool_t *scratch_pool);
 
 /* Read a noderev container from its serialized representation in STREAM.
  * Allocate the result in RESULT_POOL and return it in *CONTAINER.  Use
