@@ -27,11 +27,11 @@
 
 /* Recover the fsx associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
-   Use POOL for temporary allocations. */
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__recover(svn_fs_t *fs,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
-                  apr_pool_t *pool);
+                  apr_pool_t *scratch_pool);
 
 #endif
