@@ -689,10 +689,10 @@ svn_fs_x__extractor_drive(svn_stringbuf_t **contents,
 svn_error_t *
 svn_fs_x__write_reps_container(svn_stream_t *stream,
                                const svn_fs_x__reps_builder_t *builder,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   int i;
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   /* one top-level stream for each array */
   svn_packed__int_stream_t *bases_stream
@@ -755,7 +755,7 @@ svn_fs_x__write_reps_container(svn_stream_t *stream,
   svn_packed__add_uint(misc_stream, 0);
 
   /* write to stream */
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
   
   return SVN_NO_ERROR;
 }
