@@ -194,10 +194,10 @@ get_noderev(const fs_x__id_t *id)
 /* Implement id_vtable_t.unparse */
 static svn_string_t *
 id_unparse(const svn_fs_id_t *fs_id,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
-  return svn_fs_x__id_unparse(&id->noderev_id, pool);
+  return svn_fs_x__id_unparse(&id->noderev_id, result_pool);
 }
 
 /* Implement id_vtable_t.compare.
