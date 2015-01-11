@@ -357,12 +357,12 @@ svn_fs_x__check_file_buffer_numeric(const char *buf,
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
  * by #svn_fs_fs__path_min_unpacked_rev() for FS.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
                                 svn_fs_t *fs,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 /* Re-read the MIN_UNPACKED_REV member of FS from disk.
  * Use POOL for temporary allocations.
@@ -380,19 +380,19 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
                                  apr_pool_t *scratch_pool);
 
 /* Set *REV to the value read from the 'current' file.  Perform temporary
- * allocations in POOL.
+ * allocations in SCRATCH_POOL.
  */
 svn_error_t *
 svn_fs_x__read_current(svn_revnum_t *rev,
                        svn_fs_t *fs,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 /* Atomically update the 'current' file to hold the specifed REV.
-   Perform temporary allocations in POOL. */
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__write_current(svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *pool);
+                        apr_pool_t *scratch_pool);
 
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will
  * not be modified unless the whole file was read successfully.
@@ -410,11 +410,12 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
                                   svn_boolean_t last_attempt,
                                   apr_pool_t *pool);
 
-/* Fetch the current offset of FILE into *OFFSET_P. */
+/* Fetch the current offset of FILE into *OFFSET_P.
+ * Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__get_file_offset(apr_off_t *offset_p,
                           apr_file_t *file,
-                          apr_pool_t *pool);
+                          apr_pool_t *scratch_pool);
 
 /* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
@@ -438,7 +439,7 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
 /* Move a file into place from OLD_FILENAME in the transactions
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL.
+   PERMS_REFERENCE.  Temporary allocations are from SCRATCH_POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
@@ -446,6 +447,6 @@ svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
                           const char *perms_reference,
-                          apr_pool_t *pool);
+                          apr_pool_t *scratch_pool);
 
 #endif
