@@ -86,12 +86,12 @@ svn_fs_x__string_table_get(const string_table_t *table,
                            apr_pool_t *pool);
 
 /* Write a serialized representation of the string table TABLE to STREAM.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
 /* Read the serialized string table representation from STREAM and return
  * the resulting runtime representation in *TABLE_P.  Allocate it in
