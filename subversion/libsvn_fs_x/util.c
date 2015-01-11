@@ -443,30 +443,32 @@ svn_fs_x__check_file_buffer_numeric(const char *buf, apr_off_t offset,
 svn_error_t *
 svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
                                 svn_fs_t *fs,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
 
   SVN_ERR(svn_io_file_open(&file,
-                           svn_fs_x__path_min_unpacked_rev(fs, pool),
+                           svn_fs_x__path_min_unpacked_rev(fs, scratch_pool),
                            APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT,
-                           pool));
+                           scratch_pool));
   len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(svn_io_read_length_line(file, buf, &len, scratch_pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   SVN_ERR(svn_revnum_parse(min_unpacked_rev, buf, NULL));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs,
+                                  apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  return svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
+  return svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs,
+                                         scratch_pool);
 }
 
 /* Write a file FILENAME in directory FS_PATH, containing a single line
@@ -495,13 +497,13 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__read_current(svn_revnum_t *rev,
                        svn_fs_t *fs,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   const char *str;
   svn_stringbuf_t *content;
   SVN_ERR(svn_fs_x__read_content(&content,
-                                 svn_fs_x__path_current(fs, pool),
-                                 pool));
+                                 svn_fs_x__path_current(fs, scratch_pool),
+                                 scratch_pool));
   SVN_ERR(svn_revnum_parse(rev, content->data, &str));
   if (*str != '\n')
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -511,23 +513,25 @@ svn_fs_x__read_current(svn_revnum_t *rev,
 }
 
 /* Atomically update the 'current' file to hold the specifed REV.
-   Perform temporary allocations in POOL. */
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_fs_x__write_current(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_x__write_current(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *scratch_pool)
 {
   char *buf;
   const char *tmp_name, *name;
 
   /* Now we can just write out this line. */
-  buf = apr_psprintf(pool, "%ld\n", rev);
+  buf = apr_psprintf(scratch_pool, "%ld\n", rev);
 
-  name = svn_fs_x__path_current(fs, pool);
+  name = svn_fs_x__path_current(fs, scratch_pool);
   SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, pool),
+                              svn_dirent_dirname(name, scratch_pool),
                               buf, strlen(buf),
-                              svn_io_file_del_none, pool));
+                              svn_io_file_del_none, scratch_pool));
 
-  return svn_fs_x__move_into_place(tmp_name, name, name, pool);
+  return svn_fs_x__move_into_place(tmp_name, name, name, scratch_pool);
 }
 
 
@@ -586,14 +590,14 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
 svn_error_t *
 svn_fs_x__get_file_offset(apr_off_t *offset_p,
                           apr_file_t *file,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
 
   /* Note that, for buffered files, one (possibly surprising) side-effect
      of this call is to flush any unwritten data to disk. */
   offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, scratch_pool));
   *offset_p = offset;
 
   return SVN_NO_ERROR;
@@ -661,7 +665,7 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
 /* Move a file into place from OLD_FILENAME in the transactions
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL.
+   PERMS_REFERENCE.  Temporary allocations are from SCRATCH_POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
@@ -669,14 +673,14 @@ svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
                           const char *perms_reference,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 
-  SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, pool));
+  SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, pool);
+  err = svn_io_file_rename(old_filename, new_filename, scratch_pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
       apr_file_t *file;
@@ -684,18 +688,19 @@ svn_fs_x__move_into_place(const char *old_filename,
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
+      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE,
+                               scratch_pool));
 
       /* Flush the target of the copy to disk. */
       SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
-                               APR_OS_DEFAULT, pool));
+                               APR_OS_DEFAULT, scratch_pool));
       /* ### BH: Does this really guarantee a flush of the data written
          ### via a completely different handle on all operating systems?
          ###
          ### Maybe we should perform the copy ourselves instead of making
          ### apr do that and flush the real handle? */
-      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
+      SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+      SVN_ERR(svn_io_file_close(file, scratch_pool));
     }
   if (err)
     return svn_error_trace(err);
@@ -710,11 +715,11 @@ svn_fs_x__move_into_place(const char *old_filename,
     const char *dirname;
     apr_file_t *file;
 
-    dirname = svn_dirent_dirname(new_filename, pool);
+    dirname = svn_dirent_dirname(new_filename, scratch_pool);
     SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-    SVN_ERR(svn_io_file_close(file, pool));
+                             scratch_pool));
+    SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+    SVN_ERR(svn_io_file_close(file, scratch_pool));
   }
 #endif
 
