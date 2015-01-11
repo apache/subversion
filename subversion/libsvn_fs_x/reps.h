@@ -141,12 +141,12 @@ svn_fs_x__extractor_drive(svn_stringbuf_t** contents,
 /* I/O interface. */
 
 /* Write a serialized representation of the final container described by
- * BUILDER to STREAM.  Use POOL for temporary allocations.
+ * BUILDER to STREAM.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_reps_container(svn_stream_t *stream,
                                const svn_fs_x__reps_builder_t *builder,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 /* Read a representations container from its serialized representation in
  * STREAM.  Allocate the result in RESULT_POOL and return it in *CONTAINER.
