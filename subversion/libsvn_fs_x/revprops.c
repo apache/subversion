@@ -405,12 +405,12 @@ static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
                                const char *message,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   svn_error_t *err = svn_error_createf(
                        SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
                        underlying_err, message,
-                       svn_dirent_local_style(fs->path, pool));
+                       svn_dirent_local_style(fs->path, scratch_pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -1176,7 +1176,7 @@ write_non_packed_revprop(const char **final_path,
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
  * The latter may be NULL.
  *
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 switch_to_new_revprop(svn_fs_t *fs,
@@ -1185,26 +1185,26 @@ switch_to_new_revprop(svn_fs_t *fs,
                       const char *perms_reference,
                       apr_array_header_t *files_to_delete,
                       svn_boolean_t bump_generation,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
   apr_int64_t generation;
 
   /* Now, we may actually be replacing revprops. Make sure that all other
      threads and processes will know about this. */
   if (bump_generation)
-    SVN_ERR(begin_revprop_change(&generation, fs, pool));
+    SVN_ERR(begin_revprop_change(&generation, fs, scratch_pool));
 
   SVN_ERR(svn_fs_x__move_into_place(tmp_path, final_path, perms_reference,
-                                    pool));
+                                    scratch_pool));
 
   /* Indicate that the update (if relevant) has been completed. */
   if (bump_generation)
-    SVN_ERR(end_revprop_change(fs, generation, pool));
+    SVN_ERR(end_revprop_change(fs, generation, scratch_pool));
 
   /* Clean up temporary files, if necessary. */
   if (files_to_delete)
     {
-      apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
       for (i = 0; i < files_to_delete->nelts; ++i)
@@ -1229,16 +1229,16 @@ serialize_revprops_header(svn_stream_t *stream,
                           apr_array_header_t *sizes,
                           int start,
                           int end,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
   SVN_ERR_ASSERT(start < end);
 
   /* start revision and entry count */
-  SVN_ERR(svn_stream_printf(stream, pool, "%ld\n", start_revision));
-  SVN_ERR(svn_stream_printf(stream, pool, "%d\n", end - start));
+  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%ld\n", start_revision));
+  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%d\n", end - start));
 
   /* the sizes array */
   for (i = start; i < end; ++i)
@@ -1268,7 +1268,7 @@ serialize_revprops_header(svn_stream_t *stream,
  * taken in that case but only a subset of the old data will be copied.
  *
  * NEW_TOTAL_SIZE is a hint for pre-allocating buffers of appropriate size.
- * POOL is used for temporary allocations.
+ * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
 repack_revprops(svn_fs_t *fs,
@@ -1279,7 +1279,7 @@ repack_revprops(svn_fs_t *fs,
                 svn_stringbuf_t *new_serialized,
                 apr_off_t new_total_size,
                 svn_stream_t *file_stream,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
@@ -1287,14 +1287,15 @@ repack_revprops(svn_fs_t *fs,
 
   /* create data empty buffers and the stream object */
   svn_stringbuf_t *uncompressed
-    = svn_stringbuf_create_ensure((apr_size_t)new_total_size, pool);
+    = svn_stringbuf_create_ensure((apr_size_t)new_total_size, scratch_pool);
   svn_stringbuf_t *compressed
-    = svn_stringbuf_create_empty(pool);
-  stream = svn_stream_from_stringbuf(uncompressed, pool);
+    = svn_stringbuf_create_empty(scratch_pool);
+  stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
 
   /* write the header*/
   SVN_ERR(serialize_revprops_header(stream, revprops->start_revision + start,
-                                    revprops->sizes, start, end, pool));
+                                    revprops->sizes, start, end,
+                                    scratch_pool));
 
   /* append the serialized revprops */
   for (i = start; i < end; ++i)
@@ -1548,12 +1549,12 @@ write_packed_revprop(const char **final_path,
 }
 
 /* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
+   PROPLIST.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__set_revision_proplist(svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 apr_hash_t *proplist,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_packed;
   svn_boolean_t bump_generation = FALSE;
@@ -1562,7 +1563,7 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
 
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_x__is_packed_revprop(fs, rev);
@@ -1577,55 +1578,59 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   else
     {
       svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, rev, pool),
-                                &kind, pool));
+      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, rev,
+                                                        scratch_pool),
+                                &kind, scratch_pool));
       bump_generation = kind != svn_node_none;
     }
 
   /* Serialize the new revprop data */
   if (is_packed)
     SVN_ERR(write_packed_revprop(&final_path, &tmp_path, &files_to_delete,
-                                 fs, rev, proplist, pool));
+                                 fs, rev, proplist, scratch_pool));
   else
     SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
-                                     fs, rev, proplist, pool));
+                                     fs, rev, proplist, scratch_pool));
 
   /* We use the rev file of this revision as the perms reference,
    * because when setting revprops for the first time, the revprop
    * file won't exist and therefore can't serve as its own reference.
    * (Whereas the rev file should already exist at this point.)
    */
-  perms_reference = svn_fs_x__path_rev_absolute(fs, rev, pool);
+  perms_reference = svn_fs_x__path_rev_absolute(fs, rev, scratch_pool);
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
-                                files_to_delete, bump_generation, pool));
+                                files_to_delete, bump_generation,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 svn_boolean_t
 svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
                                    svn_fs_t *fs,
                                    svn_revnum_t revision,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision, pool);
-  const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST, pool);
+  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision,
+                                                          scratch_pool);
+  const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST,
+                                              scratch_pool);
 
   svn_error_t *err = svn_fs_x__try_stringbuf_from_file(&content,
                                                        missing,
                                                        manifest_path,
                                                        FALSE,
-                                                       pool);
+                                                       scratch_pool);
 
   /* if the manifest cannot be read, consider the pack files inaccessible
    * even if the file itself exists. */
@@ -1657,8 +1662,8 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
           /* the respective pack file must exist (and be a file) */
           svn_node_kind_t kind;
           err = svn_io_check_path(svn_dirent_join(folder, content->data,
-                                                  pool),
-                                  &kind, pool);
+                                                  scratch_pool),
+                                  &kind, scratch_pool);
           if (err)
             {
               svn_error_clear(err);
