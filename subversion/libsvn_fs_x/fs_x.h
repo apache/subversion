@@ -32,41 +32,42 @@ svn_fs_x__read_format_file(svn_fs_t *fs,
                            apr_pool_t *scratch_pool);
 
 /* Open the fsx filesystem pointed to by PATH and associate it with
-   filesystem object FS.  Use POOL for temporary allocations.
+   filesystem object FS.  Use SCRATCH_POOL for temporary allocations.
 
    ### Some parts of *FS must have been initialized beforehand; some parts
        (including FS->path) are initialized by this function. */
 svn_error_t *
 svn_fs_x__open(svn_fs_t *fs,
                const char *path,
-               apr_pool_t *pool);
+               apr_pool_t *scratch_pool);
 
 /* Upgrade the fsx filesystem FS.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
- * Use POOL for temporary allocations. */
+ * Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__upgrade(svn_fs_t *fs,
                   svn_fs_upgrade_notify_t notify_func,
                   void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
-                  apr_pool_t *pool);
+                  apr_pool_t *scratch_pool);
 
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
-   temporary allocation in POOL. */
+   temporary allocation in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__youngest_rev(svn_revnum_t *youngest,
                        svn_fs_t *fs,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
-   revision number, else return success. */
+   revision number, else return success.  Use SCRATCH_POOL for temporary
+   allocations. */
 svn_error_t *
 svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *scratch_pool);
 
 /* Return an error iff REV does not exist in FS. */
 svn_error_t *
@@ -131,33 +132,33 @@ svn_fs_x__file_checksum(svn_checksum_t **checksum,
  * callers such as hotcopy to modify the contents before turning the
  * tree into an accessible repository.
  *
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__create_file_tree(svn_fs_t *fs,
                            const char *path,
                            int format,
                            int shard_size,
-                           apr_pool_t *pool);
+                           apr_pool_t *scratch_pool);
 
 /* Create a fs_x fileysystem referenced by FS at path PATH.  Get any
-   temporary allocations from POOL.
+   temporary allocations from SCRATCH_POOL.
 
    ### Some parts of *FS must have been initialized beforehand; some parts
        (including FS->path) are initialized by this function. */
 svn_error_t *
 svn_fs_x__create(svn_fs_t *fs,
                  const char *path,
-                 apr_pool_t *pool);
+                 apr_pool_t *scratch_pool);
 
 /* Set the uuid of repository FS to UUID and the instance ID to INSTANCE_ID.
    If any of them is NULL, use a newly generated UUID / ID instead.
-   Perform temporary allocations in POOL. */
+   Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *uuid,
                    const char *instance_id,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 /* Set *PATH to the path of REV in FS, whether in a pack file or not.
    Allocate *PATH in POOL.
@@ -185,11 +186,11 @@ svn_fs_x__path_current(svn_fs_t *fs,
    *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
    will be set to zero if a linear scheme should be used.
 
-   Use POOL for temporary allocation. */
+   Use SCRATCH_POOL for temporary allocation. */
 svn_error_t *
 svn_fs_x__write_format(svn_fs_t *fs,
                        svn_boolean_t overwrite,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
@@ -204,22 +205,23 @@ svn_fs_x__revision_prop(svn_string_t **value_p,
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,
    gives the new contents of the property.  If value is NULL, then the
-   property will be deleted.  If OLD_VALUE_P is not NULL, do nothing unless the
-   preexisting value is *OLD_VALUE_P.  Do any temporary allocation in POOL.  */
+   property will be deleted.  If OLD_VALUE_P is not NULL, do nothing unless
+   the preexisting value is *OLD_VALUE_P.
+   Do any temporary allocation in SCRATCH_POOL.  */
 svn_error_t *
 svn_fs_x__change_rev_prop(svn_fs_t *fs,
                           svn_revnum_t rev,
                           const char *name,
                           const svn_string_t *const *old_value_p,
                           const svn_string_t *value,
-                          apr_pool_t *pool);
+                          apr_pool_t *scratch_pool);
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS_PATH.*/
+   permissions as FS_PATH.  Do any temporary allocation in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__ensure_dir_exists(const char *path,
                             const char *fs_path,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /* Initialize all session-local caches in FS according to the global
    cache settings. Use SCRATCH_POOL for temporary allocations.
