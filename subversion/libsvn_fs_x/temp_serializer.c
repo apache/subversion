@@ -235,10 +235,13 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
 }
 
 /* Utility function to serialize the ENTRIES into a new serialization
- * context to be returned. Allocation will be made form POOL.
+ * context to be returned.
+ *
+ * Temporary allocation will be made form SCRATCH_POOL.
  */
 static svn_temp_serializer__context_t *
-serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
+serialize_dir(apr_array_header_t *entries,
+              apr_pool_t *scratch_pool)
 {
   dir_data_t dir_data;
   int i = 0;
@@ -255,8 +258,8 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   dir_data.count = count;
   dir_data.over_provision = over_provision;
   dir_data.operations = 0;
-  dir_data.entries = apr_palloc(pool, entries_len);
-  dir_data.lengths = apr_palloc(pool, lengths_len);
+  dir_data.entries = apr_palloc(scratch_pool, entries_len);
+  dir_data.lengths = apr_palloc(scratch_pool, lengths_len);
 
   for (i = 0; i < count; ++i)
     dir_data.entries[i] = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
@@ -266,7 +269,7 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   context = svn_temp_serializer__init(&dir_data,
                                       sizeof(dir_data),
                                       50 + count * 200 + entries_len,
-                                      pool);
+                                      scratch_pool);
 
   /* serialize entries references */
   svn_temp_serializer__push(context,
