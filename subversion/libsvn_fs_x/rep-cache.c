@@ -58,7 +58,7 @@ path_rep_cache_db(const char *fs_path,
  */
 static svn_error_t *
 open_rep_cache(void *baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   svn_fs_t *fs = baton;
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -68,7 +68,7 @@ open_rep_cache(void *baton,
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destroyed. */
-  db_path = path_rep_cache_db(fs->path, pool);
+  db_path = path_rep_cache_db(fs->path, scratch_pool);
 #ifndef WIN32
   {
     /* We want to extend the permissions that apply to the repository
@@ -76,11 +76,11 @@ open_rep_cache(void *baton,
        to umask. */
     svn_boolean_t exists;
 
-    SVN_ERR(svn_fs_x__exists_rep_cache(&exists, fs, pool));
+    SVN_ERR(svn_fs_x__exists_rep_cache(&exists, fs, scratch_pool));
     if (!exists)
       {
-        const char *current = svn_fs_x__path_current(fs, pool);
-        svn_error_t *err = svn_io_file_create_empty(db_path, pool);
+        const char *current = svn_fs_x__path_current(fs, scratch_pool);
+        svn_error_t *err = svn_io_file_create_empty(db_path, scratch_pool);
 
         if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
           /* A real error. */
@@ -90,16 +90,16 @@ open_rep_cache(void *baton,
           svn_error_clear(err);
         else
           /* We created the file. */
-          SVN_ERR(svn_io_copy_perms(current, db_path, pool));
+          SVN_ERR(svn_io_copy_perms(current, db_path, scratch_pool));
       }
   }
 #endif
   SVN_ERR(svn_sqlite__open(&sdb, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL, 0,
-                           fs->pool, pool));
+                           fs->pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, pool));
+  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, scratch_pool));
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
@@ -116,22 +116,23 @@ open_rep_cache(void *baton,
 
 svn_error_t *
 svn_fs_x__open_rep_cache(svn_fs_t *fs,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
-                                           open_rep_cache, fs, pool);
+                                           open_rep_cache, fs, scratch_pool);
   return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
 }
 
 svn_error_t *
 svn_fs_x__exists_rep_cache(svn_boolean_t *exists,
-                           svn_fs_t *fs, apr_pool_t *pool)
+                           svn_fs_t *fs,
+                           apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_io_check_path(path_rep_cache_db(fs->path, pool),
-                            &kind, pool));
+  SVN_ERR(svn_io_check_path(path_rep_cache_db(fs->path, scratch_pool),
+                            &kind, scratch_pool));
 
   *exists = (kind != svn_node_none);
   return SVN_NO_ERROR;
@@ -148,17 +149,17 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              void *walker_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int iterations = 0;
 
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
+    SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
   /* Check global invariants. */
   if (start == 0)
@@ -292,7 +293,7 @@ svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
 svn_error_t *
 svn_fs_x__set_rep_reference(svn_fs_t *fs,
                             svn_fs_x__representation_t *rep,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
@@ -303,7 +304,7 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
+    SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
   /* We only allow SHA1 checksums in this table. */
   if (! rep->has_sha1)
@@ -313,7 +314,7 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
   SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
-                            svn_checksum_to_cstring(&checksum, pool),
+                            svn_checksum_to_cstring(&checksum, scratch_pool),
                             (apr_int64_t) rep->id.change_set,
                             (apr_int64_t) rep->id.number,
                             (apr_int64_t) rep->size,
@@ -332,7 +333,8 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
       /* Constraint failed so the mapping for SHA1_CHECKSUM->REP
          should exist.  If so that's cool -- just do nothing.  If not,
          that's a red flag!  */
-      SVN_ERR(svn_fs_x__get_rep_reference(&old_rep, fs, &checksum, pool));
+      SVN_ERR(svn_fs_x__get_rep_reference(&old_rep, fs, &checksum,
+                                          scratch_pool));
 
       if (!old_rep)
         {
@@ -349,13 +351,13 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
 svn_error_t *
 svn_fs_x__del_rep_reference(svn_fs_t *fs,
                             svn_revnum_t youngest,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
 
   if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
+    SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
                                     STMT_DEL_REPS_YOUNGER_THAN_REV));
@@ -367,12 +369,12 @@ svn_fs_x__del_rep_reference(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_x__lock_rep_cache(svn_fs_t *fs,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
   if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_x__open_rep_cache(fs, pool));
+    SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
   SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db, STMT_LOCK_REP));
 
