@@ -75,11 +75,11 @@ svn_fs_x__get_locks(svn_fs_t *fs,
                     svn_depth_t depth,
                     svn_fs_get_locks_callback_t get_locks_func,
                     void *get_locks_baton,
-                    apr_pool_t *pool);
+                    apr_pool_t *scratch_pool);
 
 
 /* Examine PATH for existing locks, and check whether they can be
-   used.  Use POOL for temporary allocations.
+   used.  Use SCRATCH_POOL for temporary allocations.
 
    If no locks are present, return SVN_NO_ERROR.
 
@@ -107,7 +107,7 @@ svn_fs_x__allow_locked_operation(const char *path,
                                  svn_fs_t *fs,
                                  svn_boolean_t recurse,
                                  svn_boolean_t have_write_lock,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

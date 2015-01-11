@@ -161,7 +161,7 @@ digest_path_from_path(const char **digest_path,
    empty, if the versioned path in FS represented by DIGEST_PATH has
    no children) and LOCK (which may be NULL if that versioned path is
    lock itself locked).  Set the permissions of DIGEST_PATH to those of
-   PERMS_REFERENCE.  Use POOL for all allocations.
+   PERMS_REFERENCE.  Use POOL for temporary allocations.
  */
 static svn_error_t *
 write_digest_file(apr_hash_t *children,
@@ -169,45 +169,53 @@ write_digest_file(apr_hash_t *children,
                   const char *fs_path,
                   const char *digest_path,
                   const char *perms_reference,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_stream_t *stream;
   apr_hash_index_t *hi;
-  apr_hash_t *hash = apr_hash_make(pool);
+  apr_hash_t *hash = apr_hash_make(scratch_pool);
   const char *tmp_path;
 
   SVN_ERR(svn_fs_x__ensure_dir_exists(svn_dirent_join(fs_path, PATH_LOCKS_DIR,
-                                                      pool), fs_path, pool));
-  SVN_ERR(svn_fs_x__ensure_dir_exists(svn_dirent_dirname(digest_path, pool),
-                                      fs_path, pool));
+                                                      scratch_pool),
+                                      fs_path, scratch_pool));
+  SVN_ERR(svn_fs_x__ensure_dir_exists(svn_dirent_dirname(digest_path,
+                                                         scratch_pool),
+                                      fs_path, scratch_pool));
 
   if (lock)
     {
       const char *creation_date = NULL, *expiration_date = NULL;
       if (lock->creation_date)
-        creation_date = svn_time_to_cstring(lock->creation_date, pool);
+        creation_date = svn_time_to_cstring(lock->creation_date,
+                                            scratch_pool);
       if (lock->expiration_date)
-        expiration_date = svn_time_to_cstring(lock->expiration_date, pool);
+        expiration_date = svn_time_to_cstring(lock->expiration_date,
+                                              scratch_pool);
+
       hash_store(hash, PATH_KEY, sizeof(PATH_KEY)-1,
-                 lock->path, APR_HASH_KEY_STRING, pool);
+                 lock->path, APR_HASH_KEY_STRING, scratch_pool);
       hash_store(hash, TOKEN_KEY, sizeof(TOKEN_KEY)-1,
-                 lock->token, APR_HASH_KEY_STRING, pool);
+                 lock->token, APR_HASH_KEY_STRING, scratch_pool);
       hash_store(hash, OWNER_KEY, sizeof(OWNER_KEY)-1,
-                 lock->owner, APR_HASH_KEY_STRING, pool);
+                 lock->owner, APR_HASH_KEY_STRING, scratch_pool);
       hash_store(hash, COMMENT_KEY, sizeof(COMMENT_KEY)-1,
-                 lock->comment, APR_HASH_KEY_STRING, pool);
+                 lock->comment, APR_HASH_KEY_STRING, scratch_pool);
       hash_store(hash, IS_DAV_COMMENT_KEY, sizeof(IS_DAV_COMMENT_KEY)-1,
-                 lock->is_dav_comment ? "1" : "0", 1, pool);
+                 lock->is_dav_comment ? "1" : "0", 1, scratch_pool);
       hash_store(hash, CREATION_DATE_KEY, sizeof(CREATION_DATE_KEY)-1,
-                 creation_date, APR_HASH_KEY_STRING, pool);
+                 creation_date, APR_HASH_KEY_STRING, scratch_pool);
       hash_store(hash, EXPIRATION_DATE_KEY, sizeof(EXPIRATION_DATE_KEY)-1,
-                 expiration_date, APR_HASH_KEY_STRING, pool);
+                 expiration_date, APR_HASH_KEY_STRING, scratch_pool);
     }
   if (apr_hash_count(children))
     {
-      svn_stringbuf_t *children_list = svn_stringbuf_create_empty(pool);
-      for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
+      svn_stringbuf_t *children_list
+        = svn_stringbuf_create_empty(scratch_pool);
+      for (hi = apr_hash_first(scratch_pool, children);
+           hi;
+           hi = apr_hash_next(hi))
         {
           svn_stringbuf_appendbytes(children_list,
                                     apr_hash_this_key(hi),
@@ -215,24 +223,28 @@ write_digest_file(apr_hash_t *children,
           svn_stringbuf_appendbyte(children_list, '\n');
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
-                 children_list->data, children_list->len, pool);
+                 children_list->data, children_list->len, scratch_pool);
     }
 
   SVN_ERR(svn_stream_open_unique(&stream, &tmp_path,
-                                 svn_dirent_dirname(digest_path, pool),
-                                 svn_io_file_del_none, pool, pool));
-  if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool)))
+                                 svn_dirent_dirname(digest_path,
+                                                    scratch_pool),
+                                 svn_io_file_del_none, scratch_pool,
+                                 scratch_pool));
+  if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR,
+                             scratch_pool)))
     {
       svn_error_clear(svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
-                               svn_dirent_local_style(tmp_path, pool));
+                               svn_dirent_local_style(tmp_path,
+                                                      scratch_pool));
     }
 
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
-  SVN_ERR(svn_io_copy_perms(perms_reference, digest_path, pool));
+  SVN_ERR(svn_io_file_rename(tmp_path, digest_path, scratch_pool));
+  SVN_ERR(svn_io_copy_perms(perms_reference, digest_path, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -345,19 +357,21 @@ static svn_error_t *
 set_lock(const char *fs_path,
          svn_lock_t *lock,
          const char *perms_reference,
-         apr_pool_t *pool)
+         apr_pool_t *scratch_pool)
 {
   const char *digest_path;
   apr_hash_t *children;
 
-  SVN_ERR(digest_path_from_path(&digest_path, fs_path, lock->path, pool));
+  SVN_ERR(digest_path_from_path(&digest_path, fs_path, lock->path,
+                                scratch_pool));
 
   /* We could get away without reading the file as children should
      always come back empty. */
-  SVN_ERR(read_digest_file(&children, NULL, fs_path, digest_path, pool));
+  SVN_ERR(read_digest_file(&children, NULL, fs_path, digest_path,
+                           scratch_pool));
 
   SVN_ERR(write_digest_file(children, lock, fs_path, digest_path, 
-                            perms_reference, pool));
+                            perms_reference, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -365,13 +379,13 @@ set_lock(const char *fs_path,
 static svn_error_t *
 delete_lock(const char *fs_path,
             const char *path,
-            apr_pool_t *pool)
+            apr_pool_t *scratch_pool)
 {
   const char *digest_path;
 
-  SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
+  SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, scratch_pool));
 
-  SVN_ERR(svn_io_remove_file2(digest_path, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(digest_path, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -381,7 +395,7 @@ add_to_digest(const char *fs_path,
               apr_array_header_t *paths,
               const char *index_path,
               const char *perms_reference,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   const char *index_digest_path;
   apr_hash_t *children;
@@ -389,9 +403,10 @@ add_to_digest(const char *fs_path,
   int i;
   unsigned int original_count;
 
-  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path, pool));
-
-  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path, pool));
+  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path,
+                                scratch_pool));
+  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path,
+                           scratch_pool));
 
   original_count = apr_hash_count(children);
 
@@ -400,14 +415,15 @@ add_to_digest(const char *fs_path,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *digest_path, *digest_file;
 
-      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path,
+                                    scratch_pool));
       digest_file = svn_dirent_basename(digest_path, NULL);
       svn_hash_sets(children, digest_file, (void *)1);
     }
 
   if (apr_hash_count(children) != original_count)
     SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
-                              perms_reference, pool));
+                              perms_reference, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -417,32 +433,34 @@ delete_from_digest(const char *fs_path,
                    apr_array_header_t *paths,
                    const char *index_path,
                    const char *perms_reference,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   const char *index_digest_path;
   apr_hash_t *children;
   svn_lock_t *lock;
   int i;
 
-  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path, pool));
-
-  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path, pool));
+  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path,
+                                scratch_pool));
+  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path,
+                           scratch_pool));
 
   for (i = 0; i < paths->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *digest_path, *digest_file;
 
-      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path,
+                                    scratch_pool));
       digest_file = svn_dirent_basename(digest_path, NULL);
       svn_hash_sets(children, digest_file, NULL);
     }
 
   if (apr_hash_count(children) || lock)
     SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
-                              perms_reference, pool));
+                              perms_reference, scratch_pool));
   else
-    SVN_ERR(svn_io_remove_file2(index_digest_path, TRUE, pool));
+    SVN_ERR(svn_io_remove_file2(index_digest_path, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -694,24 +712,26 @@ svn_fs_x__allow_locked_operation(const char *path,
                                  svn_fs_t *fs,
                                  svn_boolean_t recurse,
                                  svn_boolean_t have_write_lock,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *scratch_pool)
 {
-  path = svn_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, scratch_pool);
   if (recurse)
     {
       /* Discover all locks at or below the path. */
       const char *digest_path;
-      SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
+      SVN_ERR(digest_path_from_path(&digest_path, fs->path, path,
+                                    scratch_pool));
       SVN_ERR(walk_locks(fs, digest_path, get_locks_callback,
-                         fs, have_write_lock, pool));
+                         fs, have_write_lock, scratch_pool));
     }
   else
     {
       /* Discover and verify any lock attached to the path. */
       svn_lock_t *lock;
-      SVN_ERR(get_lock_helper(fs, &lock, path, have_write_lock, pool));
+      SVN_ERR(get_lock_helper(fs, &lock, path, have_write_lock,
+                              scratch_pool));
       if (lock)
-        SVN_ERR(verify_lock(fs, lock, pool));
+        SVN_ERR(verify_lock(fs, lock, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1168,11 +1188,11 @@ unlock_body(void *baton, apr_pool_t *pool)
 static svn_error_t *
 unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   struct unlock_baton ub;
   svn_sort__item_t item;
-  apr_array_header_t *targets = apr_array_make(pool, 1,
+  apr_array_header_t *targets = apr_array_make(scratch_pool, 1,
                                                sizeof(svn_sort__item_t));
   item.key = lock->path;
   item.klen = strlen(item.key);
@@ -1182,10 +1202,10 @@ unlock_single(svn_fs_t *fs,
   ub.fs = fs;
   ub.targets = targets;
   ub.skip_check = TRUE;
-  ub.result_pool = pool;
+  ub.result_pool = scratch_pool;
 
   /* No ub.infos[].fs_err error because skip_check is TRUE. */
-  SVN_ERR(unlock_body(&ub, pool));
+  SVN_ERR(unlock_body(&ub, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1434,13 +1454,13 @@ svn_fs_x__get_locks(svn_fs_t *fs,
                     svn_depth_t depth,
                     svn_fs_get_locks_callback_t get_locks_func,
                     void *get_locks_baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   const char *digest_path;
   get_locks_filter_baton_t glfb;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  path = svn_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
   glfb.path = path;
   glfb.requested_depth = depth;
@@ -1448,8 +1468,8 @@ svn_fs_x__get_locks(svn_fs_t *fs,
   glfb.get_locks_baton = get_locks_baton;
 
   /* Get the top digest path in our tree of interest, and then walk it. */
-  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
+  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, scratch_pool));
   SVN_ERR(walk_locks(fs, digest_path, get_locks_filter_func, &glfb,
-                     FALSE, pool));
+                     FALSE, scratch_pool));
   return SVN_NO_ERROR;
 }
