@@ -59,11 +59,12 @@
 
 /* Initialize the part of FS that requires global serialization across all
    instances.  The caller is responsible of ensuring that serialization.
-   Use COMMON_POOL for process-wide and POOL for temporary allocations. */
+   Use COMMON_POOL for process-wide and SCRATCH_POOL for temporary
+   allocations. */
 static svn_error_t *
 x_serialized_init(svn_fs_t *fs,
                   apr_pool_t *common_pool,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *key;
@@ -95,7 +96,7 @@ x_serialized_init(svn_fs_t *fs,
   SVN_ERR_ASSERT(fs->uuid);
   SVN_ERR_ASSERT(ffd->instance_id);
 
-  key = apr_pstrcat(pool, SVN_FSX_SHARED_USERDATA_PREFIX,
+  key = apr_pstrcat(scratch_pool, SVN_FSX_SHARED_USERDATA_PREFIX,
                     fs->uuid, ":", ffd->instance_id, SVN_VA_NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
@@ -232,11 +233,11 @@ x_revision_proplist(apr_hash_t **proplist_p,
 static svn_error_t *
 x_set_uuid(svn_fs_t *fs,
            const char *uuid,
-           apr_pool_t *pool)
+           apr_pool_t *scratch_pool)
 {
   /* Whenever we set a new UUID, imply that FS will also be a different
    * instance (on formats that support this). */
-  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, pool));
+  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, scratch_pool));
 }
 
 
@@ -291,24 +292,26 @@ uninitialize_fs_struct(svn_fs_t *fs)
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
    fsx-backed Subversion filesystem at path PATH and link it into
-   *FS.  Perform temporary allocations in POOL, and fs-global allocations
+   *FS.
+
+   Perform temporary allocations in SCRATCH_POOL, and fs-global allocations
    in COMMON_POOL.  The latter must be serialized using COMMON_POOL_LOCK. */
 static svn_error_t *
 x_create(svn_fs_t *fs,
          const char *path,
          svn_mutex__t *common_pool_lock,
-         apr_pool_t *pool,
+         apr_pool_t *scratch_pool,
          apr_pool_t *common_pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   SVN_ERR(initialize_fs_struct(fs));
 
-  SVN_ERR(svn_fs_x__create(fs, path, pool));
+  SVN_ERR(svn_fs_x__create(fs, path, scratch_pool));
 
-  SVN_ERR(svn_fs_x__initialize_caches(fs, pool));
+  SVN_ERR(svn_fs_x__initialize_caches(fs, scratch_pool));
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       x_serialized_init(fs, common_pool, pool));
+                       x_serialized_init(fs, common_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -319,17 +322,17 @@ x_create(svn_fs_t *fs,
 
 /* This implements the fs_library_vtable_t.open() API.  Open an FSX
    Subversion filesystem located at PATH, set *FS to point to the
-   correct vtable for the filesystem.  Use POOL for any temporary
+   correct vtable for the filesystem.  Use SCRATCH_POOL for any temporary
    allocations, and COMMON_POOL for fs-global allocations.
    The latter must be serialized using COMMON_POOL_LOCK.  */
 static svn_error_t *
 x_open(svn_fs_t *fs,
        const char *path,
        svn_mutex__t *common_pool_lock,
-       apr_pool_t *pool,
+       apr_pool_t *scratch_pool,
        apr_pool_t *common_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
@@ -353,12 +356,12 @@ static svn_error_t *
 x_open_for_recovery(svn_fs_t *fs,
                     const char *path,
                     svn_mutex__t *common_pool_lock,
-                    apr_pool_t *pool,
+                    apr_pool_t *scratch_pool,
                     apr_pool_t *common_pool)
 {
   svn_error_t * err;
   svn_revnum_t youngest_rev;
-  apr_pool_t * subpool = svn_pool_create(pool);
+  apr_pool_t * subpool = svn_pool_create(scratch_pool);
 
   /* Recovery for FSFS is currently limited to recreating the 'current'
      file from the latest revision. */
@@ -405,7 +408,7 @@ x_open_for_recovery(svn_fs_t *fs,
   svn_pool_destroy(subpool);
 
   /* Now open the filesystem properly by calling the vtable method directly. */
-  return x_open(fs, path, common_pool_lock, pool, common_pool);
+  return x_open(fs, path, common_pool_lock, scratch_pool, common_pool);
 }
 
 
@@ -419,12 +422,12 @@ x_upgrade(svn_fs_t *fs,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           svn_mutex__t *common_pool_lock,
-          apr_pool_t *pool,
+          apr_pool_t *scratch_pool,
           apr_pool_t *common_pool)
 {
-  SVN_ERR(x_open(fs, path, common_pool_lock, pool, common_pool));
+  SVN_ERR(x_open(fs, path, common_pool_lock, scratch_pool, common_pool));
   return svn_fs_x__upgrade(fs, notify_func, notify_baton,
-                           cancel_func, cancel_baton, pool);
+                           cancel_func, cancel_baton, scratch_pool);
 }
 
 static svn_error_t *
@@ -437,12 +440,12 @@ x_verify(svn_fs_t *fs,
          svn_cancel_func_t cancel_func,
          void *cancel_baton,
          svn_mutex__t *common_pool_lock,
-         apr_pool_t *pool,
+         apr_pool_t *scratch_pool,
          apr_pool_t *common_pool)
 {
-  SVN_ERR(x_open(fs, path, common_pool_lock, pool, common_pool));
+  SVN_ERR(x_open(fs, path, common_pool_lock, scratch_pool, common_pool));
   return svn_fs_x__verify(fs, start, end, notify_func, notify_baton,
-                          cancel_func, cancel_baton, pool);
+                          cancel_func, cancel_baton, scratch_pool);
 }
 
 static svn_error_t *
@@ -453,12 +456,12 @@ x_pack(svn_fs_t *fs,
        svn_cancel_func_t cancel_func,
        void *cancel_baton,
        svn_mutex__t *common_pool_lock,
-       apr_pool_t *pool,
+       apr_pool_t *scratch_pool,
        apr_pool_t *common_pool)
 {
-  SVN_ERR(x_open(fs, path, common_pool_lock, pool, common_pool));
+  SVN_ERR(x_open(fs, path, common_pool_lock, scratch_pool, common_pool));
   return svn_fs_x__pack(fs, notify_func, notify_baton,
-                        cancel_func, cancel_baton, pool);
+                        cancel_func, cancel_baton, scratch_pool);
 }
 
 
@@ -470,7 +473,8 @@ x_pack(svn_fs_t *fs,
    re-copy data which already exists in DST_FS.
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  The NOTIFY_FUNC and NOTIFY_BATON arguments
-   are also currently ignored.  Perform all temporary allocations in POOL. */
+   are also currently ignored.
+   Perform all temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 x_hotcopy(svn_fs_t *src_fs,
           svn_fs_t *dst_fs,
@@ -483,11 +487,12 @@ x_hotcopy(svn_fs_t *src_fs,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           svn_mutex__t *common_pool_lock,
-          apr_pool_t *pool,
+          apr_pool_t *scratch_pool,
           apr_pool_t *common_pool)
 {
   /* Open the source repo as usual. */
-  SVN_ERR(x_open(src_fs, src_path, common_pool_lock, pool, common_pool));
+  SVN_ERR(x_open(src_fs, src_path, common_pool_lock, scratch_pool,
+                 common_pool));
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
@@ -496,18 +501,19 @@ x_hotcopy(svn_fs_t *src_fs,
    * available. */
   SVN_ERR(initialize_fs_struct(dst_fs));
   SVN_ERR(svn_fs_x__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
-                                           incremental, pool));
+                                           incremental, scratch_pool));
   uninitialize_fs_struct(dst_fs);
 
   /* Now, the destination repo should open just fine. */
-  SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
+  SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, scratch_pool,
+                 common_pool));
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Now, we may copy data as needed ... */
   return svn_fs_x__hotcopy(src_fs, dst_fs, incremental,
                            notify_func, notify_baton,
-                           cancel_func, cancel_baton, pool);
+                           cancel_func, cancel_baton, scratch_pool);
 }
 
 
@@ -532,13 +538,14 @@ x_logfiles(apr_array_header_t **logfiles,
 
 
 /* Delete the filesystem located at path PATH.  Perform any temporary
-   allocations in POOL. */
+   allocations in SCRATCH_POOL. */
 static svn_error_t *
 x_delete_fs(const char *path,
-            apr_pool_t *pool)
+            apr_pool_t *scratch_pool)
 {
   /* Remove everything. */
-  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL,
+                                            scratch_pool));
 }
 
 static const svn_version_t *
