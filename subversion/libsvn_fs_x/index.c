@@ -1556,20 +1556,21 @@ typedef struct l2p_page_baton_t
 
 /* Return the rev / pack file offset of the item at BATON->PAGE_OFFSET in
  * OFFSETS of PAGE and write it to *OFFSET.
+ * Allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 l2p_page_get_offset(l2p_page_baton_t *baton,
                     const l2p_page_t *page,
                     const apr_off_t *offsets,
                     const apr_uint32_t *sub_items,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
     return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                              _("Item index %s too large in"
                                " revision %ld"),
-                             apr_psprintf(pool, "%" APR_UINT64_T_FMT,
+                             apr_psprintf(scratch_pool, "%" APR_UINT64_T_FMT,
                                           baton->item_index),
                              baton->revision);
 
