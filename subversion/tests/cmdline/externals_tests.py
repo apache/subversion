@@ -3480,6 +3480,31 @@ def switch_relative_externals(sbox):
                                      'up', wc)
 
 
+def copy_file_external_to_repo(sbox):
+  "explicitly copy file external to repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  change_external(sbox.ospath('A'), '^/A/mu ext')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--message', 'external copy',
+                                     sbox.ospath('A/ext'),
+                                     sbox.repo_url + '/ext_copy')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'ext_copy' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/ext'    : Item('This is the file \'mu\'.\n'),
+      'ext_copy' : Item('This is the file \'mu\'.\n'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk, None)
+
 ########################################################################
 # Run the tests
 
@@ -3538,6 +3563,7 @@ test_list = [ None,
               update_external_peg_rev,
               update_deletes_file_external,
               switch_relative_externals,
+              copy_file_external_to_repo,
              ]
 
 if __name__ == '__main__':
