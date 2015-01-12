@@ -869,7 +869,7 @@ char *
 svn_cstring_tokenize(const char *sep, char **str)
 {
     char *token;
-    const char * next;
+    char *next;
     char csep;
 
     /* check parameters */
@@ -899,8 +899,8 @@ svn_cstring_tokenize(const char *sep, char **str)
       }
     else
       {
-        *(char *)next = '\0';
-        *str = (char *)next + 1;
+        *next = '\0';
+        *str = next + 1;
       }
 
     return token;
