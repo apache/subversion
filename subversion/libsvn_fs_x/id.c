@@ -148,12 +148,12 @@ svn_fs_x__id_parse(svn_fs_x__id_t *part,
 
 svn_string_t *
 svn_fs_x__id_unparse(const svn_fs_x__id_t *id,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool)
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = part_unparse(string, id);
 
-  return svn_string_ncreate(string, p - string, pool);
+  return svn_string_ncreate(string, p - string, result_pool);
 }
 
 void

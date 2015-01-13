@@ -100,10 +100,10 @@ svn_error_t *
 svn_fs_x__id_parse(svn_fs_x__id_t *part,
                    const char *data);
 
-/* Convert ID into string form, allocated in POOL. */
+/* Convert ID into string form, allocated in RESULT_POOL. */
 svn_string_t *
 svn_fs_x__id_unparse(const svn_fs_x__id_t*id,
-                     apr_pool_t *pool);
+                     apr_pool_t *result_pool);
 
 /* Set *PART to "unused". */
 void
