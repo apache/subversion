@@ -190,23 +190,28 @@ aligned_seek(svn_fs_t *fs,
 
 /* Open the revision file for the item given by ID in filesystem FS and
    store the newly opened file in FILE.  Seek to the item's location before
-   returning.  Perform temporary allocations in POOL. */
+   returning.
+
+   Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 static svn_error_t *
 open_and_seek_revision(svn_fs_x__revision_file_t **file,
                        svn_fs_t *fs,
                        const svn_fs_x__id_t *id,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_fs_x__revision_file_t *rev_file;
   apr_off_t offset = -1;
   apr_uint32_t sub_item = 0;
   svn_revnum_t rev = svn_fs_x__get_revnum(id->change_set);
 
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, rev, pool, pool));
-  SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file, id, pool));
-  SVN_ERR(aligned_seek(fs, rev_file->file, NULL, offset, pool));
+  SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, rev, result_pool,
+                                          scratch_pool));
+  SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file, id,
+                                scratch_pool));
+  SVN_ERR(aligned_seek(fs, rev_file->file, NULL, offset, scratch_pool));
 
   *file = rev_file;
 
@@ -214,40 +219,48 @@ open_and_seek_revision(svn_fs_x__revision_file_t **file,
 }
 
 /* Open the representation REP for a node-revision in filesystem FS, seek
-   to its position and store the newly opened file in FILE.  Perform
-   temporary allocations in POOL. */
+   to its position and store the newly opened file in FILE.
+
+   Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 static svn_error_t *
 open_and_seek_transaction(svn_fs_x__revision_file_t **file,
                           svn_fs_t *fs,
                           svn_fs_x__representation_t *rep,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
   apr_uint32_t sub_item = 0;
   apr_int64_t txn_id = svn_fs_x__get_txn_id(rep->id.change_set);
 
-  SVN_ERR(svn_fs_x__open_proto_rev_file(file, fs, txn_id, pool, pool));
+  SVN_ERR(svn_fs_x__open_proto_rev_file(file, fs, txn_id, result_pool,
+                                        scratch_pool));
 
   SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, *file, &rep->id,
-                                pool));
-  SVN_ERR(aligned_seek(fs, (*file)->file, NULL, offset, pool));
+                                scratch_pool));
+  SVN_ERR(aligned_seek(fs, (*file)->file, NULL, offset, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Given a node-id ID, and a representation REP in filesystem FS, open
    the correct file and seek to the correction location.  Store this
-   file in *FILE_P.  Perform any allocations in POOL. */
+   file in *FILE_P.
+
+   Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 static svn_error_t *
 open_and_seek_representation(svn_fs_x__revision_file_t **file_p,
                              svn_fs_t *fs,
                              svn_fs_x__representation_t *rep,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   if (svn_fs_x__is_revision(rep->id.change_set))
-    return open_and_seek_revision(file_p, fs, &rep->id, pool);
+    return open_and_seek_revision(file_p, fs, &rep->id, result_pool,
+                                  scratch_pool);
   else
-    return open_and_seek_transaction(file_p, fs, rep, pool);
+    return open_and_seek_transaction(file_p, fs, rep, result_pool,
+                                     scratch_pool);
 }
 
 
@@ -702,7 +715,7 @@ create_rep_state_body(rep_state_t **rep_state,
            * an in-txn file.
            */
           SVN_ERR(open_and_seek_representation(&rs->sfile->rfile, fs, rep,
-                                               result_pool));
+                                               result_pool, scratch_pool));
         }
 
       if (SVN_IS_VALID_REVNUM(revision))
