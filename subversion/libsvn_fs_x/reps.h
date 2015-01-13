@@ -71,11 +71,11 @@ typedef struct svn_fs_x__reps_baton_t
 
 /* Create and populate noderev containers. */
 
-/* Create and return a new builder object, allocated in POOL.
+/* Create and return a new builder object, allocated in RESULT_POOL.
  */
 svn_fs_x__reps_builder_t *
 svn_fs_x__reps_builder_create(svn_fs_t *fs,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* To BUILDER, add reference to the fulltext currently stored in
  * representation REP.  Substrings matching with any of the base reps

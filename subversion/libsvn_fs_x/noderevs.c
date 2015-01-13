@@ -167,21 +167,23 @@ struct svn_fs_x__noderevs_t
 
 svn_fs_x__noderevs_t *
 svn_fs_x__noderevs_create(int initial_count,
-                          apr_pool_t* pool)
+                          apr_pool_t* result_pool)
 {
-  svn_fs_x__noderevs_t *noderevs = apr_palloc(pool, sizeof(*noderevs));
+  svn_fs_x__noderevs_t *noderevs
+    = apr_palloc(result_pool, sizeof(*noderevs));
 
-  noderevs->builder = svn_fs_x__string_table_builder_create(pool);
-  noderevs->ids_dict = svn_hash__make(pool);
-  noderevs->reps_dict = svn_hash__make(pool);
+  noderevs->builder = svn_fs_x__string_table_builder_create(result_pool);
+  noderevs->ids_dict = svn_hash__make(result_pool);
+  noderevs->reps_dict = svn_hash__make(result_pool);
   noderevs->paths = NULL;
 
   noderevs->ids
-    = apr_array_make(pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
+    = apr_array_make(result_pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
   noderevs->reps
-    = apr_array_make(pool, 2 * initial_count, sizeof(binary_representation_t));
+    = apr_array_make(result_pool, 2 * initial_count,
+                     sizeof(binary_representation_t));
   noderevs->noderevs
-    = apr_array_make(pool, initial_count, sizeof(binary_noderev_t));
+    = apr_array_make(result_pool, initial_count, sizeof(binary_noderev_t));
 
   return noderevs;
 }

@@ -47,10 +47,10 @@ typedef struct string_table_builder_t string_table_builder_t;
 /* the string table */
 typedef struct string_table_t string_table_t;
 
-/* Returns a new string table builder object, allocated in POOL.
+/* Returns a new string table builder object, allocated in RESULT_POOL.
  */
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool);
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool);
 
 /* Add an arbitrary NUL-terminated C-string STRING of the given length LEN
  * to BUILDER.  Return the index of that string in the future string table.

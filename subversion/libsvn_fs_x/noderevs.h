@@ -47,11 +47,12 @@ typedef struct svn_fs_x__noderevs_t svn_fs_x__noderevs_t;
 /* Create and populate noderev containers. */
 
 /* Create and return a new noderevs container with an initial capacity of
- * INITIAL_COUNT svn_fs_x__noderev_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__noderev_t objects.
+ * Allocate the result in RESULT_POOL.
  */
 svn_fs_x__noderevs_t *
 svn_fs_x__noderevs_create(int initial_count,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool);
 
 /* Add NODEREV to the CONTAINER. Return the index that identifies the new
  * item in this container.
