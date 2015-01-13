@@ -89,52 +89,60 @@ svn_fs_x__pack_size(svn_fs_t *fs, svn_revnum_t rev)
 }
 
 const char *
-svn_fs_x__path_format(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_format(svn_fs_t *fs,
+                      apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_FORMAT, pool);
+  return svn_dirent_join(fs->path, PATH_FORMAT, result_pool);
 }
 
 const char *
-svn_fs_x__path_uuid(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_uuid(svn_fs_t *fs,
+                    apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_UUID, pool);
+  return svn_dirent_join(fs->path, PATH_UUID, result_pool);
 }
 
 const char *
-svn_fs_x__path_current(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_current(svn_fs_t *fs,
+                       apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_CURRENT, pool);
+  return svn_dirent_join(fs->path, PATH_CURRENT, result_pool);
 }
 
 const char *
-svn_fs_x__path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_txn_current(svn_fs_t *fs,
+                           apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT,
+                         result_pool);
 }
 
 const char *
-svn_fs_x__path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_txn_current_lock(svn_fs_t *fs,
+                                apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, result_pool);
 }
 
 const char *
-svn_fs_x__path_lock(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_lock(svn_fs_t *fs,
+                    apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
+  return svn_dirent_join(fs->path, PATH_LOCK_FILE, result_pool);
 }
 
 const char *
 svn_fs_x__path_pack_lock(svn_fs_t *fs,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE, pool);
+  return svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE, result_pool);
 }
 
 const char *
-svn_fs_x__path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_revprop_generation(svn_fs_t *fs,
+                                  apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, pool);
+  return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, result_pool);
 }
 
 const char *
@@ -217,9 +225,9 @@ svn_fs_x__path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 
 const char *
 svn_fs_x__txn_name(svn_fs_x__txn_id_t txn_id,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
-  char *p = apr_palloc(pool, SVN_INT64_BUFFER_SIZE);
+  char *p = apr_palloc(result_pool, SVN_INT64_BUFFER_SIZE);
   svn__ui64tobase36(p, txn_id);
   return p;
 }
@@ -253,9 +261,9 @@ combine_txn_id_string(svn_fs_x__txn_id_t txn_id,
 
 const char *
 svn_fs_x__path_txns_dir(svn_fs_t *fs,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXNS_DIR, pool);
+  return svn_dirent_join(fs->path, PATH_TXNS_DIR, result_pool);
 }
 
 const char *
@@ -342,16 +350,17 @@ svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs,
+                                apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
+  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, result_pool);
 }
 
 const char *
 svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, pool);
+  return svn_dirent_join(fs->path, PATH_TXN_PROTOS_DIR, result_pool);
 }
 
 const char *
@@ -535,24 +544,14 @@ svn_fs_x__write_current(svn_fs_t *fs,
 }
 
 
-
-/* Read the file at PATH and return its content in *CONTENT. *CONTENT will
- * not be modified unless the whole file was read successfully.
- *
- * ESTALE, EIO and ENOENT will not cause this function to return an error
- * unless LAST_ATTEMPT has been set.  If MISSING is not NULL, indicate
- * missing files (ENOENT) there.
- *
- * Use POOL for allocations.
- */
 svn_error_t *
 svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
                                   svn_boolean_t *missing,
                                   const char *path,
                                   svn_boolean_t last_attempt,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *result_pool)
 {
-  svn_error_t *err = svn_stringbuf_from_file2(content, path, pool);
+  svn_error_t *err = svn_stringbuf_from_file2(content, path, result_pool);
   if (missing)
     *missing = FALSE;
 

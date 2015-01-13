@@ -174,10 +174,10 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.
-   Perform allocation in POOL. */
+   Perform allocation in RESULT_POOL. */
 const char *
 svn_fs_x__path_current(svn_fs_t *fs,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Read the format number and maximum number of files per directory
    from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
