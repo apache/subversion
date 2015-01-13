@@ -660,8 +660,8 @@ typedef struct packed_revprops_t
  * our file system, the revprops belong to REVISION and the global revprop
  * GENERATION is used as well.
  *
- * The returned hash will be allocated in POOL, SCRATCH_POOL is being used
- * for temporary allocations.
+ * The returned hash will be allocated in RESULT_POOL, SCRATCH_POOL is 
+ * being used for temporary allocations.
  */
 static svn_error_t *
 parse_revprop(apr_hash_t **properties,
@@ -669,14 +669,15 @@ parse_revprop(apr_hash_t **properties,
               svn_revnum_t revision,
               apr_int64_t generation,
               svn_string_t *content,
-              apr_pool_t *pool,
+              apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
-  *properties = apr_hash_make(pool);
+  *properties = apr_hash_make(result_pool);
 
-  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
-  if (has_revprop_cache(fs, pool))
+  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR,
+                         result_pool));
+  if (has_revprop_cache(fs, result_pool))
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
       svn_fs_x__pair_cache_key_t key = { 0 };
@@ -747,12 +748,13 @@ get_min_filename_len(packed_revprops_t *revprops)
 }
 
 /* Given FS and REVPROPS->REVISION, fill the FILENAME, FOLDER and MANIFEST
- * members. Use POOL for allocating results and SCRATCH_POOL for temporaries.
+ * members. Use RESULT_POOL for allocating results and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 get_revprop_packname(svn_fs_t *fs,
                      packed_revprops_t *revprops,
-                     apr_pool_t *pool,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -773,17 +775,19 @@ get_revprop_packname(svn_fs_t *fs,
       --rev_count;
     }
 
-  revprops->manifest = apr_array_make(pool, rev_count, sizeof(const char*));
+  revprops->manifest = apr_array_make(result_pool, rev_count,
+                                      sizeof(const char*));
 
   /* No line in the file can be less than this number of chars long. */
   min_filename_len = get_min_filename_len(revprops);
 
   /* Read the content of the manifest file */
   revprops->folder
-    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, pool);
-  manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
+    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, result_pool);
+  manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
+                                       result_pool);
 
-  SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, pool));
+  SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, result_pool));
 
   /* There CONTENT must have a certain minimal size and there no
    * unterminated lines at the end of the file.  Both guarantees also
@@ -876,7 +880,7 @@ static svn_error_t *
 parse_packed_revprops(svn_fs_t *fs,
                       packed_revprops_t *revprops,
                       svn_boolean_t read_all,
-                      apr_pool_t *pool,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
@@ -888,7 +892,7 @@ parse_packed_revprops(svn_fs_t *fs,
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
-  svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(result_pool);
   SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
@@ -926,7 +930,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
   offset = header_end - uncompressed->data + 2;
 
-  revprops->packed_revprops = svn_stringbuf_create_empty(pool);
+  revprops->packed_revprops = svn_stringbuf_create_empty(result_pool);
   revprops->packed_revprops->data = uncompressed->data + offset;
   revprops->packed_revprops->len = (apr_size_t)(uncompressed->len - offset);
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
@@ -936,8 +940,10 @@ parse_packed_revprops(svn_fs_t *fs,
   if (read_all)
     {
       /* Init / construct REVPROPS members. */
-      revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
-      revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+      revprops->sizes = apr_array_make(result_pool, (int)count, 
+                                       sizeof(offset));
+      revprops->offsets = apr_array_make(result_pool, (int)count,
+                                         sizeof(offset));
     }
 
   /* Now parse, revision by revision, the size and content of each
@@ -964,7 +970,7 @@ parse_packed_revprops(svn_fs_t *fs,
         {
           SVN_ERR(parse_revprop(&revprops->properties, fs, revision,
                                 revprops->generation, &serialized,
-                                pool, iterpool));
+                                result_pool, iterpool));
           revprops->serialized_size = serialized.len;
 
           /* If we only wanted the revprops for REVISION then we are done. */
