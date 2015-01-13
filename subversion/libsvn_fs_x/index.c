@@ -2001,13 +2001,12 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
  */
 svn_fs_x__p2l_entry_t *
 svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool)
 {
-  svn_fs_x__p2l_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
-  *new_entry = *entry;
-
+  svn_fs_x__p2l_entry_t *new_entry = apr_pmemdup(result_pool, entry,
+                                                 sizeof(*new_entry));
   if (new_entry->item_count)
-    new_entry->items = apr_pmemdup(pool,
+    new_entry->items = apr_pmemdup(result_pool,
                                    entry->items,
                                    entry->item_count * sizeof(*entry->items));
 
