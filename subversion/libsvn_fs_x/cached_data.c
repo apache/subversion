@@ -365,10 +365,6 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
             return SVN_NO_ERROR;
         }
 
-      /* read the data from disk */
-      SVN_ERR(open_and_seek_revision(&revision_file, fs, id,
-                                     scratch_pool));
-
       /* block-read will parse the whole block and will also return
          the one noderev that we need right now. */
       SVN_ERR(block_read((void **)noderev_p, fs,
