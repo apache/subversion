@@ -475,8 +475,7 @@ hotcopy_remove_revprop_files(svn_fs_t *dst_fs,
  * hotcopy from SRC_FS. */
 static svn_error_t *
 hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
-                                        svn_fs_t *dst_fs,
-                                        apr_pool_t *pool)
+                                        svn_fs_t *dst_fs)
 {
   svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
   svn_fs_x__data_t *dst_ffd = dst_fs->fsap_data;
@@ -952,8 +951,7 @@ svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
         {
           /* Check the existing repository. */
           SVN_ERR(svn_fs_x__open(dst_fs, dst_path, scratch_pool));
-          SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
-                                                          scratch_pool));
+          SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs));
         }
     }
   else
