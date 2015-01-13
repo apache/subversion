@@ -354,9 +354,11 @@ read_rep_offsets(svn_fs_x__representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
+/* If PATH needs to be escaped, return an escaped version of it, allocated
+ * from RESULT_POOL. Otherwise, return PATH directly. */
 static const char *
 auto_escape_path(const char *path,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
   apr_size_t len = strlen(path);
   apr_size_t i;
@@ -365,7 +367,8 @@ auto_escape_path(const char *path,
   for (i = 0; i < len; ++i)
     if (path[i] < ' ')
       {
-        svn_stringbuf_t *escaped = svn_stringbuf_create_ensure(2 * len, pool);
+        svn_stringbuf_t *escaped = svn_stringbuf_create_ensure(2 * len,
+                                                               result_pool);
         for (i = 0; i < len; ++i)
           if (path[i] < ' ')
             {
@@ -379,13 +382,15 @@ auto_escape_path(const char *path,
 
         return escaped->data;
       }
-      
+
    return path;
 }
 
+/* If PATH has been escaped, return the un-escaped version of it, allocated
+ * from RESULT_POOL. Otherwise, return PATH directly. */
 static const char *
 auto_unescape_path(const char *path,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   const char esc = '\x1b';
   if (strchr(path, esc))
@@ -393,7 +398,8 @@ auto_unescape_path(const char *path,
       apr_size_t len = strlen(path);
       apr_size_t i;
 
-      svn_stringbuf_t *unescaped = svn_stringbuf_create_ensure(len, pool);
+      svn_stringbuf_t *unescaped = svn_stringbuf_create_ensure(len,
+                                                               result_pool);
       for (i = 0; i < len; ++i)
         if (path[i] == esc)
           svn_stringbuf_appendbyte(unescaped, path[++i] + 1 - 'A');
