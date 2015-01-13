@@ -302,38 +302,40 @@ hash_to_index(hash_t *hash, hash_key_t adler32)
   return (adler32 * 0xd1f3da69) >> hash->shift;
 }
 
-/* Allocate and initialized SIZE buckets in POOL.  Assign them to HASH.
+/* Allocate and initialized SIZE buckets in RESULT_POOL.
+ * Assign them to HASH.
  */
 static void
 allocate_hash_members(hash_t *hash,
                       apr_size_t size,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool)
 {
   apr_size_t i;
 
-  hash->pool = pool;
+  hash->pool = result_pool;
   hash->size = size;
 
-  hash->prefixes = apr_pcalloc(pool, size);
-  hash->last_matches = apr_pcalloc(pool, sizeof(*hash->last_matches) * size);
-  hash->offsets = apr_palloc(pool, sizeof(*hash->offsets) * size);
+  hash->prefixes = apr_pcalloc(result_pool, size);
+  hash->last_matches = apr_pcalloc(result_pool,
+                                   sizeof(*hash->last_matches) * size);
+  hash->offsets = apr_palloc(result_pool, sizeof(*hash->offsets) * size);
 
   for (i = 0; i < size; ++i)
     hash->offsets[i] = NO_OFFSET;
 }
 
 /* Initialize the HASH data structure with 2**TWOPOWER buckets allocated
- * in POOL.
+ * in RESULT_POOL.
  */
 static void
 init_hash(hash_t *hash,
           apr_size_t twoPower,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool)
 {
   hash->used = 0;
   hash->shift = sizeof(hash_key_t) * 8 - twoPower;
 
-  allocate_hash_members(hash, 1 << twoPower, pool);
+  allocate_hash_members(hash, 1 << twoPower, result_pool);
 }
 
 /* Make HASH have at least MIN_SIZE buckets but at least double the number
@@ -384,17 +386,19 @@ grow_hash(hash_t *hash,
 
 svn_fs_x__reps_builder_t *
 svn_fs_x__reps_builder_create(svn_fs_t *fs,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
-  svn_fs_x__reps_builder_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__reps_builder_t *result = apr_pcalloc(result_pool,
+                                                 sizeof(*result));
 
   result->fs = fs;
-  result->text = svn_stringbuf_create_empty(pool);
-  init_hash(&result->hash, 4, pool);
+  result->text = svn_stringbuf_create_empty(result_pool);
+  init_hash(&result->hash, 4, result_pool);
 
-  result->bases = apr_array_make(pool, 0, sizeof(base_t));
-  result->reps = apr_array_make(pool, 0, sizeof(rep_t));
-  result->instructions = apr_array_make(pool, 0, sizeof(instruction_t));
+  result->bases = apr_array_make(result_pool, 0, sizeof(base_t));
+  result->reps = apr_array_make(result_pool, 0, sizeof(rep_t));
+  result->instructions = apr_array_make(result_pool, 0,
+                                        sizeof(instruction_t));
 
   return result;
 }

@@ -121,11 +121,11 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool)
 {
-  string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = pool;
-  result->tables = apr_array_make(pool, 1, sizeof(builder_table_t *));
+  string_table_builder_t *result = apr_palloc(result_pool, sizeof(*result));
+  result->pool = result_pool;
+  result->tables = apr_array_make(result_pool, 1, sizeof(builder_table_t *));
 
   add_table(result);
   
