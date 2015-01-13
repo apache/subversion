@@ -160,25 +160,6 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *instance_id,
                    apr_pool_t *scratch_pool);
 
-/* Set *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate *PATH in POOL.
-
-   Note: If the caller does not have the write lock on FS, then the path is
-   not guaranteed to be correct or to remain correct after the function
-   returns, because the revision might become packed before or after this
-   call.  If a file exists at that path, then it is correct; if not, then
-   the caller should call update_min_unpacked_rev() and re-try once. */
-const char *
-svn_fs_x__path_rev_absolute(svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool);
-
-/* Return the path to the 'current' file in FS.
-   Perform allocation in RESULT_POOL. */
-const char *
-svn_fs_x__path_current(svn_fs_t *fs,
-                       apr_pool_t *result_pool);
-
 /* Read the format number and maximum number of files per directory
    from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
    respectively.

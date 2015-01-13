@@ -96,6 +96,12 @@ const char *
 svn_fs_x__path_format(svn_fs_t *fs,
                       apr_pool_t *result_pool);
 
+/* Return the path to the 'current' file in FS.
+   Perform allocation in RESULT_POOL. */
+const char *
+svn_fs_x__path_current(svn_fs_t *fs,
+                       apr_pool_t *result_pool);
+
 /* Return the full path of the "uuid" file in FS.
  * The result will be allocated in RESULT_POOL.
  */
@@ -163,6 +169,19 @@ const char *
 svn_fs_x__path_rev(svn_fs_t *fs,
                    svn_revnum_t rev,
                    apr_pool_t *pool);
+
+/* Set *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate *PATH in POOL.
+
+   Note: If the caller does not have the write lock on FS, then the path is
+   not guaranteed to be correct or to remain correct after the function
+   returns, because the revision might become packed before or after this
+   call.  If a file exists at that path, then it is correct; if not, then
+   the caller should call update_min_unpacked_rev() and re-try once. */
+const char *
+svn_fs_x__path_rev_absolute(svn_fs_t *fs,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
 
 /* Return the full path of the revision properties shard directory that
  * will contain the properties of revision REV in FS.

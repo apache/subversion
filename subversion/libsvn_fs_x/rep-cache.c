@@ -27,6 +27,7 @@
 #include "fs_x.h"
 #include "fs.h"
 #include "rep-cache.h"
+#include "util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_path.h"
