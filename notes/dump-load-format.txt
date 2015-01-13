@@ -47,6 +47,8 @@ Dumpfiles include four record types.  Two, the version stamp and UUID
 record, consist of single header lines. The bulk of a dumpfile
 consists of Revision and Node records.
 
+==== Version stamp records ====
+
 A version stamp record is always the first line of the file and
 looks like this:
 
@@ -58,6 +60,8 @@ where <N> is replaced by the dump format version. Except where
 specified, the descriptions in this document apply to all
 versions of the format.
 
+==== UUID records ====
+
 Versions 2 and later may have a UUID record following the version
 stamp. It is of the form 
 
@@ -67,6 +71,8 @@ UUID: <hex-string>
 
 where the <hex-string> is the UUID of the originating repository.
 An example UUID is "7bf7a5ef-cabf-0310-b7d4-93df341afa7e".
+
+==== Revision records ====
 
 A Revision record has three headers and is always followed by a
 property section.  Expect the following form and sequence:
@@ -87,42 +93,7 @@ that can parse RFC-822 messages.
 
 A revision record is followed by one or more Node records (see below).
 
-=== Property sections ==
-
-A Revision record *must* have a property section, and a Node record *may*
-have a property section. Every record with a property section has 
-a Prop-content-length header.
-
-A property section consists of pairs of key and value records and
-is ended by a fixed trailer.  Here is an example attached to a
-Revision record:
-
--------------------------------------------------------------------
-Revision-number: 1422
-Prop-content-length: 80
-Content-length: 80
-
-K 6
-author
-V 7
-sussman
-K 3
-log
-V 33
-Added two files, changed a third.
-PROPS-END
--------------------------------------------------------------------
-
-The fixed trailer is "PROPS-END\n" and its length is included in the
-Prop-content-length. Before it, each K and V record consists of a
-header line giving the length of the key or value content in bytes.  
-The content follows.  The content is itself always followed by \n.
-
-In version 3 of the format, a third type 'D' of property record is
-introduced to describe property deletion. This feature will be
-described later, in the specification of delta dumps.
-
-=== Node records ===
+==== Node records ====
 
 Each Revision record is followed by one or more Node records.
 Node records have the following sequence of header lines:
@@ -184,6 +155,41 @@ copyfrom sources may also not have either.
 
 Again, the '!' stands in for a mandatory empty line following the
 RFC822-style headers. A body may follow.
+
+=== Property sections ===
+
+A Revision record *must* have a property section, and a Node record *may*
+have a property section. Every record with a property section has 
+a Prop-content-length header.
+
+A property section consists of pairs of key and value records and
+is ended by a fixed trailer.  Here is an example attached to a
+Revision record:
+
+-------------------------------------------------------------------
+Revision-number: 1422
+Prop-content-length: 80
+Content-length: 80
+
+K 6
+author
+V 7
+sussman
+K 3
+log
+V 33
+Added two files, changed a third.
+PROPS-END
+-------------------------------------------------------------------
+
+The fixed trailer is "PROPS-END\n" and its length is included in the
+Prop-content-length. Before it, each K and V record consists of a
+header line giving the length of the key or value content in bytes.  
+The content follows.  The content is itself always followed by \n.
+
+In version 3 of the format, a third type 'D' of property record is
+introduced to describe property deletion. This feature will be
+described later, in the specification of delta dumps.
 
 == Semantics ==
 
