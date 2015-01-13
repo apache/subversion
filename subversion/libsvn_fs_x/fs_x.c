@@ -801,7 +801,7 @@ svn_error_t *
 svn_fs_x__file_checksum(svn_checksum_t **checksum,
                         svn_fs_x__noderev_t *noderev,
                         svn_checksum_kind_t kind,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool)
 {
   *checksum = NULL;
 
@@ -827,7 +827,7 @@ svn_fs_x__file_checksum(svn_checksum_t **checksum,
             return SVN_NO_ERROR;
         }
 
-      *checksum = svn_checksum_dup(&temp, pool);
+      *checksum = svn_checksum_dup(&temp, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -835,18 +835,12 @@ svn_fs_x__file_checksum(svn_checksum_t **checksum,
 
 svn_fs_x__representation_t *
 svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
-  svn_fs_x__representation_t *rep_new;
-
   if (rep == NULL)
     return NULL;
 
-  rep_new = apr_palloc(pool, sizeof(*rep_new));
-
-  memcpy(rep_new, rep, sizeof(*rep_new));
-
-  return rep_new;
+  return apr_pmemdup(result_pool, rep, sizeof(*rep));
 }
 
 

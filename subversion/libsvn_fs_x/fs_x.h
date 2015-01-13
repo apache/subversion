@@ -109,20 +109,20 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
                          apr_pool_t *scratch_pool);
 
 
-/* Return a copy of the representation REP allocated from POOL. */
+/* Return a copy of the representation REP allocated from RESULT_POOL. */
 svn_fs_x__representation_t *
 svn_fs_x__rep_copy(svn_fs_x__representation_t *rep,
-                   apr_pool_t *pool);
+                   apr_pool_t *result_pool);
 
 
 /* Return the recorded checksum of type KIND for the text representation
-   of NODREV into CHECKSUM, allocating from POOL.  If no stored checksum is
-   available, put all NULL into CHECKSUM. */
+   of NODREV into CHECKSUM, allocating from RESULT_POOL.  If no stored
+   checksum is available, put all NULL into CHECKSUM. */
 svn_error_t *
 svn_fs_x__file_checksum(svn_checksum_t **checksum,
                         svn_fs_x__noderev_t *noderev,
                         svn_checksum_kind_t kind,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool);
 
 /* Under the repository db PATH, create a FSFS repository with FORMAT,
  * the given SHARD_SIZE.  If not supported by the respective format,
