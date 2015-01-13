@@ -69,12 +69,6 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
                                  apr_pool_t *scratch_pool);
 
-/* Return an error iff REV does not exist in FS. */
-svn_error_t *
-svn_fs_x__revision_exists(svn_revnum_t rev,
-                          svn_fs_t *fs,
-                          apr_pool_t *pool);
-
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    revision REV as seen in filesystem FS.  Use POOL for temporary
    allocations. */
