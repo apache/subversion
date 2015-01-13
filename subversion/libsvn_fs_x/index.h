@@ -80,11 +80,11 @@ typedef struct svn_fs_x__p2l_entry_t
   svn_fs_x__id_t *items;
 } svn_fs_x__p2l_entry_t;
 
-/* Return a (deep) copy of ENTRY, allocated in POOL.
+/* Return a (deep) copy of ENTRY, allocated in RESULT_POOL.
  */
 svn_fs_x__p2l_entry_t *
 svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool);
 
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
