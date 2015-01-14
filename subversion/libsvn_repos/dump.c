@@ -1712,8 +1712,6 @@ write_revision_record(svn_stream_t *stream,
   svn_string_t *datevalue;
   svn_stream_t *propstream;
 
-  /* Read the revision props even if we're aren't going to dump
-     them for verification purposes */
   SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
 
   /* Run revision date properties through the time conversion to
