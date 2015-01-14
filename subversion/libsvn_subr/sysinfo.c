@@ -55,6 +55,10 @@
 
 #ifdef SVN_HAVE_MACOS_PLIST
 #include <CoreFoundation/CoreFoundation.h>
+#include <AvailabilityMacros.h>
+# ifndef MAC_OS_X_VERSION_10_6
+#  define MAC_OS_X_VERSION_10_6  1060
+# endif
 #endif
 
 #ifdef SVN_HAVE_MACHO_ITERATE
@@ -927,7 +931,6 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
   svn_error_t *err;
   CFPropertyListRef plist = NULL;
   CFMutableDataRef resource = CFDataCreateMutable(kCFAllocatorDefault, 0);
-  CFStringRef errstr = NULL;
 
   /* failed getting the CFMutableDataRef, shouldn't happen */
   if (!resource)
@@ -974,16 +977,23 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       return NULL;
     }
 
-  /* ### CFPropertyListCreateFromXMLData is obsolete, but its
-         replacement CFPropertyListCreateWithData is only available
-         from Mac OS 10.6 onward. */
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_6
+  /* This function is only available from Mac OS 10.6 onward. */
+  plist = CFPropertyListCreateWithData(kCFAllocatorDefault, resource,
+                                       kCFPropertyListImmutable,
+                                       NULL, NULL);
+#else  /* Mac OS 10.5 or earlier */
+  /* This function obsolete and deprecated since Mac OS 10.10. */
   plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, resource,
                                           kCFPropertyListImmutable,
-                                          &errstr);
+                                          NULL);
+#endif /* MAC_OS_X_VERSION_10_6 */
+
   if (resource)
     CFRelease(resource);
-  if (errstr)
-    CFRelease(errstr);
+
+  if (!plist)
+    return NULL;
 
   if (CFDictionaryGetTypeID() != CFGetTypeID(plist))
     {
