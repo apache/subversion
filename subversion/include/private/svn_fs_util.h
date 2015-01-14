@@ -29,11 +29,16 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_version.h"
 #include "svn_fs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+/* Get libsvn_fs_util version information. */
+const svn_version_t *
+svn_fs_util__version(void);
 
 /* Returns whether PATH is in canonical form as defined by
    svn_fs__canonicalize_abspath().

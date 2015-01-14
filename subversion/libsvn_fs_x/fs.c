@@ -613,6 +613,7 @@ svn_fs_x__init(const svn_version_t *loader_version,
     {
       { "svn_subr",  svn_subr_version },
       { "svn_delta", svn_delta_version },
+      { "svn_fs_util", svn_fs_util__version },
       { NULL, NULL }
     };
 
