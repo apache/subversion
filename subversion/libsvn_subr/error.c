@@ -288,6 +288,8 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
       *chain = *new_err;
       if (chain->message)
         chain->message = apr_pstrdup(pool, new_err->message);
+      if (chain->file)
+        chain->file = apr_pstrdup(pool, new_err->file);
       chain->pool = pool;
 #if defined(SVN_DEBUG)
       if (! new_err->child)
@@ -364,6 +366,8 @@ svn_error_dup(const svn_error_t *err)
       tmp_err->pool = pool;
       if (tmp_err->message)
         tmp_err->message = apr_pstrdup(pool, tmp_err->message);
+      if (tmp_err->file)
+        tmp_err->file = apr_pstrdup(pool, tmp_err->file);
     }
 
 #if defined(SVN_DEBUG)
