@@ -58,9 +58,6 @@ struct dir_baton
   /* is this directory a new addition to this revision? */
   svn_boolean_t added;
 
-  /* has this directory been written to the output stream? */
-  svn_boolean_t written_out;
-
   /* the path to this directory */
   const char *repos_relpath; /* a relpath */
 
@@ -200,7 +197,6 @@ make_dir_baton(const char *path,
                             : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
-  new_db->written_out = FALSE;
   new_db->props = apr_hash_make(pool);
   new_db->deleted_props = apr_hash_make(pool);
   new_db->deleted_entries = apr_hash_make(pool);
@@ -627,7 +623,6 @@ open_root(void *edit_baton,
 
               /* Remember that we've started but not yet finished
                  handling this directory. */
-              new_db->written_out = TRUE;
               eb->pending_baton = new_db;
               eb->pending_kind = svn_node_dir;
             }
@@ -706,7 +701,6 @@ add_directory(const char *path,
 
   /* Remember that we've started, but not yet finished handling this
      directory. */
-  new_db->written_out = TRUE;
   pb->eb->pending_baton = new_db;
   pb->eb->pending_kind = svn_node_dir;
 
