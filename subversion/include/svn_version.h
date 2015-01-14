@@ -175,10 +175,25 @@ struct svn_version_t
  * Generate the implementation of a version query function.
  *
  * @since New in 1.1.
+ * @since Since 1.9, embeds a string into the compiled object
+ *        file that can be queried with the 'what' utility.
  */
-#define SVN_VERSION_BODY \
-  SVN_VERSION_DEFINE(versioninfo);              \
-  return &versioninfo
+#define SVN_VERSION_BODY            \
+  static struct versioninfo_t       \
+    {                               \
+      const char *const str;        \
+      const svn_version_t num;      \
+    } const versioninfo =           \
+    {                               \
+      "@(#)" SVN_VERSION,           \
+      {                             \
+        SVN_VER_MAJOR,              \
+        SVN_VER_MINOR,              \
+        SVN_VER_PATCH,              \
+        SVN_VER_NUMTAG              \
+      }                             \
+    };                              \
+  return &versioninfo.num
 
 /**
  * Check library version compatibility. Return #TRUE if the client's
