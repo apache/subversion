@@ -155,12 +155,12 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs,
                           apr_pool_t *pool);
 
 /* Return the full path of the rev shard directory that will contain
- * revision REV in FS.  Allocate the result in POOL.
+ * revision REV in FS.  Allocate the result in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_rev_shard(svn_fs_t *fs,
                          svn_revnum_t rev,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Return the full path of the non-packed rev file containing revision REV
  * in FS.  Allocate the result in POOL.
@@ -185,12 +185,12 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
 
 /* Return the full path of the revision properties shard directory that
  * will contain the properties of revision REV in FS.
- * Allocate the result in POOL.
+ * Allocate the result in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* Return the full path of the revision properties pack shard directory
  * that will contain the packed properties of revision REV in FS.

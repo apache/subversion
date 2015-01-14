@@ -160,12 +160,16 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
 }
 
 const char *
-svn_fs_x__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_x__path_rev_shard(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool, "%ld",
-                                                 rev / ffd->max_files_per_dir),
+
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
+
+  return svn_dirent_join_many(result_pool, fs->path, PATH_REVS_DIR, buffer,
                               SVN_VA_NULL);
 }
 
@@ -192,14 +196,15 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
 const char *
 svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
-  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                              apr_psprintf(pool, "%ld",
-                                           rev / ffd->max_files_per_dir),
-                              SVN_VA_NULL);
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
+
+  return svn_dirent_join_many(result_pool, fs->path, PATH_REVPROPS_DIR,
+                              buffer, SVN_VA_NULL);
 }
 
 const char *
