@@ -1004,7 +1004,7 @@ struct rep_read_baton
   svn_filesize_t fulltext_delivered;
 
   /* Used for temporary allocations during the read. */
-  apr_pool_t *pool;
+  apr_pool_t *scratch_pool;
 
   /* Pool used to store file handles and other data that is persistant
      for the entire stream read. */
@@ -1247,21 +1247,22 @@ build_rep_list(apr_array_header_t **list,
                rep_state_t **src_state,
                svn_fs_t *fs,
                svn_fs_x__representation_t *first_rep,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   svn_fs_x__representation_t rep;
   rep_state_t *rs = NULL;
   svn_fs_x__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
   shared_file_t *shared_file = NULL;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
+  *list = apr_array_make(result_pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
 
   /* for the top-level rep, we need the rep_args */
-  SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool,
-                           iterpool));
+  SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs,
+                           result_pool, iterpool));
 
   while (1)
     {
@@ -1270,13 +1271,14 @@ build_rep_list(apr_array_header_t **list,
       /* fetch state, if that has not been done already */
       if (!rs)
         SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file,
-                                 &rep, fs, pool, iterpool));
+                                 &rep, fs, result_pool, iterpool));
 
       /* for txn reps and containered reps, there won't be a cached
        * combined window */
       if (svn_fs_x__is_revision(rep.id.change_set)
           && rep_header->type != svn_fs_x__rep_container)
-        SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
+        SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached,
+                                           result_pool));
 
       if (is_cached)
         {
@@ -1320,31 +1322,39 @@ build_rep_list(apr_array_header_t **list,
 /* Create a rep_read_baton structure for node revision NODEREV in
    filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
    NULL, it is the rep's key in the fulltext cache, and a stringbuf
-   must be allocated to store the text.  Perform all allocations in
-   POOL.  If rep is mutable, it must be for file contents. */
+   must be allocated to store the text.  If rep is mutable, it must be
+   refer to file contents.
+
+   Allocate the result in RESULT_POOL.  This includes the pools within *RB_P.
+ */
 static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
                    svn_fs_x__representation_t *rep,
                    svn_fs_x__pair_cache_key_t fulltext_cache_key,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   struct rep_read_baton *b;
 
-  b = apr_pcalloc(pool, sizeof(*b));
+  b = apr_pcalloc(result_pool, sizeof(*b));
   b->fs = fs;
   b->rep = *rep;
   b->base_window = NULL;
   b->chunk_index = 0;
   b->buf = NULL;
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5,
+                                                result_pool);
   b->checksum_finalized = FALSE;
   memcpy(b->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
   b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
-  b->pool = svn_pool_create(pool);
-  b->filehandle_pool = svn_pool_create(pool);
+
+  /* Clearable sub-pools.  Since they have to remain valid for as long as B
+     lives, we can't take them from some scratch pool.  The caller of this
+     function will have no control over how those subpools will be used. */
+  b->scratch_pool = svn_pool_create(result_pool);
+  b->filehandle_pool = svn_pool_create(result_pool);
   b->fulltext_cache = NULL;
   b->fulltext_delivered = 0;
   b->current_fulltext = NULL;
@@ -1514,9 +1524,9 @@ get_combined_window(svn_stringbuf_t **result,
      the size of each window is relatively small (100kB) and skip-
      delta limits the number of deltas in a chain to well under 100.
      Stop early if one of them does not depend on its predecessors. */
-  window_pool = svn_pool_create(rb->pool);
+  window_pool = svn_pool_create(rb->scratch_pool);
   windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
-  iterpool = svn_pool_create(rb->pool);
+  iterpool = svn_pool_create(rb->scratch_pool);
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
       svn_txdelta_window_t *window;
@@ -1536,7 +1546,7 @@ get_combined_window(svn_stringbuf_t **result,
     }
 
   /* Combine in the windows from the other delta reps. */
-  pool = svn_pool_create(rb->pool);
+  pool = svn_pool_create(rb->scratch_pool);
   for (--i; i >= 0; --i)
     {
       svn_txdelta_window_t *window;
@@ -1556,7 +1566,7 @@ get_combined_window(svn_stringbuf_t **result,
                                       window->sview_len, pool, iterpool));
 
       /* Combine this window with the current one. */
-      new_pool = svn_pool_create(rb->pool);
+      new_pool = svn_pool_create(rb->scratch_pool);
       buf = svn_stringbuf_create_ensure(window->tview_len, new_pool);
       buf->len = window->tview_len;
 
@@ -1606,7 +1616,7 @@ rep_read_contents_close(void *baton)
 {
   struct rep_read_baton *rb = baton;
 
-  svn_pool_destroy(rb->pool);
+  svn_pool_destroy(rb->scratch_pool);
   svn_pool_destroy(rb->filehandle_pool);
 
   return SVN_NO_ERROR;
@@ -1819,8 +1829,8 @@ get_contents_from_windows(struct rep_read_baton *rb,
           /* RS->SIZE is unreliable here because it is based upon
            * the delta rep size _before_ putting the data into a
            * a container. */
-          SVN_ERR(read_container_window(&rb->base_window, rs,
-                                        rb->len, rb->pool, rb->pool));
+          SVN_ERR(read_container_window(&rb->base_window, rs, rb->len,
+                                        rb->scratch_pool, rb->scratch_pool));
           rs->current -= rb->base_window->len;
         }
 
@@ -1863,7 +1873,7 @@ get_contents_from_windows(struct rep_read_baton *rb,
              local pool. */
           if (rb->buf_pos == rb->buf_len)
             {
-              svn_pool_clear(rb->pool);
+              svn_pool_clear(rb->scratch_pool);
               rb->buf = NULL;
             }
         }
@@ -1960,7 +1970,7 @@ get_contents_from_fulltext(svn_boolean_t *cached,
   SVN_ERR(svn_cache__get_partial(&dummy, cached, baton->fulltext_cache,
                                  &baton->fulltext_cache_key,
                                  get_fulltext_partial, &fulltext_baton,
-                                 baton->pool));
+                                 baton->scratch_pool));
 
   if (*cached)
     {
@@ -2057,7 +2067,7 @@ skip_contents(struct rep_read_baton *baton,
   else if (len > 0)
     {
       /* Simply drain LEN bytes from the window stream. */
-      apr_pool_t *subpool = subpool = svn_pool_create(baton->pool);
+      apr_pool_t *subpool = subpool = svn_pool_create(baton->scratch_pool);
       char *buffer = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
 
       while (len > 0 && !err)
@@ -2105,7 +2115,7 @@ rep_read_contents(void *baton,
       /* Window stream not initialized, yet.  Do it now. */
       SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
                              &rb->src_state, rb->fs, &rb->rep,
-                             rb->filehandle_pool));
+                             rb->filehandle_pool, rb->scratch_pool));
 
       /* In case we did read from the fulltext cache before, make the 
        * window stream catch up.  Also, initialize the fulltext buffer
@@ -2136,11 +2146,11 @@ rep_read_contents(void *baton,
 
           rb->checksum_finalized = TRUE;
           SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
-                                     rb->pool));
+                                     rb->scratch_pool));
           if (!svn_checksum_match(md5_checksum, &expected))
             return svn_error_create(SVN_ERR_FS_CORRUPT,
                     svn_checksum_mismatch_err(&expected, md5_checksum,
-                        rb->pool,
+                        rb->scratch_pool,
                         _("Checksum mismatch while reading representation")),
                     NULL);
         }
@@ -2150,7 +2160,7 @@ rep_read_contents(void *baton,
     {
       svn_fs_x__data_t *ffd = rb->fs->fsap_data;
       SVN_ERR(svn_cache__set(ffd->fulltext_cache, &rb->fulltext_cache_key,
-                             rb->current_fulltext, rb->pool));
+                             rb->current_fulltext, rb->scratch_pool));
       rb->current_fulltext = NULL;
     }
 
@@ -2162,11 +2172,11 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
                        svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   if (! rep)
     {
-      *contents_p = svn_stream_empty(pool);
+      *contents_p = svn_stream_empty(result_pool);
     }
   else
     {
@@ -2181,7 +2191,8 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
 
       /* Initialize the reader baton.  Some members may added lazily
        * while reading from the stream */
-      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
+      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key,
+                                 result_pool));
 
       /* Make the stream attempt fulltext cache lookups if the fulltext
        * is cacheable.  If it is not, then also don't try to buffer and
@@ -2199,7 +2210,7 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
           rb->fulltext_cache_key.revision = SVN_INVALID_REVNUM;
         }
 
-      *contents_p = svn_stream_create(rb, pool);
+      *contents_p = svn_stream_create(rb, result_pool);
       svn_stream_set_read2(*contents_p, NULL /* only full read support */,
                            rep_read_contents);
       svn_stream_set_close(*contents_p, rep_read_contents_close);
