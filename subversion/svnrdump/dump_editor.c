@@ -179,38 +179,31 @@ make_dir_baton(const char *path,
   struct dump_edit_baton *eb = edit_baton;
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
   const char *repos_relpath;
-  apr_pool_t *dir_pool;
 
   /* Construct the full path of this node. */
   if (pb)
-    {
-      dir_pool = svn_pool_create(pb->pool);
-      repos_relpath = svn_relpath_canonicalize(path, dir_pool);
-    }
+    repos_relpath = svn_relpath_canonicalize(path, pool);
   else
-    {
-      dir_pool = svn_pool_create(eb->pool);
-      repos_relpath = "";
-    }
+    repos_relpath = "";
 
   /* Strip leading slash from copyfrom_path so that the path is
      canonical and svn_relpath_join can be used */
   if (copyfrom_path)
-    copyfrom_path = svn_relpath_canonicalize(copyfrom_path, dir_pool);
+    copyfrom_path = svn_relpath_canonicalize(copyfrom_path, pool);
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
-  new_db->pool = dir_pool;
+  new_db->pool = pool;
   new_db->repos_relpath = repos_relpath;
   new_db->copyfrom_path = copyfrom_path
-                            ? svn_relpath_canonicalize(copyfrom_path, dir_pool)
+                            ? svn_relpath_canonicalize(copyfrom_path, pool)
                             : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
-  new_db->props = apr_hash_make(dir_pool);
-  new_db->deleted_props = apr_hash_make(dir_pool);
-  new_db->deleted_entries = apr_hash_make(dir_pool);
+  new_db->props = apr_hash_make(pool);
+  new_db->deleted_props = apr_hash_make(pool);
+  new_db->deleted_entries = apr_hash_make(pool);
 
   return new_db;
 }
@@ -224,15 +217,14 @@ make_file_baton(const char *path,
                 struct dir_baton *pb,
                 apr_pool_t *pool)
 {
-  apr_pool_t *file_pool = svn_pool_create(pb->pool);
-  struct file_baton *new_fb = apr_pcalloc(file_pool, sizeof(*new_fb));
+  struct file_baton *new_fb = apr_pcalloc(pool, sizeof(*new_fb));
 
   new_fb->eb = pb->eb;
   new_fb->parent_dir_baton = pb;
-  new_fb->pool = file_pool;
-  new_fb->repos_relpath = svn_relpath_canonicalize(path, file_pool);
-  new_fb->props = apr_hash_make(file_pool);
-  new_fb->deleted_props = apr_hash_make(file_pool);
+  new_fb->pool = pool;
+  new_fb->repos_relpath = svn_relpath_canonicalize(path, pool);
+  new_fb->props = apr_hash_make(pool);
+  new_fb->deleted_props = apr_hash_make(pool);
   new_fb->is_copy = FALSE;
   new_fb->copyfrom_path = NULL;
   new_fb->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -800,7 +792,7 @@ close_directory(void *dir_baton,
     }
 
   /* ### should be unnecessary */
-  svn_pool_destroy(db->pool);
+  apr_hash_clear(db->deleted_entries);
 
   return SVN_NO_ERROR;
 }
@@ -1072,8 +1064,6 @@ close_file(void *file_baton,
   /* Write a couple of blank lines for matching output with `svnadmin
      dump` */
   SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
-
-  svn_pool_clear(fb->pool);
 
   return SVN_NO_ERROR;
 }
