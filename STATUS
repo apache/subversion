@@ -41,7 +41,8 @@ Candidate changes:
      this patch, there is no way except of 'svnadmin load' to know that these
      dump files will load at all.  With this patch, a successful verify run
      should guarantee loadable dump files.
-   Branch: ^/subversion/branches/1.8.x-r1536854
+   Branch:
+     ^/subversion/branches/1.8.x-r1536854
    Votes:
      +1: stefan2, breser
 
@@ -111,17 +112,6 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1544302, r1544303
-   Add HTTPd lock file configuration for testing against HTTPd 2.4+.
-   Justification:
-     Without this change, the davautocheck tests do not work on some
-     systems where HTTPd 2.4+ is the default; OSX 10.10 is one such case.
-   Notes:
-     As far as I'm concerned, this blocks 1.7.19 and 1.8.11 since the
-     tests won't run on a current version of a supported OS.
-   Votes:
-     +1: brane, breser
-
  * r1646230, r1646250, r1646253
    Make svnsync strip any r0 references from mergeinfo -- issue #4476.
    Justification:
@@ -145,7 +135,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1646797
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1611380, r1611381, r1619071, r1647339
    Use simple apr_thread_mutex_t instead of apr_thread_rwlock_t as a workaround
@@ -193,7 +183,7 @@ Candidate changes:
    Justification:
      Result will usually be undefined and the functions may segfault.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1651759
    Api correctness fix: Duplicate error filename when copying errors
@@ -217,3 +207,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1544302, r1544303
+   Add HTTPd lock file configuration for testing against HTTPd 2.4+.
+   Justification:
+     Without this change, the davautocheck tests do not work on some
+     systems where HTTPd 2.4+ is the default; OSX 10.10 is one such case.
+   Notes:
+     As far as I'm concerned, this blocks 1.7.19 and 1.8.11 since the
+     tests won't run on a current version of a supported OS.
+   Votes:
+     +1: brane, breser, rhuijben
