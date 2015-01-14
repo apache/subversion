@@ -328,6 +328,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool2 = svn_pool_create(scratch_pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
 
@@ -347,6 +348,8 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       apr_array_header_t *entries;
       svn_fs_x__p2l_entry_t *last_entry;
       int i;
+
+      svn_pool_clear(iterpool);
 
       /* get all entries for the current block */
       SVN_ERR(svn_fs_x__p2l_index_lookup(&entries, fs, rev_file, start,
@@ -379,8 +382,9 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
               svn_revnum_t revision
                 = svn_fs_x__get_revnum(p2l_item->change_set);
 
+              svn_pool_clear(iterpool2);
               SVN_ERR(svn_fs_x__item_offset(&l2p_offset, &sub_item, fs,
-                                            rev_file, p2l_item, iterpool));
+                                            rev_file, p2l_item, iterpool2));
 
               if (sub_item != k || l2p_offset != entry->offset)
                 return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT,
@@ -403,6 +407,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
         SVN_ERR(cancel_func(cancel_baton));
     }
 
+  svn_pool_destroy(iterpool2);
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_x__close_revision_file(rev_file));
@@ -662,10 +667,10 @@ compare_p2l_to_rev(svn_fs_t *fs,
             {
               if (entry->size < STREAM_THRESHOLD)
                 SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
-                                                   scratch_pool));
+                                                   iterpool));
               else
                 SVN_ERR(expected_streamed_checksum(rev_file->file, entry,
-                                                   scratch_pool));
+                                                   iterpool));
             }
 
           /* advance offset */
