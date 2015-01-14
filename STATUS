@@ -111,6 +111,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1651759
+   Api correctness fix: Duplicate error filename when copying errors
+   Justification:
+     Simple to fix issue caused error on buildbot.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
