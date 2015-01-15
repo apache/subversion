@@ -9314,24 +9314,23 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     /* Resolve a few conflicts manually */
     SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
         svn_wc_conflict_choose_mine_conflict));
-    SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
-        svn_wc_conflict_choose_mine_conflict));
-    SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
-        svn_wc_conflict_choose_mine_conflict));
 
     {
       nodes_row_t nodes[] = {
 
-        /* ### We have an invalid database state here!!! 
-               One of the calls before this left a delete of A_moved/A/A/A */
         {1, "A_moved",        "normal",       2, "A", MOVED_HERE},
         {1, "A_moved/A",      "normal",       2, "A/A", MOVED_HERE},
-        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM},
 
         { 0 },
       };
         SVN_ERR(check_db_rows(&b, "A_moved", nodes));
     }
+
+    SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+        svn_wc_conflict_choose_mine_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
+        svn_wc_conflict_choose_mine_conflict));
+
 
     /* ### These can currently only be resolved to merged ???? */
     SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
@@ -9370,7 +9369,6 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
         {1, "AAA_3/A",        "normal",       1, "C/A/A/A"},
         {1, "A_moved",        "normal",       2, "A", MOVED_HERE},
         {1, "A_moved/A",      "normal",       2, "A/A", MOVED_HERE},
-        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM}, /* ### */
         {1, "B",              "base-deleted", NO_COPY_FROM, "A"},
         {0, "B",              "normal",       1, "B"},
         {1, "B/A",            "base-deleted", NO_COPY_FROM},
@@ -9381,7 +9379,6 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
         {0, "B/A/A/A",        "normal",       1, "B/A/A/A"},
         {1, "BA_moved",       "normal",       1, "A/A", MOVED_HERE},
         {1, "BA_moved/A",     "normal",       1, "A/A/A", MOVED_HERE},
-        {2, "BA_moved/A/A",   "base-deleted", NO_COPY_FROM},
         {1, "BA_moved/A/A",   "normal",       1, "A/A/A/A", MOVED_HERE},
         {0, "C",              "normal",       1, "C"},
         {2, "C/A",            "base-deleted", NO_COPY_FROM, "A/A"},
@@ -10117,7 +10114,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move4: delete AAA"),
     SVN_TEST_OPTS_PASS(move4_update_add_AAA,
                        "move4: add AAA"),
-    SVN_TEST_OPTS_XFAIL(move4_update_delself_AAA,
+    SVN_TEST_OPTS_PASS(move4_update_delself_AAA,
                        "move4: delete self AAA"),
     SVN_TEST_OPTS_PASS(simple_move_bump,
                        "simple move bump"),

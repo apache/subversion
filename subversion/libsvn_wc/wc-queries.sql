@@ -235,11 +235,11 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND presence = MAP_BASE_DELETED
-  AND op_depth > 0
+  AND op_depth > ?3
   AND op_depth = (SELECT MIN(op_depth) FROM nodes n
                     WHERE n.wc_id = ?1
                       AND n.local_relpath = nodes.local_relpath
-                      AND op_depth > 0)
+                      AND op_depth > ?3)
 
 -- STMT_DELETE_WORKING_RECURSIVE
 DELETE FROM nodes

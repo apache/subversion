@@ -1233,23 +1233,23 @@ tc_editor_delete(update_move_baton_t *b,
 
 /* Delete handling for both WORKING and shadowed nodes */
 static svn_error_t *
-delete_move_leaf(update_move_baton_t *b,
-                 const char *relpath,
+delete_move_leaf(svn_wc__db_wcroot_t *wcroot,
+                 const char *local_relpath,
+                 int op_depth,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  int op_depth = relpath_depth(b->move_root_dst_relpath);
-  const char *parent_relpath = svn_relpath_dirname(relpath, scratch_pool);
   svn_boolean_t have_row;
   int op_depth_below;
 
-  /* Deleting the ROWS is valid so long as we update the parent before
+  /* Deleting the ROWS is valid as long as we update the parent before
      committing the transaction.  The removed rows could have been
      replacing a lower layer in which case we need to add base-deleted
      rows. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_HIGHEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, parent_relpath,
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            svn_relpath_dirname(local_relpath, scratch_pool),
                             op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
@@ -1258,30 +1258,38 @@ delete_move_leaf(update_move_baton_t *b,
   if (have_row)
     {
       /* Remove non-shadowing nodes. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_NO_LOWER_LAYER));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isdd", wcroot->wc_id, local_relpath,
                                 op_depth, op_depth_below));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* Convert remaining shadowing nodes to presence='base-deleted'. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_REPLACE_WITH_BASE_DELETED));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
                                 op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
   else
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WORKING_OP_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
                                 op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* Retract any base-delete. */
-  SVN_ERR(svn_wc__db_retract_parent_delete(b->wcroot, relpath, op_depth,
+  /* Retract any base-delete for descendants. */
+  {
+    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_BASE_DELETE));
+    SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                              op_depth));
+    SVN_ERR(svn_sqlite__step_done(stmt));
+  }
+  /* And for the node itself */
+  SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, op_depth,
                                            scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1523,7 +1531,9 @@ update_moved_away_node(update_move_baton_t *b,
 
       /* And perform some work that in some ways belongs in
          replace_moved_layer() after creating all conflicts */
-      SVN_ERR(delete_move_leaf(b, dst_relpath, scratch_pool));
+      SVN_ERR(delete_move_leaf(b->wcroot, dst_relpath,
+                               relpath_depth(b->move_root_dst_relpath),
+                               scratch_pool));
     }
 
   if (src_kind != svn_node_none && src_kind != dst_kind)
