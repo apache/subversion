@@ -7594,7 +7594,11 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
                             op_depth,
                             new_moved_to_relpath));
   SVN_ERR(svn_sqlite__update(&affected, stmt));
-  assert(affected == 1);
+#ifdef SVN_DEBUG
+  /* Not fatal in release mode. The move recording is broken,
+     but the rest of the working copy can handle this. */
+  SVN_ERR_ASSERT(affected == 1);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -7984,7 +7988,12 @@ delete_node(void *baton,
                                                         child_relpath))
                         child_op_depth = delete_op_depth;
                       else
-                        child_op_depth = relpath_depth(child_relpath);
+                        {
+                          /* Calculate depth of the shadowing at the new location */
+                          child_op_depth = child_op_depth
+                                                - relpath_depth(local_relpath)
+                                                + relpath_depth(b->moved_to_relpath);
+                        }
 
                       fixup = TRUE;
                     }
