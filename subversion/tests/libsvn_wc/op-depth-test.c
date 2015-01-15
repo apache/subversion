@@ -9775,6 +9775,82 @@ nested_move_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_move(&b, "A", "A_moved"));
 
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                   "normal",       0, ""},
+      {0, "A",                  "normal",       1, "A"},
+      {1, "A",                  "base-deleted", NO_COPY_FROM, "A_moved"},
+      {0, "A/B",                "normal",       1, "A/B"},
+      {1, "A/B",                "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E",              "normal",       1, "A/B/E"},
+      {1, "A/B/E",              "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E/alpha",        "normal",       1, "A/B/E/alpha"},
+      {1, "A/B/E/alpha",        "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E/beta",         "normal",       1, "A/B/E/beta"},
+      {1, "A/B/E/beta",         "base-deleted", NO_COPY_FROM},
+      {0, "A/B/F",              "normal",       1, "A/B/F"},
+      {1, "A/B/F",              "base-deleted", NO_COPY_FROM},
+      {0, "A/B/lambda",         "normal",       1, "A/B/lambda"},
+      {1, "A/B/lambda",         "base-deleted", NO_COPY_FROM},
+      {0, "A/C",                "normal",       1, "A/C"},
+      {1, "A/C",                "base-deleted", NO_COPY_FROM},
+      {0, "A/D",                "normal",       1, "A/D"},
+      {1, "A/D",                "base-deleted", NO_COPY_FROM},
+      {0, "A/D/G",              "normal",       1, "A/D/G"},
+      {1, "A/D/G",              "base-deleted", NO_COPY_FROM},
+      {0, "A/D/G/pi",           "normal",       1, "A/D/G/pi"},
+      {1, "A/D/G/pi",           "base-deleted", NO_COPY_FROM},
+      {0, "A/D/G/rho",          "normal",       1, "A/D/G/rho"},
+      {1, "A/D/G/rho",          "base-deleted", NO_COPY_FROM},
+      {0, "A/D/G/tau",          "normal",       1, "A/D/G/tau"},
+      {1, "A/D/G/tau",          "base-deleted", NO_COPY_FROM},
+      {0, "A/D/H",              "normal",       1, "A/D/H"},
+      {1, "A/D/H",              "base-deleted", NO_COPY_FROM},
+      {0, "A/D/H/chi",          "normal",       1, "A/D/H/chi"},
+      {1, "A/D/H/chi",          "base-deleted", NO_COPY_FROM},
+      {0, "A/D/H/omega",        "normal",       1, "A/D/H/omega"},
+      {1, "A/D/H/omega",        "base-deleted", NO_COPY_FROM},
+      {0, "A/D/H/psi",          "normal",       1, "A/D/H/psi"},
+      {1, "A/D/H/psi",          "base-deleted", NO_COPY_FROM},
+      {0, "A/D/gamma",          "normal",       1, "A/D/gamma"},
+      {1, "A/D/gamma",          "base-deleted", NO_COPY_FROM},
+      {0, "A/mu",               "normal",       1, "A/mu"},
+      {1, "A/mu",               "base-deleted", NO_COPY_FROM},
+      {1, "A_moved",            "normal",       1, "A", MOVED_HERE},
+      {1, "A_moved/B",          "normal",       1, "A/B", MOVED_HERE},
+      {2, "A_moved/B",          "base-deleted", NO_COPY_FROM},
+      {2, "A_moved/B/E",        "base-deleted", NO_COPY_FROM},
+      {1, "A_moved/B/E",        "normal",       1, "A/B/E", MOVED_HERE},
+      {1, "A_moved/B/E/alpha",  "normal",       1, "A/B/E/alpha", MOVED_HERE},
+      {2, "A_moved/B/E/alpha",  "base-deleted", NO_COPY_FROM},
+      {1, "A_moved/B/E/beta",   "normal",       1, "A/B/E/beta", MOVED_HERE},
+      {2, "A_moved/B/E/beta",   "base-deleted", NO_COPY_FROM},
+      {1, "A_moved/B/F",        "normal",       1, "A/B/F", MOVED_HERE},
+      {2, "A_moved/B/F",        "base-deleted", NO_COPY_FROM},
+      {1, "A_moved/B/lambda",   "normal",       1, "A/B/lambda", MOVED_HERE},
+      {2, "A_moved/B/lambda",   "base-deleted", NO_COPY_FROM, "A_moved/Z/lambda"},
+      {1, "A_moved/C",          "normal",       1, "A/C", MOVED_HERE},
+      {1, "A_moved/D",          "normal",       1, "A/D", MOVED_HERE},
+      {1, "A_moved/D/G",        "normal",       1, "A/D/G", MOVED_HERE},
+      {1, "A_moved/D/G/pi",     "normal",       1, "A/D/G/pi", MOVED_HERE},
+      {1, "A_moved/D/G/rho",    "normal",       1, "A/D/G/rho", MOVED_HERE},
+      {1, "A_moved/D/G/tau",    "normal",       1, "A/D/G/tau", MOVED_HERE},
+      {1, "A_moved/D/H",        "normal",       1, "A/D/H", MOVED_HERE},
+      {1, "A_moved/D/H/chi",    "normal",       1, "A/D/H/chi", MOVED_HERE},
+      {1, "A_moved/D/H/omega",  "normal",       1, "A/D/H/omega", MOVED_HERE},
+      {1, "A_moved/D/H/psi",    "normal",       1, "A/D/H/psi", MOVED_HERE},
+      {1, "A_moved/D/gamma",    "normal",       1, "A/D/gamma", MOVED_HERE},
+      {2, "A_moved/Z",          "normal",       NO_COPY_FROM},
+      {3, "A_moved/Z/lambda",   "normal",       1, "A/B/lambda", MOVED_HERE},
+      {1, "A_moved/mu",         "normal",       1, "A/mu", MOVED_HERE},
+      {0, "iota", "normal",  1, "iota"},
+
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   return SVN_NO_ERROR;
 }
 
