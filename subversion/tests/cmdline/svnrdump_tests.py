@@ -831,8 +831,8 @@ def load_non_deltas_copy_with_props(sbox):
   "load non-deltas copy with props"
   sbox.build()
 
-  # Set props on a file and on a dir
-  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  # Set props on a file and on a dir and on a child of the dir to be copied
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
@@ -841,7 +841,7 @@ def load_non_deltas_copy_with_props(sbox):
   sbox.simple_copy('A/mu@2', 'A/mu_COPY')
   sbox.simple_copy('A/B@2', 'A/B_COPY')
   # On the copy, delete a prop
-  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY')
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E')
 
   sbox.simple_commit()
 
