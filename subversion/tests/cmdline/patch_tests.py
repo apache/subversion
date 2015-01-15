@@ -4817,7 +4817,6 @@ def patch_hunk_avoid_reorder(sbox):
 
   sbox.simple_revert('A/mu')
 
-@XFail()
 @Issue(4533)
 def patch_hunk_avoid_reorder2(sbox):
   """avoid reordering hunks 2"""
