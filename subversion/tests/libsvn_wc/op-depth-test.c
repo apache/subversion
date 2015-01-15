@@ -9747,6 +9747,32 @@ nested_move_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_wc_delete(&b, "A/B"));
 
+  {
+    nodes_row_t nodes_AB[] = {
+      {0, "A/B",          "normal",       1, "A/B"},
+      {2, "A/B",          "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E",        "normal",       1, "A/B/E"},
+      {2, "A/B/E",        "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E/alpha",  "normal",       1, "A/B/E/alpha"},
+      {2, "A/B/E/alpha",  "base-deleted", NO_COPY_FROM},
+      {0, "A/B/E/beta",   "normal",       1, "A/B/E/beta"},
+      {2, "A/B/E/beta",   "base-deleted", NO_COPY_FROM},
+      {0, "A/B/F",        "normal",       1, "A/B/F"},
+      {2, "A/B/F",        "base-deleted", NO_COPY_FROM},
+      {2, "A/B/lambda",   "base-deleted", NO_COPY_FROM, "A/Z/lambda"},
+      {0, "A/B/lambda",   "normal",       1, "A/B/lambda"},
+      {0}
+    };
+    nodes_row_t nodes_AZ[] = {
+      {2, "A/Z",          "normal",       NO_COPY_FROM},
+      {3, "A/Z/lambda",   "normal",       1, "A/B/lambda", MOVED_HERE },
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "A/B", nodes_AB));
+    SVN_ERR(check_db_rows(&b, "A/Z", nodes_AZ));
+  }
+
   SVN_ERR(sbox_wc_move(&b, "A", "A_moved"));
 
   return SVN_NO_ERROR;
