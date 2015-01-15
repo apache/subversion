@@ -13047,6 +13047,15 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_wq_add_internal(svn_wc__db_wcroot_t *wcroot,
+                           const svn_skel_t *work_item,
+                           apr_pool_t *scratch_pool)
+{
+  /* Add the work item(s) to the WORK_QUEUE.  */
+  return svn_error_trace(add_work_items(wcroot->sdb, work_item,
+                                        scratch_pool));
+}
 
 svn_error_t *
 svn_wc__db_wq_add(svn_wc__db_t *db,

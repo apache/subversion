@@ -216,6 +216,13 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_wq_add() but taking WCROOT */
+svn_error_t *
+svn_wc__db_wq_add_internal(svn_wc__db_wcroot_t *wcroot,
+                           const svn_skel_t *work_item,
+                           apr_pool_t *scratch_pool);
+
+
 /* Like svn_wc__db_read_info(), but taking WCROOT+LOCAL_RELPATH instead of
    DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 svn_error_t *
