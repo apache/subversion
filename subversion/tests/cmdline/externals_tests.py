@@ -3506,7 +3506,6 @@ def copy_file_external_to_repo(sbox):
                                         expected_output, expected_disk, None)
 
 @Issue(4550)
-@XFail()
 def replace_tree_with_foreign_external(sbox):
   "replace tree with foreign external"
 
