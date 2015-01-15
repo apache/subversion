@@ -192,6 +192,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1651963, r1651966, r1651980, r1651997
+   Sequence of moves shouldn't trigger an assertion in the working copy
+   Justification:
+     Users shouldn't be able to trigger assertions by performing normal
+     operations.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
