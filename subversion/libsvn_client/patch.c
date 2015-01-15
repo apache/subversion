@@ -1733,26 +1733,73 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
           if (! already_applied)
             {
-              /* Scan the whole file again from the start. */
-              SVN_ERR(seek_to_line(content, 1, scratch_pool));
+              int i;
+              svn_linenum_t search_start = 1, search_end = 0;
+              svn_linenum_t matched_line2;
 
-              /* Scan forward towards the hunk's line and look for a line
-               * where the hunk matches. */
+              /* Search for closest match before or after original
+                 start.  We have no backward search so search forwards
+                 from the previous match (or start of file) to the
+                 original start looking for the last match.  Then
+                 search forwards from the original start looking for a
+                 better match.  Finally search forwards from the start
+                 of file to the previous hunk if that could result in
+                 a better match. */
+
+              for (i = content->hunks->nelts; i > 0; --i)
+                {
+                  const hunk_info_t *prev
+                    = APR_ARRAY_IDX(content->hunks, i - 1, const hunk_info_t *);
+                  if (!prev->rejected)
+                    {
+                      svn_linenum_t length;
+
+                      length = svn_diff_hunk_get_original_length(prev->hunk);
+                      search_start = prev->matched_line + length;
+                      break;
+                    }
+                }
+
+              /* Search from the previous match, or start of file,
+                 towards the original location. */
+              SVN_ERR(seek_to_line(content, search_start, scratch_pool));
               SVN_ERR(scan_for_match(&matched_line, content, hunk, FALSE,
                                      original_start, fuzz,
                                      ignore_whitespace, FALSE,
                                      cancel_func, cancel_baton,
                                      scratch_pool));
 
-              /* In tie-break situations, we arbitrarily prefer early matches
-               * to save us from scanning the rest of the file. */
-              if (matched_line == 0)
+              /* If a match we only need to search forwards for a
+                 better match, otherwise to the end of the file. */
+              if (matched_line)
+                search_end = original_start + (original_start - matched_line);
+
+              /* Search from original location, towards the end. */
+              SVN_ERR(seek_to_line(content, original_start + 1, scratch_pool));
+              SVN_ERR(scan_for_match(&matched_line2, content, hunk,
+                                     TRUE, search_end, fuzz, ignore_whitespace,
+                                     FALSE, cancel_func, cancel_baton,
+                                     scratch_pool));
+
+              /* Chose the forward match if it is closer than the
+                 backward match or if there is no backward match. */
+              if (matched_line2
+                  && (!matched_line
+                      || (matched_line2 - original_start
+                          < original_start - matched_line)))
+                  matched_line = matched_line2;
+
+              /* Search from start of file if there could be a better match. */
+              if (search_start > 1
+                  && (!matched_line
+                      || (matched_line > original_start
+                          && (matched_line - original_start > original_start)))) 
                 {
-                  /* Scan forward towards the end of the file and look
-                   * for a line where the hunk matches. */
-                  SVN_ERR(scan_for_match(&matched_line, content, hunk,
-                                         TRUE, 0, fuzz, ignore_whitespace,
-                                         FALSE, cancel_func, cancel_baton,
+                  SVN_ERR(seek_to_line(content, 1, scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line, content, hunk, FALSE,
+                                         search_start - 1, fuzz,
+                                         ignore_whitespace, FALSE,
+                                         cancel_func, cancel_baton,
                                          scratch_pool));
                 }
             }
