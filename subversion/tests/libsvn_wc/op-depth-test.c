@@ -9296,6 +9296,21 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     /* Update and resolve via mine strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
 
+    {
+      nodes_row_t nodes[] = {
+
+        {1, "A_moved",        "normal",       1, "A", MOVED_HERE},
+        {1, "A_moved/A",      "normal",       1, "A/A", MOVED_HERE},
+        {1, "A_moved/A/A",    "normal",       1, "A/A/A", MOVED_HERE},
+        {3, "A_moved/A/A",    "base-deleted", NO_COPY_FROM, "AAA_1"},
+        {1, "A_moved/A/A/A",  "normal",       1, "A/A/A/A", MOVED_HERE},
+        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM},
+
+        { 0 },
+      };
+        SVN_ERR(check_db_rows(&b, "A_moved", nodes));
+    }
+
     /* Resolve a few conflicts manually */
     SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
         svn_wc_conflict_choose_mine_conflict));
@@ -9303,6 +9318,20 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
         svn_wc_conflict_choose_mine_conflict));
     SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
         svn_wc_conflict_choose_mine_conflict));
+
+    {
+      nodes_row_t nodes[] = {
+
+        /* ### We have an invalid database state here!!! 
+               One of the calls before this left a delete of A_moved/A/A/A */
+        {1, "A_moved",        "normal",       2, "A", MOVED_HERE},
+        {1, "A_moved/A",      "normal",       2, "A/A", MOVED_HERE},
+        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM},
+
+        { 0 },
+      };
+        SVN_ERR(check_db_rows(&b, "A_moved", nodes));
+    }
 
     /* ### These can currently only be resolved to merged ???? */
     SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
@@ -9341,7 +9370,7 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
         {1, "AAA_3/A",        "normal",       1, "C/A/A/A"},
         {1, "A_moved",        "normal",       2, "A", MOVED_HERE},
         {1, "A_moved/A",      "normal",       2, "A/A", MOVED_HERE},
-        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM},
+        {3, "A_moved/A/A/A",  "base-deleted", NO_COPY_FROM}, /* ### */
         {1, "B",              "base-deleted", NO_COPY_FROM, "A"},
         {0, "B",              "normal",       1, "B"},
         {1, "B/A",            "base-deleted", NO_COPY_FROM},
@@ -9370,7 +9399,6 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
       };
         SVN_ERR(check_db_rows(&b, "", nodes));
     }
-    SVN_DBG(("---------------"));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
