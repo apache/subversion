@@ -593,8 +593,7 @@ tc_editor_add_directory(update_move_baton_t *b,
       SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db, abspath,
                                            scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
-                                scratch_pool));
+      SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_item, scratch_pool));
       /* Fall through */
     case svn_node_dir:
       break;
@@ -680,8 +679,7 @@ tc_editor_add_file(update_move_baton_t *b,
                                         TRUE  /* record_file_info */,
                                         scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
-                            scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_item, scratch_pool));
 
   SVN_ERR(update_move_list_add(b->wcroot, relpath,
                                svn_wc_notify_update_add,
@@ -884,8 +882,8 @@ tc_editor_alter_directory(update_move_baton_t *b,
           SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, dst_relpath,
                                                     conflict_skel,
                                                     scratch_pool));
-          SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_items,
-                                    scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_items,
+                                             scratch_pool));
         }
 
     SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
@@ -1020,8 +1018,7 @@ update_working_file(update_move_baton_t *b,
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_items,
-                            scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_items, scratch_pool));
 
   SVN_ERR(update_move_list_add(b->wcroot, local_relpath,
                                svn_wc_notify_update_update,
@@ -1199,8 +1196,7 @@ tc_editor_delete(update_move_baton_t *b,
                                                b->wcroot->abspath, del_abspath,
                                                iterpool, iterpool);
           if (!err)
-            err = svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
-                                    iterpool);
+            err = svn_wc__db_wq_add_internal(b->wcroot, work_item, iterpool);
           if (err)
             return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
@@ -1222,8 +1218,7 @@ tc_editor_delete(update_move_baton_t *b,
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item, b->db,
                                              b->wcroot->abspath, local_abspath,
                                              iterpool, iterpool));
-      SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_item,
-                                iterpool));
+      SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_item, iterpool));
 
       if (!is_conflicted)
         SVN_ERR(update_move_list_add(b->wcroot, relpath,
@@ -2574,16 +2569,29 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
       const char *src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *dst_relpath = svn_sqlite__column_text(stmt, 1, NULL);
       int src_op_depth = svn_sqlite__column_int(stmt, 2);
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(break_move(wcroot, src_relpath, src_op_depth, dst_relpath,
-                         iterpool));
-      SVN_ERR(update_move_list_add(wcroot, src_relpath,
-                                   svn_wc_notify_move_broken,
-                                   svn_node_unknown,
-                                   svn_wc_notify_state_inapplicable,
-                                   svn_wc_notify_state_inapplicable));
+      err = break_move(wcroot, src_relpath, src_op_depth, dst_relpath,
+                       iterpool);
+
+      if (! err)
+        {
+          err = update_move_list_add(wcroot, src_relpath,
+                                     svn_wc_notify_move_broken,
+                                     svn_node_unknown,
+                                     svn_wc_notify_state_inapplicable,
+                                     svn_wc_notify_state_inapplicable);
+        }
+
+      if (err)
+        {
+          return svn_error_trace(
+                          svn_error_compose_create(err,
+                                                   svn_sqlite__reset(stmt)));
+        }
+
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   svn_pool_destroy(iterpool);
