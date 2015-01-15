@@ -825,6 +825,7 @@ def load_mergeinfo_contains_r0(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # not exist and the failure mode is to error out.
+@XFail()
 @Issue(4551)
 def load_non_deltas_copy_with_props(sbox):
   "load non-deltas copy with props"
@@ -860,6 +861,7 @@ def load_non_deltas_copy_with_props(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # exist and the failure mode is to fail to delete a property.
+@XFail()
 @Issue(4551)
 def load_non_deltas_replace_copy_with_props(sbox):
   "load non-deltas replace&copy with props"
