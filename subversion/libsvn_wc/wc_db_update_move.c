@@ -2614,21 +2614,26 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    const char *src_op_root_abspath,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  const char *src_relpath;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
+  src_relpath = svn_dirent_skip_ancestor(wcroot->abspath, src_op_root_abspath);
+  SVN_ERR_ASSERT(src_relpath != NULL);
+
   SVN_WC__DB_WITH_TXN(
     svn_wc__db_resolve_break_moved_away_internal(wcroot, local_relpath,
-                                                 relpath_depth(local_relpath),
+                                                 relpath_depth(src_relpath),
                                                  scratch_pool),
     wcroot);
 
@@ -2654,6 +2659,7 @@ svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
                                              const char *local_abspath,
+                                             const char *src_op_root_abspath,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool)
