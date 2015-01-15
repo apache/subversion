@@ -1561,6 +1561,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   svn_boolean_t sqlite_exclusive = FALSE;
   apr_int32_t sqlite_timeout = 0; /* default timeout */
+  apr_hash_index_t *hi;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1592,6 +1593,16 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* The WCROOT is complete. Stash it into DB.  */
   svn_hash_sets(db->dir_data, wcroot->abspath, wcroot);
+
+  /* Any previously cached children now have a new WCROOT. */
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *abspath = apr_hash_this_key(hi);
+      if (svn_dirent_is_ancestor(wcroot->abspath, abspath))
+        svn_hash_sets(db->dir_data, abspath, wcroot);
+    }
 
   return SVN_NO_ERROR;
 }
