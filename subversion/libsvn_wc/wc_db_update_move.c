@@ -1504,6 +1504,9 @@ update_moved_away_node(update_move_baton_t *b,
   apr_array_header_t *src_children, *dst_children;
   int dst_op_depth = relpath_depth(move_root_dst_relpath);
 
+  SVN_ERR(verify_write_lock(wcroot, src_relpath, scratch_pool));
+  SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
+
   SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
                    src_relpath, src_op_depth,
                    wcroot, scratch_pool, scratch_pool));
@@ -1652,6 +1655,9 @@ replace_moved_layer(const char *src_relpath,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int dst_op_depth = relpath_depth(dst_relpath);
+
+  SVN_ERR(verify_write_lock(wcroot, src_relpath, scratch_pool));
+  SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
 
   /* Replace entire subtree at one op-depth. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -2046,40 +2052,8 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
 
-  /* Verify precondition*/
-  SVN_ERR(verify_write_lock(wcroot, move_src_op_root_relpath, scratch_pool));
-  {
-    svn_boolean_t locked;
-
-    SVN_ERR(svn_wc__db_wclock_owns_lock_internal(&locked, wcroot,
-                                                 move_dst_op_root_relpath,
-                                                 FALSE, scratch_pool));
-
-    if (!locked)
-      {
-        /* The user is updating something that is moved away, but the location
-           that it is moved to is outside the lock scope of the operation
-           itself.
-
-           The only thing we can do is mark a tree conflict, to allow
-           updating the target in a followup 'resolve' operation, as updating
-           the target itself is not allowed. (Taking a lock is the responsibility
-           of the caller!) */
-
-        /* ### WIP: Return same error as before */
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Can't bump move from '%s' to '%s' as the "
-                                   "target isn't locked"),
-                                 path_for_error_message(
-                                              wcroot,
-                                              move_src_op_root_relpath,
-                                              scratch_pool),
-                                 path_for_error_message(
-                                              wcroot,
-                                              move_dst_op_root_relpath,
-                                              scratch_pool));
-      }
-  }
+  /* Verify precondition: We are allowed to set a tree conflict here. */
+  SVN_ERR(verify_write_lock(wcroot, move_src_root_relpath, scratch_pool));
 
   /* Read new (post-update) information from the new move source BASE node. */
   SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_kind, &new_rev,
@@ -2091,13 +2065,35 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
                                       wcroot->sdb, repos_id, scratch_pool));
 
-  /* Read old (pre-update) information from the move destination node. */
+  /* Read old (pre-update) information from the move destination node.
+
+     This potentially touches nodes that aren't locked by us, but that is not
+     a problem because we have a SQLite write lock here, and all sqlite
+     operations that affect move stability use a sqlite lock as well.
+     (And affecting the move itself requires a write lock on the node that
+      we do own the lock for: the move source)
+  */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &old_kind, &old_rev,
                                     &old_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                     wcroot, move_dst_op_root_relpath,
                                     relpath_depth(move_dst_op_root_relpath),
                                     scratch_pool, scratch_pool));
+
+  if (strcmp(move_src_root_relpath, move_src_op_root_relpath))
+    {
+      /* We have information for the op-root, but need it for the node that
+         we are putting the tree conflict on. Luckily we know that we have
+         a clean BASE */
+
+      const char *rpath = svn_relpath_skip_ancestor(move_src_op_root_relpath,
+                                                    move_src_root_relpath);
+
+      old_repos_relpath = svn_relpath_join(old_repos_relpath, rpath,
+                                           scratch_pool);
+      new_repos_relpath = svn_relpath_join(new_repos_relpath, rpath,
+                                           scratch_pool);
+    }
 
   old_version = svn_wc_conflict_version_create2(
                   repos_root_url, repos_uuid, old_repos_relpath, old_rev,
@@ -2365,10 +2361,26 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
         {
           if (strcmp(move_src_root_relpath, local_relpath))
             {
-              SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
-                                              move_src_op_root_relpath,
-                                              move_dst_op_root_relpath,
-                                              db, scratch_pool));
+              /* An ancestor of the path that was updated is moved away.
+
+                 If we have a lock on that ancestor, we can mark a tree
+                 conflict on it, if we don't we ignore this case. A future
+                 update of the ancestor will handle this. */
+              svn_boolean_t locked;
+
+              SVN_ERR(svn_wc__db_wclock_owns_lock_internal(
+                                &locked, wcroot,
+                                move_src_root_relpath,
+                                FALSE, scratch_pool));
+
+              if (locked)
+                {
+                  SVN_ERR(bump_mark_tree_conflict(wcroot,
+                                                  move_src_root_relpath,
+                                                  move_src_op_root_relpath,
+                                                  move_dst_op_root_relpath,
+                                                  db, scratch_pool));
+                }
               return SVN_NO_ERROR;
             }
         }
