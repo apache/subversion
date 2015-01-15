@@ -10122,7 +10122,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "movedhere extract retract"),
     SVN_TEST_OPTS_PASS(repo_wc_copy,
                        "repo_wc_copy"),
-    SVN_TEST_OPTS_XFAIL(break_move_in_delete,
+    SVN_TEST_OPTS_PASS(break_move_in_delete,
                        "break move in delete (issue 4491)"),
     SVN_TEST_OPTS_PASS(nested_move_delete,
                        "nested move delete"),
