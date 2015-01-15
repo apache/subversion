@@ -820,6 +820,84 @@ def load_mergeinfo_contains_r0(sbox):
   run_load_test(sbox, "mergeinfo-contains-r0.dump",
                 expected_dumpfile_name="mergeinfo-contains-r0.expected.dump")
 
+#----------------------------------------------------------------------
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# not exist and the failure mode is to error out.
+@Issue(4551)
+def load_non_deltas_copy_with_props(sbox):
+  "load non-deltas copy with props"
+  sbox.build()
+
+  # Set props on a file and on a dir
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Case (1): Copy file/dir, not replacing anything; the copy target path
+  # at (new rev - 1) does not exist
+  sbox.simple_copy('A/mu@2', 'A/mu_COPY')
+  sbox.simple_copy('A/B@2', 'A/B_COPY')
+  # On the copy, delete a prop
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+  # For regression test purposes, all we require is that the 'load'
+  # doesn't throw an error
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# exist and the failure mode is to fail to delete a property.
+@Issue(4551)
+def load_non_deltas_replace_copy_with_props(sbox):
+  "load non-deltas replace&copy with props"
+  sbox.build()
+
+  # Set props on a file and on a dir
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Case (2): Copy file/dir, replacing something; the copy target path
+  # at (new rev - 1) exists and has no property named 'p'
+  sbox.simple_rm('A/D/gamma', 'A/C')
+  sbox.simple_copy('A/mu@2', 'A/D/gamma')
+  sbox.simple_copy('A/B@2', 'A/C')
+  # On the copy, delete a prop that isn't present on the replaced node
+  sbox.simple_propdel('p', 'A/D/gamma', 'A/C')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'p' really was deleted on each copied node
+  for tgt_path in ['A/D/gamma', 'A/C']:
+    _, out, _ = svntest.main.run_svn(None, 'proplist',
+                                     new_repo_url + '/' + tgt_path)
+    expected = []
+    actual = out[1:]
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 ########################################################################
 # Run the tests
@@ -878,6 +956,8 @@ test_list = [ None,
               load_prop_change_in_non_deltas_dump,
               dump_mergeinfo_contains_r0,
               load_mergeinfo_contains_r0,
+              load_non_deltas_copy_with_props,
+              load_non_deltas_replace_copy_with_props,
              ]
 
 if __name__ == '__main__':
