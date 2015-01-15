@@ -101,6 +101,20 @@
 #include "token-map.h"
 
 /* Helper functions */
+/* Return the absolute path, in local path style, of LOCAL_RELPATH
+   in WCROOT.  */
+static const char *
+path_for_error_message(const svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath,
+                       apr_pool_t *result_pool)
+{
+  const char *local_abspath
+    = svn_dirent_join(wcroot->abspath, local_relpath, result_pool);
+
+  return svn_dirent_local_style(local_abspath, result_pool);
+}
+
+/* Ensure that there is a working copy lock for LOCAL_RELPATH in WCROOT */
 static svn_error_t *
 verify_write_lock(svn_wc__db_wcroot_t *wcroot,
                   const char *local_relpath,
@@ -114,11 +128,8 @@ verify_write_lock(svn_wc__db_wcroot_t *wcroot,
     {
       return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                                _("No write-lock in '%s'"),
-                               svn_dirent_local_style(
-                                            svn_dirent_join(wcroot->abspath,
-                                                            local_relpath,
-                                                            scratch_pool),
-                                            scratch_pool));
+                               path_for_error_message(wcroot, local_relpath,
+                                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -308,7 +319,7 @@ mark_tree_conflict(const char *local_relpath,
           && conflict_operation != svn_wc_operation_switch)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("'%s' already in conflict"),
-                                 svn_dirent_local_style(local_relpath,
+                                 path_for_error_message(wcroot, local_relpath,
                                                         scratch_pool));
 
       if (tree_conflicted)
@@ -332,7 +343,8 @@ mark_tree_conflict(const char *local_relpath,
                                                      existing_abspath))))
             return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                                      _("'%s' already in conflict"),
-                                     svn_dirent_local_style(local_relpath,
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
                                                             scratch_pool));
 
           /* Already a suitable tree-conflict. */
@@ -1719,10 +1731,8 @@ drive_tree_conflict_editor(update_move_baton_t *b,
       operation != svn_wc_operation_switch)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                             _("Cannot auto-resolve tree-conflict on '%s'"),
-                            svn_dirent_local_style(
-                              svn_dirent_join(wcroot->abspath,
-                                              src_relpath, scratch_pool),
-                              scratch_pool));
+                            path_for_error_message(wcroot, src_relpath,
+                                                   scratch_pool));
 
   /* We walk the move source (i.e. the post-update tree), comparing each node
    * with the equivalent node at the move destination and applying the update
@@ -1780,22 +1790,17 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
                                  svn_sqlite__reset(stmt),
                                  _("Cannot apply update because move source "
                                    "%s' is a mixed-revision working copy"),
-                                 svn_dirent_local_style(svn_dirent_join(
-                                                          wcroot->abspath,
-                                                          local_relpath,
-                                                          scratch_pool),
-                                 scratch_pool));
+                                 path_for_error_message(wcroot, local_relpath,
+                                                        scratch_pool));
 
       if (strcmp(relpath, svn_sqlite__column_text(stmt, 1, NULL)))
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                  svn_sqlite__reset(stmt),
                                  _("Cannot apply update because move source "
                                    "'%s' is a switched subtree"),
-                                 svn_dirent_local_style(svn_dirent_join(
-                                                          wcroot->abspath,
-                                                          local_relpath,
-                                                          scratch_pool),
-                                 scratch_pool));
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
+                                                        scratch_pool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -1840,10 +1845,8 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
   if (umb.move_root_dst_relpath == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("The node '%s' has not been moved away"),
-                             svn_dirent_local_style(
-                               svn_dirent_join(wcroot->abspath, victim_relpath,
-                                               scratch_pool),
-                               scratch_pool));
+                             path_for_error_message(wcroot, victim_relpath,
+                                                    scratch_pool));
 
   move_root_dst_abspath
     = svn_dirent_join(wcroot->abspath, umb.move_root_dst_relpath,
@@ -1869,10 +1872,8 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("'%s' is not deleted"),
-                             svn_dirent_local_style(
-                               svn_dirent_join(wcroot->abspath, victim_relpath,
-                                               scratch_pool),
-                               scratch_pool));
+                             path_for_error_message(wcroot, victim_relpath,
+                                                    scratch_pool));
 
   if (src_op_depth == 0)
     SVN_ERR(suitable_for_move(wcroot, victim_relpath, scratch_pool));
@@ -2045,8 +2046,40 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
 
+  /* Verify precondition*/
   SVN_ERR(verify_write_lock(wcroot, move_src_op_root_relpath, scratch_pool));
-  SVN_ERR(verify_write_lock(wcroot, move_dst_op_root_relpath, scratch_pool));
+  {
+    svn_boolean_t locked;
+
+    SVN_ERR(svn_wc__db_wclock_owns_lock_internal(&locked, wcroot,
+                                                 move_dst_op_root_relpath,
+                                                 FALSE, scratch_pool));
+
+    if (!locked)
+      {
+        /* The user is updating something that is moved away, but the location
+           that it is moved to is outside the lock scope of the operation
+           itself.
+
+           The only thing we can do is mark a tree conflict, to allow
+           updating the target in a followup 'resolve' operation, as updating
+           the target itself is not allowed. (Taking a lock is the responsibility
+           of the caller!) */
+
+        /* ### WIP: Return same error as before */
+        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                                 _("Can't bump move from '%s' to '%s' as the "
+                                   "target isn't locked"),
+                                 path_for_error_message(
+                                              wcroot,
+                                              move_src_op_root_relpath,
+                                              scratch_pool),
+                                 path_for_error_message(
+                                              wcroot,
+                                              move_dst_op_root_relpath,
+                                              scratch_pool));
+      }
+  }
 
   /* Read new (post-update) information from the new move source BASE node. */
   SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_kind, &new_rev,
