@@ -9733,6 +9733,25 @@ break_move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+nested_move_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "nested_move_delete", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A/Z"));
+  SVN_ERR(sbox_wc_move(&b, "A/B/lambda", "A/Z/lambda"));
+
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+
+  SVN_ERR(sbox_wc_move(&b, "A", "A_moved"));
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -9926,6 +9945,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "repo_wc_copy"),
     SVN_TEST_OPTS_XFAIL(break_move_in_delete,
                        "break move in delete (issue 4491)"),
+    SVN_TEST_OPTS_XFAIL(nested_move_delete,
+                       "nested move delete"),
     SVN_TEST_NULL
   };
 
