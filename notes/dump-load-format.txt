@@ -74,12 +74,12 @@ An example UUID is "7bf7a5ef-cabf-0310-b7d4-93df341afa7e".
 
 ==== Revision records ====
 
-A Revision record has three headers and is always followed by a
+A Revision record has three headers and is usually followed by a
 property section.  Expect the following form and sequence:
 
 -------------------------------------------------------------------
 Revision-number: <N>
-Prop-content-length: <P>
+[Prop-content-length: <P>]
 Content-length: <L>
 !
 -------------------------------------------------------------------
@@ -158,7 +158,7 @@ RFC822-style headers. A body may follow.
 
 === Property sections ===
 
-A Revision record *must* have a property section, and a Node record *may*
+A Revision record *may* have a property section, and a Node record *may*
 have a property section. Every record with a property section has 
 a Prop-content-length header.
 
@@ -345,9 +345,13 @@ to the same directory.
 
 === Properties and persistence ===
 
-The properties section of a Revision record consists of some subset
-of the three reserved per-commit properties: svn:author, svn:date,
-and svn:log. These properties do not persist to later revisions.
+The properties section of a Revision record consists of some (possibly
+empty) subset of the three reserved revision properties: svn:author,
+svn:date, and svn:log, along with any other revision properties.
+
+The revision properties do not persist to later revisions.  Each revision
+has exactly the revision properties specified in its revision record, or
+no revision properties if there is no property section.
 
 The key thing to know about Node properties is that they are 
 persistent, once set, until modified by a future property 
@@ -519,6 +523,15 @@ properties block.
 
 This note is included for historical completeness only, at is it highly
 unlikely that any Subversion instances that old remain in production.
+
+== Implementation choices for optional behaviour ==
+
+This section lists some of the ways existing implementations interpret the
+optional aspects of the specification.
+
+When a Revision record has no revision properties, svnadmin and svnrdump
+write an empty properties section whereas svndumpfilter omits the properties
+section. (At least in Subversion 1.0 through 1.8.)
 
 == Ancient history ==
 
