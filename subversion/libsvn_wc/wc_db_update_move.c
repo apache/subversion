@@ -408,28 +408,33 @@ mark_tree_conflict(const char *local_relpath,
 /* Checks if a specific local path is shadowed as seen from the move root */
 static svn_error_t *
 check_node_shadowed(svn_boolean_t *shadowed,
-                    update_move_baton_t *b,
+                    svn_wc__db_wcroot_t *wcroot,
                     const char *local_relpath,
+                    const char *move_root_dst_relpath,
                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  int op_depth = -1;
-  *shadowed = FALSE;
 
   /* ### This should really be optimized by using something smart
          in the baton */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (have_row)
-    op_depth = svn_sqlite__column_int(stmt, 0);
-  SVN_ERR(svn_sqlite__reset(stmt));
 
-  *shadowed = (op_depth > relpath_depth(b->move_root_dst_relpath));
+  if (have_row)
+    {
+      int op_depth = -1;
+
+      *shadowed = (op_depth > relpath_depth(move_root_dst_relpath));
+    }
+  else
+    *shadowed = FALSE;
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -1624,8 +1629,8 @@ update_moved_away_node(update_move_baton_t *b,
                                                iterpool);
 
           if (!child_shadowed)
-            SVN_ERR(check_node_shadowed(&child_shadowed, b, dst_child_relpath,
-                                        iterpool));
+            SVN_ERR(check_node_shadowed(&child_shadowed, wcroot, dst_child_relpath,
+                                        b->move_root_dst_relpath, iterpool));
 
           SVN_ERR(update_moved_away_node(b, wcroot, src_child_relpath,
                                          dst_child_relpath, src_op_depth,
