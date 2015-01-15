@@ -9759,8 +9759,8 @@ nested_move_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "A/B/E/beta",   "base-deleted", NO_COPY_FROM},
       {0, "A/B/F",        "normal",       1, "A/B/F"},
       {2, "A/B/F",        "base-deleted", NO_COPY_FROM},
-      {2, "A/B/lambda",   "base-deleted", NO_COPY_FROM, "A/Z/lambda"},
       {0, "A/B/lambda",   "normal",       1, "A/B/lambda"},
+      {2, "A/B/lambda",   "base-deleted", NO_COPY_FROM, "A/Z/lambda"},
       {0}
     };
     nodes_row_t nodes_AZ[] = {
@@ -9971,7 +9971,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "repo_wc_copy"),
     SVN_TEST_OPTS_XFAIL(break_move_in_delete,
                        "break move in delete (issue 4491)"),
-    SVN_TEST_OPTS_XFAIL(nested_move_delete,
+    SVN_TEST_OPTS_PASS(nested_move_delete,
                        "nested move delete"),
     SVN_TEST_NULL
   };
