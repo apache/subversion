@@ -486,11 +486,11 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
    which see. */
-struct unlock_proto_rev_baton
+typedef struct unlock_proto_rev_baton_t
 {
   svn_fs_x__txn_id_t txn_id;
   void *lockcookie;
-};
+} unlock_proto_rev_baton_t;
 
 /* Callback used in the implementation of unlock_proto_rev(). */
 static svn_error_t *
@@ -498,7 +498,7 @@ unlock_proto_rev_body(svn_fs_t *fs,
                       const void *baton,
                       apr_pool_t *scratch_pool)
 {
-  const struct unlock_proto_rev_baton *b = baton;
+  const unlock_proto_rev_baton_t *b = baton;
   apr_file_t *lockfile = b->lockcookie;
   svn_fs_x__shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, FALSE);
   apr_status_t apr_err;
@@ -541,7 +541,7 @@ unlock_proto_rev(svn_fs_t *fs,
                  void *lockcookie,
                  apr_pool_t *scratch_pool)
 {
-  struct unlock_proto_rev_baton b;
+  unlock_proto_rev_baton_t b;
 
   b.txn_id = txn_id;
   b.lockcookie = lockcookie;
@@ -550,11 +550,11 @@ unlock_proto_rev(svn_fs_t *fs,
 
 /* A structure used by get_writable_proto_rev() and
    get_writable_proto_rev_body(), which see. */
-struct get_writable_proto_rev_baton
+typedef struct get_writable_proto_rev_baton_t
 {
   void **lockcookie;
   svn_fs_x__txn_id_t txn_id;
-};
+} get_writable_proto_rev_baton_t;
 
 /* Callback used in the implementation of get_writable_proto_rev(). */
 static svn_error_t *
@@ -562,7 +562,7 @@ get_writable_proto_rev_body(svn_fs_t *fs,
                             const void *baton,
                             apr_pool_t *scratch_pool)
 {
-  const struct get_writable_proto_rev_baton *b = baton;
+  const get_writable_proto_rev_baton_t *b = baton;
   void **lockcookie = b->lockcookie;
   svn_fs_x__shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, TRUE);
 
@@ -688,7 +688,7 @@ get_writable_proto_rev(apr_file_t **file,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  struct get_writable_proto_rev_baton b;
+  get_writable_proto_rev_baton_t b;
   svn_error_t *err;
   apr_off_t end_offset = 0;
 
@@ -1169,10 +1169,11 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 }
 
 /* A structure used by get_and_increment_txn_key_body(). */
-struct get_and_increment_txn_key_baton {
+typedef struct get_and_increment_txn_key_baton_t
+{
   svn_fs_t *fs;
   apr_uint64_t txn_number;
-};
+} get_and_increment_txn_key_baton_t;
 
 /* Callback used in the implementation of create_txn_dir().  This gets
    the current base 36 value in PATH_TXN_CURRENT and increments it.
@@ -1181,7 +1182,7 @@ static svn_error_t *
 get_and_increment_txn_key_body(void *baton,
                                apr_pool_t *scratch_pool)
 {
-  struct get_and_increment_txn_key_baton *cb = baton;
+  get_and_increment_txn_key_baton_t *cb = baton;
   const char *txn_current_filename = svn_fs_x__path_txn_current(cb->fs,
                                                                 scratch_pool);
   const char *tmp_filename;
@@ -1216,7 +1217,7 @@ create_txn_dir(const char **id_p,
                svn_fs_t *fs,
                apr_pool_t *pool)
 {
-  struct get_and_increment_txn_key_baton cb;
+  get_and_increment_txn_key_baton_t cb;
   const char *txn_dir;
 
   /* Get the current transaction sequence value, which is a base-36
@@ -1828,7 +1829,7 @@ svn_fs_x__add_change(svn_fs_t *fs,
 /* This baton is used by the representation writing streams.  It keeps
    track of the checksum information as well as the total size of the
    representation so far. */
-struct rep_write_baton
+typedef struct rep_write_baton_t
 {
   /* The FS we are writing to. */
   svn_fs_t *fs;
@@ -1869,17 +1870,17 @@ struct rep_write_baton
 
   /* Outer / result pool. */
   apr_pool_t *result_pool;
-};
+} rep_write_baton_t;
 
 /* Handler for the write method of the representation writable stream.
-   BATON is a rep_write_baton, DATA is the data to write, and *LEN is
+   BATON is a rep_write_baton_t, DATA is the data to write, and *LEN is
    the length of this data. */
 static svn_error_t *
 rep_write_contents(void *baton,
                    const char *data,
                    apr_size_t *len)
 {
-  struct rep_write_baton *b = baton;
+  rep_write_baton_t *b = baton;
 
   SVN_ERR(svn_checksum_update(b->md5_checksum_ctx, data, *len));
   SVN_ERR(svn_checksum_update(b->sha1_checksum_ctx, data, *len));
@@ -2056,7 +2057,7 @@ static apr_status_t
 rep_write_cleanup(void *data)
 {
   svn_error_t *err;
-  struct rep_write_baton *b = data;
+  rep_write_baton_t *b = data;
   svn_fs_x__txn_id_t txn_id
     = svn_fs_x__get_txn_id(b->noderev->noderev_id.change_set);
 
@@ -2083,18 +2084,18 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
-/* Get a rep_write_baton and store it in *WB_P for the representation
+/* Get a rep_write_baton_t and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
    directory contents. */
 static svn_error_t *
-rep_write_get_baton(struct rep_write_baton **wb_p,
+rep_write_get_baton(rep_write_baton_t **wb_p,
                     svn_fs_t *fs,
                     svn_fs_x__noderev_t *noderev,
                     apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  struct rep_write_baton *b;
+  rep_write_baton_t *b;
   apr_file_t *file;
   svn_fs_x__representation_t *base_rep;
   svn_stream_t *source;
@@ -2300,12 +2301,12 @@ digests_final(svn_fs_x__representation_t *rep,
 }
 
 /* Close handler for the representation write stream.  BATON is a
-   rep_write_baton.  Writes out a new node-rev that correctly
+   rep_write_baton_t.  Writes out a new node-rev that correctly
    references the representation we just finished writing. */
 static svn_error_t *
 rep_write_contents_close(void *baton)
 {
-  struct rep_write_baton *b = baton;
+  rep_write_baton_t *b = baton;
   svn_fs_x__representation_t *rep;
   svn_fs_x__representation_t *old_rep;
   apr_off_t offset;
@@ -2400,7 +2401,7 @@ set_representation(svn_stream_t **contents_p,
                    svn_fs_x__noderev_t *noderev,
                    apr_pool_t *pool)
 {
-  struct rep_write_baton *wb;
+  rep_write_baton_t *wb;
 
   if (! svn_fs_x__is_txn(noderev->noderev_id.change_set))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -2492,7 +2493,7 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
 }
 
 /* This baton is used by the stream created for write_container_rep. */
-struct write_container_baton
+typedef struct write_container_baton_t
 {
   svn_stream_t *stream;
 
@@ -2500,17 +2501,17 @@ struct write_container_baton
 
   svn_checksum_ctx_t *md5_ctx;
   svn_checksum_ctx_t *sha1_ctx;
-};
+} write_container_baton_t;
 
 /* The handler for the write_container_rep stream.  BATON is a
-   write_container_baton, DATA has the data to write and *LEN is the number
+   write_container_baton_t, DATA has the data to write and *LEN is the number
    of bytes to write. */
 static svn_error_t *
 write_container_handler(void *baton,
                         const char *data,
                         apr_size_t *len)
 {
-  struct write_container_baton *whb = baton;
+  write_container_baton_t *whb = baton;
 
   SVN_ERR(svn_checksum_update(whb->md5_ctx, data, *len));
   SVN_ERR(svn_checksum_update(whb->sha1_ctx, data, *len));
@@ -2598,7 +2599,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
   apr_off_t delta_start = 0;
   apr_off_t offset = 0;
 
-  struct write_container_baton *whb;
+  write_container_baton_t *whb;
   int diff_version = 1;
   svn_boolean_t is_props = (item_type == SVN_FS_X__ITEM_TYPE_FILE_PROPS)
                         || (item_type == SVN_FS_X__ITEM_TYPE_DIR_PROPS);
@@ -3257,23 +3258,23 @@ svn_fs_x__add_index_data(svn_fs_t *fs,
 }
 
 /* Baton used for commit_body below. */
-struct commit_baton {
+typedef struct commit_baton_t {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   apr_array_header_t *reps_to_cache;
   apr_hash_t *reps_hash;
   apr_pool_t *reps_pool;
-};
+} commit_baton_t;
 
 /* The work-horse for svn_fs_x__commit, called with the FS write lock.
    This implements the svn_fs_x__with_write_lock() 'body' callback
-   type.  BATON is a 'struct commit_baton *'. */
+   type.  BATON is a 'commit_baton_t *'. */
 static svn_error_t *
 commit_body(void *baton,
             apr_pool_t *scratch_pool)
 {
-  struct commit_baton *cb = baton;
+  commit_baton_t *cb = baton;
   svn_fs_x__data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
@@ -3468,7 +3469,7 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
                  svn_fs_txn_t *txn,
                  apr_pool_t *scratch_pool)
 {
-  struct commit_baton cb;
+  commit_baton_t cb;
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
   cb.new_rev_p = new_rev_p;
