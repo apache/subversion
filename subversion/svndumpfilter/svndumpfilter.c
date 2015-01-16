@@ -893,6 +893,9 @@ set_node_property(void *node_baton,
   if (nb->do_skip)
     return SVN_NO_ERROR;
 
+  /* Try to detect if a delta-mode property occurs unexpectedly. HAS_PROPS
+     can be false here only if the parser didn't call remove_node_props(),
+     so this may indicate a bug rather than bad data. */
   if (! (nb->has_props || nb->has_prop_delta))
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              _("Delta property block detected, but deltas "
@@ -938,14 +941,17 @@ delete_node_property(void *node_baton, const char *name)
 }
 
 
+/* The parser calls this method if the node record has a non-delta
+ * property content section, before any calls to set_node_property().
+ * If the node record uses property deltas, this is not called.
+ */
 static svn_error_t *
 remove_node_props(void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
 
   /* In this case, not actually indicating that the node *has* props,
-     rather that we know about all the props that it has, since it now
-     has none. */
+     rather that it has a property content section. */
   nb->has_props = TRUE;
 
   return SVN_NO_ERROR;
