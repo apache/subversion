@@ -484,17 +484,12 @@ svn_fs_x__path_txn_node_children(svn_fs_t *fs,
                                  scratch_pool);
 }
 
-
-/* Check that BUF, a nul-terminated buffer of text from file PATH,
-   contains only digits at OFFSET and beyond, raising an error if not.
-   TITLE contains a user-visible description of the file, usually the
-   short file name.
-
-   Uses POOL for temporary allocation. */
 svn_error_t *
-svn_fs_x__check_file_buffer_numeric(const char *buf, apr_off_t offset,
-                                    const char *path, const char *title,
-                                    apr_pool_t *pool)
+svn_fs_x__check_file_buffer_numeric(const char *buf,
+                                    apr_off_t offset,
+                                    const char *path,
+                                    const char *title,
+                                    apr_pool_t *scratch_pool)
 {
   const char *p;
 
@@ -502,7 +497,7 @@ svn_fs_x__check_file_buffer_numeric(const char *buf, apr_off_t offset,
     if (!svn_ctype_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("%s file '%s' contains unexpected non-digit '%c' within '%s'"),
-        title, svn_dirent_local_style(path, pool), *p, buf);
+        title, svn_dirent_local_style(path, scratch_pool), *p, buf);
 
   return SVN_NO_ERROR;
 }
@@ -660,12 +655,10 @@ svn_fs_x__get_file_offset(apr_off_t *offset_p,
   return SVN_NO_ERROR;
 }
 
-/* Read the 'current' file FNAME and store the contents in *BUF.
-   Allocations are performed in POOL. */
 svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   int i;
   *content = NULL;
@@ -673,12 +666,12 @@ svn_fs_x__read_content(svn_stringbuf_t **content,
   for (i = 0; !*content && (i < SVN_FS_X__RECOVERABLE_RETRY_COUNT); ++i)
     SVN_ERR(svn_fs_x__try_stringbuf_from_file(content, NULL,
                            fname, i + 1 < SVN_FS_X__RECOVERABLE_RETRY_COUNT,
-                           pool));
+                           result_pool));
 
   if (!*content)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Can't read '%s'"),
-                             svn_dirent_local_style(fname, pool));
+                             svn_dirent_local_style(fname, result_pool));
 
   return SVN_NO_ERROR;
 }
