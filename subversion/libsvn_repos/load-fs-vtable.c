@@ -41,6 +41,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_repos_private.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -192,8 +193,6 @@ change_node_prop(svn_fs_root_t *txn_root,
 
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
    return it in *MERGEINFO_VAL. */
-/* ### FIXME:  Consider somehow sharing code with
-   ### svnrdump/load_editor.c:prefix_mergeinfo_paths() */
 static svn_error_t *
 prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
                        const svn_string_t *mergeinfo_orig,
@@ -225,13 +224,20 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 
 /* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
    as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
-   (allocated from POOL). */
-/* ### FIXME:  Consider somehow sharing code with
-   ### svnrdump/load_editor.c:renumber_mergeinfo_revs() */
+   (allocated from POOL).
+
+   Adjust any mergeinfo revisions not older than OLDEST_DUMPSTREAM_REV by
+   using REV_MAP which maps (svn_revnum_t) old rev to (svn_revnum_t) new rev.
+
+   Adjust any mergeinfo revisions older than OLDEST_DUMPSTREAM_REV by
+   (-OLDER_REVS_OFFSET), dropping any that become <= 0.
+ */
 static svn_error_t *
 renumber_mergeinfo_revs(svn_string_t **final_val,
                         const svn_string_t *initial_val,
-                        struct revision_baton *rb,
+                        apr_hash_t *rev_map,
+                        svn_revnum_t oldest_dumpstream_rev,
+                        apr_int32_t older_revs_offset,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -246,19 +252,22 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
      Remove mergeinfo older than the oldest revision in the dump stream
      and adjust its revisions by the difference between the head rev of
      the target repository and the current dump stream rev. */
-  if (rb->pb->oldest_dumpstream_rev > 1)
+  if (oldest_dumpstream_rev > 1)
     {
+      /* predates_stream_mergeinfo := mergeinfo that refers to revs before
+         oldest_dumpstream_rev */
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
         &predates_stream_mergeinfo, mergeinfo,
-        rb->pb->oldest_dumpstream_rev - 1, 0,
+        oldest_dumpstream_rev - 1, 0,
         TRUE, subpool, subpool));
+      /* mergeinfo := mergeinfo that refers to revs >= oldest_dumpstream_rev */
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
         &mergeinfo, mergeinfo,
-        rb->pb->oldest_dumpstream_rev - 1, 0,
+        oldest_dumpstream_rev - 1, 0,
         FALSE, subpool, subpool));
       SVN_ERR(svn_mergeinfo__adjust_mergeinfo_rangelists(
         &predates_stream_mergeinfo, predates_stream_mergeinfo,
-        -rb->rev_offset, subpool, subpool));
+        -older_revs_offset, subpool, subpool));
     }
   else
     {
@@ -269,7 +278,6 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
     {
       const char *merge_source = apr_hash_this_key(hi);
       svn_rangelist_t *rangelist = apr_hash_this_val(hi);
-      struct parse_baton *pb = rb->pb;
       int i;
 
       /* Possibly renumber revisions in merge source's rangelist. */
@@ -278,27 +286,27 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           svn_revnum_t rev_from_map;
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
-          rev_from_map = get_revision_mapping(pb->rev_map, range->start);
+          rev_from_map = get_revision_mapping(rev_map, range->start);
           if (SVN_IS_VALID_REVNUM(rev_from_map))
             {
               range->start = rev_from_map;
             }
-          else if (range->start == pb->oldest_dumpstream_rev - 1)
+          else if (range->start == oldest_dumpstream_rev - 1)
             {
               /* Since the start revision of svn_merge_range_t are not
                  inclusive there is one possible valid start revision that
-                 won't be found in the PB->REV_MAP mapping of load stream
+                 won't be found in the REV_MAP mapping of load stream
                  revsions to loaded revisions: The revision immediately
                  preceding the oldest revision from the load stream.
                  This is a valid revision for mergeinfo, but not a valid
-                 copy from revision (which PB->REV_MAP also maps for) so it
+                 copy from revision (which REV_MAP also maps for) so it
                  will never be in the mapping.
 
                  If that is what we have here, then find the mapping for the
                  oldest rev from the load stream and subtract 1 to get the
                  renumbered, non-inclusive, start revision. */
-              rev_from_map = get_revision_mapping(pb->rev_map,
-                                                  pb->oldest_dumpstream_rev);
+              rev_from_map = get_revision_mapping(rev_map,
+                                                  oldest_dumpstream_rev);
               if (SVN_IS_VALID_REVNUM(rev_from_map))
                 range->start = rev_from_map - 1;
             }
@@ -315,7 +323,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
               continue;
             }
 
-          rev_from_map = get_revision_mapping(pb->rev_map, range->end);
+          rev_from_map = get_revision_mapping(rev_map, range->end);
           if (SVN_IS_VALID_REVNUM(rev_from_map))
             range->end = rev_from_map;
         }
@@ -758,18 +766,18 @@ set_revision_property(void *baton,
 }
 
 
-/* Adjust mergeinfo:
- *   - normalize line endings (if all CRLF, change to LF; but error if mixed);
- *   - adjust revision numbers (see renumber_mergeinfo_revs());
- *   - adjust paths (see prefix_mergeinfo_paths()).
- */
-static svn_error_t *
-adjust_mergeinfo_property(struct revision_baton *rb,
-                          svn_string_t **new_value_p,
-                          const svn_string_t *old_value,
-                          apr_pool_t *result_pool)
+svn_error_t *
+svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
+                                     const svn_string_t *old_value,
+                                     const char *parent_dir,
+                                     apr_hash_t *rev_map,
+                                     svn_revnum_t oldest_dumpstream_rev,
+                                     apr_int32_t older_revs_offset,
+                                     svn_repos_notify_func_t notify_func,
+                                     void *notify_baton,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
 {
-  struct parse_baton *pb = rb->pb;
   svn_string_t prop_val = *old_value;
 
   /* Tolerate mergeinfo with "\r\n" line endings because some
@@ -790,29 +798,29 @@ adjust_mergeinfo_property(struct revision_baton *rb,
       prop_val.data = prop_eol_normalized;
       prop_val.len = strlen(prop_eol_normalized);
 
-      if (pb->notify_func)
+      if (notify_func)
         {
-          /* ### TODO: Use proper scratch pool instead of pb->notify_pool */
           svn_repos_notify_t *notify
                   = svn_repos_notify_create(
                                 svn_repos_notify_load_normalized_mergeinfo,
-                                pb->notify_pool);
+                                scratch_pool);
 
-          pb->notify_func(pb->notify_baton, notify, pb->notify_pool);
-          svn_pool_clear(pb->notify_pool);
+          notify_func(notify_baton, notify, scratch_pool);
         }
     }
 
   /* Renumber mergeinfo as appropriate. */
-  SVN_ERR(renumber_mergeinfo_revs(new_value_p, &prop_val, rb,
+  SVN_ERR(renumber_mergeinfo_revs(new_value_p, &prop_val,
+                                  rev_map, oldest_dumpstream_rev,
+                                  older_revs_offset,
                                   result_pool));
 
-  if (pb->parent_dir)
+  if (parent_dir)
     {
-      /* Prefix the merge source paths with PB->parent_dir. */
+      /* Prefix the merge source paths with PARENT_DIR. */
       /* ASSUMPTION: All source paths are included in the dump stream. */
       SVN_ERR(prefix_mergeinfo_paths(new_value_p, *new_value_p,
-                                     pb->parent_dir, result_pool));
+                                     parent_dir, result_pool));
     }
 
   return SVN_NO_ERROR;
@@ -842,7 +850,14 @@ set_node_property(void *baton,
       svn_string_t *new_value;
       svn_error_t *err;
 
-      err = adjust_mergeinfo_property(rb, &new_value, value, nb->pool);
+      err = svn_repos__adjust_mergeinfo_property(&new_value, value,
+                                                 pb->parent_dir,
+                                                 pb->rev_map,
+                                                 pb->oldest_dumpstream_rev,
+                                                 rb->rev_offset,
+                                                 pb->notify_func, pb->notify_baton,
+                                                 nb->pool, pb->notify_pool);
+      svn_pool_clear(pb->notify_pool);
       if (err)
         {
           if (pb->validate_props)
