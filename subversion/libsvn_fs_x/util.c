@@ -192,13 +192,7 @@ svn_fs_x__path_rev_shard(svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *result_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
-
-  return svn_dirent_join_many(result_pool, fs->path, PATH_REVS_DIR, buffer,
-                              SVN_VA_NULL);
+  return construct_shard_sub_path(fs, rev, FALSE, FALSE, NULL, result_pool);
 }
 
 const char *
@@ -228,13 +222,7 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
                               svn_revnum_t rev,
                               apr_pool_t *result_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
-
-  return svn_dirent_join_many(result_pool, fs->path, PATH_REVPROPS_DIR,
-                              buffer, SVN_VA_NULL);
+  return construct_shard_sub_path(fs, rev, TRUE, FALSE, NULL, result_pool);
 }
 
 const char *
