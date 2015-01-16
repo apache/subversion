@@ -258,6 +258,39 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                           svn_repos_t *preferred_repos,
                           apr_pool_t *pool);
 
+/* Adjust mergeinfo paths and revisions in ways that are useful when loading
+ * a dump stream.
+ *
+ * Set *NEW_VALUE_P to an adjusted version of the mergeinfo property value
+ * supplied in OLD_VALUE, with the following adjustments.
+ *
+ *   - Normalize line endings: if all CRLF, change to LF; but error if
+ *     mixed. If this normalization is performed, send a notification type
+ *     svn_repos_notify_load_normalized_mergeinfo to NOTIFY_FUNC/NOTIFY_BATON.
+ *
+ *   - Prefix all the merge source paths with PARENT_DIR, if not null.
+ *
+ *   - Adjust any mergeinfo revisions not older than OLDEST_DUMPSTREAM_REV
+ *     by using REV_MAP which maps (svn_revnum_t) old rev to (svn_revnum_t)
+ *     new rev.
+ *
+ *   - Adjust any mergeinfo revisions older than OLDEST_DUMPSTREAM_REV by
+ *     (-OLDER_REVS_OFFSET), dropping any revisions that become <= 0.
+ *
+ * Allocate *NEW_VALUE_P in RESULT_POOL.
+ */
+svn_error_t *
+svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
+                                     const svn_string_t *old_value,
+                                     const char *parent_dir,
+                                     apr_hash_t *rev_map,
+                                     svn_revnum_t oldest_dumpstream_rev,
+                                     apr_int32_t older_revs_offset,
+                                     svn_repos_notify_func_t notify_func,
+                                     void *notify_baton,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 /** @} */
 
 #ifdef __cplusplus
