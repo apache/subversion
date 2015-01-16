@@ -66,9 +66,6 @@ struct parse_baton
   /* To bleep, or not to bleep?  (What kind of question is that?) */
   svn_boolean_t quiet;
 
-  /* UUID found in the dumpstream, if any; NULL otherwise. */
-  const char *uuid;
-
   /* Root URL of the target repository. */
   const char *root_url;
 
@@ -99,13 +96,12 @@ struct parse_baton
 
 /**
  * Use to wrap the dir_context_t in commit.c so we can keep track of
- * depth, relpath and parent for open_directory and close_directory.
+ * relpath and parent for open_directory and close_directory.
  */
 struct directory_baton
 {
   void *baton;
   const char *relpath;
-  int depth;
   struct directory_baton *parent;
 };
 
@@ -590,9 +586,6 @@ uuid_record(const char *uuid,
             void *parse_baton,
             apr_pool_t *pool)
 {
-  struct parse_baton *pb;
-  pb = parse_baton;
-  pb->uuid = apr_pstrdup(pool, uuid);
   return SVN_NO_ERROR;
 }
 
@@ -652,7 +645,6 @@ new_node_record(void **node_baton,
       /* child_db corresponds to the root directory baton here */
       child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
       child_db->baton = child_baton;
-      child_db->depth = 0;
       child_db->relpath = "";
       child_db->parent = NULL;
       rb->db = child_db;
@@ -736,7 +728,6 @@ new_node_record(void **node_baton,
           LDR_DBG(("Opened dir %p\n", child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
-          child_db->depth = rb->db->depth + 1;
           child_db->relpath = relpath_compose;
           child_db->parent = rb->db;
           rb->db = child_db;
@@ -804,7 +795,6 @@ new_node_record(void **node_baton,
                    nb->path, rb->db->baton, child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
-          child_db->depth = rb->db->depth + 1;
           child_db->relpath = apr_pstrdup(rb->pool, nb->path);
           child_db->parent = rb->db;
           rb->db = child_db;
@@ -827,7 +817,6 @@ new_node_record(void **node_baton,
                                                 rb->pool, &child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
-          child_db->depth = rb->db->depth + 1;
           child_db->relpath = apr_pstrdup(rb->pool, nb->path);
           child_db->parent = rb->db;
           rb->db = child_db;
