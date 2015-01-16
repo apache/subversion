@@ -1123,22 +1123,22 @@ svn_fs_x__revision_prop(svn_string_t **value_p,
 
 
 /* Baton used for change_rev_prop_body below. */
-struct change_rev_prop_baton {
+typedef struct change_rev_prop_baton_t {
   svn_fs_t *fs;
   svn_revnum_t rev;
   const char *name;
   const svn_string_t *const *old_value_p;
   const svn_string_t *value;
-};
+} change_rev_prop_baton_t;
 
 /* The work-horse for svn_fs_x__change_rev_prop, called with the FS
    write lock.  This implements the svn_fs_x__with_write_lock()
-   'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
+   'body' callback type.  BATON is a 'change_rev_prop_baton_t *'. */
 static svn_error_t *
 change_rev_prop_body(void *baton,
                      apr_pool_t *scratch_pool)
 {
-  struct change_rev_prop_baton *cb = baton;
+  change_rev_prop_baton_t *cb = baton;
   apr_hash_t *table;
 
   SVN_ERR(svn_fs_x__revision_proplist(&table, cb->fs, cb->rev, scratch_pool));
@@ -1173,7 +1173,7 @@ svn_fs_x__change_rev_prop(svn_fs_t *fs,
                           const svn_string_t *value,
                           apr_pool_t *scratch_pool)
 {
-  struct change_rev_prop_baton cb;
+  change_rev_prop_baton_t cb;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
