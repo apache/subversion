@@ -221,12 +221,12 @@ svn_fs_x__txn_by_name(svn_fs_x__txn_id_t *txn_id,
                       const char *txn_name);
 
 /* Return the path of the directory containing the transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Return the path of the 'transactions' directory in FS.
  * The result will be allocated in RESULT_POOL.
@@ -252,57 +252,57 @@ svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
                               apr_pool_t *result_pool);
 
 /* Return the path of the changes file for transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_changes(svn_fs_t *fs,
                            svn_fs_x__txn_id_t txn_id,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* Return the path of the file containing the log-to-phys index for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char*
 svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the phys-to-log index for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char*
 svn_fs_x__path_p2l_proto_index(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the transaction properties for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_props(svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Return the path of the file containing the "final" transaction
  * properties for the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_props_final(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the node and copy ID counters for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 /* Return the path of the file storing the oldest non-packed revision in FS.
  * The result will be allocated in RESULT_POOL.
@@ -313,12 +313,12 @@ svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs,
 
 /* Return the path of the file containing item_index counter for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_item_index(svn_fs_t *fs,
                               svn_fs_x__txn_id_t txn_id,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
  * The result will be allocated in POOL.
