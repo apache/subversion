@@ -201,8 +201,7 @@ static svn_error_t *
 verify_block_size(apr_int64_t block_size,
                   apr_size_t item_size,
                   const char *name,
-                  apr_pool_t *scratch_pool
-                 )
+                  apr_pool_t *scratch_pool)
 {
   /* Limit range. */
   if (block_size <= 0)

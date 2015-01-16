@@ -184,7 +184,8 @@ recover_body(void *baton,
   if (youngest_revprops_kind == svn_node_none)
     {
       svn_boolean_t missing = TRUE;
-      if (!svn_fs_x__packed_revprop_available(&missing, fs, max_rev, scratch_pool))
+      if (!svn_fs_x__packed_revprop_available(&missing, fs, max_rev,
+                                              scratch_pool))
         {
           if (missing)
             {
@@ -217,7 +218,8 @@ recover_body(void *baton,
     {
       svn_boolean_t rep_cache_exists;
 
-      SVN_ERR(svn_fs_x__exists_rep_cache(&rep_cache_exists, fs, scratch_pool));
+      SVN_ERR(svn_fs_x__exists_rep_cache(&rep_cache_exists, fs,
+                                         scratch_pool));
       if (rep_cache_exists)
         SVN_ERR(svn_fs_x__del_rep_reference(fs, max_rev, scratch_pool));
     }
