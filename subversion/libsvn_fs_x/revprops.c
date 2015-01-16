@@ -677,7 +677,7 @@ parse_revprop(apr_hash_t **properties,
 
   SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR,
                          result_pool));
-  if (has_revprop_cache(fs, result_pool))
+  if (has_revprop_cache(fs, scratch_pool))
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
       svn_fs_x__pair_cache_key_t key = { 0 };
