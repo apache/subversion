@@ -124,7 +124,8 @@ recover_body(void *baton,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
   svn_revnum_t youngest_rev;
-  svn_node_kind_t youngest_revprops_kind;
+  svn_boolean_t revprop_missing = TRUE;
+  svn_boolean_t revprop_accessible = FALSE;
 
   /* Lose potentially corrupted data in temp files */
   SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, scratch_pool));
@@ -179,36 +180,49 @@ recover_body(void *baton,
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev, scratch_pool),
-                            &youngest_revprops_kind, scratch_pool));
-  if (youngest_revprops_kind == svn_node_none)
+  if (svn_fs_x__is_packed_revprop(fs, max_rev))
     {
-      svn_boolean_t missing = TRUE;
-      if (!svn_fs_x__packed_revprop_available(&missing, fs, max_rev,
-                                              scratch_pool))
-        {
-          if (missing)
-            {
-              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                      _("Revision %ld has a revs file but no "
-                                        "revprops file"),
-                                      max_rev);
-            }
-          else
-            {
-              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                      _("Revision %ld has a revs file but the "
-                                        "revprops file is inaccessible"),
-                                      max_rev);
-            }
-          }
+      revprop_accessible
+        = svn_fs_x__packed_revprop_available(&revprop_missing, fs, max_rev,
+                                             scratch_pool);
     }
-  else if (youngest_revprops_kind != svn_node_file)
+  else
     {
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Revision %ld has a non-file where its "
-                                 "revprops file should be"),
-                               max_rev);
+      svn_node_kind_t youngest_revprops_kind;
+      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev,
+                                                        scratch_pool),
+                                &youngest_revprops_kind, scratch_pool));
+
+      if (youngest_revprops_kind == svn_node_file)
+        {
+          revprop_missing = FALSE;
+          revprop_accessible = TRUE;
+        }
+      else if (youngest_revprops_kind != svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a non-file where its "
+                                    "revprops file should be"),
+                                  max_rev);
+        }
+    }
+
+  if (!revprop_accessible)
+    {
+      if (revprop_missing)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a revs file but no "
+                                    "revprops file"),
+                                  max_rev);
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a revs file but the "
+                                    "revprops file is inaccessible"),
+                                  max_rev);
+        }
     }
 
   /* Prune younger-than-(newfound-youngest) revisions from the rep
