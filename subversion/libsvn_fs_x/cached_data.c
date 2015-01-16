@@ -948,7 +948,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
 }
 
 
-struct rep_read_baton
+typedef struct rep_read_baton_t
 {
   /* The FS from which we're reading. */
   svn_fs_t *fs;
@@ -1010,7 +1010,7 @@ struct rep_read_baton
   /* Pool used to store file handles and other data that is persistant
      for the entire stream read. */
   apr_pool_t *filehandle_pool;
-};
+} rep_read_baton_t;
 
 /* Set window key in *KEY to address the window described by RS.
    For convenience, return the KEY. */
@@ -1329,13 +1329,13 @@ build_rep_list(apr_array_header_t **list,
    Allocate the result in RESULT_POOL.  This includes the pools within *RB_P.
  */
 static svn_error_t *
-rep_read_get_baton(struct rep_read_baton **rb_p,
+rep_read_get_baton(rep_read_baton_t **rb_p,
                    svn_fs_t *fs,
                    svn_fs_x__representation_t *rep,
                    svn_fs_x__pair_cache_key_t fulltext_cache_key,
                    apr_pool_t *result_pool)
 {
-  struct rep_read_baton *b;
+  rep_read_baton_t *b;
 
   b = apr_pcalloc(result_pool, sizeof(*b));
   b->fs = fs;
@@ -1512,7 +1512,7 @@ read_container_window(svn_stringbuf_t **nwin,
    base representation.  Store the window in *RESULT. */
 static svn_error_t *
 get_combined_window(svn_stringbuf_t **result,
-                    struct rep_read_baton *rb)
+                    rep_read_baton_t *rb)
 {
   apr_pool_t *pool, *new_pool, *window_pool;
   int i;
@@ -1615,7 +1615,7 @@ fulltext_size_is_cachable(svn_fs_x__data_t *ffd,
 static svn_error_t *
 rep_read_contents_close(void *baton)
 {
-  struct rep_read_baton *rb = baton;
+  rep_read_baton_t *rb = baton;
 
   svn_pool_destroy(rb->scratch_pool);
   svn_pool_destroy(rb->filehandle_pool);
@@ -1809,7 +1809,7 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
 /* Return the next *LEN bytes of the rep from our plain / delta windows
    and store them in *BUF. */
 static svn_error_t *
-get_contents_from_windows(struct rep_read_baton *rb,
+get_contents_from_windows(rep_read_baton_t *rb,
                           char *buf,
                           apr_size_t *len)
 {
@@ -1954,7 +1954,7 @@ get_fulltext_partial(void **out,
  */
 static svn_error_t *
 get_contents_from_fulltext(svn_boolean_t *cached,
-                           struct rep_read_baton *baton,
+                           rep_read_baton_t *baton,
                            char *buffer,
                            apr_size_t *len)
 {
@@ -2031,7 +2031,7 @@ optimimal_allocation_size(apr_size_t needed)
  * want to cache it at the end.
  */
 static svn_error_t *
-skip_contents(struct rep_read_baton *baton,
+skip_contents(rep_read_baton_t *baton,
               svn_filesize_t len)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -2087,7 +2087,7 @@ skip_contents(struct rep_read_baton *baton,
   return svn_error_trace(err);
 }
 
-/* BATON is of type `rep_read_baton'; read the next *LEN bytes of the
+/* BATON is of type `rep_read_baton_t'; read the next *LEN bytes of the
    representation and store them in *BUF.  Sum as we read and verify
    the MD5 sum at the end. */
 static svn_error_t *
@@ -2095,7 +2095,7 @@ rep_read_contents(void *baton,
                   char *buf,
                   apr_size_t *len)
 {
-  struct rep_read_baton *rb = baton;
+  rep_read_baton_t *rb = baton;
 
   /* Get data from the fulltext cache for as long as we can. */
   if (rb->fulltext_cache)
@@ -2183,7 +2183,7 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
       svn_filesize_t len = rep->expanded_size;
-      struct rep_read_baton *rb;
+      rep_read_baton_t *rb;
       svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
 
       svn_fs_x__pair_cache_key_t fulltext_cache_key = { 0 };
