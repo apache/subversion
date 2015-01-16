@@ -773,7 +773,8 @@ svn_fs_x__put_node_revision(svn_fs_t *fs,
                              svn_fs_x__id_unparse(id, scratch_pool)->data);
 
   SVN_ERR(svn_io_file_open(&noderev_file,
-                           svn_fs_x__path_txn_node_rev(fs, id, scratch_pool),
+                           svn_fs_x__path_txn_node_rev(fs, id, scratch_pool,
+                                                       scratch_pool),
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, scratch_pool));
 
@@ -1694,7 +1695,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
   svn_fs_x__representation_t *rep = parent_noderev->data_rep;
   const char *filename
     = svn_fs_x__path_txn_node_children(fs, &parent_noderev->noderev_id,
-                                       scratch_pool);
+                                       scratch_pool, scratch_pool);
   apr_file_t *file;
   svn_stream_t *out;
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -2461,7 +2462,8 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
                        apr_pool_t *scratch_pool)
 {
   const svn_fs_x__id_t *id = &noderev->noderev_id;
-  const char *filename = svn_fs_x__path_txn_node_props(fs, id, scratch_pool);
+  const char *filename = svn_fs_x__path_txn_node_props(fs, id, scratch_pool,
+                                                       scratch_pool);
   apr_file_t *file;
   svn_stream_t *out;
 
@@ -3623,6 +3625,7 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
   if (noderev->prop_rep
       && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
     SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_props(fs, id,
+                                                              scratch_pool,
                                                               scratch_pool),
                                 FALSE, scratch_pool));
 
@@ -3635,15 +3638,17 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       const svn_fs_x__id_t *key = id;
 
       SVN_ERR(svn_io_remove_file2(
-                  svn_fs_x__path_txn_node_children(fs, id, scratch_pool),
+                  svn_fs_x__path_txn_node_children(fs, id, scratch_pool,
+                                                   scratch_pool),
                   FALSE, scratch_pool));
 
       /* remove the corresponding entry from the cache, if such exists */
       SVN_ERR(svn_cache__set(ffd->dir_cache, key, NULL, scratch_pool));
     }
 
-  return svn_io_remove_file2(svn_fs_x__path_txn_node_rev(fs,
-                                                         id, scratch_pool),
+  return svn_io_remove_file2(svn_fs_x__path_txn_node_rev(fs, id,
+                                                         scratch_pool,
+                                                         scratch_pool),
                              FALSE, scratch_pool);
 }
 
