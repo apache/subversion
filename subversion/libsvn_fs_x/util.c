@@ -145,18 +145,46 @@ svn_fs_x__path_revprop_generation(svn_fs_t *fs,
   return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, result_pool);
 }
 
-const char *
-svn_fs_x__path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
-                          apr_pool_t *pool)
+/* Return the full path of the file FILENAME within revision REV's shard in
+ * FS.  If FILENAME is NULL, return the shard directory directory itself.
+ * REVPROPS indicates the parent of the shard parent folder ("revprops" or
+ * "revs").  PACKED says whether we want the packed shard's name.
+ *
+ * Allocate the result in RESULT_POOL.
+ */static const char*
+construct_shard_sub_path(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         svn_boolean_t revprops,
+                         svn_boolean_t packed,
+                         const char *filename,
+                         apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  assert(svn_fs_x__is_packed_rev(fs, rev));
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)];
 
-  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool,
-                                           "%ld" PATH_EXT_PACKED_SHARD,
-                                           rev / ffd->max_files_per_dir),
-                              kind, SVN_VA_NULL);
+  /* Select the appropriate parent path constant. */
+  const char *parent = revprops ? PATH_REVPROPS_DIR : PATH_REVS_DIR;
+
+  /* String containing the shard number. */
+  apr_size_t len = svn__i64toa(buffer, rev / ffd->max_files_per_dir);
+
+  /* Append the suffix.  Limit it to the buffer size (should never hit it). */
+  if (packed)
+    strncpy(buffer + len, PATH_EXT_PACKED_SHARD, sizeof(buffer) - len - 1);
+
+  /* This will also work for NULL FILENAME as well. */
+  return svn_dirent_join_many(result_pool, fs->path, parent, buffer,
+                              filename, SVN_VA_NULL);
+}
+
+const char *
+svn_fs_x__path_rev_packed(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          const char *kind,
+                          apr_pool_t *result_pool)
+{
+  assert(svn_fs_x__is_packed_rev(fs, rev));
+  return construct_shard_sub_path(fs, rev, FALSE, TRUE, kind, result_pool);
 }
 
 const char *
@@ -174,23 +202,27 @@ svn_fs_x__path_rev_shard(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_x__path_rev(svn_fs_t *fs,
+                   svn_revnum_t rev,
+                   apr_pool_t *result_pool)
 {
-  assert(! svn_fs_x__is_packed_rev(fs, rev));
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
-  return svn_dirent_join(svn_fs_x__path_rev_shard(fs, rev, pool),
-                         apr_psprintf(pool, "%ld", rev),
-                         pool);
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
+
+  assert(! svn_fs_x__is_packed_rev(fs, rev));
+  return construct_shard_sub_path(fs, rev, FALSE, FALSE, buffer, result_pool);
 }
 
 const char *
 svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
   return ! svn_fs_x__is_packed_rev(fs, rev)
-       ? svn_fs_x__path_rev(fs, rev, pool)
-       : svn_fs_x__path_rev_packed(fs, rev, PATH_PACKED, pool);
+       ? svn_fs_x__path_rev(fs, rev, result_pool)
+       : svn_fs_x__path_rev_packed(fs, rev, PATH_PACKED, result_pool);
 }
 
 const char *
@@ -210,22 +242,23 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
 const char *
 svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *result_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-
-  return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                              apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
-                                           rev / ffd->max_files_per_dir),
-                              SVN_VA_NULL);
+  return construct_shard_sub_path(fs, rev, TRUE, TRUE, NULL, result_pool);
 }
 
 const char *
-svn_fs_x__path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_x__path_revprops(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *result_pool)
 {
-  return svn_dirent_join(svn_fs_x__path_revprops_shard(fs, rev, pool),
-                         apr_psprintf(pool, "%ld", rev),
-                         pool);
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn__i64toa(buffer, rev / ffd->max_files_per_dir);
+
+  assert(! svn_fs_x__is_packed_rev(fs, rev));
+  return construct_shard_sub_path(fs, rev, TRUE, FALSE, buffer, result_pool);
 }
 
 const char *
