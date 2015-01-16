@@ -268,19 +268,6 @@ svn_fs_x__txn_by_name(svn_fs_x__txn_id_t *txn_id,
   return SVN_NO_ERROR;
 }
 
-
-/* Return TO_ADD appended to the C string representation of TXN_ID.
- * Allocate the result in POOL.
- */
-static const char *
-combine_txn_id_string(svn_fs_x__txn_id_t txn_id,
-                      const char *to_add,
-                      apr_pool_t *pool)
-{
-  return apr_pstrcat(pool, svn_fs_x__txn_name(txn_id, pool),
-                     to_add, SVN_VA_NULL);
-}
-
 const char *
 svn_fs_x__path_txns_dir(svn_fs_t *fs,
                         apr_pool_t *result_pool)
@@ -409,27 +396,42 @@ svn_fs_x__path_txn_item_index(svn_fs_t *fs,
   return construct_txn_path(fs, txn_id, PATH_TXN_ITEM_INDEX, result_pool);
 }
 
+/* Return the full path of the proto-rev file / lock file for transaction
+ * TXN_ID in FS.  The SUFFIX determines what file (rev / lock) it will be.
+ *
+ * Allocate the result in RESULT_POOL.
+ */
+static const char *
+construct_proto_rev_path(svn_fs_t *fs,
+                         svn_fs_x__txn_id_t txn_id,
+                         const char *suffix,
+                         apr_pool_t *result_pool)
+{
+  /* Construct the file name without temp. allocations. */
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_REV_LOCK)];
+  apr_size_t len = svn__ui64tobase36(buffer, txn_id);
+  strncpy(buffer + len, suffix, sizeof(buffer) - len - 1);
+
+  /* If FILENAME is NULL, it will terminate the list of segments
+     to concatenate. */
+  return svn_dirent_join_many(result_pool, fs->path, PATH_TXN_PROTOS_DIR,
+                              buffer, SVN_VA_NULL);
+}
+
 const char *
 svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              svn_fs_x__txn_id_t txn_id,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool)
 {
-  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
-                              combine_txn_id_string(txn_id, PATH_EXT_REV,
-                                                    pool),
-                              SVN_VA_NULL);
+  return construct_proto_rev_path(fs, txn_id, PATH_EXT_REV, result_pool);
 }
 
 const char *
 svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   svn_fs_x__txn_id_t txn_id,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *result_pool)
 {
-  return svn_dirent_join_many(pool, svn_fs_x__path_txn_proto_revs(fs, pool),
-                              combine_txn_id_string(txn_id,
-                                                    PATH_EXT_REV_LOCK,
-                                                    pool),
-                              SVN_VA_NULL);
+  return construct_proto_rev_path(fs, txn_id, PATH_EXT_REV_LOCK, result_pool);
 }
 
 const char *

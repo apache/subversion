@@ -322,20 +322,20 @@ svn_fs_x__path_txn_item_index(svn_fs_t *fs,
                               apr_pool_t *result_pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              svn_fs_x__txn_id_t txn_id,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool);
 
 /* Return the path of the proto-revision lock file for transaction TXN_ID
- * in FS.  The result will be allocated in POOL.
+ * in FS.  The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   svn_fs_x__txn_id_t txn_id,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool);
 
 /* Return the path of the file containing the in-transaction node revision
  * identified by ID in FS.  The result will be allocated in POOL.
