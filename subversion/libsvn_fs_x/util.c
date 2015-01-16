@@ -218,9 +218,9 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *result_pool)
 {
-  return ! svn_fs_x__is_packed_rev(fs, rev)
-       ? svn_fs_x__path_rev(fs, rev, result_pool)
-       : svn_fs_x__path_rev_packed(fs, rev, PATH_PACKED, result_pool);
+  return svn_fs_x__is_packed_rev(fs, rev)
+       ? svn_fs_x__path_rev_packed(fs, rev, PATH_PACKED, result_pool)
+       : svn_fs_x__path_rev(fs, rev, result_pool);
 }
 
 const char *
