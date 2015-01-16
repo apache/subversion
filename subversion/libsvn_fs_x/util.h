@@ -372,13 +372,13 @@ svn_fs_x__path_txn_node_children(svn_fs_t *fs,
    TITLE contains a user-visible description of the file, usually the
    short file name.
 
-   Uses POOL for temporary allocation. */
+   Uses SCRATCH_POOL for temporary allocation. */
 svn_error_t *
 svn_fs_x__check_file_buffer_numeric(const char *buf,
                                     apr_off_t offset,
                                     const char *path,
                                     const char *title,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
  * by #svn_fs_fs__path_min_unpacked_rev() for FS.
@@ -390,11 +390,11 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
                                 apr_pool_t *scratch_pool);
 
 /* Re-read the MIN_UNPACKED_REV member of FS from disk.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /* Atomically update the 'min-unpacked-rev' file in FS to hold the specifed
  * REVNUM.  Perform temporary allocations in SCRATCH_POOL.
@@ -442,11 +442,11 @@ svn_fs_x__get_file_offset(apr_off_t *offset_p,
                           apr_pool_t *scratch_pool);
 
 /* Read the file FNAME and store the contents in *BUF.
-   Allocations are performed in POOL. */
+   Allocations are performed in RESULT_POOL. */
 svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Reads a line from STREAM and converts it to a 64 bit integer to be
  * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave
