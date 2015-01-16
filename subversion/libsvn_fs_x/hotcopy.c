@@ -710,7 +710,7 @@ hotcopy_revisions(svn_fs_t *src_fs,
 }
 
 /* Baton for hotcopy_body(). */
-struct hotcopy_body_baton {
+typedef struct hotcopy_body_baton_t {
   svn_fs_t *src_fs;
   svn_fs_t *dst_fs;
   svn_boolean_t incremental;
@@ -718,7 +718,7 @@ struct hotcopy_body_baton {
   void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} hotcopy_body_baton_t;
 
 /* Perform a hotcopy, either normal or incremental.
  *
@@ -742,7 +742,7 @@ static svn_error_t *
 hotcopy_body(void *baton,
              apr_pool_t *scratch_pool)
 {
-  struct hotcopy_body_baton *hbb = baton;
+  hotcopy_body_baton_t *hbb = baton;
   svn_fs_t *src_fs = hbb->src_fs;
   svn_fs_t *dst_fs = hbb->dst_fs;
   svn_boolean_t incremental = hbb->incremental;
@@ -881,7 +881,7 @@ static svn_error_t *
 hotcopy_locking_src_body(void *baton,
                          apr_pool_t *scratch_pool)
 {
-  struct hotcopy_body_baton *hbb = baton;
+  hotcopy_body_baton_t *hbb = baton;
 
   return svn_error_trace(svn_fs_x__with_pack_lock(hbb->src_fs, hotcopy_body,
                                                   baton, scratch_pool));
@@ -975,7 +975,7 @@ svn_fs_x__hotcopy(svn_fs_t *src_fs,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  struct hotcopy_body_baton hbb;
+  hotcopy_body_baton_t hbb;
 
   hbb.src_fs = src_fs;
   hbb.dst_fs = dst_fs;

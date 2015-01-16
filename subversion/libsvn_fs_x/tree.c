@@ -444,11 +444,12 @@ dag_node_cache_set(svn_fs_root_t *root,
 
 
 /* Baton for find_descendants_in_cache. */
-struct fdic_baton {
+typedef struct fdic_baton_t
+{
   const char *path;
   apr_array_header_t *list;
   apr_pool_t *pool;
-};
+} fdic_baton_t;
 
 /* If the given item is a descendant of BATON->PATH, push
  * it onto BATON->LIST (copying into BATON->POOL).  Implements
@@ -460,7 +461,7 @@ find_descendants_in_cache(void *baton,
                           void *val,
                           apr_pool_t *pool)
 {
-  struct fdic_baton *b = baton;
+  fdic_baton_t *b = baton;
   const char *item_path = key;
 
   if (svn_fspath__skip_ancestor(b->path, item_path))
@@ -476,7 +477,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
                           const char *path,
                           apr_pool_t *scratch_pool)
 {
-  struct fdic_baton b;
+  fdic_baton_t b;
   svn_cache__t *cache;
   apr_pool_t *iterpool;
   int i;
@@ -3024,7 +3025,7 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
 /* --- Machinery for svn_fs_apply_text() ---  */
 
 /* Baton for svn_fs_apply_text(). */
-struct text_baton_t
+typedef struct text_baton_t
 {
   /* The original file info */
   svn_fs_root_t *root;
@@ -3045,7 +3046,7 @@ struct text_baton_t
 
   /* Pool used by db txns */
   apr_pool_t *pool;
-};
+} text_baton_t;
 
 
 /* A wrapper around svn_fs_x__dag_finalize_edits, but for
@@ -3064,7 +3065,7 @@ text_stream_writer(void *baton,
                    const char *data,
                    apr_size_t *len)
 {
-  struct text_baton_t *tb = baton;
+  text_baton_t *tb = baton;
 
   /* Psst, here's some data.  Pass it on to the -real- file stream. */
   return svn_stream_write(tb->file_stream, data, len);
@@ -3074,7 +3075,7 @@ text_stream_writer(void *baton,
 static svn_error_t *
 text_stream_closer(void *baton)
 {
-  struct text_baton_t *tb = baton;
+  text_baton_t *tb = baton;
 
   /* Close the internal-use stream.  ### This used to be inside of
      txn_body_fulltext_finalize_edits(), but that invoked a nested
@@ -3093,7 +3094,7 @@ static svn_error_t *
 apply_text(void *baton,
            apr_pool_t *scratch_pool)
 {
-  struct text_baton_t *tb = baton;
+  text_baton_t *tb = baton;
   parent_path_t *parent_path;
   svn_fs_x__txn_id_t txn_id = root_txn_id(tb->root);
 
@@ -3139,7 +3140,7 @@ x_apply_text(svn_stream_t **contents_p,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
+  text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
   tb->path = svn_fs__canonicalize_abspath(path, pool);

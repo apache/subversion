@@ -106,20 +106,20 @@ recover_get_largest_revision(svn_fs_t *fs,
 }
 
 /* Baton used for recover_body below. */
-struct recover_baton {
+typedef struct recover_baton_t {
   svn_fs_t *fs;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} recover_baton_t;
 
 /* The work-horse for svn_fs_x__recover, called with the FS
    write lock.  This implements the svn_fs_x__with_write_lock()
-   'body' callback type.  BATON is a 'struct recover_baton *'. */
+   'body' callback type.  BATON is a 'recover_baton_t *'. */
 static svn_error_t *
 recover_body(void *baton,
              apr_pool_t *scratch_pool)
 {
-  struct recover_baton *b = baton;
+  recover_baton_t *b = baton;
   svn_fs_t *fs = b->fs;
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
@@ -246,10 +246,11 @@ recover_body(void *baton,
 /* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
 svn_fs_x__recover(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func, void *cancel_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  struct recover_baton b;
+  recover_baton_t b;
 
   /* We have no way to take out an exclusive lock in FSX, so we're
      restricted as to the types of recovery we can do.  Luckily,
