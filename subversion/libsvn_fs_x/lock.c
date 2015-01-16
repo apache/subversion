@@ -845,12 +845,12 @@ check_lock(svn_error_t **fs_err,
   return SVN_NO_ERROR;
 }
 
-struct lock_info_t {
+typedef struct lock_info_t {
   const char *path;
   const char *component;
   svn_lock_t *lock;
   svn_error_t *fs_err;
-};
+} lock_info_t;
 
 /* The body of svn_fs_x__lock(), which see.
 
@@ -874,7 +874,7 @@ lock_body(void *baton, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   lb->infos = apr_array_make(lb->result_pool, lb->targets->nelts,
-                             sizeof(struct lock_info_t));
+                             sizeof(lock_info_t));
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
@@ -888,7 +888,7 @@ lock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
                                                     svn_sort__item_t);
       const svn_fs_lock_target_t *target = item->value;
-      struct lock_info_t info;
+      lock_info_t info;
 
       svn_pool_clear(iterpool);
 
@@ -896,7 +896,7 @@ lock_body(void *baton, apr_pool_t *pool)
       SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root, iterpool));
       info.lock = NULL;
       info.component = NULL;
-      APR_ARRAY_PUSH(lb->infos, struct lock_info_t) = info;
+      APR_ARRAY_PUSH(lb->infos, lock_info_t) = info;
       if (!info.fs_err)
         ++outstanding;
     }
@@ -934,8 +934,7 @@ lock_body(void *baton, apr_pool_t *pool)
 
       for (i = 0; i < lb->infos->nelts; ++i)
         {
-          struct lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i,
-                                                    struct lock_info_t);
+          lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i, lock_info_t);
           const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
                                                         svn_sort__item_t);
           const svn_fs_lock_target_t *target = item->value;
@@ -1047,13 +1046,13 @@ check_unlock(svn_error_t **fs_err,
   return SVN_NO_ERROR;
 }
 
-struct unlock_info_t {
+typedef struct unlock_info_t {
   const char *path;
   const char *component;
   svn_error_t *fs_err;
   svn_boolean_t done;
   int components;
-};
+} unlock_info_t;
 
 /* The body of svn_fs_x__unlock(), which see.
 
@@ -1077,7 +1076,7 @@ unlock_body(void *baton, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   ub->infos = apr_array_make(ub->result_pool, ub->targets->nelts,
-                             sizeof(struct unlock_info_t));
+                             sizeof( unlock_info_t));
 
   SVN_ERR(ub->fs->vtable->youngest_rev(&youngest, ub->fs, pool));
   SVN_ERR(ub->fs->vtable->revision_root(&root, ub->fs, youngest, pool));
@@ -1087,7 +1086,7 @@ unlock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(ub->targets, i,
                                                     svn_sort__item_t);
       const char *token = item->value;
-      struct unlock_info_t info = { 0 };
+      unlock_info_t info = { 0 };
 
       svn_pool_clear(iterpool);
 
@@ -1112,7 +1111,7 @@ unlock_body(void *baton, apr_pool_t *pool)
 
           ++outstanding;
         }
-      APR_ARRAY_PUSH(ub->infos, struct unlock_info_t) = info;
+      APR_ARRAY_PUSH(ub->infos, unlock_info_t) = info;
     }
 
   rev_0_path = svn_fs_x__path_rev_absolute(ub->fs, 0, pool);
@@ -1128,8 +1127,7 @@ unlock_body(void *baton, apr_pool_t *pool)
 
       for (j = 0; j < ub->infos->nelts; ++j)
         {
-          struct unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j,
-                                                      struct unlock_info_t);
+          unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j, unlock_info_t);
 
           if (!info->fs_err && info->path)
             {
@@ -1357,8 +1355,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
   err = svn_fs_x__with_write_lock(fs, unlock_body, &ub, scratch_pool);
   for (i = 0; i < ub.infos->nelts; ++i)
     {
-      struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
-                                                  struct unlock_info_t);
+      unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i, unlock_info_t);
       if (!cb_err && lock_callback)
         {
           if (!info->done && !info->fs_err)

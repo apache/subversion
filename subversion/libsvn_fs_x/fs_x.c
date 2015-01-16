@@ -593,14 +593,14 @@ svn_fs_x__open(svn_fs_t *fs,
 
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
  * parameters over between them. */
-struct upgrade_baton_t
+typedef struct upgrade_baton_t
 {
   svn_fs_t *fs;
   svn_fs_upgrade_notify_t notify_func;
   void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} upgrade_baton_t;
 
 /* Upgrade the FS given in upgrade_baton_t *)BATON to the latest format
  * version.  Apply options an invoke callback from that BATON.
@@ -613,7 +613,7 @@ static svn_error_t *
 upgrade_body(void *baton,
              apr_pool_t *scratch_pool)
 {
-  struct upgrade_baton_t *upgrade_baton = baton;
+  upgrade_baton_t *upgrade_baton = baton;
   svn_fs_t *fs = upgrade_baton->fs;
   int format, max_files_per_dir;
   const char *format_path = svn_fs_x__path_format(fs, scratch_pool);
@@ -639,7 +639,7 @@ svn_fs_x__upgrade(svn_fs_t *fs,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  struct upgrade_baton_t baton;
+  upgrade_baton_t baton;
   baton.fs = fs;
   baton.notify_func = notify_func;
   baton.notify_baton = notify_baton;
