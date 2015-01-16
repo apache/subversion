@@ -384,19 +384,6 @@ svn_fs_x__dag_delete(dag_node_t *parent,
                      apr_pool_t *scratch_pool);
 
 
-/* Delete all mutable node revisions reachable from node ID, including
-   ID itself, from FS's `nodes' table.  Also delete any mutable
-   representations and strings associated with that node revision.
-   ID may refer to a file or directory, which may be mutable or immutable.
-
-   Use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                const svn_fs_x__id_t *id,
-                                apr_pool_t *scratch_pool);
-
-
 /* Create a new mutable directory named NAME in PARENT.  Set *CHILD_P
    to a reference to the new node, allocated in POOL.  The new
    directory has no contents, and no properties.  PARENT must be
