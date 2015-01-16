@@ -1561,6 +1561,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   svn_boolean_t sqlite_exclusive = FALSE;
   apr_int32_t sqlite_timeout = 0; /* default timeout */
+  apr_hash_index_t *hi;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1592,6 +1593,16 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* The WCROOT is complete. Stash it into DB.  */
   svn_hash_sets(db->dir_data, wcroot->abspath, wcroot);
+
+  /* Any previously cached children now have a new WCROOT. */
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *abspath = apr_hash_this_key(hi);
+      if (svn_dirent_is_ancestor(wcroot->abspath, abspath))
+        svn_hash_sets(db->dir_data, abspath, wcroot);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2340,7 +2351,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WORKING_BASE_DELETE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath, 0));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
   else
@@ -7594,7 +7605,11 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
                             op_depth,
                             new_moved_to_relpath));
   SVN_ERR(svn_sqlite__update(&affected, stmt));
-  assert(affected == 1);
+#ifdef SVN_DEBUG
+  /* Not fatal in release mode. The move recording is broken,
+     but the rest of the working copy can handle this. */
+  SVN_ERR_ASSERT(affected == 1);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -7984,7 +7999,12 @@ delete_node(void *baton,
                                                         child_relpath))
                         child_op_depth = delete_op_depth;
                       else
-                        child_op_depth = relpath_depth(child_relpath);
+                        {
+                          /* Calculate depth of the shadowing at the new location */
+                          child_op_depth = child_op_depth
+                                                - relpath_depth(local_relpath)
+                                                + relpath_depth(b->moved_to_relpath);
+                        }
 
                       fixup = TRUE;
                     }
@@ -13038,6 +13058,15 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_wq_add_internal(svn_wc__db_wcroot_t *wcroot,
+                           const svn_skel_t *work_item,
+                           apr_pool_t *scratch_pool)
+{
+  /* Add the work item(s) to the WORK_QUEUE.  */
+  return svn_error_trace(add_work_items(wcroot->sdb, work_item,
+                                        scratch_pool));
+}
 
 svn_error_t *
 svn_wc__db_wq_add(svn_wc__db_t *db,

@@ -388,8 +388,7 @@ svn_client_info4(const char *abspath_or_url,
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
                                             abspath_or_url, NULL, peg_revision,
                                             revision, ctx, pool));
-
-  svn_uri_split(NULL, &base_name, pathrev->url, pool);
+  base_name = svn_uri_basename(pathrev->url, pool);
 
   /* Get the dirent for the URL itself. */
   SVN_ERR(svn_ra_stat(ra_session, "", pathrev->rev, &the_ent, pool));

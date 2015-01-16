@@ -544,6 +544,15 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
        and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
+  valgrind_diagnostic = False
+  # A valgrind diagnostic will raise a failure if the command is
+  # expected to run without error.  When an error is expected any
+  # subsequent error pattern matching is usually lenient and will not
+  # detect the diagnostic so make sure a failure is raised here.
+  if error_expected and stderr_lines:
+    if any(map(lambda arg: re.match('==[0-9]+==', arg), stderr_lines)):
+      valgrind_diagnostic = True
+
   stop = time.time()
   logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
@@ -551,7 +560,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   for x in stderr_lines:
     logger.info(x.rstrip())
 
-  if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
+  if (((not error_expected) and ((stderr_lines) or (exit_code != 0)))
+      or valgrind_diagnostic):
     for x in stderr_lines:
       logger.warning(x.rstrip())
     if len(varargs) <= 5:

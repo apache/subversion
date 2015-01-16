@@ -63,6 +63,14 @@ echo "============ autogen.sh"
 cd ${abssrc}
 ./autogen.sh
 
+svnminor=$(awk '/define *SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h)
+
+# --enable-optimize adds -flto which breaks the 1.8 C tests because
+# they link main() from a library.
+if [ ${svnminor} -gt 8 ]; then
+  optimizeconfig=' --enable-optimize'
+fi
+
 #
 # Step 3: Configure
 #
@@ -72,8 +80,7 @@ cd ${absbld}
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --disable-debug \
-    --enable-optimize \
+    --disable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
@@ -82,6 +89,7 @@ ${abssrc}/configure \
     --enable-javahl \
     --without-jikes \
     --with-junit="${SVNBB_JUNIT}"
+
 test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 
 #

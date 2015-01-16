@@ -771,7 +771,8 @@ get_best_connection(report_context_t *ctx)
          pending requests, thereby giving more work to lightly loaded server
          processes.
        */
-      unsigned int i, min = INT_MAX, best_conn = first_conn;
+      int i, best_conn = first_conn;
+      unsigned int min = INT_MAX;
       for (i = first_conn; i < ctx->sess->num_conns; i++)
         {
           serf_connection_t *sc = ctx->sess->conns[i]->conn;

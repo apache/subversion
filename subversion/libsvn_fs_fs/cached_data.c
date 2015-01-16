@@ -277,11 +277,10 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Return TRUE, if REVISION in FS is of a format that supports block-read
-   and the feature has been enabled. */
+/* Return TRUE, if FS is of a format that supports block-read and the
+   feature has been enabled. */
 static svn_boolean_t
-use_block_read(svn_fs_t *fs,
-               svn_revnum_t revision)
+use_block_read(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
@@ -359,7 +358,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                      rev_item->number,
                                      scratch_pool));
 
-      if (use_block_read(fs, rev_item->revision))
+      if (use_block_read(fs))
         {
           /* block-read will parse the whole block and will also return
              the one noderev that we need right now. */
@@ -839,7 +838,7 @@ create_rep_state_body(rep_state_t **rep_state,
       /* populate the cache if appropriate */
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
-          if (use_block_read(fs, rep->revision))
+          if (use_block_read(fs))
             SVN_ERR(block_read(NULL, fs, rep->revision, rep->item_index,
                                rs->sfile->rfile, result_pool, scratch_pool));
           else
@@ -1484,7 +1483,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
      because the block is unlikely to contain other data. */
   if (   rs->chunk_index == 0
       && SVN_IS_VALID_REVNUM(rs->revision)
-      && use_block_read(rs->sfile->fs, rs->revision)
+      && use_block_read(rs->sfile->fs)
       && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
@@ -2717,7 +2716,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
                                                scratch_pool, scratch_pool));
 
-      if (use_block_read(fs, rev))
+      if (use_block_read(fs))
         {
           /* 'block-read' will also provide us with the desired data */
           SVN_ERR(block_read((void **)changes, fs,

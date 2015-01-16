@@ -308,7 +308,7 @@ void
 svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
                          char byte);
 
-/** Append an array of bytes onto @a targetstr.
+/** Append the array of bytes @a bytes of length @a count onto @a targetstr.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
  *
@@ -345,14 +345,15 @@ void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
                          const char *cstr);
 
-/** Read @a count bytes from @a bytes and insert them into @a str at
- * position @a pos and following.  The resulting string will be
- * @c count+str->len bytes long.  If @c pos is larger or equal to the
- * number of bytes currently used in @a str,  simply append @a bytes.
+/** Insert into @a str at position @a pos an array of bytes @a bytes
+ * which is @a count bytes long.
+ *
+ * The resulting string will be @c count+str->len bytes long.  If
+ * @a pos is larger than or equal to @c str->len, simply append @a bytes.
  *
  * Reallocs if necessary. @a str is affected, nothing else is.
  *
- * @note The inserted string may be a sub-range if @a str.
+ * @note The inserted string may be a sub-range of @a str.
  *
  * @since New in 1.8.
  *
@@ -364,9 +365,10 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
                      const char *bytes,
                      apr_size_t count);
 
-/** Removes @a count bytes from @a str, starting at position @a pos.
- * If that range exceeds the current string data,  @a str gets truncated
- * at @a pos.  If the latter is larger or equal to @c str->pos, this will
+/** Remove @a count bytes from @a str, starting at position @a pos.
+ *
+ * If that range exceeds the current string data, truncate @a str at
+ * @a pos.  If @a pos is larger than or equal to @c str->len, this will
  * be a no-op.  Otherwise, the resulting string will be @c str->len-count
  * bytes long.
  *
@@ -378,8 +380,8 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
                      apr_size_t count);
 
 /** Replace in @a str the substring which starts at @a pos and is @a
- * old_count bytes long with a new substring @a bytes (which is @a
- * new_count bytes long).
+ * old_count bytes long with a new substring @a bytes which is @a
+ * new_count bytes long.
  *
  * This is faster but functionally equivalent to the following sequence:
  * @code

@@ -315,6 +315,9 @@ dav_svn__log_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 1, sizeof(const char *));
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {

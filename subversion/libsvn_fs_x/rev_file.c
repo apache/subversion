@@ -37,7 +37,7 @@ static svn_fs_x__revision_file_t *
 create_revision_file(svn_fs_t *fs,
                      apr_pool_t *result_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
 
   file->is_packed = FALSE;

@@ -35,63 +35,63 @@ extern "C" {
 #define REP_CACHE_DB_NAME        "rep-cache.db"
 
 /* Open and create, if needed, the rep cache database associated with FS.
-   Use POOL for temporary allocations. */
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__open_rep_cache(svn_fs_t *fs,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /* Set *EXISTS to TRUE iff the rep-cache DB file exists. */
 svn_error_t *
 svn_fs_x__exists_rep_cache(svn_boolean_t *exists,
                            svn_fs_t *fs,
-                           apr_pool_t *pool);
+                           apr_pool_t *scratch_pool);
 
 /* Iterate all representations currently in FS's cache. */
 svn_error_t *
 svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              svn_revnum_t start,
                              svn_revnum_t end,
-                             svn_error_t *(*walker)(representation_t *rep,
+                             svn_error_t *(*walker)(svn_fs_x__representation_t *rep,
                                                     void *walker_baton,
                                                     svn_fs_t *fs,
                                                     apr_pool_t *scratch_pool),
                              void *walker_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
    REP is allocated in POOL.  If the rep cache database has not been
    opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if
    a reference beyond HEAD is detected. */
 svn_error_t *
-svn_fs_x__get_rep_reference(representation_t **rep,
+svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
                             svn_fs_t *fs,
                             svn_checksum_t *checksum,
                             apr_pool_t *pool);
 
 /* Set the representation REP in FS, using REP->CHECKSUM.
-   Use POOL for temporary allocations.  Returns SVN_ERR_FS_CORRUPT if
-   an existing reference beyond HEAD is detected.
+   Use SCRATCH_POOL for temporary allocations.  Returns SVN_ERR_FS_CORRUPT
+   if an existing reference beyond HEAD is detected.
 
    If the rep cache database has not been opened, this may be a no op. */
 svn_error_t *
 svn_fs_x__set_rep_reference(svn_fs_t *fs,
-                            representation_t *rep,
-                            apr_pool_t *pool);
+                            svn_fs_x__representation_t *rep,
+                            apr_pool_t *scratch_pool);
 
 /* Delete from the cache all reps corresponding to revisions younger
    than YOUNGEST. */
 svn_error_t *
 svn_fs_x__del_rep_reference(svn_fs_t *fs,
                             svn_revnum_t youngest,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /* Start a transaction to take an SQLite reserved lock that prevents
    other writes. */
 svn_error_t *
 svn_fs_x__lock_rep_cache(svn_fs_t *fs,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
