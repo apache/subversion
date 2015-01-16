@@ -160,7 +160,7 @@ construct_shard_sub_path(svn_fs_t *fs,
                          apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)];
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)] = { 0 };
 
   /* Select the appropriate parent path constant. */
   const char *parent = revprops ? PATH_REVPROPS_DIR : PATH_REVS_DIR;
@@ -288,7 +288,7 @@ construct_txn_path(svn_fs_t *fs,
                    apr_pool_t *result_pool)
 {
   /* Construct the transaction directory name without temp. allocations. */
-  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_TXN)];
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_TXN)] = { 0 };
   apr_size_t len = svn__ui64tobase36(buffer, txn_id);
   strncpy(buffer + len, PATH_EXT_TXN, sizeof(buffer) - len - 1);
 
@@ -408,7 +408,7 @@ construct_proto_rev_path(svn_fs_t *fs,
                          apr_pool_t *result_pool)
 {
   /* Construct the file name without temp. allocations. */
-  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_REV_LOCK)];
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_REV_LOCK)] = { 0 };
   apr_size_t len = svn__ui64tobase36(buffer, txn_id);
   strncpy(buffer + len, suffix, sizeof(buffer) - len - 1);
 
