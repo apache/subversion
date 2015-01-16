@@ -4706,7 +4706,6 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                                 NULL, NULL, NULL, NULL,
                                 ctx->wc_ctx, child->abspath,
                                 TRUE /* ignore_enoent */,
-                                FALSE /* show_hidden */,
                                 scratch_pool, scratch_pool));
   /* If CHILD has no base revision then it hasn't been committed yet, so it
      can't have any "future" history. */

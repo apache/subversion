@@ -75,7 +75,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
 
     IF ERRORLEVEL 1 (
         echo [Perl tests reported error !ERRORLEVEL!] 1>&2
-        REM SET result=1
+        SET result=1
     ) ELSE (
         echo Done.
     )

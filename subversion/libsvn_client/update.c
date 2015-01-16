@@ -262,7 +262,7 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_wc__node_get_base(NULL, NULL, &repos_relpath, &repos_root_url,
                                 &repos_uuid, NULL,
                                 ctx->wc_ctx, anchor_abspath,
-                                TRUE, FALSE,
+                                TRUE /* ignore_enoent */,
                                 scratch_pool, scratch_pool));
 
   /* It does not make sense to update conflict victims. */

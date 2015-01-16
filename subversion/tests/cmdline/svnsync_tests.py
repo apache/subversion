@@ -209,8 +209,12 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
 
   return dest_sbox
 
-def verify_mirror(dest_sbox, src_sbox):
-  """Compare the contents of the DEST_SBOX repository with EXP_DUMP_FILE_CONTENTS."""
+def verify_mirror(dest_sbox, exp_dump_file_contents):
+  """Compare the contents of the mirror repository in DEST_SBOX with
+     EXP_DUMP_FILE_CONTENTS, by comparing the parsed dump stream content.
+
+     First remove svnsync rev-props from the DEST_SBOX repository.
+  """
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -222,10 +226,9 @@ def verify_mirror(dest_sbox, src_sbox):
 
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
-  src_dump = svntest.actions.run_and_verify_dump(src_sbox.repo_dir)
 
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", src_dump, dest_dump)
+    "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
              bypass_prop_validation=False, source_prop_encoding=None,
@@ -251,16 +254,12 @@ or another dump file."""
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    build_repos(sbox)
-    svntest.actions.run_and_verify_load(sbox.repo_dir,
-                                        open(os.path.join(svnsync_tests_dir,
-                                                          exp_dump_file_name),
-                                             'rb').readlines())
-    src_sbox = sbox
+    exp_dump_file_contents = open(os.path.join(svnsync_tests_dir,
+                                  exp_dump_file_name), 'rb').readlines()
   else:
-    src_sbox = sbox
+    exp_dump_file_contents = master_dumpfile_contents
 
-  verify_mirror(dest_sbox, sbox)
+  verify_mirror(dest_sbox, exp_dump_file_contents)
 
 
 
@@ -564,9 +563,7 @@ def delete_revprops(sbox):
   run_copy_revprops(dest_sbox.repo_url, sbox.repo_url)
 
   # Does the result look as we expected?
-  build_repos(sbox)
-  svntest.actions.run_and_verify_load(sbox.repo_dir, expected_contents)
-  verify_mirror(dest_sbox, sbox)
+  verify_mirror(dest_sbox, expected_contents)
 
 @Issue(3870)
 @SkipUnless(svntest.main.is_posix_os)
@@ -575,6 +572,15 @@ def fd_leak_sync_from_serf_to_local(sbox):
   import resource
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
+
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def mergeinfo_contains_r0(sbox):
+  "mergeinfo contains r0"
+  run_test(sbox, "mergeinfo-contains-r0.dump",
+           exp_dump_file_name="mergeinfo-contains-r0.expected.dump",
+           bypass_prop_validation=True)
 
 
 ########################################################################
@@ -612,6 +618,7 @@ test_list = [ None,
               descend_into_replace,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
+              mergeinfo_contains_r0,
              ]
 
 if __name__ == '__main__':

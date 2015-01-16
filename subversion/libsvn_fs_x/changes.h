@@ -32,25 +32,27 @@
  *
  * In its serialized form, the svn_fs_x__changes_t container extracts most
  * of that redundancy and the run-time representation is also much smaller
- * than sum of the respective change_t* arrays.
+ * than sum of the respective svn_fs_x__change_t* arrays.
  *
  * As with other containers, this one has two modes: 'construction', in
  * which you may add data to it, and 'getter' in which there is only r/o
  * access to the data.
  */
 
-/* An opaque collection of change lists (apr_array_header_t * of change_t*).
+/* An opaque collection of change lists (apr_array_header_t * of
+ * svn_fs_x__change_t *).
  */
 typedef struct svn_fs_x__changes_t svn_fs_x__changes_t;
 
 /* Create and populate changes containers. */
 
 /* Create and return a new changes container with an initial capacity of
- * INITIAL_COUNT change_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__change_t objects.
+ * Allocate the result in RESULT_POOL.
  */
 svn_fs_x__changes_t *
 svn_fs_x__changes_create(apr_size_t initial_count,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Start a new change list CHANGES (implicitly terminating the previous one)
  * and return its index in *LIST_INDEX.  Append all changes from LIST to
@@ -80,13 +82,13 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
 
 /* I/O interface. */
 
-/* Write a serialized representation of CHANGES to STREAM.  Use POOL for
- * temporary allocations.
+/* Write a serialized representation of CHANGES to STREAM.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_changes_container(svn_stream_t *stream,
                                   const svn_fs_x__changes_t *changes,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /* Read a changes container from its serialized representation in STREAM.
  * Allocate the result in RESULT_POOL and return it in *CHANGES_P.  Use

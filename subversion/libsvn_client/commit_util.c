@@ -779,7 +779,6 @@ harvest_status_callback(void *status_baton,
                                       wc_ctx, svn_dirent_dirname(local_abspath,
                                                                  scratch_pool),
                                       FALSE /* ignore_enoent */,
-                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)

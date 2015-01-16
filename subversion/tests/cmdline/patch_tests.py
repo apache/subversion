@@ -4689,6 +4689,396 @@ def patch_git_rename(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+@Issue(4533)
+def patch_hunk_avoid_reorder(sbox):
+  """avoid reordering hunks"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n', truncate=True)
+  sbox.simple_commit()
+
+  # two hunks, first matches at offset +18, second matches at both -13
+  # and +18 but we want the second match as it is after the first
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -20,6 +20,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -20,6 +20,7 @@ with offset 18\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  sbox.simple_revert('A/mu')
+
+  # change patch so second hunk matches at both -14 and +17, we still
+  # want the second match
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -21,6 +21,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -21,6 +21,7 @@ with offset 17\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  sbox.simple_revert('A/mu')
+
+@Issue(4533)
+def patch_hunk_avoid_reorder2(sbox):
+  """avoid reordering hunks 2"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n', truncate=True)
+  sbox.simple_commit()
+
+  # two hunks, first matches at offset +18, second matches at both -13
+  # change patch so second hunk matches at both -12 and +19, we still
+  # want the second match
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -19,6 +19,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -19,6 +19,7 @@ with offset 19\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+@Issue(4533)
+def patch_hunk_reorder(sbox):
+  """hunks that reorder"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n' 'MM\n' 'NN\n',
+                     truncate=True)
+  sbox.simple_commit()
+
+  # Two hunks match in opposite order
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -2,6 +2,7 @@\n",
+    " II\n",
+    " JJ\n",
+    " KK\n",
+    "+11111\n",
+    " LL\n",
+    " MM\n",
+    " NN\n",
+    "@@ -9,6 +10,7 @@\n",
+    " BB\n",
+    " CC\n",
+    " DD\n",
+    "+22222\n",
+    " EE\n",
+    " FF\n",
+    " GG\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -7\n',
+    '>         applied hunk @@ -2,6 +2,7 @@ with offset 7\n',
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' '22222\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' '11111\n' 'LL\n' 'MM\n' 'NN\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+@XFail()
+def patch_hunk_overlap(sbox):
+  """hunks that overlap"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'GG\n' 'HH\n' 'II\n', truncate=True)
+  sbox.simple_commit()
+
+  # Two hunks that overlap when applied, GNU patch can apply both hunks.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -2,6 +2,7 @@\n",
+    " BB\n",
+    " CC\n",
+    " DD\n",
+    "+11111\n",
+    " EE\n",
+    " FF\n",
+    " GG\n",
+    "@@ -9,6 +10,7 @@\n",
+    " DD\n",
+    " EE\n",
+    " FF\n",
+    "+22222\n",
+    " GG\n",
+    " HH\n",
+    " II\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -5\n',
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' '11111\n' 'EE\n' 'FF\n'
+                     '22222\n' 'GG\n' 'HH\n' 'II\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+def patch_delete_modified(sbox):
+  """patch delete modified"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A patch that deletes beta.
+  unidiff_patch = [
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # First application deletes beta
+  expected_output = [
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/beta')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/beta', status='D ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Second application skips
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Third application, with file present even though state is 'D', also skips
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+  expected_disk.add({'A/B/E/beta' : Item(contents='Modified')})
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Revert and modify beta, fourth application gives a text conflict.
+  sbox.simple_revert('A/B/E/beta')
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/B/E/beta'),
+    '>         rejected hunk @@ -1,1 +0,0 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_skip = wc.State('', { })
+  reject_file_contents = [
+    "--- A/B/E/beta\n",
+    "+++ A/B/E/beta\n",
+    "@@ -1,1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+  expected_disk.add({'A/B/E/beta.svnpatch.rej'
+                     : Item(contents=''.join(reject_file_contents))
+                     })
+  expected_status.tweak('A/B/E/beta', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -4741,7 +5131,12 @@ test_list = [ None,
               patch_apply_no_fuz,
               patch_lacking_trailing_eol_on_context,
               patch_with_custom_keywords,
-              patch_git_rename
+              patch_git_rename,
+              patch_hunk_avoid_reorder,
+              patch_hunk_avoid_reorder2,
+              patch_hunk_reorder,
+              patch_hunk_overlap,
+              patch_delete_modified,
             ]
 
 if __name__ == '__main__':

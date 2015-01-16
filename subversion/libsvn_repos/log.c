@@ -1070,6 +1070,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
 {
   apr_hash_t *r_props, *changed_paths = NULL;
   svn_boolean_t get_revprops = TRUE, censor_revprops = FALSE;
+  svn_boolean_t want_revprops = !revprops || revprops->nelts;
 
   /* Discover changed paths if the user requested them
      or if we need to check that they are readable. */
@@ -1111,7 +1112,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
         changed_paths = NULL;
     }
 
-  if (get_revprops)
+  if (get_revprops && want_revprops)
     {
       /* User is allowed to see at least some revprops. */
       SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));

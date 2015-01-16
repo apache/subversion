@@ -31,6 +31,35 @@
 #include "svn_private_config.h"
 #include "svnfsfs.h"
 
+/* Return the string, allocated in RESULT_POOL, describing the value 2**I.
+ */
+static const char *
+print_two_power(int i,
+                apr_pool_t *result_pool)
+{
+  /* These are the SI prefixes for base-1000, the binary ones with base-1024
+     are too clumsy and require appending B for "byte" to be intelligible,
+     e.g. "MiB".
+
+     Therefore, we ignore the official standard and revert to the traditional
+     contextual use were the base-1000 prefixes are understood as base-1024
+     when it came to data sizes.
+   */
+  const char *si_prefixes = " kMGTPEZY";
+
+  int number = (1 << (i % 10));
+  int thousands = i / 10;
+
+  char si_prefix = ((thousands >= 0) && (thousands < strlen(si_prefixes)))
+                 ? si_prefixes[thousands]
+                 : '?';
+
+  if (si_prefix == ' ')
+    return apr_psprintf(result_pool, "%d", number);
+
+  return apr_psprintf(result_pool, "%d%c", number, si_prefix);
+}
+
 /* Print statistics for the given group of representations to console.
  * Use POOL for allocations.
  */
@@ -88,8 +117,8 @@ print_histogram(svn_fs_fs__histogram_t *histogram,
 
   /* display histogram lines */
   for (i = last; i >= first; --i)
-    printf(_("  [2^%2d, 2^%2d)   %15s (%2d%%) bytes in %12s (%2d%%) items\n"),
-           i-1, i,
+    printf(_("  %4s .. < %-4s %19s (%2d%%) bytes in %12s (%2d%%) items\n"),
+           print_two_power(i-1, pool), print_two_power(i, pool),
            svn__ui64toa_sep(histogram->lines[i].sum, ',', pool),
            (int)(histogram->lines[i].sum * 100 / histogram->total.sum),
            svn__ui64toa_sep(histogram->lines[i].count, ',', pool),

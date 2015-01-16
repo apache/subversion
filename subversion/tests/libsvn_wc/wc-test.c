@@ -141,7 +141,6 @@ test_node_get_base(const svn_test_opts_t *opts, apr_pool_t *pool)
                                       NULL,
                                       b->wc_ctx, local_abspath,
                                       TRUE /* ignore_enoent */,
-                                      FALSE /* show_hidden */,
                                       b->pool, b->pool));
         SVN_TEST_ASSERT(revision == subtest->base_rev);
         if (SVN_IS_VALID_REVNUM(subtest->base_rev))
