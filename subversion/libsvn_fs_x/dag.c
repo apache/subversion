@@ -796,6 +796,55 @@ svn_fs_x__dag_clone_root(dag_node_t **root_p,
 }
 
 
+/* Delete all mutable node revisions reachable from node ID, including
+   ID itself, from FS's `nodes' table.  Also delete any mutable
+   representations and strings associated with that node revision.
+   ID may refer to a file or directory, which may be mutable or immutable.
+
+   Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+delete_if_mutable(svn_fs_t *fs,
+                  const svn_fs_x__id_t *id,
+                  apr_pool_t *scratch_pool)
+{
+  dag_node_t *node;
+
+  /* Get the node. */
+  SVN_ERR(svn_fs_x__dag_get_node(&node, fs, id, scratch_pool));
+
+  /* If immutable, do nothing and return immediately. */
+  if (! svn_fs_x__dag_check_mutable(node))
+    return SVN_NO_ERROR;
+
+  /* Else it's mutable.  Recurse on directories... */
+  if (node->kind == svn_node_dir)
+    {
+      apr_array_header_t *entries;
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+      /* Loop over directory entries */
+      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool));
+      if (entries)
+        for (i = 0; i < entries->nelts; ++i)
+          {
+            const svn_fs_x__id_t *noderev_id
+              = &APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *)->id;
+
+            svn_pool_clear(iterpool);
+            SVN_ERR(delete_if_mutable(fs, noderev_id, iterpool));
+          }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  /* ... then delete the node itself, after deleting any mutable
+     representations and strings it points to. */
+  return svn_fs_x__delete_node_revision(fs, id, scratch_pool);
+}
+
+
 svn_error_t *
 svn_fs_x__dag_delete(dag_node_t *parent,
                      const char *name,
@@ -843,8 +892,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
        "Delete failed--directory has no entry '%s'", name);
 
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR(svn_fs_x__dag_delete_if_mutable(parent->fs, &dirent->id,
-                                          scratch_pool));
+  SVN_ERR(delete_if_mutable(parent->fs, &dirent->id, scratch_pool));
   svn_pool_destroy(subpool);
 
   /* Remove this entry from its parent's entries list. */
@@ -852,48 +900,6 @@ svn_fs_x__dag_delete(dag_node_t *parent,
                              NULL, svn_node_unknown, scratch_pool);
 }
 
-
-svn_error_t *
-svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                const svn_fs_x__id_t *id,
-                                apr_pool_t *scratch_pool)
-{
-  dag_node_t *node;
-
-  /* Get the node. */
-  SVN_ERR(svn_fs_x__dag_get_node(&node, fs, id, scratch_pool));
-
-  /* If immutable, do nothing and return immediately. */
-  if (! svn_fs_x__dag_check_mutable(node))
-    return SVN_NO_ERROR;
-
-  /* Else it's mutable.  Recurse on directories... */
-  if (node->kind == svn_node_dir)
-    {
-      apr_array_header_t *entries;
-      int i;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-      /* Loop over directory entries */
-      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool));
-      if (entries)
-        for (i = 0; i < entries->nelts; ++i)
-          {
-            const svn_fs_x__id_t *noderev_id
-              = &APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *)->id;
-
-            svn_pool_clear(iterpool);
-            SVN_ERR(svn_fs_x__dag_delete_if_mutable(fs, noderev_id,
-                                                    scratch_pool));
-          }
-
-      svn_pool_destroy(iterpool);
-    }
-
-  /* ... then delete the node itself, after deleting any mutable
-     representations and strings it points to. */
-  return svn_fs_x__delete_node_revision(fs, id, scratch_pool);
-}
 
 svn_error_t *
 svn_fs_x__dag_make_file(dag_node_t **child_p,
