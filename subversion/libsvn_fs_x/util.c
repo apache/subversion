@@ -284,7 +284,7 @@ construct_txn_path(svn_fs_t *fs,
                    apr_pool_t *result_pool)
 {
   /* Construct the transaction directory name without temp. allocations. */
-  char buffer[SVN_INT64_BUFFER_SIZE + strlen(PATH_EXT_TXN)];
+  char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_TXN)];
   apr_size_t len = svn__ui64tobase36(buffer, txn_id);
   strncpy(buffer + len, PATH_EXT_TXN, sizeof(buffer) - len - 1);
 
