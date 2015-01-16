@@ -547,11 +547,12 @@ get_lock_helper(svn_fs_t *fs,
 
 
 /* Baton for locks_walker(). */
-struct walk_locks_baton {
+typedef struct walk_locks_baton_t
+{
   svn_fs_get_locks_callback_t get_locks_func;
   void *get_locks_baton;
   svn_fs_t *fs;
-};
+} walk_locks_baton_t;
 
 /* Implements walk_digests_callback_t. */
 static svn_error_t *
@@ -563,7 +564,7 @@ locks_walker(void *baton,
              svn_boolean_t have_write_lock,
              apr_pool_t *pool)
 {
-  struct walk_locks_baton *wlb = baton;
+  walk_locks_baton_t *wlb = baton;
 
   if (lock)
     {
@@ -650,7 +651,7 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  struct walk_locks_baton wlb;
+  walk_locks_baton_t wlb;
 
   wlb.get_locks_func = get_locks_func;
   wlb.get_locks_baton = get_locks_baton;
@@ -736,7 +737,7 @@ svn_fs_x__allow_locked_operation(const char *path,
 }
 
 /* The effective arguments for lock_body() below. */
-struct lock_baton {
+typedef struct lock_baton_t {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
@@ -745,13 +746,13 @@ struct lock_baton {
   apr_time_t expiration_date;
   svn_boolean_t steal_lock;
   apr_pool_t *result_pool;
-};
+} lock_baton_t;
 
 static svn_error_t *
 check_lock(svn_error_t **fs_err,
            const char *path,
            const svn_fs_lock_target_t *target,
-           struct lock_baton *lb,
+           lock_baton_t *lb,
            svn_fs_root_t *root,
            apr_pool_t *pool)
 {
@@ -854,7 +855,7 @@ typedef struct lock_info_t {
 
 /* The body of svn_fs_x__lock(), which see.
 
-   BATON is a 'struct lock_baton *' holding the effective arguments.
+   BATON is a 'lock_baton_t *' holding the effective arguments.
    BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
    path, mapping canonical path to 'svn_fs_lock_target_t'.  Set
    BATON->infos to an array of 'lock_info_t' holding the results.  For
@@ -866,7 +867,7 @@ typedef struct lock_info_t {
 static svn_error_t *
 lock_body(void *baton, apr_pool_t *pool)
 {
-  struct lock_baton *lb = baton;
+  lock_baton_t *lb = baton;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
@@ -1012,7 +1013,7 @@ lock_body(void *baton, apr_pool_t *pool)
 }
 
 /* The effective arguments for unlock_body() below. */
-struct unlock_baton {
+typedef struct unlock_baton_t {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
@@ -1020,13 +1021,13 @@ struct unlock_baton {
   svn_boolean_t skip_check;
   svn_boolean_t break_lock;
   apr_pool_t *result_pool;
-};
+} unlock_baton_t;
 
 static svn_error_t *
 check_unlock(svn_error_t **fs_err,
              const char *path,
              const char *token,
-             struct unlock_baton *ub,
+             unlock_baton_t *ub,
              svn_fs_root_t *root,
              apr_pool_t *pool)
 {
@@ -1056,7 +1057,7 @@ typedef struct unlock_info_t {
 
 /* The body of svn_fs_x__unlock(), which see.
 
-   BATON is a 'struct unlock_baton *' holding the effective arguments.
+   BATON is a 'unlock_baton_t *' holding the effective arguments.
    BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
    path, mapping canonical path to (const char *) token.  Set
    BATON->infos to an array of 'unlock_info_t' results.  For the other
@@ -1068,7 +1069,7 @@ typedef struct unlock_info_t {
 static svn_error_t *
 unlock_body(void *baton, apr_pool_t *pool)
 {
-  struct unlock_baton *ub = baton;
+  unlock_baton_t *ub = baton;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
@@ -1187,7 +1188,7 @@ unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
               apr_pool_t *scratch_pool)
 {
-  struct unlock_baton ub;
+  unlock_baton_t ub;
   svn_sort__item_t item;
   apr_array_header_t *targets = apr_array_make(scratch_pool, 1,
                                                sizeof(svn_sort__item_t));
@@ -1222,7 +1223,7 @@ svn_fs_x__lock(svn_fs_t *fs,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  struct lock_baton lb;
+  lock_baton_t lb;
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
@@ -1316,7 +1317,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  struct unlock_baton ub;
+  unlock_baton_t ub;
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
