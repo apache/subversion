@@ -1171,7 +1171,6 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 struct get_and_increment_txn_key_baton {
   svn_fs_t *fs;
   apr_uint64_t txn_number;
-  apr_pool_t *pool;
 };
 
 /* Callback used in the implementation of create_txn_dir().  This gets
@@ -1188,7 +1187,7 @@ get_and_increment_txn_key_body(void *baton,
   char new_id_str[SVN_INT64_BUFFER_SIZE];
 
   svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_filename, cb->pool));
+  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_filename, scratch_pool));
 
   /* remove trailing newlines */
   cb->txn_number = svn__base36toui64(NULL, buf->data);
@@ -1223,7 +1222,6 @@ create_txn_dir(const char **id_p,
      number, from the txn-current file, and write an
      incremented value back out to the file.  Place the revision
      number the transaction is based off into the transaction id. */
-  cb.pool = pool;
   cb.fs = fs;
   SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
                                           get_and_increment_txn_key_body,
