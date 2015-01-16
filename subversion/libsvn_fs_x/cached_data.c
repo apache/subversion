@@ -299,6 +299,7 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
          different from that of rev / pack files. */
       err = svn_io_file_open(&file,
                              svn_fs_x__path_txn_node_rev(fs, id,
+                                                         scratch_pool,
                                                          scratch_pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                              scratch_pool);
@@ -2579,7 +2580,8 @@ get_dir_contents(apr_array_header_t **entries,
       && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
     {
       const char *filename
-        = svn_fs_x__path_txn_node_children(fs, id, scratch_pool);
+        = svn_fs_x__path_txn_node_children(fs, id, scratch_pool,
+                                           scratch_pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
@@ -2755,7 +2757,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
     {
       const char *filename
-        = svn_fs_x__path_txn_node_props(fs, noderev_id, pool);
+        = svn_fs_x__path_txn_node_props(fs, noderev_id, pool, pool);
       proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));

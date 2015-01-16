@@ -338,29 +338,34 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   apr_pool_t *result_pool);
 
 /* Return the path of the file containing the in-transaction node revision
- * identified by ID in FS.  The result will be allocated in POOL.
+ * identified by ID in FS.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
                             const svn_fs_x__id_t *id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Return the path of the file containing the in-transaction properties of
- * the node identified by ID in FS.  The result will be allocated in POOL.
+ * the node identified by ID in FS.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_props(svn_fs_t *fs,
                               const svn_fs_x__id_t *id,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Return the path of the file containing the directory entries of the
  * in-transaction directory node identified by ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_children(svn_fs_t *fs,
                                  const svn_fs_x__id_t *id,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Check that BUF, a nul-terminated buffer of text from file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.

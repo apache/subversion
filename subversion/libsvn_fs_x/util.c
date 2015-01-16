@@ -434,35 +434,54 @@ svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
   return construct_proto_rev_path(fs, txn_id, PATH_EXT_REV_LOCK, result_pool);
 }
 
+/* Return the full path of the noderev-related file with the extension SUFFIX
+ * for noderev *ID in transaction TXN_ID in FS.
+ *
+ * Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL.
+ */
+static const char *
+construct_txn_node_path(svn_fs_t *fs,
+                        const svn_fs_x__id_t *id,
+                        const char *suffix,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *filename = svn_fs_x__id_unparse(id, result_pool)->data;
+  apr_int64_t txn_id = svn_fs_x__get_txn_id(id->change_set);
+
+  return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, scratch_pool),
+                         apr_psprintf(scratch_pool, PATH_PREFIX_NODE "%s%s",
+                                      filename, suffix),
+                         result_pool);
+}
+
 const char *
 svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
                             const svn_fs_x__id_t *id,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
-  const char *filename = svn_fs_x__id_unparse(id, pool)->data;
-  apr_int64_t txn_id = svn_fs_x__get_txn_id(id->change_set);
-
-  return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
-                         apr_psprintf(pool, PATH_PREFIX_NODE "%s", filename),
-                         pool);
+  return construct_txn_node_path(fs, id, "", result_pool, scratch_pool);
 }
 
 const char *
 svn_fs_x__path_txn_node_props(svn_fs_t *fs,
                               const svn_fs_x__id_t *id,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
-                     PATH_EXT_PROPS, SVN_VA_NULL);
+  return construct_txn_node_path(fs, id, PATH_EXT_PROPS, result_pool,
+                                 scratch_pool);
 }
 
 const char *
 svn_fs_x__path_txn_node_children(svn_fs_t *fs,
                                  const svn_fs_x__id_t *id,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
-  return apr_pstrcat(pool, svn_fs_x__path_txn_node_rev(fs, id, pool),
-                     PATH_EXT_CHILDREN, SVN_VA_NULL);
+  return construct_txn_node_path(fs, id, PATH_EXT_CHILDREN, result_pool,
+                                 scratch_pool);
 }
 
 
