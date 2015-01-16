@@ -104,8 +104,7 @@ hash_store(apr_hash_t *hash,
    of that value (if it exists). */
 static const char *
 hash_fetch(apr_hash_t *hash,
-           const char *key,
-           apr_pool_t *pool)
+           const char *key)
 {
   svn_string_t *str = svn_hash_gets(hash, key);
   return str ? str->data : NULL;
@@ -297,7 +296,7 @@ read_digest_file(apr_hash_t **children_p,
 
   /* If our caller cares, see if we have a lock path in our hash. If
      so, we'll assume we have a lock here. */
-  val = hash_fetch(hash, PATH_KEY, pool);
+  val = hash_fetch(hash, PATH_KEY);
   if (val && lock_p)
     {
       const char *path = val;
@@ -306,30 +305,30 @@ read_digest_file(apr_hash_t **children_p,
       lock = svn_lock_create(pool);
       lock->path = path;
 
-      if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
+      if (! ((lock->token = hash_fetch(hash, TOKEN_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
-      if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
+      if (! ((lock->owner = hash_fetch(hash, OWNER_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
-      if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
+      if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       lock->is_dav_comment = (val[0] == '1');
 
-      if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
+      if (! ((val = hash_fetch(hash, CREATION_DATE_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
-      if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))
+      if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY)))
         SVN_ERR(svn_time_from_cstring(&(lock->expiration_date), val, pool));
 
-      lock->comment = hash_fetch(hash, COMMENT_KEY, pool);
+      lock->comment = hash_fetch(hash, COMMENT_KEY);
 
       *lock_p = lock;
     }
 
   /* If our caller cares, see if we have any children for this path. */
-  val = hash_fetch(hash, CHILDREN_KEY, pool);
+  val = hash_fetch(hash, CHILDREN_KEY);
   if (val && children_p)
     {
       apr_array_header_t *kiddos = svn_cstring_split(val, "\n", FALSE, pool);
@@ -671,8 +670,7 @@ walk_locks(svn_fs_t *fs,
  */
 static svn_error_t *
 verify_lock(svn_fs_t *fs,
-            svn_lock_t *lock,
-            apr_pool_t *pool)
+            svn_lock_t *lock)
 {
   if ((! fs->access_ctx) || (! fs->access_ctx->username))
     return svn_error_createf
@@ -703,7 +701,7 @@ get_locks_callback(void *baton,
                    svn_lock_t *lock,
                    apr_pool_t *pool)
 {
-  return verify_lock(baton, lock, pool);
+  return verify_lock(baton, lock);
 }
 
 
@@ -732,7 +730,7 @@ svn_fs_x__allow_locked_operation(const char *path,
       SVN_ERR(get_lock_helper(fs, &lock, path, have_write_lock,
                               scratch_pool));
       if (lock)
-        SVN_ERR(verify_lock(fs, lock, scratch_pool));
+        SVN_ERR(verify_lock(fs, lock));
     }
   return SVN_NO_ERROR;
 }
