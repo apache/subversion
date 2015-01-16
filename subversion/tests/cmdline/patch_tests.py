@@ -4946,6 +4946,122 @@ def patch_hunk_reorder(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+  # In the following case the reordered hunk2 is smaller offset
+  # magnitude than hunk2 at the end and the reorder is preferred.
+  sbox.simple_revert('A/mu')
+  sbox.simple_append('A/mu',
+                     'x\n' * 2  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 2  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 100  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n',
+                     truncate=True)
+  sbox.simple_commit()
+
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -28,7 +28,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk1\n",
+    "+hunk1-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -44,7 +44,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk2\n",
+    "+hunk2-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -44,7 +44,7 @@ with offset -32\n',
+    '>         applied hunk @@ -28,7 +28,7 @@ with offset 1\n',
+    ]
+  expected_disk.tweak('A/mu', contents=
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 10  +
+                      '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 100  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n')
+
+  expected_status.tweak('A/mu', status='M ', wc_rev=3)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  sbox.simple_revert('A/mu')
+
+  # In this case the reordered hunk2 is further than hunk2 at the end
+  # and the reordered is not preferred.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -28,7 +28,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk1\n",
+    "+hunk1-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -110,7 +110,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk2\n",
+    "+hunk2-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -28,7 +28,7 @@ with offset 1\n',
+    '>         applied hunk @@ -110,7 +110,7 @@ with offset 26\n',
+    ]
+  expected_disk.tweak('A/mu', contents=
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 10  +
+                      '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 100  +
+                      '1\n' '2\n' '3\n' 'hunk2-mod\n' '4\n' '5\n' '6\n')
+
+  expected_status.tweak('A/mu', status='M ', wc_rev=3)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 @XFail()
 def patch_hunk_overlap(sbox):
   """hunks that overlap"""

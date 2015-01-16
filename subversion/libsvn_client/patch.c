@@ -1796,11 +1796,13 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                           && (matched_line - original_start > original_start)))) 
                 {
                   SVN_ERR(seek_to_line(content, 1, scratch_pool));
-                  SVN_ERR(scan_for_match(&matched_line, content, hunk, FALSE,
+                  SVN_ERR(scan_for_match(&matched_line2, content, hunk, FALSE,
                                          search_start - 1, fuzz,
                                          ignore_whitespace, FALSE,
                                          cancel_func, cancel_baton,
                                          scratch_pool));
+                  if (matched_line2)
+                    matched_line = matched_line2;
                 }
             }
         }
