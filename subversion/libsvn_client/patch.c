@@ -1789,13 +1789,22 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                           < original_start - matched_line)))
                   matched_line = matched_line2;
 
-              /* Search from start of file if there could be a better match. */
+              /* Search from before previous hunk if there could be a
+                 better match. */
               if (search_start > 1
                   && (!matched_line
                       || (matched_line > original_start
-                          && (matched_line - original_start > original_start)))) 
+                          && (matched_line - original_start
+                              > original_start - search_start)))) 
                 {
-                  SVN_ERR(seek_to_line(content, 1, scratch_pool));
+                  svn_linenum_t search_start2 = 1;
+
+                  if (matched_line
+                      && matched_line - original_start < original_start)
+                    search_start2
+                      = original_start - (matched_line - original_start);
+
+                  SVN_ERR(seek_to_line(content, search_start2, scratch_pool));
                   SVN_ERR(scan_for_match(&matched_line2, content, hunk, FALSE,
                                          search_start - 1, fuzz,
                                          ignore_whitespace, FALSE,
