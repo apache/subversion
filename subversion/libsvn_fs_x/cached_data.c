@@ -2292,11 +2292,11 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 }
 
 /* Baton used when reading delta windows. */
-struct delta_read_baton
+typedef struct delta_read_baton_t
 {
   struct rep_state_t *rs;
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
-};
+} delta_read_baton_t;
 
 /* This implements the svn_txdelta_next_window_fn_t interface. */
 static svn_error_t *
@@ -2304,7 +2304,7 @@ delta_read_next_window(svn_txdelta_window_t **window,
                        void *baton,
                        apr_pool_t *pool)
 {
-  struct delta_read_baton *drb = baton;
+  delta_read_baton_t *drb = baton;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   *window = NULL;
@@ -2324,7 +2324,7 @@ delta_read_next_window(svn_txdelta_window_t **window,
 static const unsigned char *
 delta_read_md5_digest(void *baton)
 {
-  struct delta_read_baton *drb = baton;
+  delta_read_baton_t *drb = baton;
   return drb->md5_digest;
 }
 
@@ -2337,7 +2337,7 @@ get_storaged_delta_stream(rep_state_t *rep_state,
                           apr_pool_t *pool)
 {
   /* Create the delta read baton. */
-  struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
+  delta_read_baton_t *drb = apr_pcalloc(pool, sizeof(*drb));
   drb->rs = rep_state;
   memcpy(drb->md5_digest, target->data_rep->md5_digest,
          sizeof(drb->md5_digest));
