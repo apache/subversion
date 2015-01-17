@@ -833,7 +833,8 @@ delete_if_mutable(svn_fs_t *fs,
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* Loop over directory entries */
-      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool,
+                                        iterpool));
       for (i = 0; i < entries->nelts; ++i)
         {
           const svn_fs_x__id_t *noderev_id

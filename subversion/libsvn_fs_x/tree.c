@@ -2371,7 +2371,8 @@ x_dir_entries(apr_hash_t **table_p,
 
   /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, scratch_pool));
-  SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, scratch_pool,
+                                    scratch_pool));
 
   if (table->nelts)
     context = svn_fs_x__id_create_context(root->fs, pool);
