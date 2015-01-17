@@ -109,13 +109,16 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE
    into the contents of the file TARGET, allocated in RESULT_POOL.
-   If SOURCE is NULL, an empty string will be used in its stead. */
+   If SOURCE is NULL, an empty string will be used in its stead.
+   Use SCRATCH_POOL for temporary allocations.
+ */
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
                                 svn_fs_x__noderev_t *source,
                                 svn_fs_x__noderev_t *target,
-                                apr_pool_t *result_pool);
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* Set *ENTRIES to an apr_array_header_t of dirent structs that contain
    the directory entries of node-revision NODEREV in filesystem FS.  The

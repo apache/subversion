@@ -439,16 +439,17 @@ svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
 
 
 /* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into
-   the contents of TARGET, allocated in POOL.  If SOURCE is null, the empty
-   string will be used.
+   the contents of TARGET, allocated in RESULT_POOL.  If SOURCE is null, the
+   empty string will be used is its stead.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                     dag_node_t *source,
                                     dag_node_t *target,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
    contents of FILE.  Allocate the stream in RESULT_POOL.
