@@ -1669,8 +1669,10 @@ compare_dir_structure(svn_boolean_t *changed,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_fs_x__dag_dir_entries(&lhs_entries, lhs, scratch_pool));
-  SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&lhs_entries, lhs, scratch_pool,
+                                    iterpool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, scratch_pool,
+                                    iterpool));
 
   /* Since directories are sorted by name, we can simply compare their
      entries one-by-one without binary lookup etc. */
@@ -1917,12 +1919,12 @@ merge(svn_stringbuf_t *conflict_p,
   /* ### todo: it would be more efficient to simply check for a NULL
      entries hash where necessary below than to allocate an empty hash
      here, but another day, another day... */
-  SVN_ERR(svn_fs_x__dag_dir_entries(&s_entries, source, pool));
-  SVN_ERR(svn_fs_x__dag_dir_entries(&t_entries, target, pool));
-  SVN_ERR(svn_fs_x__dag_dir_entries(&a_entries, ancestor, pool));
+  iterpool = svn_pool_create(pool);
+  SVN_ERR(svn_fs_x__dag_dir_entries(&s_entries, source, pool, iterpool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&t_entries, target, pool, iterpool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&a_entries, ancestor, pool, iterpool));
 
   /* for each entry E in a_entries... */
-  iterpool = svn_pool_create(pool);
   for (i = 0; i < a_entries->nelts; ++i)
     {
       svn_fs_x__dirent_t *s_entry, *t_entry, *a_entry;
@@ -3827,7 +3829,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_fs_x__dag_dir_entries(&entries, dir_dag, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&entries, dir_dag, scratch_pool,
+                                    iterpool));
   for (i = 0; i < entries->nelts; ++i)
     {
       svn_fs_x__dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
@@ -4378,7 +4381,8 @@ verify_node(dag_node_t *node,
       apr_int64_t children_mergeinfo = 0;
       APR_ARRAY_PUSH(parent_nodes, dag_node_t*) = node;
 
-      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_dir_entries(&entries, node, scratch_pool,
+                                        iterpool));
 
       /* Compute CHILDREN_MERGEINFO. */
       for (i = 0; i < entries->nelts; ++i)

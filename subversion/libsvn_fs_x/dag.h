@@ -315,11 +315,12 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
 /* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
    and the values are svn_fs_x__dirent_t. The returned table (and elements)
-   is allocated in POOL, which is also used for temporary allocations. */
+   is allocated in RESULT_POOL, temporaries in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
                           dag_node_t *node,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
