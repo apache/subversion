@@ -788,8 +788,10 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
 
   /* At least one of the reps has been modified in a txn.
      Fetch and compare them. */
-  SVN_ERR(svn_fs_x__get_proplist(&proplist_a, fs, a, scratch_pool));
-  SVN_ERR(svn_fs_x__get_proplist(&proplist_b, fs, b, scratch_pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_a, fs, a, scratch_pool,
+                                 scratch_pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_b, fs, b, scratch_pool,
+                                 scratch_pool));
 
   *equal = svn_fs__prop_lists_equal(proplist_a, proplist_b, scratch_pool);
   return SVN_NO_ERROR;

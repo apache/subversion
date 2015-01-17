@@ -2897,7 +2897,8 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
       apr_uint32_t item_type = noderev->kind == svn_node_dir
                              ? SVN_FS_X__ITEM_TYPE_DIR_PROPS
                              : SVN_FS_X__ITEM_TYPE_FILE_PROPS;
-      SVN_ERR(svn_fs_x__get_proplist(&proplist, fs, noderev, scratch_pool));
+      SVN_ERR(svn_fs_x__get_proplist(&proplist, fs, noderev, scratch_pool,
+                                     scratch_pool));
 
       noderev->prop_rep->id.change_set = change_set;
 

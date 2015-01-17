@@ -158,13 +158,14 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  apr_pool_t *scratch_pool);
 
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
-   node-revision NODEREV as seen in filesystem FS.  Use POOL for
-   temporary allocations. */
+   node-revision NODEREV as seen in filesystem FS.  Allocate the result
+   in RESULT_POOL and use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist,
                        svn_fs_t *fs,
                        svn_fs_x__noderev_t *noderev,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.
  * Allocate the result in POOL.

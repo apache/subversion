@@ -1467,13 +1467,15 @@ x_node_prop(svn_string_t **value_p,
 {
   dag_node_t *node;
   apr_hash_t *proplist;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(get_dag(&node, root, path,  pool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, node, pool));
+  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, node, pool, scratch_pool));
   *value_p = NULL;
   if (proplist)
     *value_p = svn_hash_gets(proplist, propname);
 
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1488,13 +1490,13 @@ x_node_proplist(apr_hash_t **table_p,
                 const char *path,
                 apr_pool_t *pool)
 {
-  apr_hash_t *table;
   dag_node_t *node;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&table, node, pool));
-  *table_p = table ? table : apr_hash_make(pool);
+  SVN_ERR(svn_fs_x__dag_get_proplist(table_p, node, pool, scratch_pool));
 
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1544,7 +1546,8 @@ x_change_node_prop(svn_fs_root_t *root,
                                              subpool));
 
   SVN_ERR(make_path_mutable(root, parent_path, path, subpool, subpool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, parent_path->node, subpool));
+  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, parent_path->node, subpool,
+                                     subpool));
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
   if ((! proplist) && (! value))
@@ -3844,7 +3847,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_string_t *mergeinfo_string;
           svn_error_t *err;
 
-          SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, kid_dag, iterpool));
+          SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, kid_dag, iterpool,
+                                             iterpool));
           mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
           if (!mergeinfo_string)
             {
@@ -3963,7 +3967,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
     }
 
   SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, nearest_ancestor->node,
-                                     scratch_pool));
+                                     scratch_pool, scratch_pool));
   mergeinfo_string = svn_hash_gets(proplist, SVN_PROP_MERGEINFO);
   if (!mergeinfo_string)
     return svn_error_createf

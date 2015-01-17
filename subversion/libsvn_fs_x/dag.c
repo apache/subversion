@@ -525,14 +525,16 @@ svn_fs_x__dag_set_entry(dag_node_t *node,
 svn_error_t *
 svn_fs_x__dag_get_proplist(apr_hash_t **proplist_p,
                            dag_node_t *node,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_fs_x__noderev_t *noderev;
   apr_hash_t *proplist = NULL;
 
   SVN_ERR(get_node_revision(&noderev, node));
 
-  SVN_ERR(svn_fs_x__get_proplist(&proplist, node->fs, noderev, pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist, node->fs, noderev, result_pool,
+                                 scratch_pool));
 
   *proplist_p = proplist;
 
