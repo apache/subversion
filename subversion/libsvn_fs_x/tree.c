@@ -2365,10 +2365,11 @@ x_dir_entries(apr_hash_t **table_p,
   apr_array_header_t *table;
   int i;
   svn_fs_x__id_context_t *context = NULL;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* Get the entries for this path in the caller's pool. */
-  SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, pool));
+  SVN_ERR(get_dag(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, scratch_pool));
 
   if (table->nelts)
     context = svn_fs_x__id_create_context(root->fs, pool);
@@ -2378,16 +2379,19 @@ x_dir_entries(apr_hash_t **table_p,
     {
       svn_fs_x__dirent_t *entry
         = APR_ARRAY_IDX(table, i, svn_fs_x__dirent_t *);
+      apr_size_t len = strlen(entry->name);
 
       svn_fs_dirent_t *api_dirent = apr_pcalloc(pool, sizeof(*api_dirent));
-      api_dirent->name = entry->name;
+      api_dirent->name = apr_pstrmemdup(pool, entry->name, len);
       api_dirent->kind = entry->kind;
       api_dirent->id = svn_fs_x__id_create(context, &entry->id, pool);
 
-      svn_hash_sets(hash, api_dirent->name, api_dirent);
+      apr_hash_set(hash, api_dirent->name, len, api_dirent);
     }
 
   *table_p = hash;
+  svn_pool_destroy(scratch_pool);
+
   return SVN_NO_ERROR;
 }
 
