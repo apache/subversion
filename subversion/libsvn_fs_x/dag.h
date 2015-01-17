@@ -261,7 +261,7 @@ svn_fs_x__dag_revision_root(dag_node_t **node_p,
 
 
 /* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
-   from POOL.
+   from RESULT_POOL.
 
    Note that the root node of TXN_ID is not necessarily mutable.  If
    no changes have been made in the transaction, then it may share its
@@ -271,7 +271,7 @@ svn_error_t *
 svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 
 /* Set *NODE_P to the base root of transaction TXN_ID in FS,
