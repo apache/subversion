@@ -1000,7 +1000,7 @@ svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
                                         dag_node_t *node,
                                         svn_fs_process_contents_func_t processor,
                                         void* baton,
-                                        apr_pool_t *pool)
+                                        apr_pool_t *scratch_pool)
 {
   svn_fs_x__noderev_t *noderev;
 
@@ -1009,7 +1009,7 @@ svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
 
   return svn_fs_x__try_process_file_contents(success, node->fs,
                                              noderev,
-                                             processor, baton, pool);
+                                             processor, baton, scratch_pool);
 }
 
 
