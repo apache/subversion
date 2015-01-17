@@ -573,7 +573,7 @@ root_node(dag_node_t **node_p,
     {
       /* It's a transaction root.  Open a fresh copy.  */
       return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
-                                     pool);
+                                    pool);
     }
   else
     {
@@ -4383,7 +4383,8 @@ verify_node(dag_node_t *node,
       /* Compute CHILDREN_MERGEINFO. */
       for (i = 0; i < entries->nelts; ++i)
         {
-          svn_fs_x__dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
+          svn_fs_x__dirent_t *dirent
+            = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
           dag_node_t *child;
           apr_int64_t child_mergeinfo;
 
