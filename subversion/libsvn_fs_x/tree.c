@@ -1500,11 +1500,17 @@ increment_mergeinfo_up_tree(parent_path_t *pp,
                             apr_int64_t increment,
                             apr_pool_t *scratch_pool)
 {
-  for (; pp; pp = pp->parent)
-    SVN_ERR(svn_fs_x__dag_increment_mergeinfo_count(pp->node,
-                                                    increment,
-                                                    scratch_pool));
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  for (; pp; pp = pp->parent)
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_x__dag_increment_mergeinfo_count(pp->node,
+                                                      increment,
+                                                      iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
