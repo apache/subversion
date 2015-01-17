@@ -463,7 +463,7 @@ svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
 
 
 /* Signify the completion of edits to FILE made using the stream
-   returned by svn_fs_x__dag_get_edit_stream, allocating from POOL.
+   returned by svn_fs_x__dag_get_edit_stream.
 
    If CHECKSUM is non-null, it must match the checksum for FILE's
    contents (note: this is not recalculated, the recorded checksum is
