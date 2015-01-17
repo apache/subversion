@@ -385,7 +385,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
 
 
 /* Create a new mutable directory named NAME in PARENT.  Set *CHILD_P
-   to a reference to the new node, allocated in POOL.  The new
+   to a reference to the new node, allocated in RESULT_POOL.  The new
    directory has no contents, and no properties.  PARENT must be
    mutable.  NAME must be a single path component; it cannot be a
    slash-separated directory path.  PARENT_PATH must be the
@@ -393,7 +393,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
    not currently have an entry named NAME.  TXN_ID is the Subversion
    transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_make_dir(dag_node_t **child_p,
@@ -401,7 +401,8 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
                        const char *parent_path,
                        const char *name,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 
 
@@ -496,14 +497,14 @@ svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
                             apr_pool_t *result_pool);
 
 /* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a
-   reference to the new node, allocated in POOL.  The new file's
+   reference to the new node, allocated in RESULT_POOL.  The new file's
    contents are the empty string, and it has no properties.  PARENT
    must be mutable.  NAME must be a single path component; it cannot
    be a slash-separated directory path.  PARENT_PATH must be the
    canonicalized absolute path of the parent directory.  TXN_ID is the
    Subversion transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_make_file(dag_node_t **child_p,
@@ -511,7 +512,8 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
                         const char *parent_path,
                         const char *name,
                         svn_fs_x__txn_id_t txn_id,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 
 

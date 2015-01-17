@@ -2433,7 +2433,7 @@ x_make_dir(svn_fs_root_t *root,
                                                   subpool),
                                  parent_path->entry,
                                  txn_id,
-                                 subpool));
+                                 subpool, subpool));
 
   /* Add this directory to the path cache. */
   SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
@@ -2771,7 +2771,7 @@ x_make_file(svn_fs_root_t *root,
                                                    subpool),
                                   parent_path->entry,
                                   txn_id,
-                                  subpool));
+                                  subpool, subpool));
 
   /* Add this file to the path cache. */
   SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
