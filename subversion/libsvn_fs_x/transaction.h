@@ -189,14 +189,14 @@ svn_fs_x__add_change(svn_fs_t *fs,
                      const char *copyfrom_path,
                      apr_pool_t *scratch_pool);
 
-/* Return a writable stream in *STREAM that allows storing the text
-   representation of node-revision NODEREV in filesystem FS.
-   Allocations are from POOL. */
+/* Return a writable stream in *STREAM, allocated in RESULT_POOL, that
+   allows storing the text representation of node-revision NODEREV in
+   filesystem FS. */
 svn_error_t *
 svn_fs_x__set_contents(svn_stream_t **stream,
                        svn_fs_t *fs,
                        svn_fs_x__noderev_t *noderev,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Create a node revision in FS which is an immediate successor of
    NEW_NODEREV's predecessor.  Use SCRATCH_POOL for any temporary allocation.
