@@ -414,10 +414,10 @@ set_entry(dag_node_t *parent,
 
 /* Make a new entry named NAME in PARENT.  If IS_DIR is true, then the
    node revision the new entry points to will be a directory, else it
-   will be a file.  The new node will be allocated in POOL.  PARENT
+   will be a file.  The new node will be allocated in RESULT_POOL.  PARENT
    must be mutable, and must not have an entry named NAME.
 
-   Use POOL for all allocations, except caching the node_revision in PARENT.
+   Use SCRATCH_POOL for all temporary allocations.
  */
 static svn_error_t *
 make_entry(dag_node_t **child_p,
@@ -426,7 +426,8 @@ make_entry(dag_node_t **child_p,
            const char *name,
            svn_boolean_t is_dir,
            svn_fs_x__txn_id_t txn_id,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   svn_fs_x__noderev_t new_noderev, *parent_noderev;
 
@@ -451,10 +452,10 @@ make_entry(dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset(&new_noderev, 0, sizeof(new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.created_path = svn_fspath__join(parent_path, name, pool);
+  new_noderev.created_path = svn_fspath__join(parent_path, name, result_pool);
 
   SVN_ERR(get_node_revision(&parent_noderev, parent));
-  new_noderev.copyroot_path = apr_pstrdup(pool,
+  new_noderev.copyroot_path = apr_pstrdup(result_pool,
                                           parent_noderev->copyroot_path);
   new_noderev.copyroot_rev = parent_noderev->copyroot_rev;
   new_noderev.copyfrom_rev = SVN_INVALID_REVNUM;
@@ -463,17 +464,17 @@ make_entry(dag_node_t **child_p,
 
   SVN_ERR(svn_fs_x__create_node
           (svn_fs_x__dag_get_fs(parent), &new_noderev,
-           &parent_noderev->copy_id, txn_id, pool));
+           &parent_noderev->copy_id, txn_id, scratch_pool));
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR(svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
-                                 &new_noderev.noderev_id, pool));
+                                 &new_noderev.noderev_id, result_pool));
 
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
   return set_entry(parent, name, &new_noderev.noderev_id,
-                   new_noderev.kind, txn_id, pool);
+                   new_noderev.kind, txn_id, scratch_pool);
 }
 
 
@@ -907,10 +908,12 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
                         const char *parent_path,
                         const char *name,
                         svn_fs_x__txn_id_t txn_id,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   /* Call our little helper function */
-  return make_entry(child_p, parent, parent_path, name, FALSE, txn_id, pool);
+  return make_entry(child_p, parent, parent_path, name, FALSE, txn_id,
+                    result_pool, scratch_pool);
 }
 
 
@@ -920,10 +923,12 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
                        const char *parent_path,
                        const char *name,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   /* Call our little helper function */
-  return make_entry(child_p, parent, parent_path, name, TRUE, txn_id, pool);
+  return make_entry(child_p, parent, parent_path, name, TRUE, txn_id,
+                    result_pool, scratch_pool);
 }
 
 
