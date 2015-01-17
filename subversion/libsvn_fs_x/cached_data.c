@@ -1625,7 +1625,7 @@ rep_read_contents_close(void *baton)
 
 /* Inialize the representation read state RS for the given REP_HEADER and
  * p2l index ENTRY.  If not NULL, assign FILE and STREAM to RS.
- * Use POOL for allocations.
+ * Allocate all sub-structures of RS in RESULT_POOL.
  */
 static svn_error_t *
 init_rep_state(rep_state_t *rs,
@@ -1633,10 +1633,10 @@ init_rep_state(rep_state_t *rs,
                svn_fs_t *fs,
                svn_fs_x__revision_file_t *rev_file,
                svn_fs_x__p2l_entry_t* entry,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  shared_file_t *shared_file = apr_pcalloc(pool, sizeof(*shared_file));
+  shared_file_t *shared_file = apr_pcalloc(result_pool, sizeof(*shared_file));
 
   /* this function does not apply to representation containers */
   SVN_ERR_ASSERT(entry->type >= SVN_FS_X__ITEM_TYPE_FILE_REP
@@ -1646,7 +1646,7 @@ init_rep_state(rep_state_t *rs,
   shared_file->rfile = rev_file;
   shared_file->fs = fs;
   shared_file->revision = svn_fs_x__get_revnum(entry->items[0].change_set);
-  shared_file->pool = pool;
+  shared_file->pool = result_pool;
 
   rs->sfile = shared_file;
   rs->rep_id = entry->items[0];
