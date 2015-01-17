@@ -691,15 +691,16 @@ svn_error_t *
 svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t base_root_id;
   svn_revnum_t base_rev;
 
-  SVN_ERR(svn_fs_x__get_base_rev(&base_rev, fs, txn_id, pool));
+  SVN_ERR(svn_fs_x__get_base_rev(&base_rev, fs, txn_id, scratch_pool));
 
   svn_fs_x__init_rev_root(&base_root_id, base_rev);
-  return svn_fs_x__dag_get_node(node_p, fs, &base_root_id, pool);
+  return svn_fs_x__dag_get_node(node_p, fs, &base_root_id, result_pool);
 }
 
 
