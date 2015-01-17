@@ -1054,7 +1054,7 @@ svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
 svn_error_t *
 svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
                               dag_node_t *file,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
   svn_fs_x__noderev_t *noderev;
   svn_stream_t *ws;
@@ -1074,7 +1074,7 @@ svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
   /* Get the node revision. */
   SVN_ERR(get_node_revision(&noderev, file));
 
-  SVN_ERR(svn_fs_x__set_contents(&ws, file->fs, noderev, pool));
+  SVN_ERR(svn_fs_x__set_contents(&ws, file->fs, noderev, result_pool));
 
   *contents = ws;
 

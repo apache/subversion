@@ -451,17 +451,15 @@ svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                     apr_pool_t *pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
-   contents of FILE.  Allocate the stream in POOL.
+   contents of FILE.  Allocate the stream in RESULT_POOL.
 
    Any previous edits on the file will be deleted, and a new edit
    stream will be constructed.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
                               dag_node_t *file,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 
 /* Signify the completion of edits to FILE made using the stream

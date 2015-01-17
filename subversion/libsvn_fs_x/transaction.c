@@ -2087,15 +2087,15 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
-/* Get a rep_write_baton_t and store it in *WB_P for the representation
-   indicated by NODEREV in filesystem FS.  Perform allocations in
-   POOL.  Only appropriate for file contents, not for props or
-   directory contents. */
+/* Get a rep_write_baton_t, allocated from RESULT_POOL, and store it in
+   WB_P for the representation indicated by NODEREV in filesystem FS.
+   Only appropriate for file contents, not for props or directory contents.
+ */
 static svn_error_t *
 rep_write_get_baton(rep_write_baton_t **wb_p,
                     svn_fs_t *fs,
                     svn_fs_x__noderev_t *noderev,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   rep_write_baton_t *b;
@@ -2109,14 +2109,16 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
   svn_fs_x__txn_id_t txn_id
     = svn_fs_x__get_txn_id(noderev->noderev_id.change_set);
 
-  b = apr_pcalloc(pool, sizeof(*b));
+  b = apr_pcalloc(result_pool, sizeof(*b));
 
-  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1,
+                                                 result_pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5,
+                                                result_pool);
 
   b->fs = fs;
-  b->result_pool = pool;
-  b->scratch_pool = svn_pool_create(pool);
+  b->result_pool = result_pool;
+  b->scratch_pool = svn_pool_create(result_pool);
   b->rep_size = 0;
   b->noderev = noderev;
 
@@ -2167,7 +2169,7 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
                           svn_stream_disown(b->rep_stream, b->result_pool),
                           diff_version,
                           ffd->delta_compression_level,
-                          pool);
+                          result_pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source,
                                             b->result_pool);
@@ -2395,16 +2397,15 @@ rep_write_contents_close(void *baton)
   return SVN_NO_ERROR;
 }
 
-/* Store a writable stream in *CONTENTS_P that will receive all data
-   written and store it as the file data representation referenced by
-   NODEREV in filesystem FS.  Perform temporary allocations in
-   POOL.  Only appropriate for file data, not props or directory
-   contents. */
+/* Store a writable stream in *CONTENTS_P, allocated in RESULT_POOL, that
+   will receive all data written and store it as the file data representation
+   referenced by NODEREV in filesystem FS.  Only appropriate for file data,
+   not props or directory contents. */
 static svn_error_t *
 set_representation(svn_stream_t **contents_p,
                    svn_fs_t *fs,
                    svn_fs_x__noderev_t *noderev,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   rep_write_baton_t *wb;
 
@@ -2412,11 +2413,11 @@ set_representation(svn_stream_t **contents_p,
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Attempted to write to non-transaction '%s'"),
                              svn_fs_x__id_unparse(&noderev->noderev_id,
-                                                  pool)->data);
+                                                  result_pool)->data);
 
-  SVN_ERR(rep_write_get_baton(&wb, fs, noderev, pool));
+  SVN_ERR(rep_write_get_baton(&wb, fs, noderev, result_pool));
 
-  *contents_p = svn_stream_create(wb, pool);
+  *contents_p = svn_stream_create(wb, result_pool);
   svn_stream_set_write(*contents_p, rep_write_contents);
   svn_stream_set_close(*contents_p, rep_write_contents_close);
 
@@ -2427,13 +2428,13 @@ svn_error_t *
 svn_fs_x__set_contents(svn_stream_t **stream,
                        svn_fs_t *fs,
                        svn_fs_x__noderev_t *noderev,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   if (noderev->kind != svn_node_file)
     return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
                             _("Can't set text contents of a directory"));
 
-  return set_representation(stream, fs, noderev, pool);
+  return set_representation(stream, fs, noderev, result_pool);
 }
 
 svn_error_t *
