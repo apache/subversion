@@ -106,7 +106,6 @@ get_dag(dag_node_t **dag_node_p,
 static svn_fs_root_t *
 make_revision_root(svn_fs_t *fs,
                    svn_revnum_t rev,
-                   dag_node_t *root_dir,
                    apr_pool_t *pool);
 
 static svn_error_t *
@@ -541,13 +540,10 @@ svn_fs_x__revision_root(svn_fs_root_t **root_p,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
 {
-  dag_node_t *root_dir;
-
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
 
-  SVN_ERR(svn_fs_x__dag_revision_root(&root_dir, fs, rev, pool));
-
-  *root_p = make_revision_root(fs, rev, root_dir, pool);
+  *root_p = make_revision_root(fs, rev, pool);
 
   return SVN_NO_ERROR;
 }
@@ -583,9 +579,8 @@ root_node(dag_node_t **node_p,
     {
       /* It's a revision root, so we already have its root directory
          opened.  */
-      dag_node_t *root_dir = root->fsap_data;
-      *node_p = svn_fs_x__dag_dup(root_dir, pool);
-      return SVN_NO_ERROR;
+      return svn_fs_x__dag_revision_root(node_p, root->fs, root->rev,
+                                         pool);
     }
 }
 
@@ -1293,7 +1288,7 @@ x_node_id(const svn_fs_id_t **id_p,
           const char *path,
           apr_pool_t *pool)
 {
-  const svn_fs_x__id_t *noderev_id;
+  svn_fs_x__id_t noderev_id;
 
   if ((! root->is_txn_root)
       && (path[0] == '\0' || ((path[0] == '/') && (path[1] == '\0'))))
@@ -1302,19 +1297,18 @@ x_node_id(const svn_fs_id_t **id_p,
          The root directory ("" or "/") node is stored in the
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
-      dag_node_t *root_dir = root->fsap_data;
-      noderev_id = svn_fs_x__dag_get_id(root_dir);
+      svn_fs_x__init_rev_root(&noderev_id, root->rev);
     }
   else
     {
       dag_node_t *node;
 
       SVN_ERR(get_dag(&node, root, path, pool));
-      noderev_id = svn_fs_x__dag_get_id(node);
+      noderev_id = *svn_fs_x__dag_get_id(node);
     }
 
   *id_p = svn_fs_x__id_create(svn_fs_x__id_create_context(root->fs, pool),
-                              noderev_id, pool);
+                              &noderev_id, pool);
 
   return SVN_NO_ERROR;
 }
@@ -4230,14 +4224,12 @@ make_root(svn_fs_t *fs,
 static svn_fs_root_t *
 make_revision_root(svn_fs_t *fs,
                    svn_revnum_t rev,
-                   dag_node_t *root_dir,
                    apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root(fs, pool);
 
   root->is_txn_root = FALSE;
   root->rev = rev;
-  root->fsap_data = root_dir;
 
   return root;
 }
@@ -4429,7 +4421,6 @@ svn_error_t *
 svn_fs_x__verify_root(svn_fs_root_t *root,
                       apr_pool_t *scratch_pool)
 {
-  svn_fs_t *fs = root->fs;
   dag_node_t *root_dir;
   apr_array_header_t *parent_nodes;
 
@@ -4443,17 +4434,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
      When this code is called in the library, we want to ensure we
      use the on-disk data --- rather than some data that was read
      in the possibly-distance past and cached since. */
-
-  if (root->is_txn_root)
-    {
-      fs_txn_root_data_t *frd = root->fsap_data;
-      SVN_ERR(svn_fs_x__dag_txn_root(&root_dir, fs, frd->txn_id,
-                                     scratch_pool));
-    }
-  else
-    {
-      root_dir = root->fsap_data;
-    }
+  SVN_ERR(root_node(&root_dir, root, scratch_pool));
 
   /* Recursively verify ROOT_DIR. */
   parent_nodes = apr_array_make(scratch_pool, 16, sizeof(dag_node_t *));
