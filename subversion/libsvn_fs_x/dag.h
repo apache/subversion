@@ -352,7 +352,7 @@ svn_fs_x__dag_set_entry(dag_node_t *node,
 
    TXN_ID is the Subversion transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Allocate *CHILD_P in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 svn_error_t *
 svn_fs_x__dag_clone_child(dag_node_t **child_p,
@@ -362,7 +362,8 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
                           const svn_fs_x__id_t *copy_id,
                           svn_fs_x__txn_id_t txn_id,
                           svn_boolean_t is_parent_copyroot,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 
 /* Delete the directory entry named NAME from PARENT, allocating from
