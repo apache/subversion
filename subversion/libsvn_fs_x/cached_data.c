@@ -2748,7 +2748,8 @@ svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist_p,
                        svn_fs_t *fs,
                        svn_fs_x__noderev_t *noderev,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   apr_hash_t *proplist;
   svn_stream_t *stream;
@@ -2757,12 +2758,15 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
     {
-      const char *filename
-        = svn_fs_x__path_txn_node_props(fs, noderev_id, pool, pool);
-      proplist = apr_hash_make(pool);
+      const char *filename = svn_fs_x__path_txn_node_props(fs, noderev_id,
+                                                           scratch_pool,
+                                                           scratch_pool);
+      proplist = apr_hash_make(result_pool);
 
-      SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      SVN_ERR(svn_stream_open_readonly(&stream, filename, scratch_pool,
+                                       scratch_pool));
+      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                             result_pool));
       SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
@@ -2777,24 +2781,26 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
         {
           svn_boolean_t is_cached;
           SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                                 ffd->properties_cache, &key, pool));
+                                 ffd->properties_cache, &key, result_pool));
           if (is_cached)
             return SVN_NO_ERROR;
         }
 
-      proplist = apr_hash_make(pool);
+      proplist = apr_hash_make(result_pool);
       SVN_ERR(svn_fs_x__get_contents(&stream, fs, noderev->prop_rep, FALSE,
-                                     pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+                                     scratch_pool));
+      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                             result_pool));
       SVN_ERR(svn_stream_close(stream));
 
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->id.change_set))
-        SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist, pool));
+        SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist,
+                               scratch_pool));
     }
   else
     {
       /* return an empty prop list if the node doesn't have any props */
-      proplist = apr_hash_make(pool);
+      proplist = apr_hash_make(result_pool);
     }
 
   *proplist_p = proplist;
