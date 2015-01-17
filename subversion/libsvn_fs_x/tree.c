@@ -2108,8 +2108,8 @@ merge_changes(dag_node_t *ancestor_node,
 
   if (ancestor_node == NULL)
     {
-      SVN_ERR(svn_fs_x__dag_txn_base_root(&ancestor_node, fs,
-                                          txn_id, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_txn_base_root(&ancestor_node, fs, txn_id,
+                                          scratch_pool, scratch_pool));
     }
 
   SVN_ERR(svn_fs_x__dag_related_node(&related, ancestor_node, txn_root_node));

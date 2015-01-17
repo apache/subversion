@@ -275,12 +275,14 @@ svn_fs_x__dag_txn_root(dag_node_t **node_p,
 
 
 /* Set *NODE_P to the base root of transaction TXN_ID in FS,
-   allocating from POOL.  Allocate the node in TRAIL->pool.  */
+   allocating from RESULT_POOL.  Allocate the node in TRAIL->pool.
+   Use SCRATCH_POOL for temporaries. */
 svn_error_t *
 svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 
 /* Clone the root directory of TXN_ID in FS, and update the
