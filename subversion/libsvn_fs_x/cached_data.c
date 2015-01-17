@@ -2069,7 +2069,7 @@ skip_contents(rep_read_baton_t *baton,
   else if (len > 0)
     {
       /* Simply drain LEN bytes from the window stream. */
-      apr_pool_t *subpool = subpool = svn_pool_create(baton->scratch_pool);
+      apr_pool_t *subpool = svn_pool_create(baton->scratch_pool);
       char *buffer = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
 
       while (len > 0 && !err)
