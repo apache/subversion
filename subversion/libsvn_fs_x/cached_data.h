@@ -71,13 +71,13 @@ svn_fs_x__rep_chain_length(int *chain_length,
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
    not set, bypass fulltext cache lookup for this rep and don't put the
    reconstructed fulltext into cache.
-   Use POOL for allocations. */
+   Allocate *CONTENT_P in RESULT_POOL. */
 svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
                        svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Determine on-disk and expanded sizes of the representation identified
  * by ENTRY in FS and return the result in PACKED_LEN and EXPANDED_LEN,

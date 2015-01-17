@@ -942,7 +942,7 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
 svn_error_t *
 svn_fs_x__dag_get_contents(svn_stream_t **contents_p,
                            dag_node_t *file,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool)
 {
   svn_fs_x__noderev_t *noderev;
   svn_stream_t *contents;
@@ -958,7 +958,7 @@ svn_fs_x__dag_get_contents(svn_stream_t **contents_p,
 
   /* Get a stream to the contents. */
   SVN_ERR(svn_fs_x__get_contents(&contents, file->fs,
-                                 noderev->data_rep, TRUE, pool));
+                                 noderev->data_rep, TRUE, result_pool));
 
   *contents_p = contents;
 

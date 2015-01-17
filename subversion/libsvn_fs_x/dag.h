@@ -415,16 +415,14 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
 
 
 /* Set *CONTENTS to a readable generic stream which yields the
-   contents of FILE.  Allocate the stream in POOL.
+   contents of FILE.  Allocate the stream in RESULT_POOL.
 
    If FILE is not a file, return SVN_ERR_FS_NOT_FILE.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_contents(svn_stream_t **contents,
                            dag_node_t *file,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* Attempt to fetch the contents of NODE and pass it along with the BATON
    to the PROCESSOR.   Set *SUCCESS only of the data could be provided
