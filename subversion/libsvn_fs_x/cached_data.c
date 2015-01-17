@@ -2317,20 +2317,20 @@ delta_read_md5_digest(void *baton)
 }
 
 /* Return a txdelta stream for on-disk representation REP_STATE
- * of TARGET.  Allocate the result in POOL.
+ * of TARGET.  Allocate the result in RESULT_POOL.
  */
 static svn_txdelta_stream_t *
 get_storaged_delta_stream(rep_state_t *rep_state,
                           svn_fs_x__noderev_t *target,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
   /* Create the delta read baton. */
-  delta_read_baton_t *drb = apr_pcalloc(pool, sizeof(*drb));
+  delta_read_baton_t *drb = apr_pcalloc(result_pool, sizeof(*drb));
   drb->rs = rep_state;
   memcpy(drb->md5_digest, target->data_rep->md5_digest,
          sizeof(drb->md5_digest));
   return svn_txdelta_stream_create(drb, delta_read_next_window,
-                                   delta_read_md5_digest, pool);
+                                   delta_read_md5_digest, result_pool);
 }
 
 svn_error_t *
@@ -2338,7 +2338,8 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
                                 svn_fs_x__noderev_t *source,
                                 svn_fs_x__noderev_t *target,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   svn_stream_t *source_stream, *target_stream;
   rep_state_t *rep_state;
@@ -2352,7 +2353,8 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
     {
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
-                                target->data_rep, fs, pool, pool));
+                               target->data_rep, fs, result_pool,
+                               scratch_pool));
 
       /* Try a shortcut: if the target is stored as a delta against the source,
          then just use that delta. */
@@ -2366,7 +2368,8 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                  == svn_fs_x__get_revnum(source->data_rep->id.change_set)
               && rep_header->base_item_index == source->data_rep->id.number)
             {
-              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              *stream_p = get_storaged_delta_stream(rep_state, target,
+                                                    result_pool);
               return SVN_NO_ERROR;
             }
         }
@@ -2377,7 +2380,8 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
              format. */
           if (rep_header->type == svn_fs_x__rep_self_delta)
             {
-              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              *stream_p = get_storaged_delta_stream(rep_state, target,
+                                                    result_pool);
               return SVN_NO_ERROR;
             }
         }
@@ -2393,16 +2397,17 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   /* Read both fulltexts and construct a delta. */
   if (source)
     SVN_ERR(svn_fs_x__get_contents(&source_stream, fs, source->data_rep,
-                                   TRUE, pool));
+                                   TRUE, result_pool));
   else
-    source_stream = svn_stream_empty(pool);
+    source_stream = svn_stream_empty(result_pool);
+
   SVN_ERR(svn_fs_x__get_contents(&target_stream, fs, target->data_rep,
-                                 TRUE, pool));
+                                 TRUE, result_pool));
 
   /* Because source and target stream will already verify their content,
    * there is no need to do this once more.  In particular if the stream
    * content is being fetched from cache. */
-  svn_txdelta2(stream_p, source_stream, target_stream, FALSE, pool);
+  svn_txdelta2(stream_p, source_stream, target_stream, FALSE, result_pool);
 
   return SVN_NO_ERROR;
 }

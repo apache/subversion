@@ -970,7 +970,8 @@ svn_error_t *
 svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                     dag_node_t *source,
                                     dag_node_t *target,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
 {
   svn_fs_x__noderev_t *src_noderev;
   svn_fs_x__noderev_t *tgt_noderev;
@@ -991,7 +992,8 @@ svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
   /* Get the delta stream. */
   return svn_fs_x__get_file_delta_stream(stream_p, target->fs,
-                                         src_noderev, tgt_noderev, pool);
+                                         src_noderev, tgt_noderev,
+                                         result_pool, scratch_pool);
 }
 
 

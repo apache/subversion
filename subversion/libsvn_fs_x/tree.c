@@ -3245,7 +3245,8 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
   /* Create a delta stream that turns the source into the target.  */
   SVN_ERR(svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
-                                              target_node, pool));
+                                              target_node, pool,
+                                              scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
