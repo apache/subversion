@@ -49,14 +49,6 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               const svn_fs_x__id_t *id,
                               apr_pool_t *scratch_pool);
 
-/* Set *ROOT_ID to the noderev ID for the root of revision REV in
-   filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
-svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *scratch_pool);
-
 /* Verify that representation REP in FS can be accessed.
    Do any allocations in SCRATCH_POOL. */
 svn_error_t *
