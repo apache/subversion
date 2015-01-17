@@ -4204,29 +4204,29 @@ static root_vtable_t root_vtable = {
   x_get_mergeinfo,
 };
 
-/* Construct a new root object in FS, allocated from POOL.  */
+/* Construct a new root object in FS, allocated from RESULT_POOL.  */
 static svn_fs_root_t *
 make_root(svn_fs_t *fs,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool)
 {
-  svn_fs_root_t *root = apr_pcalloc(pool, sizeof(*root));
+  svn_fs_root_t *root = apr_pcalloc(result_pool, sizeof(*root));
 
   root->fs = fs;
-  root->pool = pool;
+  root->pool = result_pool;
   root->vtable = &root_vtable;
 
   return root;
 }
 
 
-/* Construct a root object referring to the root of REVISION in FS,
-   whose root directory is ROOT_DIR.  Create the new root in POOL.  */
+/* Construct a root object referring to the root of revision REV in FS.
+   Create the new root in RESULT_POOL.  */
 static svn_fs_root_t *
 make_revision_root(svn_fs_t *fs,
                    svn_revnum_t rev,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
-  svn_fs_root_t *root = make_root(fs, pool);
+  svn_fs_root_t *root = make_root(fs, result_pool);
 
   root->is_txn_root = FALSE;
   root->rev = rev;
@@ -4237,16 +4237,16 @@ make_revision_root(svn_fs_t *fs,
 
 /* Construct a root object referring to the root of the transaction
    named TXN and based on revision BASE_REV in FS, with FLAGS to
-   describe transaction's behavior.  Create the new root in POOL.  */
+   describe transaction's behavior.  Create the new root in RESULT_POOL.  */
 static svn_error_t *
 make_txn_root(svn_fs_root_t **root_p,
               svn_fs_t *fs,
               svn_fs_x__txn_id_t txn_id,
               svn_revnum_t base_rev,
               apr_uint32_t flags,
-              apr_pool_t *pool)
+              apr_pool_t *result_pool)
 {
-  svn_fs_root_t *root = make_root(fs, pool);
+  svn_fs_root_t *root = make_root(fs, result_pool);
   fs_txn_root_data_t *frd = apr_pcalloc(root->pool, sizeof(*frd));
   frd->txn_id = txn_id;
 
