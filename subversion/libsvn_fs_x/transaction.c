@@ -1868,8 +1868,9 @@ typedef struct rep_write_baton_t
   /* Receives the low-level checksum when closing REP_STREAM. */
   apr_uint32_t fnv1a_checksum;
 
-  /* Local / scratch pool, available for temporary allocations. */
-  apr_pool_t *scratch_pool;
+  /* Local pool, available for allocations that must remain valid as long
+     as this baton is used but may be cleaned up immediately afterwards. */
+  apr_pool_t *local_pool;
 
   /* Outer / result pool. */
   apr_pool_t *result_pool;
@@ -2065,9 +2066,9 @@ rep_write_cleanup(void *data)
     = svn_fs_x__get_txn_id(b->noderev->noderev_id.change_set);
 
   /* Truncate and close the protorevfile. */
-  err = svn_io_file_trunc(b->file, b->rep_offset, b->scratch_pool);
+  err = svn_io_file_trunc(b->file, b->rep_offset, b->local_pool);
   err = svn_error_compose_create(err, svn_io_file_close(b->file,
-                                                        b->scratch_pool));
+                                                        b->local_pool));
 
   /* Remove our lock regardless of any preceding errors so that the
      being_written flag is always removed and stays consistent with the
@@ -2076,7 +2077,7 @@ rep_write_cleanup(void *data)
   err = svn_error_compose_create(err,
                                  unlock_proto_rev(b->fs, txn_id,
                                                   b->lockcookie,
-                                                  b->scratch_pool));
+                                                  b->local_pool));
   if (err)
     {
       apr_status_t rc = err->apr_err;
@@ -2118,27 +2119,27 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
 
   b->fs = fs;
   b->result_pool = result_pool;
-  b->scratch_pool = svn_pool_create(result_pool);
+  b->local_pool = svn_pool_create(result_pool);
   b->rep_size = 0;
   b->noderev = noderev;
 
   /* Open the prototype rev file and seek to its end. */
   SVN_ERR(get_writable_proto_rev(&file, &b->lockcookie, fs, txn_id,
-                                 b->scratch_pool));
+                                 b->local_pool));
 
   b->file = file;
   b->rep_stream = svn_checksum__wrap_write_stream_fnv1a_32x4(
                               &b->fnv1a_checksum,
                               svn_stream_from_aprfile2(file, TRUE,
-                                                       b->scratch_pool),
-                              b->scratch_pool);
+                                                       b->local_pool),
+                              b->local_pool);
 
-  SVN_ERR(svn_fs_x__get_file_offset(&b->rep_offset, file, b->scratch_pool));
+  SVN_ERR(svn_fs_x__get_file_offset(&b->rep_offset, file, b->local_pool));
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->scratch_pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->local_pool));
   SVN_ERR(svn_fs_x__get_contents(&source, fs, base_rep, TRUE,
-                                 b->scratch_pool));
+                                 b->local_pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2153,14 +2154,14 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
       header.type = svn_fs_x__rep_self_delta;
     }
   SVN_ERR(svn_fs_x__write_rep_header(&header, b->rep_stream,
-                                      b->scratch_pool));
+                                      b->local_pool));
 
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(svn_fs_x__get_file_offset(&b->delta_start, file,
-                                    b->scratch_pool));
+                                    b->local_pool));
 
   /* Cleanup in case something goes wrong. */
-  apr_pool_cleanup_register(b->scratch_pool, b, rep_write_cleanup,
+  apr_pool_cleanup_register(b->local_pool, b, rep_write_cleanup,
                             apr_pool_cleanup_null);
 
   /* Prepare to write the svndiff data. */
@@ -2326,7 +2327,7 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->scratch_pool));
+  SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->local_pool));
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
@@ -2341,12 +2342,12 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->result_pool,
-                         b->scratch_pool));
+                         b->local_pool));
 
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->scratch_pool));
+      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->local_pool));
 
       /* Use the old rep for this content. */
       b->noderev->data_rep = old_rep;
@@ -2356,9 +2357,9 @@ rep_write_contents_close(void *baton)
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
       SVN_ERR(allocate_item_index(&rep->id.number, b->fs, txn_id,
-                                  b->scratch_pool));
+                                  b->local_pool));
       SVN_ERR(store_l2p_index_entry(b->fs, txn_id, b->rep_offset,
-                                    rep->id.number, b->scratch_pool));
+                                    rep->id.number, b->local_pool));
 
       b->noderev->data_rep = rep;
     }
@@ -2366,11 +2367,11 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_stream_close(b->rep_stream));
 
   /* Remove cleanup callback. */
-  apr_pool_cleanup_kill(b->scratch_pool, b, rep_write_cleanup);
+  apr_pool_cleanup_kill(b->local_pool, b, rep_write_cleanup);
 
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_x__put_node_revision(b->fs, b->noderev, FALSE,
-                                      b->scratch_pool));
+                                      b->local_pool));
   if (!old_rep)
     {
       svn_fs_x__p2l_entry_t entry;
@@ -2379,20 +2380,20 @@ rep_write_contents_close(void *baton)
       noderev_id.number = rep->id.number;
 
       entry.offset = b->rep_offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->scratch_pool));
+      SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->local_pool));
       entry.size = offset - b->rep_offset;
       entry.type = SVN_FS_X__ITEM_TYPE_FILE_REP;
       entry.item_count = 1;
       entry.items = &noderev_id;
       entry.fnv1_checksum = b->fnv1a_checksum;
 
-      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->scratch_pool));
-      SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->scratch_pool));
+      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->local_pool));
+      SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->local_pool));
     }
 
-  SVN_ERR(svn_io_file_close(b->file, b->scratch_pool));
-  SVN_ERR(unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->scratch_pool));
-  svn_pool_destroy(b->scratch_pool);
+  SVN_ERR(svn_io_file_close(b->file, b->local_pool));
+  SVN_ERR(unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->local_pool));
+  svn_pool_destroy(b->local_pool);
 
   return SVN_NO_ERROR;
 }
