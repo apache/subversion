@@ -3231,10 +3231,10 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (source_root && source_path)
-    SVN_ERR(get_dag(&source_node, source_root, source_path, pool));
+    SVN_ERR(get_dag(&source_node, source_root, source_path, scratch_pool));
   else
     source_node = NULL;
-  SVN_ERR(get_dag(&target_node, target_root, target_path, pool));
+  SVN_ERR(get_dag(&target_node, target_root, target_path, scratch_pool));
 
   /* Create a delta stream that turns the source into the target.  */
   SVN_ERR(svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
