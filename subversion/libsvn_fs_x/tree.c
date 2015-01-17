@@ -3013,7 +3013,7 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                   svn_checksum_t *result_checksum,
                   apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3022,12 +3022,12 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_textdelta(tb, subpool));
+  SVN_ERR(apply_textdelta(tb, scratch_pool));
 
   *contents_p = window_consumer;
   *contents_baton_p = tb;
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3151,7 +3151,7 @@ x_apply_text(svn_stream_t **contents_p,
              svn_checksum_t *result_checksum,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
   text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3159,11 +3159,11 @@ x_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_text(tb, subpool));
+  SVN_ERR(apply_text(tb, scratch_pool));
 
   *contents_p = tb->stream;
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3228,7 +3228,7 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                         apr_pool_t *pool)
 {
   dag_node_t *source_node, *target_node;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (source_root && source_path)
     SVN_ERR(get_dag(&source_node, source_root, source_path, pool));
@@ -3240,7 +3240,7 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
                                               target_node, pool));
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3443,14 +3443,14 @@ x_closest_copy(svn_fs_root_t **root_p,
   svn_fs_root_t *copy_dst_root;
   dag_node_t *copy_dst_node;
   svn_boolean_t related;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* Initialize return values. */
   *root_p = NULL;
   *path_p = NULL;
 
-  path = svn_fs__canonicalize_abspath(path, subpool);
-  SVN_ERR(open_path(&parent_path, root, path, 0, FALSE, subpool));
+  path = svn_fs__canonicalize_abspath(path, scratch_pool);
+  SVN_ERR(open_path(&parent_path, root, path, 0, FALSE, scratch_pool));
 
   /* Find the youngest copyroot in the path of this node-rev, which
      will indicate the target of the innermost copy affecting the
@@ -3459,7 +3459,7 @@ x_closest_copy(svn_fs_root_t **root_p,
                                  fs, parent_path));
   if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
     {
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
     }
 
@@ -3469,10 +3469,10 @@ x_closest_copy(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_x__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
   SVN_ERR(open_path(&copy_dst_parent_path, copy_dst_root, path,
                     open_path_node_only | open_path_allow_null, FALSE,
-                    subpool));
+                    scratch_pool));
   if (copy_dst_parent_path == NULL)
     {
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
     }
 
@@ -3481,7 +3481,7 @@ x_closest_copy(svn_fs_root_t **root_p,
                                      parent_path->node));
   if (!related)
     {
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
     }
 
@@ -3506,7 +3506,7 @@ x_closest_copy(svn_fs_root_t **root_p,
       SVN_ERR(svn_fs_x__dag_get_predecessor_id(&pred, copy_dst_node));
       if (!svn_fs_x__id_used(&pred))
         {
-          svn_pool_destroy(subpool);
+          svn_pool_destroy(scratch_pool);
           return SVN_NO_ERROR;
         }
     }
@@ -3515,7 +3515,7 @@ x_closest_copy(svn_fs_root_t **root_p,
   *root_p = copy_dst_root;
   *path_p = apr_pstrdup(pool, copy_dst_path);
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
