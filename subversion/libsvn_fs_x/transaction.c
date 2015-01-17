@@ -1250,6 +1250,9 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
   txn = apr_pcalloc(pool, sizeof(*txn));
   ftd = apr_pcalloc(pool, sizeof(*ftd));
 
+  /* Valid revision number? */
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+
   /* Get the txn_id. */
   SVN_ERR(create_txn_dir(&txn->id, &ftd->txn_id, fs, pool));
 
@@ -1261,7 +1264,7 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
   *txn_p = txn;
 
   /* Create a new root node for this transaction. */
-  SVN_ERR(svn_fs_x__rev_get_root(&root_id, fs, rev, pool));
+  svn_fs_x__init_rev_root(&root_id, rev);
   SVN_ERR(create_new_txn_noderev_from_rev(fs, ftd->txn_id, &root_id, pool));
 
   /* Create an empty rev file. */

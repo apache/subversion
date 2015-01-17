@@ -457,19 +457,6 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
-  svn_fs_x__init_rev_root(root_id, rev);
-
-  return SVN_NO_ERROR;
-}
-
 /* Describes a lazily opened rev / pack file.  Instances will be shared
    between multiple instances of rep_state_t. */
 typedef struct shared_file_t
