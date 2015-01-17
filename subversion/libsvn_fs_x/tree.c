@@ -1099,16 +1099,17 @@ open_path(parent_path_t **parent_path_p,
 }
 
 
-/* Make the node referred to by PARENT_PATH mutable, if it isn't
-   already, allocating from POOL.  ROOT must be the root from which
+/* Make the node referred to by PARENT_PATH mutable, if it isn't already,
+   allocating from RESULT_POOL.  ROOT must be the root from which
    PARENT_PATH descends.  Clone any parent directories as needed.
    Adjust the dag nodes in PARENT_PATH to refer to the clones.  Use
-   ERROR_PATH in error messages.  */
+   ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries. */
 static svn_error_t *
 make_path_mutable(svn_fs_root_t *root,
                   parent_path_t *parent_path,
                   const char *error_path,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   dag_node_t *clone;
   svn_fs_x__txn_id_t txn_id = root_txn_id(root);
@@ -1133,7 +1134,7 @@ make_path_mutable(svn_fs_root_t *root,
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
       SVN_ERR(make_path_mutable(root, parent_path->parent,
-                                error_path, pool));
+                                error_path, result_pool, scratch_pool));
 
       switch (inherit)
         {
@@ -1144,7 +1145,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_new:
           SVN_ERR(svn_fs_x__reserve_copy_id(&copy_id, root->fs, txn_id,
-                                             pool));
+                                            scratch_pool));
           break;
 
         case copy_id_inherit_self:
@@ -1161,8 +1162,9 @@ make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
                                           parent_path->node));
       SVN_ERR(svn_fs_x__revision_root(&copyroot_root, root->fs,
-                                      copyroot_rev, pool));
-      SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path, pool));
+                                      copyroot_rev, scratch_pool));
+      SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
+                      result_pool));
 
       SVN_ERR(svn_fs_x__dag_related_node(&related, copyroot_node,
                                          parent_path->node));
@@ -1170,23 +1172,25 @@ make_path_mutable(svn_fs_root_t *root,
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
-      clone_path = parent_path_path(parent_path->parent, pool);
+      clone_path = parent_path_path(parent_path->parent, scratch_pool);
       SVN_ERR(svn_fs_x__dag_clone_child(&clone,
                                         parent_path->parent->node,
                                         clone_path,
                                         parent_path->entry,
                                         copy_id_ptr, txn_id,
                                         is_parent_copyroot,
-                                        pool));
+                                        result_pool,
+                                        scratch_pool));
 
       /* Update the path cache. */
-      SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, pool),
-                                 clone, pool));
+      SVN_ERR(dag_node_cache_set(root,
+                                 parent_path_path(parent_path, scratch_pool),
+                                 clone, scratch_pool));
     }
   else
     {
       /* We're trying to clone the root directory.  */
-      SVN_ERR(mutable_root_node(&clone, root, error_path, pool));
+      SVN_ERR(mutable_root_node(&clone, root, error_path, result_pool));
     }
 
   /* Update the PARENT_PATH link to refer to the clone.  */
@@ -1539,7 +1543,7 @@ x_change_node_prop(svn_fs_root_t *root,
     SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, FALSE, FALSE,
                                              subpool));
 
-  SVN_ERR(make_path_mutable(root, parent_path, path, subpool));
+  SVN_ERR(make_path_mutable(root, parent_path, path, subpool, subpool));
   SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, parent_path->node, subpool));
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
@@ -2426,7 +2430,8 @@ x_make_dir(svn_fs_root_t *root,
     return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Create the subdirectory.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool,
+                            subpool));
   SVN_ERR(svn_fs_x__dag_make_dir(&sub_dir,
                                  parent_path->parent->node,
                                  parent_path_path(parent_path->parent,
@@ -2482,7 +2487,8 @@ x_delete_node(svn_fs_root_t *root,
                                              subpool));
 
   /* Make the parent directory mutable, and do the deletion.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool,
+                            subpool));
   SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_count,
                                             parent_path->node));
   SVN_ERR(svn_fs_x__dag_delete(parent_path->parent->node,
@@ -2610,7 +2616,7 @@ copy_helper(svn_fs_root_t *from_root,
 
       /* Make sure the target node's parents are mutable.  */
       SVN_ERR(make_path_mutable(to_root, to_parent_path->parent,
-                                to_path, scratch_pool));
+                                to_path, scratch_pool, scratch_pool));
 
       /* Canonicalize the copyfrom path. */
       from_canonpath = svn_fs__canonicalize_abspath(from_path, scratch_pool);
@@ -2764,7 +2770,8 @@ x_make_file(svn_fs_root_t *root,
                                              subpool));
 
   /* Create the file.  */
-  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool));
+  SVN_ERR(make_path_mutable(root, parent_path->parent, path, subpool,
+                            subpool));
   SVN_ERR(svn_fs_x__dag_make_file(&child,
                                   parent_path->parent->node,
                                   parent_path_path(parent_path->parent,
@@ -2944,7 +2951,8 @@ apply_textdelta(void *baton,
                                              FALSE, FALSE, scratch_pool));
 
   /* Now, make sure this path is mutable. */
-  SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, scratch_pool));
+  SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, scratch_pool,
+                            scratch_pool));
   tb->node = svn_fs_x__dag_dup(parent_path->node, tb->pool);
 
   if (tb->base_checksum)
@@ -3109,7 +3117,8 @@ apply_text(void *baton,
                                              FALSE, FALSE, scratch_pool));
 
   /* Now, make sure this path is mutable. */
-  SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, scratch_pool));
+  SVN_ERR(make_path_mutable(tb->root, parent_path, tb->path, scratch_pool,
+                            scratch_pool));
   tb->node = svn_fs_x__dag_dup(parent_path->node, tb->pool);
 
   /* Make a writable stream for replacing the file's text. */

@@ -709,12 +709,12 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
                           const svn_fs_x__id_t *copy_id,
                           svn_fs_x__txn_id_t txn_id,
                           svn_boolean_t is_parent_copyroot,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   dag_node_t *cur_entry; /* parent's current entry named NAME */
   const svn_fs_x__id_t *new_node_id; /* node id we'll put into NEW_NODE */
   svn_fs_t *fs = svn_fs_x__dag_get_fs(parent);
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* First check that the parent is mutable. */
   if (! svn_fs_x__dag_check_mutable(parent))
@@ -729,7 +729,8 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
        "Attempted to make a child clone with an illegal name '%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
-  SVN_ERR(svn_fs_x__dag_open(&cur_entry, parent, name, pool, subpool));
+  SVN_ERR(svn_fs_x__dag_open(&cur_entry, parent, name, scratch_pool,
+                             scratch_pool));
   if (! cur_entry)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -753,7 +754,7 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
         {
           SVN_ERR(get_node_revision(&parent_noderev, parent));
           noderev->copyroot_rev = parent_noderev->copyroot_rev;
-          noderev->copyroot_path = apr_pstrdup(pool,
+          noderev->copyroot_path = apr_pstrdup(scratch_pool,
                                                parent_noderev->copyroot_path);
         }
 
@@ -762,23 +763,24 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
 
       noderev->predecessor_id = noderev->noderev_id;
       noderev->predecessor_count++;
-      noderev->created_path = svn_fspath__join(parent_path, name, pool);
+      noderev->created_path = svn_fspath__join(parent_path, name,
+                                               scratch_pool);
 
       if (copy_id == NULL)
         copy_id = &noderev->copy_id;
 
-      SVN_ERR(svn_fs_x__create_successor(fs, noderev, copy_id, txn_id, pool));
+      SVN_ERR(svn_fs_x__create_successor(fs, noderev, copy_id, txn_id,
+                                         scratch_pool));
       new_node_id = &noderev->noderev_id;
 
       /* Replace the ID in the parent's ENTRY list with the ID which
          refers to the mutable clone of this child. */
       SVN_ERR(set_entry(parent, name, new_node_id, noderev->kind, txn_id,
-                        pool));
+                        scratch_pool));
     }
 
   /* Initialize the youngster. */
-  svn_pool_destroy(subpool);
-  return svn_fs_x__dag_get_node(child_p, fs, new_node_id, pool);
+  return svn_fs_x__dag_get_node(child_p, fs, new_node_id, result_pool);
 }
 
 
