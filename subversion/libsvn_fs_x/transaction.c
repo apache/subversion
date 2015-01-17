@@ -2213,7 +2213,9 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
       svn_checksum_t checksum;
       checksum.digest = rep->sha1_digest;
       checksum.kind = svn_checksum_sha1;
-      err = svn_fs_x__get_rep_reference(old_rep, fs, &checksum, result_pool);
+      err = svn_fs_x__get_rep_reference(old_rep, fs, &checksum, result_pool,
+                                        scratch_pool);
+
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
         {

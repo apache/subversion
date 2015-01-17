@@ -61,14 +61,15 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              apr_pool_t *scratch_pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
-   REP is allocated in POOL.  If the rep cache database has not been
-   opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if
-   a reference beyond HEAD is detected. */
+   REP is allocated in RESULT_POOL.  If the rep cache database has not been
+   opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if a reference
+   beyond HEAD is detected.  Uses SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
                             svn_fs_t *fs,
                             svn_checksum_t *checksum,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set the representation REP in FS, using REP->CHECKSUM.
    Use SCRATCH_POOL for temporary allocations.  Returns SVN_ERR_FS_CORRUPT
