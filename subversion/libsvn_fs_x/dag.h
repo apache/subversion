@@ -252,12 +252,12 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
 
 
 /* Open the root of revision REV of filesystem FS, allocating from
-   POOL.  Set *NODE_P to the new node.  */
+   RESULT_POOL.  Set *NODE_P to the new node. */
 svn_error_t *
 svn_fs_x__dag_revision_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_revnum_t rev,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 
 /* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
