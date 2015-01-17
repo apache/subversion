@@ -1667,16 +1667,16 @@ init_rep_state(rep_state_t *rs,
  * window caches.  If MAX_OFFSET is not -1, don't read windows that start
  * at or beyond that offset.  As a side effect, return the total sum of all
  * expanded window sizes in *FULLTEXT_LEN.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 cache_windows(svn_filesize_t *fulltext_len,
               svn_fs_t *fs,
               rep_state_t *rs,
               apr_off_t max_offset,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   *fulltext_len = 0;
 
   while (rs->current < rs->size)
@@ -1693,7 +1693,8 @@ cache_windows(svn_filesize_t *fulltext_len,
 
       /* efficiently skip windows that are still being cached instead
        * of fully decoding them */
-      SVN_ERR(get_cached_window_sizes(&window_sizes, rs, &is_cached, pool));
+      SVN_ERR(get_cached_window_sizes(&window_sizes, rs, &is_cached,
+                                      iterpool));
       if (is_cached)
         {
           *fulltext_len += window_sizes->target_len;
@@ -1707,10 +1708,10 @@ cache_windows(svn_filesize_t *fulltext_len,
           apr_off_t block_start;
 
           /* navigate to & read the current window */
-          SVN_ERR(rs_aligned_seek(rs, &block_start, start_offset, pool));
+          SVN_ERR(rs_aligned_seek(rs, &block_start, start_offset, iterpool));
           SVN_ERR(svn_txdelta_read_svndiff_window(&window,
                                                   rs->sfile->rfile->stream,
-                                                  rs->ver, pool));
+                                                  rs->ver, iterpool));
 
           /* aggregate expanded window size */
           *fulltext_len += window->tview_len;
@@ -1718,7 +1719,7 @@ cache_windows(svn_filesize_t *fulltext_len,
           /* determine on-disk window size */
           SVN_ERR(svn_fs_x__get_file_offset(&end_offset,
                                             rs->sfile->rfile->file,
-                                            pool));
+                                            iterpool));
           rs->current = end_offset - rs->start;
           if (rs->current > rs->size)
             return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1728,7 +1729,7 @@ cache_windows(svn_filesize_t *fulltext_len,
           /* if the window has not been cached before, cache it now
            * (if caching is used for them at all) */
           if (!is_cached)
-            SVN_ERR(set_cached_window(window, rs, start_offset, pool));
+            SVN_ERR(set_cached_window(window, rs, start_offset, iterpool));
         }
 
       rs->chunk_index++;
