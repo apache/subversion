@@ -1802,7 +1802,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                   if (matched_line
                       && matched_line - original_start < original_start)
                     search_start2
-                      = original_start - (matched_line - original_start);
+                      = original_start - (matched_line - original_start) + 1;
 
                   SVN_ERR(seek_to_line(content, search_start2, scratch_pool));
                   SVN_ERR(scan_for_match(&matched_line2, content, hunk, FALSE,
