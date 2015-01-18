@@ -521,9 +521,8 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
 
 /* Copies */
 
-/* Make ENTRY in TO_NODE be a copy of FROM_NODE, allocating from POOL.
-   TO_NODE must be mutable.  TXN_ID is the Subversion transaction
-   under which this occurs.
+/* Make ENTRY in TO_NODE be a copy of FROM_NODE.  TO_NODE must be mutable.
+   TXN_ID is the Subversion transaction under which this occurs.
 
    If PRESERVE_HISTORY is true, the new node will record that it was
    copied from FROM_PATH in FROM_REV; therefore, FROM_NODE should be
@@ -533,7 +532,7 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
 
    If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_copy(dag_node_t *to_node,
@@ -543,7 +542,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
                    svn_revnum_t from_rev,
                    const char *from_path,
                    svn_fs_x__txn_id_t txn_id,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 
 /* Comparison */

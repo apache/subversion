@@ -1247,7 +1247,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
                    svn_revnum_t from_rev,
                    const char *from_path,
                    svn_fs_x__txn_id_t txn_id,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   const svn_fs_x__id_t *id;
 
@@ -1259,10 +1259,10 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
 
       /* Make a copy of the original node revision. */
       SVN_ERR(get_node_revision(&from_noderev, from_node));
-      to_noderev = copy_node_revision(from_noderev, pool);
+      to_noderev = copy_node_revision(from_noderev, scratch_pool);
 
       /* Reserve a copy ID for this new copy. */
-      SVN_ERR(svn_fs_x__reserve_copy_id(&copy_id, fs, txn_id, pool));
+      SVN_ERR(svn_fs_x__reserve_copy_id(&copy_id, fs, txn_id, scratch_pool));
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
@@ -1270,15 +1270,15 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
       to_noderev->predecessor_count++;
       to_noderev->created_path =
         svn_fspath__join(svn_fs_x__dag_get_created_path(to_node), entry,
-                         pool);
-      to_noderev->copyfrom_path = apr_pstrdup(pool, from_path);
+                         scratch_pool);
+      to_noderev->copyfrom_path = apr_pstrdup(scratch_pool, from_path);
       to_noderev->copyfrom_rev = from_rev;
 
       /* Set the copyroot equal to our own id. */
       to_noderev->copyroot_path = NULL;
 
       SVN_ERR(svn_fs_x__create_successor(fs, to_noderev,
-                                         &copy_id, txn_id, pool));
+                                         &copy_id, txn_id, scratch_pool));
       id = &to_noderev->noderev_id;
     }
   else  /* don't preserve history */
@@ -1288,7 +1288,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
 
   /* Set the entry in to_node to the new id. */
   return svn_fs_x__dag_set_entry(to_node, entry, id, from_node->kind,
-                                 txn_id, pool);
+                                 txn_id, scratch_pool);
 }
 
 
