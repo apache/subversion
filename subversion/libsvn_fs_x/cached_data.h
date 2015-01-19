@@ -142,13 +142,19 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
-   be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
+   be NULL.  The value referenced by HINT can be used to speed up
+   consecutive calls when travering the directory in name order.
+   Any value is allowed, however APR_SIZE_MAX gives best performance
+   when there has been no previous lookup for the same directory.
+
+   The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
 svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
                                  svn_fs_x__noderev_t *noderev,
                                  const char *name,
+                                 apr_size_t *hint,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
