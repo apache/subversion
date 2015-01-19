@@ -54,10 +54,11 @@ struct dag_node_t
   svn_fs_x__id_t id;
 
   /* In the special case that this node is the root of a transaction
-     that has not yet been modified, the node revision ID for this dag
-     node's predecessor; otherwise NULL. (Used in
-     svn_fs_node_created_rev.) */
-  svn_fs_x__id_t fresh_root_predecessor_id;
+     that has not yet been modified, the revision of this node is the
+     respective txn's base rev.  Otherwise, this is SVN_INVALID_REVNUM
+     for txn nodes and the respective crev for committed nodes.
+     (Used in svn_fs_node_created_rev.) */
+  svn_revnum_t revision;
 
   /* The node's type (file, dir, etc.) */
   svn_node_kind_t kind;
@@ -257,10 +258,12 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   new_node->kind = noderev->kind;
   new_node->created_path = apr_pstrdup(result_pool, noderev->created_path);
 
-  if (noderev->is_fresh_txn_root)
-    new_node->fresh_root_predecessor_id = noderev->predecessor_id;
-  else
-    svn_fs_x__id_reset(&new_node->fresh_root_predecessor_id);
+  /* Support our quirky svn_fs_node_created_rev API.
+     Untouched txn roots report the base rev as theirs. */
+  new_node->revision
+    = (  noderev->is_fresh_txn_root
+       ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
+       : svn_fs_x__get_revnum(id->change_set));
 
   /* Return a fresh new node */
   *node = new_node;
@@ -271,16 +274,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
 svn_revnum_t
 svn_fs_x__dag_get_revision(const dag_node_t *node)
 {
-  /* In the special case that this is an unmodified transaction root,
-     we need to actually get the revision of the noderev's predecessor
-     (the revision root); see Issue #2608. */
-  const svn_fs_x__id_t *correct_id
-    = svn_fs_x__id_used(&node->fresh_root_predecessor_id)
-        ? &node->fresh_root_predecessor_id
-        : &node->id;
-
-  /* Look up the committed revision from the Node-ID. */
-  return svn_fs_x__get_revnum(correct_id->change_set);
+  return node->revision;
 }
 
 
