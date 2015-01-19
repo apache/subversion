@@ -157,7 +157,11 @@ svn_fs_x__abort_txn(svn_fs_txn_t *txn,
 
 /* Add or set in filesystem FS, transaction TXN_ID, in directory
    PARENT_NODEREV a directory entry for NAME pointing to ID of type
-   KIND.  Temporary allocations are done in SCRATCH_POOL. */
+   KIND.  The PARENT_NODEREV's DATA_REP will be redirected to the in-txn
+   representation, if it had not been mutable before.
+
+   If PARENT_NODEREV does not have a DATA_REP, allocate one in RESULT_POOL.
+   Temporary allocations are done in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
@@ -165,6 +169,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     const char *name,
                     const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
+                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
 /* Add a change to the changes record for filesystem FS in transaction
