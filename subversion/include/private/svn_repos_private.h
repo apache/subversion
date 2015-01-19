@@ -258,6 +258,8 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                           svn_repos_t *preferred_repos,
                           apr_pool_t *pool);
 
+/** @} */
+
 /* Adjust mergeinfo paths and revisions in ways that are useful when loading
  * a dump stream.
  *
@@ -290,8 +292,6 @@ svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
                                      void *notify_baton,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
-
-/** @} */
 
 #ifdef __cplusplus
 }
