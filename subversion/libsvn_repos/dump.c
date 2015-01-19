@@ -495,7 +495,7 @@ svn_repos__dump_revision_record(svn_stream_t *dump_stream,
     }
 
   /* put an end to revision */
-  svn_stream_puts(dump_stream, "\n");
+  SVN_ERR(svn_stream_puts(dump_stream, "\n"));
 
   return SVN_NO_ERROR;
 }
