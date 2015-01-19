@@ -310,6 +310,24 @@ magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
 }
 
 
+/* Return a deep copy of a (char * -> char *) hash. */
+static apr_hash_t *
+headers_dup(apr_hash_t *headers,
+            apr_pool_t *pool)
+{
+  apr_hash_t *new_hash = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_hash_this_key(hi);
+      const char *val = apr_hash_this_val(hi);
+
+      svn_hash_sets(new_hash, apr_pstrdup(pool, key), apr_pstrdup(pool, val));
+    }
+  return new_hash;
+}
+
 /* New revision: set up revision_baton, decide if we skip it. */
 static svn_error_t *
 new_revision_record(void **revision_baton,
@@ -327,7 +345,7 @@ new_revision_record(void **revision_baton,
   rb->had_dropped_nodes = FALSE;
   rb->writing_begun = FALSE;
   rb->props = apr_hash_make(pool);
-  rb->original_headers = apr_hash_copy(pool, headers);
+  rb->original_headers = headers_dup(headers, pool);
 
   rev_orig = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
   rb->rev_orig = SVN_STR_TO_REV(rev_orig);
