@@ -293,6 +293,31 @@ svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
+/* Write a revision record to DUMP_STREAM for revision REVISION with revision
+ * properies REVPROPS, creating appropriate headers.
+ *
+ * Include all of the headers in EXTRA_HEADERS (if non-null), ignoring
+ * the revision number header and the three content length headers (which
+ * will be recreated as needed). EXTRA_HEADERS maps (char *) key to
+ * (char *) value.
+ *
+ * REVPROPS maps (char *) key to (svn_string_t *) value.
+ *
+ * Iff PROPS_SECTION_ALWAYS is true, include a prop content section (and
+ * corresponding header) even when REVPROPS is empty. This option exists
+ * to support a historical difference between svndumpfilter and svnadmin
+ * dump.
+ *
+ * Finally write another blank line.
+ */
+svn_error_t *
+svn_repos__dump_revision_record(svn_stream_t *dump_stream,
+                                svn_revnum_t revision,
+                                apr_hash_t *extra_headers,
+                                apr_hash_t *revprops,
+                                svn_boolean_t props_section_always,
+                                apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
