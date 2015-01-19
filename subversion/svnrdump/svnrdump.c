@@ -39,6 +39,7 @@
 
 #include "svnrdump.h"
 
+#include "private/svn_repos_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
 
@@ -229,34 +230,13 @@ replay_revstart(svn_revnum_t revision,
 {
   struct replay_baton *rb = replay_baton;
   apr_hash_t *normal_props;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *revprop_stream;
 
-  /* Revision-number: 19 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
+  /* Normalize and dump the revprops */
   SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
-  propstring = svn_stringbuf_create_ensure(0, pool);
-  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(revprop_stream));
-
-  /* Prop-content-length: 13 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
-
-  /* Content-length: 29 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
-
-  /* Property data. */
-  SVN_ERR(svn_stream_write(rb->stdout_stream, propstring->data,
-                           &(propstring->len)));
-
-  SVN_ERR(svn_stream_puts(rb->stdout_stream, "\n"));
+  SVN_ERR(svn_repos__dump_revision_record(rb->stdout_stream, revision, NULL,
+                                          normal_props,
+                                          TRUE /*props_section_always*/,
+                                          pool));
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
                                      rb->stdout_stream, rb->extra_ra_session,
@@ -299,34 +279,13 @@ replay_revstart_v2(svn_revnum_t revision,
 {
   struct replay_baton *rb = replay_baton;
   apr_hash_t *normal_props;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *revprop_stream;
 
-  /* Revision-number: 19 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
+  /* Normalize and dump the revprops */
   SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
-  propstring = svn_stringbuf_create_ensure(0, pool);
-  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(revprop_stream));
-
-  /* Prop-content-length: 13 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
-
-  /* Content-length: 29 */
-  SVN_ERR(svn_stream_printf(rb->stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
-
-  /* Property data. */
-  SVN_ERR(svn_stream_write(rb->stdout_stream, propstring->data,
-                           &(propstring->len)));
-
-  SVN_ERR(svn_stream_puts(rb->stdout_stream, "\n"));
+  SVN_ERR(svn_repos__dump_revision_record(rb->stdout_stream, revision,
+                                          normal_props,
+                                          TRUE /*props_section_always*/,
+                                          pool));
 
   SVN_ERR(svn_rdump__get_dump_editor_v2(editor, revision,
                                         rb->stdout_stream,
@@ -463,35 +422,13 @@ dump_revision_header(svn_ra_session_t *session,
                      apr_pool_t *pool)
 {
   apr_hash_t *prophash;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *propstream;
-
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
 
   prophash = apr_hash_make(pool);
-  propstring = svn_stringbuf_create_empty(pool);
   SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
-
-  propstream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(propstream));
-
-  /* Property-content-length: 14; Content-length: 14 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n",
-                            propstring->len));
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n",
-                            propstring->len));
-  /* The properties */
-  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                           &(propstring->len)));
-  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
-
+  SVN_ERR(svn_repos__dump_revision_record(stdout_stream, revision, NULL,
+                                          prophash,
+                                          TRUE /*props_section_always*/,
+                                          pool));
   return SVN_NO_ERROR;
 }
 
@@ -1168,7 +1105,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (strcmp(subcommand->name, "load") == 0)
     {
-      /* 
+      /*
        * By default (no --*-interactive options given), the 'load' subcommand
        * is interactive unless username and password were provided on the
        * command line. This allows prompting for auth creds to work without
