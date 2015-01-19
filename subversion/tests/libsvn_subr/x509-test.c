@@ -410,6 +410,33 @@ static struct x509_test cert_tests[] = {
     "www.example.com",
     "0e0869961d508b13bb22aa8da675b2e9951c0e70"
   },
+  /* X.509 v1 certificate, we used to crash on these prior to r1619861. */
+  { "MIIDDTCCAfUCAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMTkyMjEyNDhaFw0xNjAxMTkyMjEyNDhaMFQxCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMRswGQYD"
+    "VQQDExJ4NTA5djEuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw"
+    "ggEKAoIBAQDniW3DmGGtA0MoYqE9H55/RmjtTJD2WVmM/STEsw+RW74UGsZ62qfi"
+    "ADedl4ukZYKlk3TwJrGEwDBKOMWHuzCYVxhclyHkHwX7QqamvZRgaOonEu82KHuE"
+    "dZo4FhOWDC9D0yS4RFbfqvSu/JG19FYsnRQn1RPFYji6jG9TRwavplVBiMhR68kc"
+    "8HTW1Wu7uJ5SV0UtTicFes8MGek3+zWceGt+Egwd2UlIYXwTPzB5m7UPuufEdvFL"
+    "ED3pusVatohFzjCbYsuJIR5ppYd49uTxPWGvRidJ2C8GbDf9PCgDduS0Gz91Txnw"
+    "h+WiVYCQ6SxAJWp/xeZWE71k88N0vJEzAgMBAAEwDQYJKoZIhvcNAQEFBQADggEB"
+    "ABoBaObsHnIrkd3RvvGb5q7fnEfiT1DXsufS3ypf4Z8IST/z+NeaUaiRN1oLcvDz"
+    "qC7ygTYZ2BZoEw3ReCGqQWT4iYET+lH8DM+U5val3gVlSWqx1jj/wiV1OAxQsakM"
+    "BnmNs/MDshiv54irvSlqnxEp2o/BU/vMrN656C5DJkZpYoMpIWxdFnd+bzNzuN1k"
+    "pJfTjzWlGckKfdblNPOfdtccTqtQ5d4mWtYNJ8DfL5rRRwCuzXvZtbVHKxqkXaXr"
+    "CYUfFUobapgPfvvMc1QcDY+2nvhC2ij+HAPIHgZPuzJsjZRC1zwg074cfgjZbgbm"
+    "R0HVF486p3vS8HFv4lndRZA=",
+    "C=US, ST=Washington, L=North Bend, CN=x509v1.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.3",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
+    "2015-01-19T22:12:48.000000Z",
+    "2016-01-19T22:12:48.000000Z",
+    "x509v1.example.com",
+    "5730dd65a7f77fdf0dfd90e5a53119f38854af29"
+  },
   { NULL }
 };
 
