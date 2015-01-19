@@ -200,6 +200,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1653039
+   Allocate correct amount of memory for freeze arguments.
+   Justiciation:
+     Writing beyond allocated memory is undefined behaviour.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
