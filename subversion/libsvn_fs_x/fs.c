@@ -241,6 +241,21 @@ x_set_uuid(svn_fs_t *fs,
   return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, scratch_pool));
 }
 
+/* Wrapper around svn_fs_x__begin_txn() providing the scratch pool. */
+static svn_error_t *
+x_begin_txn(svn_fs_txn_t **txn_p,
+            svn_fs_t *fs,
+            svn_revnum_t rev,
+            apr_uint32_t flags,
+            apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  SVN_ERR(svn_fs_x__begin_txn(txn_p, fs, rev, flags, pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The vtable associated with a specific open filesystem. */
@@ -251,7 +266,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_x__change_rev_prop,
   x_set_uuid,
   svn_fs_x__revision_root,
-  svn_fs_x__begin_txn,
+  x_begin_txn,
   svn_fs_x__open_txn,
   svn_fs_x__purge_txn,
   svn_fs_x__list_transactions,
