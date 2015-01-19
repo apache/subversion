@@ -423,7 +423,6 @@ dump_revision_header(svn_ra_session_t *session,
 {
   apr_hash_t *prophash;
 
-  prophash = apr_hash_make(pool);
   SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
   SVN_ERR(svn_repos__dump_revision_record(stdout_stream, revision, NULL,
                                           prophash,
