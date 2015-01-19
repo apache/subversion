@@ -408,7 +408,7 @@ set_entry(dag_node_t *parent,
 
   /* Set the new entry. */
   return svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name, id,
-                             kind, scratch_pool);
+                             kind, parent->node_pool, scratch_pool);
 }
 
 
@@ -905,7 +905,8 @@ svn_fs_x__dag_delete(dag_node_t *parent,
 
   /* Remove this entry from its parent's entries list. */
   return svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name,
-                             NULL, svn_node_unknown, scratch_pool);
+                             NULL, svn_node_unknown, parent->node_pool,
+                             scratch_pool);
 }
 
 

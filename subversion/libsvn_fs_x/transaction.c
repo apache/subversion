@@ -1694,6 +1694,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                     const char *name,
                     const svn_fs_x__id_t *id,
                     svn_node_kind_t kind,
+                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   svn_fs_x__representation_t *rep = parent_noderev->data_rep;
@@ -1721,13 +1722,21 @@ svn_fs_x__set_entry(svn_fs_t *fs,
 
       svn_pool_clear(subpool);
 
+      /* Provide the parent with a data rep if it had none before
+         (directories so far empty). */
+      if (!rep)
+        {
+          rep = apr_pcalloc(result_pool, sizeof(*rep));
+          parent_noderev->data_rep = rep;
+        }
+
       /* Mark the node-rev's data rep as mutable. */
-      rep = apr_pcalloc(scratch_pool, sizeof(*rep));
       rep->id.change_set = svn_fs_x__change_set_by_txn(txn_id);
       rep->id.number = SVN_FS_X__ITEM_INDEX_UNUSED;
-      parent_noderev->data_rep = rep;
+
+      /* Save noderev to disk. */
       SVN_ERR(svn_fs_x__put_node_revision(fs, parent_noderev, FALSE,
-                                          scratch_pool));
+                                          subpool));
     }
   else
     {
