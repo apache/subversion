@@ -416,6 +416,7 @@ write_revision_headers(svn_stream_t *stream,
   static const char *revision_headers_order[] =
   {
     SVN_REPOS_DUMPFILE_REVISION_NUMBER,  /* must be first */
+    NULL
   };
 
   /* Write some headers in a given order */
