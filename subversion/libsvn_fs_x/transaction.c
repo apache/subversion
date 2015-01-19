@@ -1215,7 +1215,8 @@ static svn_error_t *
 create_txn_dir(const char **id_p,
                svn_fs_x__txn_id_t *txn_id,
                svn_fs_t *fs,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   get_and_increment_txn_key_baton_t cb;
   const char *txn_dir;
@@ -1228,33 +1229,38 @@ create_txn_dir(const char **id_p,
   SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
                                           get_and_increment_txn_key_body,
                                           &cb,
-                                          pool));
+                                          scratch_pool));
   *txn_id = cb.txn_number;
 
-  *id_p = svn_fs_x__txn_name(*txn_id, pool);
-  txn_dir = svn_fs_x__path_txn_dir(fs, *txn_id, pool);
+  *id_p = svn_fs_x__txn_name(*txn_id, result_pool);
+  txn_dir = svn_fs_x__path_txn_dir(fs, *txn_id, scratch_pool);
 
-  return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
+  return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, scratch_pool);
 }
 
-svn_error_t *
-svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
-                     svn_fs_t *fs,
-                     svn_revnum_t rev,
-                     apr_pool_t *pool)
+/* Create a new transaction in filesystem FS, based on revision REV,
+   and store it in *TXN_P, allocated in RESULT_POOL.  Allocate necessary
+   temporaries from SCRATCH_POOL. */
+static svn_error_t *
+create_txn(svn_fs_txn_t **txn_p,
+           svn_fs_t *fs,
+           svn_revnum_t rev,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   svn_fs_txn_t *txn;
   fs_txn_data_t *ftd;
   svn_fs_x__id_t root_id;
 
-  txn = apr_pcalloc(pool, sizeof(*txn));
-  ftd = apr_pcalloc(pool, sizeof(*ftd));
+  txn = apr_pcalloc(result_pool, sizeof(*txn));
+  ftd = apr_pcalloc(result_pool, sizeof(*ftd));
 
   /* Valid revision number? */
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* Get the txn_id. */
-  SVN_ERR(create_txn_dir(&txn->id, &ftd->txn_id, fs, pool));
+  SVN_ERR(create_txn_dir(&txn->id, &ftd->txn_id, fs, result_pool,
+                         scratch_pool));
 
   txn->fs = fs;
   txn->base_rev = rev;
@@ -1265,27 +1271,30 @@ svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
 
   /* Create a new root node for this transaction. */
   svn_fs_x__init_rev_root(&root_id, rev);
-  SVN_ERR(create_new_txn_noderev_from_rev(fs, ftd->txn_id, &root_id, pool));
+  SVN_ERR(create_new_txn_noderev_from_rev(fs, ftd->txn_id, &root_id,
+                                          scratch_pool));
 
   /* Create an empty rev file. */
   SVN_ERR(svn_io_file_create_empty(
-              svn_fs_x__path_txn_proto_rev(fs, ftd->txn_id, pool),
-              pool));
+              svn_fs_x__path_txn_proto_rev(fs, ftd->txn_id, scratch_pool),
+              scratch_pool));
 
   /* Create an empty rev-lock file. */
   SVN_ERR(svn_io_file_create_empty(
-              svn_fs_x__path_txn_proto_rev_lock(fs, ftd->txn_id, pool),
-              pool));
+              svn_fs_x__path_txn_proto_rev_lock(fs, ftd->txn_id, scratch_pool),
+              scratch_pool));
 
   /* Create an empty changes file. */
   SVN_ERR(svn_io_file_create_empty(
-              svn_fs_x__path_txn_changes(fs, ftd->txn_id, pool),
-              pool));
+              svn_fs_x__path_txn_changes(fs, ftd->txn_id, scratch_pool),
+              scratch_pool));
 
   /* Create the next-ids file. */
-  return svn_io_file_create(
-              svn_fs_x__path_txn_next_ids(fs, ftd->txn_id, pool),
-              "0 0\n", pool);
+  SVN_ERR(svn_io_file_create(
+              svn_fs_x__path_txn_next_ids(fs, ftd->txn_id, scratch_pool),
+              "0 0\n", scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Store the property list for transaction TXN_ID in PROPLIST.
@@ -3712,22 +3721,23 @@ svn_fs_x__begin_txn(svn_fs_txn_t **txn_p,
                     svn_fs_t *fs,
                     svn_revnum_t rev,
                     apr_uint32_t flags,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_string_t date;
   fs_txn_data_t *ftd;
-  apr_hash_t *props = apr_hash_make(pool);
+  apr_hash_t *props = apr_hash_make(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  SVN_ERR(svn_fs_x__create_txn(txn_p, fs, rev, pool));
+  SVN_ERR(create_txn(txn_p, fs, rev, result_pool, scratch_pool));
 
   /* Put a datestamp on the newly created txn, so we always know
      exactly how old it is.  (This will help sysadmins identify
      long-abandoned txns that may need to be manually removed.)  When
      a txn is promoted to a revision, this property will be
      automatically overwritten with a revision datestamp. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
+  date.data = svn_time_to_cstring(apr_time_now(), scratch_pool);
   date.len = strlen(date.data);
 
   svn_hash_sets(props, SVN_PROP_REVISION_DATE, &date);
@@ -3736,17 +3746,18 @@ svn_fs_x__begin_txn(svn_fs_txn_t **txn_p,
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
     svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_OOD,
-                  svn_string_create("true", pool));
+                  svn_string_create("true", scratch_pool));
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
     svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                  svn_string_create("true", pool));
+                  svn_string_create("true", scratch_pool));
 
   if (flags & SVN_FS_TXN_CLIENT_DATE)
     svn_hash_sets(props, SVN_FS__PROP_TXN_CLIENT_DATE,
-                  svn_string_create("0", pool));
+                  svn_string_create("0", scratch_pool));
 
   ftd = (*txn_p)->fsap_data;
-  return svn_error_trace(set_txn_proplist(fs, ftd->txn_id, props, FALSE,
-                                          pool));
+  SVN_ERR(set_txn_proplist(fs, ftd->txn_id, props, FALSE, scratch_pool));
+
+  return SVN_NO_ERROR;
 }

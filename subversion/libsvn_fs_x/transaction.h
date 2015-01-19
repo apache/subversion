@@ -91,15 +91,6 @@ svn_fs_x__txn_changes_fetch(apr_hash_t **changed_paths_p,
                             svn_fs_x__txn_id_t txn_id,
                             apr_pool_t *scratch_pool);
 
-/* Create a new transaction in filesystem FS, based on revision REV,
-   and store it in *TXN_P.  Allocate all necessary variables from
-   POOL. */
-svn_error_t *
-svn_fs_x__create_txn(svn_fs_txn_t **txn_p,
-                     svn_fs_t *fs,
-                     svn_revnum_t rev,
-                     apr_pool_t *pool);
-
 /* Set the transaction property NAME to the value VALUE in transaction
    TXN.  Perform temporary allocations from SCRATCH_POOL. */
 svn_error_t *
@@ -309,13 +300,14 @@ svn_fs_x__txn_prop(svn_string_t **value_p,
                    apr_pool_t *pool);
 
 /* Begin a new transaction in filesystem FS, based on existing
-   revision REV.  The new transaction is returned in *TXN_P.  Allocate
-   the new transaction structure from POOL. */
+   revision REV.  The new transaction is returned in *TXN_P, allocated
+   in RESULT_POOL.  Allocate temporaries from SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__begin_txn(svn_fs_txn_t **txn_p,
                     svn_fs_t *fs,
                     svn_revnum_t rev,
                     apr_uint32_t flags,
-                    apr_pool_t *pool);
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
 
 #endif
