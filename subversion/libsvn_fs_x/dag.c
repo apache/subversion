@@ -77,6 +77,11 @@ struct dag_node_t
 
   /* the path at which this node was created. */
   const char *created_path;
+
+  /* Directory entry lookup hint to speed up consecutive calls to
+     svn_fs_x__rep_contents_dir_entry(). Only used for directory nodes.
+     Any value is legal but should default to APR_SIZE_MAX. */
+  apr_size_t hint;
 };
 
 
@@ -249,6 +254,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   new_node = apr_pcalloc(result_pool, sizeof(*new_node));
   new_node->fs = fs;
   new_node->id = *id;
+  new_node->hint = APR_SIZE_MAX;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = result_pool;
@@ -369,7 +375,8 @@ dir_entry_id_from_node(svn_fs_x__id_t *id_p,
 
   /* Get a dirent hash for this directory. */
   SVN_ERR(svn_fs_x__rep_contents_dir_entry(&dirent, parent->fs, noderev,
-                                           name, scratch_pool, scratch_pool));
+                                           name, &parent->hint,
+                                           scratch_pool, scratch_pool));
   if (dirent)
     *id_p = dirent->id;
   else
@@ -663,6 +670,7 @@ svn_fs_x__dag_revision_root(dag_node_t **node_p,
   /* Initialize the KIND and CREATED_PATH attributes */
   new_node->kind = svn_node_dir;
   new_node->created_path = "/";
+  new_node->hint = APR_SIZE_MAX;
 
   /* Return a fresh new node */
   *node_p = new_node;
@@ -883,7 +891,8 @@ svn_fs_x__dag_delete(dag_node_t *parent,
 
   /* Search this directory for a dirent with that NAME. */
   SVN_ERR(svn_fs_x__rep_contents_dir_entry(&dirent, fs, parent_noderev,
-                                           name, subpool, subpool));
+                                           name, &parent->hint,
+                                           subpool, subpool));
 
   /* If we never found ID in ENTRIES (perhaps because there are no
      ENTRIES, perhaps because ID just isn't in the existing ENTRIES

@@ -795,6 +795,23 @@ find_entry(svn_fs_x__dirent_t **entries,
   return lower;
 }
 
+/* Utility function that returns TRUE if entry number IDX in ENTRIES has the
+ * name NAME.
+ */
+static svn_boolean_t
+found_entry(const svn_fs_x__dirent_t * const *entries,
+            const char *name,
+            apr_size_t idx)
+{
+  /* check whether we actually found a match */
+  const svn_fs_x__dirent_t *entry =
+    svn_temp_deserializer__ptr(entries, (const void *const *)&entries[idx]);
+  const char* entry_name =
+    svn_temp_deserializer__ptr(entry, (const void *const *)&entry->name);
+
+  return strcmp(entry_name, name) == 0;
+}
+
 svn_error_t *
 svn_fs_x__extract_dir_entry(void **out,
                             const void *data,
@@ -803,8 +820,9 @@ svn_fs_x__extract_dir_entry(void **out,
                             apr_pool_t *pool)
 {
   const dir_data_t *dir_data = data;
-  const char* name = baton;
+  svn_fs_x__ede_baton_t *b = baton;
   svn_boolean_t found;
+  apr_size_t pos;
 
   /* resolve the reference to the entries array */
   const svn_fs_x__dirent_t * const *entries =
@@ -814,14 +832,33 @@ svn_fs_x__extract_dir_entry(void **out,
   const apr_uint32_t *lengths =
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->lengths);
 
-  /* binary search for the desired entry by name */
-  apr_size_t pos = find_entry((svn_fs_x__dirent_t **)entries,
-                              name,
-                              dir_data->count,
-                              &found);
+  /* Special case: Early out for empty directories.
+     That simplifies tests further down the road. */
+  *out = NULL;
+  if (dir_data->count == 0)
+    return SVN_NO_ERROR;
+
+  /* HINT _might_ be the position we hit last time.
+     If within valid range, check whether HINT+1 is a hit. */
+  if (   b->hint < dir_data->count - 1
+      && found_entry(entries, b->name, b->hint + 1))
+    {
+      /* Got lucky. */
+      pos = b->hint + 1;
+      found = TRUE;
+    }
+  else
+    {
+      /* Binary search for the desired entry by name. */
+      pos = find_entry((svn_fs_x__dirent_t **)entries, b->name,
+                       dir_data->count, &found);
+    }
+
+  /* Remember the hit index - if we FOUND the entry. */
+  if (found)
+    b->hint = pos;
 
   /* de-serialize that entry or return NULL, if no match has been found */
-  *out = NULL;
   if (found)
     {
       const svn_fs_x__dirent_t *source =

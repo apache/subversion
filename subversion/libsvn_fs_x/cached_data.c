@@ -2690,6 +2690,7 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
                                  svn_fs_x__noderev_t *noderev,
                                  const char *name,
+                                 apr_size_t *hint,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -2700,14 +2701,22 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
   if (cache)
     {
+      svn_fs_x__ede_baton_t baton;
+      baton.hint = *hint;
+      baton.name = name;
+
       /* Cache lookup. */
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
                                      &key,
                                      svn_fs_x__extract_dir_entry,
-                                     (void*)name,
+                                     &baton,
                                      result_pool));
+
+      /* Remember the new clue only if we found something at that spot. */
+      if (found)
+        *hint = baton.hint;
     }
 
   /* fetch data from disk if we did not find it in the cache */

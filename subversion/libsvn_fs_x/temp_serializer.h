@@ -194,9 +194,20 @@ svn_fs_x__get_sharded_offset(void **out,
                              apr_pool_t *pool);
 
 /**
+ * Baton type to be used with svn_fs_x__extract_dir_entry. */
+typedef struct svn_fs_x__ede_baton_t
+{
+  /* Name of the directory entry to find. */
+  const char *name;
+
+  /* Lookup hint [in / out] */
+  apr_size_t hint;
+} svn_fs_x__ede_baton_t;
+
+/**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_x__dirent_t within a serialized directory contents hash,
- * identified by its name (const char @a *baton).
+ * identified by its name (given in @a svn_fs_x__ede_baton_t @a *baton).
  */
 svn_error_t *
 svn_fs_x__extract_dir_entry(void **out,
