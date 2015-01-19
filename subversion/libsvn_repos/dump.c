@@ -357,6 +357,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
    with message WARNING_FMT formatted with the remaining variable arguments.
    Send it by calling NOTIFY_FUNC (if not null) with NOTIFY_BATON.
  */
+__attribute__((format(printf, 5, 6)))
 static void
 notify_warning(apr_pool_t *scratch_pool,
                svn_repos_notify_func_t notify_func,
