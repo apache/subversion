@@ -1555,6 +1555,9 @@ endif
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
+	echo >> $@.tmp '#SVNInMemoryCacheSize 0'
+	echo >> $@.tmp '#SVNCacheTextDeltas Off'
+	echo >> $@.tmp '#SVNCacheRevProps Off'
 	mv -f $@.tmp $@
 
 .PHONY: libpath

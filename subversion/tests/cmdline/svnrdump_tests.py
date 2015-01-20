@@ -70,27 +70,28 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
-  """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
-  by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
-  SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
+def compare_repos_dumps(sbox, other_dumpfile,
+                        bypass_prop_validation=False):
+  """Compare two dumpfiles, one created from SBOX, and other given
+  by OTHER_DUMPFILE.  The dumpfiles do not need to match linewise, as the
+  OTHER_DUMPFILE contents will first be loaded into a repository and then
   re-dumped to do the match, which should generate the same dumpfile as
-  dumping SVNRDUMP_SBOX."""
+  dumping SBOX."""
 
-  svnrdump_contents = svntest.actions.run_and_verify_dump(
-                                                    svnrdump_sbox.repo_dir)
 
-  svnadmin_sbox = svnrdump_sbox.clone_dependent()
-  svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
-  svntest.main.create_repos(svnadmin_sbox.repo_dir)
+  sbox_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
-  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+  # Load and dump the other dumpfile (using svnadmin)
+  other_sbox = sbox.clone_dependent()
+  svntest.main.safe_rmtree(other_sbox.repo_dir)
+  svntest.main.create_repos(other_sbox.repo_dir)
+  svntest.actions.run_and_verify_load(other_sbox.repo_dir, other_dumpfile,
+                                      bypass_prop_validation)
+  other_dumpfile = svntest.actions.run_and_verify_dump(other_sbox.repo_dir)
 
-  svnadmin_contents = svntest.actions.run_and_verify_dump(
-                                                    svnadmin_sbox.repo_dir)
-
+  ### This call kind-of assumes EXPECTED is first and ACTUAL is second.
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
+    "Dump files", "DUMP", other_dumpfile, sbox_dumpfile)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False,
@@ -111,11 +112,10 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Load the specified dump file into the sbox repository using
   # svnadmin load
-  svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
+  original_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                         dumpfile_name),
                            'rb').readlines()
-
-  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile,
+  svntest.actions.run_and_verify_load(sbox.repo_dir, original_dumpfile,
                                       bypass_prop_validation)
 
   repo_url = sbox.repo_url
@@ -129,28 +129,29 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                               [], 0, *opts)
 
   if expected_dumpfile_name:
-    svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
+    expected_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
     # Compare the output from stdout
     if ignore_base_checksums:
-      svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+      expected_dumpfile = [l for l in expected_dumpfile
                                     if not l.startswith('Text-delta-base-md5')]
       svnrdump_dumpfile = [l for l in svnrdump_dumpfile
                                     if not l.startswith('Text-delta-base-md5')]
-    svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+    expected_dumpfile = [l for l in expected_dumpfile
                                   if not mismatched_headers_re.match(l)]
     svnrdump_dumpfile = [l for l in svnrdump_dumpfile
                                   if not mismatched_headers_re.match(l)]
 
-    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
+    expected_dumpfile = svntest.verify.UnorderedOutput(expected_dumpfile)
 
     svntest.verify.compare_and_display_lines(
-      "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+      "Dump files", "DUMP", expected_dumpfile, svnrdump_dumpfile,
       None)
 
   else:
-    compare_repos_dumps(sbox, svnadmin_dumpfile)
+    # The expected dumpfile is the result of dumping SBOX.
+    compare_repos_dumps(sbox, svnrdump_dumpfile, bypass_prop_validation)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
@@ -169,36 +170,37 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Load the specified dump file into the sbox repository using
   # svnrdump load
-  svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+  original_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                         dumpfile_name),
                            'rb').readlines()
 
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
-  uuid = svnrdump_dumpfile[2].split(' ')[1][:-1]
+  uuid = original_dumpfile[2].split(' ')[1][:-1]
   svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
-  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
+  svntest.actions.run_and_verify_svnrdump(original_dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', sbox.repo_url)
 
-  # Create a dump file using svnadmin dump
-  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
+  # Re-dump the rdump-loaded repo using svnadmin dump
+  resulted_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
                                                           expect_deltas)
 
   if expected_dumpfile_name:
-    svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+    expected_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
 
     # Compare the output from stdout
     svntest.verify.compare_and_display_lines(
-      "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+      "Dump files", "DUMP", expected_dumpfile, resulted_dumpfile)
 
   else:
-    compare_repos_dumps(sbox, svnrdump_dumpfile)
+    expected_dumpfile = original_dumpfile
+    compare_repos_dumps(sbox, expected_dumpfile)
 
 ######################################################################
 # Tests
@@ -799,6 +801,129 @@ def load_prop_change_in_non_deltas_dump(sbox):
                                           [], [], 0,
                                           '-q', 'load', sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def dump_mergeinfo_contains_r0(sbox):
+  "dump: mergeinfo that contains r0"
+  ### We pass the original dump file name as 'expected_dumpfile_name' because
+  ### run_dump_test is currently broken when we don't.
+  run_dump_test(sbox, "mergeinfo-contains-r0.dump",
+                bypass_prop_validation=True)
+
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4476)
+def load_mergeinfo_contains_r0(sbox):
+  "load: mergeinfo that contains r0"
+  run_load_test(sbox, "mergeinfo-contains-r0.dump",
+                expected_dumpfile_name="mergeinfo-contains-r0.expected.dump")
+
+#----------------------------------------------------------------------
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# not exist and the failure mode is to error out.
+@XFail()
+@Issue(4551)
+def load_non_deltas_copy_with_props(sbox):
+  "load non-deltas copy with props"
+  sbox.build()
+
+  # Set props on a file and on a dir and on a child of the dir to be copied
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Case (1): Copy file/dir, not replacing anything; the copy target path
+  # at (new rev - 1) does not exist
+  sbox.simple_copy('A/mu@2', 'A/mu_COPY')
+  sbox.simple_copy('A/B@2', 'A/B_COPY')
+  # On the copy, delete a prop
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+  # For regression test purposes, all we require is that the 'load'
+  # doesn't throw an error
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# exist and the failure mode is to fail to delete a property.
+@XFail()
+@Issue(4551)
+def load_non_deltas_replace_copy_with_props(sbox):
+  "load non-deltas replace&copy with props"
+  sbox.build()
+
+  # Set props on a file and on a dir
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Case (2): Copy file/dir, replacing something; the copy target path
+  # at (new rev - 1) exists and has no property named 'p'
+  sbox.simple_rm('A/D/gamma', 'A/C')
+  sbox.simple_copy('A/mu@2', 'A/D/gamma')
+  sbox.simple_copy('A/B@2', 'A/C')
+  # On the copy, delete a prop that isn't present on the replaced node
+  sbox.simple_propdel('p', 'A/D/gamma', 'A/C')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'p' really was deleted on each copied node
+  for tgt_path in ['A/D/gamma', 'A/C']:
+    _, out, _ = svntest.main.run_svn(None, 'proplist',
+                                     new_repo_url + '/' + tgt_path)
+    expected = []
+    actual = out[1:]
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
+
+# Regression test for issue #4552 "svnrdump writes duplicate headers for a
+# replace-with-copy". 'svnrdump dump' wrote the Node-path and Node-kind
+# headers twice for the 'delete' record of a replace-with-copy.
+@Issue(4552)
+def dump_replace_with_copy(sbox):
+  "dump replace with copy"
+  sbox.build()
+
+  # Copy file/dir, replacing something
+  sbox.simple_rm('A/D/gamma', 'A/C')
+  sbox.simple_copy('A/mu@1', 'A/D/gamma')
+  sbox.simple_copy('A/B@1', 'A/C')
+  sbox.simple_commit()
+
+  # Dump with 'svnrdump'
+  dumpfile = svntest.actions.run_and_verify_svnrdump(
+                               None, svntest.verify.AnyOutput, [], 0,
+                               'dump', '--quiet', '--incremental', '-r2',
+                               sbox.repo_url)
+
+  # Check the 'delete' record headers: expect this parse to fail if headers
+  # are duplicated
+  svntest.verify.DumpParser(dumpfile).parse()
 
 ########################################################################
 # Run the tests
@@ -855,6 +980,11 @@ test_list = [ None,
               only_trunk_range_dump,
               only_trunk_A_range_dump,
               load_prop_change_in_non_deltas_dump,
+              dump_mergeinfo_contains_r0,
+              load_mergeinfo_contains_r0,
+              load_non_deltas_copy_with_props,
+              load_non_deltas_replace_copy_with_props,
+              dump_replace_with_copy,
              ]
 
 if __name__ == '__main__':

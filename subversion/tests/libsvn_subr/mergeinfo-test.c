@@ -114,7 +114,7 @@ verify_mergeinfo_parse(const char *input,
 }
 
 
-#define NBR_MERGEINFO_VALS 24
+#define NBR_MERGEINFO_VALS 25
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -148,7 +148,8 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/A/:7-8",
     "/A///:7-8",
     "/A/.:7-8",
-    "/A/./B:7-8"
+    "/A/./B:7-8",
+    ":7-8",
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -181,7 +182,8 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/A",
     "/A",
     "/A",
-    "/A/B"
+    "/A/B",
+    "/",
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -208,6 +210,7 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
     { {0, 77, TRUE} },
+    { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
@@ -298,7 +301,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 27
+#define NBR_BROKEN_MERGEINFO_VALS 26
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -330,8 +333,6 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:",
     "/trunk:2-9\n/branch:",
     "::",
-    /* No path */
-    ":1-3",
     /* Invalid revisions */
     "trunk:a-3",
     "branch:3-four",

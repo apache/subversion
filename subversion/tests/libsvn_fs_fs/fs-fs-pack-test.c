@@ -1079,7 +1079,7 @@ metadata_checksumming(const svn_test_opts_t *opts,
   SVN_ERR(svn_stringbuf_from_file2(&r0, r0_path, pool));
   r0->data[21] = '1';
   SVN_ERR(svn_io_remove_file2(r0_path, FALSE, pool));
-  SVN_ERR(svn_io_file_create_binary(r0_path, r0->data, r0->len, pool));
+  SVN_ERR(svn_io_file_create_bytes(r0_path, r0->data, r0->len, pool));
 
   /* Reading the corrupted data on the normal code path triggers no error.
    * Use a separate namespace to avoid simply reading data from cache. */

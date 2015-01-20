@@ -405,7 +405,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                            "refers to revision %ld outside "
                                            "the rev / pack file (%ld-%ld)"),
                                          apr_off_t_toa(pool, entry->offset),
-                                         (long)entry->item.number,
+                                         entry->item.revision,
                                          start, start + count - 1);
             }
           else

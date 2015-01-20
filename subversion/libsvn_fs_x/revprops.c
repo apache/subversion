@@ -61,7 +61,7 @@ svn_fs_x__upgrade_pack_revprops(svn_fs_t *fs,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *revprops_shard_path;
   const char *revprops_pack_file_dir;
   apr_int64_t shard;
@@ -113,7 +113,7 @@ svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                         void *cancel_baton,
                                         apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *revprops_shard_path;
   apr_int64_t shard;
   apr_int64_t first_unpacked_shard
@@ -194,7 +194,7 @@ static svn_error_t *
 close_revprop_generation_file(svn_fs_t *fs,
                               apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   if (ffd->revprop_generation_file)
     {
       SVN_ERR(svn_io_file_close(ffd->revprop_generation_file, scratch_pool));
@@ -216,7 +216,7 @@ open_revprop_generation_file(svn_fs_t *fs,
                              svn_boolean_t read_only,
                              apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_int32_t flags = read_only ? APR_READ : (APR_READ | APR_WRITE);
 
   /* Close the current file handle if it has insufficient rights. */
@@ -299,7 +299,7 @@ read_revprop_generation_file(apr_int64_t *current,
                              svn_fs_t *fs,
                              apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   char buf[CHECKSUMMED_NUMBER_BUFFER_LEN];
   apr_size_t len;
@@ -354,7 +354,7 @@ write_revprop_generation_file(svn_fs_t *fs,
                               apr_int64_t current,
                               apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *buffer;
   apr_off_t offset = 0;
 
@@ -405,12 +405,12 @@ static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
                                const char *message,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   svn_error_t *err = svn_error_createf(
                        SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
                        underlying_err, message,
-                       svn_dirent_local_style(fs->path, pool));
+                       svn_dirent_local_style(fs->path, scratch_pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -424,7 +424,7 @@ static svn_boolean_t
 has_revprop_cache(svn_fs_t *fs,
                   apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_error_t *error;
 
   /* is the cache (still) enabled? */
@@ -472,7 +472,7 @@ revprop_generation_fixup(void *void_baton,
                          apr_pool_t *scratch_pool)
 {
   revprop_generation_upgrade_t *baton = void_baton;
-  fs_x_data_t *ffd = baton->fs->fsap_data;
+  svn_fs_x__data_t *ffd = baton->fs->fsap_data;
   assert(ffd->has_write_lock);
 
   /* Make sure we don't operate on stale OS buffers. */
@@ -507,7 +507,7 @@ read_revprop_generation(apr_int64_t *generation,
                         apr_pool_t *scratch_pool)
 {
   apr_int64_t current = 0;
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* read the current revprop generation number */
   SVN_ERR(read_revprop_generation_file(&current, fs, scratch_pool));
@@ -562,7 +562,7 @@ begin_revprop_change(apr_int64_t *generation,
                      svn_fs_t *fs,
                      apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   SVN_ERR_ASSERT(ffd->has_write_lock);
 
   /* Close and re-open to make sure we read the latest data. */
@@ -589,7 +589,7 @@ end_revprop_change(svn_fs_t *fs,
                    apr_int64_t generation,
                    apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   SVN_ERR_ASSERT(ffd->has_write_lock);
   SVN_ERR_ASSERT(generation % 2);
 
@@ -660,8 +660,8 @@ typedef struct packed_revprops_t
  * our file system, the revprops belong to REVISION and the global revprop
  * GENERATION is used as well.
  *
- * The returned hash will be allocated in POOL, SCRATCH_POOL is being used
- * for temporary allocations.
+ * The returned hash will be allocated in RESULT_POOL, SCRATCH_POOL is 
+ * being used for temporary allocations.
  */
 static svn_error_t *
 parse_revprop(apr_hash_t **properties,
@@ -669,17 +669,18 @@ parse_revprop(apr_hash_t **properties,
               svn_revnum_t revision,
               apr_int64_t generation,
               svn_string_t *content,
-              apr_pool_t *pool,
+              apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
-  *properties = apr_hash_make(pool);
+  *properties = apr_hash_make(result_pool);
 
-  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
-  if (has_revprop_cache(fs, pool))
+  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR,
+                         result_pool));
+  if (has_revprop_cache(fs, scratch_pool))
     {
-      fs_x_data_t *ffd = fs->fsap_data;
-      pair_cache_key_t key = { 0 };
+      svn_fs_x__data_t *ffd = fs->fsap_data;
+      svn_fs_x__pair_cache_key_t key = { 0 };
 
       key.revision = revision;
       key.second = generation;
@@ -747,15 +748,16 @@ get_min_filename_len(packed_revprops_t *revprops)
 }
 
 /* Given FS and REVPROPS->REVISION, fill the FILENAME, FOLDER and MANIFEST
- * members. Use POOL for allocating results and SCRATCH_POOL for temporaries.
+ * members. Use RESULT_POOL for allocating results and SCRATCH_POOL for
+ * temporaries.
  */
 static svn_error_t *
 get_revprop_packname(svn_fs_t *fs,
                      packed_revprops_t *revprops,
-                     apr_pool_t *pool,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
   int idx, rev_count;
@@ -773,17 +775,19 @@ get_revprop_packname(svn_fs_t *fs,
       --rev_count;
     }
 
-  revprops->manifest = apr_array_make(pool, rev_count, sizeof(const char*));
+  revprops->manifest = apr_array_make(result_pool, rev_count,
+                                      sizeof(const char*));
 
   /* No line in the file can be less than this number of chars long. */
   min_filename_len = get_min_filename_len(revprops);
 
   /* Read the content of the manifest file */
   revprops->folder
-    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, pool);
-  manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
+    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, result_pool);
+  manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
+                                       result_pool);
 
-  SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, pool));
+  SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, result_pool));
 
   /* There CONTENT must have a certain minimal size and there no
    * unterminated lines at the end of the file.  Both guarantees also
@@ -859,7 +863,7 @@ same_shard(svn_fs_t *fs,
            svn_revnum_t r1,
            svn_revnum_t r2)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
@@ -876,7 +880,7 @@ static svn_error_t *
 parse_packed_revprops(svn_fs_t *fs,
                       packed_revprops_t *revprops,
                       svn_boolean_t read_all,
-                      apr_pool_t *pool,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
@@ -888,7 +892,7 @@ parse_packed_revprops(svn_fs_t *fs,
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
-  svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(result_pool);
   SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
@@ -926,7 +930,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
   offset = header_end - uncompressed->data + 2;
 
-  revprops->packed_revprops = svn_stringbuf_create_empty(pool);
+  revprops->packed_revprops = svn_stringbuf_create_empty(result_pool);
   revprops->packed_revprops->data = uncompressed->data + offset;
   revprops->packed_revprops->len = (apr_size_t)(uncompressed->len - offset);
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
@@ -936,8 +940,10 @@ parse_packed_revprops(svn_fs_t *fs,
   if (read_all)
     {
       /* Init / construct REVPROPS members. */
-      revprops->sizes = apr_array_make(pool, (int)count, sizeof(offset));
-      revprops->offsets = apr_array_make(pool, (int)count, sizeof(offset));
+      revprops->sizes = apr_array_make(result_pool, (int)count, 
+                                       sizeof(offset));
+      revprops->offsets = apr_array_make(result_pool, (int)count,
+                                         sizeof(offset));
     }
 
   /* Now parse, revision by revision, the size and content of each
@@ -964,7 +970,7 @@ parse_packed_revprops(svn_fs_t *fs,
         {
           SVN_ERR(parse_revprop(&revprops->properties, fs, revision,
                                 revprops->generation, &serialized,
-                                pool, iterpool));
+                                result_pool, iterpool));
           revprops->serialized_size = serialized.len;
 
           /* If we only wanted the revprops for REVISION then we are done. */
@@ -1078,7 +1084,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_boolean_t bypass_cache,
                                 apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_int64_t generation = 0;
 
   /* not found, yet */
@@ -1091,7 +1097,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   if (!bypass_cache && has_revprop_cache(fs, pool))
     {
       svn_boolean_t is_cached;
-      pair_cache_key_t key = { 0 };
+      svn_fs_x__pair_cache_key_t key = { 0 };
 
       SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
@@ -1176,7 +1182,7 @@ write_non_packed_revprop(const char **final_path,
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
  * The latter may be NULL.
  *
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 switch_to_new_revprop(svn_fs_t *fs,
@@ -1185,26 +1191,26 @@ switch_to_new_revprop(svn_fs_t *fs,
                       const char *perms_reference,
                       apr_array_header_t *files_to_delete,
                       svn_boolean_t bump_generation,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
   apr_int64_t generation;
 
   /* Now, we may actually be replacing revprops. Make sure that all other
      threads and processes will know about this. */
   if (bump_generation)
-    SVN_ERR(begin_revprop_change(&generation, fs, pool));
+    SVN_ERR(begin_revprop_change(&generation, fs, scratch_pool));
 
   SVN_ERR(svn_fs_x__move_into_place(tmp_path, final_path, perms_reference,
-                                    pool));
+                                    scratch_pool));
 
   /* Indicate that the update (if relevant) has been completed. */
   if (bump_generation)
-    SVN_ERR(end_revprop_change(fs, generation, pool));
+    SVN_ERR(end_revprop_change(fs, generation, scratch_pool));
 
   /* Clean up temporary files, if necessary. */
   if (files_to_delete)
     {
-      apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
       for (i = 0; i < files_to_delete->nelts; ++i)
@@ -1229,16 +1235,16 @@ serialize_revprops_header(svn_stream_t *stream,
                           apr_array_header_t *sizes,
                           int start,
                           int end,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
   SVN_ERR_ASSERT(start < end);
 
   /* start revision and entry count */
-  SVN_ERR(svn_stream_printf(stream, pool, "%ld\n", start_revision));
-  SVN_ERR(svn_stream_printf(stream, pool, "%d\n", end - start));
+  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%ld\n", start_revision));
+  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%d\n", end - start));
 
   /* the sizes array */
   for (i = start; i < end; ++i)
@@ -1268,7 +1274,7 @@ serialize_revprops_header(svn_stream_t *stream,
  * taken in that case but only a subset of the old data will be copied.
  *
  * NEW_TOTAL_SIZE is a hint for pre-allocating buffers of appropriate size.
- * POOL is used for temporary allocations.
+ * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
 repack_revprops(svn_fs_t *fs,
@@ -1279,22 +1285,23 @@ repack_revprops(svn_fs_t *fs,
                 svn_stringbuf_t *new_serialized,
                 apr_off_t new_total_size,
                 svn_stream_t *file_stream,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   int i;
 
   /* create data empty buffers and the stream object */
   svn_stringbuf_t *uncompressed
-    = svn_stringbuf_create_ensure((apr_size_t)new_total_size, pool);
+    = svn_stringbuf_create_ensure((apr_size_t)new_total_size, scratch_pool);
   svn_stringbuf_t *compressed
-    = svn_stringbuf_create_empty(pool);
-  stream = svn_stream_from_stringbuf(uncompressed, pool);
+    = svn_stringbuf_create_empty(scratch_pool);
+  stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
 
   /* write the header*/
   SVN_ERR(serialize_revprops_header(stream, revprops->start_revision + start,
-                                    revprops->sizes, start, end, pool));
+                                    revprops->sizes, start, end,
+                                    scratch_pool));
 
   /* append the serialized revprops */
   for (i = start; i < end; ++i)
@@ -1409,7 +1416,7 @@ write_packed_revprop(const char **final_path,
                      apr_hash_t *proplist,
                      apr_pool_t *pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   packed_revprops_t *revprops;
   apr_int64_t generation = 0;
   svn_stream_t *stream;
@@ -1548,12 +1555,12 @@ write_packed_revprop(const char **final_path,
 }
 
 /* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
+   PROPLIST.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__set_revision_proplist(svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 apr_hash_t *proplist,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_packed;
   svn_boolean_t bump_generation = FALSE;
@@ -1562,7 +1569,7 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
 
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_x__is_packed_revprop(fs, rev);
@@ -1577,55 +1584,59 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   else
     {
       svn_node_kind_t kind;
-      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, rev, pool),
-                                &kind, pool));
+      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, rev,
+                                                        scratch_pool),
+                                &kind, scratch_pool));
       bump_generation = kind != svn_node_none;
     }
 
   /* Serialize the new revprop data */
   if (is_packed)
     SVN_ERR(write_packed_revprop(&final_path, &tmp_path, &files_to_delete,
-                                 fs, rev, proplist, pool));
+                                 fs, rev, proplist, scratch_pool));
   else
     SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
-                                     fs, rev, proplist, pool));
+                                     fs, rev, proplist, scratch_pool));
 
   /* We use the rev file of this revision as the perms reference,
    * because when setting revprops for the first time, the revprop
    * file won't exist and therefore can't serve as its own reference.
    * (Whereas the rev file should already exist at this point.)
    */
-  perms_reference = svn_fs_x__path_rev_absolute(fs, rev, pool);
+  perms_reference = svn_fs_x__path_rev_absolute(fs, rev, scratch_pool);
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
-                                files_to_delete, bump_generation, pool));
+                                files_to_delete, bump_generation,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 svn_boolean_t
 svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
                                    svn_fs_t *fs,
                                    svn_revnum_t revision,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision, pool);
-  const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST, pool);
+  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision,
+                                                          scratch_pool);
+  const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST,
+                                              scratch_pool);
 
   svn_error_t *err = svn_fs_x__try_stringbuf_from_file(&content,
                                                        missing,
                                                        manifest_path,
                                                        FALSE,
-                                                       pool);
+                                                       scratch_pool);
 
   /* if the manifest cannot be read, consider the pack files inaccessible
    * even if the file itself exists. */
@@ -1657,8 +1668,8 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
           /* the respective pack file must exist (and be a file) */
           svn_node_kind_t kind;
           err = svn_io_check_path(svn_dirent_join(folder, content->data,
-                                                  pool),
-                                  &kind, pool);
+                                                  scratch_pool),
+                                  &kind, scratch_pool);
           if (err)
             {
               svn_error_clear(err);

@@ -23,6 +23,10 @@
 ### Run this to produce everything needed for configuration. ###
 
 
+# Some shells can produce output when running 'cd' which interferes
+# with the construct 'abs=`cd dir && pwd`'.
+(unset CDPATH) >/dev/null 2>&1 && unset CDPATH
+
 # Run tests to ensure that our build requirements are met
 RELEASE_MODE=""
 RELEASE_ARGS=""

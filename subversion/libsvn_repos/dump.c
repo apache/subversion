@@ -38,6 +38,7 @@
 #include "svn_props.h"
 #include "svn_sorts.h"
 
+#include "private/svn_repos_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sorts_private.h"
@@ -356,6 +357,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
    with message WARNING_FMT formatted with the remaining variable arguments.
    Send it by calling NOTIFY_FUNC (if not null) with NOTIFY_BATON.
  */
+__attribute__((format(printf, 5, 6)))
 static void
 notify_warning(apr_pool_t *scratch_pool,
                svn_repos_notify_func_t notify_func,
@@ -379,6 +381,126 @@ notify_warning(apr_pool_t *scratch_pool,
   notify_func(notify_baton, notify, scratch_pool);
 }
 
+
+/*----------------------------------------------------------------------*/
+
+/* Write to STREAM the header in HEADERS named KEY, if present.
+ */
+static svn_error_t *
+write_header(svn_stream_t *stream,
+             apr_hash_t *headers,
+             const char *key,
+             apr_pool_t *scratch_pool)
+{
+  const char *val = svn_hash_gets(headers, key);
+
+  if (val)
+    {
+      SVN_ERR(svn_stream_printf(stream, scratch_pool,
+                                "%s: %s\n", key, val));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Write headers, in arbitrary order.
+ * ### TODO: use a stable order
+ * ### Modifies HEADERS.
+ */
+static svn_error_t *
+write_revision_headers(svn_stream_t *stream,
+                       apr_hash_t *headers,
+                       apr_pool_t *scratch_pool)
+{
+  const char **h;
+  apr_hash_index_t *hi;
+
+  static const char *revision_headers_order[] =
+  {
+    SVN_REPOS_DUMPFILE_REVISION_NUMBER,  /* must be first */
+    NULL
+  };
+
+  /* Write some headers in a given order */
+  for (h = revision_headers_order; *h; h++)
+    {
+      SVN_ERR(write_header(stream, headers, *h, scratch_pool));
+      svn_hash_sets(headers, *h, NULL);
+    }
+
+  /* Write any and all remaining headers except Content-length.
+   * ### TODO: use a stable order
+   */
+  for (hi = apr_hash_first(scratch_pool, headers); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_hash_this_key(hi);
+
+      if (strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH) != 0)
+        SVN_ERR(write_header(stream, headers, key, scratch_pool));
+    }
+
+  /* Content-length must be last */
+  SVN_ERR(write_header(stream, headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                       scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos__dump_revision_record(svn_stream_t *dump_stream,
+                                svn_revnum_t revision,
+                                apr_hash_t *extra_headers,
+                                apr_hash_t *revprops,
+                                svn_boolean_t props_section_always,
+                                apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *propstring = NULL;
+  apr_hash_t *headers;
+
+  if (extra_headers)
+    headers = apr_hash_copy(scratch_pool, extra_headers);
+  else
+    headers = apr_hash_make(scratch_pool);
+
+  /* ### someday write a revision-content-checksum */
+
+  svn_hash_sets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                apr_psprintf(scratch_pool, "%ld", revision));
+
+  if (apr_hash_count(revprops) || props_section_always)
+    {
+      svn_stream_t *propstream;
+
+      propstring = svn_stringbuf_create_empty(scratch_pool);
+      propstream = svn_stream_from_stringbuf(propstring, scratch_pool);
+      SVN_ERR(svn_hash_write2(revprops, propstream, "PROPS-END", scratch_pool));
+      SVN_ERR(svn_stream_close(propstream));
+
+      svn_hash_sets(headers, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
+                    apr_psprintf(scratch_pool,
+                                 "%" APR_SIZE_T_FMT, propstring->len));
+    }
+
+  /* Write out a regular Content-length header for the benefit of
+     non-Subversion RFC-822 parsers. */
+  svn_hash_sets(headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                apr_psprintf(scratch_pool,
+                             "%" APR_SIZE_T_FMT, propstring->len));
+  SVN_ERR(write_revision_headers(dump_stream, headers, scratch_pool));
+
+  /* End of headers */
+  SVN_ERR(svn_stream_puts(dump_stream, "\n"));
+
+  /* Property data. */
+  if (propstring)
+    {
+      SVN_ERR(svn_stream_write(dump_stream, propstring->data, &propstring->len));
+    }
+
+  /* put an end to revision */
+  SVN_ERR(svn_stream_puts(dump_stream, "\n"));
+
+  return SVN_NO_ERROR;
+}
 
 /*----------------------------------------------------------------------*/
 
@@ -425,10 +547,6 @@ struct edit_baton
   /* If not NULL, set to true if any mergeinfo was dumped which contains
      revisions older than OLDEST_DUMPED_REV. */
   svn_boolean_t *found_old_mergeinfo;
-
-  /* reusable buffer for writing file contents */
-  char buffer[SVN__STREAM_CHUNK_SIZE];
-  apr_size_t bufsize;
 
   /* Structure allows us to verify the paths currently being dumped.
      If NULL, validity checks are being skipped. */
@@ -693,7 +811,6 @@ extract_mergeinfo_paths(void *baton, const void *key, apr_ssize_t klen,
 struct filter_mergeinfo_paths_baton
 {
   apr_hash_t *paths;
-  svn_membuf_t buffer;
 };
 
 /* Compare two sets of denormalized paths from mergeinfo entries,
@@ -800,7 +917,6 @@ check_mergeinfo_normalization(const char *path,
       normalized_paths = extract_baton.result;
 
       filter_baton.paths = added_paths;
-      filter_baton.buffer = extract_baton.buffer;
       SVN_ERR(svn_iter_apr_hash(NULL, oldinfo,
                                 filter_mergeinfo_paths,
                                 &filter_baton, pool));
@@ -826,7 +942,7 @@ check_mergeinfo_normalization(const char *path,
 
    Write out a node record for PATH of type KIND under EB->FS_ROOT.
    ACTION describes what is happening to the node (see enum svn_node_action).
-   Write record to writable EB->STREAM, using EB->BUFFER to write in chunks.
+   Write record to writable EB->STREAM.
 
    If the node was itself copied, IS_COPY is TRUE and the
    path/revision of the copy source are in CMP_PATH/CMP_REV.  If
@@ -977,6 +1093,8 @@ dump_node(struct edit_baton *eb,
 
           /* we can leave this routine quietly now, don't need to dump
              any content;  that was already done in the second record. */
+          /* ### This fall-through results in writing an extra two blank
+             lines. This has been the case since r842476, pre-1.0. */
           must_dump_text = FALSE;
           must_dump_props = FALSE;
         }
@@ -1651,7 +1769,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
   eb->oldest_dumped_rev = oldest_dumped_rev;
-  eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
   eb->fs = fs;
@@ -1712,15 +1829,10 @@ write_revision_record(svn_stream_t *stream,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
-  apr_size_t len;
   apr_hash_t *props;
-  svn_stringbuf_t *encoded_prophash;
   apr_time_t timetemp;
   svn_string_t *datevalue;
-  svn_stream_t *propstream;
 
-  /* Read the revision props even if we're aren't going to dump
-     them for verification purposes */
   SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
 
   /* Run revision date properties through the time conversion to
@@ -1735,33 +1847,10 @@ write_revision_record(svn_stream_t *stream,
       svn_hash_sets(props, SVN_PROP_REVISION_DATE, datevalue);
     }
 
-  encoded_prophash = svn_stringbuf_create_ensure(0, pool);
-  propstream = svn_stream_from_stringbuf(encoded_prophash, pool);
-  SVN_ERR(svn_hash_write2(props, propstream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(propstream));
-
-  /* ### someday write a revision-content-checksum */
-
-  SVN_ERR(svn_stream_printf(stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", rev));
-  SVN_ERR(svn_stream_printf(stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n",
-                            encoded_prophash->len));
-
-  /* Write out a regular Content-length header for the benefit of
-     non-Subversion RFC-822 parsers. */
-  SVN_ERR(svn_stream_printf(stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n",
-                            encoded_prophash->len));
-
-  len = encoded_prophash->len;
-  SVN_ERR(svn_stream_write(stream, encoded_prophash->data, &len));
-
-  len = 1;
-  return svn_stream_write(stream, "\n", &len);
+  SVN_ERR(svn_repos__dump_revision_record(stream, rev, NULL, props,
+                                          TRUE /*props_section_always*/,
+                                          pool));
+  return SVN_NO_ERROR;
 }
 
 

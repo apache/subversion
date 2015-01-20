@@ -43,6 +43,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_version.h"
 
+#include "private/svn_repos_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_sorts_private.h"
@@ -240,7 +241,6 @@ struct revision_baton_t
 
   /* Does this revision have node or prop changes? */
   svn_boolean_t has_nodes;
-  svn_boolean_t has_props;
 
   /* Did we drop any nodes? */
   svn_boolean_t had_dropped_nodes;
@@ -253,7 +253,7 @@ struct revision_baton_t
   svn_revnum_t rev_actual;
 
   /* Pointers to dumpfile data. */
-  svn_stringbuf_t *header;
+  apr_hash_t *original_headers;
   apr_hash_t *props;
 };
 
@@ -310,6 +310,24 @@ magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
 }
 
 
+/* Return a deep copy of a (char * -> char *) hash. */
+static apr_hash_t *
+headers_dup(apr_hash_t *headers,
+            apr_pool_t *pool)
+{
+  apr_hash_t *new_hash = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_hash_this_key(hi);
+      const char *val = apr_hash_this_val(hi);
+
+      svn_hash_sets(new_hash, apr_pstrdup(pool, key), apr_pstrdup(pool, val));
+    }
+  return new_hash;
+}
+
 /* New revision: set up revision_baton, decide if we skip it. */
 static svn_error_t *
 new_revision_record(void **revision_baton,
@@ -318,21 +336,16 @@ new_revision_record(void **revision_baton,
                     apr_pool_t *pool)
 {
   struct revision_baton_t *rb;
-  apr_hash_index_t *hi;
   const char *rev_orig;
-  svn_stream_t *header_stream;
 
   *revision_baton = apr_palloc(pool, sizeof(struct revision_baton_t));
   rb = *revision_baton;
   rb->pb = parse_baton;
   rb->has_nodes = FALSE;
-  rb->has_props = FALSE;
   rb->had_dropped_nodes = FALSE;
   rb->writing_begun = FALSE;
-  rb->header = svn_stringbuf_create_empty(pool);
   rb->props = apr_hash_make(pool);
-
-  header_stream = svn_stream_from_stringbuf(rb->header, pool);
+  rb->original_headers = headers_dup(headers, pool);
 
   rev_orig = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
   rb->rev_orig = SVN_STR_TO_REV(rev_orig);
@@ -341,28 +354,6 @@ new_revision_record(void **revision_baton,
     rb->rev_actual = rb->rev_orig - rb->pb->rev_drop_count;
   else
     rb->rev_actual = rb->rev_orig;
-
-  SVN_ERR(svn_stream_printf(header_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %ld\n",
-                            rb->rev_actual));
-
-  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
-    {
-      const char *key = apr_hash_this_key(hi);
-      const char *val = apr_hash_this_val(hi);
-
-      if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
-          || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
-          || (!strcmp(key, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
-        continue;
-
-      /* passthru: put header into header stringbuf. */
-
-      SVN_ERR(svn_stream_printf(header_stream, pool, "%s: %s\n",
-                                key, val));
-    }
-
-  SVN_ERR(svn_stream_close(header_stream));
 
   return SVN_NO_ERROR;
 }
@@ -375,12 +366,8 @@ new_revision_record(void **revision_baton,
 static svn_error_t *
 output_revision(struct revision_baton_t *rb)
 {
-  int bytes_used;
-  char buf[SVN_KEYLINE_MAXLEN];
-  apr_hash_index_t *hi;
   svn_boolean_t write_out_rev = FALSE;
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
-  svn_stringbuf_t *props = svn_stringbuf_create_empty(hash_pool);
   apr_pool_t *subpool = svn_pool_create(hash_pool);
 
   rb->writing_begun = TRUE;
@@ -398,7 +385,6 @@ output_revision(struct revision_baton_t *rb)
       && (! rb->pb->drop_all_empty_revs))
     {
       apr_hash_t *old_props = rb->props;
-      rb->has_props = TRUE;
       rb->props = apr_hash_make(hash_pool);
       svn_hash_sets(rb->props, SVN_PROP_REVISION_DATE,
                     svn_hash_gets(old_props, SVN_PROP_REVISION_DATE));
@@ -406,39 +392,6 @@ output_revision(struct revision_baton_t *rb)
                     svn_string_create(_("This is an empty revision for "
                                         "padding."), hash_pool));
     }
-
-  /* Now, "rasterize" the props to a string, and append the property
-     information to the header string.  */
-  if (rb->has_props)
-    {
-      for (hi = apr_hash_first(subpool, rb->props);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *pname = apr_hash_this_key(hi);
-          const svn_string_t *pval = apr_hash_this_val(hi);
-
-          write_prop_to_stringbuf(props, pname, pval);
-        }
-      svn_stringbuf_appendcstr(props, "PROPS-END\n");
-      svn_stringbuf_appendcstr(rb->header,
-                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
-                                props->len);
-      svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
-      svn_stringbuf_appendbyte(rb->header, '\n');
-    }
-
-  svn_stringbuf_appendcstr(rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT, props->len);
-  svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
-  svn_stringbuf_appendbyte(rb->header, '\n');
-
-  /* put an end to headers */
-  svn_stringbuf_appendbyte(rb->header, '\n');
-
-  /* put an end to revision */
-  svn_stringbuf_appendbyte(props, '\n');
 
   /* write out the revision */
   /* Revision is written out in the following cases:
@@ -459,10 +412,12 @@ output_revision(struct revision_baton_t *rb)
   if (write_out_rev)
     {
       /* This revision is a keeper. */
-      SVN_ERR(svn_stream_write(rb->pb->out_stream,
-                               rb->header->data, &(rb->header->len)));
-      SVN_ERR(svn_stream_write(rb->pb->out_stream,
-                               props->data, &(props->len)));
+      SVN_ERR(svn_repos__dump_revision_record(rb->pb->out_stream,
+                                              rb->rev_actual,
+                                              rb->original_headers,
+                                              rb->props,
+                                              FALSE /*props_section_always*/,
+                                              subpool));
 
       /* Stash the oldest original rev not dropped. */
       if (rb->rev_orig > 0
@@ -791,10 +746,16 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
      start of all history.  E.g. if we dump -r100:400 then dumpfilter the
      result with --skip-missing-merge-sources, any mergeinfo with revision
      100 implies a change of -r99:100, but r99 is part of the history we
-     want filtered.  This is analogous to how r1 is always meaningless as
-     a merge source revision.
+     want filtered.
 
      If the oldest rev is r0 then there is nothing to filter. */
+
+  /* ### This seems to cater only for use cases where the revisions being
+         processed are not following on from revisions that will already
+         exist in the destination repository. If the revisions being
+         processed do follow on, then we might want to keep the mergeinfo
+         that refers to those older revisions. */
+
   if (rb->pb->skip_missing_merge_sources && rb->pb->oldest_original_rev > 0)
     SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
       &mergeinfo, mergeinfo,
@@ -852,7 +813,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       svn_hash_sets(final_mergeinfo, merge_source, rangelist);
     }
 
-  SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
+  SVN_ERR(svn_mergeinfo__canonicalize_ranges(final_mergeinfo, subpool));
   SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
@@ -868,7 +829,6 @@ set_revision_property(void *revision_baton,
   struct revision_baton_t *rb = revision_baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(rb->props);
 
-  rb->has_props = TRUE;
   svn_hash_sets(rb->props,
                 apr_pstrdup(hash_pool, name),
                 svn_string_dup(value, hash_pool));
@@ -887,6 +847,9 @@ set_node_property(void *node_baton,
   if (nb->do_skip)
     return SVN_NO_ERROR;
 
+  /* Try to detect if a delta-mode property occurs unexpectedly. HAS_PROPS
+     can be false here only if the parser didn't call remove_node_props(),
+     so this may indicate a bug rather than bad data. */
   if (! (nb->has_props || nb->has_prop_delta))
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              _("Delta property block detected, but deltas "
@@ -932,14 +895,17 @@ delete_node_property(void *node_baton, const char *name)
 }
 
 
+/* The parser calls this method if the node record has a non-delta
+ * property content section, before any calls to set_node_property().
+ * If the node record uses property deltas, this is not called.
+ */
 static svn_error_t *
 remove_node_props(void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
 
   /* In this case, not actually indicating that the node *has* props,
-     rather that we know about all the props that it has, since it now
-     has none. */
+     rather that it has a property content section. */
   nb->has_props = TRUE;
 
   return SVN_NO_ERROR;

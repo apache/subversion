@@ -6599,6 +6599,103 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_txn_pool_lifetime(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  /* Technically, the FS API makes no assumption on the lifetime of logically
+   * dependent objects.  In particular, a txn root object may get destroyed
+   * after the FS object that it has been built upon.  Actual data access is
+   * implied to be invalid without a valid svn_fs_t.
+   *
+   * This test verifies that at least the destruction order of those two
+   * objects is arbitrary.
+   */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  /* We will allocate FS in FS_POOL.  Using a separate allocator makes
+   * sure that we actually free the memory when destroying the pool.
+   */
+  apr_allocator_t *fs_allocator = svn_pool_create_allocator(FALSE);
+  apr_pool_t *fs_pool = apr_allocator_owner_get(fs_allocator);
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-pool-lifetime",
+                              opts, fs_pool));
+
+  /* Create a TXN_ROOT referencing FS. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Destroy FS.  Depending on the actual allocator implementation,
+   * these memory pages becomes inaccessible. */
+  svn_pool_destroy(fs_pool);
+
+  /* Unclean implementations will try to access FS and may segfault here. */
+  svn_fs_close_root(txn_root);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_modify_txn_being_written(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  /* FSFS has a limitation (and check) that only one file can be
+   * modified in TXN at time: see r861812 and svn_fs_apply_text() docstring.
+   * This is regression test for this behavior. */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  const char *txn_name;
+  svn_fs_root_t *txn_root;
+  svn_stream_t *foo_contents;
+  svn_stream_t *bar_contents;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-modify-txn-being-written",
+                              opts, pool));
+
+  /* Create a TXN_ROOT referencing FS. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Make file /foo and open for writing.*/
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+  SVN_ERR(svn_fs_apply_text(&foo_contents, txn_root, "/foo", NULL, pool));
+
+  /* Attempt to modify another file '/bar' -- FSFS doesn't allow this. */
+  SVN_ERR(svn_fs_make_file(txn_root, "/bar", pool));
+  SVN_TEST_ASSERT_ERROR(
+      svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
+      SVN_ERR_FS_REP_BEING_WRITTEN);
+
+  /* *Reopen TXN. */
+  SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Check that file '/bar' still cannot be modified */
+  SVN_TEST_ASSERT_ERROR(
+      svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
+      SVN_ERR_FS_REP_BEING_WRITTEN);
+
+  /* Close file '/foo'. */
+  SVN_ERR(svn_stream_close(foo_contents));
+
+  /* Now file '/bar' can be modified. */
+  SVN_ERR(svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6724,6 +6821,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "get merging txns with newer revisions"),
     SVN_TEST_OPTS_PASS(test_fsfs_config_opts,
                        "test creating FSFS repository with different opts"),
+    SVN_TEST_OPTS_PASS(test_txn_pool_lifetime,
+                       "test pool lifetime dependencies with txn roots"),
+    SVN_TEST_OPTS_PASS(test_modify_txn_being_written,
+                       "test modify txn being written in FSFS"),
     SVN_TEST_NULL
   };
 
