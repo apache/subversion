@@ -47,10 +47,10 @@ typedef struct string_table_builder_t string_table_builder_t;
 /* the string table */
 typedef struct string_table_t string_table_t;
 
-/* Returns a new string table builder object, allocated in POOL.
+/* Returns a new string table builder object, allocated in RESULT_POOL.
  */
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool);
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool);
 
 /* Add an arbitrary NUL-terminated C-string STRING of the given length LEN
  * to BUILDER.  Return the index of that string in the future string table.
@@ -86,12 +86,12 @@ svn_fs_x__string_table_get(const string_table_t *table,
                            apr_pool_t *pool);
 
 /* Write a serialized representation of the string table TABLE to STREAM.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool);
+                             apr_pool_t *scratch_pool);
 
 /* Read the serialized string table representation from STREAM and return
  * the resulting runtime representation in *TABLE_P.  Allocate it in

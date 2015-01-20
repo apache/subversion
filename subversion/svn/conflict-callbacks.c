@@ -695,6 +695,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                 b->path_prefix, desc->local_abspath,
                                 scratch_pool)));
 
+  /* ### TODO This whole feature availability check is grossly outdated.
+     DIFF_ALLOWED needs either to be redefined or to go away.
+   */
+
   /* Diffing can happen between base and merged, to show conflict
      markers to the user (this is the typical 3-way merge
      scenario), or if no base is available, we can show a diff
@@ -714,9 +718,15 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       *next_option++ = "p";
       if (diff_allowed)
         {
-          *next_option++ = "df";
+          /* We need one more path for this feature. */
+          if (desc->my_abspath)
+            *next_option++ = "df";
+
           *next_option++ = "e";
-          *next_option++ = "m";
+
+          /* We need one more path for this feature. */
+          if (desc->my_abspath)
+            *next_option++ = "m";
 
           if (knows_something)
             *next_option++ = "r";
@@ -781,7 +791,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "df") == 0)
         {
-          if (! diff_allowed)
+          /* Re-check preconditions. */
+          if (! diff_allowed || desc->my_abspath)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                              _("Invalid option; there's no "
@@ -804,6 +815,15 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0)
         {
           svn_error_t *err;
+
+          /* Re-check preconditions. */
+          if (! desc->my_abspath)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                             _("Invalid option; there's no "
+                                "base path to merge.\n\n")));
+              continue;
+            }
 
           err = svn_cl__merge_file_externally(desc->base_abspath,
                                               desc->their_abspath,
