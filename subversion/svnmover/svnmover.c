@@ -1721,7 +1721,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   };
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
-    {"quiet", '-q', 0, ""},
+    {"quiet", 'q', 0, ""},
     {"branch", 'b', 1, ""},
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
