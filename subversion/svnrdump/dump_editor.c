@@ -30,6 +30,7 @@
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_editor.h"
@@ -229,9 +230,11 @@ make_file_baton(const char *path,
   return new_fb;
 }
 
-/* Return in *HEADER and *CONTENT the headers and content for PROPS. */
+/* Append to HEADERS the required headers, and set *CONTENT to the property
+ * content section, to represent the property delta of PROPS/DELETED_PROPS.
+ */
 static svn_error_t *
-get_props_content(svn_stringbuf_t **header,
+get_props_content(apr_array_header_t *headers,
                   svn_stringbuf_t **content,
                   apr_hash_t *props,
                   apr_hash_t *deleted_props,
@@ -240,10 +243,8 @@ get_props_content(svn_stringbuf_t **header,
 {
   svn_stream_t *content_stream;
   apr_hash_t *normal_props;
-  const char *buf;
 
   *content = svn_stringbuf_create_empty(result_pool);
-  *header = svn_stringbuf_create_empty(result_pool);
 
   content_stream = svn_stream_from_stringbuf(*content, scratch_pool);
 
@@ -254,13 +255,13 @@ get_props_content(svn_stringbuf_t **header,
   SVN_ERR(svn_stream_close(content_stream));
 
   /* Prop-delta: true */
-  *header = svn_stringbuf_createf(result_pool, SVN_REPOS_DUMPFILE_PROP_DELTA
-                                  ": true\n");
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_PROP_DELTA, "true");
 
   /* Prop-content-length: 193 */
-  buf = apr_psprintf(scratch_pool, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                     ": %" APR_SIZE_T_FMT "\n", (*content)->len);
-  svn_stringbuf_appendcstr(*header, buf);
+  svn_repos__dumpfile_header_pushf(
+    headers, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
+    "%" APR_SIZE_T_FMT, (*content)->len);
 
   return SVN_NO_ERROR;
 }
@@ -279,7 +280,7 @@ do_dump_newlines(struct dump_edit_baton *eb,
 }
 
 /*
- * Write out a node record for PATH of type KIND under EB->FS_ROOT.
+ * Write out a partial node record for PATH of type KIND.
  * ACTION describes what is happening to the node (see enum
  * svn_node_action). Write record to writable EB->STREAM.
  *
@@ -287,6 +288,9 @@ do_dump_newlines(struct dump_edit_baton *eb,
  * path/revision of the copy source are in COPYFROM_PATH/COPYFROM_REV.
  * If IS_COPY is FALSE, yet COPYFROM_PATH/COPYFROM_REV are valid, this
  * node is part of a copied subtree.
+
+ * Note: only when ACTION=delete, write a complete dumpfile record
+ * terminated with blank lines.
  */
 static svn_error_t *
 dump_node(struct dump_edit_baton *eb,
@@ -300,6 +304,7 @@ dump_node(struct dump_edit_baton *eb,
           apr_pool_t *pool)
 {
   const char *node_relpath = repos_relpath;
+  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
 
   assert(svn_relpath_is_canonical(repos_relpath));
   assert(!copyfrom_path || svn_relpath_is_canonical(copyfrom_path));
@@ -311,17 +316,16 @@ dump_node(struct dump_edit_baton *eb,
                                     node_relpath, pool);
 
   /* Node-path: ... */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
-                            node_relpath));
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_PATH, node_relpath);
 
   /* Node-kind: "file" | "dir" */
   if (fb)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "file");
   else if (db)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "dir");
 
 
   /* Write the appropriate Node-action header */
@@ -333,8 +337,8 @@ dump_node(struct dump_edit_baton *eb,
          do here but print node action information.
 
          Node-action: change.  */
-      SVN_ERR(svn_stream_puts(eb->stream,
-                              SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "change");
       break;
 
     case svn_node_action_replace:
@@ -344,20 +348,21 @@ dump_node(struct dump_edit_baton *eb,
              copyfrom_rev are present: delete the original, and then re-add
              it */
 
-          SVN_ERR(svn_stream_puts(eb->stream,
-                                  SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": delete\n\n"));
+          svn_repos__dumpfile_header_push(
+            headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+
+          SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
 
           /* Recurse: Print an additional add-with-history record. */
           SVN_ERR(dump_node(eb, repos_relpath, db, fb, svn_node_action_add,
                             is_copy, copyfrom_path, copyfrom_rev, pool));
+          return SVN_NO_ERROR;
         }
       else
         {
           /* Node-action: replace */
-          SVN_ERR(svn_stream_puts(eb->stream,
-                                  SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": replace\n"));
+          svn_repos__dumpfile_header_push(
+            headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "replace");
 
           /* Wait for a change_*_prop to be called before dumping
              anything */
@@ -370,30 +375,29 @@ dump_node(struct dump_edit_baton *eb,
 
     case svn_node_action_delete:
       /* Node-action: delete */
-      SVN_ERR(svn_stream_puts(eb->stream,
-                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
 
       /* We can leave this routine quietly now. Nothing more to do-
-         print a couple of newlines because we're not dumping props or
-         text. */
-      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
+         print the headers terminated by one blank line, and an extra
+         blank line because we're not dumping props or text. */
+      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
+      SVN_ERR(svn_stream_puts(eb->stream, "\n"));
 
-      break;
+      return SVN_NO_ERROR;
 
     case svn_node_action_add:
       /* Node-action: add */
-      SVN_ERR(svn_stream_puts(eb->stream,
-                              SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "add");
 
       if (is_copy)
         {
           /* Node-copyfrom-rev / Node-copyfrom-path */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
-                                    ": %ld\n"
-                                    SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
-                                    ": %s\n",
-                                    copyfrom_rev, copyfrom_path));
+          svn_repos__dumpfile_header_pushf(
+            headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV, "%ld", copyfrom_rev);
+          svn_repos__dumpfile_header_push(
+            headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH, copyfrom_path);
 
           /* Ugly hack: If a directory was copied from a previous
              revision, nothing like close_file() will be called to write two
@@ -431,6 +435,11 @@ dump_node(struct dump_edit_baton *eb,
 
       break;
     }
+
+  /* Write the headers so far. We don't necessarily have all the headers
+     yet -- there may be property-related and content length headers to
+     come -- so don't write a terminating blank line. */
+  SVN_ERR(svn_repos__dump_headers(eb->stream, headers, FALSE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -439,34 +448,30 @@ dump_mkdir(struct dump_edit_baton *eb,
            const char *repos_relpath,
            apr_pool_t *pool)
 {
-  svn_stringbuf_t *prop_header, *prop_content;
+  svn_stringbuf_t *prop_content;
   apr_size_t len;
-  const char *buf;
+  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
 
   /* Node-path: ... */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
-                            repos_relpath));
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_PATH, repos_relpath);
 
   /* Node-kind: dir */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_KIND, "dir");
 
   /* Node-action: add */
-  SVN_ERR(svn_stream_puts(eb->stream,
-                          SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "add");
 
   /* Dump the (empty) property block. */
-  SVN_ERR(get_props_content(&prop_header, &prop_content,
+  SVN_ERR(get_props_content(headers, &prop_content,
                             apr_hash_make(pool), apr_hash_make(pool),
                             pool, pool));
-  len = prop_header->len;
-  SVN_ERR(svn_stream_write(eb->stream, prop_header->data, &len));
   len = prop_content->len;
-  buf = apr_psprintf(pool, SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                     ": %" APR_SIZE_T_FMT "\n", len);
-  SVN_ERR(svn_stream_puts(eb->stream, buf));
-  SVN_ERR(svn_stream_puts(eb->stream, "\n"));
+  svn_repos__dumpfile_header_pushf(headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                                   "%" SVN_FILESIZE_T_FMT, len);
+  SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
   SVN_ERR(svn_stream_write(eb->stream, prop_content->data, &len));
 
   /* Newlines to tie it all off. */
@@ -518,19 +523,21 @@ dump_pending(struct dump_edit_baton *eb,
 
   if (dump_props)
     {
-      svn_stringbuf_t *header, *content;
+      apr_array_header_t *headers
+        = svn_repos__dumpfile_headers_create(scratch_pool);
+      svn_stringbuf_t *content;
       apr_size_t len;
 
-      SVN_ERR(get_props_content(&header, &content, props, deleted_props,
+      SVN_ERR(get_props_content(headers, &content, props, deleted_props,
                                 scratch_pool, scratch_pool));
-      len = header->len;
-      SVN_ERR(svn_stream_write(eb->stream, header->data, &len));
 
       /* Content-length: 14 */
-      SVN_ERR(svn_stream_printf(eb->stream, scratch_pool,
-                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n\n",
-                                content->len));
+      svn_repos__dumpfile_header_pushf(
+        headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+        "%" APR_SIZE_T_FMT, content->len);
+
+      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE,
+                                      scratch_pool));
 
       len = content->len;
       SVN_ERR(svn_stream_write(eb->stream, content->data, &len));
@@ -953,6 +960,7 @@ close_file(void *file_baton,
   struct dump_edit_baton *eb = fb->eb;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
   svn_stringbuf_t *propstring;
+  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
 
   LDR_DBG(("close_file %p\n", file_baton));
 
@@ -968,13 +976,9 @@ close_file(void *file_baton,
      the text headers too (if present). */
   if (fb->dump_props)
     {
-      svn_stringbuf_t *header;
-      apr_size_t len;
-
-      SVN_ERR(get_props_content(&header, &propstring, fb->props, fb->deleted_props,
+      SVN_ERR(get_props_content(headers, &propstring,
+                                fb->props, fb->deleted_props,
                                 pool, pool));
-      len = header->len;
-      SVN_ERR(svn_stream_write(eb->stream, header->data, &len));
     }
 
   /* Dump the text headers */
@@ -983,9 +987,8 @@ close_file(void *file_baton,
       apr_status_t err;
 
       /* Text-delta: true */
-      SVN_ERR(svn_stream_puts(eb->stream,
-                              SVN_REPOS_DUMPFILE_TEXT_DELTA
-                              ": true\n"));
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_TEXT_DELTA, "true");
 
       err = apr_file_info_get(info, APR_FINFO_SIZE, eb->delta_file);
       if (err)
@@ -993,36 +996,31 @@ close_file(void *file_baton,
 
       if (fb->base_checksum)
         /* Text-delta-base-md5: */
-        SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
-                                  ": %s\n",
-                                  fb->base_checksum));
+        svn_repos__dumpfile_header_push(
+          headers, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5, fb->base_checksum);
 
       /* Text-content-length: 39 */
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
-                                ": %lu\n",
-                                (unsigned long)info->size));
+      svn_repos__dumpfile_header_pushf(
+        headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+        "%lu", (unsigned long)info->size);
 
       /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
-                                ": %s\n",
-                                text_checksum));
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5, text_checksum);
     }
 
   /* Content-length: 1549 */
   /* If both text and props are absent, skip this header */
   if (fb->dump_props)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                              ": %ld\n\n",
-                              (unsigned long)info->size + propstring->len));
+    svn_repos__dumpfile_header_pushf(
+      headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+      "%ld", (unsigned long)info->size + propstring->len);
   else if (fb->dump_text)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                              ": %ld\n\n",
-                              (unsigned long)info->size));
+    svn_repos__dumpfile_header_pushf(
+      headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+      "%ld", (unsigned long)info->size);
+
+  SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
 
   /* Dump the props now */
   if (fb->dump_props)
