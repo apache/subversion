@@ -1093,6 +1093,8 @@ dump_node(struct edit_baton *eb,
 
           /* we can leave this routine quietly now, don't need to dump
              any content;  that was already done in the second record. */
+          /* ### This fall-through results in writing an extra two blank
+             lines. This has been the case since r842476, pre-1.0. */
           must_dump_text = FALSE;
           must_dump_props = FALSE;
         }
