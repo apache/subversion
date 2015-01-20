@@ -470,7 +470,7 @@ dump_mkdir(struct dump_edit_baton *eb,
                             pool, pool));
   len = prop_content->len;
   svn_repos__dumpfile_header_pushf(headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-                                   "%" SVN_FILESIZE_T_FMT, len);
+                                   "%" APR_SIZE_T_FMT, len);
   SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
   SVN_ERR(svn_stream_write(eb->stream, prop_content->data, &len));
 
@@ -1014,11 +1014,11 @@ close_file(void *file_baton,
   if (fb->dump_props)
     svn_repos__dumpfile_header_pushf(
       headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-      "%ld", (unsigned long)info->size + propstring->len);
+      "%lu", (unsigned long)(info->size + propstring->len));
   else if (fb->dump_text)
     svn_repos__dumpfile_header_pushf(
       headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-      "%ld", (unsigned long)info->size);
+      "%lu", (unsigned long)info->size);
 
   SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
 
