@@ -622,7 +622,7 @@ create_rep_state_body(rep_state_t **rep_state,
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (revision / ffd->max_files_per_dir));
 
-  svn_fs_x__representation_cache_key_t key;
+  svn_fs_x__representation_cache_key_t key = { 0 };
   key.revision = revision;
   key.is_packed = revision < ffd->min_unpacked_rev;
   key.item_index = rep->id.number;
