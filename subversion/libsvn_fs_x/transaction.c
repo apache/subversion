@@ -182,12 +182,13 @@ with_txnlist_lock(svn_fs_t *fs,
 }
 
 
-/* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
+/* Get a lock on empty file LOCK_FILENAME, creating it in RESULT_POOL. */
 static svn_error_t *
 get_lock_on_filesystem(const char *lock_filename,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
-  return svn_error_trace(svn_io__file_lock_autocreate(lock_filename, pool));
+  return svn_error_trace(svn_io__file_lock_autocreate(lock_filename,
+                                                      result_pool));
 }
 
 /* Reset the HAS_WRITE_LOCK member in the FFD given as BATON_VOID.
@@ -355,7 +356,8 @@ init_lock_baton(with_lock_baton_t *baton,
 
 /* Return the  baton for the innermost lock of a (potential) lock chain.
    The baton shall take out LOCK_ID from FS and execute BODY with BATON
-   while the lock is being held.  Allocate the result in a sub-pool of POOL.
+   while the lock is being held.  Allocate the result in a sub-pool of
+   RESULT_POOL.
  */
 static with_lock_baton_t *
 create_lock_baton(svn_fs_t *fs,
@@ -363,11 +365,11 @@ create_lock_baton(svn_fs_t *fs,
                   svn_error_t *(*body)(void *baton,
                                        apr_pool_t *scratch_pool),
                   void *baton,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
   /* Allocate everything along the lock chain into a single sub-pool.
      This minimizes memory usage and cleanup overhead. */
-  apr_pool_t *lock_pool = svn_pool_create(pool);
+  apr_pool_t *lock_pool = svn_pool_create(result_pool);
   with_lock_baton_t *result = apr_pcalloc(lock_pool, sizeof(*result));
 
   /* Store parameters. */
