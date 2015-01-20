@@ -106,7 +106,7 @@ get_dag(dag_node_t **dag_node_p,
 static svn_fs_root_t *
 make_revision_root(svn_fs_t *fs,
                    svn_revnum_t rev,
-                   apr_pool_t *pool);
+                   apr_pool_t *result_pool);
 
 static svn_error_t *
 make_txn_root(svn_fs_root_t **root_p,
@@ -114,7 +114,7 @@ make_txn_root(svn_fs_root_t **root_p,
               svn_fs_x__txn_id_t txn_id,
               svn_revnum_t base_rev,
               apr_uint32_t flags,
-              apr_pool_t *pool);
+              apr_pool_t *result_pool);
 
 static svn_error_t *
 x_closest_copy(svn_fs_root_t **root_p,
@@ -191,10 +191,10 @@ struct svn_fs_x__dag_cache_t
 };
 
 svn_fs_x__dag_cache_t*
-svn_fs_x__create_dag_cache(apr_pool_t *pool)
+svn_fs_x__create_dag_cache(apr_pool_t *result_pool)
 {
-  svn_fs_x__dag_cache_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->pool = svn_pool_create(pool);
+  svn_fs_x__dag_cache_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->pool = svn_pool_create(result_pool);
 
   return result;
 }
@@ -328,13 +328,13 @@ cache_lookup_last_path(svn_fs_x__dag_cache_t *cache,
 /* Find and return the DAG node cache for ROOT and the key that
    should be used for PATH.
 
-   Pool will only be used for allocating a new keys if necessary */
+   RESULT_POOL will only be used for allocating a new keys if necessary. */
 static void
 locate_cache(svn_cache__t **cache,
              const char **key,
              svn_fs_root_t *root,
              const char *path,
-             apr_pool_t *pool)
+             apr_pool_t *result_pool)
 {
   if (root->is_txn_root)
     {
@@ -352,7 +352,8 @@ locate_cache(svn_cache__t **cache,
       if (cache)
         *cache = ffd->rev_node_cache;
       if (key && path)
-        *key = svn_fs_x__combine_number_and_string(root->rev, path, pool);
+        *key = svn_fs_x__combine_number_and_string(root->rev, path,
+                                                   result_pool);
     }
 }
 
@@ -563,42 +564,42 @@ root_txn_id(svn_fs_root_t *root)
 }
 
 /* Set *NODE_P to a freshly opened dag node referring to the root
-   directory of ROOT, allocating from POOL.  */
+   directory of ROOT, allocating from RESULT_POOL.  */
 static svn_error_t *
 root_node(dag_node_t **node_p,
           svn_fs_root_t *root,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool)
 {
   if (root->is_txn_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
       return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
-                                    pool);
+                                    result_pool);
     }
   else
     {
       /* It's a revision root, so we already have its root directory
          opened.  */
       return svn_fs_x__dag_revision_root(node_p, root->fs, root->rev,
-                                         pool);
+                                         result_pool);
     }
 }
 
 
 /* Set *NODE_P to a mutable root directory for ROOT, cloning if
-   necessary, allocating in POOL.  ROOT must be a transaction root.
+   necessary, allocating in RESULT_POOL.  ROOT must be a transaction root.
    Use ERROR_PATH in error messages.  */
 static svn_error_t *
 mutable_root_node(dag_node_t **node_p,
                   svn_fs_root_t *root,
                   const char *error_path,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool)
 {
   if (root->is_txn_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
       return svn_fs_x__dag_clone_root(node_p, root->fs, root_txn_id(root),
-                                       pool);
+                                      result_pool);
     }
   else
     /* If it's not a transaction root, we can't change its contents.  */
@@ -767,17 +768,17 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new parent_path_t node from POOL, referring to NODE,
+/* Allocate a new parent_path_t node from RESULT_POOL, referring to NODE,
    ENTRY, PARENT, and COPY_ID.  */
 static parent_path_t *
 make_parent_path(dag_node_t *node,
                  char *entry,
                  parent_path_t *parent,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
-  parent_path_t *parent_path = apr_pcalloc(pool, sizeof(*parent_path));
+  parent_path_t *parent_path = apr_pcalloc(result_pool, sizeof(*parent_path));
   if (node)
-    parent_path->node = svn_fs_x__dag_copy_into_pool(node, pool);
+    parent_path->node = svn_fs_x__dag_copy_into_pool(node, result_pool);
   parent_path->entry = entry;
   parent_path->parent = parent;
   parent_path->copy_inherit = copy_id_inherit_unknown;
@@ -3367,7 +3368,7 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool);
 
 
 /* Set *HISTORY_P to an opaque node history object which represents
@@ -3757,16 +3758,16 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
 
 
 /* Set *PATH and *REVISION to the path and revision for the HISTORY
-   object.  Use POOL for all allocations. */
+   object.  Allocate *PATH in RESULT_POOL. */
 static svn_error_t *
 fs_history_location(const char **path,
                     svn_revnum_t *revision,
                     svn_fs_history_t *history,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   fs_history_data_t *fhd = history->fsap_data;
 
-  *path = apr_pstrdup(pool, fhd->path);
+  *path = apr_pstrdup(result_pool, fhd->path);
   *revision = fhd->revision;
   return SVN_NO_ERROR;
 }
@@ -3777,9 +3778,9 @@ static history_vtable_t history_vtable = {
 };
 
 /* Return a new history object (marked as "interesting") for PATH and
-   REVISION, allocated in POOL, and with its members set to the values
-   of the parameters provided.  Note that PATH and PATH_HINT get
-   normalized and duplicated in POOL. */
+   REVISION, allocated in RESULT_POOL, and with its members set to the
+   values of the parameters provided.  Note that PATH and PATH_HINT get
+   normalized and duplicated in RESULT_POOL. */
 static svn_fs_history_t *
 assemble_history(svn_fs_t *fs,
                  const char *path,
@@ -3787,15 +3788,16 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
-  svn_fs_history_t *history = apr_pcalloc(pool, sizeof(*history));
-  fs_history_data_t *fhd = apr_pcalloc(pool, sizeof(*fhd));
-  fhd->path = svn_fs__canonicalize_abspath(path, pool);
+  svn_fs_history_t *history = apr_pcalloc(result_pool, sizeof(*history));
+  fs_history_data_t *fhd = apr_pcalloc(result_pool, sizeof(*fhd));
+  fhd->path = svn_fs__canonicalize_abspath(path, result_pool);
   fhd->revision = revision;
   fhd->is_interesting = is_interesting;
-  fhd->path_hint = path_hint ? svn_fs__canonicalize_abspath(path_hint, pool)
-                             : NULL;
+  fhd->path_hint = path_hint
+                 ? svn_fs__canonicalize_abspath(path_hint, result_pool)
+                 : NULL;
   fhd->rev_hint = rev_hint;
   fhd->fs = fs;
 
@@ -3904,21 +3906,21 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
 /* Return the cache key as a combination of REV_ROOT->REV, the inheritance
    flags INHERIT and ADJUST_INHERITED_MERGEINFO, and the PATH.  The result
-   will be allocated in POOL..
+   will be allocated in RESULT_POOL.
  */
 static const char *
 mergeinfo_cache_key(const char *path,
                     svn_fs_root_t *rev_root,
                     svn_mergeinfo_inheritance_t inherit,
                     svn_boolean_t adjust_inherited_mergeinfo,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool)
 {
   apr_int64_t number = rev_root->rev;
   number = number * 4
          + (inherit == svn_mergeinfo_nearest_ancestor ? 2 : 0)
          + (adjust_inherited_mergeinfo ? 1 : 0);
 
-  return svn_fs_x__combine_number_and_string(number, path, pool);
+  return svn_fs_x__combine_number_and_string(number, path, result_pool);
 }
 
 /* Calculates the mergeinfo for PATH under REV_ROOT using inheritance
@@ -4294,10 +4296,10 @@ make_txn_root(svn_fs_root_t **root_p,
 /* Verify. */
 static const char *
 stringify_node(dag_node_t *node,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
   /* ### TODO: print some PATH@REV to it, too. */
-  return svn_fs_x__id_unparse(svn_fs_x__dag_get_id(node), pool)->data;
+  return svn_fs_x__id_unparse(svn_fs_x__dag_get_id(node), result_pool)->data;
 }
 
 /* Check metadata sanity on NODE, and on its children.  Manually verify
