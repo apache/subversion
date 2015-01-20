@@ -901,6 +901,30 @@ def load_non_deltas_replace_copy_with_props(sbox):
     actual = out[1:]
     svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
+# Regression test for issue #4552 "svnrdump writes duplicate headers for a
+# replace-with-copy". 'svnrdump dump' wrote the Node-path and Node-kind
+# headers twice for the 'delete' record of a replace-with-copy.
+@Issue(4552)
+def dump_replace_with_copy(sbox):
+  "dump replace with copy"
+  sbox.build()
+
+  # Copy file/dir, replacing something
+  sbox.simple_rm('A/D/gamma', 'A/C')
+  sbox.simple_copy('A/mu@1', 'A/D/gamma')
+  sbox.simple_copy('A/B@1', 'A/C')
+  sbox.simple_commit()
+
+  # Dump with 'svnrdump'
+  dumpfile = svntest.actions.run_and_verify_svnrdump(
+                               None, svntest.verify.AnyOutput, [], 0,
+                               'dump', '--quiet', '--incremental', '-r2',
+                               sbox.repo_url)
+
+  # Check the 'delete' record headers: expect this parse to fail if headers
+  # are duplicated
+  svntest.verify.DumpParser(dumpfile).parse()
+
 ########################################################################
 # Run the tests
 
@@ -960,6 +984,7 @@ test_list = [ None,
               load_mergeinfo_contains_r0,
               load_non_deltas_copy_with_props,
               load_non_deltas_replace_copy_with_props,
+              dump_replace_with_copy,
              ]
 
 if __name__ == '__main__':
