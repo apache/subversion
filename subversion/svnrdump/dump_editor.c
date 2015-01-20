@@ -265,64 +265,6 @@ get_props_content(svn_stringbuf_t **header,
   return SVN_NO_ERROR;
 }
 
-/* Extract and dump properties stored in PROPS and property deletions
- * stored in DELETED_PROPS. If TRIGGER_VAR is not NULL, it is set to
- * FALSE.
- *
- * If PROPSTRING is non-NULL, set *PROPSTRING to a string containing
- * the content block of the property changes; otherwise, dump that to
- * the stream, too.
- */
-static svn_error_t *
-do_dump_props(svn_stringbuf_t **propstring,
-              svn_stream_t *stream,
-              apr_hash_t *props,
-              apr_hash_t *deleted_props,
-              svn_boolean_t *trigger_var,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *header;
-  svn_stringbuf_t *content;
-  apr_size_t len;
-
-  if (trigger_var && !*trigger_var)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(get_props_content(&header, &content, props, deleted_props,
-                            result_pool, scratch_pool));
-  len = header->len;
-  SVN_ERR(svn_stream_write(stream, header->data, &len));
-
-  if (propstring)
-    {
-      *propstring = content;
-    }
-  else
-    {
-      /* Content-length: 14 */
-      SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n\n",
-                                content->len));
-
-      len = content->len;
-      SVN_ERR(svn_stream_write(stream, content->data, &len));
-
-      /* No text is going to be dumped. Write a couple of newlines and
-         wait for the next node/ revision. */
-      SVN_ERR(svn_stream_puts(stream, "\n\n"));
-
-      /* Cleanup so that data is never dumped twice. */
-      apr_hash_clear(props);
-      apr_hash_clear(deleted_props);
-      if (trigger_var)
-        *trigger_var = FALSE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 do_dump_newlines(struct dump_edit_baton *eb,
                  svn_boolean_t *trigger_var,
@@ -539,30 +481,76 @@ static svn_error_t *
 dump_pending(struct dump_edit_baton *eb,
              apr_pool_t *scratch_pool)
 {
+  svn_boolean_t dump_props = FALSE;
+  apr_hash_t *props, *deleted_props;
+
   if (! eb->pending_baton)
     return SVN_NO_ERROR;
 
+  /* Some pending properties to dump? */
   if (eb->pending_kind == svn_node_dir)
     {
       struct dir_baton *db = eb->pending_baton;
 
-      /* Some pending properties to dump? */
-      SVN_ERR(do_dump_props(NULL, eb->stream, db->props, db->deleted_props,
-                            &(db->dump_props), db->pool, scratch_pool));
+      if (db->dump_props)
+        {
+          dump_props = TRUE;
+          props = db->props;
+          deleted_props = db->deleted_props;
 
-      /* Some pending newlines to dump? */
-      SVN_ERR(do_dump_newlines(eb, &(db->dump_newlines), scratch_pool));
+          db->dump_props = FALSE;
+        }
     }
   else if (eb->pending_kind == svn_node_file)
     {
       struct file_baton *fb = eb->pending_baton;
 
-      /* Some pending properties to dump? */
-      SVN_ERR(do_dump_props(NULL, eb->stream, fb->props, fb->deleted_props,
-                            &(fb->dump_props), fb->pool, scratch_pool));
+      if (fb->dump_props)
+        {
+          dump_props = TRUE;
+          props = fb->props;
+          deleted_props = fb->deleted_props;
+          fb->dump_props = FALSE;
+        }
     }
   else
     abort();
+
+  if (dump_props)
+    {
+      svn_stringbuf_t *header, *content;
+      apr_size_t len;
+
+      SVN_ERR(get_props_content(&header, &content, props, deleted_props,
+                                scratch_pool, scratch_pool));
+      len = header->len;
+      SVN_ERR(svn_stream_write(eb->stream, header->data, &len));
+
+      /* Content-length: 14 */
+      SVN_ERR(svn_stream_printf(eb->stream, scratch_pool,
+                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                                ": %" APR_SIZE_T_FMT "\n\n",
+                                content->len));
+
+      len = content->len;
+      SVN_ERR(svn_stream_write(eb->stream, content->data, &len));
+
+      /* No text is going to be dumped. Write a couple of newlines and
+         wait for the next node/ revision. */
+      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
+
+      /* Cleanup so that data is never dumped twice. */
+      apr_hash_clear(props);
+      apr_hash_clear(deleted_props);
+    }
+
+  if (eb->pending_kind == svn_node_dir)
+    {
+      struct dir_baton *db = eb->pending_baton;
+
+      /* Some pending newlines to dump? */
+      SVN_ERR(do_dump_newlines(eb, &(db->dump_newlines), scratch_pool));
+    }
 
   /* Anything that was pending is pending no longer. */
   eb->pending_baton = NULL;
@@ -978,8 +966,16 @@ close_file(void *file_baton,
   /* Some pending properties to dump?  We'll dump just the headers for
      now, then dump the actual propchange content only after dumping
      the text headers too (if present). */
-  SVN_ERR(do_dump_props(&propstring, eb->stream, fb->props, fb->deleted_props,
-                        &(fb->dump_props), pool, pool));
+  if (fb->dump_props)
+    {
+      svn_stringbuf_t *header;
+      apr_size_t len;
+
+      SVN_ERR(get_props_content(&header, &propstring, fb->props, fb->deleted_props,
+                                pool, pool));
+      len = header->len;
+      SVN_ERR(svn_stream_write(eb->stream, header->data, &len));
+    }
 
   /* Dump the text headers */
   if (fb->dump_text)
