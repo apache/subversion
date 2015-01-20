@@ -398,10 +398,15 @@ dump_node(struct dump_edit_baton *eb,
     case svn_node_action_replace:
       if (is_copy)
         {
-          /* Delete the original, and then re-add the replacement as a
-             copy using recursive calls into this function. */
-          SVN_ERR(dump_node(eb, repos_relpath, db, fb, svn_node_action_delete,
-                            FALSE, NULL, SVN_INVALID_REVNUM, pool));
+          /* More complex case: is_copy is true, and copyfrom_path/
+             copyfrom_rev are present: delete the original, and then re-add
+             it */
+
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": delete\n\n"));
+
+          /* Recurse: Print an additional add-with-history record. */
           SVN_ERR(dump_node(eb, repos_relpath, db, fb, svn_node_action_add,
                             is_copy, copyfrom_path, copyfrom_rev, pool));
         }
