@@ -1535,13 +1535,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 
   /* Add any items which only need their externals pinned. */
-  for (i = 0; i < pin_externals_only_infos->nelts; i++)
+  if (pin_externals_only_infos)
     {
-      path_driver_info_t *info;
-      
-      info = APR_ARRAY_IDX(pin_externals_only_infos, i, path_driver_info_t *);
-      APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
-      svn_hash_sets(action_hash, info->dst_path, info);
+      for (i = 0; i < pin_externals_only_infos->nelts; i++)
+        {
+          path_driver_info_t *info;
+          
+          info = APR_ARRAY_IDX(pin_externals_only_infos, i, path_driver_info_t *);
+          APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
+          svn_hash_sets(action_hash, info->dst_path, info);
+        }
     }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
