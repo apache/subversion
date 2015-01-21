@@ -133,7 +133,7 @@ fuzzing_1_byte_1_rev(const char *repo_name,
               /* Let us know where we were too strict ... */
               printf("Detected case change in checksum digest at offset 0x%"
                      APR_UINT64_T_HEX_FMT " (%" APR_OFF_T_FMT ") in r%ld: "
-                     "%c -> %c\n", i, i, revision, c_old, c_new);
+                     "%c -> %c\n", (apr_uint64_t)i, i, revision, c_old, c_new);
 
               SVN_ERR(err);
             }
@@ -143,7 +143,7 @@ fuzzing_1_byte_1_rev(const char *repo_name,
           /* Let us know where we miss changes ... */
           printf("Undetected mod at offset 0x%"APR_UINT64_T_HEX_FMT
                 " (%"APR_OFF_T_FMT") in r%ld: 0x%02x -> 0x%02x\n",
-                i, i, revision, c_old, c_new);
+                (apr_uint64_t)i, i, revision, c_old, c_new);
 
           SVN_TEST_ASSERT(err);
         }

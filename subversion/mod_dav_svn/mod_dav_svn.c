@@ -662,9 +662,10 @@ dav_svn__get_fs_parent_path(request_rec *r)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_get_repos_path(request_rec *r,
-                       const char *root_path,
-                       const char **repos_path)
+dav_svn_get_repos_path2(request_rec *r,
+                        const char *root_path,
+                        const char **repos_path,
+                        apr_pool_t *pool)
 {
 
   const char *fs_path;
@@ -692,19 +693,26 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Split the svn URI to get the name of the repository below
      the parent path. */
-  derr = dav_svn_split_uri(r, r->uri, root_path,
-                           &ignored_cleaned_uri, &ignored_had_slash,
-                           &repos_name,
-                           &ignored_relative, &ignored_path_in_repos);
+  derr = dav_svn_split_uri2(r, r->uri, root_path,
+                            &ignored_cleaned_uri, &ignored_had_slash,
+                            &repos_name,
+                            &ignored_relative, &ignored_path_in_repos, pool);
   if (derr)
     return derr;
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, pool);
   return NULL;
 }
 
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_get_repos_path(request_rec *r,
+                       const char *root_path,
+                       const char **repos_path)
+{
+  return dav_svn_get_repos_path2(r, root_path, repos_path, r->pool);
+}
 
 const char *
 dav_svn__get_repo_name(request_rec *r)
@@ -1324,8 +1332,8 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
                 "specifies the maximum size in kB per process of Subversion's "
-                "in-memory object cache (default value is 16384; 0 deactivates "
-                "the cache)."),
+                "in-memory object cache (default value is 16384; 0 switches "
+                "to dynamically sized caches)."),
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
                 RSRC_CONF,

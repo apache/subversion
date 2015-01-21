@@ -402,10 +402,9 @@ organize_lock_targets(apr_array_header_t **lock_paths,
                                 _("Unable to lock/unlock across multiple "
                                   "repositories"));
 
-      /* Now we need to create a couple of different hash mappings. */
+      /* Now we need to create our mapping. */
       rel_fs_paths = apr_hash_make(result_pool);
-      target_urls = apr_array_make(scratch_pool, targets->nelts,
-                                   sizeof(const char *));
+
       for (hi = apr_hash_first(scratch_pool, wc_info);
            hi;
            hi = apr_hash_next(hi))

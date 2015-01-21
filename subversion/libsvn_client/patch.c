@@ -48,6 +48,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_sorts_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */
@@ -1578,7 +1579,8 @@ match_existing_target(svn_boolean_t *match,
 /* Determine the line at which a HUNK applies to CONTENT of the TARGET
  * file, and return an appropriate hunk_info object in *HI, allocated from
  * RESULT_POOL. Use fuzz factor FUZZ. Set HI->FUZZ to FUZZ. If no correct
- * line can be determined, set HI->REJECTED to TRUE.
+ * line can be determined, set HI->REJECTED to TRUE.  PREVIOUS_OFFSET
+ * is the offset at which the previous matching hunk was applied, or zero.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * matching. IS_PROP_HUNK indicates whether the hunk patches file content
  * or a property.
@@ -1590,6 +1592,7 @@ static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_t *content,
               svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
+              apr_int64_t previous_offset,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1599,7 +1602,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   svn_linenum_t original_start;
   svn_boolean_t already_applied;
 
-  original_start = svn_diff_hunk_get_original_start(hunk);
+  original_start = svn_diff_hunk_get_original_start(hunk) + previous_offset;
   already_applied = FALSE;
 
   /* An original offset of zero means that this hunk wants to create
@@ -1707,7 +1710,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               modified_start = svn_diff_hunk_get_modified_start(hunk);
               if (modified_start == 0)
                 {
-                  /* Patch wants to delete the file. */
+                  /* Patch wants to delete the file.
+
+                     ### locally_deleted is always false here? */
                   already_applied = target->locally_deleted;
                 }
               else
@@ -1728,27 +1733,85 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
           if (! already_applied)
             {
-              /* Scan the whole file again from the start. */
-              SVN_ERR(seek_to_line(content, 1, scratch_pool));
+              int i;
+              svn_linenum_t search_start = 1, search_end = 0;
+              svn_linenum_t matched_line2;
 
-              /* Scan forward towards the hunk's line and look for a line
-               * where the hunk matches. */
+              /* Search for closest match before or after original
+                 start.  We have no backward search so search forwards
+                 from the previous match (or start of file) to the
+                 original start looking for the last match.  Then
+                 search forwards from the original start looking for a
+                 better match.  Finally search forwards from the start
+                 of file to the previous hunk if that could result in
+                 a better match. */
+
+              for (i = content->hunks->nelts; i > 0; --i)
+                {
+                  const hunk_info_t *prev
+                    = APR_ARRAY_IDX(content->hunks, i - 1, const hunk_info_t *);
+                  if (!prev->rejected)
+                    {
+                      svn_linenum_t length;
+
+                      length = svn_diff_hunk_get_original_length(prev->hunk);
+                      search_start = prev->matched_line + length;
+                      break;
+                    }
+                }
+
+              /* Search from the previous match, or start of file,
+                 towards the original location. */
+              SVN_ERR(seek_to_line(content, search_start, scratch_pool));
               SVN_ERR(scan_for_match(&matched_line, content, hunk, FALSE,
                                      original_start, fuzz,
                                      ignore_whitespace, FALSE,
                                      cancel_func, cancel_baton,
                                      scratch_pool));
 
-              /* In tie-break situations, we arbitrarily prefer early matches
-               * to save us from scanning the rest of the file. */
-              if (matched_line == 0)
+              /* If a match we only need to search forwards for a
+                 better match, otherwise to the end of the file. */
+              if (matched_line)
+                search_end = original_start + (original_start - matched_line);
+
+              /* Search from original location, towards the end. */
+              SVN_ERR(seek_to_line(content, original_start + 1, scratch_pool));
+              SVN_ERR(scan_for_match(&matched_line2, content, hunk,
+                                     TRUE, search_end, fuzz, ignore_whitespace,
+                                     FALSE, cancel_func, cancel_baton,
+                                     scratch_pool));
+
+              /* Chose the forward match if it is closer than the
+                 backward match or if there is no backward match. */
+              if (matched_line2
+                  && (!matched_line
+                      || (matched_line2 - original_start
+                          < original_start - matched_line)))
+                  matched_line = matched_line2;
+
+              /* Search from before previous hunk if there could be a
+                 better match. */
+              if (search_start > 1
+                  && (!matched_line
+                      || (matched_line > original_start
+                          && (matched_line - original_start
+                              > original_start - search_start)))) 
                 {
-                  /* Scan forward towards the end of the file and look
-                   * for a line where the hunk matches. */
-                  SVN_ERR(scan_for_match(&matched_line, content, hunk,
-                                         TRUE, 0, fuzz, ignore_whitespace,
-                                         FALSE, cancel_func, cancel_baton,
+                  svn_linenum_t search_start2 = 1;
+
+                  if (matched_line
+                      && matched_line - original_start < original_start)
+                    search_start2
+                      = original_start - (matched_line - original_start) + 1;
+
+                  SVN_ERR(seek_to_line(content, search_start2, scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line2, content, hunk, FALSE,
+                                         search_start - 1, fuzz,
+                                         ignore_whitespace, FALSE,
+                                         cancel_func, cancel_baton,
                                          scratch_pool));
+                  if (matched_line2)
+                    matched_line = matched_line2;
                 }
             }
         }
@@ -2139,6 +2202,48 @@ send_patch_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
+/* Implements the callback for svn_sort__array.  Puts hunks that match
+   before hunks that do not match, puts hunks that match in order
+   based on postion matched, puts hunks that do not match in order
+   based on original position. */
+static int
+sort_matched_hunks(const void *a, const void *b)
+{
+  const hunk_info_t *item1 = *((const hunk_info_t * const *)a);
+  const hunk_info_t *item2 = *((const hunk_info_t * const *)b);
+  svn_boolean_t matched1 = !item1->rejected && !item1->already_applied;
+  svn_boolean_t matched2 = !item2->rejected && !item2->already_applied;
+  svn_linenum_t original1, original2;
+
+  if (matched1 && matched2)
+    {
+      /* Both match so use order matched in file. */
+      if (item1->matched_line > item2->matched_line)
+        return 1;
+      else if (item1->matched_line == item2->matched_line)
+        return 0;
+      else
+        return -1;
+    }
+  else if (matched2)
+    /* Only second matches, put it before first. */
+    return 1;
+  else if (matched1)
+    /* Only first matches, put it before second. */
+    return -1;
+
+  /* Neither matches, sort by original_start. */
+  original1 = svn_diff_hunk_get_original_start(item1->hunk);
+  original2 = svn_diff_hunk_get_original_start(item2->hunk);
+  if (original1 > original2)
+    return 1;
+  else if (original1 == original2)
+    return 0;
+  else
+    return -1;
+}
+
+
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
  * into temporary files, to be installed in the working copy later.
  * Return information about the patch target in *PATCH_TARGET, allocated
@@ -2167,6 +2272,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
+  apr_int64_t previous_offset = 0;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -2209,6 +2315,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, target->content, hunk, fuzz,
+                                previous_offset,
                                 ignore_whitespace,
                                 FALSE /* is_prop_hunk */,
                                 cancel_func, cancel_baton,
@@ -2217,8 +2324,16 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
       while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
 
+      if (hi->matched_line)
+        previous_offset
+          = hi->matched_line - svn_diff_hunk_get_original_start(hunk);
+
       APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
     }
+
+  /* Hunks are applied in the order determined by the matched line and
+     this may be different from the order of the original lines. */
+  svn_sort__array(target->content->hunks, sort_matched_hunks);
 
   /* Apply or reject hunks. */
   for (i = 0; i < target->content->hunks->nelts; i++)
@@ -2291,7 +2406,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           do
             {
               SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
-                                    hunk, fuzz,
+                                    hunk, fuzz, 0,
                                     ignore_whitespace,
                                     TRUE /* is_prop_hunk */,
                                     cancel_func, cancel_baton,

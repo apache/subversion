@@ -1209,14 +1209,15 @@ static void log_warning(void *baton, svn_error_t *err)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_split_uri(request_rec *r,
-                  const char *uri_to_split,
-                  const char *root_path,
-                  const char **cleaned_uri,
-                  int *trailing_slash,
-                  const char **repos_basename,
-                  const char **relative_path,
-                  const char **repos_path)
+dav_svn_split_uri2(request_rec *r,
+                   const char *uri_to_split,
+                   const char *root_path,
+                   const char **cleaned_uri,
+                   int *trailing_slash,
+                   const char **repos_basename,
+                   const char **relative_path,
+                   const char **repos_path,
+                   apr_pool_t *pool)
 {
   apr_size_t len1;
   int had_slash;
@@ -1232,7 +1233,7 @@ dav_svn_split_uri(request_rec *r,
   if ((fs_path == NULL) && (fs_parent_path == NULL))
     {
       /* ### are SVN_ERR_APMOD codes within the right numeric space? */
-      return dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+      return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR,
                                 SVN_ERR_APMOD_MISSING_PATH_TO_FS,
                                 "The server is misconfigured: "
                                 "either an SVNPath or SVNParentPath "
@@ -1241,7 +1242,7 @@ dav_svn_split_uri(request_rec *r,
     }
 
   /* make a copy so that we can do some work on it */
-  uri = apr_pstrdup(r->pool, uri_to_split);
+  uri = apr_pstrdup(pool, uri_to_split);
 
   /* remove duplicate slashes, and make sure URI has no trailing '/' */
   ap_no2slash(uri);
@@ -1256,7 +1257,7 @@ dav_svn_split_uri(request_rec *r,
     *trailing_slash = FALSE;
 
   /* return the first item.  */
-  *cleaned_uri = apr_pstrdup(r->pool, uri);
+  *cleaned_uri = apr_pstrdup(pool, uri);
 
   /* The URL space defined by the SVN provider is always a virtual
      space. Construct the path relative to the configured Location
@@ -1297,7 +1298,7 @@ dav_svn_split_uri(request_rec *r,
   if (fs_path != NULL)
     {
       /* the repos_basename is the last component of root_path. */
-      *repos_basename = svn_dirent_basename(root_path, r->pool);
+      *repos_basename = svn_dirent_basename(root_path, pool);
 
       /* 'relative' is already correct for SVNPath; the root_path
          already contains the name of the repository, so relative is
@@ -1315,7 +1316,7 @@ dav_svn_split_uri(request_rec *r,
       if (relative[1] == '\0')
         {
           /* ### are SVN_ERR_APMOD codes within the right numeric space? */
-          return dav_svn__new_error(r->pool, HTTP_FORBIDDEN,
+          return dav_svn__new_error(pool, HTTP_FORBIDDEN,
                                     SVN_ERR_APMOD_MALFORMED_URI,
                                     "The URI does not contain the name "
                                     "of a repository.");
@@ -1332,7 +1333,7 @@ dav_svn_split_uri(request_rec *r,
         }
       else
         {
-          magic_component = apr_pstrndup(r->pool, relative + 1,
+          magic_component = apr_pstrndup(pool, relative + 1,
                                          magic_end - relative - 1);
           relative = magic_end;
         }
@@ -1342,7 +1343,7 @@ dav_svn_split_uri(request_rec *r,
     }
 
   /* We can return 'relative' at this point too. */
-  *relative_path = apr_pstrdup(r->pool, relative);
+  *relative_path = apr_pstrdup(pool, relative);
 
   /* Code to remove the !svn junk from the front of the relative path,
      mainly stolen from parse_uri().  This code assumes that
@@ -1363,7 +1364,7 @@ dav_svn_split_uri(request_rec *r,
         if (ch == '\0')
           {
             /* relative is just "!svn", which is malformed. */
-            return dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
+            return dav_svn__new_error(pool, HTTP_NOT_FOUND,
                                       SVN_ERR_APMOD_MALFORMED_URI,
                                       "Nothing follows the svn special_uri.");
           }
@@ -1390,7 +1391,7 @@ dav_svn_split_uri(request_rec *r,
                           *repos_path = NULL;
                         else
                           return dav_svn__new_error(
-                                     r->pool, HTTP_NOT_FOUND,
+                                     pool, HTTP_NOT_FOUND,
                                      SVN_ERR_APMOD_MALFORMED_URI,
                                      "Missing info after special_uri.");
                       }
@@ -1414,7 +1415,7 @@ dav_svn_split_uri(request_rec *r,
                             /* Did we break from the loop prematurely? */
                             if (j != (defn->numcomponents - 1))
                               return dav_svn__new_error(
-                                         r->pool, HTTP_NOT_FOUND,
+                                         pool, HTTP_NOT_FOUND,
                                          SVN_ERR_APMOD_MALFORMED_URI,
                                          "Not enough components after "
                                          "special_uri.");
@@ -1428,13 +1429,13 @@ dav_svn_split_uri(request_rec *r,
                         else
                           {
                             /* Found a slash after the special components. */
-                            *repos_path = apr_pstrdup(r->pool, start - 1);
+                            *repos_path = apr_pstrdup(pool, start - 1);
                           }
                       }
                     else
                       {
                         return
-                          dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
+                          dav_svn__new_error(pool, HTTP_NOT_FOUND,
                                         SVN_ERR_APMOD_MALFORMED_URI,
                                         "Unknown data after special_uri.");
                       }
@@ -1445,7 +1446,7 @@ dav_svn_split_uri(request_rec *r,
 
             if (defn->name == NULL)
               return
-                dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
+                dav_svn__new_error(pool, HTTP_NOT_FOUND,
                                    SVN_ERR_APMOD_MALFORMED_URI,
                                    "Couldn't match subdir after special_uri.");
           }
@@ -1454,13 +1455,27 @@ dav_svn_split_uri(request_rec *r,
       {
         /* There's no "!svn/" at all, so the relative path is already
            a valid path within the repository.  */
-        *repos_path = apr_pstrdup(r->pool, relative - 1);
+        *repos_path = apr_pstrdup(pool, relative - 1);
       }
   }
 
   return NULL;
 }
 
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_split_uri(request_rec *r,
+                  const char *uri_to_split,
+                  const char *root_path,
+                  const char **cleaned_uri,
+                  int *trailing_slash,
+                  const char **repos_basename,
+                  const char **relative_path,
+                  const char **repos_path)
+{
+  return dav_svn_split_uri2(r, uri_to_split, root_path, cleaned_uri,
+                            trailing_slash, repos_basename, relative_path,
+                            repos_path, r->pool);
+}
 
 /* Context for cleanup handler. */
 struct cleanup_fs_access_baton
