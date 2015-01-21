@@ -1498,10 +1498,9 @@ svn_repos_replay(svn_fs_root_t *root,
  * filesystem of @a repos, beginning at location 'rev:@a base_path',
  * where "rev" is the argument given to open_root().
  *
- * @a repos is a previously opened repository.  @a repos_url is the
+ * @a repos is a previously opened repository.  @a repos_url_decoded is the
  * decoded URL to the base of the repository, and is used to check
- * copyfrom paths.  copyfrom paths passed to the editor must be full,
- * URI-encoded, URLs.  @a txn is a filesystem transaction object to use
+ * copyfrom paths.  @a txn is a filesystem transaction object to use
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *
@@ -1537,19 +1536,19 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @since New in 1.5.
  *
- * @note Yes, @a repos_url is a <em>decoded</em> URL.  We realize
+ * @note Yes, @a repos_url_decoded is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
  *
  * @note Like most commit editors, the returned editor requires that the
  * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
- * methods is a URL, not a relative path.
+ * methods is a full, URI-encoded URL, not a relative path.
  */
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
                              svn_fs_txn_t *txn,
-                             const char *repos_url,
+                             const char *repos_url_decoded,
                              const char *base_path,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
