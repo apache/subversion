@@ -1461,7 +1461,12 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
                                 apr_time_t tm,
                                 apr_pool_t *pool);
 
-/* Implements svn_ra__vtable_t.get_commit_editor(). */
+/* Implements svn_ra__vtable_t.get_commit_editor().
+ *
+ * Note: Like other commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
+ */
 svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
