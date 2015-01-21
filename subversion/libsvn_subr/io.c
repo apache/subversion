@@ -1953,7 +1953,7 @@ svn_io_set_file_read_only(const char *path,
 
   if (status && status != APR_ENOTIMPL)
     if (!(ignore_enoent && (APR_STATUS_IS_ENOENT(status)
-                            || SVN__APR_STATUS_IS_ENOTDIR(status))
+                            || SVN__APR_STATUS_IS_ENOTDIR(status))))
       return svn_error_wrap_apr(status,
                                 _("Can't set file '%s' read-only"),
                                 svn_dirent_local_style(path, pool));
