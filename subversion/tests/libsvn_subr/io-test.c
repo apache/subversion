@@ -723,33 +723,14 @@ ignore_enoent(apr_pool_t *pool)
                            pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
-#define ASSERT_ENOTDIR(exp) {                                           \
-    svn_error_t *svn__err = (exp);                                      \
-    SVN_TEST_ASSERT(svn__err);                                          \
-    SVN_TEST_ASSERT(SVN__APR_STATUS_IS_ENOTDIR(svn__err->apr_err));     \
-    svn_error_clear(svn__err);                                          \
-}
-
   /* Path does not exist as child of file. */
-  /* ### Some return SUCCESS others ENOTDIR, is that what we want? */
   path = svn_dirent_join(path, "not-present", pool);
-#ifdef WIN32
   SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
-#else
-  ASSERT_ENOTDIR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
-#endif
   SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
-#ifdef WIN32
   SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
   SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
   SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
-#else
-  ASSERT_ENOTDIR(svn_io_set_file_read_only(path, TRUE, pool));
-  ASSERT_ENOTDIR(svn_io_set_file_read_write(path, TRUE, pool));
-  ASSERT_ENOTDIR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
-  ASSERT_ENOTDIR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
-#endif
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
 

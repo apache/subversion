@@ -1590,7 +1590,8 @@ io_set_file_perms(const char *path,
   status = apr_stat(&finfo, path_apr, APR_FINFO_PROT | APR_FINFO_LINK, pool);
   if (status)
     {
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status)))
         return SVN_NO_ERROR;
       else if (status != APR_ENOTIMPL)
         return svn_error_wrap_apr(status,
@@ -1951,7 +1952,8 @@ svn_io_set_file_read_only(const char *path,
                               pool);
 
   if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+    if (!(ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status))
       return svn_error_wrap_apr(status,
                                 _("Can't set file '%s' read-only"),
                                 svn_dirent_local_style(path, pool));
@@ -2552,7 +2554,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(err->apr_err)
+                            || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;
