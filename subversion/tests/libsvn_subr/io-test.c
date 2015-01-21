@@ -733,7 +733,11 @@ ignore_enoent(apr_pool_t *pool)
   /* Path does not exist as child of file. */
   /* ### Some return SUCCESS others ENOTDIR, is that what we want? */
   path = svn_dirent_join(path, "not-present", pool);
+#ifdef WIN32
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+#else
   ASSERT_ENOTDIR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+#endif
   SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
   ASSERT_ENOTDIR(svn_io_set_file_read_only(path, TRUE, pool));
   ASSERT_ENOTDIR(svn_io_set_file_read_write(path, TRUE, pool));
