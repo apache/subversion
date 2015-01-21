@@ -73,7 +73,7 @@ struct edit_baton
   svn_repos_t *repos;
 
   /* URL to the root of the open repository. */
-  const char *repos_url;
+  const char *repos_url_decoded;
 
   /* The name of the repository (here for convenience). */
   const char *repos_name;
@@ -319,8 +319,8 @@ add_file_or_directory(const char *path,
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
       copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
+      repos_url_len = strlen(eb->repos_url_decoded);
+      if (strncmp(copy_path, eb->repos_url_decoded, repos_url_len) != 0)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            _("Source url '%s' is from different repository"), copy_path);
@@ -934,7 +934,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
                              svn_fs_txn_t *txn,
-                             const char *repos_url,
+                             const char *repos_url_decoded,
                              const char *base_path,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
@@ -948,6 +948,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   struct edit_baton *eb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                     svn_delta_shim_callbacks_default(pool);
+  const char *repos_url = svn_path_uri_encode(repos_url_decoded, pool);
 
   /* Do a global authz access lookup.  Users with no write access
      whatsoever to the repository don't get a commit editor. */
@@ -989,7 +990,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->authz_baton = authz_baton;
   eb->base_path = svn_fspath__canonicalize(base_path, subpool);
   eb->repos = repos;
-  eb->repos_url = repos_url;
+  eb->repos_url_decoded = repos_url_decoded;
   eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
                                        subpool);
   eb->fs = svn_repos_fs(repos);
@@ -1005,7 +1006,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   eb->repos_url, eb->base_path,
+                                   repos_url, eb->base_path,
                                    shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
