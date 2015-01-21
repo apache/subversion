@@ -868,7 +868,7 @@ def load_non_deltas_replace_copy_with_props(sbox):
   sbox.build()
 
   # Set props on a file and on a dir
-  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
@@ -878,7 +878,7 @@ def load_non_deltas_replace_copy_with_props(sbox):
   sbox.simple_copy('A/mu@2', 'A/D/gamma')
   sbox.simple_copy('A/B@2', 'A/C')
   # On the copy, delete a prop that isn't present on the replaced node
-  sbox.simple_propdel('p', 'A/D/gamma', 'A/C')
+  sbox.simple_propdel('p', 'A/D/gamma', 'A/C', 'A/C/E')
 
   sbox.simple_commit()
 
@@ -894,7 +894,7 @@ def load_non_deltas_replace_copy_with_props(sbox):
                                           [], 0, 'load', new_repo_url)
 
   # Check that property 'p' really was deleted on each copied node
-  for tgt_path in ['A/D/gamma', 'A/C']:
+  for tgt_path in ['A/D/gamma', 'A/C', 'A/C/E']:
     _, out, _ = svntest.main.run_svn(None, 'proplist',
                                      new_repo_url + '/' + tgt_path)
     expected = []
