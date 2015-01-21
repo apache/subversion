@@ -785,6 +785,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
         }
 
       /* Run the serf loop. */
+      done = FALSE;
       SVN_ERR(svn_ra_serf__context_run_wait(&done, session, pool));
 
       /* Substract the number of completely handled responses from our
@@ -795,7 +796,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
         done_list = done_reports;
 
-        done = FALSE;
         done_reports = NULL;
 
         while (done_list)

@@ -298,6 +298,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * Allow PARALLEL value to specify the number of threads to run tests with,
       PARALLEL=1 means to use the default (r1573320)
     * pkg-config support for libsvn_* libraries (issue #4435)
+    * binaries built on Mac OS X 10.6+ will not run on older versions (r1651549)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
@@ -315,7 +316,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * New api svn_io_file_aligned_seek() (r1502539)
     * ra_svn: fix svn_ra_get_log*() to apply limit when server can't (r1503043)
     * svn_client_commit6: notify which path prevents a mv commit (r1503662)
-    * New apis svn_io_file_create_empty() and svn_io_file_create_binary()
+    * New apis svn_io_file_create_empty() and svn_io_file_create_bytes()
       (r1505006)
     * New api svn_ver_check_list2() (r1502267)
     * svn_fs_paths_changed() gains support for moves (r1525448)
@@ -457,6 +458,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.10
     * mod_dav_svn: reject requests with missing repository paths (r1643409)
     * mod_dav_svn: reject requests with invalid virtual transaction names
       (r1643437)
+    * mod_dav_svn: avoid unneeded memory growth in resource walking
+      (issue #4531)
 
  Developer-visible changes:
   - General:
@@ -466,6 +469,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.10
       r1564576, r1568180)
     * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
       during a unix build (r1637826)
+    * allow the use of libtool 2.4.3 (r1640862, r1640873, r1643793)
 
 
 Version 1.8.10
@@ -1216,6 +1220,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.19
     * mod_dav_svn: reject requests with missing repository paths (r1643409)
     * mod_dav_svn: reject requests with invalid virtual transaction names
       (r1643437)
+    * mod_dav_svn: avoid unneeded memory growth in resource walking
+      (issue #4531)
 
  Developer-visible changes:
   - General:
@@ -1227,6 +1233,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.19
       2003-2008 (r1595431)
     * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
       during a unix build (r1637826)
+    * allow the use of libtool 2.4.3 (r1640862, r1640873, r1643793)
 
 
 Version 1.7.18

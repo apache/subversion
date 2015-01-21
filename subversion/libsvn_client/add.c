@@ -1270,11 +1270,7 @@ svn_client__make_local_parents(const char *local_abspath,
   else
     SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
 
-  /* Should no longer use svn_depth_empty to indicate that only the directory
-     itself is added, since it not only constraints the operation depth, but
-     also defines the depth of the target directory now. Moreover, the new
-     directory will have no children at all.*/
-  err = svn_client_add5(local_abspath, svn_depth_infinity, FALSE, FALSE, FALSE,
+  err = svn_client_add5(local_abspath, svn_depth_empty, FALSE, FALSE, FALSE,
                         make_parents, ctx, scratch_pool);
 
   /* If we created a new directory, but couldn't add it to version

@@ -208,7 +208,9 @@ parse_revprop(apr_hash_t **properties,
   svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
   *properties = apr_hash_make(pool);
 
-  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR_W(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool),
+            apr_psprintf(scratch_pool, "Failed to parse revprops for r%ld.",
+                         revision));
 
   return SVN_NO_ERROR;
 }

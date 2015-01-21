@@ -337,7 +337,6 @@ svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
 
   *mtcc = apr_pcalloc(mtcc_pool, sizeof(**mtcc));
   (*mtcc)->pool = mtcc_pool;
-  (*mtcc)->base_revision = base_revision;
 
   (*mtcc)->root_op = mtcc_op_create(NULL, FALSE, TRUE, mtcc_pool);
 
@@ -350,9 +349,12 @@ svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
   SVN_ERR(svn_ra_get_latest_revnum((*mtcc)->ra_session, &(*mtcc)->head_revision,
                                    scratch_pool));
 
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = (*mtcc)->head_revision;
-  else if (base_revision > (*mtcc)->head_revision)
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    (*mtcc)->base_revision = base_revision;
+  else
+    (*mtcc)->base_revision = (*mtcc)->head_revision;
+
+  if ((*mtcc)->base_revision > (*mtcc)->head_revision)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld (HEAD is %ld)"),
                              base_revision, (*mtcc)->head_revision);

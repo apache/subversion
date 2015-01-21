@@ -55,8 +55,7 @@ SVN::Client - Subversion client functions
                                            0,           #no_auth_cache
                                            0,           #trust_server_cert
                                            $config_category,
-                                           undef,       #cancel_func
-                                           undef)       #cancel_baton
+                                           undef)       #cancel_callback
     );
 
     # Use first argument as target and canonicalize it before using
@@ -1286,24 +1285,8 @@ sub log_msg {
 =item $client-E<gt>cancel(\&cancel)
 
 Sets the cancellation callback for the client context to a code reference that you
-pass.  It always returns the current codereference set.
-
-The subroutine pointed to by this value will be called to see if the operation
-should be canceled.  If the operation should be canceled, the function may
-return one of the following values:
-
-An svn_error_t object made with SVN::Error::create.
-
-Any true value, in which case the bindings will generate an svn_error_t object
-for you with the error code of SVN_ERR_CANCELLED and the string set to "By
-cancel callback".
-
-A string, in which case the bindings will generate an svn_error_t object for you
-with the error code of SVN_ERR_CANCELLED and the string set to the string you
-returned.
-
-Any other value will be interpreted as wanting to continue the operation.
-Generally, it's best to return 0 to continue the operation.
+pass. See L<"CANCELLATION CALLBACK"> below for details.
+It always returns the current codereference set.
 
 =cut
 
@@ -1488,6 +1471,25 @@ The svn_auth_cred_ssl_client_cert_pw has the following members: password and
 may_save.
 
 =back
+
+=head1 CANCELLATION CALLBACK
+
+This callback will be called periodically to see if the operation
+should be canceled.  If the operation should be canceled, the function may
+return one of the following values:
+
+An svn_error_t object made with SVN::Error::create.
+
+Any true value, in which case the bindings will generate an svn_error_t object
+for you with the error code of SVN_ERR_CANCELLED and the string set to "By
+cancel callback".
+
+A string, in which case the bindings will generate an svn_error_t object for you
+with the error code of SVN_ERR_CANCELLED and the string set to the string you
+returned.
+
+Any other value will be interpreted as wanting to continue the operation.
+Generally, it's best to return 0 to continue the operation.
 
 =head1 OBJECTS
 

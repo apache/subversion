@@ -2694,6 +2694,7 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
   svn_skel_t *conflicts;
   svn_wc_operation_t operation;
   svn_boolean_t tree_conflicted;
+  const char *src_op_root_abspath;
 
   *did_resolve = FALSE;
 
@@ -2708,7 +2709,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
   if (!tree_conflicted)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL,
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
+                                              &src_op_root_abspath,
                                               db, local_abspath,
                                               conflicts,
                                               scratch_pool, scratch_pool));
@@ -2725,7 +2727,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
               /* Break moves for any children moved out of this directory,
                * and leave this directory deleted. */
               SVN_ERR(svn_wc__db_resolve_break_moved_away_children(
-                        db, local_abspath, notify_func, notify_baton,
+                        db, local_abspath, src_op_root_abspath,
+                        notify_func, notify_baton,
                         scratch_pool));
               *did_resolve = TRUE;
             }
@@ -2807,6 +2810,7 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                  ### involving the move until
                  ### svn_wc__db_op_mark_resolved. */
               SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
+                                                          src_op_root_abspath,
                                                           notify_func,
                                                           notify_baton,
                                                           scratch_pool));

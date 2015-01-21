@@ -154,9 +154,6 @@ adjust_paths_for_diff_labels(const char **index_path,
         new_path = ".";
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(new_path, relative_to_dir);
-
-      child_path = svn_dirent_is_child(relative_to_dir, new_path1,
-                                       result_pool);
     }
 
   {
