@@ -262,7 +262,9 @@ make_dir_baton(struct edit_baton *edit_baton,
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
    parameter here is IS_DIR, which is TRUE when adding a directory,
-   and FALSE when adding a file.  */
+   and FALSE when adding a file.
+
+   COPY_PATH must be a full URL, not a relative path. */
 static svn_error_t *
 add_file_or_directory(const char *path,
                       void *parent_baton,

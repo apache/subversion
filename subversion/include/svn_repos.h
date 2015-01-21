@@ -1539,6 +1539,10 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @note Yes, @a repos_url is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
+ *
+ * @note Like most commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
  */
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,

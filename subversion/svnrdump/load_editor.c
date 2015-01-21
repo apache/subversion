@@ -604,6 +604,7 @@ new_node_record(void **node_baton,
       if (rb->pb->parent_dir)
         nb->copyfrom_path = svn_relpath_join(rb->pb->parent_dir,
                                              nb->copyfrom_path, rb->pool);
+      /* Convert to a URL, as the commit editor requires. */
       nb->copyfrom_path = svn_path_url_add_component2(rb->pb->root_url,
                                                       nb->copyfrom_path,
                                                       rb->pool);
