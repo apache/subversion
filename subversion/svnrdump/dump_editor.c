@@ -661,7 +661,7 @@ add_directory(const char *path,
               void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
-  void *val;
+  void *was_deleted;
   struct dir_baton *new_db;
   svn_boolean_t is_copy;
 
@@ -673,20 +673,20 @@ add_directory(const char *path,
                           pb, pb->pool);
 
   /* This might be a replacement -- is the path already deleted? */
-  val = svn_hash_gets(pb->deleted_entries, path);
+  was_deleted = svn_hash_gets(pb->deleted_entries, path);
 
   /* Detect an add-with-history */
   is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node */
   SVN_ERR(dump_node(pb->eb, new_db->repos_relpath, new_db, NULL,
-                    val ? svn_node_action_replace : svn_node_action_add,
+                    was_deleted ? svn_node_action_replace : svn_node_action_add,
                     is_copy,
                     is_copy ? new_db->copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
-  if (val)
+  if (was_deleted)
     /* Delete the path, it's now been dumped */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
@@ -792,7 +792,7 @@ add_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
-  void *val;
+  void *was_deleted;
 
   LDR_DBG(("add_file %s\n", path));
 
@@ -802,7 +802,7 @@ add_file(const char *path,
   fb = make_file_baton(path, pb, pool);
 
   /* This might be a replacement -- is the path already deleted? */
-  val = svn_hash_gets(pb->deleted_entries, path);
+  was_deleted = svn_hash_gets(pb->deleted_entries, path);
 
   /* Detect add-with-history. */
   if (ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev))
@@ -811,10 +811,10 @@ add_file(const char *path,
       fb->copyfrom_rev = copyfrom_rev;
       fb->is_copy = TRUE;
     }
-  fb->action = val ? svn_node_action_replace : svn_node_action_add;
+  fb->action = was_deleted ? svn_node_action_replace : svn_node_action_add;
 
   /* Delete the path, it's now been dumped. */
-  if (val)
+  if (was_deleted)
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
   *file_baton = fb;
