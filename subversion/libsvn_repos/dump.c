@@ -1495,13 +1495,13 @@ add_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  void *val;
+  void *was_deleted;
   svn_boolean_t is_copy = FALSE;
   struct dir_baton *new_db
     = make_dir_baton(path, copyfrom_path, copyfrom_rev, eb, pb, pool);
 
   /* This might be a replacement -- is the path already deleted? */
-  val = svn_hash_gets(pb->deleted_entries, path);
+  was_deleted = svn_hash_gets(pb->deleted_entries, path);
 
   /* Detect an add-with-history. */
   is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
@@ -1509,19 +1509,19 @@ add_directory(const char *path,
   /* Dump the node. */
   SVN_ERR(dump_node(eb, path,
                     svn_node_dir,
-                    val ? svn_node_action_replace : svn_node_action_add,
+                    was_deleted ? svn_node_action_replace : svn_node_action_add,
                     is_copy,
                     is_copy ? copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
-  if (val)
+  if (was_deleted)
     /* Delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
   /* Check for normalized name clashes, but only if this is actually a
      new name in the parent, not a replacement. */
-  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
+  if (!was_deleted && eb->verify && eb->check_normalization && eb->notify_func)
     {
       pb->check_name_collision = TRUE;
     }
@@ -1607,11 +1607,11 @@ add_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  void *val;
+  void *was_deleted;
   svn_boolean_t is_copy = FALSE;
 
   /* This might be a replacement -- is the path already deleted? */
-  val = svn_hash_gets(pb->deleted_entries, path);
+  was_deleted = svn_hash_gets(pb->deleted_entries, path);
 
   /* Detect add-with-history. */
   is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
@@ -1619,19 +1619,19 @@ add_file(const char *path,
   /* Dump the node. */
   SVN_ERR(dump_node(eb, path,
                     svn_node_file,
-                    val ? svn_node_action_replace : svn_node_action_add,
+                    was_deleted ? svn_node_action_replace : svn_node_action_add,
                     is_copy,
                     is_copy ? copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
-  if (val)
+  if (was_deleted)
     /* delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
   /* Check for normalized name clashes, but only if this is actually a
      new name in the parent, not a replacement. */
-  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
+  if (!was_deleted && eb->verify && eb->check_normalization && eb->notify_func)
     {
       pb->check_name_collision = TRUE;
     }
