@@ -680,6 +680,43 @@ aligned_seek_test(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ignore_enoent(apr_pool_t *pool)
+{
+  const char *tmp_dir, *path;
+  const svn_io_dirent2_t *dirent_p;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "ignore_enoent", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Path does not exist. */
+  path = svn_dirent_join(tmp_dir, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+  
+  /* Neither path nor parent exists. */
+  path = svn_dirent_join(path, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -700,6 +737,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "svn_io_read_length_line() shouldn't loop"),
     SVN_TEST_PASS2(aligned_seek_test,
                    "test aligned seek"),
+    SVN_TEST_PASS2(ignore_enoent,
+                   "test ignore-enoent"),
     SVN_TEST_NULL
   };
 
