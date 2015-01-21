@@ -617,10 +617,6 @@ struct edit_baton
 struct dir_baton
 {
   struct edit_baton *edit_baton;
-  struct dir_baton *parent_dir_baton;
-
-  /* is this directory a new addition to this revision? */
-  svn_boolean_t added;
 
   /* has this directory been written to the output stream? */
   svn_boolean_t written_out;
@@ -660,21 +656,19 @@ struct dir_baton
    path, SVN_INVALID_REVNUM for the rev), just compare this directory
    PATH against itself in the previous revision.
 
-   PARENT_DIR_BATON is the directory baton of this directory's parent,
-   or NULL if this is the top-level directory of the edit.  ADDED
-   indicated if this directory is newly added in this revision.
+   PB is the directory baton of this directory's parent,
+   or NULL if this is the top-level directory of the edit.
+
    Perform all allocations in POOL.  */
 static struct dir_baton *
 make_dir_baton(const char *path,
                const char *cmp_path,
                svn_revnum_t cmp_rev,
                void *edit_baton,
-               void *parent_dir_baton,
-               svn_boolean_t added,
+               struct dir_baton *pb,
                apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *pb = parent_dir_baton;
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
   const char *full_path;
 
@@ -692,11 +686,9 @@ make_dir_baton(const char *path,
     cmp_path = svn_relpath_canonicalize(cmp_path, pool);
 
   new_db->edit_baton = eb;
-  new_db->parent_dir_baton = pb;
   new_db->path = full_path;
   new_db->cmp_path = cmp_path;
   new_db->cmp_rev = cmp_rev;
-  new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
   new_db->check_name_collision = FALSE;
@@ -1472,7 +1464,7 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                               edit_baton, NULL, FALSE, pool);
+                               edit_baton, NULL, pool);
   return SVN_NO_ERROR;
 }
 
@@ -1506,7 +1498,7 @@ add_directory(const char *path,
   void *val;
   svn_boolean_t is_copy = FALSE;
   struct dir_baton *new_db
-    = make_dir_baton(path, copyfrom_path, copyfrom_rev, eb, pb, TRUE, pool);
+    = make_dir_baton(path, copyfrom_path, copyfrom_rev, eb, pb, pool);
 
   /* This might be a replacement -- is the path already deleted? */
   val = svn_hash_gets(pb->deleted_entries, path);
@@ -1563,7 +1555,7 @@ open_directory(const char *path,
       cmp_rev = pb->cmp_rev;
     }
 
-  new_db = make_dir_baton(path, cmp_path, cmp_rev, eb, pb, FALSE, pool);
+  new_db = make_dir_baton(path, cmp_path, cmp_rev, eb, pb, pool);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
