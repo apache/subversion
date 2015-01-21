@@ -739,10 +739,17 @@ ignore_enoent(apr_pool_t *pool)
   ASSERT_ENOTDIR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
 #endif
   SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+#ifdef WIN32
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+#else
   ASSERT_ENOTDIR(svn_io_set_file_read_only(path, TRUE, pool));
   ASSERT_ENOTDIR(svn_io_set_file_read_write(path, TRUE, pool));
   ASSERT_ENOTDIR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
   ASSERT_ENOTDIR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+#endif
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
 
