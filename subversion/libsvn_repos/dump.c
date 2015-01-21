@@ -1682,11 +1682,16 @@ change_dir_prop(void *parent_baton,
 
   /* This function is what distinguishes between a directory that is
      opened to merely get somewhere, vs. one that is opened because it
-     *actually* changed by itself.  */
+     *actually* changed by itself.
+
+     Instead of recording the prop changes here, we just use this method
+     to trigger writing the node; dump_node() finds all the changes. */
   if (! db->written_out)
     {
       SVN_ERR(dump_node(eb, db->path,
                         svn_node_dir, svn_node_action_change,
+                        /* ### We pass is_copy=FALSE; this might be wrong
+                           but the parameter isn't used when action=change. */
                         FALSE, db->cmp_path, db->cmp_rev, pool));
       db->written_out = TRUE;
     }
