@@ -725,8 +725,8 @@ ignore_enoent(apr_pool_t *pool)
 
 #define ASSERT_ENOTDIR(exp) {                                           \
     svn_error_t *svn__err = (exp);                                      \
-    SVN_TEST_ASSERT(svn__err                                            \
-                    && SVN__APR_STATUS_IS_ENOTDIR(svn__err->apr_err));  \
+    SVN_TEST_ASSERT(svn__err);                                          \
+    SVN_TEST_ASSERT(SVN__APR_STATUS_IS_ENOTDIR(svn__err->apr_err));     \
     svn_error_clear(svn__err);                                          \
 }
 
