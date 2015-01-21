@@ -1012,6 +1012,10 @@ open_path(parent_path_t **parent_path_p,
 
       svn_pool_clear(iterpool);
 
+      /* The NODE in PARENT_PATH always lives in POOL, i.e. it will
+       * survive the cleanup of ITERPOOL and the DAG cache.*/
+      here = parent_path->node;
+
       /* Parse out the next entry from the path.  */
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
@@ -1105,10 +1109,6 @@ open_path(parent_path_t **parent_path_p,
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
-
-      /* The NODE in PARENT_PATH equals CHILD but lives in POOL, i.e.
-       * it will survive the cleanup of ITERPOOL.*/
-      here = parent_path->node;
     }
 
   svn_pool_destroy(iterpool);
