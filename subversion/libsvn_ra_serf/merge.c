@@ -439,5 +439,13 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
   *commit_info = merge_ctx->commit_info;
 
+  /* Sanity check (Reported to be triggered by CodePlex's svnbridge) */
+  if (! SVN_IS_VALID_REVNUM(merge_ctx->commit_info->revision))
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                              _("The MERGE response did not include "
+                                "a new revision"));
+    }
+
   return SVN_NO_ERROR;
 }
