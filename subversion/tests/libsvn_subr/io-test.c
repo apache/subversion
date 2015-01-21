@@ -685,6 +685,7 @@ ignore_enoent(apr_pool_t *pool)
 {
   const char *tmp_dir, *path;
   const svn_io_dirent2_t *dirent_p;
+  apr_file_t *file;
 
   /* Create an empty directory. */
   SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "ignore_enoent", pool));
@@ -711,6 +712,33 @@ ignore_enoent(apr_pool_t *pool)
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
   SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
   SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  /* File does exist. */
+  path = svn_dirent_join(tmp_dir, "present", pool);
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT,
+                           pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+#define ASSERT_ENOTDIR(exp) {                                           \
+    svn_error_t *svn__err = (exp);                                      \
+    SVN_TEST_ASSERT(svn__err                                            \
+                    && SVN__APR_STATUS_IS_ENOTDIR(svn__err->apr_err));  \
+    svn_error_clear(svn__err);                                          \
+}
+
+  /* Path does not exist as child of file. */
+  /* ### Some return SUCCESS others ENOTDIR, is that what we want? */
+  path = svn_dirent_join(path, "not-present", pool);
+  ASSERT_ENOTDIR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  ASSERT_ENOTDIR(svn_io_set_file_read_only(path, TRUE, pool));
+  ASSERT_ENOTDIR(svn_io_set_file_read_write(path, TRUE, pool));
+  ASSERT_ENOTDIR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  ASSERT_ENOTDIR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
 
