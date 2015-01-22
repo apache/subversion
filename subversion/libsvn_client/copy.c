@@ -1626,7 +1626,7 @@ check_url_kind(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Queue a property change to LOCAL_ABSPATH in the COMMIT_ITEMS list.
+/* Queue a property change to COMMIT_URL in the COMMIT_ITEMS list.
  * If the list does not already have a commit item for LOCAL_ABSPATH
  * add a new commit item for the property change.
  * Allocate results in RESULT_POOL.
@@ -1664,6 +1664,7 @@ queue_prop_change_commit_items(const char *commit_url,
       item->url = commit_url;
       item->kind = svn_node_dir;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
     }
   else
     item->state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
@@ -1672,7 +1673,7 @@ queue_prop_change_commit_items(const char *commit_url,
     item->outgoing_prop_changes = apr_array_make(result_pool, 1,
                                                  sizeof(svn_prop_t *));
 
-  SVN_DBG(("item->url=%s item->state_flags=0x%x", item->url, item->state_flags));
+  SVN_DBG(("%s: item->url=%s item->state_flags=0x%x propval=%s", __func__, item->url, item->state_flags, propval->data));
   prop = apr_palloc(result_pool, sizeof(*prop));
   prop->name = propname;
   prop->value = propval;
