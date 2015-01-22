@@ -3547,10 +3547,10 @@ def replace_tree_with_foreign_external(sbox):
                                         None, None, None, None, None, 1,
                                         '-r', '2', wc_dir)
 
-def pin_externals(sbox):
+def copy_pin_externals(sbox):
   "test svn copy --pin-externals"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
@@ -3562,6 +3562,36 @@ def pin_externals(sbox):
                                      repo_url + '/A_copy',
                                      '-m', 'copy',
                                      '--pin-externals')
+
+  # Verify that externals have been pinned.
+  def verify_pinned_externals():
+    expected_output = [
+      '-r1 %s@1 gamma\n' % external_url_for["A/B/gamma"],
+      '\n',
+    ]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'propget', 'svn:externals',
+                                        repo_url + '/A_copy/B')
+    expected_output = [
+      '-r3 %s@3 exdir_G\n' % external_url_for["A/C/exdir_G"],
+      '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
+      '\n',
+    ]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'propget', 'svn:externals',
+                                        repo_url + '/A_copy/C')
+    expected_output = [
+      '-r5 %s@5 exdir_A\n' % external_url_for["A/D/exdir_A"],
+      '-r3 %s@3 exdir_A/G\n' % external_url_for["A/D/exdir_A/G/"],
+      '-r1 %s@1 exdir_A/H\n' % external_url_for["A/D/exdir_A/H"],
+      '-r4 %s@4 x/y/z/blah\n' % external_url_for["A/D/x/y/z/blah"],
+      '\n',
+    ]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'propget', 'svn:externals',
+                                        repo_url + '/A_copy/D')
+    
+  verify_pinned_externals()
 
   # Create a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3634,7 +3664,7 @@ test_list = [ None,
               switch_relative_externals,
               copy_file_external_to_repo,
               replace_tree_with_foreign_external,
-              pin_externals,
+              copy_pin_externals,
              ]
 
 if __name__ == '__main__':
