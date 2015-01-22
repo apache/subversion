@@ -856,7 +856,7 @@ remove_node_props(void *baton)
   /* Find the path and revision that has the node's original properties */
   if (ARE_VALID_COPY_ARGS(nb->copyfrom_path, nb->copyfrom_rev))
     {
-      SVN_DBG(("using nb->copyfrom  %s@%ld", nb->copyfrom_path, nb->copyfrom_rev));
+      LDR_DBG(("using nb->copyfrom  %s@%ld", nb->copyfrom_path, nb->copyfrom_rev));
       orig_path = nb->copyfrom_path;
       orig_rev = nb->copyfrom_rev;
     }
@@ -865,7 +865,7 @@ remove_node_props(void *baton)
     {
       /* If this is a dir, then it's described by rb->db;
          if this is a file, then it's a child of the dir in rb->db. */
-      SVN_DBG(("using rb->db->copyfrom (k=%d) %s@%ld",
+      LDR_DBG(("using rb->db->copyfrom (k=%d) %s@%ld",
                  nb->kind, rb->db->copyfrom_path, rb->db->copyfrom_rev));
       orig_path = (nb->kind == svn_node_dir)
                     ? rb->db->copyfrom_path
@@ -876,13 +876,13 @@ remove_node_props(void *baton)
     }
   else
     {
-      SVN_DBG(("using self.path@head  %s@%ld", nb->path, SVN_INVALID_REVNUM));
+      LDR_DBG(("using self.path@head  %s@%ld", nb->path, SVN_INVALID_REVNUM));
       /* ### Should we query at a known, fixed, "head" revision number
          instead of passing SVN_INVALID_REVNUM and getting a moving target? */
       orig_path = nb->path;
       orig_rev = SVN_INVALID_REVNUM;
     }
-  SVN_DBG(("Trying %s@%ld", orig_path, orig_rev));
+  LDR_DBG(("Trying %s@%ld", orig_path, orig_rev));
 
   if ((nb->action == svn_node_action_add
             || nb->action == svn_node_action_replace)
