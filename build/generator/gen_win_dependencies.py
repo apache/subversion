@@ -838,7 +838,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     txt = open(version_path).read()
 
     vermatch = re.search(
-      r'#define OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      r'#\s*define\s+OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
   
     version = (int(vermatch.group(2)), 
