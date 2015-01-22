@@ -41,6 +41,8 @@
 
 #define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
 
+#define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
+
 #if 0
 #define LDR_DBG(x) SVN_DBG(x)
 #else
@@ -102,6 +104,15 @@ struct directory_baton
 {
   void *baton;
   const char *relpath;
+
+  /* The copy-from source of this directory, no matter whether it is
+     copied explicitly (the root node of a copy) or implicitly (being an
+     existing child of a copied directory). For a node that is newly
+     added (without history), even inside a copied parent, these are
+     NULL and SVN_INVALID_REVNUM. */
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+
   struct directory_baton *parent;
 };
 
@@ -115,8 +126,13 @@ struct node_baton
   svn_node_kind_t kind;
   enum svn_node_action action;
 
+  /* Is this directory explicitly added? If not, then it already existed
+     or is a child of a copy. */
+  svn_boolean_t is_added;
+
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
+  const char *copyfrom_url;
 
   void *file_baton;
   const char *base_checksum;
@@ -387,6 +403,7 @@ new_revision_record(void **revision_baton,
   pb = parse_baton;
   rb->pool = svn_pool_create(pool);
   rb->pb = pb;
+  rb->db = NULL;
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
@@ -435,6 +452,47 @@ uuid_record(const char *uuid,
   return SVN_NO_ERROR;
 }
 
+/* Push information about another directory onto the linked list RB->db.
+ *
+ * CHILD_BATON is the baton returned by the commit editor. RELPATH is the
+ * repository-relative path of this directory. IS_ADDED is true iff this
+ * directory is being added (with or without history). If added with
+ * history then COPYFROM_PATH/COPYFROM_REV are the copyfrom source, else
+ * are NULL/SVN_INVALID_REVNUM.
+ */
+static void
+push_directory(struct revision_baton *rb,
+               void *child_baton,
+               const char *relpath,
+               svn_boolean_t is_added,
+               const char *copyfrom_path,
+               svn_revnum_t copyfrom_rev)
+{
+  struct directory_baton *child_db = apr_pcalloc(rb->pool, sizeof (*child_db));
+
+  SVN_ERR_ASSERT_NO_RETURN(
+    is_added || (copyfrom_path == NULL && copyfrom_rev == SVN_INVALID_REVNUM));
+
+  /* If this node is an existing (not newly added) child of a copied node,
+     calculate where it was copied from. */
+  if (!is_added
+      && ARE_VALID_COPY_ARGS(rb->db->copyfrom_path, rb->db->copyfrom_rev))
+    {
+      const char *name = svn_relpath_basename(relpath, NULL);
+
+      copyfrom_path = svn_relpath_join(rb->db->copyfrom_path, name,
+                                       rb->pool);
+      copyfrom_rev = rb->db->copyfrom_rev;
+    }
+
+  child_db->baton = child_baton;
+  child_db->relpath = relpath;
+  child_db->copyfrom_path = copyfrom_path;
+  child_db->copyfrom_rev = copyfrom_rev;
+  child_db->parent = rb->db;
+  rb->db = child_db;
+}
+
 static svn_error_t *
 new_node_record(void **node_baton,
                 apr_hash_t *headers,
@@ -445,16 +503,15 @@ new_node_record(void **node_baton,
   const struct svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
   void *commit_edit_baton = rb->pb->commit_edit_baton;
   struct node_baton *nb;
-  struct directory_baton *child_db;
   apr_hash_index_t *hi;
   void *child_baton;
-  char *relpath_compose;
   const char *nb_dirname;
 
   nb = apr_pcalloc(rb->pool, sizeof(*nb));
   nb->rb = rb;
-
+  nb->is_added = FALSE;
   nb->copyfrom_path = NULL;
+  nb->copyfrom_url = NULL;
   nb->copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* If the creation of commit_editor is pending, create it now and
@@ -488,12 +545,9 @@ new_node_record(void **node_baton,
 
       LDR_DBG(("Opened root %p\n", child_baton));
 
-      /* child_db corresponds to the root directory baton here */
-      child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
-      child_db->baton = child_baton;
-      child_db->relpath = "";
-      child_db->parent = NULL;
-      rb->db = child_db;
+      /* child_baton corresponds to the root directory baton here */
+      push_directory(rb, child_baton, "", TRUE /*is_added*/,
+                     NULL, SVN_INVALID_REVNUM);
     }
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
@@ -527,7 +581,8 @@ new_node_record(void **node_baton,
     }
 
   /* Before handling the new node, ensure depth-first editing order by
-     traversing the directory hierarchy from the old to the new node. */
+     traversing the directory hierarchy from the old node's to the new
+     node's parent directory. */
   nb_dirname = svn_relpath_dirname(nb->path, pool);
   if (svn_path_compare_paths(nb_dirname,
                              rb->db->relpath) != 0)
@@ -562,7 +617,7 @@ new_node_record(void **node_baton,
 
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          relpath_compose =
+          char *relpath_compose =
             svn_relpath_join(rb->db->relpath,
                              APR_ARRAY_IDX(residual_open_path, i, const char *),
                              rb->pool);
@@ -571,11 +626,8 @@ new_node_record(void **node_baton,
                                                 rb->rev - rb->rev_offset - 1,
                                                 rb->pool, &child_baton));
           LDR_DBG(("Opened dir %p\n", child_baton));
-          child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
-          child_db->baton = child_baton;
-          child_db->relpath = relpath_compose;
-          child_db->parent = rb->db;
-          rb->db = child_db;
+          push_directory(rb, child_baton, relpath_compose, TRUE /*is_added*/,
+                         NULL, SVN_INVALID_REVNUM);
         }
     }
 
@@ -604,7 +656,7 @@ new_node_record(void **node_baton,
         nb->copyfrom_path = svn_relpath_join(rb->pb->parent_dir,
                                              nb->copyfrom_path, rb->pool);
       /* Convert to a URL, as the commit editor requires. */
-      nb->copyfrom_path = svn_path_url_add_component2(rb->pb->root_url,
+      nb->copyfrom_url = svn_path_url_add_component2(rb->pb->root_url,
                                                       nb->copyfrom_path,
                                                       rb->pool);
     }
@@ -622,11 +674,12 @@ new_node_record(void **node_baton,
       else
         /* FALL THROUGH */;
     case svn_node_action_add:
+      nb->is_added = TRUE;
       switch (nb->kind)
         {
         case svn_node_file:
           SVN_ERR(commit_editor->add_file(nb->path, rb->db->baton,
-                                          nb->copyfrom_path,
+                                          nb->copyfrom_url,
                                           nb->copyfrom_rev,
                                           rb->pool, &(nb->file_baton)));
           LDR_DBG(("Added file %s to dir %p as %p\n",
@@ -634,16 +687,13 @@ new_node_record(void **node_baton,
           break;
         case svn_node_dir:
           SVN_ERR(commit_editor->add_directory(nb->path, rb->db->baton,
-                                               nb->copyfrom_path,
+                                               nb->copyfrom_url,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
           LDR_DBG(("Added dir %s to dir %p as %p\n",
                    nb->path, rb->db->baton, child_baton));
-          child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
-          child_db->baton = child_baton;
-          child_db->relpath = apr_pstrdup(rb->pool, nb->path);
-          child_db->parent = rb->db;
-          rb->db = child_db;
+          push_directory(rb, child_baton, nb->path, TRUE /*is_added*/,
+                         nb->copyfrom_path, nb->copyfrom_rev);
           break;
         default:
           break;
@@ -661,11 +711,8 @@ new_node_record(void **node_baton,
           SVN_ERR(commit_editor->open_directory(nb->path, rb->db->baton,
                                                 rb->rev - rb->rev_offset - 1,
                                                 rb->pool, &child_baton));
-          child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
-          child_db->baton = child_baton;
-          child_db->relpath = apr_pstrdup(rb->pool, nb->path);
-          child_db->parent = rb->db;
-          rb->db = child_db;
+          push_directory(rb, child_baton, nb->path, FALSE /*is_added*/,
+                         NULL, SVN_INVALID_REVNUM);
           break;
         }
       break;
@@ -787,29 +834,71 @@ delete_node_property(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Delete all the properties of the node, if any.
+ *
+ * The commit editor doesn't have a method to delete a node's properties
+ * without knowing what they are, so we have to first find out what
+ * properties the node would have had. If it's copied (explicitly or
+ * implicitly), we look at the copy source. If it's only being changed,
+ * we look at the node's current path in the head revision.
+ */
 static svn_error_t *
 remove_node_props(void *baton)
 {
   struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
   apr_pool_t *pool = nb->rb->pool;
   apr_hash_index_t *hi;
   apr_hash_t *props;
+  const char *orig_path;
+  svn_revnum_t orig_rev;
+
+  /* Find the path and revision that has the node's original properties */
+  if (ARE_VALID_COPY_ARGS(nb->copyfrom_path, nb->copyfrom_rev))
+    {
+      SVN_DBG(("using nb->copyfrom  %s@%ld", nb->copyfrom_path, nb->copyfrom_rev));
+      orig_path = nb->copyfrom_path;
+      orig_rev = nb->copyfrom_rev;
+    }
+  else if (!nb->is_added
+           && ARE_VALID_COPY_ARGS(rb->db->copyfrom_path, rb->db->copyfrom_rev))
+    {
+      /* If this is a dir, then it's described by rb->db;
+         if this is a file, then it's a child of the dir in rb->db. */
+      SVN_DBG(("using rb->db->copyfrom (k=%d) %s@%ld",
+                 nb->kind, rb->db->copyfrom_path, rb->db->copyfrom_rev));
+      orig_path = (nb->kind == svn_node_dir)
+                    ? rb->db->copyfrom_path
+                    : svn_relpath_join(rb->db->copyfrom_path,
+                                       svn_relpath_basename(nb->path, NULL),
+                                       rb->pool);
+      orig_rev = rb->db->copyfrom_rev;
+    }
+  else
+    {
+      SVN_DBG(("using self.path@head  %s@%ld", nb->path, SVN_INVALID_REVNUM));
+      /* ### Should we query at a known, fixed, "head" revision number
+         instead of passing SVN_INVALID_REVNUM and getting a moving target? */
+      orig_path = nb->path;
+      orig_rev = SVN_INVALID_REVNUM;
+    }
+  SVN_DBG(("Trying %s@%ld", orig_path, orig_rev));
 
   if ((nb->action == svn_node_action_add
             || nb->action == svn_node_action_replace)
-      && ! SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
+      && ! ARE_VALID_COPY_ARGS(orig_path, orig_rev))
     /* Add-without-history; no "old" properties to worry about. */
     return SVN_NO_ERROR;
 
   if (nb->kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file(nb->rb->pb->aux_session, nb->path,
-                              SVN_INVALID_REVNUM, NULL, NULL, &props, pool));
+      SVN_ERR(svn_ra_get_file(nb->rb->pb->aux_session,
+                              orig_path, orig_rev, NULL, NULL, &props, pool));
     }
   else  /* nb->kind == svn_node_dir */
     {
       SVN_ERR(svn_ra_get_dir2(nb->rb->pb->aux_session, NULL, NULL, &props,
-                              nb->path, SVN_INVALID_REVNUM, 0, pool));
+                              orig_path, orig_rev, 0, pool));
     }
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
