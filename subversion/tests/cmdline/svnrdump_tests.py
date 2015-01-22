@@ -825,59 +825,77 @@ def load_mergeinfo_contains_r0(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # not exist and the failure mode is to error out.
-@XFail()
 @Issue(4551)
 def load_non_deltas_copy_with_props(sbox):
   "load non-deltas copy with props"
   sbox.build()
 
-  # Set props on a file and on a dir and on a child of the dir to be copied
-  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  # Case (1): Copies that do not replace anything: the copy target path
+  # at (new rev - 1) does not exist
+
+  # Set properties on each node to be copied
+  sbox.simple_propset('-R', 'p', 'pval', 'A')
+  sbox.simple_propset('-R', 'q', 'qval', 'A')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
-  # Case (1): Copy file/dir, not replacing anything; the copy target path
-  # at (new rev - 1) does not exist
+  # Do the copies
   sbox.simple_copy('A/mu@2', 'A/mu_COPY')
   sbox.simple_copy('A/B@2', 'A/B_COPY')
-  # On the copy, delete a prop
-  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E')
+  # Also add new nodes inside the copied dir, to test more code paths
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/copied')
+  sbox.simple_mkdir('A/B_COPY/added')
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/added/copied')
+  # On each copied node, delete a prop
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                           'A/B_COPY/copied', 'A/B_COPY/added/copied')
 
   sbox.simple_commit()
 
   # Dump with 'svnadmin' (non-deltas mode)
   dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
 
-  # Load with 'svnrdump'
+  # Load with 'svnrdump'. This used to throw an error:
+  # svnrdump: E160013: File not found: revision 2, path '/A/B_COPY'
   new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
   svntest.main.create_repos(new_repo_dir)
   svntest.actions.enable_revprop_changes(new_repo_dir)
   svntest.actions.run_and_verify_svnrdump(dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', new_repo_url)
-  # For regression test purposes, all we require is that the 'load'
-  # doesn't throw an error
+
+  # Check that property 'p' really was deleted on each copied node
+  for tgt_path in ['A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                   'A/B_COPY/copied', 'A/B_COPY/added/copied']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # exist and the failure mode is to fail to delete a property.
-@XFail()
 @Issue(4551)
 def load_non_deltas_replace_copy_with_props(sbox):
   "load non-deltas replace&copy with props"
   sbox.build()
 
-  # Set props on a file and on a dir and on a child of the dir to be copied
+  # Case (2): Copies that replace something: the copy target path
+  # at (new rev - 1) exists and has no property named 'p'
+
+  # Set props on the copy source nodes (a file, a dir, a child of the dir)
   sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
-  # Case (2): Copy file/dir, replacing something; the copy target path
-  # at (new rev - 1) exists and has no property named 'p'
+  # Do the copies, replacing something
   sbox.simple_rm('A/D/gamma', 'A/C')
   sbox.simple_copy('A/mu@2', 'A/D/gamma')
   sbox.simple_copy('A/B@2', 'A/C')
-  # On the copy, delete a prop that isn't present on the replaced node
+  # On the copy, delete a prop that wasn't present on the node that it replaced
   sbox.simple_propdel('p', 'A/D/gamma', 'A/C', 'A/C/E')
 
   sbox.simple_commit()
@@ -894,11 +912,13 @@ def load_non_deltas_replace_copy_with_props(sbox):
                                           [], 0, 'load', new_repo_url)
 
   # Check that property 'p' really was deleted on each copied node
+  # This used to fail, finding that property 'p' was still present
   for tgt_path in ['A/D/gamma', 'A/C', 'A/C/E']:
-    _, out, _ = svntest.main.run_svn(None, 'proplist',
-                                     new_repo_url + '/' + tgt_path)
-    expected = []
-    actual = out[1:]
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
     svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 # Regression test for issue #4552 "svnrdump writes duplicate headers for a
