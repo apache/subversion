@@ -199,11 +199,12 @@ pin_externals_prop(svn_string_t **pinned_externals,
 
   SVN_DBG(("repos_root_url: %s", repos_root_url));
   SVN_DBG(("local_abspath_or_url: %s", local_abspath_or_url));
+  SVN_DBG(("externals_prop_val: %s", externals_prop_val->data));
 
   SVN_ERR(svn_wc_parse_externals_description3(&external_items,
                                               local_abspath_or_url,
                                               externals_prop_val->data,
-                                              TRUE /* canonicalize_url */,
+                                              FALSE /* canonicalize_url */,
                                               scratch_pool));
 
   buf = svn_stringbuf_create_empty(scratch_pool);
