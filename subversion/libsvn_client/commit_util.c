@@ -1754,12 +1754,15 @@ do_item_commit(void **dir_baton,
          repository, a "not found" error does not occur immediately
          upon opening the directory.  It appears here during the delta
          transmisssion. */
-      err = svn_wc_transmit_prop_deltas2(
-              ctx->wc_ctx, local_abspath, editor,
-              (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
+      if (local_abspath)
+        {
+          err = svn_wc_transmit_prop_deltas2(
+                  ctx->wc_ctx, local_abspath, editor,
+                  (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
-      if (err)
-        goto fixup_error;
+          if (err)
+            goto fixup_error;
+        }
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
