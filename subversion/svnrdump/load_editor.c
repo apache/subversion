@@ -526,6 +526,8 @@ new_node_record(void **node_baton,
         nb->copyfrom_path = apr_pstrdup(rb->pool, hval);
     }
 
+  /* Before handling the new node, ensure depth-first editing order by
+     traversing the directory hierarchy from the old to the new node. */
   nb_dirname = svn_relpath_dirname(nb->path, pool);
   if (svn_path_compare_paths(nb_dirname,
                              rb->db->relpath) != 0)
@@ -536,9 +538,6 @@ new_node_record(void **node_baton,
       int i;
       apr_size_t n;
 
-      /* Before attempting to handle the action, call open_directory
-         for all the path components and set the directory baton
-         accordingly */
       ancestor_path =
         svn_relpath_get_longest_ancestor(nb_dirname,
                                          rb->db->relpath, pool);
