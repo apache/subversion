@@ -3564,14 +3564,14 @@ def copy_pin_externals(sbox):
                                      '--pin-externals')
 
   # Verify that externals have been pinned.
-  def verify_pinned_externals():
+  def verify_pinned_externals(base_path_or_url):
     expected_output = [
       '-r1 %s@1 gamma\n' % external_url_for["A/B/gamma"],
       '\n',
     ]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        repo_url + '/A_copy/B')
+                                        base_path_or_url + '/A_copy/B')
     expected_output = [
       '-r3 %s@3 exdir_G\n' % external_url_for["A/C/exdir_G"],
       '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
@@ -3579,7 +3579,7 @@ def copy_pin_externals(sbox):
     ]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        repo_url + '/A_copy/C')
+                                        base_path_or_url + '/A_copy/C')
     expected_output = [
       '-r5 %s@5 exdir_A\n' % external_url_for["A/D/exdir_A"],
       '-r3 %s@3 exdir_A/G\n' % external_url_for["A/D/exdir_A/G/"],
@@ -3589,9 +3589,14 @@ def copy_pin_externals(sbox):
     ]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        repo_url + '/A_copy/D')
+                                        base_path_or_url + '/A_copy/D')
     
-  verify_pinned_externals()
+  verify_pinned_externals(repo_url)
+
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'rm', repo_url + '/A_copy',
+                                    '-m', 'remove A_copy')
 
   # Create a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3599,10 +3604,39 @@ def copy_pin_externals(sbox):
                                      repo_url, wc_dir)
 
   # Perform a repos->wc copy, pinning externals
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     repo_url + '/A',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
+  verify_pinned_externals(wc_dir)
+
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
 
   # Perform a wc->repos copy, pinning externals
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A',
+                                     repo_url + '/A_copy',
+                                     '-m', 'copy',
+                                     '--pin-externals')
+  verify_pinned_externals(repo_url)
+
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'rm', repo_url + '/A_copy',
+                                    '-m', 'remove A_copy')
 
   # Perform a wc->wc copy, pinning externals
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
+  verify_pinned_externals(wc_dir)
 
 ########################################################################
 # Run the tests
