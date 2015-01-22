@@ -71,8 +71,7 @@ RemoteSession::open(jint jretryAttempts,
                     jobject jprompter, jobject jdeprecatedPrompter,
                     jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!jprompter != !jdeprecatedPrompter
-                           || !jprompter && !jdeprecatedPrompter);
+  SVN_ERR_ASSERT_NO_RETURN(!(jprompter && jdeprecatedPrompter));
 
   SVN::Pool requestPool;
   URL url(jurl, requestPool);
