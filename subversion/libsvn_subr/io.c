@@ -2495,7 +2495,12 @@ svn_io_remove_file2(const char *path,
     }
 #endif
 
-  if (apr_err)
+  /* On Windows EACCESS at the start could be followed by ENOENT from
+     the retry so repeat the ignore_enoent check. */
+  if (apr_err
+      && !(ignore_enoent
+           && (APR_STATUS_IS_ENOENT(apr_err)
+               || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
     return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
                               svn_dirent_local_style(path, scratch_pool));
 
