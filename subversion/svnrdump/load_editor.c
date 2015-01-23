@@ -43,14 +43,7 @@
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
-#if 0
-#define LDR_DBG(x) SVN_DBG(x)
-#else
-#define LDR_DBG(x) while(0)
-#endif
-
 
-
 /**
  * General baton used by the parser functions.
  */
@@ -547,8 +540,6 @@ new_node_record(void **node_baton,
                                        rb->rev - rb->rev_offset - 1,
                                        rb->pool, &child_baton));
 
-      LDR_DBG(("Opened root %p\n", child_baton));
-
       /* child_baton corresponds to the root directory baton here */
       push_directory(rb, child_baton, "", TRUE /*is_added*/,
                      NULL, SVN_INVALID_REVNUM);
@@ -614,7 +605,6 @@ new_node_record(void **node_baton,
           /* Don't worry about destroying the actual rb->db object,
              since the pool we're using has the lifetime of one
              revision anyway */
-          LDR_DBG(("Closing dir %p\n", rb->db->baton));
           SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
           rb->db = rb->db->parent;
         }
@@ -629,7 +619,6 @@ new_node_record(void **node_baton,
                                                 rb->db->baton,
                                                 rb->rev - rb->rev_offset - 1,
                                                 rb->pool, &child_baton));
-          LDR_DBG(("Opened dir %p\n", child_baton));
           push_directory(rb, child_baton, relpath_compose, TRUE /*is_added*/,
                          NULL, SVN_INVALID_REVNUM);
         }
@@ -670,7 +659,6 @@ new_node_record(void **node_baton,
     {
     case svn_node_action_delete:
     case svn_node_action_replace:
-      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
       SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev - rb->rev_offset,
                                           rb->db->baton, rb->pool));
       if (nb->action == svn_node_action_delete)
@@ -686,16 +674,12 @@ new_node_record(void **node_baton,
                                           nb->copyfrom_url,
                                           nb->copyfrom_rev,
                                           rb->pool, &(nb->file_baton)));
-          LDR_DBG(("Added file %s to dir %p as %p\n",
-                   nb->path, rb->db->baton, nb->file_baton));
           break;
         case svn_node_dir:
           SVN_ERR(commit_editor->add_directory(nb->path, rb->db->baton,
                                                nb->copyfrom_url,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
-          LDR_DBG(("Added dir %s to dir %p as %p\n",
-                   nb->path, rb->db->baton, child_baton));
           push_directory(rb, child_baton, nb->path, TRUE /*is_added*/,
                          nb->copyfrom_path, nb->copyfrom_rev);
           break;
@@ -848,7 +832,6 @@ remove_node_props(void *baton)
   /* Find the path and revision that has the node's original properties */
   if (ARE_VALID_COPY_ARGS(nb->copyfrom_path, nb->copyfrom_rev))
     {
-      LDR_DBG(("using nb->copyfrom  %s@%ld", nb->copyfrom_path, nb->copyfrom_rev));
       orig_path = nb->copyfrom_path;
       orig_rev = nb->copyfrom_rev;
     }
@@ -857,8 +840,6 @@ remove_node_props(void *baton)
     {
       /* If this is a dir, then it's described by rb->db;
          if this is a file, then it's a child of the dir in rb->db. */
-      LDR_DBG(("using rb->db->copyfrom (k=%d) %s@%ld",
-                 nb->kind, rb->db->copyfrom_path, rb->db->copyfrom_rev));
       orig_path = (nb->kind == svn_node_dir)
                     ? rb->db->copyfrom_path
                     : svn_relpath_join(rb->db->copyfrom_path,
@@ -868,13 +849,11 @@ remove_node_props(void *baton)
     }
   else
     {
-      LDR_DBG(("using self.path@head  %s@%ld", nb->path, SVN_INVALID_REVNUM));
       /* ### Should we query at a known, fixed, "head" revision number
          instead of passing SVN_INVALID_REVNUM and getting a moving target? */
       orig_path = nb->path;
       orig_rev = SVN_INVALID_REVNUM;
     }
-  LDR_DBG(("Trying %s@%ld", orig_path, orig_rev));
 
   if ((nb->action == svn_node_action_add
             || nb->action == svn_node_action_replace)
@@ -915,7 +894,6 @@ set_fulltext(svn_stream_t **stream,
   void *handler_baton;
   apr_pool_t *pool = nb->rb->pool;
 
-  LDR_DBG(("Setting fulltext for %p\n", nb->file_baton));
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
                                          pool, &handler, &handler_baton));
   *stream = svn_txdelta_target_push(handler, handler_baton,
@@ -932,7 +910,6 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
 
-  LDR_DBG(("Applying textdelta to %p\n", nb->file_baton));
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
                                          pool, handler, handler_baton));
 
@@ -972,7 +949,6 @@ close_node(void *baton)
      deleted the file (which doesn't require us to open it). */
   if ((nb->kind == svn_node_file) && (nb->file_baton))
     {
-      LDR_DBG(("Closing file %p\n", nb->file_baton));
       SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
     }
 
@@ -1002,12 +978,10 @@ close_revision(void *baton)
          session itself */
       while (rb->db && rb->db->parent)
         {
-          LDR_DBG(("Closing dir %p\n", rb->db->baton));
           SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
           rb->db = rb->db->parent;
         }
       /* root dir's baton */
-      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
       SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }
@@ -1025,8 +999,6 @@ close_revision(void *baton)
                                        rb->rev - rb->rev_offset - 1,
                                        rb->pool, &child_baton));
 
-      LDR_DBG(("Opened root %p\n", child_baton));
-      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
       SVN_ERR(commit_editor->close_directory(child_baton, rb->pool));
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }

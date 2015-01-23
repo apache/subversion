@@ -40,11 +40,6 @@
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
-#if 0
-#define LDR_DBG(x) SVN_DBG(x)
-#else
-#define LDR_DBG(x) while(0)
-#endif
 
 /* A directory baton used by all directory-related callback functions
  * in the dump editor.  */
@@ -573,8 +568,6 @@ open_root(void *edit_baton,
   /* Clear the per-revision pool after each revision */
   svn_pool_clear(eb->pool);
 
-  LDR_DBG(("open_root %p\n", *root_baton));
-
   if (eb->update_anchor_relpath)
     {
       int i;
@@ -639,8 +632,6 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
 
-  LDR_DBG(("delete_entry %s\n", path));
-
   SVN_ERR(dump_pending(pb->eb, pool));
 
   /* We don't dump this deletion immediate.  Rather, we add this path
@@ -664,8 +655,6 @@ add_directory(const char *path,
   void *was_deleted;
   struct dir_baton *new_db;
   svn_boolean_t is_copy;
-
-  LDR_DBG(("add_directory %s\n", path));
 
   SVN_ERR(dump_pending(pb->eb, pool));
 
@@ -711,8 +700,6 @@ open_directory(const char *path,
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
-  LDR_DBG(("open_directory %s\n", path));
-
   SVN_ERR(dump_pending(pb->eb, pool));
 
   /* If the parent directory has explicit comparison path and rev,
@@ -739,8 +726,6 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   apr_hash_index_t *hi;
   svn_boolean_t this_pending;
-
-  LDR_DBG(("close_directory %p\n", dir_baton));
 
   /* Remember if this directory is the one currently pending. */
   this_pending = (db->eb->pending_baton == db);
@@ -794,8 +779,6 @@ add_file(const char *path,
   struct file_baton *fb;
   void *was_deleted;
 
-  LDR_DBG(("add_file %s\n", path));
-
   SVN_ERR(dump_pending(pb->eb, pool));
 
   /* Make the file baton. */
@@ -831,8 +814,6 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
 
-  LDR_DBG(("open_file %s\n", path));
-
   SVN_ERR(dump_pending(pb->eb, pool));
 
   /* Make the file baton. */
@@ -860,8 +841,6 @@ change_dir_prop(void *parent_baton,
 {
   struct dir_baton *db = parent_baton;
   svn_boolean_t this_pending;
-
-  LDR_DBG(("change_dir_prop %p\n", parent_baton));
 
   /* This directory is not pending, but something else is, so handle
      the "something else".  */
@@ -895,8 +874,6 @@ change_file_prop(void *file_baton,
 {
   struct file_baton *fb = file_baton;
 
-  LDR_DBG(("change_file_prop %p\n", file_baton));
-
   if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
@@ -925,8 +902,6 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   struct dump_edit_baton *eb = fb->eb;
   svn_stream_t *delta_filestream;
 
-  LDR_DBG(("apply_textdelta %p\n", file_baton));
-
   /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
@@ -952,8 +927,6 @@ close_file(void *file_baton,
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
   svn_stringbuf_t *propstring;
   apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
-
-  LDR_DBG(("close_file %p\n", file_baton));
 
   SVN_ERR(dump_pending(eb, pool));
 
