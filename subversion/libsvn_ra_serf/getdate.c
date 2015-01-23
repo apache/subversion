@@ -100,7 +100,8 @@ static svn_error_t *
 create_getdate_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   date_context_t *date_ctx = baton;

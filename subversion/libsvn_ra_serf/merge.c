@@ -271,7 +271,8 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 static svn_error_t *
 setup_merge_headers(serf_bucket_t *headers,
                     void *baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
 
@@ -337,7 +338,8 @@ static svn_error_t*
 create_merge_body(serf_bucket_t **bkt,
                   void *baton,
                   serf_bucket_alloc_t *alloc,
-                  apr_pool_t *pool)
+                  apr_pool_t *pool /* request pool */,
+                  apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
   serf_bucket_t *body_bkt;

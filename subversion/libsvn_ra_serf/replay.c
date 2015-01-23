@@ -506,7 +506,8 @@ static svn_error_t *
 create_replay_body(serf_bucket_t **bkt,
                    void *baton,
                    serf_bucket_alloc_t *alloc,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   struct revision_report_t *ctx = baton;
   serf_bucket_t *body_bkt;
