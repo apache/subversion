@@ -834,8 +834,8 @@ def load_non_deltas_copy_with_props(sbox):
   # at (new rev - 1) does not exist
 
   # Set properties on each node to be copied
-  sbox.simple_propset('-R', 'p', 'pval', 'A')
-  sbox.simple_propset('-R', 'q', 'qval', 'A')
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
