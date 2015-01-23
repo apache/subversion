@@ -2456,11 +2456,6 @@ svn_io_remove_file2(const char *path,
   SVN_ERR(cstring_from_utf8(&path_apr, path, scratch_pool));
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
-  if (!apr_err
-      || (ignore_enoent
-          && (APR_STATUS_IS_ENOENT(apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
-    return SVN_NO_ERROR;
 
 #ifdef WIN32
   /* If the target is read only NTFS reports EACCESS and FAT/FAT32
@@ -2495,16 +2490,20 @@ svn_io_remove_file2(const char *path,
     }
 #endif
 
-  /* On Windows EACCESS at the start could be followed by ENOENT from
-     the retry so repeat the ignore_enoent check. */
-  if (apr_err
-      && !(ignore_enoent
-           && (APR_STATUS_IS_ENOENT(apr_err)
-               || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
-    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                              svn_dirent_local_style(path, scratch_pool));
-
-  return SVN_NO_ERROR;
+  if (!apr_err)
+    {
+      return SVN_NO_ERROR;
+    }
+  else if (ignore_enoent && (APR_STATUS_IS_ENOENT(apr_err)
+                             || SVN__APR_STATUS_IS_ENOTDIR(apr_err)))
+    {
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                                svn_dirent_local_style(path, scratch_pool));
+    }
 }
 
 
