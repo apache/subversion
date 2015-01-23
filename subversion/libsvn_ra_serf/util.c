@@ -1877,7 +1877,7 @@ static apr_status_t
 handler_cleanup(void *baton)
 {
   svn_ra_serf__handler_t *handler = baton;
-  if (handler->scheduled && handler->conn)
+  if (handler->scheduled && handler->conn && handler->conn->conn)
     {
       serf_connection_reset(handler->conn->conn);
     }
