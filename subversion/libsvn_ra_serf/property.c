@@ -577,58 +577,54 @@ svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
   return SVN_NO_ERROR;
 }
 
-/* Baton for deliver_prop */
-struct deliver_prop_baton_t
+svn_error_t *
+svn_ra_serf__deliver_svn_props(void *baton,
+                               const char *path,
+                               const char *ns,
+                               const char *name,
+                               const svn_string_t *value,
+                               apr_pool_t *scratch_pool)
 {
-  apr_pool_t *result_pool;
-  apr_hash_t *prop_vals;
-  svn_revnum_t rev;
-};
+  apr_hash_t *props = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(props);
+  const char *prop_name;
 
-/* Implements svn_ra_serf__prop_func for svn_ra_serf__deliver_props */
-static svn_error_t *
-deliver_prop(void *baton,
-             const char *path,
-             const char *ns,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *scratch_pool)
-{
-  struct deliver_prop_baton_t *dpb = baton;
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, result_pool);
+  if (prop_name == NULL)
+    return SVN_NO_ERROR;
 
-  svn_ra_serf__set_ver_prop(dpb->prop_vals,
-                            path, dpb->rev,
-                            ns, name, value,
-                            dpb->result_pool);
+  svn_hash_sets(props, prop_name, svn_string_dup(value, result_pool));
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
-                           apr_hash_t *prop_vals,
-                           svn_ra_serf__session_t *sess,
-                           svn_ra_serf__connection_t *conn,
-                           const char *url,
-                           svn_revnum_t rev,
-                           const char *depth,
-                           const svn_ra_serf__dav_props_t *lookup_props,
-                           apr_pool_t *pool)
+svn_ra_serf__deliver_node_props(void *baton,
+                               const char *path,
+                               const char *ns,
+                               const char *name,
+                               const svn_string_t *value,
+                               apr_pool_t *scratch_pool)
 {
-  struct deliver_prop_baton_t *dpb = apr_pcalloc(pool, sizeof(*dpb));
+  apr_hash_t *nss = baton;
+  apr_hash_t *props;
+  apr_pool_t *result_pool = apr_hash_pool_get(nss);
 
-  dpb->result_pool = apr_hash_pool_get(prop_vals);
-  dpb->prop_vals = prop_vals;
-  dpb->rev = rev;
+  props = svn_hash_gets(nss, ns);
 
-  return svn_error_trace(svn_ra_serf__deliver_props2(propfind_handler,
-                                                     sess, conn,
-                                                     url, rev,
-                                                     depth,
-                                                     lookup_props,
-                                                     deliver_prop, dpb,
-                                                     pool));
+  if (!props)
+    {
+      props = apr_hash_make(result_pool);
+
+      ns = apr_pstrdup(result_pool, ns);
+      svn_hash_sets(nss, ns, props);
+    }
+
+  name = apr_pstrdup(result_pool, name);
+  svn_hash_sets(props, name, svn_string_dup(value, result_pool));
+
+  return SVN_NO_ERROR;
 }
-
 
 
 /*
@@ -647,32 +643,6 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
   return SVN_NO_ERROR;
 }
 
-/*
- * This is a blocking version of deliver_props.
- */
-svn_error_t *
-svn_ra_serf__retrieve_props(apr_hash_t **results,
-                            svn_ra_serf__session_t *sess,
-                            svn_ra_serf__connection_t *conn,
-                            const char *url,
-                            svn_revnum_t rev,
-                            const char *depth,
-                            const svn_ra_serf__dav_props_t *props,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__handler_t *handler;
-
-  *results = apr_hash_make(result_pool);
-
-  SVN_ERR(svn_ra_serf__deliver_props(&handler, *results, sess, conn, url,
-                                     rev, depth, props, result_pool));
-  SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_ra_serf__fetch_node_props(apr_hash_t **results,
                               svn_ra_serf__connection_t *conn,
@@ -682,28 +652,19 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  apr_hash_t *multiprops;
-  apr_hash_t *ver_props;
+  apr_hash_t *props;
+  svn_ra_serf__handler_t *handler;
 
-  /* Note: a couple extra hash tables and whatnot get into RESULT_POOL.
-     Not a big deal at this point. Theoretically, we could fetch all
-     props into SCRATCH_POOL, then copy just the REVISION/URL props
-     into RESULT_POOL. Too much work for too little gain...  */
-  SVN_ERR(svn_ra_serf__retrieve_props(&multiprops, conn->session, conn,
+  props = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_ra_serf__deliver_props2(&handler, conn->session, conn,
                                       url, revision, "0", which_props,
-                                      result_pool, scratch_pool));
+                                      svn_ra_serf__deliver_node_props, props,
+                                      scratch_pool));
+  SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
 
-  ver_props = apr_hash_get(multiprops, &revision, sizeof(revision));
-  if (ver_props != NULL)
-    {
-      *results = svn_hash_gets(ver_props, url);
-      if (*results != NULL)
-        return SVN_NO_ERROR;
-    }
-
-  return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                          _("The PROPFIND response did not include "
-                            "the requested properties"));
+  *results = props;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1264,4 +1225,20 @@ svn_ra_serf__fetch_dav_prop(const char **value,
   *value = apr_pstrdup(result_pool, svn_prop_get_value(dav_props, propname));
 
   return SVN_NO_ERROR;
+}
+
+/* Removes all non regular properties from PROPS */
+void
+svn_ra_serf__keep_only_regular_props(apr_hash_t *props,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (svn_property_kind2(propname) != svn_prop_regular_kind)
+        svn_hash_sets(props, propname, NULL);
+    }
 }
