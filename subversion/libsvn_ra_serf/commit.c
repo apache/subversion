@@ -199,7 +199,8 @@ static svn_error_t *
 create_checkout_body(serf_bucket_t **bkt,
                      void *baton,
                      serf_bucket_alloc_t *alloc,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool /* request pool */,
+                     apr_pool_t *scratch_pool)
 {
   const char *activity_url = baton;
   serf_bucket_t *body_bkt;
@@ -716,7 +717,8 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
 static svn_error_t *
 setup_proppatch_headers(serf_bucket_t *headers,
                         void *baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *pool /* request pool */,
+                        apr_pool_t *scratch_pool)
 {
   proppatch_context_t *proppatch = baton;
 
@@ -740,12 +742,15 @@ static svn_error_t *
 create_proppatch_body(serf_bucket_t **bkt,
                       void *baton,
                       serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool /* request pool */,
                       apr_pool_t *scratch_pool)
 {
   proppatch_context_t *ctx = baton;
   serf_bucket_t *body_bkt;
   svn_boolean_t opened = FALSE;
   apr_hash_index_t *hi;
+
+  scratch_pool = pool; /*### Should be disabled, but needs review! */
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -876,7 +881,8 @@ static svn_error_t *
 create_put_body(serf_bucket_t **body_bkt,
                 void *baton,
                 serf_bucket_alloc_t *alloc,
-                apr_pool_t *pool)
+                apr_pool_t *pool /* request pool */,
+                apr_pool_t *scratch_pool)
 {
   file_context_t *ctx = baton;
   apr_off_t offset;
@@ -904,7 +910,8 @@ static svn_error_t *
 create_empty_put_body(serf_bucket_t **body_bkt,
                       void *baton,
                       serf_bucket_alloc_t *alloc,
-                      apr_pool_t *pool)
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
 {
   *body_bkt = SERF_BUCKET_SIMPLE_STRING("", alloc);
   return SVN_NO_ERROR;
@@ -913,7 +920,8 @@ create_empty_put_body(serf_bucket_t **body_bkt,
 static svn_error_t *
 setup_put_headers(serf_bucket_t *headers,
                   void *baton,
-                  apr_pool_t *pool)
+                  apr_pool_t *pool /* request pool */,
+                  apr_pool_t *scratch_pool)
 {
   file_context_t *ctx = baton;
 
@@ -944,7 +952,8 @@ setup_put_headers(serf_bucket_t *headers,
 static svn_error_t *
 setup_copy_file_headers(serf_bucket_t *headers,
                         void *baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *pool /* request pool */,
+                        apr_pool_t *scratch_pool)
 {
   file_context_t *file = baton;
   apr_uri_t uri;
@@ -1042,7 +1051,8 @@ setup_if_header_recursive(svn_boolean_t *added,
 static svn_error_t *
 setup_add_dir_common_headers(serf_bucket_t *headers,
                              void *baton,
-                             apr_pool_t *pool)
+                             apr_pool_t *pool /* request pool */,
+                             apr_pool_t *scratch_pool)
 {
   dir_context_t *dir = baton;
   svn_boolean_t added;
@@ -1055,7 +1065,8 @@ setup_add_dir_common_headers(serf_bucket_t *headers,
 static svn_error_t *
 setup_copy_dir_headers(serf_bucket_t *headers,
                        void *baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *pool /* request pool */,
+                       apr_pool_t *scratch_pool)
 {
   dir_context_t *dir = baton;
   apr_uri_t uri;
@@ -1084,13 +1095,15 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   /* Implicitly checkout this dir now. */
   dir->working_url = apr_pstrdup(dir->pool, uri.path);
 
-  return svn_error_trace(setup_add_dir_common_headers(headers, baton, pool));
+  return svn_error_trace(setup_add_dir_common_headers(headers, baton, pool,
+                                                      scratch_pool));
 }
 
 static svn_error_t *
 setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool /* request pool */,
+                     apr_pool_t *scratch_pool)
 {
   delete_context_t *del = baton;
   svn_boolean_t added;
@@ -1115,7 +1128,8 @@ static svn_error_t *
 create_txn_post_body(serf_bucket_t **body_bkt,
                      void *baton,
                      serf_bucket_alloc_t *alloc,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool /* request pool */,
+                     apr_pool_t *scratch_pool)
 {
   apr_hash_t *revprops = baton;
   svn_skel_t *request_skel;
@@ -1144,7 +1158,8 @@ create_txn_post_body(serf_bucket_t **body_bkt,
 static svn_error_t *
 setup_post_headers(serf_bucket_t *headers,
                    void *baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
 #ifdef SVN_DAV_SEND_VTXN_NAME
   /* Enable this to exercise the VTXN-NAME code based on a client

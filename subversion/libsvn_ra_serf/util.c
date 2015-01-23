@@ -1470,9 +1470,8 @@ setup_request(serf_request_t *request,
     {
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
-      /* ### should pass the scratch_pool  */
       SVN_ERR(handler->body_delegate(&body_bkt, handler->body_delegate_baton,
-                                     bkt_alloc, request_pool));
+                                     bkt_alloc, request_pool, scratch_pool));
     }
   else
     {
@@ -1501,10 +1500,9 @@ setup_request(serf_request_t *request,
 
   if (handler->header_delegate)
     {
-      /* ### should pass the scratch_pool  */
       SVN_ERR(handler->header_delegate(headers_bkt,
                                        handler->header_delegate_baton,
-                                       request_pool));
+                                       request_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;

@@ -92,7 +92,8 @@ static svn_error_t *
 create_getdrev_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   drev_context_t *drev_ctx = baton;

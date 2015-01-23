@@ -347,8 +347,9 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
 
 static svn_error_t *
 setup_propfind_headers(serf_bucket_t *headers,
-                        void *setup_baton,
-                        apr_pool_t *pool)
+                       void *setup_baton,
+                       apr_pool_t *pool /* request pool */,
+                       apr_pool_t *scratch_pool)
 {
   propfind_context_t *ctx = setup_baton;
 
@@ -369,7 +370,8 @@ static svn_error_t *
 create_propfind_body(serf_bucket_t **bkt,
                      void *setup_baton,
                      serf_bucket_alloc_t *alloc,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool /* request pool */,
+                     apr_pool_t *scratch_pool)
 {
   propfind_context_t *ctx = setup_baton;
 

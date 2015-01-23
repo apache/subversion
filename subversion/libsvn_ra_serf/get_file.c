@@ -83,7 +83,8 @@ typedef struct stream_ctx_t {
 static svn_error_t *
 headers_fetch(serf_bucket_t *headers,
               void *baton,
-              apr_pool_t *pool)
+              apr_pool_t *pool /* request pool */,
+              apr_pool_t *scratch_pool)
 {
   stream_ctx_t *fetch_ctx = baton;
 

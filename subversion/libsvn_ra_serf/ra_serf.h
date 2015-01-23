@@ -382,19 +382,19 @@ typedef svn_error_t *
                                          apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */
-/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_body_delegate_t)(serf_bucket_t **body_bkt,
                                         void *baton,
                                         serf_bucket_alloc_t *alloc,
-                                        apr_pool_t *request_pool);
+                                        apr_pool_t *request_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Callback for when request headers are needed. */
-/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
-                                          apr_pool_t *request_pool);
+                                          apr_pool_t *request_pool,
+                                          apr_pool_t *scratch_pool);
 
 /* Callback for when a response has an error. */
 typedef svn_error_t *

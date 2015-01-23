@@ -199,7 +199,8 @@ static svn_error_t *
 create_iprops_body(serf_bucket_t **bkt,
                    void *baton,
                    serf_bucket_alloc_t *alloc,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   iprops_context_t *iprops_ctx = baton;
   serf_bucket_t *body_bkt;
