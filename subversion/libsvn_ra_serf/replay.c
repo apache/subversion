@@ -169,8 +169,7 @@ typedef struct revision_report_t {
   svn_revnum_t revprop_rev;
 
   /* Revision properties for this revision. */
-  apr_hash_t *revs_props;
-  apr_hash_t *props;
+  apr_hash_t *rev_props;
 
   /* Handlers for the PROPFIND and REPORT for the current revision. */
   svn_ra_serf__handler_t *propfind_handler;
@@ -193,19 +192,13 @@ replay_opened(svn_ra_serf__xml_estate_t *xes,
       /* Before we can continue, we need the revision properties. */
       SVN_ERR_ASSERT(!ctx->propfind_handler || ctx->propfind_handler->done);
 
-      /* Create a pool for the commit editor. */
-      SVN_ERR(svn_ra_serf__select_revprops(&ctx->props,
-                                           ctx->revprop_target,
-                                           ctx->revprop_rev,
-                                           ctx->revs_props,
-                                           ctx->pool,
-                                           scratch_pool));
+      svn_ra_serf__keep_only_regular_props(ctx->rev_props, scratch_pool);
 
       if (ctx->revstart_func)
         {
           SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
                                      &ctx->editor, &ctx->editor_baton,
-                                     ctx->props,
+                                     ctx->rev_props,
                                      ctx->pool));
         }
     }
@@ -261,8 +254,7 @@ replay_closed(svn_ra_serf__xml_estate_t *xes,
         {
           SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton,
                                       ctx->editor, ctx->editor_baton,
-                                      ctx->props,
-                                      scratch_pool));
+                                      ctx->rev_props, scratch_pool));
         }
     }
   else if (leaving_state == REPLAY_TARGET_REVISION)
@@ -583,7 +575,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   ctx.revision = revision;
   ctx.low_water_mark = low_water_mark;
   ctx.send_deltas = send_deltas;
-  ctx.revs_props = apr_hash_make(scratch_pool);
+  ctx.rev_props = apr_hash_make(scratch_pool);
 
   xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
@@ -703,50 +695,51 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          requests to MAX_OUTSTANDING_REQUESTS. */
       if (rev <= end_revision  && active_reports < MAX_OUTSTANDING_REQUESTS)
         {
-          struct revision_report_t *replay_ctx;
+          struct revision_report_t *rev_ctx;
           svn_ra_serf__handler_t *handler;
           apr_pool_t *ctx_pool = svn_pool_create(pool);
           svn_ra_serf__xml_context_t *xmlctx;
           const char *replay_target;
 
-          replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
-          replay_ctx->pool = ctx_pool;
-          replay_ctx->revstart_func = revstart_func;
-          replay_ctx->revfinish_func = revfinish_func;
-          replay_ctx->replay_baton = replay_baton;
-          replay_ctx->done = &done;
-          replay_ctx->done_list = &done_reports;
-          replay_ctx->include_path = include_path;
-          replay_ctx->revision = rev;
-          replay_ctx->low_water_mark = low_water_mark;
-          replay_ctx->send_deltas = send_deltas;
-          replay_ctx->done_item.data = replay_ctx;
+          rev_ctx = apr_pcalloc(ctx_pool, sizeof(*rev_ctx));
+          rev_ctx->pool = ctx_pool;
+          rev_ctx->revstart_func = revstart_func;
+          rev_ctx->revfinish_func = revfinish_func;
+          rev_ctx->replay_baton = replay_baton;
+          rev_ctx->done = &done;
+          rev_ctx->done_list = &done_reports;
+          rev_ctx->include_path = include_path;
+          rev_ctx->revision = rev;
+          rev_ctx->low_water_mark = low_water_mark;
+          rev_ctx->send_deltas = send_deltas;
+          rev_ctx->done_item.data = rev_ctx;
 
           /* Request all properties of a certain revision. */
-          replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
+          rev_ctx->rev_props = apr_hash_make(rev_ctx->pool);
 
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
             {
-              replay_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
+              rev_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
                                                         session->rev_stub, rev);
-              replay_ctx->revprop_rev = SVN_INVALID_REVNUM;
+              rev_ctx->revprop_rev = SVN_INVALID_REVNUM;
             }
           else
             {
-              replay_ctx->revprop_target = report_target;
-              replay_ctx->revprop_rev = rev;
+              rev_ctx->revprop_target = report_target;
+              rev_ctx->revprop_rev = rev;
             }
 
-          SVN_ERR(svn_ra_serf__deliver_props(&replay_ctx->propfind_handler,
-                                             replay_ctx->revs_props, session,
-                                             session->conns[0],
-                                             replay_ctx->revprop_target,
-                                             replay_ctx->revprop_rev,
-                                             "0", all_props,
-                                             replay_ctx->pool));
+          SVN_ERR(svn_ra_serf__deliver_props2(&rev_ctx->propfind_handler,
+                                              session, session->conns[0],
+                                              rev_ctx->revprop_target,
+                                              rev_ctx->revprop_rev,
+                                              "0", all_props,
+                                              svn_ra_serf__deliver_svn_props,
+                                              rev_ctx->rev_props,
+                                              rev_ctx->pool));
 
           /* Spin up the serf request for the PROPFIND.  */
-          svn_ra_serf__request_create(replay_ctx->propfind_handler);
+          svn_ra_serf__request_create(rev_ctx->propfind_handler);
 
           /* Send the replay REPORT request. */
           if (session->supports_rev_rsrc_replay)
@@ -761,8 +754,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
-                                           replay_cdata,
-                                           replay_ctx,
+                                           replay_cdata, rev_ctx,
                                            ctx_pool);
 
           handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, ctx_pool);
@@ -770,14 +762,14 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler->method = "REPORT";
           handler->path = replay_target;
           handler->body_delegate = create_replay_body;
-          handler->body_delegate_baton = replay_ctx;
+          handler->body_delegate_baton = rev_ctx;
           handler->conn = session->conns[0];
           handler->session = session;
 
           handler->done_delegate = replay_done;
-          handler->done_delegate_baton = replay_ctx;
+          handler->done_delegate_baton = rev_ctx;
 
-          replay_ctx->report_handler = handler;
+          rev_ctx->report_handler = handler;
           svn_ra_serf__request_create(handler);
 
           rev++;
