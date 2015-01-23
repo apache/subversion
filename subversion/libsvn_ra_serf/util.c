@@ -1410,12 +1410,13 @@ static apr_status_t
 handle_response_cb(serf_request_t *request,
                    serf_bucket_t *response,
                    void *baton,
-                   apr_pool_t *scratch_pool)
+                   apr_pool_t *response_pool)
 {
   svn_ra_serf__handler_t *handler = baton;
   svn_error_t *err;
   apr_status_t inner_status;
   apr_status_t outer_status;
+  apr_pool_t *scratch_pool = response_pool; /* Scratch pool needed? */
 
   err = svn_error_trace(handle_response(request, response,
                                         handler, &inner_status,
@@ -1519,14 +1520,15 @@ setup_request_cb(serf_request_t *request,
               void **acceptor_baton,
               serf_response_handler_t *s_handler,
               void **s_handler_baton,
-              apr_pool_t *pool)
+              apr_pool_t *request_pool)
 {
   svn_ra_serf__handler_t *handler = setup_baton;
+  apr_pool_t *scratch_pool;
   svn_error_t *err;
 
-  /* ### construct a scratch_pool? serf gives us a pool that will live for
-     ### the duration of the request.  */
-  apr_pool_t *scratch_pool = pool;
+  /* Construct a scratch_pool? serf gives us a pool that will live for
+     the duration of the request. But requests are retried in some cases */
+  scratch_pool = svn_pool_create(request_pool);
 
   if (strcmp(handler->method, "HEAD") == 0)
     *acceptor = accept_head;
@@ -1538,8 +1540,9 @@ setup_request_cb(serf_request_t *request,
   *s_handler_baton = handler;
 
   err = svn_error_trace(setup_request(request, handler, req_bkt,
-                                      pool /* request_pool */, scratch_pool));
+                                      request_pool, scratch_pool));
 
+  svn_pool_destroy(scratch_pool);
   return save_error(handler->session, err);
 }
 
