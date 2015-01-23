@@ -137,6 +137,9 @@ struct node_baton
   void *file_baton;
   const char *base_checksum;
 
+  /* (const char *name) -> (svn_prop_t *) */
+  apr_hash_t *prop_changes;
+
   struct revision_baton *rb;
 };
 
@@ -513,6 +516,7 @@ new_node_record(void **node_baton,
   nb->copyfrom_path = NULL;
   nb->copyfrom_url = NULL;
   nb->copyfrom_rev = SVN_INVALID_REVNUM;
+  nb->prop_changes = apr_hash_make(rb->pool);
 
   /* If the creation of commit_editor is pending, create it now and
      open_root on it; also create a top-level directory baton. */
@@ -768,8 +772,8 @@ set_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
   struct parse_baton *pb = rb->pb;
-  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
+  svn_prop_t *prop;
 
   if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
@@ -796,21 +800,11 @@ set_node_property(void *baton,
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 
-  switch (nb->kind)
-    {
-    case svn_node_file:
-      LDR_DBG(("Applying properties on %p\n", nb->file_baton));
-      SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
-                                              value, pool));
-      break;
-    case svn_node_dir:
-      LDR_DBG(("Applying properties on %p\n", nb->rb->db->baton));
-      SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
-                                             value, pool));
-      break;
-    default:
-      break;
-    }
+  prop = apr_palloc(nb->rb->pool, sizeof (*prop));
+  prop->name = apr_pstrdup(pool, name);
+  prop->value = value ? svn_string_dup(value, pool) : NULL;
+  svn_hash_sets(nb->prop_changes, prop->name, prop);
+
   return SVN_NO_ERROR;
 }
 
@@ -819,17 +813,15 @@ delete_node_property(void *baton,
                      const char *name)
 {
   struct node_baton *nb = baton;
-  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
+  svn_prop_t *prop;
 
   SVN_ERR(svn_repos__validate_prop(name, NULL, pool));
 
-  if (nb->kind == svn_node_file)
-    SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
-                                            NULL, pool));
-  else
-    SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
-                                           NULL, pool));
+  prop = apr_palloc(pool, sizeof (*prop));
+  prop->name = apr_pstrdup(pool, name);
+  prop->value = NULL;
+  svn_hash_sets(nb->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
 }
@@ -952,6 +944,29 @@ close_node(void *baton)
 {
   struct node_baton *nb = baton;
   const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  apr_pool_t *pool = nb->rb->pool;
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, nb->prop_changes);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *name = apr_hash_this_key(hi);
+      svn_prop_t *prop = apr_hash_this_val(hi);
+
+      switch (nb->kind)
+        {
+        case svn_node_file:
+          SVN_ERR(commit_editor->change_file_prop(nb->file_baton,
+                                                  name, prop->value, pool));
+          break;
+        case svn_node_dir:
+          SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton,
+                                                 name, prop->value, pool));
+          break;
+        default:
+          break;
+        }
+    }
 
   /* Pass a file node closure through to the editor *unless* we
      deleted the file (which doesn't require us to open it). */
