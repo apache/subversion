@@ -64,8 +64,7 @@ typedef struct propfind_context_t {
   /* the requested path */
   const char *path;
 
-  /* the requested version (number and string form) */
-  svn_revnum_t rev;
+  /* the requested version (in string form) */
   const char *label;
 
   /* the request depth */
@@ -169,6 +168,29 @@ propfind_opened(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
+/* Set PROPS for NS:NAME VAL. Helper for propfind_closed */
+static void
+set_ns_prop(apr_hash_t *ns_props,
+            const char *ns, const char *name,
+            const svn_string_t *val, apr_pool_t *result_pool)
+{
+  apr_hash_t *props = svn_hash_gets(ns_props, ns);
+
+  if (!props)
+    {
+      props = apr_hash_make(result_pool);
+      ns = apr_pstrdup(result_pool, ns);
+      svn_hash_sets(ns_props, ns, props);
+    }
+
+  if (val)
+    {
+      name = apr_pstrdup(result_pool, name);
+      val = svn_string_dup(val, result_pool);
+    }
+
+  svn_hash_sets(props, name, val);
+}
 
 /* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
@@ -226,8 +248,6 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
     {
       const char *encoding;
       const svn_string_t *val_str;
-      apr_hash_t *gathered;
-      const char *path;
       const char *ns;
       const char *name;
       const char *altvalue;
@@ -253,9 +273,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
           val_str = cdata;
         }
 
-      /* The current path sits on the RESPONSE state. Gather up all the
-         state from this PROPVAL to the (grandparent) RESPONSE state,
-         and grab the path from there.
+      /* The current path sits on the RESPONSE state.
 
          Now, it would be nice if we could, at this point, know that
          the status code for this property indicated a problem -- then
@@ -265,19 +283,12 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
          here, setting the property and value as expected.  Once we
          know for sure the status code associate with the property,
          we'll decide its fate.  */
-      gathered = svn_ra_serf__xml_gather_since(xes, RESPONSE);
-
-      /* These will be dup'd into CTX->POOL, as necessary.  */
-      path = svn_hash_gets(gathered, "path");
-      if (path == NULL)
-        path = ctx->path;
 
       ns = svn_hash_gets(attrs, "ns");
       name = svn_hash_gets(attrs, "name");
 
-      svn_ra_serf__set_ver_prop(ctx->ps_props,
-                                path, ctx->rev, ns, name, val_str,
-                                apr_hash_pool_get(ctx->ps_props));
+      set_ns_prop(ctx->ps_props, ns, name, val_str,
+                  apr_hash_pool_get(ctx->ps_props));
     }
   else
     {
@@ -285,17 +296,45 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
 
       SVN_ERR_ASSERT(leaving_state == PROPSTAT);
 
-      gathered = svn_ra_serf__xml_gather_since(xes, PROPSTAT);
+      gathered = svn_ra_serf__xml_gather_since(xes, RESPONSE);
 
       /* If we've squirreled away a note that says we want to ignore
          these properties, we'll do so.  Otherwise, we need to copy
          them from the temporary hash into the ctx->ret_props hash. */
       if (! svn_hash_gets(gathered, "ignore-prop"))
         {
-          SVN_ERR(svn_ra_serf__walk_all_paths(ctx->ps_props, ctx->rev,
-                                              ctx->prop_func,
-                                              ctx->prop_func_baton,
-                                              scratch_pool));
+          apr_hash_index_t *hi_ns;
+          const char *path;
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+
+          path = svn_hash_gets(gathered, "path");
+          if (!path)
+            path = ctx->path;
+
+          for (hi_ns = apr_hash_first(scratch_pool, ctx->ps_props);
+               hi_ns;
+               hi_ns = apr_hash_next(hi_ns))
+            {
+              const char *ns = apr_hash_this_key(hi_ns);
+              apr_hash_t *props = apr_hash_this_val(hi_ns);
+              apr_hash_index_t *hi_prop;
+
+              svn_pool_clear(iterpool);
+
+              for (hi_prop = apr_hash_first(iterpool, props);
+                   hi_prop;
+                   hi_prop = apr_hash_next(hi_prop))
+                {
+                  const char *name = apr_hash_this_key(hi_prop);
+                  const svn_string_t *value = apr_hash_this_val(hi_prop);
+
+                  SVN_ERR(ctx->prop_func(ctx->prop_func_baton, path,
+                                         ns, name, value, iterpool));
+                }
+            }
+
+          svn_pool_destroy(iterpool);
         }
 
       ctx->ps_props = NULL; /* Allocated in PROPSTAT state pool */
@@ -305,117 +344,6 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
 }
 
 
-const svn_string_t *
-svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
-                                 const char *path,
-                                 svn_revnum_t rev,
-                                 const char *ns,
-                                 const char *name)
-{
-  apr_hash_t *ver_props, *path_props, *ns_props;
-  void *val = NULL;
-
-  ver_props = apr_hash_get(props, &rev, sizeof(rev));
-  if (ver_props)
-    {
-      path_props = svn_hash_gets(ver_props, path);
-
-      if (path_props)
-        {
-          ns_props = svn_hash_gets(path_props, ns);
-          if (ns_props)
-            {
-              val = svn_hash_gets(ns_props, name);
-            }
-        }
-    }
-
-  return val;
-}
-
-const char *
-svn_ra_serf__get_ver_prop(apr_hash_t *props,
-                          const char *path,
-                          svn_revnum_t rev,
-                          const char *ns,
-                          const char *name)
-{
-  const svn_string_t *val;
-
-  val = svn_ra_serf__get_ver_prop_string(props, path, rev, ns, name);
-
-  if (val)
-    {
-      return val->data;
-    }
-
-  return NULL;
-}
-
-const svn_string_t *
-svn_ra_serf__get_prop_string(apr_hash_t *props,
-                             const char *path,
-                             const char *ns,
-                             const char *name)
-{
-  return svn_ra_serf__get_ver_prop_string(props, path, SVN_INVALID_REVNUM,
-                                          ns, name);
-}
-
-const char *
-svn_ra_serf__get_prop(apr_hash_t *props,
-                      const char *path,
-                      const char *ns,
-                      const char *name)
-{
-  return svn_ra_serf__get_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name);
-}
-
-void
-svn_ra_serf__set_ver_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name,
-                          const svn_string_t *val, apr_pool_t *pool)
-{
-  apr_hash_t *ver_props, *path_props, *ns_props;
-
-  ver_props = apr_hash_get(props, &rev, sizeof(rev));
-  if (!ver_props)
-    {
-      ver_props = apr_hash_make(pool);
-      apr_hash_set(props, apr_pmemdup(pool, &rev, sizeof(rev)), sizeof(rev),
-                   ver_props);
-    }
-
-  path_props = svn_hash_gets(ver_props, path);
-
-  if (!path_props)
-    {
-      path_props = apr_hash_make(pool);
-      path = apr_pstrdup(pool, path);
-      svn_hash_sets(ver_props, path, path_props);
-
-      /* todo: we know that we'll fail the next check, but fall through
-       * for now for simplicity's sake.
-       */
-    }
-
-  ns_props = svn_hash_gets(path_props, ns);
-  if (!ns_props)
-    {
-      ns_props = apr_hash_make(pool);
-      ns = apr_pstrdup(pool, ns);
-      svn_hash_sets(path_props, ns, ns_props);
-    }
-
-  if (val)
-    {
-      name = apr_pstrdup(pool, name);
-      val = svn_string_dup(val, pool);
-    }
-
-  svn_hash_sets(ns_props, name, val);
-}
 
 static svn_error_t *
 setup_propfind_headers(serf_bucket_t *headers,
@@ -538,7 +466,6 @@ svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
   new_prop_ctx->prop_func = prop_func;
   new_prop_ctx->prop_func_baton = prop_func_baton;
   new_prop_ctx->depth = depth;
-  new_prop_ctx->rev = rev;
 
   if (SVN_IS_VALID_REVNUM(rev))
     {
@@ -711,79 +638,6 @@ svn_ra_serf__walk_node_props(apr_hash_t *props,
 }
 
 
-static svn_error_t *
-walk_all_props(apr_hash_t *props,
-                            const char *name,
-                            svn_revnum_t rev,
-                            svn_ra_serf__walker_visitor_t walker,
-                            void *baton,
-                            apr_pool_t *scratch_pool)
-{
-  apr_hash_t *ver_props;
-  apr_hash_t *path_props;
-
-  ver_props = apr_hash_get(props, &rev, sizeof(rev));
-  if (!ver_props)
-    return SVN_NO_ERROR;
-
-  path_props = svn_hash_gets(ver_props, name);
-  if (!path_props)
-    return SVN_NO_ERROR;
-
-  return svn_error_trace(svn_ra_serf__walk_node_props(path_props,
-                                                      walker, baton,
-                                                      scratch_pool));
-}
-
-
-svn_error_t *
-svn_ra_serf__walk_all_paths(apr_hash_t *props,
-                            svn_revnum_t rev,
-                            svn_ra_serf__path_rev_walker_t walker,
-                            void *baton,
-                            apr_pool_t *pool)
-{
-  apr_hash_index_t *path_hi;
-  apr_hash_t *ver_props;
-
-  ver_props = apr_hash_get(props, &rev, sizeof(rev));
-
-  if (!ver_props)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  for (path_hi = apr_hash_first(pool, ver_props); path_hi;
-       path_hi = apr_hash_next(path_hi))
-    {
-      void *path_props;
-      const void *path_name;
-      apr_hash_index_t *ns_hi;
-
-      apr_hash_this(path_hi, &path_name, NULL, &path_props);
-      for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
-           ns_hi = apr_hash_next(ns_hi))
-        {
-          void *ns_val;
-          const void *ns_name;
-          apr_hash_index_t *name_hi;
-          apr_hash_this(ns_hi, &ns_name, NULL, &ns_val);
-          for (name_hi = apr_hash_first(pool, ns_val); name_hi;
-               name_hi = apr_hash_next(name_hi))
-            {
-              void *prop_val;
-              const void *prop_name;
-
-              apr_hash_this(name_hi, &prop_name, NULL, &prop_val);
-              /* use a subpool? */
-              SVN_ERR(walker(baton, path_name, ns_name, prop_name, prop_val,
-                             pool));
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 const char *
@@ -866,58 +720,6 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                             *flat_props /* baton */,
                             scratch_pool));
 }
-
-
-static svn_error_t *
-select_revprops(void *baton,
-                const char *ns,
-                const char *name,
-                const svn_string_t *val,
-                apr_pool_t *scratch_pool)
-{
-  apr_hash_t *revprops = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(revprops);
-  const char *prop_name;
-
-  /* ### copy NAME into the RESULT_POOL?  */
-  /* ### copy VAL into the RESULT_POOL?  */
-
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = name;
-  else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
-  else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
-  else if (strcmp(ns, "") == 0)
-    prop_name = name;
-  else
-    {
-      /* do nothing for now? */
-      return SVN_NO_ERROR;
-    }
-
-  svn_hash_sets(revprops, prop_name, val);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_serf__select_revprops(apr_hash_t **revprops,
-                             const char *name,
-                             svn_revnum_t rev,
-                             apr_hash_t *all_revprops,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  *revprops = apr_hash_make(result_pool);
-
-  return svn_error_trace(walk_all_props(
-                            all_revprops, name, rev,
-                            select_revprops, *revprops,
-                            scratch_pool));
-}
-
 
 /*
  * Contact the server (using CONN) to calculate baseline

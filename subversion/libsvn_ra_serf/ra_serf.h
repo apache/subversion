@@ -1028,17 +1028,6 @@ svn_ra_serf__fetch_dav_prop(const char **value,
                             apr_pool_t *scratch_pool);
 
 
-/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
- *
- * The POOL governs allocation.
- */
-void
-svn_ra_serf__set_ver_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name,
-                          const svn_string_t *val, apr_pool_t *pool);
-#define svn_ra_serf__set_rev_prop svn_ra_serf__set_ver_prop
-
 /** Property walker functions **/
 
 typedef svn_error_t *
@@ -1056,21 +1045,6 @@ svn_ra_serf__walk_node_props(apr_hash_t *props,
                              apr_pool_t *scratch_pool);
 
 
-typedef svn_error_t *
-(*svn_ra_serf__path_rev_walker_t)(void *baton,
-                                  const char *path,
-                                  const char *ns,
-                                  const char *name,
-                                  const svn_string_t *val,
-                                  apr_pool_t *pool);
-svn_error_t *
-svn_ra_serf__walk_all_paths(apr_hash_t *props,
-                            svn_revnum_t rev,
-                            svn_ra_serf__path_rev_walker_t walker,
-                            void *baton,
-                            apr_pool_t *pool);
-
-
 /* Map a property name, as passed over the wire, into its corresponding
    Subversion-internal name. The returned name will be a static value,
    or allocated within RESULT_POOL.
@@ -1081,17 +1055,6 @@ const char *
 svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
                                    apr_pool_t *result_pool);
-
-
-/* Select the basic revision properties from the set of "all" properties.
-   Return these in *REVPROPS, allocated from RESULT_POOL.  */
-svn_error_t *
-svn_ra_serf__select_revprops(apr_hash_t **revprops,
-                             const char *name,
-                             svn_revnum_t rev,
-                             apr_hash_t *all_revprops,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
 
 
 /* PROPS is nested hash tables mapping NS -> NAME -> VALUE.
@@ -1111,34 +1074,6 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-
-/* Return the property value for PATH at REV revision with a NS:NAME.
- * PROPS is a four-level nested hash: (svn_revnum_t => char *path =>
- * char *ns => char *name => svn_string_t *). */
-const svn_string_t *
-svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
-                                 const char *path, svn_revnum_t rev,
-                                 const char *ns, const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop_string(), but returns a C string. */
-const char *
-svn_ra_serf__get_ver_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop_string(), but for the unknown revision. */
-const svn_string_t *
-svn_ra_serf__get_prop_string(apr_hash_t *props,
-                             const char *path,
-                             const char *ns,
-                             const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop(), but for the unknown revision. */
-const char *
-svn_ra_serf__get_prop(apr_hash_t *props,
-                      const char *path,
-                      const char *ns,
-                      const char *name);
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
