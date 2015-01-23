@@ -417,17 +417,6 @@ svn_ra_serf__set_ver_prop(apr_hash_t *props,
   svn_hash_sets(ns_props, name, val);
 }
 
-void
-svn_ra_serf__set_prop(apr_hash_t *props,
-                      const char *path,
-                      const char *ns, const char *name,
-                      const svn_string_t *val, apr_pool_t *pool)
-{
-  svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
-                            val, pool);
-}
-
-
 static svn_error_t *
 setup_propfind_headers(serf_bucket_t *headers,
                         void *setup_baton,
@@ -761,8 +750,8 @@ svn_ra_serf__walk_node_props(apr_hash_t *props,
 }
 
 
-svn_error_t *
-svn_ra_serf__walk_all_props(apr_hash_t *props,
+static svn_error_t *
+walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
                             svn_ra_serf__walker_visitor_t walker,
@@ -962,7 +951,7 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 {
   *revprops = apr_hash_make(result_pool);
 
-  return svn_error_trace(svn_ra_serf__walk_all_props(
+  return svn_error_trace(walk_all_props(
                             all_revprops, name, rev,
                             select_revprops, *revprops,
                             scratch_pool));

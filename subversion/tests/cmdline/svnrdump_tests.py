@@ -825,7 +825,6 @@ def load_mergeinfo_contains_r0(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # not exist and the failure mode is to error out.
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(4551)
 def load_non_deltas_copy_with_props(sbox):
   "load non-deltas copy with props"
@@ -878,7 +877,6 @@ def load_non_deltas_copy_with_props(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # exist and the failure mode is to fail to delete a property.
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(4551)
 def load_non_deltas_replace_copy_with_props(sbox):
   "load non-deltas replace&copy with props"
@@ -951,7 +949,6 @@ def dump_replace_with_copy(sbox):
 # or fails, on a non-deltas dumpfile". In this test, a node's props are
 # modified, and the failure mode is that RA-serf would end up deleting
 # properties that should remain on the node.
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(4551)
 def load_non_deltas_with_props(sbox):
   "load non-deltas with props"

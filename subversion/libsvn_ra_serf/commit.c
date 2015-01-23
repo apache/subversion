@@ -85,13 +85,11 @@ typedef struct proppatch_context_t {
 
   commit_context_t *commit_ctx;
 
-  /* Changed and removed properties. */
-  apr_hash_t *changed_props;
-  apr_hash_t *removed_props;
+  /* Changed properties. const char * -> svn_prop_t * */
+  apr_hash_t *prop_changes;
 
-  /* Same, for the old value (*old_value_p). */
-  apr_hash_t *previous_changed_props;
-  apr_hash_t *previous_removed_props;
+  /* Same, for the old value, or NULL. */
+  apr_hash_t *old_props;
 
   /* In HTTP v2, this is the file/directory version we think we're changing. */
   svn_revnum_t base_revision;
@@ -139,9 +137,8 @@ typedef struct dir_context_t {
   const char *copy_path;
   svn_revnum_t copy_revision;
 
-  /* Changed and removed properties */
-  apr_hash_t *changed_props;
-  apr_hash_t *removed_props;
+  /* Changed properties (const char * -> svn_prop_t *) */
+  apr_hash_t *prop_changes;
 
   /* The checked-out working resource for this directory.  May be NULL; if so
      call checkout_dir() first.  */
@@ -186,9 +183,8 @@ typedef struct file_context_t {
   /* Our resulting checksum as reported by the WC. */
   const char *result_checksum;
 
-  /* Changed and removed properties. */
-  apr_hash_t *changed_props;
-  apr_hash_t *removed_props;
+  /* Changed properties (const char * -> svn_prop_t *) */
+  apr_hash_t *prop_changes;
 
   /* URL to PUT the file at. */
   const char *url;
@@ -569,101 +565,23 @@ get_encoding_and_cdata(const char **encoding_p,
   return SVN_NO_ERROR;
 }
 
-typedef struct walker_baton_t {
-  serf_bucket_t *body_bkt;
-  apr_pool_t *body_pool;
-
-  apr_hash_t *previous_changed_props;
-  apr_hash_t *previous_removed_props;
-
-  const char *path;
-
-  /* Hack, since change_rev_prop(old_value_p != NULL, value = NULL) uses D:set
-     rather than D:remove...  (see notes/http-and-webdav/webdav-protocol) */
-  enum {
-    filter_all_props,
-    filter_props_with_old_value,
-    filter_props_without_old_value
-  } filter;
-
-  /* Is the property being deleted? */
-  svn_boolean_t deleting;
-} walker_baton_t;
-
-/* If we have (recorded in WB) the old value of the property named NS:NAME,
- * then set *HAVE_OLD_VAL to TRUE and set *OLD_VAL_P to that old value
- * (which may be NULL); else set *HAVE_OLD_VAL to FALSE.  */
+/* Helper for create_proppatch_body. Writes per property xml to body */
 static svn_error_t *
-derive_old_val(svn_boolean_t *have_old_val,
-               const svn_string_t **old_val_p,
-               walker_baton_t *wb,
-               const char *ns,
-               const char *name)
+write_prop_xml(const proppatch_context_t *proppatch,
+               serf_bucket_t *body_bkt,
+               serf_bucket_alloc_t *alloc,
+               const svn_prop_t *prop,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
-  *have_old_val = FALSE;
-
-  if (wb->previous_changed_props)
-    {
-      const svn_string_t *val;
-      val = svn_ra_serf__get_prop_string(wb->previous_changed_props,
-                                         wb->path, ns, name);
-      if (val)
-        {
-          *have_old_val = TRUE;
-          *old_val_p = val;
-        }
-    }
-
-  if (wb->previous_removed_props)
-    {
-      const svn_string_t *val;
-      val = svn_ra_serf__get_prop_string(wb->previous_removed_props,
-                                         wb->path, ns, name);
-      if (val)
-        {
-          *have_old_val = TRUE;
-          *old_val_p = NULL;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-proppatch_walker(void *baton,
-                 const char *ns,
-                 const char *name,
-                 const svn_string_t *val,
-                 apr_pool_t *scratch_pool)
-{
-  walker_baton_t *wb = baton;
-  serf_bucket_t *body_bkt = wb->body_bkt;
   serf_bucket_t *cdata_bkt;
-  serf_bucket_alloc_t *alloc;
   const char *encoding;
-  svn_boolean_t have_old_val;
-  const svn_string_t *old_val;
   const svn_string_t *encoded_value;
   const char *prop_name;
+  const svn_prop_t *old_prop;
 
-  SVN_ERR(derive_old_val(&have_old_val, &old_val, wb, ns, name));
-
-  /* Jump through hoops to work with D:remove and its val = (""-for-NULL)
-   * representation. */
-  if (wb->filter != filter_all_props)
-    {
-      if (wb->filter == filter_props_with_old_value && ! have_old_val)
-        return SVN_NO_ERROR;
-      if (wb->filter == filter_props_without_old_value && have_old_val)
-        return SVN_NO_ERROR;
-    }
-  if (wb->deleting)
-    val = NULL;
-
-  alloc = body_bkt->allocator;
-
-  SVN_ERR(get_encoding_and_cdata(&encoding, &encoded_value, alloc, val,
-                                 wb->body_pool, scratch_pool));
+  SVN_ERR(get_encoding_and_cdata(&encoding, &encoded_value, alloc, prop->value,
+                                 result_pool, scratch_pool));
   if (encoded_value)
     {
       cdata_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(encoded_value->data,
@@ -677,12 +595,18 @@ proppatch_walker(void *baton,
 
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
-  if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "S:", name, SVN_VA_NULL);
-  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "C:", name, SVN_VA_NULL);
+  if (strncmp(prop->name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+    {
+      prop_name = apr_pstrcat(result_pool,
+                              "S:", prop->name + sizeof(SVN_PROP_PREFIX) - 1,
+                              SVN_VA_NULL);
+    }
   else
-    SVN_ERR_MALFUNCTION();
+    {
+      prop_name = apr_pstrcat(result_pool,
+                              "C:", prop->name,
+                              SVN_VA_NULL);
+    }
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
@@ -693,15 +617,18 @@ proppatch_walker(void *baton,
                                       "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
                                       SVN_VA_NULL);
 
-  if (have_old_val)
+  old_prop = proppatch->old_props
+                          ? svn_hash_gets(proppatch->old_props, prop->name)
+                          : NULL;
+  if (old_prop)
     {
       const char *encoding2;
       const svn_string_t *encoded_value2;
       serf_bucket_t *cdata_bkt2;
 
       SVN_ERR(get_encoding_and_cdata(&encoding2, &encoded_value2,
-                                     alloc, old_val,
-                                     wb->body_pool, scratch_pool));
+                                     alloc, old_prop->value,
+                                     result_pool, scratch_pool));
 
       if (encoded_value2)
         {
@@ -817,7 +744,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 {
   proppatch_context_t *ctx = baton;
   serf_bucket_t *body_bkt;
-  walker_baton_t wb = { 0 };
+  svn_boolean_t opened = FALSE;
+  apr_hash_index_t *hi;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -829,59 +757,64 @@ create_proppatch_body(serf_bucket_t **bkt,
                                     "xmlns:S", SVN_DAV_PROP_NS_SVN,
                                     SVN_VA_NULL);
 
-  wb.body_bkt = body_bkt;
-  wb.body_pool = scratch_pool;
-  wb.previous_changed_props = ctx->previous_changed_props;
-  wb.previous_removed_props = ctx->previous_removed_props;
-  wb.path = ctx->path;
-
-  if (apr_hash_count(ctx->changed_props) > 0)
+  /* First we write property SETs */
+  for (hi = apr_hash_first(scratch_pool, ctx->prop_changes);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
+      svn_prop_t *prop = apr_hash_this_val(hi);
 
-      wb.filter = filter_all_props;
-      wb.deleting = FALSE;
-      SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
-                                          SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb,
-                                          scratch_pool));
+      if (prop->value
+          || (ctx->old_props && svn_hash_gets(ctx->old_props, prop->name)))
+        {
+          if (!opened)
+            {
+              opened = TRUE;
+              svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set",
+                                                SVN_VA_NULL);
+              svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop",
+                                                SVN_VA_NULL);
+            }
 
+          SVN_ERR(write_prop_xml(ctx, body_bkt, alloc, prop,
+                                 scratch_pool, scratch_pool));
+        }
+    }
+
+  if (opened)
+    {
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
     }
 
-  if ((apr_hash_count(ctx->removed_props) > 0)
-      && (wb.previous_changed_props || wb.previous_removed_props))
+  /* And then property REMOVEs */
+  opened = FALSE;
+
+  for (hi = apr_hash_first(scratch_pool, ctx->prop_changes);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      /* For revision properties we handle a remove as a special propset if
-         we want to provide the old version of the property */
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
+      svn_prop_t *prop = apr_hash_this_val(hi);
 
-      wb.filter = filter_props_with_old_value;
-      wb.deleting = TRUE;
-      SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                          SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb,
-                                          scratch_pool));
+      if (!prop->value
+          && !(ctx->old_props && svn_hash_gets(ctx->old_props, prop->name)))
+        {
+          if (!opened)
+            {
+              opened = TRUE;
+              svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove",
+                                                SVN_VA_NULL);
+              svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop",
+                                                SVN_VA_NULL);
+            }
 
-      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
-      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
+          SVN_ERR(write_prop_xml(ctx, body_bkt, alloc, prop,
+                                 scratch_pool, scratch_pool));
+        }
     }
 
-  if (apr_hash_count(ctx->removed_props) > 0)
+  if (opened)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", SVN_VA_NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
-
-      wb.filter = filter_props_without_old_value;
-      wb.deleting = TRUE;
-      SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                          SVN_INVALID_REVNUM,
-                                          proppatch_walker, &wb,
-                                          scratch_pool));
-
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:remove");
     }
@@ -1369,8 +1302,7 @@ open_root(void *edit_baton,
       dir->base_revision = base_revision;
       dir->relpath = "";
       dir->name = "";
-      dir->changed_props = apr_hash_make(dir->pool);
-      dir->removed_props = apr_hash_make(dir->pool);
+      dir->prop_changes = apr_hash_make(dir->pool);
       dir->url = apr_pstrdup(dir->pool, commit_ctx->txn_root_url);
 
       /* If we included our revprops in the POST, we need not
@@ -1434,8 +1366,7 @@ open_root(void *edit_baton,
       dir->base_revision = base_revision;
       dir->relpath = "";
       dir->name = "";
-      dir->changed_props = apr_hash_make(dir->pool);
-      dir->removed_props = apr_hash_make(dir->pool);
+      dir->prop_changes = apr_hash_make(dir->pool);
 
       SVN_ERR(get_version_url(&dir->url, dir->commit_ctx->session,
                               dir->relpath,
@@ -1458,31 +1389,19 @@ open_root(void *edit_baton,
       proppatch_ctx->pool = scratch_pool;
       proppatch_ctx->commit_ctx = NULL; /* No lock info */
       proppatch_ctx->path = proppatch_target;
-      proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
-      proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+      proppatch_ctx->prop_changes = apr_hash_make(proppatch_ctx->pool);
       proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
       for (hi = apr_hash_first(scratch_pool, commit_ctx->revprop_table);
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = apr_hash_this_key(hi);
-          svn_string_t *value = apr_hash_this_val(hi);
-          const char *ns;
+          svn_prop_t *prop = apr_palloc(scratch_pool, sizeof(*prop));
 
-          if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-            {
-              ns = SVN_DAV_PROP_NS_SVN;
-              name += sizeof(SVN_PROP_PREFIX) - 1;
-            }
-          else
-            {
-              ns = SVN_DAV_PROP_NS_CUSTOM;
-            }
+          prop->name = apr_hash_this_key(hi);
+          prop->value = apr_hash_this_val(hi);
 
-          svn_ra_serf__set_prop(proppatch_ctx->changed_props,
-                                proppatch_ctx->path,
-                                ns, name, value, scratch_pool);
+          svn_hash_sets(proppatch_ctx->prop_changes, prop->name, prop);
         }
 
       SVN_ERR(proppatch_resource(commit_ctx->session,
@@ -1580,8 +1499,7 @@ add_directory(const char *path,
   dir->copy_path = apr_pstrdup(dir->pool, copyfrom_path);
   dir->relpath = apr_pstrdup(dir->pool, path);
   dir->name = svn_relpath_basename(dir->relpath, NULL);
-  dir->changed_props = apr_hash_make(dir->pool);
-  dir->removed_props = apr_hash_make(dir->pool);
+  dir->prop_changes = apr_hash_make(dir->pool);
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1673,8 +1591,7 @@ open_directory(const char *path,
   dir->base_revision = base_revision;
   dir->relpath = apr_pstrdup(dir->pool, path);
   dir->name = svn_relpath_basename(dir->relpath, NULL);
-  dir->changed_props = apr_hash_make(dir->pool);
-  dir->removed_props = apr_hash_make(dir->pool);
+  dir->prop_changes = apr_hash_make(dir->pool);
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1698,46 +1615,23 @@ static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
                 const svn_string_t *value,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   dir_context_t *dir = dir_baton;
-  const char *ns;
-  const char *proppatch_target;
+  svn_prop_t *prop;
 
-
-  if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
-    {
-      proppatch_target = dir->url;
-    }
-  else
+  if (! USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
       /* Ensure we have a checked out dir. */
-      SVN_ERR(checkout_dir(dir, pool /* scratch_pool */));
-
-      proppatch_target = dir->working_url;
+      SVN_ERR(checkout_dir(dir, scratch_pool));
     }
 
-  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-    {
-      ns = SVN_DAV_PROP_NS_SVN;
-      name += sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      ns = SVN_DAV_PROP_NS_CUSTOM;
-    }
+  prop = apr_palloc(dir->pool, sizeof(*prop));
 
-  if (value)
-    {
-      svn_ra_serf__set_prop(dir->changed_props, proppatch_target,
-                            ns, name, value, dir->pool);
-    }
-  else
-    {
-      value = svn_string_create_empty(pool);
-      svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
-                            ns, name, value, dir->pool);
-    }
+  prop->name = apr_pstrdup(dir->pool, name);
+  prop->value = value ? svn_string_dup(value, dir->pool) : NULL;
+
+  svn_hash_sets(dir->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
 }
@@ -1753,17 +1647,15 @@ close_directory(void *dir_baton,
    */
 
   /* PROPPATCH our prop change and pass it along.  */
-  if (apr_hash_count(dir->changed_props) ||
-      apr_hash_count(dir->removed_props))
+  if (apr_hash_count(dir->prop_changes))
     {
       proppatch_context_t *proppatch_ctx;
 
       proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
       proppatch_ctx->pool = pool;
-      proppatch_ctx->commit_ctx = dir->commit_ctx;
+      proppatch_ctx->commit_ctx = NULL /* No lock tokens necessary */;
       proppatch_ctx->relpath = dir->relpath;
-      proppatch_ctx->changed_props = dir->changed_props;
-      proppatch_ctx->removed_props = dir->removed_props;
+      proppatch_ctx->prop_changes = dir->prop_changes;
       proppatch_ctx->base_revision = dir->base_revision;
 
       if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
@@ -1809,8 +1701,7 @@ add_file(const char *path,
   new_file->base_revision = SVN_INVALID_REVNUM;
   new_file->copy_path = apr_pstrdup(new_file->pool, copy_path);
   new_file->copy_revision = copy_revision;
-  new_file->changed_props = apr_hash_make(new_file->pool);
-  new_file->removed_props = apr_hash_make(new_file->pool);
+  new_file->prop_changes = apr_hash_make(new_file->pool);
 
   /* Ensure that the file doesn't exist by doing a HEAD on the
      resource.  If we're using HTTP v2, we'll just look into the
@@ -1933,8 +1824,7 @@ open_file(const char *path,
   new_file->name = svn_relpath_basename(new_file->relpath, NULL);
   new_file->added = FALSE;
   new_file->base_revision = base_revision;
-  new_file->changed_props = apr_hash_make(new_file->pool);
-  new_file->removed_props = apr_hash_make(new_file->pool);
+  new_file->prop_changes = apr_hash_make(new_file->pool);
 
   if (USING_HTTPV2_COMMIT_SUPPORT(parent->commit_ctx))
     {
@@ -2008,30 +1898,14 @@ change_file_prop(void *file_baton,
                  apr_pool_t *pool)
 {
   file_context_t *file = file_baton;
-  const char *ns;
+  svn_prop_t *prop;
 
-  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-    {
-      ns = SVN_DAV_PROP_NS_SVN;
-      name += sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      ns = SVN_DAV_PROP_NS_CUSTOM;
-    }
+  prop = apr_palloc(file->pool, sizeof(*prop));
 
-  if (value)
-    {
-      svn_ra_serf__set_prop(file->changed_props, file->url,
-                            ns, name, value, file->pool);
-    }
-  else
-    {
-      value = svn_string_create_empty(pool);
+  prop->name = apr_pstrdup(file->pool, name);
+  prop->value = value ? svn_string_dup(value, file->pool) : NULL;
 
-      svn_ra_serf__set_prop(file->removed_props, file->url,
-                            ns, name, value, file->pool);
-    }
+  svn_hash_sets(file->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
 }
@@ -2099,8 +1973,7 @@ close_file(void *file_baton,
     SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
-  if (apr_hash_count(ctx->changed_props) ||
-      apr_hash_count(ctx->removed_props))
+  if (apr_hash_count(ctx->prop_changes))
     {
       proppatch_context_t *proppatch;
 
@@ -2109,8 +1982,7 @@ close_file(void *file_baton,
       proppatch->relpath = ctx->relpath;
       proppatch->path = ctx->url;
       proppatch->commit_ctx = ctx->commit_ctx;
-      proppatch->changed_props = ctx->changed_props;
-      proppatch->removed_props = ctx->removed_props;
+      proppatch->prop_changes = ctx->prop_changes;
       proppatch->base_revision = ctx->base_revision;
 
       SVN_ERR(proppatch_resource(ctx->commit_ctx->session,
@@ -2311,9 +2183,9 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   proppatch_context_t *proppatch_ctx;
   const char *proppatch_target;
-  const char *ns;
   const svn_string_t *tmp_old_value;
   svn_boolean_t atomic_capable = FALSE;
+  svn_prop_t *prop;
   svn_error_t *err;
 
   if (old_value_p || !value)
@@ -2365,57 +2237,30 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                                           pool, pool));
     }
 
-  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
-    {
-      ns = SVN_DAV_PROP_NS_SVN;
-      name += sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      ns = SVN_DAV_PROP_NS_CUSTOM;
-    }
-
   /* PROPPATCH our log message and pass it along.  */
   proppatch_ctx = apr_pcalloc(pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = pool;
   proppatch_ctx->commit_ctx = NULL; /* No lock headers */
   proppatch_ctx->path = proppatch_target;
-  proppatch_ctx->changed_props = apr_hash_make(pool);
-  proppatch_ctx->removed_props = apr_hash_make(pool);
-  if (old_value_p)
-    {
-      proppatch_ctx->previous_changed_props = apr_hash_make(pool);
-      proppatch_ctx->previous_removed_props = apr_hash_make(pool);
-    }
+  proppatch_ctx->prop_changes = apr_hash_make(pool);
   proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
-  if (old_value_p && *old_value_p)
+  if (old_value_p)
     {
-      svn_ra_serf__set_prop(proppatch_ctx->previous_changed_props,
-                            proppatch_ctx->path,
-                            ns, name, *old_value_p, pool);
-    }
-  else if (old_value_p)
-    {
-      svn_string_t *dummy_value = svn_string_create_empty(pool);
+      prop = apr_palloc(pool, sizeof (*prop));
 
-      svn_ra_serf__set_prop(proppatch_ctx->previous_removed_props,
-                            proppatch_ctx->path,
-                            ns, name, dummy_value, pool);
+      prop->name = name;
+      prop->value = *old_value_p;
+
+      proppatch_ctx->old_props = apr_hash_make(pool);
+      svn_hash_sets(proppatch_ctx->old_props, prop->name, prop);
     }
 
-  if (value)
-    {
-      svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, value, pool);
-    }
-  else
-    {
-      value = svn_string_create_empty(pool);
+  prop = apr_palloc(pool, sizeof (*prop));
 
-      svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
-                            ns, name, value, pool);
-    }
+  prop->name = name;
+  prop->value = value;
+  svn_hash_sets(proppatch_ctx->prop_changes, prop->name, prop);
 
   err = proppatch_resource(session,
                            session->conns[0],

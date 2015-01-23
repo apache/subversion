@@ -1056,15 +1056,6 @@ typedef svn_error_t *
                                  const svn_string_t *val,
                                  apr_pool_t *pool);
 
-svn_error_t *
-svn_ra_serf__walk_all_props(apr_hash_t *props,
-                            const char *name,
-                            svn_revnum_t rev,
-                            svn_ra_serf__walker_visitor_t walker,
-                            void *baton,
-                            apr_pool_t *pool);
-
-
 /* Like walk_all_props(), but a 2-level hash.  */
 svn_error_t *
 svn_ra_serf__walk_node_props(apr_hash_t *props,
@@ -1156,12 +1147,6 @@ svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
                       const char *name);
-
-/* Same as svn_ra_serf__set_rev_prop(), but for the unknown revision. */
-void
-svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
-                      const char *ns, const char *name,
-                      const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
