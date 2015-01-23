@@ -1981,7 +1981,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
               break;
             }
         }
-      if (! action->action)
+      if (j == sizeof(action_defn) / sizeof(action_defn[0]))
         return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                  "'%s' is not an action",
                                  action_string);
