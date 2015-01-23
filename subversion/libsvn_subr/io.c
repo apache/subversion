@@ -2471,23 +2471,20 @@ svn_io_remove_file2(const char *path,
         return SVN_NO_ERROR;
     }
 
+  /* Check to make sure we aren't trying to delete a directory */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED)
+      || apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
     {
-      apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
-      /* Check to make sure we aren't trying to delete a directory */
-      if (os_err == ERROR_ACCESS_DENIED || os_err == ERROR_SHARING_VIOLATION)
+      apr_finfo_t finfo;
+
+      if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
+          && finfo.filetype == APR_REG)
         {
-          apr_finfo_t finfo;
-
-          if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
-              && finfo.filetype == APR_REG)
-            {
-              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr,
-                                                        scratch_pool));
-            }
+          WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, scratch_pool));
         }
-
-      /* Just return the delete error */
     }
+
+  /* Just return the delete error */
 #endif
 
   if (!apr_err)
