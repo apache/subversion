@@ -3671,8 +3671,23 @@ def copy_pin_externals(sbox):
                                      wc_dir + '/A',
                                      wc_dir + '/A_copy',
                                      '--pin-externals')
+  # gamma was moved so its path and expected last-changed revision change
   last_changed_rev_gamma = 11
   external_url_for["A/B/gamma"] = '^/A/D/gamma-moved'
+  verify_pinned_externals(wc_dir)
+
+  sbox.simple_update()
+  sbox.simple_move('A/D', 'A/D-moved')
+  change_external(sbox.ospath('A/B'), '^/A/D-moved/gamma-moved gamma', commit=False)
+  sbox.simple_commit()
+  sbox.simple_update()
+  # While gamma's path has changed by virtue of being moved along with
+  # its parent A/D, gamma's last-changed rev should not have changed.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
   verify_pinned_externals(wc_dir)
 
 
