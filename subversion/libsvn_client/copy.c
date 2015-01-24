@@ -264,10 +264,28 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                                    iterpool));
       SVN_ERR(svn_ra_get_session_url(external_ra_session, &session_url, scratch_pool));
       SVN_DBG(("external ra session url: %s", session_url));
-      SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
-                                       &external_youngest_rev,
-                                       iterpool));
+      if (item->peg_revision.kind == svn_opt_revision_unspecified ||
+          item->peg_revision.kind == svn_opt_revision_head)
+        {
+          SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
+                                           &external_youngest_rev,
+                                           iterpool));
+        }
+      else
+        {
+          if (item->peg_revision.kind == svn_opt_revision_date)
+            {
+              item->peg_revision.kind = svn_opt_revision_number;
+              SVN_ERR(svn_ra_get_dated_revision(external_ra_session,
+                                                &item->peg_revision.value.number,
+                                                item->peg_revision.value.date,
+                                                iterpool));
+            }
 
+          SVN_ERR_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          external_youngest_rev = item->peg_revision.value.number;
+        }
+        
       SVN_ERR(svn_ra_stat(external_ra_session, "",
                           external_youngest_rev,
                           &dirent,
@@ -331,15 +349,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                             iterpool));
         }
 
-      if (item->peg_revision.kind == svn_opt_revision_date)
-        {
-          item->peg_revision.kind = svn_opt_revision_number;
-          SVN_ERR(svn_ra_get_dated_revision(external_ra_session,
-                                            &item->peg_revision.value.number,
-                                            item->peg_revision.value.date,
-                                            iterpool));
-        }
-
       if (item->revision.kind != svn_opt_revision_number)
         {
           item->revision.kind = svn_opt_revision_number;
@@ -351,6 +360,9 @@ pin_externals_prop(svn_string_t **pinned_externals,
           item->peg_revision.kind = svn_opt_revision_number;
           item->peg_revision.value.number = dirent->created_rev;
         }
+ 
+      SVN_ERR_ASSERT(item->revision.kind == svn_opt_revision_number);
+      SVN_ERR_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
 
       pinned_desc = apr_psprintf(iterpool, "-r%lu %s@%lu %s%s",
                                  item->revision.value.number,
