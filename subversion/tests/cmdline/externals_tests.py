@@ -3564,9 +3564,12 @@ def copy_pin_externals(sbox):
                                      '--pin-externals')
 
   # Verify that externals have been pinned.
+  last_changed_rev_gamma = 1
   def verify_pinned_externals(base_path_or_url):
     expected_output = [
-      '-r1 %s@1 gamma\n' % external_url_for["A/B/gamma"],
+      '-r%d %s@%d gamma\n' % (last_changed_rev_gamma, 
+                              external_url_for["A/B/gamma"],
+                              last_changed_rev_gamma),
       '\n',
     ]
     svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -3656,13 +3659,9 @@ def copy_pin_externals(sbox):
                                      wc_dir + '/A',
                                      wc_dir + '/A_copy',
                                      '--pin-externals')
-  expected_output = [
-    '-r11 ^/A/D/gamma-moved@11 gamma\n',
-    '\n',
-  ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:externals',
-                                      sbox.ospath('A_copy/B'))
+  last_changed_rev_gamma = 11
+  external_url_for["A/B/gamma"] = '^/A/D/gamma-moved'
+  verify_pinned_externals(wc_dir)
 
 
 ########################################################################
