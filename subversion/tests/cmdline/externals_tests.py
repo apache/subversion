@@ -3554,6 +3554,7 @@ def copy_pin_externals(sbox):
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
 
   # Perform a repos->repos copy, pinning externals
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3565,6 +3566,7 @@ def copy_pin_externals(sbox):
 
   # Verify that externals have been pinned.
   last_changed_rev_gamma = 1
+  last_changed_rev_A = 5
   A_copy_D_path = 'A_copy/D'
   def verify_pinned_externals(base_path_or_url):
     expected_output = [
@@ -3595,7 +3597,9 @@ def copy_pin_externals(sbox):
                                        'propget', 'svn:externals',
                                        target)
     expected_output = [
-      '-r5 %s@5 exdir_A\n' % external_url_for["A/D/exdir_A"],
+      '-r%d %s@%d exdir_A\n' % (last_changed_rev_A,
+                                external_url_for["A/D/exdir_A"],
+                                last_changed_rev_A),
       '-r3 %s@3 exdir_A/G\n' % external_url_for["A/D/exdir_A/G/"],
       '-r1 %s@1 exdir_A/H\n' % external_url_for["A/D/exdir_A/H"],
       '-r4 %s@4 x/y/z/blah\n' % external_url_for["A/D/x/y/z/blah"],
@@ -3701,6 +3705,25 @@ def copy_pin_externals(sbox):
   # See the "BUG:" comment in libsvn_client's pin_externals_prop() function.
   external_url_for["A/B/gamma"] = ('%s/A/D/gamma-moved' % repo_url)
   A_copy_D_path = 'A_copy/D-moved'
+  verify_pinned_externals(wc_dir)
+
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
+
+  # Test an already pinned external which was removed in HEAD.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     other_repo_url + '/A/D/H',
+                                     '-m', 'remove A/D/H')
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
+  last_changed_rev_A = 6
   verify_pinned_externals(wc_dir)
 
 
