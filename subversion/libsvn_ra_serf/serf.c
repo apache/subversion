@@ -871,6 +871,7 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   const char *propfind_path;
+  svn_ra_serf__handler_t *handler;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
@@ -890,13 +891,16 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
                                         scratch_pool));
     }
 
-  /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
+  props = apr_hash_make(result_pool);
+  SVN_ERR(svn_ra_serf__deliver_props2(&handler, session, session->conns[0],
                                       propfind_path, rev, "0", fetch_props,
-                                      result_pool, scratch_pool));
+                                      svn_ra_serf__deliver_svn_props, props,
+                                      scratch_pool));
+  SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
-                                       result_pool, scratch_pool));
+  svn_ra_serf__keep_only_regular_props(props, scratch_pool);
+
+  *ret_props = props;
 
   return SVN_NO_ERROR;
 }

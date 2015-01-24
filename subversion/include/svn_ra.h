@@ -1011,6 +1011,10 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  *
  * @since New in 1.5.
+ *
+ * @note Like most commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
  */
 svn_error_t *
 svn_ra_get_commit_editor3(svn_ra_session_t *session,

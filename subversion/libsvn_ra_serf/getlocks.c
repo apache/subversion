@@ -213,7 +213,8 @@ static svn_error_t *
 create_getlocks_body(serf_bucket_t **body_bkt,
                      void *baton,
                      serf_bucket_alloc_t *alloc,
-                     apr_pool_t *pool)
+                     apr_pool_t *pool /* request pool */,
+                     apr_pool_t *scratch_pool)
 {
   lock_context_t *lock_ctx = baton;
   serf_bucket_t *buckets;

@@ -931,7 +931,8 @@ ensure_file_opened(file_baton_t *file,
 static svn_error_t *
 headers_fetch(serf_bucket_t *headers,
               void *baton,
-              apr_pool_t *pool)
+              apr_pool_t *pool /* request pool */,
+              apr_pool_t *scratch_pool)
 {
   fetch_ctx_t *fetch_ctx = baton;
 
@@ -2302,7 +2303,8 @@ static svn_error_t *
 create_update_report_body(serf_bucket_t **body_bkt,
                           void *baton,
                           serf_bucket_alloc_t *alloc,
-                          apr_pool_t *pool)
+                          apr_pool_t *pool /* request pool */,
+                          apr_pool_t *scratch_pool)
 {
   report_context_t *report = baton;
   body_create_baton_t *body = report->body;
@@ -2330,7 +2332,8 @@ create_update_report_body(serf_bucket_t **body_bkt,
 static svn_error_t *
 setup_update_report_headers(serf_bucket_t *headers,
                             void *baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *pool /* request pool */,
+                            apr_pool_t *scratch_pool)
 {
   report_context_t *report = baton;
 
