@@ -3640,6 +3640,31 @@ def copy_pin_externals(sbox):
                                      '--pin-externals')
   verify_pinned_externals(wc_dir)
 
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
+
+  # Test behaviour for external URLs which were moved since
+  # their last-changed revision.
+  sbox.simple_move('A/D/gamma', 'A/D/gamma-moved')
+  sbox.simple_commit()
+  change_external(sbox.ospath('A/B'), '^/A/D/gamma-moved gamma', commit=True)
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
+  expected_output = [
+    '-r11 ^/A/D/gamma-moved@11 gamma\n',
+    '\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:externals',
+                                      sbox.ospath('A_copy/B'))
+
+
 ########################################################################
 # Run the tests
 
