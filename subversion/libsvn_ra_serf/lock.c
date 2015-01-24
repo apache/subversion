@@ -191,7 +191,8 @@ locks_closed(svn_ra_serf__xml_estate_t *xes,
 static svn_error_t *
 set_lock_headers(serf_bucket_t *headers,
                  void *baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *pool /* request pool */,
+                 apr_pool_t *scratch_pool)
 {
   lock_ctx_t *lock_ctx = baton;
 
@@ -399,7 +400,8 @@ static svn_error_t *
 create_lock_body(serf_bucket_t **body_bkt,
                  void *baton,
                  serf_bucket_alloc_t *alloc,
-                 apr_pool_t *pool)
+                 apr_pool_t *pool /* request pool */,
+                 apr_pool_t *scratch_pool)
 {
   lock_ctx_t *ctx = baton;
   serf_bucket_t *buckets;
@@ -528,7 +530,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 static svn_error_t *
 set_unlock_headers(serf_bucket_t *headers,
                    void *baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   lock_ctx_t *ctx = baton;
 

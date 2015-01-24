@@ -114,7 +114,8 @@ static svn_error_t *
 create_get_locations_body(serf_bucket_t **body_bkt,
                           void *baton,
                           serf_bucket_alloc_t *alloc,
-                          apr_pool_t *pool)
+                          apr_pool_t *pool /* request pool */,
+                          apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   loc_context_t *loc_ctx = baton;

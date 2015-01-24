@@ -116,7 +116,8 @@ static svn_error_t *
 create_options_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *body;
   body = serf_bucket_aggregate_create(alloc);
@@ -525,7 +526,8 @@ static svn_error_t *
 create_simple_options_body(serf_bucket_t **body_bkt,
                            void *baton,
                            serf_bucket_alloc_t *alloc,
-                           apr_pool_t *pool)
+                           apr_pool_t *pool /* request pool */,
+                           apr_pool_t *scratch_pool)
 {
   serf_bucket_t *body;
   serf_bucket_t *s;

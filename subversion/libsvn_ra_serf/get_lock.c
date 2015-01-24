@@ -232,7 +232,8 @@ static svn_error_t *
 create_getlock_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
 
@@ -255,7 +256,8 @@ create_getlock_body(serf_bucket_t **body_bkt,
 static svn_error_t*
 setup_getlock_headers(serf_bucket_t *headers,
                       void *baton,
-                      apr_pool_t *pool)
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_headers_setn(headers, "Depth", "0");
 

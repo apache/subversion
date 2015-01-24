@@ -382,19 +382,19 @@ typedef svn_error_t *
                                          apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */
-/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_body_delegate_t)(serf_bucket_t **body_bkt,
                                         void *baton,
                                         serf_bucket_alloc_t *alloc,
-                                        apr_pool_t *request_pool);
+                                        apr_pool_t *request_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Callback for when request headers are needed. */
-/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
-                                          apr_pool_t *request_pool);
+                                          apr_pool_t *request_pool,
+                                          apr_pool_t *scratch_pool);
 
 /* Callback for when a response has an error. */
 typedef svn_error_t *
@@ -916,6 +916,12 @@ svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
 
 /** PROPFIND-related functions **/
 
+/* Removes all non regular properties from PROPS */
+void
+svn_ra_serf__keep_only_regular_props(apr_hash_t *props,
+                                     apr_pool_t *scratch_pool);
+
+
 /* Callback used via svn_ra_serf__deliver_props2 */
 typedef svn_error_t *
 (*svn_ra_serf__prop_func)(void *baton,
@@ -926,23 +932,29 @@ typedef svn_error_t *
                           apr_pool_t *scratch_pool);
 
 /*
- * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in LOOKUP_PROPS at URL for
- * DEPTH ("0","1","infinity").
- *
- * This function will not block waiting for the response. Callers are
- * expected to call svn_ra_serf__wait_for_props().
+ * Implementation of svn_ra_serf__prop_func that just delivers svn compatible
+ * properties  in the apr_hash_t * that is used as baton.
  */
 svn_error_t *
-svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
-                           apr_hash_t *prop_vals,
-                           svn_ra_serf__session_t *sess,
-                           svn_ra_serf__connection_t *conn,
-                           const char *url,
-                           svn_revnum_t rev,
-                           const char *depth,
-                           const svn_ra_serf__dav_props_t *lookup_props,
-                           apr_pool_t *pool);
+svn_ra_serf__deliver_svn_props(void *baton,
+                               const char *path,
+                               const char *ns,
+                               const char *name,
+                               const svn_string_t *value,
+                               apr_pool_t *scratch_pool);
+
+/*
+ * Implementation of svn_ra_serf__prop_func that delivers all DAV properties
+ * in (const char * -> apr_hash_t *) on Namespace pointing to a second hash
+ *    (const char * -> svn_string_t *) to the values.
+ */
+svn_error_t *
+svn_ra_serf__deliver_node_props(void *baton,
+                                const char *path,
+                                const char *ns,
+                                const char *name,
+                                const svn_string_t *value,
+                                apr_pool_t *scratch_pool);
 
 
 /*
@@ -970,26 +982,6 @@ svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
  */
 svn_error_t *
 svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
-                            apr_pool_t *scratch_pool);
-
-/* This is a blocking version of deliver_props.
-
-   The properties are fetched and placed into RESULTS, allocated in
-   RESULT_POOL.
-
-   ### more docco about the other params.
-
-   Temporary allocations are made in SCRATCH_POOL.
-*/
-svn_error_t *
-svn_ra_serf__retrieve_props(apr_hash_t **results,
-                            svn_ra_serf__session_t *sess,
-                            svn_ra_serf__connection_t *conn,
-                            const char *url,
-                            svn_revnum_t rev,
-                            const char *depth,
-                            const svn_ra_serf__dav_props_t *props,
-                            apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
 
@@ -1036,17 +1028,6 @@ svn_ra_serf__fetch_dav_prop(const char **value,
                             apr_pool_t *scratch_pool);
 
 
-/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
- *
- * The POOL governs allocation.
- */
-void
-svn_ra_serf__set_ver_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name,
-                          const svn_string_t *val, apr_pool_t *pool);
-#define svn_ra_serf__set_rev_prop svn_ra_serf__set_ver_prop
-
 /** Property walker functions **/
 
 typedef svn_error_t *
@@ -1056,36 +1037,12 @@ typedef svn_error_t *
                                  const svn_string_t *val,
                                  apr_pool_t *pool);
 
-svn_error_t *
-svn_ra_serf__walk_all_props(apr_hash_t *props,
-                            const char *name,
-                            svn_revnum_t rev,
-                            svn_ra_serf__walker_visitor_t walker,
-                            void *baton,
-                            apr_pool_t *pool);
-
-
 /* Like walk_all_props(), but a 2-level hash.  */
 svn_error_t *
 svn_ra_serf__walk_node_props(apr_hash_t *props,
                              svn_ra_serf__walker_visitor_t walker,
                              void *baton,
                              apr_pool_t *scratch_pool);
-
-
-typedef svn_error_t *
-(*svn_ra_serf__path_rev_walker_t)(void *baton,
-                                  const char *path,
-                                  const char *ns,
-                                  const char *name,
-                                  const svn_string_t *val,
-                                  apr_pool_t *pool);
-svn_error_t *
-svn_ra_serf__walk_all_paths(apr_hash_t *props,
-                            svn_revnum_t rev,
-                            svn_ra_serf__path_rev_walker_t walker,
-                            void *baton,
-                            apr_pool_t *pool);
 
 
 /* Map a property name, as passed over the wire, into its corresponding
@@ -1098,17 +1055,6 @@ const char *
 svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
                                    apr_pool_t *result_pool);
-
-
-/* Select the basic revision properties from the set of "all" properties.
-   Return these in *REVPROPS, allocated from RESULT_POOL.  */
-svn_error_t *
-svn_ra_serf__select_revprops(apr_hash_t **revprops,
-                             const char *name,
-                             svn_revnum_t rev,
-                             apr_hash_t *all_revprops,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
 
 
 /* PROPS is nested hash tables mapping NS -> NAME -> VALUE.
@@ -1128,40 +1074,6 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-
-/* Return the property value for PATH at REV revision with a NS:NAME.
- * PROPS is a four-level nested hash: (svn_revnum_t => char *path =>
- * char *ns => char *name => svn_string_t *). */
-const svn_string_t *
-svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
-                                 const char *path, svn_revnum_t rev,
-                                 const char *ns, const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop_string(), but returns a C string. */
-const char *
-svn_ra_serf__get_ver_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop_string(), but for the unknown revision. */
-const svn_string_t *
-svn_ra_serf__get_prop_string(apr_hash_t *props,
-                             const char *path,
-                             const char *ns,
-                             const char *name);
-
-/* Same as svn_ra_serf__get_ver_prop(), but for the unknown revision. */
-const char *
-svn_ra_serf__get_prop(apr_hash_t *props,
-                      const char *path,
-                      const char *ns,
-                      const char *name);
-
-/* Same as svn_ra_serf__set_rev_prop(), but for the unknown revision. */
-void
-svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
-                      const char *ns, const char *name,
-                      const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
@@ -1461,7 +1373,12 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
                                 apr_time_t tm,
                                 apr_pool_t *pool);
 
-/* Implements svn_ra__vtable_t.get_commit_editor(). */
+/* Implements svn_ra__vtable_t.get_commit_editor().
+ *
+ * Note: Like other commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
+ */
 svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
