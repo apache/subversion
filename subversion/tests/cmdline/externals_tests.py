@@ -3574,6 +3574,8 @@ def copy_pin_externals(sbox):
                                         base_path_or_url + '/A_copy/B')
     expected_output = [
       '-r3 %s@3 exdir_G\n' % external_url_for["A/C/exdir_G"],
+      # Note: A/D/H was last changed in r5, but exdir_H's external
+      # definition's URL is already pinned to r1.
       '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
       '\n',
     ]
