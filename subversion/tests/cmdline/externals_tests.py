@@ -3572,9 +3572,13 @@ def copy_pin_externals(sbox):
                               last_changed_rev_gamma),
       '\n',
     ]
+    if svntest.sandbox.is_url(base_path_or_url):
+      target = base_path_or_url + '/A_copy/B'
+    else:
+      target = sbox.ospath('A_copy/B')
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        base_path_or_url + '/A_copy/B')
+                                       target)
     expected_output = [
       '-r3 %s@3 exdir_G\n' % external_url_for["A/C/exdir_G"],
       # Note: A/D/H was last changed in r5, but exdir_H's external
@@ -3582,9 +3586,13 @@ def copy_pin_externals(sbox):
       '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
       '\n',
     ]
+    if svntest.sandbox.is_url(base_path_or_url):
+      target = base_path_or_url + '/A_copy/C'
+    else:
+      target = sbox.ospath('A_copy/C')
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        base_path_or_url + '/A_copy/C')
+                                       target)
     expected_output = [
       '-r5 %s@5 exdir_A\n' % external_url_for["A/D/exdir_A"],
       '-r3 %s@3 exdir_A/G\n' % external_url_for["A/D/exdir_A/G/"],
@@ -3592,9 +3600,13 @@ def copy_pin_externals(sbox):
       '-r4 %s@4 x/y/z/blah\n' % external_url_for["A/D/x/y/z/blah"],
       '\n',
     ]
+    if svntest.sandbox.is_url(base_path_or_url):
+      target = base_path_or_url + '/A_copy/D'
+    else:
+      target = sbox.ospath('A_copy/D')
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
-                                        base_path_or_url + '/A_copy/D')
+                                       target)
     
   verify_pinned_externals(repo_url)
 
