@@ -3565,6 +3565,7 @@ def copy_pin_externals(sbox):
 
   # Verify that externals have been pinned.
   last_changed_rev_gamma = 1
+  A_copy_D_path = 'A_copy/D'
   def verify_pinned_externals(base_path_or_url):
     expected_output = [
       '-r%d %s@%d gamma\n' % (last_changed_rev_gamma, 
@@ -3601,9 +3602,9 @@ def copy_pin_externals(sbox):
       '\n',
     ]
     if svntest.sandbox.is_url(base_path_or_url):
-      target = base_path_or_url + '/A_copy/D'
+      target = base_path_or_url + '/' + A_copy_D_path
     else:
-      target = sbox.ospath('A_copy/D')
+      target = sbox.ospath(A_copy_D_path)
     svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'propget', 'svn:externals',
                                        target)
@@ -3676,18 +3677,30 @@ def copy_pin_externals(sbox):
   external_url_for["A/B/gamma"] = '^/A/D/gamma-moved'
   verify_pinned_externals(wc_dir)
 
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
+
   sbox.simple_update()
   sbox.simple_move('A/D', 'A/D-moved')
   change_external(sbox.ospath('A/B'), '^/A/D-moved/gamma-moved gamma', commit=False)
   sbox.simple_commit()
   sbox.simple_update()
-  # While gamma's path has changed by virtue of being moved along with
-  # its parent A/D, gamma's last-changed rev should not have changed.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      wc_dir + '/A',
                                      wc_dir + '/A_copy',
                                      '--pin-externals')
+  # While gamma's path has changed by virtue of being moved along with
+  # its parent A/D, gamma's last-changed rev should not have changed.
+  # Therefore, the pinned external should resolve to the pre-move path,
+  # ie. '^/A/D/gamma-moved@11' instead of '^/A/D-moved/gamma-moved@11'.
+  #
+  # Note that the pinned external will use an absolute URLs in this case.
+  # See the "BUG:" comment in libsvn_client's pin_externals_prop() function.
+  external_url_for["A/B/gamma"] = ('%s/A/D/gamma-moved' % repo_url)
+  A_copy_D_path = 'A_copy/D-moved'
   verify_pinned_externals(wc_dir)
 
 

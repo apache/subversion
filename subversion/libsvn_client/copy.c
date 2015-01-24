@@ -177,6 +177,27 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+struct external_location_segments_receiver_baton {
+  svn_revnum_t last_changed_rev;
+  const char *last_changed_repos_relpath;
+  apr_pool_t *result_pool;
+} external_location_segments_receiver_baton;
+
+/* Implements svn_location_segment_receiver_t. */
+static svn_error_t *
+external_location_segments_receiver(svn_location_segment_t *segment,
+                                    void *baton,
+                                    apr_pool_t *pool)
+{
+  struct external_location_segments_receiver_baton *b = baton;
+
+  if (segment->range_start <= b->last_changed_rev &&
+      segment->range_end >= b->last_changed_rev)
+    b->last_changed_repos_relpath = apr_pstrdup(b->result_pool, segment->path);
+
+  return SVN_NO_ERROR;
+}
+
 /* Pin all externals listed in EXTERNALS_PROP_VAL to their last-changed
  * revision. Return a new property value in *PINNED_EXTERNALS allocated
  * in RESULT_POOL. LOCAL_ABSPATH_OR_URL is the path defining the
@@ -246,18 +267,60 @@ pin_externals_prop(svn_string_t **pinned_externals,
       SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
                                        &external_youngest_rev,
                                        iterpool));
-      /* ### If the path was copied/moved since it's last-changed revision,
-         ### we should use the pre-copy/pre-move path.*/
+
       SVN_ERR(svn_ra_stat(external_ra_session, "",
                           external_youngest_rev,
                           &dirent,
                           iterpool));
-
       if (dirent == NULL)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("Cannot determine last-changed revision "
                                    "of '%s'"), resolved_url);
       SVN_DBG(("external's last-changed revision: %lu", dirent->created_rev));
+
+      if (external_youngest_rev > dirent->created_rev)
+        {
+          struct external_location_segments_receiver_baton b;
+
+          /* Find the item's URL location as of the last-changed revision. */
+          b.last_changed_rev = dirent->created_rev;
+          b.last_changed_repos_relpath = NULL;
+          b.result_pool = iterpool;
+          SVN_ERR(svn_ra_get_location_segments(
+                    external_ra_session, "", external_youngest_rev,
+                    external_youngest_rev, dirent->created_rev,
+                    external_location_segments_receiver, &b, iterpool));
+          if (b.last_changed_repos_relpath)
+            {
+              const char *external_repos_root_url;
+              const char *last_changed_url;
+
+              SVN_ERR(svn_ra_get_repos_root2(external_ra_session,
+                                             &external_repos_root_url,
+                                             iterpool));
+
+
+              last_changed_url = svn_uri_canonicalize(
+                                   apr_pstrcat(iterpool,
+                                              external_repos_root_url, "/",
+                                              b.last_changed_repos_relpath,
+                                              SVN_VA_NULL),
+                                   iterpool);
+              SVN_DBG(("external's last-changed URL: %s", last_changed_url));
+              if (strcmp(resolved_url, last_changed_url) != 0)
+                {
+                  /* The external was at a different location at its
+                   * last-changed revision so we must fix up ITEM->URL.
+                   * ### BUG: Even if the external's URL was relative the
+                   * ### pinned URL will be absolute because we have no good
+                   * ### way of transforming the resolved last-changed URL
+                   * ### into a relative one. */
+                  item->url = last_changed_url;
+                }
+            }
+        }
+
+      SVN_DBG(("external's URL: %s", item->url));
 
       if (item->revision.kind == svn_opt_revision_date)
         {
