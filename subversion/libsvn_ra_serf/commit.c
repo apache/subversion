@@ -2001,7 +2001,6 @@ close_edit(void *edit_baton,
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__run_merge(&commit_info,
                                  ctx->session,
-                                 ctx->session->conns[0],
                                  merge_target,
                                  ctx->lock_tokens,
                                  ctx->keep_locks,

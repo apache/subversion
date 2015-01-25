@@ -257,13 +257,11 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                                            NULL, getlocks_closed, NULL,
                                            lock_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;

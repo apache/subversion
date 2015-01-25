@@ -685,7 +685,8 @@ svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx);
 
    This also initializes HANDLER_POOL to the given RESULT_POOL.  */
 svn_ra_serf__handler_t *
-svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+svn_ra_serf__create_expat_handler(svn_ra_serf__session_t *session,
+                                  svn_ra_serf__xml_context_t *xmlctx,
                                   const int *expected_status,
                                   apr_pool_t *result_pool);
 
@@ -1079,7 +1080,6 @@ svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                        svn_ra_serf__session_t *session,
-                       svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
                        apr_hash_t *lock_tokens,
                        svn_boolean_t keep_locks,

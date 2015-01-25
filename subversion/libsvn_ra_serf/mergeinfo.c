@@ -217,12 +217,11 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                            NULL, mergeinfo_closed, NULL,
                                            mergeinfo_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = path;
-  handler->conn = session->conns[0];
-  handler->session = session;
+
   handler->body_delegate = create_mergeinfo_body;
   handler->body_delegate_baton = mergeinfo_ctx;
   handler->body_type = "text/xml";

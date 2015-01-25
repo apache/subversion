@@ -552,15 +552,14 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                                            &ctx,
                                            scratch_pool);
 
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "REPORT";
   handler->path = session->session_url.path;
   handler->body_delegate = create_replay_body;
   handler->body_delegate_baton = &ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   /* Not setting up done handler as we don't use a global context */
 
@@ -750,14 +749,13 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                            replay_cdata, rev_ctx,
                                            rev_pool);
 
-          handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, rev_pool);
+          handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                                      rev_pool);
 
           handler->method = "REPORT";
           handler->path = replay_target;
           handler->body_delegate = create_replay_body;
           handler->body_delegate_baton = rev_ctx;
-          handler->conn = session->conns[0];
-          handler->session = session;
 
           handler->done_delegate = replay_done;
           handler->done_delegate_baton = rev_ctx;

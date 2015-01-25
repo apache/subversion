@@ -2664,7 +2664,8 @@ finish_report(void *report_baton,
                                            update_cdata,
                                            report,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(sess, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
@@ -2674,8 +2675,6 @@ finish_report(void *report_baton,
   handler->custom_accept_encoding = TRUE;
   handler->header_delegate = setup_update_report_headers;
   handler->header_delegate_baton = report;
-  handler->conn = sess->conns[0];
-  handler->session = sess;
 
   svn_ra_serf__request_create(handler);
 

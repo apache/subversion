@@ -483,7 +483,7 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
                                            NULL,
                                            new_prop_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx,
+  handler = svn_ra_serf__create_expat_handler(sess, xmlctx,
                                               propfind_expected_status,
                                               pool);
 
@@ -494,9 +494,6 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
   handler->body_delegate_baton = new_prop_ctx;
   handler->header_delegate = setup_propfind_headers;
   handler->header_delegate_baton = new_prop_ctx;
-
-  handler->session = sess;
-  handler->conn = sess->conns[0];
 
   new_prop_ctx->handler = handler;
 
