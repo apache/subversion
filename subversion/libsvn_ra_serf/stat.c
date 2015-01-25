@@ -85,6 +85,35 @@ fetch_path_props(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_resource_type(svn_node_kind_t *kind,
+                  apr_hash_t *props)
+{
+  apr_hash_t *dav_props;
+  const char *res_type;
+
+  dav_props = apr_hash_get(props, "DAV:", 4);
+  res_type = svn_prop_get_value(dav_props, "resourcetype");
+  if (!res_type)
+    {
+      /* How did this happen? */
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                              _("The PROPFIND response did not include the "
+                                "requested resourcetype value"));
+    }
+
+  if (strcmp(res_type, "collection") == 0)
+    {
+      *kind = svn_node_dir;
+    }
+  else
+    {
+      *kind = svn_node_file;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_ra__vtable_t.check_path(). */
 svn_error_t *
 svn_ra_serf__check_path(svn_ra_session_t *ra_session,
@@ -111,7 +140,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
       if (err)
         return svn_error_trace(err);
 
-      SVN_ERR(svn_ra_serf__get_resource_type(kind, props));
+      SVN_ERR(get_resource_type(kind, props));
     }
 
   return SVN_NO_ERROR;
