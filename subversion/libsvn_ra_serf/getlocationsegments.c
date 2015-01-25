@@ -193,8 +193,6 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   handler->body_delegate = create_gls_body;
   handler->body_delegate_baton = gls_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   err = svn_ra_serf__context_run_one(handler, pool);
 
