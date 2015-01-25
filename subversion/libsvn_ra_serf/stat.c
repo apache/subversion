@@ -48,22 +48,24 @@
 
 
 
-static svn_error_t *
-fetch_path_props(apr_hash_t **props,
-                 svn_ra_serf__session_t *session,
-                 const char *session_relpath,
-                 svn_revnum_t revision,
-                 const svn_ra_serf__dav_props_t *desired_props,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+/* Implements svn_ra__vtable_t.check_path(). */
+svn_error_t *
+svn_ra_serf__check_path(svn_ra_session_t *ra_session,
+                        const char *relpath,
+                        svn_revnum_t revision,
+                        svn_node_kind_t *kind,
+                        apr_pool_t *scratch_pool)
 {
+  svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+  svn_error_t *err;
   const char *url;
 
   url = session->session_url.path;
 
   /* If we have a relative path, append it. */
-  if (session_relpath)
-    url = svn_path_url_add_component2(url, session_relpath, scratch_pool);
+  if (relpath)
+    url = svn_path_url_add_component2(url, relpath, scratch_pool);
 
   /* If we were given a specific revision, get a URL that refers to that
      specific revision (rather than floating with HEAD).  */
@@ -77,57 +79,10 @@ fetch_path_props(apr_hash_t **props,
 
   /* URL is stable, so we use SVN_INVALID_REVNUM since it is now irrelevant.
      Or we started with SVN_INVALID_REVNUM and URL may be floating.  */
-  SVN_ERR(svn_ra_serf__fetch_node_props(props, session,
-                                        url, SVN_INVALID_REVNUM,
-                                        desired_props,
-                                        result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-get_resource_type(svn_node_kind_t *kind,
-                  apr_hash_t *props)
-{
-  apr_hash_t *dav_props;
-  const char *res_type;
-
-  dav_props = apr_hash_get(props, "DAV:", 4);
-  res_type = svn_prop_get_value(dav_props, "resourcetype");
-  if (!res_type)
-    {
-      /* How did this happen? */
-      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                              _("The PROPFIND response did not include the "
-                                "requested resourcetype value"));
-    }
-
-  if (strcmp(res_type, "collection") == 0)
-    {
-      *kind = svn_node_dir;
-    }
-  else
-    {
-      *kind = svn_node_file;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_ra__vtable_t.check_path(). */
-svn_error_t *
-svn_ra_serf__check_path(svn_ra_session_t *ra_session,
-                        const char *rel_path,
-                        svn_revnum_t revision,
-                        svn_node_kind_t *kind,
-                        apr_pool_t *pool)
-{
-  svn_ra_serf__session_t *session = ra_session->priv;
-  apr_hash_t *props;
-
-  svn_error_t *err = fetch_path_props(&props, session, rel_path,
-                                      revision, check_path_props,
-                                      pool, pool);
+  err = svn_ra_serf__fetch_node_props(&props, session,
+                                      url, SVN_INVALID_REVNUM,
+                                      check_path_props,
+                                      scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
@@ -136,18 +91,35 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
     }
   else
     {
-      /* Any other error, raise to caller. */
-      if (err)
-        return svn_error_trace(err);
+      apr_hash_t *dav_props;
+      const char *res_type;
 
-      SVN_ERR(get_resource_type(kind, props));
+      /* Any other error, raise to caller. */
+      SVN_ERR(err);
+
+      dav_props = apr_hash_get(props, "DAV:", 4);
+      res_type = svn_prop_get_value(dav_props, "resourcetype");
+      if (!res_type)
+        {
+          /* How did this happen? */
+          return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                                 _("The PROPFIND response did not include the "
+                                   "requested resourcetype value"));
+        }
+
+      if (strcmp(res_type, "collection") == 0)
+        *kind = svn_node_dir;
+      else
+        *kind = svn_node_file;
     }
 
   return SVN_NO_ERROR;
 }
 
 
-struct dirent_walker_baton_t {
+/* Baton for fill_dirent_propfunc() */
+struct fill_dirent_baton_t
+{
   /* Update the fields in this entry.  */
   svn_dirent_t *entry;
 
@@ -157,22 +129,63 @@ struct dirent_walker_baton_t {
   apr_pool_t *result_pool;
 };
 
+/* Implements svn_ra_serf__prop_func_t */
 static svn_error_t *
-dirent_walker(void *baton,
-              const char *ns,
-              const char *name,
-              const svn_string_t *val,
-              apr_pool_t *scratch_pool)
+fill_dirent_propfunc(void *baton,
+                     const char *path,
+                     const char *ns,
+                     const char *name,
+                     const svn_string_t *val,
+                     apr_pool_t *scratch_pool)
 {
-  struct dirent_walker_baton_t *dwb = baton;
+  struct fill_dirent_baton_t *fdb = baton;
 
-  if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+  if (strcmp(ns, "DAV:") == 0)
     {
-      dwb->entry->has_props = TRUE;
+      if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
+        {
+          apr_int64_t rev;
+          SVN_ERR(svn_cstring_atoi64(&rev, val->data));
+
+          fdb->entry->created_rev = (svn_revnum_t)rev;
+        }
+      else if (strcmp(name, "creator-displayname") == 0)
+        {
+          fdb->entry->last_author = apr_pstrdup(fdb->result_pool, val->data);
+        }
+      else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
+        {
+          SVN_ERR(svn_time_from_cstring(&fdb->entry->time,
+                                        val->data,
+                                        fdb->result_pool));
+        }
+      else if (strcmp(name, "getcontentlength") == 0)
+        {
+          /* 'getcontentlength' property is empty for directories. */
+          if (val->len)
+            {
+              SVN_ERR(svn_cstring_atoi64(&fdb->entry->size, val->data));
+            }
+        }
+      else if (strcmp(name, "resourcetype") == 0)
+        {
+          if (strcmp(val->data, "collection") == 0)
+            {
+              fdb->entry->kind = svn_node_dir;
+            }
+          else
+            {
+              fdb->entry->kind = svn_node_file;
+            }
+        }
+    }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    {
+      fdb->entry->has_props = TRUE;
     }
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
     {
-      dwb->entry->has_props = TRUE;
+      fdb->entry->has_props = TRUE;
     }
   else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
@@ -182,51 +195,12 @@ dirent_walker(void *baton,
             {
               apr_int64_t deadprop_count;
               SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
-              dwb->entry->has_props = deadprop_count > 0;
-              if (dwb->supports_deadprop_count)
-                *dwb->supports_deadprop_count = svn_tristate_true;
+              fdb->entry->has_props = deadprop_count > 0;
+              if (fdb->supports_deadprop_count)
+                *fdb->supports_deadprop_count = svn_tristate_true;
             }
-          else if (dwb->supports_deadprop_count)
-            *dwb->supports_deadprop_count = svn_tristate_false;
-        }
-    }
-  else if (strcmp(ns, "DAV:") == 0)
-    {
-      if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
-        {
-          apr_int64_t rev;
-          SVN_ERR(svn_cstring_atoi64(&rev, val->data));
-
-          dwb->entry->created_rev = (svn_revnum_t)rev;
-        }
-      else if (strcmp(name, "creator-displayname") == 0)
-        {
-          dwb->entry->last_author = apr_pstrdup(dwb->result_pool, val->data);
-        }
-      else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
-        {
-          SVN_ERR(svn_time_from_cstring(&dwb->entry->time,
-                                        val->data,
-                                        dwb->result_pool));
-        }
-      else if (strcmp(name, "getcontentlength") == 0)
-        {
-          /* 'getcontentlength' property is empty for directories. */
-          if (val->len)
-            {
-              SVN_ERR(svn_cstring_atoi64(&dwb->entry->size, val->data));
-            }
-        }
-      else if (strcmp(name, "resourcetype") == 0)
-        {
-          if (strcmp(val->data, "collection") == 0)
-            {
-              dwb->entry->kind = svn_node_dir;
-            }
-          else
-            {
-              dwb->entry->kind = svn_node_file;
-            }
+          else if (fdb->supports_deadprop_count)
+            *fdb->supports_deadprop_count = svn_tristate_false;
         }
     }
 
@@ -308,21 +282,49 @@ get_dirent_props(apr_uint32_t dirent_fields,
 /* Implements svn_ra__vtable_t.stat(). */
 svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
-                  const char *rel_path,
+                  const char *relpath,
                   svn_revnum_t revision,
                   svn_dirent_t **dirent,
                   apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  apr_hash_t *props;
   svn_error_t *err;
-  struct dirent_walker_baton_t dwb;
+  struct fill_dirent_baton_t fdb;
   svn_tristate_t deadprop_count = svn_tristate_unknown;
+  svn_ra_serf__handler_t *handler;
+  const char *url;
 
-  err = fetch_path_props(&props,
-                         session, rel_path, revision,
-                         get_dirent_props(SVN_DIRENT_ALL, session, pool),
-                         pool, pool);
+  url = session->session_url.path;
+
+  /* If we have a relative path, append it. */
+  if (relpath)
+    url = svn_path_url_add_component2(url, relpath, pool);
+
+  /* If we were given a specific revision, get a URL that refers to that
+     specific revision (rather than floating with HEAD).  */
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      SVN_ERR(svn_ra_serf__get_stable_url(&url, NULL /* latest_revnum */,
+                                          session,
+                                          url, revision,
+                                          pool, pool));
+    }
+
+  fdb.entry = svn_dirent_create(pool);
+  fdb.supports_deadprop_count = &deadprop_count;
+  fdb.result_pool = pool;
+
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session, url,
+                                               SVN_INVALID_REVNUM, "0",
+                                               get_dirent_props(SVN_DIRENT_ALL,
+                                                                session,
+                                                                pool),
+                                               fill_dirent_propfunc, &fdb, pool));
+
+  err = svn_ra_serf__context_run_one(handler, pool);
+
+  if (!err && handler->sline.code != 207)
+    err = svn_ra_serf__unexpected_status(handler);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -335,31 +337,25 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
         return svn_error_trace(err);
     }
 
-  dwb.entry = svn_dirent_create(pool);
-  dwb.supports_deadprop_count = &deadprop_count;
-  dwb.result_pool = pool;
-  SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));
-
   if (deadprop_count == svn_tristate_false
       && session->supports_deadprop_count == svn_tristate_unknown
-      && !dwb.entry->has_props)
+      && !fdb.entry->has_props)
     {
       /* We have to requery as the server didn't give us the right
          information */
       session->supports_deadprop_count = svn_tristate_false;
 
-      SVN_ERR(fetch_path_props(&props,
-                               session, rel_path, SVN_INVALID_REVNUM,
-                               get_dirent_props(SVN_DIRENT_ALL, session, pool),
-                               pool, pool));
+      /* Run the same handler again */
+      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-      SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));
+      if (handler->sline.code != 207)
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   if (deadprop_count != svn_tristate_unknown)
     session->supports_deadprop_count = deadprop_count;
 
-  *dirent = dwb.entry;
+  *dirent = fdb.entry;
 
   return SVN_NO_ERROR;
 }
@@ -375,7 +371,7 @@ struct get_dir_baton_t
   const char *path;
 };
 
-/* Implements svn_ra_serf__prop_func */
+/* Implements svn_ra_serf__prop_func_t */
 static svn_error_t *
 get_dir_dirents_cb(void *baton,
                    const char *path,
@@ -391,22 +387,22 @@ get_dir_dirents_cb(void *baton,
 
   if (relpath && relpath[0] != '\0')
     {
-      struct dirent_walker_baton_t dwb;
+      struct fill_dirent_baton_t fdb;
 
       relpath = svn_path_uri_decode(relpath, scratch_pool);
-      dwb.entry = svn_hash_gets(db->dirents, relpath);
+      fdb.entry = svn_hash_gets(db->dirents, relpath);
 
-      if (!dwb.entry)
+      if (!fdb.entry)
         {
-          dwb.entry = svn_dirent_create(db->result_pool);
+          fdb.entry = svn_dirent_create(db->result_pool);
           svn_hash_sets(db->dirents,
                         apr_pstrdup(db->result_pool, relpath),
-                        dwb.entry);
+                        fdb.entry);
         }
 
-      dwb.result_pool = db->result_pool;
-      dwb.supports_deadprop_count = &db->supports_deadprop_count;
-      SVN_ERR(dirent_walker(&dwb, ns, name, value, scratch_pool));
+      fdb.result_pool = db->result_pool;
+      fdb.supports_deadprop_count = &db->supports_deadprop_count;
+      SVN_ERR(fill_dirent_propfunc(&fdb, path, ns, name, value, scratch_pool));
     }
   else if (relpath && !db->is_directory)
     {
