@@ -73,7 +73,7 @@ typedef struct propfind_context_t {
   /* the list of requested properties */
   const svn_ra_serf__dav_props_t *find_props;
 
-  svn_ra_serf__prop_func prop_func;
+  svn_ra_serf__prop_func_t prop_func;
   void *prop_func_baton;
 
   /* hash table containing all the properties associated with the
@@ -452,7 +452,7 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
                                      svn_revnum_t rev,
                                      const char *depth,
                                      const svn_ra_serf__dav_props_t *find_props,
-                                     svn_ra_serf__prop_func prop_func,
+                                     svn_ra_serf__prop_func_t prop_func,
                                      void *prop_func_baton,
                                      apr_pool_t *pool)
 {
@@ -666,44 +666,6 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
 
   /* An unknown namespace, must be a custom property. */
   return apr_pstrcat(result_pool, ns, name, SVN_VA_NULL);
-}
-
-
-/* Conforms to svn_ra_serf__walker_visitor_t  */
-static svn_error_t *
-set_flat_props(void *baton,
-               const char *ns,
-               const char *name,
-               const svn_string_t *value,
-               apr_pool_t *pool)
-{
-  apr_hash_t *props = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(props);
-  const char *prop_name;
-
-  /* ### is VAL in the proper pool?  */
-
-  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, result_pool);
-  if (prop_name != NULL)
-    svn_hash_sets(props, prop_name, value);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_serf__flatten_props(apr_hash_t **flat_props,
-                           apr_hash_t *props,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  *flat_props = apr_hash_make(result_pool);
-
-  return svn_error_trace(svn_ra_serf__walk_node_props(
-                            props,
-                            set_flat_props,
-                            *flat_props /* baton */,
-                            scratch_pool));
 }
 
 /*
@@ -942,36 +904,6 @@ svn_ra_serf__get_stable_url(const char **stable_url,
                                             result_pool);
   if (latest_revnum)
     *latest_revnum = revnum_used;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
-                               apr_hash_t *props)
-{
-  apr_hash_t *dav_props;
-  const char *res_type;
-
-  dav_props = apr_hash_get(props, "DAV:", 4);
-  res_type = svn_prop_get_value(dav_props, "resourcetype");
-  if (!res_type)
-    {
-      /* How did this happen? */
-      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                              _("The PROPFIND response did not include the "
-                                "requested resourcetype value"));
-    }
-
-  if (strcmp(res_type, "collection") == 0)
-    {
-      *kind = svn_node_dir;
-    }
-  else
-    {
-      *kind = svn_node_file;
-    }
 
   return SVN_NO_ERROR;
 }

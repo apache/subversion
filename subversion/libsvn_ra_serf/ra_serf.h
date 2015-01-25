@@ -927,15 +927,15 @@ svn_ra_serf__keep_only_regular_props(apr_hash_t *props,
 
 /* Callback used via svn_ra_serf__deliver_props2 */
 typedef svn_error_t *
-(*svn_ra_serf__prop_func)(void *baton,
-                          const char *path,
-                          const char *ns,
-                          const char *name,
-                          const svn_string_t *value,
-                          apr_pool_t *scratch_pool);
+(*svn_ra_serf__prop_func_t)(void *baton,
+                            const char *path,
+                            const char *ns,
+                            const char *name,
+                            const svn_string_t *value,
+                            apr_pool_t *scratch_pool);
 
 /*
- * Implementation of svn_ra_serf__prop_func that just delivers svn compatible
+ * Implementation of svn_ra_serf__prop_func_t that just delivers svn compatible
  * properties  in the apr_hash_t * that is used as baton.
  */
 svn_error_t *
@@ -947,7 +947,7 @@ svn_ra_serf__deliver_svn_props(void *baton,
                                apr_pool_t *scratch_pool);
 
 /*
- * Implementation of svn_ra_serf__prop_func that delivers all DAV properties
+ * Implementation of svn_ra_serf__prop_func_t that delivers all DAV properties
  * in (const char * -> apr_hash_t *) on Namespace pointing to a second hash
  *    (const char * -> svn_string_t *) to the values.
  */
@@ -972,7 +972,7 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **handler,
                                      svn_revnum_t rev,
                                      const char *depth,
                                      const svn_ra_serf__dav_props_t *find_props,
-                                     svn_ra_serf__prop_func prop_func,
+                                     svn_ra_serf__prop_func_t prop_func,
                                      void *prop_func_baton,
                                      apr_pool_t *result_pool);
 
@@ -1048,30 +1048,6 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
                                    apr_pool_t *result_pool);
 
-
-/* PROPS is nested hash tables mapping NS -> NAME -> VALUE.
-   This function takes the NS:NAME:VALUE hashes and flattens them into a set of
-   names to VALUE. The names are composed of NS:NAME, with specific
-   rewrite from wire names (DAV) to SVN names. This mapping is managed
-   by the svn_ra_serf__set_baton_props() function.
-
-   FLAT_PROPS is allocated in RESULT_POOL.
-   ### right now, we do a shallow copy from PROPS to FLAT_PROPS. therefore,
-   ### the names and values in PROPS must be in the proper pool.
-
-   Temporary allocations are made in SCRATCH_POOL.  */
-svn_error_t *
-svn_ra_serf__flatten_props(apr_hash_t **flat_props,
-                           apr_hash_t *props,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
-                               apr_hash_t *props);
-
-
 /** MERGE-related functions **/
 
 /* Create an MERGE request aimed at the SESSION url, requesting the
@@ -1140,9 +1116,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                           apr_pool_t *scratch_pool);
 
 /* Set @a REPORT_TARGET to the URI of the resource at which generic
- * (path-agnostic) REPORTs should be aimed for @a SESSION.  Use @a
- * CONN for any required network communications if it is non-NULL;
- * otherwise use the default connection.
+ * (path-agnostic) REPORTs should be aimed for @a SESSION.
  *
  * All temporary allocations will be made in @a POOL.
  */

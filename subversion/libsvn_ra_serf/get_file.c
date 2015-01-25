@@ -144,12 +144,10 @@ cancel_fetch(serf_request_t *request,
 static svn_error_t *
 try_get_wc_contents(svn_boolean_t *found_p,
                     svn_ra_serf__session_t *session,
-                    apr_hash_t *props,
+                    const char *sha1_checksum_prop,
                     svn_stream_t *dst_stream,
                     apr_pool_t *pool)
 {
-  apr_hash_t *svn_props;
-  const char *sha1_checksum_prop;
   svn_checksum_t *checksum;
   svn_stream_t *wc_stream;
   svn_error_t *err;
@@ -157,24 +155,10 @@ try_get_wc_contents(svn_boolean_t *found_p,
   /* No contents found by default. */
   *found_p = FALSE;
 
-  if (!session->wc_callbacks->get_wc_contents)
+  if (!session->wc_callbacks->get_wc_contents
+      || sha1_checksum_prop == NULL)
     {
-      /* No callback, nothing to do. */
-      return SVN_NO_ERROR;
-    }
-
-
-  svn_props = svn_hash_gets(props, SVN_DAV_PROP_NS_DAV);
-  if (!svn_props)
-    {
-      /* No properties -- therefore no checksum property -- in response. */
-      return SVN_NO_ERROR;
-    }
-
-  sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
-  if (sha1_checksum_prop == NULL)
-    {
-      /* No checksum property in response. */
+      /* Nothing to do. */
       return SVN_NO_ERROR;
     }
 
@@ -280,6 +264,55 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
+/* Baton for get_file_prop_cb */
+struct file_prop_baton_t
+{
+  apr_pool_t *result_pool;
+  svn_node_kind_t kind;
+  apr_hash_t *props;
+  const char *sha1_checksum;
+};
+
+/* Implements svn_ra_serf__prop_func_t for svn_ra_serf__get_file */
+static svn_error_t *
+get_file_prop_cb(void *baton,
+                 const char *path,
+                 const char *ns,
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *scratch_pool)
+{
+  struct file_prop_baton_t *fb = baton;
+  const char *svn_name;
+
+  if (strcmp(ns, "DAV:") == 0 && strcmp(name, "resourcetype") == 0)
+    {
+      const char *val = value->data;
+
+      if (strcmp(val, "collection") == 0)
+        fb->kind = svn_node_dir;
+      else
+        fb->kind = svn_node_file;
+
+      return SVN_NO_ERROR;
+    }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0
+           && strcmp(name, "sha1-checksum") == 0)
+    {
+      fb->sha1_checksum = apr_pstrdup(fb->result_pool, value->data);
+    }
+
+  if (!fb->props)
+    return SVN_NO_ERROR;
+
+  svn_name = svn_ra_serf__svnname_from_wirename(ns, name, fb->result_pool);
+  if (svn_name)
+    {
+      svn_hash_sets(fb->props, svn_name,
+                    svn_string_dup(value, fb->result_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
@@ -292,9 +325,9 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *fetch_url;
-  apr_hash_t *fetch_props;
-  svn_node_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
+  svn_ra_serf__handler_t *handler;
+  struct file_prop_baton_t fb;
 
   /* Fetch properties. */
 
@@ -317,44 +350,42 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 
   if (props)
-    {
       which_props = all_props;
-    }
   else if (stream && session->wc_callbacks->get_wc_contents)
-    {
       which_props = type_and_checksum_props;
-    }
   else
-    {
       which_props = check_path_props;
-    }
 
-  SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, session, fetch_url,
-                                        SVN_INVALID_REVNUM,
-                                        which_props,
-                                        pool, pool));
+  fb.result_pool = pool;
+  fb.props = props ? apr_hash_make(pool) : NULL;
+  fb.kind = svn_node_unknown;
+  fb.sha1_checksum = NULL;
+
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session, fetch_url,
+                                               SVN_INVALID_REVNUM, "0",
+                                               which_props,
+                                               get_file_prop_cb, &fb,
+                                               pool));
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+
+  if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   /* Verify that resource type is not collection. */
-  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
-  if (res_kind != svn_node_file)
+  if (fb.kind != svn_node_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
                               _("Can't get text contents of a directory"));
     }
 
-  /* TODO Filter out all of our props into a usable format. */
   if (props)
-    {
-      /* ### flatten_props() does not copy PROPVALUE, but fetch_node_props()
-         ### put them into POOL, so we're okay.  */
-      SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props,
-                                         pool, pool));
-    }
+    *props = fb.props;
 
   if (stream)
     {
       svn_boolean_t found;
-      SVN_ERR(try_get_wc_contents(&found, session, fetch_props, stream, pool));
+      SVN_ERR(try_get_wc_contents(&found, session, fb.sha1_checksum, stream, pool));
 
       /* No contents found in the WC, let's fetch from server. */
       if (!found)
