@@ -362,15 +362,13 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                            blame_cdata,
                                            blame_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
   handler->body_delegate = create_file_revs_body;
   handler->body_delegate_baton = blame_ctx;
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

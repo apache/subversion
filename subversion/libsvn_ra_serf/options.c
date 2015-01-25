@@ -405,14 +405,12 @@ create_options_req(options_context_t **opt_ctx,
                                            NULL, options_closed, NULL,
                                            new_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "OPTIONS";
   handler->path = session->session_url.path;
   handler->body_delegate = create_options_body;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   new_ctx->handler = handler;
 

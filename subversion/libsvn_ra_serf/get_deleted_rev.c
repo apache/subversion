@@ -156,15 +156,13 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                                            NULL, getdrev_closed, NULL,
                                            drev_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(ras, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
   handler->body_delegate = create_getdrev_body;
   handler->body_delegate_baton = drev_ctx;
-  handler->conn = ras->conns[0];
-  handler->session = ras;
 
   err = svn_ra_serf__context_run_one(handler, pool);
 

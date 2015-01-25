@@ -183,15 +183,13 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                            NULL, getloc_closed, NULL,
                                            loc_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_get_locations_body;
   handler->body_delegate_baton = loc_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
