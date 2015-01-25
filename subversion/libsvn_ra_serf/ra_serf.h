@@ -1019,24 +1019,6 @@ svn_ra_serf__fetch_dav_prop(const char **value,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-
-/** Property walker functions **/
-
-typedef svn_error_t *
-(*svn_ra_serf__walker_visitor_t)(void *baton,
-                                 const char *ns,
-                                 const char *name,
-                                 const svn_string_t *val,
-                                 apr_pool_t *pool);
-
-/* Like walk_all_props(), but a 2-level hash.  */
-svn_error_t *
-svn_ra_serf__walk_node_props(apr_hash_t *props,
-                             svn_ra_serf__walker_visitor_t walker,
-                             void *baton,
-                             apr_pool_t *scratch_pool);
-
-
 /* Map a property name, as passed over the wire, into its corresponding
    Subversion-internal name. The returned name will be a static value,
    or allocated within RESULT_POOL.

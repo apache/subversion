@@ -579,52 +579,6 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_ra_serf__walk_node_props(apr_hash_t *props,
-                             svn_ra_serf__walker_visitor_t walker,
-                             void *baton,
-                             apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool;
-  apr_hash_index_t *ns_hi;
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (ns_hi = apr_hash_first(scratch_pool, props); ns_hi;
-       ns_hi = apr_hash_next(ns_hi))
-    {
-      void *ns_val;
-      const void *ns_name;
-      apr_hash_index_t *name_hi;
-
-      /* NOTE: We do not clear ITERPOOL in this loop. Generally, there are
-           very few namespaces, so this loop will not have many iterations.
-           Instead, ITERPOOL is used for the inner loop.  */
-
-      apr_hash_this(ns_hi, &ns_name, NULL, &ns_val);
-
-      for (name_hi = apr_hash_first(scratch_pool, ns_val); name_hi;
-           name_hi = apr_hash_next(name_hi))
-        {
-          void *prop_val;
-          const void *prop_name;
-
-          /* See note above, regarding clearing of this pool.  */
-          svn_pool_clear(iterpool);
-
-          apr_hash_this(name_hi, &prop_name, NULL, &prop_val);
-
-          SVN_ERR(walker(baton, ns_name, prop_name, prop_val, iterpool));
-        }
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
 const char *
 svn_ra_serf__svnname_from_wirename(const char *ns,
                                    const char *name,
