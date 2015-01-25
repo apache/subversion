@@ -179,8 +179,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->receiver_baton = receiver_baton;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      session, NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,

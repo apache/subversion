@@ -312,7 +312,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
       SVN_ERR(svn_ra_serf__get_stable_url(&fetch_url, fetched_rev,
-                                          session, conn,
+                                          session,
                                           fetch_url, revision,
                                           pool, pool));
       revision = SVN_INVALID_REVNUM;
@@ -333,7 +333,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       which_props = check_path_props;
     }
 
-  SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
+  SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, session, fetch_url,
                                         SVN_INVALID_REVNUM,
                                         which_props,
                                         pool, pool));

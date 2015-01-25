@@ -580,7 +580,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start == SVN_INVALID_REVNUM || start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, peg_rev,
                                       pool, pool));
 

@@ -245,8 +245,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_error_t *err;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
-  SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
-                                         NULL, pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session, pool));
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;

@@ -70,14 +70,14 @@ fetch_path_props(apr_hash_t **props,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       SVN_ERR(svn_ra_serf__get_stable_url(&url, NULL /* latest_revnum */,
-                                          session, NULL /* conn */,
+                                          session,
                                           url, revision,
                                           scratch_pool, scratch_pool));
     }
 
   /* URL is stable, so we use SVN_INVALID_REVNUM since it is now irrelevant.
      Or we started with SVN_INVALID_REVNUM and URL may be floating.  */
-  SVN_ERR(svn_ra_serf__fetch_node_props(props, session->conns[0],
+  SVN_ERR(svn_ra_serf__fetch_node_props(props, session,
                                         url, SVN_INVALID_REVNUM,
                                         desired_props,
                                         result_pool, scratch_pool));
@@ -471,7 +471,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
       SVN_ERR(svn_ra_serf__get_stable_url(&path, fetched_rev,
-                                          session, NULL /* conn */,
+                                          session,
                                           path, revision,
                                           scratch_pool, scratch_pool));
       revision = SVN_INVALID_REVNUM;
@@ -491,8 +491,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       gdb.dirents = apr_hash_make(result_pool);
 
-      SVN_ERR(svn_ra_serf__deliver_props2(&dirent_handler,
-                                          session, session->conns[0],
+      SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                          &dirent_handler, session,
                                           path, SVN_INVALID_REVNUM, "1",
                                           get_dirent_props(dirent_fields,
                                                            session,
@@ -508,8 +508,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   if (ret_props)
     {
       gdb.ret_props = apr_hash_make(result_pool);
-      SVN_ERR(svn_ra_serf__deliver_props2(&props_handler,
-                                          session, session->conns[0],
+      SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                          &props_handler, session,
                                           path, SVN_INVALID_REVNUM, "0",
                                           all_props,
                                           get_dir_props_cb, &gdb,
@@ -539,8 +539,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
           apr_hash_clear(gdb.dirents);
 
-          SVN_ERR(svn_ra_serf__deliver_props2(&dirent_handler,
-                                              session, session->conns[0],
+          SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                              &dirent_handler, session,
                                               path, SVN_INVALID_REVNUM, "1",
                                               get_dirent_props(dirent_fields,
                                                                session,

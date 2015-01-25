@@ -456,7 +456,6 @@ get_version_url(const char **checked_in_url,
   else
     {
       const char *propfind_url;
-      svn_ra_serf__connection_t *conn = session->conns[0];
 
       if (SVN_IS_VALID_REVNUM(base_revision))
         {
@@ -468,7 +467,7 @@ get_version_url(const char **checked_in_url,
           /* ### conn==NULL for session->conns[0]. same as CONN.  */
           SVN_ERR(svn_ra_serf__get_stable_url(&propfind_url,
                                               NULL /* latest_revnum */,
-                                              session, NULL /* conn */,
+                                              session,
                                               NULL /* url */, base_revision,
                                               scratch_pool, scratch_pool));
         }
@@ -477,8 +476,8 @@ get_version_url(const char **checked_in_url,
           propfind_url = session->session_url.path;
         }
 
-      SVN_ERR(svn_ra_serf__fetch_dav_prop(&root_checkout,
-                                          conn, propfind_url, base_revision,
+      SVN_ERR(svn_ra_serf__fetch_dav_prop(&root_checkout, session,
+                                          propfind_url, base_revision,
                                           "checked-in",
                                           scratch_pool, scratch_pool));
       if (!root_checkout)
@@ -1302,7 +1301,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__get_relative_path(
                                         &rel_path,
                                         commit_ctx->session->session_url.path,
-                                        commit_ctx->session, NULL,
+                                        commit_ctx->session,
                                         scratch_pool));
       commit_ctx->txn_root_url = svn_path_url_add_component2(
                                         commit_ctx->txn_root_url,
@@ -1329,21 +1328,8 @@ open_root(void *edit_baton,
       if (!activity_str)
         SVN_ERR(svn_ra_serf__v1_get_activity_collection(
                                     &activity_str,
-                                    commit_ctx->session->conns[0],
-                                    commit_ctx->pool, scratch_pool));
-
-      /* Cache the result. */
-      if (activity_str)
-        {
-          commit_ctx->session->activity_collection_url =
-            apr_pstrdup(commit_ctx->session->pool, activity_str);
-        }
-      else
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested activity-collection-set value"));
-        }
+                                    commit_ctx->session,
+                                    scratch_pool, scratch_pool));
 
       commit_ctx->activity_url = svn_path_url_add_component2(
                                     activity_str,
@@ -1368,8 +1354,7 @@ open_root(void *edit_baton,
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
       SVN_ERR(svn_ra_serf__discover_vcc(&(commit_ctx->vcc_url),
-                                        commit_ctx->session,
-                                        commit_ctx->conn, commit_ctx->pool));
+                                        commit_ctx->session, commit_ctx->pool));
 
 
       /* Build our directory baton. */
@@ -1562,7 +1547,6 @@ add_directory(const char *path,
       /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
       SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                           dir->commit_ctx->session,
-                                          NULL /* conn */,
                                           uri.path, dir->copy_revision,
                                           dir_pool, dir_pool));
 
@@ -1760,7 +1744,6 @@ add_file(const char *path,
       /* ### conn==NULL for session->conns[0]. same as commit_ctx->conn.  */
       SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                           dir->commit_ctx->session,
-                                          NULL /* conn */,
                                           uri.path, copy_revision,
                                           scratch_pool, scratch_pool));
 
@@ -2241,12 +2224,10 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     {
       const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session,
-                                        session->conns[0], pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
 
       SVN_ERR(svn_ra_serf__fetch_dav_prop(&proppatch_target,
-                                          session->conns[0], vcc_url, rev,
-                                          "href",
+                                          session, vcc_url, rev, "href",
                                           pool, pool));
     }
 

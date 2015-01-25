@@ -176,8 +176,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   *locations = loc_ctx->paths;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      session,  NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,

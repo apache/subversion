@@ -1494,12 +1494,13 @@ fetch_for_file(file_baton_t *file,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (file->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props2(&file->propfind_handler,
-                                          ctx->sess, conn, file->url,
-                                          ctx->target_rev, "0", all_props,
-                                          set_file_props, file,
-                                          file->pool));
-      SVN_ERR_ASSERT(file->propfind_handler);
+      SVN_ERR(svn_ra_serf__create_propfind_handler(&file->propfind_handler,
+                                                   ctx->sess, file->url,
+                                                   ctx->target_rev, "0",
+                                                   all_props,
+                                                   set_file_props, file,
+                                                   file->pool));
+      file->propfind_handler->conn = conn;
 
       file->propfind_handler->done_delegate = file_props_done;
       file->propfind_handler->done_delegate_baton = file;
@@ -1591,13 +1592,14 @@ fetch_for_dir(dir_baton_t *dir,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (dir->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props2(&dir->propfind_handler,
-                                          ctx->sess, conn, dir->url,
-                                          ctx->target_rev, "0", all_props,
-                                          set_dir_prop, dir,
-                                          dir->pool));
-      SVN_ERR_ASSERT(dir->propfind_handler);
+      SVN_ERR(svn_ra_serf__create_propfind_handler(&dir->propfind_handler,
+                                                   ctx->sess, dir->url,
+                                                   ctx->target_rev, "0",
+                                                   all_props,
+                                                   set_dir_prop, dir,
+                                                   dir->pool));
 
+      dir->propfind_handler->conn = conn;
       dir->propfind_handler->done_delegate = dir_props_done;
       dir->propfind_handler->done_delegate_baton = dir;
 
@@ -2262,10 +2264,8 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess,
-                                       NULL, pool));
-  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
-                                         NULL, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess, pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess, pool));
 
   link = apr_pstrcat(pool, "/", link, SVN_VA_NULL);
 
@@ -2657,8 +2657,7 @@ finish_report(void *report_baton,
   SVN_ERR(svn_stream_write(report->body_template, buf->data, &buf->len));
   SVN_ERR(svn_stream_close(report->body_template));
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL,
-                                       scratch_pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess,  scratch_pool));
 
   xmlctx = svn_ra_serf__xml_context_create(update_ttable,
                                            update_opened, update_closed,

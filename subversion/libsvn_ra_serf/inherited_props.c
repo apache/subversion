@@ -273,15 +273,15 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       rq->props = apr_hash_make(scratch_pool);
 
       SVN_ERR(svn_ra_serf__get_stable_url(&rq->urlpath, NULL, session,
-                                          session->conns[0],
                                           svn_path_url_add_component2(
                                                 session->repos_root.path,
                                                 relpath, scratch_pool),
                                           revision,
                                           scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_ra_serf__deliver_props2(&rq->handler, session,
-                                          session->conns[0], rq->urlpath,
+      SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                          &rq->handler, session,
+                                          rq->urlpath,
                                           rev_marker, "0", all_props,
                                           svn_ra_serf__deliver_svn_props,
                                           rq->props,
@@ -402,7 +402,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url,
                                       NULL /* latest_revnum */,
                                       session,
-                                      NULL /* conn */,
                                       NULL /* url */,
                                       revision,
                                       scratch_pool, scratch_pool));
