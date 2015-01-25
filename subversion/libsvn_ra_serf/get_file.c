@@ -291,14 +291,10 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  svn_ra_serf__connection_t *conn;
   const char *fetch_url;
   apr_hash_t *fetch_props;
   svn_node_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
-
-  /* What connection should we go on? */
-  conn = session->conns[session->cur_conn];
 
   /* Fetch properties. */
 
@@ -371,12 +367,13 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           stream_ctx->result_stream = stream;
           stream_ctx->using_compression = session->using_compression;
 
-          handler = svn_ra_serf__create_handler(pool);
+          handler = svn_ra_serf__create_handler(session, pool);
+
+          /* What connection should we go on? */
+          handler->conn = session->conns[session->cur_conn];
 
           handler->method = "GET";
           handler->path = fetch_url;
-          handler->conn = conn;
-          handler->session = session;
 
           handler->custom_accept_encoding = TRUE;
           handler->no_dav_headers = TRUE;

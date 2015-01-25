@@ -1101,12 +1101,9 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__session_t *session,
   ectx->expected_status = expected_status;
   ectx->cleanup_pool = result_pool;
 
-  handler = svn_ra_serf__create_handler(result_pool);
+  handler = svn_ra_serf__create_handler(session, result_pool);
   handler->response_handler = expat_response_handler;
   handler->response_baton = ectx;
-
-  handler->session = session;
-  handler->conn = session->conns[0];
 
   ectx->handler = handler;
 

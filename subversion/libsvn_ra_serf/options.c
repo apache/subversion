@@ -566,11 +566,9 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 {
   svn_ra_serf__handler_t *handler;
 
-  handler = svn_ra_serf__create_handler(scratch_pool);
+  handler = svn_ra_serf__create_handler(serf_sess, scratch_pool);
   handler->method = "OPTIONS";
   handler->path = serf_sess->session_url.path;
-  handler->conn = serf_sess->conns[0];
-  handler->session = serf_sess;
 
   /* We don't care about the response body, so discard it.  */
   handler->response_handler = svn_ra_serf__handle_discard_body;

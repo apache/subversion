@@ -1878,7 +1878,8 @@ handler_cleanup(void *baton)
 }
 
 svn_ra_serf__handler_t *
-svn_ra_serf__create_handler(apr_pool_t *result_pool)
+svn_ra_serf__create_handler(svn_ra_serf__session_t *session,
+                            apr_pool_t *result_pool)
 {
   svn_ra_serf__handler_t *handler;
 
@@ -1887,6 +1888,9 @@ svn_ra_serf__create_handler(apr_pool_t *result_pool)
 
   apr_pool_cleanup_register(result_pool, handler, handler_cleanup,
                             apr_pool_cleanup_null);
+
+  handler->session = session;
+  handler->conn = session->conns[0];
 
   /* Setup the default done handler, to handle server errors */
   handler->done_delegate_baton = handler;
