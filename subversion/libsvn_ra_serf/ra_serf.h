@@ -639,9 +639,11 @@ typedef struct svn_ra_serf__xml_transition_t {
 
 } svn_ra_serf__xml_transition_t;
 
-/* Constructor for */
+/* Constructor for svn_ra_serf__handler_t. Initializes a new handler
+   with default settings for SESSION. */
 svn_ra_serf__handler_t *
-svn_ra_serf__create_handler(apr_pool_t *result_pool);
+svn_ra_serf__create_handler(svn_ra_serf__session_t *session,
+                            apr_pool_t *result_pool);
 
 /* Construct an XML parsing context, based on the TTABLE transition table.
    As content is parsed, the CLOSED_CB callback will be invoked according

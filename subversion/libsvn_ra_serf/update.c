@@ -1461,13 +1461,12 @@ fetch_for_file(file_baton_t *file,
                                         : NULL;
             }
 
-          handler = svn_ra_serf__create_handler(file->pool);
+          handler = svn_ra_serf__create_handler(ctx->sess, file->pool);
 
           handler->method = "GET";
           handler->path = file->url;
 
-          handler->conn = conn;
-          handler->session = ctx->sess;
+          handler->conn = conn; /* Explicit scheduling */
 
           handler->custom_accept_encoding = TRUE;
           handler->no_dav_headers = TRUE;
@@ -1500,7 +1499,7 @@ fetch_for_file(file_baton_t *file,
                                                    all_props,
                                                    set_file_props, file,
                                                    file->pool));
-      file->propfind_handler->conn = conn;
+      file->propfind_handler->conn = conn; /* Explicit scheduling */
 
       file->propfind_handler->done_delegate = file_props_done;
       file->propfind_handler->done_delegate_baton = file;
