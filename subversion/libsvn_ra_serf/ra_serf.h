@@ -958,34 +958,23 @@ svn_ra_serf__deliver_node_props(void *baton,
 
 
 /*
- * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in LOOKUP_PROPS at URL for
- * DEPTH ("0","1","infinity").
- *
- * This function will not block waiting for the response. Callers are
- * expected to call svn_ra_serf__wait_for_props().
+ * This function will create a handler for a PROPFIND request, which will deliver
+ * properties to PROP_FUNC() with PROP_BATON for the properties listed in LOOKUP_PROPS
+ * at URL for DEPTH ("0","1","infinity").
  */
 svn_error_t *
-svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
-                            svn_ra_serf__session_t *sess,
-                            svn_ra_serf__connection_t *conn,
-                            const char *path,
-                            svn_revnum_t rev,
-                            const char *depth,
-                            const svn_ra_serf__dav_props_t *find_props,
-                            svn_ra_serf__prop_func prop_func,
-                            void *prop_func_baton,
-                            apr_pool_t *pool);
-/*
- * This helper function will block until PROPFIND_HANDLER indicates that is
- * done or another error is returned.
- */
-svn_error_t *
-svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
-                            apr_pool_t *scratch_pool);
+svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **handler,
+                                     svn_ra_serf__session_t *session,
+                                     const char *path,
+                                     svn_revnum_t rev,
+                                     const char *depth,
+                                     const svn_ra_serf__dav_props_t *find_props,
+                                     svn_ra_serf__prop_func prop_func,
+                                     void *prop_func_baton,
+                                     apr_pool_t *result_pool);
 
 
-/* Using CONN, fetch the properties specified by WHICH_PROPS using CONN
+/* Using SESSION, fetch the properties specified by WHICH_PROPS using CONN
    for URL at REVISION. The resulting properties are placed into a 2-level
    hash in RESULTS, mapping NAMESPACE -> hash<PROPNAME, PROPVALUE>, which
    is allocated in RESULT_POOL.
@@ -998,7 +987,7 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
    Temporary allocations are made in SCRATCH_POOL.  */
 svn_error_t *
 svn_ra_serf__fetch_node_props(apr_hash_t **results,
-                              svn_ra_serf__connection_t *conn,
+                              svn_ra_serf__session_t *session,
                               const char *url,
                               svn_revnum_t revision,
                               const svn_ra_serf__dav_props_t *which_props,
@@ -1006,7 +995,7 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
                               apr_pool_t *scratch_pool);
 
 
-/* Using CONN, fetch a DAV: property from the resource identified by URL
+/* Using SESSION, fetch a DAV: property from the resource identified by URL
    within REVISION. The PROPNAME may be one of:
 
      "checked-in"
@@ -1020,7 +1009,7 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
    Temporary allocations are made in SCRATCH_POOL.  */
 svn_error_t *
 svn_ra_serf__fetch_dav_prop(const char **value,
-                            svn_ra_serf__connection_t *conn,
+                            svn_ra_serf__session_t *session,
                             const char *url,
                             svn_revnum_t revision,
                             const char *propname,
@@ -1118,7 +1107,7 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
    All temporary allocations will be made in SCRATCH_POOL.  */
 svn_error_t *
 svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
-                                    svn_ra_serf__connection_t *conn,
+                                    svn_ra_serf__session_t *session,
                                     apr_pool_t *scratch_pool);
 
 
@@ -1133,23 +1122,20 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
    All temporary allocations will be made in SCRATCH_POOL.  */
 svn_error_t *
 svn_ra_serf__v1_get_activity_collection(const char **activity_url,
-                                        svn_ra_serf__connection_t *conn,
+                                        svn_ra_serf__session_t *session,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
 
 /* Set @a VCC_URL to the default VCC for our repository based on @a
  * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
- * repository root URLs are cached in @a SESSION.  Use @a CONN for any
- * required network communications if it is non-NULL; otherwise use the
- * default connection.
+ * repository root URLs are cached in @a SESSION. 
  *
- * All temporary allocations will be made in @a POOL. */
+ * All temporary allocations will be made in @a SCRATCH_POOL. */
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
-                          svn_ra_serf__connection_t *conn,
-                          apr_pool_t *pool);
+                          apr_pool_t *scratch_pool);
 
 /* Set @a REPORT_TARGET to the URI of the resource at which generic
  * (path-agnostic) REPORTs should be aimed for @a SESSION.  Use @a
@@ -1161,7 +1147,6 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
 svn_error_t *
 svn_ra_serf__report_resource(const char **report_target,
                              svn_ra_serf__session_t *session,
-                             svn_ra_serf__connection_t *conn,
                              apr_pool_t *pool);
 
 /* Set @a REL_PATH to a path (not URI-encoded) relative to the root of
@@ -1173,7 +1158,6 @@ svn_error_t *
 svn_ra_serf__get_relative_path(const char **rel_path,
                                const char *orig_path,
                                svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
                                apr_pool_t *pool);
 
 
@@ -1200,11 +1184,9 @@ svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
    The DAV RA provider(s) solve this by generating a URL that is specific
    to a revision by using a URL into a "baseline collection".
 
-   For a specified SESSION, with an optional CONN (if NULL, then the
-   session's default connection will be used; specifically SESSION->conns[0]),
-   generate a revision-stable URL for URL at REVISION. If REVISION is
-   SVN_INVALID_REVNUM, then the stable URL will refer to the youngest
-   revision at the time this function was called.
+   For a specified SESSION, generate a revision-stable URL for URL at
+   REVISION. If REVISION is    SVN_INVALID_REVNUM, then the stable URL will
+   refer to the youngest revision at the time this function was called.
 
    If URL is NULL, then the session root will be used.
 
@@ -1223,7 +1205,6 @@ svn_error_t *
 svn_ra_serf__get_stable_url(const char **stable_url,
                             svn_revnum_t *latest_revnum,
                             svn_ra_serf__session_t *session,
-                            svn_ra_serf__connection_t *conn,
                             const char *url,
                             svn_revnum_t revision,
                             apr_pool_t *result_pool,

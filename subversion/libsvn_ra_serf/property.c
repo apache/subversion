@@ -446,16 +446,15 @@ create_propfind_body(serf_bucket_t **bkt,
 
 
 svn_error_t *
-svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
-                            svn_ra_serf__session_t *sess,
-                            svn_ra_serf__connection_t *conn,
-                            const char *path,
-                            svn_revnum_t rev,
-                            const char *depth,
-                            const svn_ra_serf__dav_props_t *find_props,
-                            svn_ra_serf__prop_func prop_func,
-                            void *prop_func_baton,
-                            apr_pool_t *pool)
+svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
+                                     svn_ra_serf__session_t *sess,
+                                     const char *path,
+                                     svn_revnum_t rev,
+                                     const char *depth,
+                                     const svn_ra_serf__dav_props_t *find_props,
+                                     svn_ra_serf__prop_func prop_func,
+                                     void *prop_func_baton,
+                                     apr_pool_t *pool)
 {
   propfind_context_t *new_prop_ctx;
   svn_ra_serf__handler_t *handler;
@@ -497,7 +496,7 @@ svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
   handler->header_delegate_baton = new_prop_ctx;
 
   handler->session = sess;
-  handler->conn = conn;
+  handler->conn = sess->conns[0];
 
   new_prop_ctx->handler = handler;
 
@@ -555,26 +554,9 @@ svn_ra_serf__deliver_node_props(void *baton,
   return SVN_NO_ERROR;
 }
 
-
-/*
- * This helper function will block until the PROP_CTX indicates that is done
- * or another error is returned.
- */
-svn_error_t *
-svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
-                            apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
-
-  if (handler->sline.code != 207)
-    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_ra_serf__fetch_node_props(apr_hash_t **results,
-                              svn_ra_serf__connection_t *conn,
+                              svn_ra_serf__session_t *session,
                               const char *url,
                               svn_revnum_t revision,
                               const svn_ra_serf__dav_props_t *which_props,
@@ -586,11 +568,15 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
 
   props = apr_hash_make(result_pool);
 
-  SVN_ERR(svn_ra_serf__deliver_props2(&handler, conn->session, conn,
-                                      url, revision, "0", which_props,
-                                      svn_ra_serf__deliver_node_props, props,
-                                      scratch_pool));
-  SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session,
+                                               url, revision, "0", which_props,
+                                               svn_ra_serf__deliver_node_props,
+                                               props, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *results = props;
   return SVN_NO_ERROR;
@@ -736,7 +722,7 @@ svn_ra_serf__flatten_props(apr_hash_t **flat_props,
 static svn_error_t *
 retrieve_baseline_info(svn_revnum_t *actual_revision,
                        const char **basecoll_url_p,
-                       svn_ra_serf__connection_t *conn,
+                       svn_ra_serf__session_t *session,
                        const char *baseline_url,
                        svn_revnum_t revision,
                        apr_pool_t *result_pool,
@@ -746,7 +732,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
   apr_hash_t *dav_props;
   const char *basecoll_url;
 
-  SVN_ERR(svn_ra_serf__fetch_node_props(&props, conn,
+  SVN_ERR(svn_ra_serf__fetch_node_props(&props, session,
                                         baseline_url, revision,
                                         baseline_props,
                                         scratch_pool, scratch_pool));
@@ -796,7 +782,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
 static svn_error_t *
 v1_get_youngest_revnum(svn_revnum_t *youngest,
                        const char **basecoll_url,
-                       svn_ra_serf__connection_t *conn,
+                       svn_ra_serf__session_t *session,
                        const char *vcc_url,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -806,7 +792,7 @@ v1_get_youngest_revnum(svn_revnum_t *youngest,
 
   /* Fetching DAV:checked-in from the VCC (with no Label: to specify a
      revision) will return the latest Baseline resource's URL.  */
-  SVN_ERR(svn_ra_serf__fetch_dav_prop(&baseline_url, conn, vcc_url,
+  SVN_ERR(svn_ra_serf__fetch_dav_prop(&baseline_url, session, vcc_url,
                                       SVN_INVALID_REVNUM,
                                       "checked-in",
                                       scratch_pool, scratch_pool));
@@ -825,15 +811,15 @@ v1_get_youngest_revnum(svn_revnum_t *youngest,
   /* First check baseline information cache. */
   SVN_ERR(svn_ra_serf__blncache_get_baseline_info(&bc_url,
                                                   youngest,
-                                                  conn->session->blncache,
+                                                  session->blncache,
                                                   baseline_url,
                                                   scratch_pool));
   if (!bc_url)
     {
-      SVN_ERR(retrieve_baseline_info(youngest, &bc_url, conn,
+      SVN_ERR(retrieve_baseline_info(youngest, &bc_url, session,
                                      baseline_url, SVN_INVALID_REVNUM,
                                      scratch_pool, scratch_pool));
-      SVN_ERR(svn_ra_serf__blncache_set(conn->session->blncache,
+      SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
                                         baseline_url, *youngest,
                                         bc_url, scratch_pool));
     }
@@ -854,12 +840,12 @@ svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     return svn_error_trace(svn_ra_serf__v2_get_youngest_revnum(
-                             youngest, session->conns[0], scratch_pool));
+                             youngest, session, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, scratch_pool));
+  SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, scratch_pool));
 
   return svn_error_trace(v1_get_youngest_revnum(youngest, NULL,
-                                                session->conns[0], vcc_url,
+                                                session, vcc_url,
                                                 scratch_pool, scratch_pool));
 }
 
@@ -876,7 +862,6 @@ static svn_error_t *
 get_baseline_info(const char **bc_url,
                   svn_revnum_t *revnum_used,
                   svn_ra_serf__session_t *session,
-                  svn_ra_serf__connection_t *conn,
                   svn_revnum_t revision,
                   apr_pool_t *pool)
 {
@@ -892,7 +877,7 @@ get_baseline_info(const char **bc_url,
       else
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
-                    revnum_used, conn, pool));
+                    revnum_used, session, pool));
         }
 
       *bc_url = apr_psprintf(pool, "%s/%ld",
@@ -904,7 +889,7 @@ get_baseline_info(const char **bc_url,
     {
       const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
 
       if (SVN_IS_VALID_REVNUM(revision))
         {
@@ -914,7 +899,7 @@ get_baseline_info(const char **bc_url,
                                                    revision, pool));
           if (!*bc_url)
             {
-              SVN_ERR(retrieve_baseline_info(NULL, bc_url, conn,
+              SVN_ERR(retrieve_baseline_info(NULL, bc_url, session,
                                              vcc_url, revision, pool, pool));
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache, NULL,
                                                 revision, *bc_url, pool));
@@ -925,7 +910,7 @@ get_baseline_info(const char **bc_url,
       else
         {
           SVN_ERR(v1_get_youngest_revnum(revnum_used, bc_url,
-                                         conn, vcc_url,
+                                         session, vcc_url,
                                          pool, pool));
         }
     }
@@ -938,7 +923,6 @@ svn_error_t *
 svn_ra_serf__get_stable_url(const char **stable_url,
                             svn_revnum_t *latest_revnum,
                             svn_ra_serf__session_t *session,
-                            svn_ra_serf__connection_t *conn,
                             const char *url,
                             svn_revnum_t revision,
                             apr_pool_t *result_pool,
@@ -952,15 +936,10 @@ svn_ra_serf__get_stable_url(const char **stable_url,
   if (! url)
     url = session->session_url.path;
 
-  /* If the caller didn't provide a specific connection for us to use,
-     we'll use the default connection.  */
-  if (! conn)
-    conn = session->conns[0];
-
   SVN_ERR(get_baseline_info(&basecoll_url, &revnum_used,
-                            session, conn, revision, scratch_pool));
+                            session, revision, scratch_pool));
   SVN_ERR(svn_ra_serf__get_relative_path(&repos_relpath, url,
-                                         session, conn, scratch_pool));
+                                         session, scratch_pool));
 
   *stable_url = svn_path_url_add_component2(basecoll_url, repos_relpath,
                                             result_pool);
@@ -1003,7 +982,7 @@ svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
 
 svn_error_t *
 svn_ra_serf__fetch_dav_prop(const char **value,
-                            svn_ra_serf__connection_t *conn,
+                            svn_ra_serf__session_t *session,
                             const char *url,
                             svn_revnum_t revision,
                             const char *propname,
@@ -1013,7 +992,7 @@ svn_ra_serf__fetch_dav_prop(const char **value,
   apr_hash_t *props;
   apr_hash_t *dav_props;
 
-  SVN_ERR(svn_ra_serf__fetch_node_props(&props, conn, url, revision,
+  SVN_ERR(svn_ra_serf__fetch_node_props(&props, session, url, revision,
                                         checked_in_props,
                                         scratch_pool, scratch_pool));
   dav_props = apr_hash_get(props, "DAV:", 4);

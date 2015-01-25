@@ -534,7 +534,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_context_t *xmlctx;
   const char *report_target;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL,
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
                                        scratch_pool));
 
   ctx.pool = svn_pool_create(scratch_pool);
@@ -648,7 +648,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   const char *include_path;
   svn_boolean_t done;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL,
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
                                        scratch_pool));
 
   /* Prior to 1.8, mod_dav_svn expect to get replay REPORT requests
@@ -672,8 +672,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
     {
       SVN_ERR(svn_ra_serf__get_relative_path(&include_path,
                                              session->session_url.path,
-                                             session, session->conns[0],
-                                             scratch_pool));
+                                             session, scratch_pool));
     }
   else
     {
@@ -722,8 +721,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
               rev_ctx->revprop_rev = rev;
             }
 
-          SVN_ERR(svn_ra_serf__deliver_props2(&rev_ctx->propfind_handler,
-                                              session, session->conns[0],
+          SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                              &rev_ctx->propfind_handler,
+                                              session,
                                               rev_ctx->revprop_target,
                                               rev_ctx->revprop_rev,
                                               "0", all_props,

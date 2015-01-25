@@ -1580,8 +1580,7 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
-                          svn_ra_serf__connection_t *conn,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   const char *path;
   const char *relative_path;
@@ -1594,12 +1593,6 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       return SVN_NO_ERROR;
     }
 
-  /* If no connection is provided, use the default one. */
-  if (! conn)
-    {
-      conn = session->conns[0];
-    }
-
   path = session->session_url.path;
   *vcc_url = NULL;
   uuid = NULL;
@@ -1609,9 +1602,10 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       apr_hash_t *props;
       svn_error_t *err;
 
-      err = svn_ra_serf__fetch_node_props(&props, conn,
+      err = svn_ra_serf__fetch_node_props(&props, session,
                                           path, SVN_INVALID_REVNUM,
-                                          base_props, pool, pool);
+                                          base_props,
+                                          scratch_pool, scratch_pool);
       if (! err)
         {
           apr_hash_t *ns_props;
@@ -1639,7 +1633,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off a component from PATH. */
-              path = svn_urlpath__dirname(path, pool);
+              path = svn_urlpath__dirname(path, scratch_pool);
             }
         }
     }
@@ -1665,7 +1659,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
     {
       svn_stringbuf_t *url_buf;
 
-      url_buf = svn_stringbuf_create(path, pool);
+      url_buf = svn_stringbuf_create(path, scratch_pool);
 
       svn_path_remove_components(url_buf,
                                  svn_path_component_count(relative_path));
@@ -1693,7 +1687,6 @@ svn_error_t *
 svn_ra_serf__get_relative_path(const char **rel_path,
                                const char *orig_path,
                                svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
                                apr_pool_t *pool)
 {
   const char *decoded_root, *decoded_orig;
@@ -1710,7 +1703,6 @@ svn_ra_serf__get_relative_path(const char **rel_path,
          promises to populate the session's root-url cache, and that's
          what we really want. */
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session,
-                                        conn ? conn : session->conns[0],
                                         pool));
     }
 
@@ -1724,7 +1716,6 @@ svn_ra_serf__get_relative_path(const char **rel_path,
 svn_error_t *
 svn_ra_serf__report_resource(const char **report_target,
                              svn_ra_serf__session_t *session,
-                             svn_ra_serf__connection_t *conn,
                              apr_pool_t *pool)
 {
   /* If we have HTTP v2 support, we want to report against the 'me'
@@ -1734,7 +1725,7 @@ svn_ra_serf__report_resource(const char **report_target,
 
   /* Otherwise, we'll use the default VCC. */
   else
-    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, conn, pool));
+    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, pool));
 
   return SVN_NO_ERROR;
 }

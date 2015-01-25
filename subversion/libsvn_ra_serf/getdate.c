@@ -140,7 +140,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_ctx->time = tm;
   date_ctx->revision = revision;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(date_ttable,
                                            NULL, date_closed, NULL,

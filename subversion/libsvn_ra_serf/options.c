@@ -389,7 +389,6 @@ options_response_handler(serf_request_t *request,
 static svn_error_t *
 create_options_req(options_context_t **opt_ctx,
                    svn_ra_serf__session_t *session,
-                   svn_ra_serf__connection_t *conn,
                    apr_pool_t *pool)
 {
   options_context_t *new_ctx;
@@ -412,7 +411,7 @@ create_options_req(options_context_t **opt_ctx,
   handler->path = session->session_url.path;
   handler->body_delegate = create_options_body;
   handler->body_type = "text/xml";
-  handler->conn = conn;
+  handler->conn = session->conns[0];
   handler->session = session;
 
   new_ctx->handler = handler;
@@ -430,15 +429,14 @@ create_options_req(options_context_t **opt_ctx,
 
 svn_error_t *
 svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
-                                    svn_ra_serf__connection_t *conn,
+                                    svn_ra_serf__session_t *session,
                                     apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__session_t *session = conn->session;
   options_context_t *opt_ctx;
 
   SVN_ERR_ASSERT(SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
-  SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
+  SVN_ERR(create_options_req(&opt_ctx, session, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   if (opt_ctx->handler->sline.code != 200)
@@ -457,20 +455,39 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
 svn_error_t *
 svn_ra_serf__v1_get_activity_collection(const char **activity_url,
-                                        svn_ra_serf__connection_t *conn,
+                                        svn_ra_serf__session_t *session,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__session_t *session = conn->session;
   options_context_t *opt_ctx;
 
   SVN_ERR_ASSERT(!SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
-  SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
+  if (session->activity_collection_url)
+    {
+      *activity_url = apr_pstrdup(result_pool,
+                                  session->activity_collection_url);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(create_options_req(&opt_ctx, session, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   if (opt_ctx->handler->sline.code != 200)
     return svn_error_trace(svn_ra_serf__unexpected_status(opt_ctx->handler));
+
+  /* Cache the result. */
+  if (opt_ctx->activity_collection)
+    {
+      session->activity_collection_url =
+                    apr_pstrdup(session->pool, opt_ctx->activity_collection);
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested activity-collection-set value"));
+    }
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -490,9 +507,11 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 {
   options_context_t *opt_ctx;
 
+  if (corrected_url)
+    *corrected_url = NULL;
+
   /* This routine automatically fills in serf_sess->capabilities */
-  SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
-                             scratch_pool));
+  SVN_ERR(create_options_req(&opt_ctx, serf_sess, scratch_pool));
 
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 

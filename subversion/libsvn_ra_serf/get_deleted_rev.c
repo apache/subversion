@@ -149,8 +149,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   drev_ctx->revision_deleted = revision_deleted;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      ras, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      ras, NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getdrev_ttable,

@@ -801,7 +801,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   if (!svn_uri__is_ancestor(session->repos_root_str, url))
@@ -887,16 +887,22 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   else
     {
       /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL,
+      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session,
                                         scratch_pool));
     }
 
   props = apr_hash_make(result_pool);
-  SVN_ERR(svn_ra_serf__deliver_props2(&handler, session, session->conns[0],
-                                      propfind_path, rev, "0", fetch_props,
-                                      svn_ra_serf__deliver_svn_props, props,
-                                      scratch_pool));
-  SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session,
+                                               propfind_path, rev, "0",
+                                               fetch_props,
+                                               svn_ra_serf__deliver_svn_props,
+                                               props,
+                                               scratch_pool));
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   svn_ra_serf__keep_only_regular_props(props, scratch_pool);
 
@@ -971,7 +977,7 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   *url = session->repos_root_str;
@@ -1007,7 +1013,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
       if (!session->uuid)
         {
           return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
