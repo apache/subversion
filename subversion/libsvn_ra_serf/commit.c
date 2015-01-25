@@ -51,7 +51,6 @@ typedef struct commit_context_t {
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
 
   apr_hash_t *revprop_table;
 
@@ -462,7 +461,6 @@ get_version_url(const char **checked_in_url,
              this lookup, so we'll do things the hard(er) way, by
              looking up the version URL from a resource in the
              baseline collection. */
-          /* ### conn==NULL for session->conns[0]. same as CONN.  */
           SVN_ERR(svn_ra_serf__get_stable_url(&propfind_url,
                                               NULL /* latest_revnum */,
                                               session,
@@ -1530,7 +1528,6 @@ add_directory(const char *path,
                                    dir->copy_path);
         }
 
-      /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
       SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                           dir->commit_ctx->session,
                                           uri.path, dir->copy_revision,
@@ -1726,7 +1723,6 @@ add_file(const char *path,
       if (status)
         return svn_ra_serf__wrap_err(status, NULL);
 
-      /* ### conn==NULL for session->conns[0]. same as commit_ctx->conn.  */
       SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                           dir->commit_ctx->session,
                                           uri.path, copy_revision,
@@ -2087,7 +2083,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->pool = pool;
 
   ctx->session = session;
-  ctx->conn = session->conns[0];
 
   ctx->revprop_table = svn_prop_hash_dup(revprop_table, pool);
 
