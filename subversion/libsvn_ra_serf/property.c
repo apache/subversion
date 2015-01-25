@@ -523,13 +523,13 @@ svn_ra_serf__deliver_svn_props(void *baton,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra_serf__deliver_node_props(void *baton,
-                               const char *path,
-                               const char *ns,
-                               const char *name,
-                               const svn_string_t *value,
-                               apr_pool_t *scratch_pool)
+static svn_error_t *
+deliver_node_props(void *baton,
+                  const char *path,
+                  const char *ns,
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *nss = baton;
   apr_hash_t *props;
@@ -567,7 +567,7 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
 
   SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session,
                                                url, revision, "0", which_props,
-                                               svn_ra_serf__deliver_node_props,
+                                               deliver_node_props,
                                                props, scratch_pool));
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
@@ -776,7 +776,8 @@ get_baseline_info(const char **bc_url,
                   svn_revnum_t *revnum_used,
                   svn_ra_serf__session_t *session,
                   svn_revnum_t revision,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   /* If we detected HTTP v2 support on the server, we can construct
      the baseline collection URL ourselves, and fetch the latest
@@ -790,10 +791,10 @@ get_baseline_info(const char **bc_url,
       else
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
-                    revnum_used, session, pool));
+                    revnum_used, session, scratch_pool));
         }
 
-      *bc_url = apr_psprintf(pool, "%s/%ld",
+      *bc_url = apr_psprintf(result_pool, "%s/%ld",
                              session->rev_root_stub, *revnum_used);
     }
 
@@ -802,20 +803,22 @@ get_baseline_info(const char **bc_url,
     {
       const char *vcc_url;
 
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, scratch_pool));
 
       if (SVN_IS_VALID_REVNUM(revision))
         {
           /* First check baseline information cache. */
           SVN_ERR(svn_ra_serf__blncache_get_bc_url(bc_url,
                                                    session->blncache,
-                                                   revision, pool));
+                                                   revision, result_pool));
           if (!*bc_url)
             {
               SVN_ERR(retrieve_baseline_info(NULL, bc_url, session,
-                                             vcc_url, revision, pool, pool));
+                                             vcc_url, revision,
+                                             result_pool, scratch_pool));
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache, NULL,
-                                                revision, *bc_url, pool));
+                                                revision, *bc_url,
+                                                scratch_pool));
             }
 
           *revnum_used = revision;
@@ -824,7 +827,7 @@ get_baseline_info(const char **bc_url,
         {
           SVN_ERR(v1_get_youngest_revnum(revnum_used, bc_url,
                                          session, vcc_url,
-                                         pool, pool));
+                                         result_pool, scratch_pool));
         }
     }
 
@@ -850,7 +853,7 @@ svn_ra_serf__get_stable_url(const char **stable_url,
     url = session->session_url.path;
 
   SVN_ERR(get_baseline_info(&basecoll_url, &revnum_used,
-                            session, revision, scratch_pool));
+                            session, revision, scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_serf__get_relative_path(&repos_relpath, url,
                                          session, scratch_pool));
 

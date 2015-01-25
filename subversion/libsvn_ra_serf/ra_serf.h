@@ -947,20 +947,6 @@ svn_ra_serf__deliver_svn_props(void *baton,
                                apr_pool_t *scratch_pool);
 
 /*
- * Implementation of svn_ra_serf__prop_func_t that delivers all DAV properties
- * in (const char * -> apr_hash_t *) on Namespace pointing to a second hash
- *    (const char * -> svn_string_t *) to the values.
- */
-svn_error_t *
-svn_ra_serf__deliver_node_props(void *baton,
-                                const char *path,
-                                const char *ns,
-                                const char *name,
-                                const svn_string_t *value,
-                                apr_pool_t *scratch_pool);
-
-
-/*
  * This function will create a handler for a PROPFIND request, which will deliver
  * properties to PROP_FUNC() with PROP_BATON for the properties listed in LOOKUP_PROPS
  * at URL for DEPTH ("0","1","infinity").

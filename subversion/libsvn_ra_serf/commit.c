@@ -1343,7 +1343,7 @@ open_root(void *edit_baton,
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
       SVN_ERR(svn_ra_serf__discover_vcc(&(commit_ctx->vcc_url),
-                                        commit_ctx->session, commit_ctx->pool));
+                                        commit_ctx->session, scratch_pool));
 
 
       /* Build our directory baton. */
