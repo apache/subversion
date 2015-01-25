@@ -750,8 +750,6 @@ create_proppatch_body(serf_bucket_t **bkt,
   svn_boolean_t opened = FALSE;
   apr_hash_index_t *hi;
 
-  scratch_pool = pool; /*### Should be disabled, but needs review! */
-
   body_bkt = serf_bucket_aggregate_create(alloc);
 
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
@@ -782,7 +780,7 @@ create_proppatch_body(serf_bucket_t **bkt,
             }
 
           SVN_ERR(write_prop_xml(ctx, body_bkt, alloc, prop,
-                                 scratch_pool, scratch_pool));
+                                 pool, scratch_pool));
         }
     }
 
@@ -814,7 +812,7 @@ create_proppatch_body(serf_bucket_t **bkt,
             }
 
           SVN_ERR(write_prop_xml(ctx, body_bkt, alloc, prop,
-                                 scratch_pool, scratch_pool));
+                                 pool, scratch_pool));
         }
     }
 
