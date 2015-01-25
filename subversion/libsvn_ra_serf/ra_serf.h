@@ -378,7 +378,7 @@ typedef svn_error_t *
 /* Callback when the request is done */
 typedef svn_error_t *
 (*svn_ra_serf__response_done_delegate_t)(serf_request_t *request,
-                                         void *handler_baton,
+                                         void *done_baton,
                                          apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */

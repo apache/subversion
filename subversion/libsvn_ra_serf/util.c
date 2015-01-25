@@ -1839,7 +1839,7 @@ svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Shandard done_delegate handler */
+/* Shared/standard done_delegate handler */
 static svn_error_t *
 response_done(serf_request_t *request,
               void *handler_baton,
