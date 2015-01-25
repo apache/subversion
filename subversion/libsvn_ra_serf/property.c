@@ -523,6 +523,11 @@ svn_ra_serf__deliver_svn_props(void *baton,
   return SVN_NO_ERROR;
 }
 
+/*
+ * Implementation of svn_ra_serf__prop_func_t that delivers all DAV properties
+ * in (const char * -> apr_hash_t *) on Namespace pointing to a second hash
+ *    (const char * -> svn_string_t *) to the values.
+ */
 static svn_error_t *
 deliver_node_props(void *baton,
                   const char *path,
