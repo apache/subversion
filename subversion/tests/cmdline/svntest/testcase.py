@@ -173,7 +173,9 @@ class FunctionTestCase(TestCase):
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox):
-    return self.func(sandbox)
+    result = self.func(sandbox)
+    sandbox.verify()
+    return result
 
 
 class _XFail(TestCase):
