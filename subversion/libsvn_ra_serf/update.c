@@ -1429,7 +1429,7 @@ fetch_for_file(file_baton_t *file,
                                                        file->base_rev,
                                                        svn_path_uri_encode(
                                                           file->repos_relpath,
-                                                          file->pool));
+                                                          scratch_pool));
                 }
               else if (file->copyfrom_path)
                 {
@@ -1440,7 +1440,7 @@ fetch_for_file(file_baton_t *file,
                                                        file->copyfrom_rev,
                                                        svn_path_uri_encode(
                                                           file->copyfrom_path+1,
-                                                          file->pool));
+                                                          scratch_pool));
                 }
             }
           else if (ctx->sess->wc_callbacks->get_wc_prop)
