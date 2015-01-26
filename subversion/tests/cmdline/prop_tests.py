@@ -2619,7 +2619,6 @@ def peg_rev_base_working(sbox):
                                      sbox.ospath('iota') + '@BASE')
 
 @Issue(4415)
-@XFail(svntest.main.is_ra_type_dav)
 def xml_unsafe_author(sbox):
   "svn:author with XML unsafe chars"
 
@@ -2646,20 +2645,28 @@ def xml_unsafe_author(sbox):
 
   # mod_dav_svn sends svn:author (via PROPFIND for DAV)
   # Since r1553367 this works correctly on ra_serf, since we now request
-  # a single property value which somehow triggers different behavior
+  # a single property value which skips creating the creator-displayname property
   svntest.actions.run_and_verify_svn(None, ['foo\bbar'], [],
                                      'propget', '--revprop', '-r', '1',
                                      'svn:author', '--strict', wc_dir)
 
+  # Ensure a stable date
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '1',
+                                     'svn:date', '2015-01-01T00:00:00.0Z', wc_dir)
+
   # But a proplist of this property value still fails via DAV.
-  expected_output = [
+  expected_output = svntest.verify.UnorderedOutput([
     'Unversioned properties on revision 1:\n',
     '  svn:author\n',
+    '    foo\bbar\n',
     '  svn:date\n',
-    '  svn:log\n'
-  ]
+    '    2015-01-01T00:00:00.0Z\n',
+    '  svn:log\n',
+    '    Log message for revision 1.\n'
+  ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'proplist', '--revprop', '-r', '1',
+                                     'proplist', '--revprop', '-r', '1', '-v',
                                      wc_dir)
 
 def dir_prop_conflict_details(sbox):
