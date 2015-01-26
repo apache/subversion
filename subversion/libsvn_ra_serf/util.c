@@ -567,6 +567,7 @@ accept_response(serf_request_t *request,
                 void *acceptor_baton,
                 apr_pool_t *pool)
 {
+  /* svn_ra_serf__handler_t *handler = acceptor_baton; */
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
 
@@ -584,6 +585,7 @@ accept_head(serf_request_t *request,
             void *acceptor_baton,
             apr_pool_t *pool)
 {
+  /* svn_ra_serf__handler_t *handler = acceptor_baton; */
   serf_bucket_t *response;
 
   response = accept_response(request, stream, acceptor_baton, pool);
@@ -1539,7 +1541,7 @@ setup_request_cb(serf_request_t *request,
     *acceptor = accept_head;
   else
     *acceptor = accept_response;
-  *acceptor_baton = handler->session;
+  *acceptor_baton = handler;
 
   *s_handler = handle_response_cb;
   *s_handler_baton = handler;
