@@ -831,9 +831,14 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
     }
 
-  /* These headers need to be sent with every request except GET; see
+  /* These headers need to be sent with every request that might need
+     capability processing (e.g. during commit, reports, etc.), see
      issue #3255 ("mod_dav_svn does not pass client capabilities to
-     start-commit hooks") for why. */
+     start-commit hooks") for why.
+
+     Some request types like GET/HEAD/PROPFIND are unaware of capability
+     handling; and in some cases the responses can even be cached by
+     proxies, so we don't have to send these hearders there. */
   if (dav_headers)
     {
       serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);

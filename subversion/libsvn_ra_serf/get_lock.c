@@ -305,6 +305,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   handler->header_delegate = setup_getlock_headers;
   handler->header_delegate_baton = lock_ctx;
 
+  handler->no_dav_headers = TRUE;
+
   lock_ctx->inner_handler = handler->response_handler;
   lock_ctx->inner_baton = handler->response_baton;
   handler->response_handler = handle_lock;

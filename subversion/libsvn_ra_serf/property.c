@@ -495,6 +495,8 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
   handler->header_delegate = setup_propfind_headers;
   handler->header_delegate_baton = new_prop_ctx;
 
+  handler->no_dav_headers = TRUE;
+
   new_prop_ctx->handler = handler;
 
   *propfind_handler = handler;

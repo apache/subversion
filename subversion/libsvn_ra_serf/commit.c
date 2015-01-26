@@ -1758,6 +1758,7 @@ add_file(const char *path,
                                         path, scratch_pool);
       handler->response_handler = svn_ra_serf__expect_empty_body;
       handler->response_baton = handler;
+      handler->no_dav_headers = TRUE; /* Read only operation outside txn */
 
       err = svn_ra_serf__context_run_one(handler, scratch_pool);
 
