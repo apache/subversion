@@ -323,8 +323,6 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_one(handler, pool);
 
-  if (!err && handler->sline.code != 207)
-    err = svn_ra_serf__unexpected_status(handler);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -347,9 +345,6 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 
       /* Run the same handler again */
       SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
-
-      if (handler->sline.code != 207)
-        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   if (deadprop_count != svn_tristate_unknown)
@@ -551,9 +546,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                             session,
                                             scratch_pool));
 
-      if (dirent_handler->sline.code != 207)
-        return svn_error_trace(svn_ra_serf__unexpected_status(dirent_handler));
-
       if (gdb.supports_deadprop_count == svn_tristate_false
           && session->supports_deadprop_count == svn_tristate_unknown
           && dirent_fields & SVN_DIRENT_HAS_PROPS)
@@ -582,9 +574,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__context_run_wait(&props_handler->done,
                                             session,
                                             scratch_pool));
-
-      if (props_handler->sline.code != 207)
-        return svn_error_trace(svn_ra_serf__unexpected_status(props_handler));
     }
 
   /* And dirent again for the case when we had to send the request again */
@@ -593,9 +582,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__context_run_wait(&dirent_handler->done,
                                             session,
                                             scratch_pool));
-
-      if (dirent_handler->sline.code != 207)
-        return svn_error_trace(svn_ra_serf__unexpected_status(dirent_handler));
     }
 
   if (gdb.supports_deadprop_count != svn_tristate_unknown)

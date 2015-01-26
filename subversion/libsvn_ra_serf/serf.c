@@ -901,9 +901,6 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  if (handler->sline.code != 207)
-    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-
   svn_ra_serf__keep_only_regular_props(props, scratch_pool);
 
   *ret_props = props;
