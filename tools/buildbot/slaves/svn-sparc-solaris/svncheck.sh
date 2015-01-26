@@ -24,6 +24,9 @@ SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_
 
 cd ../obj
 
+# Use GNU iconv since the system one does not work well enough
+export LD_PRELOAD_64=/export/home/wandisco/buildbot/install/lib/preloadable_libiconv.so
+
 if [ $SVN_VER_MINOR -eq 9 ]; then
   echo "============ make svnserveautocheck"
   make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1
@@ -31,32 +34,5 @@ else
   echo "============ make check"
   make check CLEANUP=1 PARALLEL=30 THREADED=1
 fi
-
-# 'make check' will FAIL due to lack of UTF-8 conversion, so whitelist
-# those known failures.
-known="^FAIL: ("
-known="${known} subst_translate-test 1: test svn_subst_translate_string2"
-known="${known}|"
-known="${known} subst_translate-test 2: test svn_subst_translate_string2"
-known="${known}|"
-known="${known} utf-test 3: test svn_utf_cstring_to_utf8_ex2"
-known="${known}|"
-known="${known} utf-test 4: test svn_utf_cstring_from_utf8_ex2"
-known="${known}|"
-known="${known} prop_tests.py 22: test prop. handle invalid property names"
-known="${known}|"
-known="${known} prop_tests.py 41: svn:author with XML unsafe chars"
-known="${known}|"
-known="${known} svnsync_tests.py 24: copy and reencode non-UTF-8 svn:. props"
-known="${known})"
-
-# tests.log must exist
-test -f tests.log || exit 1
-
-# No FAIL other than the known ones.
-egrep -v "$known" tests.log | grep '^FAIL' && exit 1
-
-# Over 1,000 PASS.
-grep '^PASS' tests.log | wc -l | grep [1-9][0-9][0-9][0-9] >/dev/null || echo $?
 
 exit 0
