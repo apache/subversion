@@ -603,7 +603,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
 {
   if (why)
     {
-      return svn_error_wrap_apr(why, NULL);
+      return svn_ra_serf__wrap_err(why, NULL);
     }
 
   if (conn->session->using_ssl)
