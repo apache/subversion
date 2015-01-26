@@ -369,9 +369,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(propfind_handler, pool));
 
-  if (propfind_handler->sline.code != 207)
-    return svn_error_trace(svn_ra_serf__unexpected_status(propfind_handler));
-
   /* Verify that resource type is not collection. */
   if (fb.kind != svn_node_file)
     {

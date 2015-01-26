@@ -577,9 +577,6 @@ svn_ra_serf__fetch_node_props(apr_hash_t **results,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  if (handler->sline.code != 207)
-    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-
   *results = props;
   return SVN_NO_ERROR;
 }
