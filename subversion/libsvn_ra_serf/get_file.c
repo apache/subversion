@@ -326,7 +326,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *fetch_url;
   const svn_ra_serf__dav_props_t *which_props;
-  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__handler_t *propfind_handler;
   struct file_prop_baton_t fb;
 
   /* Fetch properties. */
@@ -361,16 +361,16 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   fb.kind = svn_node_unknown;
   fb.sha1_checksum = NULL;
 
-  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session, fetch_url,
-                                               SVN_INVALID_REVNUM, "0",
-                                               which_props,
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&propfind_handler, session,
+                                               fetch_url, SVN_INVALID_REVNUM,
+                                               "0", which_props,
                                                get_file_prop_cb, &fb,
                                                pool));
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  SVN_ERR(svn_ra_serf__context_run_one(propfind_handler, pool));
 
-  if (handler->sline.code != 207)
-    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+  if (propfind_handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(propfind_handler));
 
   /* Verify that resource type is not collection. */
   if (fb.kind != svn_node_file)
