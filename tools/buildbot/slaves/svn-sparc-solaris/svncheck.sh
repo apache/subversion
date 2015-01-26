@@ -25,7 +25,8 @@ SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_
 cd ../obj
 
 # Use GNU iconv since the system one does not work well enough
-export LD_PRELOAD_64=/export/home/wandisco/buildbot/install/lib/preloadable_libiconv.so
+LD_PRELOAD_64=/export/home/wandisco/buildbot/install/lib/preloadable_libiconv.so
+export LD_PRELOAD_64
 
 if [ $SVN_VER_MINOR -eq 9 ]; then
   echo "============ make svnserveautocheck"
