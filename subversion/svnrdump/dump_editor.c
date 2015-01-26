@@ -265,6 +265,44 @@ do_dump_newlines(struct dump_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+/* A special case of dump_node(), for a delete record.
+ *
+ * The only thing special about this version is it only writes one blank
+ * line, not two, after the headers. Why? Historical precedent for the
+ * case where a delete record is used as part of a (delete + add-with-history)
+ * in implementing a replacement.
+ */
+static svn_error_t *
+dump_node_delete(svn_stream_t *stream,
+                 const char *node_relpath,
+                 struct dir_baton *db,
+                 struct file_baton *fb,
+                 apr_pool_t *pool)
+{
+  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+
+  assert(svn_relpath_is_canonical(node_relpath));
+
+  /* Node-path: ... */
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_PATH, node_relpath);
+
+  /* Node-kind: "file" | "dir" */
+  if (fb)
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "file");
+  else if (db)
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "dir");
+
+  /* Node-action: delete */
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+
+  SVN_ERR(svn_repos__dump_headers(stream, headers, TRUE, pool));
+  return SVN_NO_ERROR;
+}
+
 /*
  * Write out a partial node record for PATH of type KIND.
  * ACTION describes what is happening to the node (see enum
@@ -327,24 +365,20 @@ dump_node(struct dump_edit_baton *eb,
         headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "change");
       break;
 
+    case svn_node_action_delete:
+      /* Node-action: delete */
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+
+      /* We can leave this routine quietly now. Nothing more to do-
+         print the headers terminated by one blank line, and an extra
+         blank line because we're not dumping props or text. */
+      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
+      SVN_ERR(svn_stream_puts(eb->stream, "\n"));
+      return SVN_NO_ERROR;
+
     case svn_node_action_replace:
-      if (is_copy)
-        {
-          /* More complex case: is_copy is true, and copyfrom_path/
-             copyfrom_rev are present: delete the original, and then re-add
-             it */
-
-          svn_repos__dumpfile_header_push(
-            headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
-
-          SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
-
-          /* Recurse: Print an additional add-with-history record. */
-          SVN_ERR(dump_node(eb, repos_relpath, db, fb, svn_node_action_add,
-                            is_copy, copyfrom_path, copyfrom_rev, pool));
-          return SVN_NO_ERROR;
-        }
-      else
+      if (! is_copy)
         {
           /* Node-action: replace */
           svn_repos__dumpfile_header_push(
@@ -356,21 +390,23 @@ dump_node(struct dump_edit_baton *eb,
             fb->dump_props = TRUE;
           else if (db)
             db->dump_props = TRUE;
+          break;
         }
-      break;
+      else
+        {
+          /* More complex case: is_copy is true, and copyfrom_path/
+             copyfrom_rev are present: delete the original, and then re-add
+             it */
+          /* ### Why not write a 'replace' record? Don't know. */
 
-    case svn_node_action_delete:
-      /* Node-action: delete */
-      svn_repos__dumpfile_header_push(
-        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+          /* ### Unusually, we end this 'delete' node record with only a single
+                 blank line after the header block -- no extra blank line. */
+          SVN_ERR(dump_node_delete(eb->stream, repos_relpath, db, fb, pool));
 
-      /* We can leave this routine quietly now. Nothing more to do-
-         print the headers terminated by one blank line, and an extra
-         blank line because we're not dumping props or text. */
-      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
-      SVN_ERR(svn_stream_puts(eb->stream, "\n"));
-
-      return SVN_NO_ERROR;
+          /* The remaining action is a non-replacing add-with-history */
+          /* action = svn_node_action_add; */
+        }
+      /* FALL THROUGH to 'add' */
 
     case svn_node_action_add:
       /* Node-action: add */
