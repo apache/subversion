@@ -762,6 +762,151 @@ def svnrdump_load_partial_incremental_dump(sbox):
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', sbox.repo_url)
 
+#----------------------------------------------------------------------
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# not exist and the failure mode is to error out.
+@Issue(4551)
+def load_non_deltas_copy_with_props(sbox):
+  "load non-deltas copy with props"
+  sbox.build()
+
+  # Case (1): Copies that do not replace anything: the copy target path
+  # at (new rev - 1) does not exist
+
+  # Set properties on each node to be copied
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Do the copies
+  sbox.simple_copy('A/mu@2', 'A/mu_COPY')
+  sbox.simple_copy('A/B@2', 'A/B_COPY')
+  # Also add new nodes inside the copied dir, to test more code paths
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/copied')
+  sbox.simple_mkdir('A/B_COPY/added')
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/added/copied')
+  # On each copied node, delete a prop
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                           'A/B_COPY/copied', 'A/B_COPY/added/copied')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'. This used to throw an error:
+  # svnrdump: E160013: File not found: revision 2, path '/A/B_COPY'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'p' really was deleted on each copied node
+  for tgt_path in ['A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                   'A/B_COPY/copied', 'A/B_COPY/added/copied']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, the copy source does
+# exist and the failure mode is to fail to delete a property.
+@Issue(4551)
+def load_non_deltas_replace_copy_with_props(sbox):
+  "load non-deltas replace&copy with props"
+  sbox.build()
+
+  # Case (2): Copies that replace something: the copy target path
+  # at (new rev - 1) exists and has no property named 'p'
+
+  # Set props on the copy source nodes (a file, a dir, a child of the dir)
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()  # avoid mixed-rev
+
+  # Do the copies, replacing something
+  sbox.simple_rm('A/D/gamma', 'A/C')
+  sbox.simple_copy('A/mu@2', 'A/D/gamma')
+  sbox.simple_copy('A/B@2', 'A/C')
+  # On the copy, delete a prop that wasn't present on the node that it replaced
+  sbox.simple_propdel('p', 'A/D/gamma', 'A/C', 'A/C/E')
+
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'p' really was deleted on each copied node
+  # This used to fail, finding that property 'p' was still present
+  for tgt_path in ['A/D/gamma', 'A/C', 'A/C/E']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, a node's props are
+# modified, and the failure mode is that RA-serf would end up deleting
+# properties that should remain on the node.
+@Issue(4551)
+def load_non_deltas_with_props(sbox):
+  "load non-deltas with props"
+  sbox.build()
+
+  # Case (3): A node's props are modified, and at least one of its previous
+  # props remains after the modification. svnrdump made two prop mod method
+  # calls for the same property (delete, then set). RA-serf's commit editor
+  # didn't expect this and performed the deletes after the non-deletes, and
+  # so ended up deleting a property that should not be deleted.
+
+  # Set properties on each node to be modified
+  sbox.simple_propset('p', 'v', 'A/mu')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B')
+  sbox.simple_commit()
+
+  # Do the modifications: a different kind of mod on each node
+  sbox.simple_propdel('p', 'A/mu')
+  sbox.simple_propset('q', 'v2', 'A/B')
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'q' remains on each modified node
+  for tgt_path in ['A/mu', 'A/B']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
   ########################################################################
 # Run the tests
 
@@ -813,6 +958,9 @@ test_list = [ None,
               reflect_dropped_renumbered_revs,
               dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads,
               svnrdump_load_partial_incremental_dump,
+              load_non_deltas_copy_with_props,
+              load_non_deltas_replace_copy_with_props,
+              load_non_deltas_with_props,
              ]
 
 if __name__ == '__main__':
