@@ -990,6 +990,43 @@ check_mergeinfo_normalization(const char *path,
 }
 
 
+/* A special case of dump_node(), for a delete record.
+ *
+ * The only thing special about this version is it only writes one blank
+ * line, not two, after the headers. Why? Historical precedent for the
+ * case where a delete record is used as part of a (delete + add-with-history)
+ * in implementing a replacement.
+ *
+ * Also it doesn't do a path-tracker check.
+ */
+static svn_error_t *
+dump_node_delete(svn_stream_t *stream,
+                 const char *node_relpath,
+                 svn_node_kind_t kind,
+                 apr_pool_t *pool)
+{
+  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+
+  /* Node-path: ... */
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_PATH, node_relpath);
+
+  /* Node-kind: "file" | "dir" */
+  if (kind == svn_node_file)
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "file");
+  else if (kind == svn_node_dir)
+    svn_repos__dumpfile_header_push(
+      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "dir");
+
+  /* Node-action: delete */
+  svn_repos__dumpfile_header_push(
+    headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+
+  SVN_ERR(svn_repos__dump_headers(stream, headers, TRUE, pool));
+  return SVN_NO_ERROR;
+}
+
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
 
@@ -1069,8 +1106,9 @@ dump_node(struct edit_baton *eb,
       compare_rev = cmp_rev;
     }
 
-  if (action == svn_node_action_change)
+  switch (action)
     {
+    case svn_node_action_change:
       if (eb->path_tracker)
         SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
                   apr_psprintf(pool, _("Change invalid path '%s' in r%ld"),
@@ -1091,9 +1129,27 @@ dump_node(struct edit_baton *eb,
         SVN_ERR(svn_fs_contents_different(&must_dump_text,
                                           compare_root, compare_path,
                                           eb->fs_root, path, pool));
-    }
-  else if (action == svn_node_action_replace)
-    {
+      break;
+
+    case svn_node_action_delete:
+      if (eb->path_tracker)
+        {
+          SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
+                    apr_psprintf(pool, _("Deleting invalid path '%s' in r%ld"),
+                                 path, eb->current_rev));
+          tracker_path_delete(eb->path_tracker, path);
+        }
+
+      svn_repos__dumpfile_header_push(
+        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
+
+      /* we can leave this routine quietly now, don't need to dump
+         any content. */
+      must_dump_text = FALSE;
+      must_dump_props = FALSE;
+      break;
+
+    case svn_node_action_replace:
       if (eb->path_tracker)
         SVN_ERR_W(node_must_exist(eb, path, eb->current_rev,
                                   svn_node_unknown, pool),
@@ -1114,63 +1170,28 @@ dump_node(struct edit_baton *eb,
           if (kind == svn_node_file)
             must_dump_text = TRUE;
           must_dump_props = TRUE;
+          break;
         }
       else
         {
+          /* more complex:  delete original, then add-with-history.  */
+          /* ### Why not write a 'replace' record? Don't know. */
+
           if (eb->path_tracker)
             {
-              SVN_ERR_W(node_must_exist(eb, compare_path, compare_rev,
-                                        kind, pool),
-                        apr_psprintf(pool,
-                                     _("Replacing path '%s' in r%ld "
-                                       "with invalid path"),
-                                     path, eb->current_rev));
-
-              /* we will call dump_node again with an addition further
-                 down the road */
               tracker_path_delete(eb->path_tracker, path);
             }
 
-          /* more complex:  delete original, then add-with-history.  */
-
-          /* the path & kind headers have already been printed;  just
-             add a delete action, and end the current record.*/
-          svn_repos__dumpfile_header_push(
-            headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
-
-          SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
-          /* ### Unusually, here we end this node record with only a single
+          /* ### Unusually, we end this 'delete' node record with only a single
                  blank line after the header block -- no extra blank line. */
+          SVN_ERR(dump_node_delete(eb->stream, path, kind, pool));
 
-          /* recurse:  print an additional add-with-history record. */
-          SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
-                            is_copy, compare_path, compare_rev, pool));
-
-          /* we can leave this routine quietly now, don't need to dump
-             any content;  that was already done in the second record. */
-          return SVN_NO_ERROR;
+          /* The remaining action is a non-replacing add-with-history */
+          /* action = svn_node_action_add; */
         }
-    }
-  else if (action == svn_node_action_delete)
-    {
-      if (eb->path_tracker)
-        {
-          SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
-                    apr_psprintf(pool, _("Deleting invalid path '%s' in r%ld"),
-                                 path, eb->current_rev));
-          tracker_path_delete(eb->path_tracker, path);
-        }
+      /* FALL THROUGH to 'add' */
 
-      svn_repos__dumpfile_header_push(
-        headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
-
-      /* we can leave this routine quietly now, don't need to dump
-         any content. */
-      must_dump_text = FALSE;
-      must_dump_props = FALSE;
-    }
-  else if (action == svn_node_action_add)
-    {
+    case svn_node_action_add:
       if (eb->path_tracker)
         SVN_ERR_W(node_must_not_exist(eb, path, eb->current_rev, pool),
                   apr_psprintf(pool,
@@ -1258,6 +1279,7 @@ dump_node(struct edit_baton *eb,
                   headers, SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_SHA1, hex_digest);
             }
         }
+      break;
     }
 
   if ((! must_dump_text) && (! must_dump_props))
