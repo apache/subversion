@@ -474,8 +474,10 @@ class DumpParser:
     if not m:
       if required:
         raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                "\nPrevious lines:\n%s"
                                 % (regex, self.current,
-                                   self.lines[self.current]))
+                                   self.lines[self.current],
+                                   ''.join(self.lines[max(0,self.current - 10):self.current])))
       else:
         return None
     self.current += 1
@@ -491,6 +493,26 @@ class DumpParser:
     self.current += 1
     return True
 
+  def parse_header(self, header):
+    regex = '([^:]*): (.*)$'
+    m = re.match(regex, self.lines[self.current])
+    if not m:
+      raise SVNDumpParseError("expected a header '%s' at line %d, but found:\n%s"
+                              % (regex, self.current,
+                                 self.lines[self.current]))
+    self.current += 1
+    return m.groups()
+
+  def parse_headers(self):
+    headers = []
+    while self.lines[self.current] != '\n':
+      key, val = self.parse_header(self)
+      headers.append((key, val))
+    return headers
+
+  def parse_boolean(self, header, required):
+    return self.parse_line(header + ': (false|true)$', required)
+
   def parse_format(self):
     return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
 
@@ -500,6 +522,9 @@ class DumpParser:
   def parse_revision(self):
     return self.parse_line('Revision-number: ([0-9]+)$')
 
+  def parse_prop_delta(self):
+    return self.parse_line('Prop-delta: (false|true)$', required=False)
+
   def parse_prop_length(self, required=True):
     return self.parse_line('Prop-content-length: ([0-9]+)$', required)
 
@@ -507,10 +532,7 @@ class DumpParser:
     return self.parse_line('Content-length: ([0-9]+)$', required)
 
   def parse_path(self):
-    path = self.parse_line('Node-path: (.+)$', required=False)
-    if not path and self.lines[self.current] == 'Node-path: \n':
-      self.current += 1
-      path = ''
+    path = self.parse_line('Node-path: (.*)$', required=False)
     return path
 
   def parse_kind(self):
@@ -541,6 +563,15 @@ class DumpParser:
   def parse_text_sha1(self):
     return self.parse_line('Text-content-sha1: ([0-9a-z]+)$', required=False)
 
+  def parse_text_delta(self):
+    return self.parse_line('Text-delta: (false|true)$', required=False)
+
+  def parse_text_delta_base_md5(self):
+    return self.parse_line('Text-delta-base-md5: ([0-9a-f]+)$', required=False)
+
+  def parse_text_delta_base_sha1(self):
+    return self.parse_line('Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
+
   def parse_text_length(self):
     return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
 
@@ -570,8 +601,14 @@ class DumpParser:
 
         return key
 
-      key = read_key_or_value(curprop)
-      value = read_key_or_value(curprop)
+      if props[curprop[0]].startswith('K'):
+        key = read_key_or_value(curprop)
+        value = read_key_or_value(curprop)
+      elif props[curprop[0]].startswith('D'):
+        key = read_key_or_value(curprop)
+        value = None
+      else:
+        raise
       prophash[key] = value
 
     return prophash
@@ -590,17 +627,28 @@ class DumpParser:
 
   def parse_one_node(self):
     node = {}
-    node['kind'] = self.parse_kind()
-    action = self.parse_action()
-    node['copyfrom_rev'] = self.parse_copyfrom_rev()
-    node['copyfrom_path'] = self.parse_copyfrom_path()
-    node['copy_md5'] = self.parse_copy_md5()
-    node['copy_sha1'] = self.parse_copy_sha1()
-    node['prop_length'] = self.parse_prop_length(required=False)
-    node['text_length'] = self.parse_text_length()
-    node['text_md5'] = self.parse_text_md5()
-    node['text_sha1'] = self.parse_text_sha1()
-    node['content_length'] = self.parse_content_length(required=False)
+    headers_list = self.parse_headers()
+    headers = { k:v for (k, v) in headers_list }
+    for key, header in [
+        ('kind', 'Node-kind'),
+        ('copyfrom_rev', 'Node-copyfrom-rev'),
+        ('copyfrom_path', 'Node-copyfrom-path'),
+        ('copy_md5', 'Text-copy-source-md5'),
+        ('copy_sha1', 'Text-copy-source-sha1'),
+        ('prop_delta', 'Prop-delta'),
+        ('prop_length', 'Prop-content-length'),
+        ('text_delta', 'Text-delta'),
+        ('text_delta_base_md5', 'Text-delta-base-md5'),
+        ('text_delta_base_sha1', 'Text-delta-base-sha1'),
+        ('text_length', 'Text-content-length'),
+        ('text_md5', 'Text-content-md5'),
+        ('text_sha1', 'Text-content-sha1'),
+        ('content_length', 'Content-length'),
+        ]:
+      node[key] = headers.get(header, None)
+
+    action = headers['Node-action']
+
     self.parse_blank()
     if node['prop_length']:
       node['props'] = self.get_props()
@@ -613,7 +661,9 @@ class DumpParser:
     blanks = 0
     while self.current < len(self.lines) and self.parse_blank(required=False):
       blanks += 1
-    node['blanks'] = blanks
+    ### disable temporarily, as svnrdump behaves differently from svnadmin
+    ### on a replace-with-copy (bug -- should file an issue)
+    #node['blanks'] = blanks
     return action, node
 
   def parse_all_nodes(self):
@@ -622,7 +672,7 @@ class DumpParser:
       if self.current >= len(self.lines):
         break
       path = self.parse_path()
-      if not path and not path is '':
+      if path is None:
         break
       if not nodes.get(path):
         nodes[path] = {}
@@ -660,7 +710,10 @@ class DumpParser:
     self.parse_all_revisions()
     return self.parsed
 
-def compare_dump_files(message, label, expected, actual):
+def compare_dump_files(message, label, expected, actual,
+                       ignore_uuid=False,
+                       expect_content_length_always=False,
+                       ignore_empty_prop_sections=False):
   """Parse two dump files EXPECTED and ACTUAL, both of which are lists
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
@@ -669,8 +722,37 @@ def compare_dump_files(message, label, expected, actual):
   parsed_expected = DumpParser(expected).parse()
   parsed_actual = DumpParser(actual).parse()
 
+  if ignore_uuid:
+    parsed_expected['uuid'] = '<ignored>'
+    parsed_actual['uuid'] = '<ignored>'
+
+  for parsed in [parsed_expected, parsed_actual]:
+    for rev_name, rev_record in parsed.items():
+      #print "Found %s" % (rev_name,)
+      if 'nodes' in rev_record:
+        #print "Found %s.%s" % (rev_name, 'nodes')
+        for path_name, path_record in rev_record['nodes'].items():
+          #print "Found %s.%s.%s" % (rev_name, 'nodes', path_name)
+          for action_name, action_record in path_record.items():
+            #print "Found %s.%s.%s.%s" % (rev_name, 'nodes', path_name, action_name)
+
+            if expect_content_length_always:
+              if action_record.get('content_length') == None:
+                #print 'Adding: %s.%s.%s.%s.%s' % (rev_name, 'nodes', path_name, action_name, 'content_length=0')
+                action_record['content_length'] = '0'
+            if ignore_empty_prop_sections:
+              if action_record.get('prop_length') == '10':
+                #print 'Removing: %s.%s.%s.%s.%s' % (rev_name, 'nodes', path_name, action_name, 'prop_length')
+                action_record['prop_length'] = None
+                del action_record['props']
+                old_content_length = int(action_record['content_length'])
+                action_record['content_length'] = str(old_content_length - 10)
+
   if parsed_expected != parsed_actual:
-    raise svntest.Failure('\n' + '\n'.join(ndiff(
+    print 'DIFF of raw dumpfiles (including expected differences)'
+    print ''.join(ndiff(expected, actual))
+    raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
+                          + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
           pprint.pformat(parsed_actual).splitlines())))
 
