@@ -2669,6 +2669,46 @@ def xml_unsafe_author(sbox):
                                      'proplist', '--revprop', '-r', '1', '-v',
                                      wc_dir)
 
+@Issue(4415)
+def xml_unsafe_author2(sbox):
+  "svn:author with XML unsafe chars 2"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # client sends svn:author (via PROPPATCH for DAV)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '1',
+                                     'svn:author', 'foo\bbar', repo_url)
+
+  # Ensure a stable date
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '1',
+                                     'svn:date', '2000-01-01T12:00:00.0Z',
+                                     repo_url)
+
+  if svntest.main.is_ra_type_dav():
+    # This receives the filtered author (but that is better than an Xml fail)
+    expected_author = 'foobar'
+  else:
+    expected_author = 'foo\bbar'
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '      1 %-8s              Jan 01  2000 ./\n' % expected_author,
+    '      1 %-8s              Jan 01  2000 A/\n' % expected_author,
+    '      1 %-8s           25 Jan 01  2000 iota\n' % expected_author
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'ls', '-v', repo_url)
+
+  expected_info = [{
+      'Repository Root' : sbox.repo_url,
+      'Last Changed Author' : expected_author,
+  }]
+  svntest.actions.run_and_verify_info(expected_info, repo_url)
+
 def dir_prop_conflict_details(sbox):
   "verify dir property conflict details"
 
@@ -2821,6 +2861,7 @@ test_list = [ None,
               almost_known_prop_names,
               peg_rev_base_working,
               xml_unsafe_author,
+              xml_unsafe_author2,
               dir_prop_conflict_details,
               iprops_list_abspath,
               wc_propop_on_url,
