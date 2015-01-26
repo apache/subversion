@@ -1002,7 +1002,6 @@ check_mergeinfo_normalization(const char *path,
 static svn_error_t *
 dump_node_delete(svn_stream_t *stream,
                  const char *node_relpath,
-                 svn_node_kind_t kind,
                  apr_pool_t *pool)
 {
   apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
@@ -1010,14 +1009,6 @@ dump_node_delete(svn_stream_t *stream,
   /* Node-path: ... */
   svn_repos__dumpfile_header_push(
     headers, SVN_REPOS_DUMPFILE_NODE_PATH, node_relpath);
-
-  /* Node-kind: "file" | "dir" */
-  if (kind == svn_node_file)
-    svn_repos__dumpfile_header_push(
-      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "file");
-  else if (kind == svn_node_dir)
-    svn_repos__dumpfile_header_push(
-      headers, SVN_REPOS_DUMPFILE_NODE_KIND, "dir");
 
   /* Node-action: delete */
   svn_repos__dumpfile_header_push(
@@ -1184,7 +1175,7 @@ dump_node(struct edit_baton *eb,
 
           /* ### Unusually, we end this 'delete' node record with only a single
                  blank line after the header block -- no extra blank line. */
-          SVN_ERR(dump_node_delete(eb->stream, path, kind, pool));
+          SVN_ERR(dump_node_delete(eb->stream, path, pool));
 
           /* The remaining action is a non-replacing add-with-history */
           /* action = svn_node_action_add; */
