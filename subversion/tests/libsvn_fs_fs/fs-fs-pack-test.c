@@ -28,6 +28,7 @@
 #include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
+#include "../../libsvn_fs_fs/low_level.h"
 #include "../../libsvn_fs_fs/util.h"
 
 #include "svn_hash.h"
@@ -1261,7 +1262,7 @@ receive_index(const svn_fs_fs__p2l_entry_t *entry,
   return SVN_NO_ERROR;
 }
 
-static char *
+static apr_size_t
 stringbuf_find(svn_stringbuf_t *rev_contents,
                const char *substring)
 {
@@ -1270,26 +1271,9 @@ stringbuf_find(svn_stringbuf_t *rev_contents,
 
   for (i = 0; i < rev_contents->len - len + 1; ++i)
       if (!memcmp(rev_contents->data + i, substring, len))
-        return rev_contents->data + i;
+        return i;
 
-  return NULL;
-}
-
-
-static svn_stringbuf_t *
-get_line(svn_stringbuf_t *rev_contents,
-         const char *prefix,
-         apr_pool_t *pool)
-{
-  char *end, *start = stringbuf_find(rev_contents, prefix);
-  if (start == NULL)
-    return svn_stringbuf_create_empty(pool);
-
-  end = strchr(start, '\n');
-  if (end == NULL)
-    return svn_stringbuf_create_empty(pool);
-
-  return svn_stringbuf_ncreate(start, end - start, pool);
+  return APR_SIZE_MAX;
 }
 
 static svn_error_t *
@@ -1302,10 +1286,10 @@ plain_0_length(const svn_test_opts_t *opts,
   svn_fs_root_t *root;
   svn_revnum_t rev;
   const char *rev_path;
-  svn_stringbuf_t *rev_contents, *props_line;
-  char *text;
+  svn_stringbuf_t *rev_contents;
   apr_hash_t *fs_config;
   svn_filesize_t file_length;
+  apr_size_t offset;
 
   if (strcmp(opts->fs_type, "fsfs") != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
@@ -1329,19 +1313,34 @@ plain_0_length(const svn_test_opts_t *opts,
   rev_path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
   SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
 
-  props_line = get_line(rev_contents, "props: ", pool);
-  text = stringbuf_find(rev_contents, "text: ");
-
-  if (text)
+  offset = stringbuf_find(rev_contents, "id: ");
+  if (offset != APR_SIZE_MAX)
     {
-      /* Explicitly set the last number before the MD5 to 0 */
-      strstr(props_line->data, " 2d29")[-1] = '0';
+      node_revision_t *noderev;
+      svn_stringbuf_t *noderev_str;
 
-      /* Add a padding space - in case we shorten the number in TEXT */
-      svn_stringbuf_appendbyte(props_line, ' ');
+      /* Read the noderev. */
+      svn_stream_t *stream = svn_stream_from_stringbuf(rev_contents, pool);
+      SVN_ERR(svn_stream_skip(stream, offset));
+      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
+      SVN_ERR(svn_stream_close(stream));
 
-      /* Make text point to the PLAIN data rep with no expanded size info. */
-      memcpy(text + 6, props_line->data + 7, props_line->len - 7);
+      /* Tweak the DATA_REP. */
+      noderev->data_rep->revision = noderev->prop_rep->revision;
+      noderev->data_rep->item_index = noderev->prop_rep->item_index;
+      noderev->data_rep->size = noderev->prop_rep->size;
+      noderev->data_rep->expanded_size = 0;
+
+      /* Serialize it back. */
+      noderev_str = svn_stringbuf_create_empty(pool);
+      stream = svn_stream_from_stringbuf(noderev_str, pool);
+      SVN_ERR(svn_fs_fs__write_noderev(stream, noderev, ffd->format,
+                                       svn_fs_fs__fs_supports_mergeinfo(fs),
+                                       pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      /* Patch the revision contents */
+      memcpy(rev_contents->data + offset, noderev_str->data, noderev_str->len);
     }
 
   SVN_ERR(svn_io_write_atomic(rev_path, rev_contents->data,
