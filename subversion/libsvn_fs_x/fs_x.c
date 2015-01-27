@@ -201,8 +201,7 @@ static svn_error_t *
 verify_block_size(apr_int64_t block_size,
                   apr_size_t item_size,
                   const char *name,
-                  apr_pool_t *scratch_pool
-                 )
+                  apr_pool_t *scratch_pool)
 {
   /* Limit range. */
   if (block_size <= 0)
@@ -594,14 +593,14 @@ svn_fs_x__open(svn_fs_t *fs,
 
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
  * parameters over between them. */
-struct upgrade_baton_t
+typedef struct upgrade_baton_t
 {
   svn_fs_t *fs;
   svn_fs_upgrade_notify_t notify_func;
   void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} upgrade_baton_t;
 
 /* Upgrade the FS given in upgrade_baton_t *)BATON to the latest format
  * version.  Apply options an invoke callback from that BATON.
@@ -614,7 +613,7 @@ static svn_error_t *
 upgrade_body(void *baton,
              apr_pool_t *scratch_pool)
 {
-  struct upgrade_baton_t *upgrade_baton = baton;
+  upgrade_baton_t *upgrade_baton = baton;
   svn_fs_t *fs = upgrade_baton->fs;
   int format, max_files_per_dir;
   const char *format_path = svn_fs_x__path_format(fs, scratch_pool);
@@ -640,7 +639,7 @@ svn_fs_x__upgrade(svn_fs_t *fs,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  struct upgrade_baton_t baton;
+  upgrade_baton_t baton;
   baton.fs = fs;
   baton.notify_func = notify_func;
   baton.notify_baton = notify_baton;
@@ -789,8 +788,10 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
 
   /* At least one of the reps has been modified in a txn.
      Fetch and compare them. */
-  SVN_ERR(svn_fs_x__get_proplist(&proplist_a, fs, a, scratch_pool));
-  SVN_ERR(svn_fs_x__get_proplist(&proplist_b, fs, b, scratch_pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_a, fs, a, scratch_pool,
+                                 scratch_pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_b, fs, b, scratch_pool,
+                                 scratch_pool));
 
   *equal = svn_fs__prop_lists_equal(proplist_a, proplist_b, scratch_pool);
   return SVN_NO_ERROR;
@@ -1124,22 +1125,22 @@ svn_fs_x__revision_prop(svn_string_t **value_p,
 
 
 /* Baton used for change_rev_prop_body below. */
-struct change_rev_prop_baton {
+typedef struct change_rev_prop_baton_t {
   svn_fs_t *fs;
   svn_revnum_t rev;
   const char *name;
   const svn_string_t *const *old_value_p;
   const svn_string_t *value;
-};
+} change_rev_prop_baton_t;
 
 /* The work-horse for svn_fs_x__change_rev_prop, called with the FS
    write lock.  This implements the svn_fs_x__with_write_lock()
-   'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
+   'body' callback type.  BATON is a 'change_rev_prop_baton_t *'. */
 static svn_error_t *
 change_rev_prop_body(void *baton,
                      apr_pool_t *scratch_pool)
 {
-  struct change_rev_prop_baton *cb = baton;
+  change_rev_prop_baton_t *cb = baton;
   apr_hash_t *table;
 
   SVN_ERR(svn_fs_x__revision_proplist(&table, cb->fs, cb->rev, scratch_pool));
@@ -1174,7 +1175,7 @@ svn_fs_x__change_rev_prop(svn_fs_t *fs,
                           const svn_string_t *value,
                           apr_pool_t *scratch_pool)
 {
-  struct change_rev_prop_baton cb;
+  change_rev_prop_baton_t cb;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 

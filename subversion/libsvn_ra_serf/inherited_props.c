@@ -199,7 +199,8 @@ static svn_error_t *
 create_iprops_body(serf_bucket_t **bkt,
                    void *baton,
                    serf_bucket_alloc_t *alloc,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   iprops_context_t *iprops_ctx = baton;
   serf_bucket_t *body_bkt;
@@ -231,21 +232,6 @@ typedef struct iprop_rq_info_t
   svn_ra_serf__handler_t *handler;
 } iprop_rq_info_t;
 
-/* Removes all non regular properties from PROPS */
-static void
-keep_only_regular_props(apr_hash_t *props,
-                        apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
-
-      if (svn_property_kind2(propname) != svn_prop_regular_kind)
-        svn_hash_sets(props, propname, NULL);
-    }
-}
 
 /* Assumes session reparented to the repository root. The old session
    root is passed as session_url */
@@ -287,17 +273,19 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       rq->props = apr_hash_make(scratch_pool);
 
       SVN_ERR(svn_ra_serf__get_stable_url(&rq->urlpath, NULL, session,
-                                          session->conns[0],
                                           svn_path_url_add_component2(
                                                 session->repos_root.path,
                                                 relpath, scratch_pool),
                                           revision,
                                           scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_ra_serf__deliver_props(&rq->handler, rq->props, session,
-                                         session->conns[0], rq->urlpath,
-                                         rev_marker, "0", all_props,
-                                         scratch_pool));
+      SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                          &rq->handler, session,
+                                          rq->urlpath,
+                                          rev_marker, "0", all_props,
+                                          svn_ra_serf__deliver_svn_props,
+                                          rq->props,
+                                          scratch_pool));
 
       /* Allow ignoring authz problems */
       rq->handler->no_fail_on_http_failure_status = TRUE;
@@ -335,29 +323,18 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       apr_hash_t *node_props;
       svn_prop_inherited_item_t *new_iprop;
 
-      if (rq->handler->sline.code >= 400 && rq->handler->sline.code != 403)
+      if (rq->handler->sline.code != 207 && rq->handler->sline.code != 403)
         {
-          return svn_error_trace(
-                        svn_ra_serf__error_on_status(rq->handler->sline,
-                                                     rq->handler->path,
-                                                     rq->handler->location));
+          if (rq->handler->server_error)
+            SVN_ERR(svn_ra_serf__server_error_create(rq->handler,
+                                                     scratch_pool));
+
+          return svn_error_trace(svn_ra_serf__unexpected_status(rq->handler));
         }
 
-      /* Obtain the real properties from the double hash */
-      node_props = apr_hash_get(rq->props, &rev_marker, sizeof(rev_marker));
+      node_props = rq->props;
 
-      if (!node_props)
-        continue;
-
-      node_props = svn_hash_gets(node_props, rq->urlpath);
-
-      if (!node_props)
-        continue;
-
-      SVN_ERR(svn_ra_serf__flatten_props(&node_props, node_props,
-                                         scratch_pool, scratch_pool));
-
-      keep_only_regular_props(node_props, scratch_pool);
+      svn_ra_serf__keep_only_regular_props(node_props, scratch_pool);
 
       if (!apr_hash_count(node_props))
         continue;
@@ -410,7 +387,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                         scratch_pool));
         }
 
-      /* For now, use implementation in libsvn_ra */
       err = get_iprops_via_more_requests(ra_session, iprops, session_uri, path,
                                          revision, result_pool, scratch_pool);
 
@@ -426,7 +402,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url,
                                       NULL /* latest_revnum */,
                                       session,
-                                      NULL /* conn */,
                                       NULL /* url */,
                                       revision,
                                       scratch_pool, scratch_pool));
@@ -448,12 +423,12 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                            NULL,
                                            iprops_ctx,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
-  handler->conn = session->conns[0];
-  handler->session = session;
+
   handler->body_delegate = create_iprops_body;
   handler->body_delegate_baton = iprops_ctx;
   handler->body_type = "text/xml";

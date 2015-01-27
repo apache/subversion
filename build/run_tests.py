@@ -207,15 +207,12 @@ class TestHarness:
     self._open_log('w')
     failed = 0
 
-    # Only run the C tests when testing ra_local
+    # If asked to skip C tests, remove non-Python tests from the list
     if self.skip_c_tests:
-      filtered_list = []
-      for cnt, prog in enumerate(list):
+      def is_py_test(prog):
         progpath, nums = self._split_nums(prog)
-        if not progpath.endswith('.py'):
-          continue
-        filtered_list.append(prog)
-      list = filtered_list
+        return progpath.endswith('.py')
+      list = filter(is_py_test, list)
 
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed

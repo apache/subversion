@@ -1096,8 +1096,7 @@ void fill_property_map(jobject map,
                        apr_hash_t* prop_hash, apr_array_header_t* prop_diffs,
                        apr_pool_t* scratch_pool, jmethodID put_mid)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (!map || (prop_hash == NULL && prop_diffs == NULL))
     return;
@@ -1189,8 +1188,7 @@ void fill_property_map(jobject map,
 jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,
                      apr_pool_t* scratch_pool)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (prop_hash == NULL && prop_diffs == NULL)
     return NULL;

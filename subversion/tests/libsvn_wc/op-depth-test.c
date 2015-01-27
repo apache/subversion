@@ -5793,7 +5793,7 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
 
       SVN_TEST_ASSERT(version != NULL);
 
-      SVN_TEST_ASSERT(!strcmp(version->path_in_repos, repos_path1));
+      SVN_TEST_STRING_ASSERT(version->path_in_repos, repos_path1);
     }
 
   if (repos_path2)
@@ -5803,7 +5803,7 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
 
       SVN_TEST_ASSERT(version != NULL);
 
-      SVN_TEST_ASSERT(!strcmp(version->path_in_repos, repos_path2));
+      SVN_TEST_STRING_ASSERT(version->path_in_repos, repos_path2);
     }
 
   return SVN_NO_ERROR;
@@ -6808,10 +6808,25 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
   SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_files, FALSE));
   SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_files, FALSE));
-  SVN_ERR(check_tree_conflict_repos_path(&b, "A/B", NULL, NULL));
+  {
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, TRUE},
+      {"P/Q", FALSE, FALSE, TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A/B", "A/B", "A/B"));
+  SVN_ERR(check_tree_conflict_repos_path(&b, "P/Q", "P/Q", "P/Q"));
   err = sbox_wc_resolve(&b, "A/B", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
   SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+
+  /* sbox_wc_resolve() obtains a lock on the target path, so now it
+     will apply the change on the target */
+  SVN_ERR(sbox_wc_resolve(&b, "P/Q", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       1, ""},
@@ -6840,10 +6855,21 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "P", "P2"));
   SVN_ERR(sbox_wc_update_depth(&b, "A/B", 2, svn_depth_immediates, FALSE));
   SVN_ERR(sbox_wc_update_depth(&b, "P", 2, svn_depth_immediates, FALSE));
-  SVN_ERR(check_tree_conflict_repos_path(&b, "P", NULL, NULL));
+  {
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, TRUE},
+      {"P", FALSE, FALSE, TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  SVN_ERR(check_tree_conflict_repos_path(&b, "P", "P", "P"));
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A/B", "A/B", "A/B"));
   err = sbox_wc_resolve(&b, "P", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
   SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       1, ""},
@@ -6874,10 +6900,21 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_move(&b, "P/Q", "Q2"));
   SVN_ERR(sbox_wc_update_depth(&b, "A/B/C", 2, svn_depth_empty, FALSE));
   SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_empty, FALSE));
-  SVN_ERR(check_tree_conflict_repos_path(&b, "P/Q", NULL, NULL));
+  {
+    conflict_info_t conflicts[] = {
+      {"A/B/C", FALSE, FALSE, TRUE},
+      {"P/Q", FALSE, FALSE, TRUE},
+      {0}
+    };
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  SVN_ERR(check_tree_conflict_repos_path(&b, "A/B/C", "A/B/C", "A/B/C"));
+  SVN_ERR(check_tree_conflict_repos_path(&b, "P/Q", "P/Q", "P/Q"));
   err = sbox_wc_resolve(&b, "P/Q", svn_depth_empty,
                         svn_wc_conflict_choose_mine_conflict);
   SVN_TEST_ASSERT_ERROR(err, SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE);
+  SVN_ERR(sbox_wc_resolve(&b, "A/B/C", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
   {
     nodes_row_t nodes[] = {
       {0, "",        "normal",       1, ""},
@@ -10058,7 +10095,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "commit_moved_descendant"),
     SVN_TEST_OPTS_XFAIL(commit_moved_away_descendant,
                         "commit_moved_away_descendant"),
-    SVN_TEST_OPTS_XFAIL(finite_move_update_bump,
+    SVN_TEST_OPTS_PASS(finite_move_update_bump,
                        "finite_move_update_bump"),
     SVN_TEST_OPTS_PASS(move_away_delete_update,
                        "move_away_delete_update"),

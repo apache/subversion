@@ -267,7 +267,7 @@ svn_prefix_string__expand(const svn_prefix_string__t *s,
   apr_size_t len = s->prefix->length + s_len;
   char *buffer = apr_palloc(pool, len + 1);
 
-  svn_string_t *result = apr_pcalloc(pool, sizeof(result));
+  svn_string_t *result = apr_pcalloc(pool, sizeof(*result));
   result->data = buffer;
   result->len = len;
   buffer[len] = '\0';

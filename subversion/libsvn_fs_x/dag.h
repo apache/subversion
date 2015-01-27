@@ -208,12 +208,13 @@ svn_fs_x__dag_node_kind(dag_node_t *node);
    If properties do not exist on NODE, *PROPLIST_P will be set to
    NULL.
 
-   Use POOL for all allocations.
+   Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporaries. 
  */
 svn_error_t *
 svn_fs_x__dag_get_proplist(apr_hash_t **proplist_p,
                            dag_node_t *node,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
    The node being changed must be mutable.
@@ -251,16 +252,16 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
 
 
 /* Open the root of revision REV of filesystem FS, allocating from
-   POOL.  Set *NODE_P to the new node.  */
+   RESULT_POOL.  Set *NODE_P to the new node. */
 svn_error_t *
 svn_fs_x__dag_revision_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_revnum_t rev,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 
 /* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
-   from POOL.
+   from RESULT_POOL.
 
    Note that the root node of TXN_ID is not necessarily mutable.  If
    no changes have been made in the transaction, then it may share its
@@ -270,16 +271,18 @@ svn_error_t *
 svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 
 /* Set *NODE_P to the base root of transaction TXN_ID in FS,
-   allocating from POOL.  Allocate the node in TRAIL->pool.  */
+   allocating from RESULT_POOL.  Allocate the node in TRAIL->pool.
+   Use SCRATCH_POOL for temporaries. */
 svn_error_t *
 svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 
 /* Clone the root directory of TXN_ID in FS, and update the
@@ -312,11 +315,12 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
 /* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
    and the values are svn_fs_x__dirent_t. The returned table (and elements)
-   is allocated in POOL, which is also used for temporary allocations. */
+   is allocated in RESULT_POOL, temporaries in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__dag_dir_entries(apr_array_header_t **entries_p,
                           dag_node_t *node,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
@@ -352,7 +356,7 @@ svn_fs_x__dag_set_entry(dag_node_t *node,
 
    TXN_ID is the Subversion transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Allocate *CHILD_P in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 svn_error_t *
 svn_fs_x__dag_clone_child(dag_node_t **child_p,
@@ -362,7 +366,8 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
                           const svn_fs_x__id_t *copy_id,
                           svn_fs_x__txn_id_t txn_id,
                           svn_boolean_t is_parent_copyroot,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 
 /* Delete the directory entry named NAME from PARENT, allocating from
@@ -384,21 +389,8 @@ svn_fs_x__dag_delete(dag_node_t *parent,
                      apr_pool_t *scratch_pool);
 
 
-/* Delete all mutable node revisions reachable from node ID, including
-   ID itself, from FS's `nodes' table.  Also delete any mutable
-   representations and strings associated with that node revision.
-   ID may refer to a file or directory, which may be mutable or immutable.
-
-   Use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
-                                const svn_fs_x__id_t *id,
-                                apr_pool_t *scratch_pool);
-
-
 /* Create a new mutable directory named NAME in PARENT.  Set *CHILD_P
-   to a reference to the new node, allocated in POOL.  The new
+   to a reference to the new node, allocated in RESULT_POOL.  The new
    directory has no contents, and no properties.  PARENT must be
    mutable.  NAME must be a single path component; it cannot be a
    slash-separated directory path.  PARENT_PATH must be the
@@ -406,7 +398,7 @@ svn_fs_x__dag_delete_if_mutable(svn_fs_t *fs,
    not currently have an entry named NAME.  TXN_ID is the Subversion
    transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_make_dir(dag_node_t **child_p,
@@ -414,7 +406,8 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
                        const char *parent_path,
                        const char *name,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 
 
@@ -422,59 +415,56 @@ svn_fs_x__dag_make_dir(dag_node_t **child_p,
 
 
 /* Set *CONTENTS to a readable generic stream which yields the
-   contents of FILE.  Allocate the stream in POOL.
+   contents of FILE.  Allocate the stream in RESULT_POOL.
 
    If FILE is not a file, return SVN_ERR_FS_NOT_FILE.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_contents(svn_stream_t **contents,
                            dag_node_t *file,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* Attempt to fetch the contents of NODE and pass it along with the BATON
    to the PROCESSOR.   Set *SUCCESS only of the data could be provided
    and the processor had been called.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_try_process_file_contents(svn_boolean_t *success,
                                         dag_node_t *node,
                                         svn_fs_process_contents_func_t processor,
                                         void* baton,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *scratch_pool);
 
 
 /* Set *STREAM_P to a delta stream that will turn the contents of SOURCE into
-   the contents of TARGET, allocated in POOL.  If SOURCE is null, the empty
-   string will be used.
+   the contents of TARGET, allocated in RESULT_POOL.  If SOURCE is null, the
+   empty string will be used is its stead.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                     dag_node_t *source,
                                     dag_node_t *target,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
-   contents of FILE.  Allocate the stream in POOL.
+   contents of FILE.  Allocate the stream in RESULT_POOL.
 
    Any previous edits on the file will be deleted, and a new edit
    stream will be constructed.
-
-   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_x__dag_get_edit_stream(svn_stream_t **contents,
                               dag_node_t *file,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 
 /* Signify the completion of edits to FILE made using the stream
-   returned by svn_fs_x__dag_get_edit_stream, allocating from POOL.
+   returned by svn_fs_x__dag_get_edit_stream.
 
    If CHECKSUM is non-null, it must match the checksum for FILE's
    contents (note: this is not recalculated, the recorded checksum is
@@ -509,14 +499,14 @@ svn_fs_x__dag_file_checksum(svn_checksum_t **checksum,
                             apr_pool_t *result_pool);
 
 /* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a
-   reference to the new node, allocated in POOL.  The new file's
+   reference to the new node, allocated in RESULT_POOL.  The new file's
    contents are the empty string, and it has no properties.  PARENT
    must be mutable.  NAME must be a single path component; it cannot
    be a slash-separated directory path.  PARENT_PATH must be the
    canonicalized absolute path of the parent directory.  TXN_ID is the
    Subversion transaction under which this occurs.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_make_file(dag_node_t **child_p,
@@ -524,15 +514,15 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
                         const char *parent_path,
                         const char *name,
                         svn_fs_x__txn_id_t txn_id,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 
 
 /* Copies */
 
-/* Make ENTRY in TO_NODE be a copy of FROM_NODE, allocating from POOL.
-   TO_NODE must be mutable.  TXN_ID is the Subversion transaction
-   under which this occurs.
+/* Make ENTRY in TO_NODE be a copy of FROM_NODE.  TO_NODE must be mutable.
+   TXN_ID is the Subversion transaction under which this occurs.
 
    If PRESERVE_HISTORY is true, the new node will record that it was
    copied from FROM_PATH in FROM_REV; therefore, FROM_NODE should be
@@ -542,7 +532,7 @@ svn_fs_x__dag_make_file(dag_node_t **child_p,
 
    If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.
 
-   Use POOL for all allocations.
+   Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__dag_copy(dag_node_t *to_node,
@@ -552,7 +542,7 @@ svn_fs_x__dag_copy(dag_node_t *to_node,
                    svn_revnum_t from_rev,
                    const char *from_path,
                    svn_fs_x__txn_id_t txn_id,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 
 /* Comparison */

@@ -104,8 +104,7 @@ hash_store(apr_hash_t *hash,
    of that value (if it exists). */
 static const char *
 hash_fetch(apr_hash_t *hash,
-           const char *key,
-           apr_pool_t *pool)
+           const char *key)
 {
   svn_string_t *str = svn_hash_gets(hash, key);
   return str ? str->data : NULL;
@@ -297,7 +296,7 @@ read_digest_file(apr_hash_t **children_p,
 
   /* If our caller cares, see if we have a lock path in our hash. If
      so, we'll assume we have a lock here. */
-  val = hash_fetch(hash, PATH_KEY, pool);
+  val = hash_fetch(hash, PATH_KEY);
   if (val && lock_p)
     {
       const char *path = val;
@@ -306,30 +305,30 @@ read_digest_file(apr_hash_t **children_p,
       lock = svn_lock_create(pool);
       lock->path = path;
 
-      if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
+      if (! ((lock->token = hash_fetch(hash, TOKEN_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
-      if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
+      if (! ((lock->owner = hash_fetch(hash, OWNER_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
 
-      if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
+      if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       lock->is_dav_comment = (val[0] == '1');
 
-      if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
+      if (! ((val = hash_fetch(hash, CREATION_DATE_KEY))))
         return svn_error_trace(err_corrupt_lockfile(fs_path, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
-      if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))
+      if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY)))
         SVN_ERR(svn_time_from_cstring(&(lock->expiration_date), val, pool));
 
-      lock->comment = hash_fetch(hash, COMMENT_KEY, pool);
+      lock->comment = hash_fetch(hash, COMMENT_KEY);
 
       *lock_p = lock;
     }
 
   /* If our caller cares, see if we have any children for this path. */
-  val = hash_fetch(hash, CHILDREN_KEY, pool);
+  val = hash_fetch(hash, CHILDREN_KEY);
   if (val && children_p)
     {
       apr_array_header_t *kiddos = svn_cstring_split(val, "\n", FALSE, pool);
@@ -548,11 +547,12 @@ get_lock_helper(svn_fs_t *fs,
 
 
 /* Baton for locks_walker(). */
-struct walk_locks_baton {
+typedef struct walk_locks_baton_t
+{
   svn_fs_get_locks_callback_t get_locks_func;
   void *get_locks_baton;
   svn_fs_t *fs;
-};
+} walk_locks_baton_t;
 
 /* Implements walk_digests_callback_t. */
 static svn_error_t *
@@ -564,7 +564,7 @@ locks_walker(void *baton,
              svn_boolean_t have_write_lock,
              apr_pool_t *pool)
 {
-  struct walk_locks_baton *wlb = baton;
+  walk_locks_baton_t *wlb = baton;
 
   if (lock)
     {
@@ -651,7 +651,7 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  struct walk_locks_baton wlb;
+  walk_locks_baton_t wlb;
 
   wlb.get_locks_func = get_locks_func;
   wlb.get_locks_baton = get_locks_baton;
@@ -671,8 +671,7 @@ walk_locks(svn_fs_t *fs,
  */
 static svn_error_t *
 verify_lock(svn_fs_t *fs,
-            svn_lock_t *lock,
-            apr_pool_t *pool)
+            svn_lock_t *lock)
 {
   if ((! fs->access_ctx) || (! fs->access_ctx->username))
     return svn_error_createf
@@ -703,7 +702,7 @@ get_locks_callback(void *baton,
                    svn_lock_t *lock,
                    apr_pool_t *pool)
 {
-  return verify_lock(baton, lock, pool);
+  return verify_lock(baton, lock);
 }
 
 
@@ -732,13 +731,13 @@ svn_fs_x__allow_locked_operation(const char *path,
       SVN_ERR(get_lock_helper(fs, &lock, path, have_write_lock,
                               scratch_pool));
       if (lock)
-        SVN_ERR(verify_lock(fs, lock, scratch_pool));
+        SVN_ERR(verify_lock(fs, lock));
     }
   return SVN_NO_ERROR;
 }
 
 /* The effective arguments for lock_body() below. */
-struct lock_baton {
+typedef struct lock_baton_t {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
@@ -747,13 +746,13 @@ struct lock_baton {
   apr_time_t expiration_date;
   svn_boolean_t steal_lock;
   apr_pool_t *result_pool;
-};
+} lock_baton_t;
 
 static svn_error_t *
 check_lock(svn_error_t **fs_err,
            const char *path,
            const svn_fs_lock_target_t *target,
-           struct lock_baton *lb,
+           lock_baton_t *lb,
            svn_fs_root_t *root,
            apr_pool_t *pool)
 {
@@ -847,16 +846,16 @@ check_lock(svn_error_t **fs_err,
   return SVN_NO_ERROR;
 }
 
-struct lock_info_t {
+typedef struct lock_info_t {
   const char *path;
   const char *component;
   svn_lock_t *lock;
   svn_error_t *fs_err;
-};
+} lock_info_t;
 
 /* The body of svn_fs_x__lock(), which see.
 
-   BATON is a 'struct lock_baton *' holding the effective arguments.
+   BATON is a 'lock_baton_t *' holding the effective arguments.
    BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
    path, mapping canonical path to 'svn_fs_lock_target_t'.  Set
    BATON->infos to an array of 'lock_info_t' holding the results.  For
@@ -868,7 +867,7 @@ struct lock_info_t {
 static svn_error_t *
 lock_body(void *baton, apr_pool_t *pool)
 {
-  struct lock_baton *lb = baton;
+  lock_baton_t *lb = baton;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
@@ -876,7 +875,7 @@ lock_body(void *baton, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   lb->infos = apr_array_make(lb->result_pool, lb->targets->nelts,
-                             sizeof(struct lock_info_t));
+                             sizeof(lock_info_t));
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
@@ -890,7 +889,7 @@ lock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
                                                     svn_sort__item_t);
       const svn_fs_lock_target_t *target = item->value;
-      struct lock_info_t info;
+      lock_info_t info;
 
       svn_pool_clear(iterpool);
 
@@ -898,7 +897,7 @@ lock_body(void *baton, apr_pool_t *pool)
       SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root, iterpool));
       info.lock = NULL;
       info.component = NULL;
-      APR_ARRAY_PUSH(lb->infos, struct lock_info_t) = info;
+      APR_ARRAY_PUSH(lb->infos, lock_info_t) = info;
       if (!info.fs_err)
         ++outstanding;
     }
@@ -936,8 +935,7 @@ lock_body(void *baton, apr_pool_t *pool)
 
       for (i = 0; i < lb->infos->nelts; ++i)
         {
-          struct lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i,
-                                                    struct lock_info_t);
+          lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i, lock_info_t);
           const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
                                                         svn_sort__item_t);
           const svn_fs_lock_target_t *target = item->value;
@@ -1015,7 +1013,7 @@ lock_body(void *baton, apr_pool_t *pool)
 }
 
 /* The effective arguments for unlock_body() below. */
-struct unlock_baton {
+typedef struct unlock_baton_t {
   svn_fs_t *fs;
   apr_array_header_t *targets;
   apr_array_header_t *infos;
@@ -1023,13 +1021,13 @@ struct unlock_baton {
   svn_boolean_t skip_check;
   svn_boolean_t break_lock;
   apr_pool_t *result_pool;
-};
+} unlock_baton_t;
 
 static svn_error_t *
 check_unlock(svn_error_t **fs_err,
              const char *path,
              const char *token,
-             struct unlock_baton *ub,
+             unlock_baton_t *ub,
              svn_fs_root_t *root,
              apr_pool_t *pool)
 {
@@ -1049,17 +1047,17 @@ check_unlock(svn_error_t **fs_err,
   return SVN_NO_ERROR;
 }
 
-struct unlock_info_t {
+typedef struct unlock_info_t {
   const char *path;
   const char *component;
   svn_error_t *fs_err;
   svn_boolean_t done;
   int components;
-};
+} unlock_info_t;
 
 /* The body of svn_fs_x__unlock(), which see.
 
-   BATON is a 'struct unlock_baton *' holding the effective arguments.
+   BATON is a 'unlock_baton_t *' holding the effective arguments.
    BATON->targets is an array of 'svn_sort__item_t' targets, sorted by
    path, mapping canonical path to (const char *) token.  Set
    BATON->infos to an array of 'unlock_info_t' results.  For the other
@@ -1071,7 +1069,7 @@ struct unlock_info_t {
 static svn_error_t *
 unlock_body(void *baton, apr_pool_t *pool)
 {
-  struct unlock_baton *ub = baton;
+  unlock_baton_t *ub = baton;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
@@ -1079,7 +1077,7 @@ unlock_body(void *baton, apr_pool_t *pool)
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   ub->infos = apr_array_make(ub->result_pool, ub->targets->nelts,
-                             sizeof(struct unlock_info_t));
+                             sizeof( unlock_info_t));
 
   SVN_ERR(ub->fs->vtable->youngest_rev(&youngest, ub->fs, pool));
   SVN_ERR(ub->fs->vtable->revision_root(&root, ub->fs, youngest, pool));
@@ -1089,7 +1087,7 @@ unlock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(ub->targets, i,
                                                     svn_sort__item_t);
       const char *token = item->value;
-      struct unlock_info_t info = { 0 };
+      unlock_info_t info = { 0 };
 
       svn_pool_clear(iterpool);
 
@@ -1114,7 +1112,7 @@ unlock_body(void *baton, apr_pool_t *pool)
 
           ++outstanding;
         }
-      APR_ARRAY_PUSH(ub->infos, struct unlock_info_t) = info;
+      APR_ARRAY_PUSH(ub->infos, unlock_info_t) = info;
     }
 
   rev_0_path = svn_fs_x__path_rev_absolute(ub->fs, 0, pool);
@@ -1130,8 +1128,7 @@ unlock_body(void *baton, apr_pool_t *pool)
 
       for (j = 0; j < ub->infos->nelts; ++j)
         {
-          struct unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j,
-                                                      struct unlock_info_t);
+          unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j, unlock_info_t);
 
           if (!info->fs_err && info->path)
             {
@@ -1191,7 +1188,7 @@ unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
               apr_pool_t *scratch_pool)
 {
-  struct unlock_baton ub;
+  unlock_baton_t ub;
   svn_sort__item_t item;
   apr_array_header_t *targets = apr_array_make(scratch_pool, 1,
                                                sizeof(svn_sort__item_t));
@@ -1226,7 +1223,7 @@ svn_fs_x__lock(svn_fs_t *fs,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  struct lock_baton lb;
+  lock_baton_t lb;
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
@@ -1320,7 +1317,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  struct unlock_baton ub;
+  unlock_baton_t ub;
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
@@ -1359,8 +1356,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
   err = svn_fs_x__with_write_lock(fs, unlock_body, &ub, scratch_pool);
   for (i = 0; i < ub.infos->nelts; ++i)
     {
-      struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
-                                                  struct unlock_info_t);
+      unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i, unlock_info_t);
       if (!cb_err && lock_callback)
         {
           if (!info->done && !info->fs_err)

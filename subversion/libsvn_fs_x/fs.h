@@ -217,14 +217,16 @@ typedef struct svn_fs_x__pair_cache_key_t
   apr_int64_t second;
 } svn_fs_x__pair_cache_key_t;
 
-/* Key type that identifies a representation / rep header. */
+/* Key type that identifies a representation / rep header.
+
+   Note: Cache keys should require no padding. */
 typedef struct svn_fs_x__representation_cache_key_t
 {
   /* Revision that contains the representation */
-  svn_revnum_t revision;
+  apr_int64_t revision;
 
-  /* Packed or non-packed representation? */
-  svn_boolean_t is_packed;
+  /* Packed or non-packed representation (boolean)? */
+  apr_int64_t is_packed;
 
   /* Item index of the representation */
   apr_uint64_t item_index;
