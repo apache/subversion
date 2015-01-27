@@ -529,6 +529,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(SKIP_C_TESTS)" != ""; then                              \
 	    flags="--skip-c-tests $$flags";                                  \
 	  fi;                                                                \
+	  if test "$(DUMP_LOAD_CROSS_CHECK)" != ""; then                     \
+	    flags="--dump-load-cross-check $$flags";                         \
+	  fi;                                                                \
 	  if test "$(FS_TYPE)" != ""; then                                   \
 	    flags="--fs-type $(FS_TYPE) $$flags";                            \
 	  fi;                                                                \

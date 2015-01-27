@@ -1379,6 +1379,9 @@ def make_log_msg():
 def tests_use_prepacakaged_repository():
   return options.fsfs_version is not None
 
+def tests_verify_dump_load_cross_check():
+  return options.dump_load_cross_check
+
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
 
@@ -1568,6 +1571,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-packing')
     if options.fsfs_version:
       args.append('--fsfs-version=' + str(options.fsfs_version))
+    if options.dump_load_cross_check:
+      args.append('--dump-load-cross-check')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1892,6 +1897,11 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-version', type='int', action='store',
                     help='FSFS version (fsfs)')
+  parser.add_option('--dump-load-cross-check', action='store_true',
+                    help="After every test, run a series of dump and load " +
+                         "tests with svnadmin, svnrdump and svndumpfilter " +
+                         " on the testcase repositories to cross-check " +
+                         " dump file compatibility.")
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
