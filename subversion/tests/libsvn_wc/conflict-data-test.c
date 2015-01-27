@@ -621,8 +621,8 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
 
     SVN_TEST_ASSERT(reason == svn_wc_conflict_reason_moved_away);
     SVN_TEST_ASSERT(action == svn_wc_conflict_action_delete);
-    SVN_TEST_ASSERT(!strcmp(moved_away_op_root_abspath,
-                            sbox_wc_path(&sbox, "A/B")));
+    SVN_TEST_STRING_ASSERT(moved_away_op_root_abspath,
+                           sbox_wc_path(&sbox, "A/B"));
   }
 
   return SVN_NO_ERROR;
