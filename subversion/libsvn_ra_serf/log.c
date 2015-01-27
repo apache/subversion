@@ -580,7 +580,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start == SVN_INVALID_REVNUM || start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, peg_rev,
                                       pool, pool));
 
@@ -588,15 +588,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                            log_opened, log_closed, NULL,
                                            log_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_log_body;
   handler->body_delegate_baton = log_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

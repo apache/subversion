@@ -176,23 +176,20 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   *locations = loc_ctx->paths;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      session,  NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,
                                            NULL, getloc_closed, NULL,
                                            loc_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_get_locations_body;
   handler->body_delegate_baton = loc_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

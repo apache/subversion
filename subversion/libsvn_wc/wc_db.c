@@ -1591,18 +1591,31 @@ svn_wc__db_init(svn_wc__db_t *db,
                         FALSE /* auto-upgrade */,
                         db->state_pool, scratch_pool));
 
-  /* The WCROOT is complete. Stash it into DB.  */
-  svn_hash_sets(db->dir_data, wcroot->abspath, wcroot);
+  /* Any previously cached children may now have a new WCROOT, most likely that
+     of the new WCROOT, but there might be descendant directories that are their
+     own working copy, in which case setting WCROOT to our new WCROOT might
+     actually break things for those.
 
-  /* Any previously cached children now have a new WCROOT. */
+     Clearing is the safest thing we can do in this case, as a test would lead
+     to unnecessary probing, while the standard code probes later anyway. So we
+     only lose a bit of memory
+
+     ### Perhaps we could check wcroot->abspath to detect which case we have
+         where, but currently it is already very hard to trigger this from
+         the short living 'svn' client. (GUI clients like TortoiseSVN are far
+         more likely to get in these cases)
+     */
   for (hi = apr_hash_first(scratch_pool, db->dir_data);
        hi;
        hi = apr_hash_next(hi))
     {
       const char *abspath = apr_hash_this_key(hi);
       if (svn_dirent_is_ancestor(wcroot->abspath, abspath))
-        svn_hash_sets(db->dir_data, abspath, wcroot);
+        svn_hash_sets(db->dir_data, abspath, NULL);
     }
+
+  /* The WCROOT is complete. Stash it into DB.  */
+  svn_hash_sets(db->dir_data, wcroot->abspath, wcroot);
 
   return SVN_NO_ERROR;
 }

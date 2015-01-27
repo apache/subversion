@@ -2210,10 +2210,21 @@ get_shared_rep(representation_t **old_rep,
         }
     }
 
-  /* Add information that is missing in the cached data. */
-  if (*old_rep)
+  if (!*old_rep)
+    return SVN_NO_ERROR;
+
+  /* We don't want 0-length PLAIN representations to replace non-0-length
+     ones (see issue #4554).  Also, this doubles as a simple guard against
+     general rep-cache induced corruption. */
+  if (   ((*old_rep)->expanded_size != rep->expanded_size)
+      || ((*old_rep)->size != rep->size))
     {
-      /* Use the old rep for this content. */
+      *old_rep = NULL;
+    }
+  else
+    {
+      /* Add information that is missing in the cached data.
+         Use the old rep for this content. */
       memcpy((*old_rep)->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
       (*old_rep)->uniquifier = rep->uniquifier;
     }

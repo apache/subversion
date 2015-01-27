@@ -1429,7 +1429,7 @@ fetch_for_file(file_baton_t *file,
                                                        file->base_rev,
                                                        svn_path_uri_encode(
                                                           file->repos_relpath,
-                                                          file->pool));
+                                                          scratch_pool));
                 }
               else if (file->copyfrom_path)
                 {
@@ -1440,7 +1440,7 @@ fetch_for_file(file_baton_t *file,
                                                        file->copyfrom_rev,
                                                        svn_path_uri_encode(
                                                           file->copyfrom_path+1,
-                                                          file->pool));
+                                                          scratch_pool));
                 }
             }
           else if (ctx->sess->wc_callbacks->get_wc_prop)
@@ -1461,13 +1461,12 @@ fetch_for_file(file_baton_t *file,
                                         : NULL;
             }
 
-          handler = svn_ra_serf__create_handler(file->pool);
+          handler = svn_ra_serf__create_handler(ctx->sess, file->pool);
 
           handler->method = "GET";
           handler->path = file->url;
 
-          handler->conn = conn;
-          handler->session = ctx->sess;
+          handler->conn = conn; /* Explicit scheduling */
 
           handler->custom_accept_encoding = TRUE;
           handler->no_dav_headers = TRUE;
@@ -1494,12 +1493,13 @@ fetch_for_file(file_baton_t *file,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (file->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props2(&file->propfind_handler,
-                                          ctx->sess, conn, file->url,
-                                          ctx->target_rev, "0", all_props,
-                                          set_file_props, file,
-                                          file->pool));
-      SVN_ERR_ASSERT(file->propfind_handler);
+      SVN_ERR(svn_ra_serf__create_propfind_handler(&file->propfind_handler,
+                                                   ctx->sess, file->url,
+                                                   ctx->target_rev, "0",
+                                                   all_props,
+                                                   set_file_props, file,
+                                                   file->pool));
+      file->propfind_handler->conn = conn; /* Explicit scheduling */
 
       file->propfind_handler->done_delegate = file_props_done;
       file->propfind_handler->done_delegate_baton = file;
@@ -1591,13 +1591,14 @@ fetch_for_dir(dir_baton_t *dir,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (dir->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props2(&dir->propfind_handler,
-                                          ctx->sess, conn, dir->url,
-                                          ctx->target_rev, "0", all_props,
-                                          set_dir_prop, dir,
-                                          dir->pool));
-      SVN_ERR_ASSERT(dir->propfind_handler);
+      SVN_ERR(svn_ra_serf__create_propfind_handler(&dir->propfind_handler,
+                                                   ctx->sess, dir->url,
+                                                   ctx->target_rev, "0",
+                                                   all_props,
+                                                   set_dir_prop, dir,
+                                                   dir->pool));
 
+      dir->propfind_handler->conn = conn;
       dir->propfind_handler->done_delegate = dir_props_done;
       dir->propfind_handler->done_delegate_baton = dir;
 
@@ -2262,10 +2263,8 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess,
-                                       NULL, pool));
-  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
-                                         NULL, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess, pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess, pool));
 
   link = apr_pstrcat(pool, "/", link, SVN_VA_NULL);
 
@@ -2657,15 +2656,15 @@ finish_report(void *report_baton,
   SVN_ERR(svn_stream_write(report->body_template, buf->data, &buf->len));
   SVN_ERR(svn_stream_close(report->body_template));
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL,
-                                       scratch_pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess,  scratch_pool));
 
   xmlctx = svn_ra_serf__xml_context_create(update_ttable,
                                            update_opened, update_closed,
                                            update_cdata,
                                            report,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(sess, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
@@ -2675,8 +2674,6 @@ finish_report(void *report_baton,
   handler->custom_accept_encoding = TRUE;
   handler->header_delegate = setup_update_report_headers;
   handler->header_delegate_baton = report;
-  handler->conn = sess->conns[0];
-  handler->session = sess;
 
   svn_ra_serf__request_create(handler);
 
