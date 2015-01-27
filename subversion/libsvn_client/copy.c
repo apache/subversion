@@ -353,12 +353,11 @@ pin_externals_prop(svn_string_t **pinned_externals,
       SVN_ERR_ASSERT(item->revision.kind == svn_opt_revision_number);
       SVN_ERR_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
 
-      pinned_desc = apr_psprintf(iterpool, "-r%lu %s@%lu %s%s",
+      pinned_desc = apr_psprintf(iterpool, "-r%lu %s@%lu %s\n",
                                  item->revision.value.number,
                                  item->url,
                                  item->peg_revision.value.number,
-                                 item->target_dir,
-                                 APR_EOL_STR);
+                                 item->target_dir);
       svn_stringbuf_appendcstr(buf, pinned_desc);
     }
   svn_pool_destroy(iterpool);
