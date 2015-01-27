@@ -809,6 +809,7 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
     { "http:///",             "http://" },
+    { "http:///example.com/", "http:///example.com" },
     { "https://",             "https://" },
     { "file:///",             "file://" },
     { "file://",              "file://" },
