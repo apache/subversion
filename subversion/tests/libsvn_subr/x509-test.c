@@ -637,6 +637,67 @@ test_x509_parse_cert(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static struct x509_test broken_cert_tests[] = {
+  /* certificate with subject that includes an attribute that has a
+   * object id that has and overflow such that it calculates to
+   * the same object id as the Common Name (2.5.4.3).  OpenSSL
+   * with its bignum support shows this as 2.5.4.2361183241434822606851.
+   * It would be wrong to display this as a Common Name to the user. */
+  { "MIIDGTCCAgECAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMjcwODMxNDNaFw0xNjAxMjcwODMxNDNaMGAxCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMScwJQYN"
+    "VQSCgICAgICAgICAAxMUb3ZlcmZsb3cuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3"
+    "DQEBAQUAA4IBDwAwggEKAoIBAQDHL1e8zSPyRND3tI42Vqca2FoCiWn881Czv2ct"
+    "tGFwyjUM8R1yHXEP+doS9KN9L29xRWZRxyCQ18S+QbjNQCh6Ay22qnkBu0uPdVB6"
+    "iIVKiW9RzU8dZSFMnveUZYLloG12kK++ooJGIstTJwkI8Naw1X1D29gZaY9oSKAc"
+    "Gs5c92po61RoetB744dUfUbAXi8eEd4ShdsdnCoswpEI4WTLdYLZ/cH/sU1a5Djm"
+    "cAfEBzZSOseEQSG7Fa/HvHyW+jDNnKG2r73M45TDcXAunSFcAYl1ioBaRwwdcTbK"
+    "SMGORThIX5UwpJDZI5sTVmTTRuCjbMxXXki/g9fTYD6mlaavAgMBAAEwDQYJKoZI"
+    "hvcNAQEFBQADggEBABvZSzFniMK4lqJcubzzk410NqZQEDBxdNZTNGrQYIDV8fDU"
+    "LLoQ2/2Y6kOQbx8r3RNcaJ6JtJeVqAq05It9oR5lMJFA2r0YMl4eB2V6o35+eaKY"
+    "FXrJzwx0rki2mX+iKsgRbJTv6mFb4I7vny404WKHNgYIfB8Z5jgbwWgrXH9M6BMb"
+    "FL9gZHMmU+6uqvCPYeIIZaAjT4J4E9322gpcumI9KGVApmbQhi5lC1hBh+eUprG7"
+    "4Brl9GeCLSTnTTf4GHIpqaUsKMtJ1sN/KJGwEB7Z4aszr80P5/sjHXOyqJ78tx46"
+    "pwH7/Fx0pM7nZjJVGvcxGBBOMeKy/o2QUVvEYPU=",
+    "C=US, ST=Washington, L=North Bend, \?\?=overflow.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.3",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
+    "2015-01-27T08:31:43.000000Z",
+    "2016-01-27T08:31:43.000000Z",
+    NULL,
+    "c1f063daf23e402fe58bab1a3fa2ba05c1106158"
+  },
+  { NULL }
+};
+
+static svn_error_t *
+test_x509_parse_cert_broken(apr_pool_t *pool)
+{
+  struct x509_test *xt;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (xt = broken_cert_tests; xt->base64_cert; xt++)
+    {
+      const svn_string_t *der_cert;
+      svn_x509_certinfo_t *certinfo;
+
+      svn_pool_clear(iterpool);
+
+      /* Convert header-less PEM to DER by undoing base64 encoding. */
+      der_cert = svn_base64_decode_string(svn_string_create(xt->base64_cert,
+                                                            pool),
+                                          iterpool);
+
+      SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                                  iterpool, iterpool));
+
+      SVN_ERR(compare_results(xt, certinfo, iterpool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -647,6 +708,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_x509_parse_cert,
                    "test svn_x509_parse_cert"),
+    SVN_TEST_XFAIL2(test_x509_parse_cert_broken,
+                    "test broken certs"),
     SVN_TEST_NULL
   };
 
