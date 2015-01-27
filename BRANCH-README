@@ -13,6 +13,10 @@ TODO before reintegrating to trunk:
   - Bypass authz when dumping with svnrdump, otherwise a partial dump is
     obtained for tests using authz, making those tests fail.
 
+  - Fix FAIL: svnmucc_tests.py 2: a no-op content-change is reported
+    differently in different cases. (Fix it how? I'd prefer to make the
+    output of a no-op change the same as a no-change.)
+
 Ideas for improvement:
   - Improve the logic for finding repositories created by a test: detect
     when a test created a repository even if the sandbox is not marked as
