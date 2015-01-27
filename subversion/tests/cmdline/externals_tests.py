@@ -3629,7 +3629,7 @@ def copy_pin_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      repo_url + '/A',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   verify_pinned_externals(wc_dir)
 
@@ -3641,7 +3641,7 @@ def copy_pin_externals(sbox):
   # Perform a wc->repos copy, pinning externals
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A',
+                                     os.path.join(wc_dir, 'A'),
                                      repo_url + '/A_copy',
                                      '-m', 'copy',
                                      '--pin-externals')
@@ -3655,8 +3655,8 @@ def copy_pin_externals(sbox):
   # Perform a wc->wc copy, pinning externals
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   verify_pinned_externals(wc_dir)
 
@@ -3673,8 +3673,8 @@ def copy_pin_externals(sbox):
   sbox.simple_update()
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   # gamma was moved so its path and expected last-changed revision change
   last_changed_rev_gamma = 11
@@ -3693,8 +3693,8 @@ def copy_pin_externals(sbox):
   sbox.simple_update()
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   # While gamma's path has changed by virtue of being moved along with
   # its parent A/D, gamma's last-changed rev should not have changed.
@@ -3720,8 +3720,8 @@ def copy_pin_externals(sbox):
   sbox.simple_update()
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   last_changed_rev_A = 6
   verify_pinned_externals(wc_dir)
@@ -3741,8 +3741,8 @@ def copy_pin_externals(sbox):
   # Test a copy from an old revision with pinning.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
-                                     wc_dir + '/A@6',
-                                     wc_dir + '/A_copy',
+                                     os.path.join(wc_dir, 'A@6'),
+                                     os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
   last_changed_rev_gamma = 1
   A_copy_D_path = 'A_copy/D'
