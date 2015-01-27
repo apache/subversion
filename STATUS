@@ -83,8 +83,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1619380
    Votes:
+     +1: rhuijben
      +0: julianfoad (previously said +1 with the wrong branch mentioned)
-     +0: rhuijben (previously said +1 with the wrong branch mentioned)
      +0: stefan2 (previously said +1 with the wrong branch mentioned)
 
  * r1643074
@@ -110,7 +110,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1644595
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1646230, r1646250, r1646253
    Make svnsync strip any r0 references from mergeinfo -- issue #4476.
@@ -158,7 +158,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1611380
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1650531
    Fix a redirect handling bug in 'svn log' over HTTP. 
@@ -175,7 +175,7 @@ Candidate changes:
      Move along with the times! And should fix buildbot failures
      according to jamessan, who submitted the patch.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1650834
    Fix svn_stringbuf_insert and svn_stringbuf_replace when the source is
@@ -205,7 +205,7 @@ Candidate changes:
    Justiciation:
      Writing beyond allocated memory is undefined behaviour.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
