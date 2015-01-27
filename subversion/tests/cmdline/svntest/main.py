@@ -132,6 +132,10 @@ else:
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by svnrdump in dump/load cross-checks
+crosscheck_username = '__dumpster__'
+crosscheck_password = '__loadster__'
+
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
@@ -693,14 +697,25 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+class svnrdump_crosscheck_authentication:
+  pass
+
 def _with_auth(args):
   assert '--password' not in args
-  args = args + ('--password', wc_passwd,
+  if svnrdump_crosscheck_authentication in args:
+    args = filter(lambda x: x is not svnrdump_crosscheck_authentication, args)
+    auth_username = crosscheck_username
+    auth_password = crosscheck_password
+  else:
+    auth_username = wc_author
+    auth_password = wc_passwd
+
+  args = args + ('--password', auth_password,
                  '--no-auth-cache' )
   if '--username' in args:
     return args
   else:
-    return args + ('--username', wc_author )
+    return args + ('--username', auth_username )
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -934,8 +949,13 @@ def _post_create_repos(path, minor_version = None):
     # This actually creates TWO [users] sections in the file (one of them is
     # uncommented in `svnadmin create`'s template), so we exercise the .ini
     # files reading code's handling of duplicates, too. :-)
-    file_append(os.path.join(path, "conf", "passwd"),
-                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+    users = ("[users]\n"
+             "jrandom = rayjandom\n"
+             "jconstant = rayjandom\n")
+    if tests_verify_dump_load_cross_check():
+      # Insert a user for the dump/load cross-check.
+      users += (crosscheck_username + " = " + crosscheck_password + "\n")
+    file_append(os.path.join(path, "conf", "passwd"), users)
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
@@ -1220,12 +1240,22 @@ an appropriate list of mappings.
     prefix = repo_name + ":"
   else:
     prefix = ""
+
   if sections:
     for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))
 
   for p, r in rules.items():
     fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+    if tests_verify_dump_load_cross_check():
+      # Insert an ACE that lets the dump/load cross-check bypass
+      # authz restrictions.
+      fp.write(crosscheck_username + " = rw\n")
+
+  if tests_verify_dump_load_cross_check() and '/' not in rules:
+    # We need a repository-root ACE for the dump/load cross-check
+    fp.write("[/]\n" + crosscheck_username + " = rw\n")
+
   fp.close()
 
 # See the warning about parallel test execution in write_authz_file

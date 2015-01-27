@@ -400,8 +400,8 @@ class Sandbox:
     dumpfile_a_d = svntest.actions.run_and_verify_dump(self.repo_dir,
                                                        deltas=True)
     dumpfile_r_d = svntest.actions.run_and_verify_svnrdump(
-                             None, svntest.verify.AnyOutput, [], 0,
-                             'dump', '-q', self.repo_url)
+      None, svntest.verify.AnyOutput, [], 0, 'dump', '-q', self.repo_url,
+      svntest.main.svnrdump_crosscheck_authentication)
 
     # Compare the two deltas dumpfiles, ignoring expected differences
     dumpfile_a_d_cmp = [l for l in dumpfile_a_d
@@ -468,11 +468,12 @@ class Sandbox:
                                         expect_content_length_always=True,
                                         ignore_empty_prop_sections=True)
 
-  def verify(self):
+  def verify(self, skip_cross_check=False):
     """Do additional testing that should hold for any sandbox, such as
        verifying that the repository can be dumped.
     """
-    if svntest.main.tests_verify_dump_load_cross_check():
+    if (not skip_cross_check
+        and svntest.main.tests_verify_dump_load_cross_check()):
       if self.is_built() and not self.read_only:
         # verify that we can in fact dump the repo
         # (except for the few tests that deliberately corrupt the repo)
