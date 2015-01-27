@@ -472,16 +472,20 @@ class Sandbox:
     """Do additional testing that should hold for any sandbox, such as
        verifying that the repository can be dumped.
     """
-    if self.is_built() and not self.read_only:
-      # verify that we can in fact dump the repo
-      # (except for the few tests that deliberately corrupt the repo)
-      os.chdir(self.was_cwd)
-      if os.path.exists(self.repo_dir):
-        print("Cross-checking dump/load...")
-        self.verify_repo()
-    else:
-      print("NOT testing dump: is_built=%d, read_only=%d"
-            % (self.is_built(), self.read_only))
+    if svntest.main.tests_verify_dump_load_cross_check():
+      if self.is_built() and not self.read_only:
+        # verify that we can in fact dump the repo
+        # (except for the few tests that deliberately corrupt the repo)
+        os.chdir(self.was_cwd)
+        if os.path.exists(self.repo_dir):
+          logger.info("VERIFY: running dump/load cross-check")
+          self.verify_repo()
+      else:
+        logger.info("VERIFY: WARNING: skipping dump/load cross-check:"
+                    " is-built=%s, read-only=%s"
+                    % (self.is_built() and "true" or "false",
+                       self.read_only and "true" or "false"))
+    pass
 
 def is_url(target):
   return (target.startswith('^/')
