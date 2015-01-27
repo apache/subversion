@@ -218,10 +218,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
   int i;
   apr_pool_t *iterpool;
 
-  SVN_DBG(("repos_root_url: %s", repos_root_url));
-  SVN_DBG(("local_abspath_or_url: %s", local_abspath_or_url));
-  SVN_DBG(("externals_prop_val: %s", externals_prop_val->data));
-
   SVN_ERR(svn_wc_parse_externals_description3(&external_items,
                                               local_abspath_or_url,
                                               externals_prop_val->data,
@@ -255,15 +251,12 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                                     defining_url,
                                                     iterpool,
                                                     iterpool));
-      SVN_DBG(("resolved external url: %s", resolved_url));
-
       SVN_ERR(svn_client__open_ra_session_internal(&external_ra_session,
                                                    NULL, resolved_url,
                                                    NULL, NULL, FALSE, FALSE,
                                                    ctx, iterpool,
                                                    iterpool));
       SVN_ERR(svn_ra_get_session_url(external_ra_session, &session_url, scratch_pool));
-      SVN_DBG(("external ra session url: %s", session_url));
       if (item->peg_revision.kind == svn_opt_revision_unspecified ||
           item->peg_revision.kind == svn_opt_revision_head)
         {
@@ -294,7 +287,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("Cannot determine last-changed revision "
                                    "of '%s'"), resolved_url);
-      SVN_DBG(("external's last-changed revision: %lu", dirent->created_rev));
 
       if (external_youngest_rev > dirent->created_rev)
         {
@@ -324,7 +316,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                               b.last_changed_repos_relpath,
                                               SVN_VA_NULL),
                                    iterpool);
-              SVN_DBG(("external's last-changed URL: %s", last_changed_url));
               if (strcmp(resolved_url, last_changed_url) != 0)
                 {
                   /* The external was at a different location at its
@@ -337,8 +328,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
                 }
             }
         }
-
-      SVN_DBG(("external's URL: %s", item->url));
 
       if (item->revision.kind == svn_opt_revision_date)
         {
@@ -370,7 +359,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                  item->peg_revision.value.number,
                                  item->target_dir,
                                  APR_EOL_STR);
-      SVN_DBG(("pinned external: %s", pinned_desc));
       svn_stringbuf_appendcstr(buf, pinned_desc);
     }
   svn_pool_destroy(iterpool);
@@ -401,7 +389,6 @@ resolve_pinned_externals(apr_hash_t **new_externals,
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url, ra_session,
                                                 pair->src_abspath_or_url,
                                                 scratch_pool));
-      SVN_DBG(("old_url: %s", old_url));
       externals_props = apr_hash_make(scratch_pool);
       SVN_ERR(svn_client__remote_propget(externals_props, NULL,
                                          SVN_PROP_EXTERNALS,
@@ -453,8 +440,6 @@ resolve_pinned_externals(apr_hash_t **new_externals,
 
       svn_pool_clear(iterpool);
 
-      SVN_DBG(("repos root url:  %s", repos_root_url));
-      SVN_DBG(("pinning externals for %s: %s", local_abspath_or_url, externals_propval->data));
       SVN_ERR(pin_externals_prop(&new_propval, externals_propval,
                                  repos_root_url, local_abspath_or_url, ctx,
                                  result_pool, iterpool));
@@ -542,7 +527,6 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
 
               local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
                                               dst_relpath, iterpool);
-              SVN_DBG(("New externals for %s: %s", local_abspath, externals_propval->data));
               SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                        SVN_PROP_EXTERNALS, externals_propval,
                                        svn_depth_empty, TRUE /* skip_checks */,
@@ -970,7 +954,6 @@ path_driver_cb_func(void **dir_baton,
   /* Initialize return value. */
   *dir_baton = NULL;
 
-  SVN_DBG(("%s: path=%s", __func__, path));
   /* This function should never get an empty PATH.  We can neither
      create nor delete the empty PATH, so if someone is calling us
      with such, the code is just plain wrong. */
@@ -1060,7 +1043,6 @@ path_driver_cb_func(void **dir_baton,
           opened_dir = TRUE;
         }
 
-      SVN_DBG(("New externals for %s: %s", path_info->dst_path, path_info->externals->data));
       SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton, SVN_PROP_EXTERNALS,
                                                 path_info->externals, pool));
       if (opened_dir)
@@ -1727,7 +1709,6 @@ queue_prop_change_commit_items(const char *commit_url,
                                     svn_client_commit_item3_t *);
       if (strcmp(existing_item->url, commit_url) == 0)
         {
-          SVN_DBG(("using existing item for %s", commit_url));
           item = existing_item;
           break;
         }
@@ -1735,7 +1716,6 @@ queue_prop_change_commit_items(const char *commit_url,
 
   if (item == NULL)
     {
-      SVN_DBG(("using new item for %s", commit_url));
       item = svn_client_commit_item3_create(result_pool);
       item->url = commit_url;
       item->kind = svn_node_dir;
@@ -1749,7 +1729,6 @@ queue_prop_change_commit_items(const char *commit_url,
     item->outgoing_prop_changes = apr_array_make(result_pool, 1,
                                                  sizeof(svn_prop_t *));
 
-  SVN_DBG(("%s: item->url=%s item->state_flags=0x%x propval=%s", __func__, item->url, item->state_flags, propval->data));
   prop = apr_palloc(result_pool, sizeof(*prop));
   prop->name = propname;
   prop->value = propval;
@@ -2279,7 +2258,6 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 
               local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
                                               dst_relpath, iterpool);
-              SVN_DBG(("New externals for %s: %s", local_abspath, externals_propval->data));
               SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                        SVN_PROP_EXTERNALS, externals_propval,
                                        svn_depth_empty, TRUE /* skip_checks */,
