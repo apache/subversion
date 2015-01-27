@@ -3726,6 +3726,29 @@ def copy_pin_externals(sbox):
   last_changed_rev_A = 6
   verify_pinned_externals(wc_dir)
 
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
+
+  # Resurrect A/D in HEAD so the next test can refer to A/D externals.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     '-m', 'resurrect A/D',
+                                     repo_url + '/A/D@6',
+                                     repo_url + '/A/D',
+                                     '--pin-externals')
+  # Test a copy from an old revision with pinning.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     wc_dir + '/A@6',
+                                     wc_dir + '/A_copy',
+                                     '--pin-externals')
+  last_changed_rev_gamma = 1
+  A_copy_D_path = 'A_copy/D'
+  external_url_for["A/B/gamma"] = '^/A/D/gamma'
+  verify_pinned_externals(wc_dir)
+
 
 ########################################################################
 # Run the tests
