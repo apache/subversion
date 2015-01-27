@@ -1221,7 +1221,7 @@ def write_restrictive_svnserve_conf_with_groups(repo_dir,
 # parallel execution at the bottom like so
 #   if __name__ == '__main__':
 #     svntest.main.run_tests(test_list, serial_only = True)
-def write_authz_file(sbox, rules, sections=None):
+def write_authz_file(sbox, rules, sections=None, prefixed_rules=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
 the rules. You can add sections SECTIONS (ex. groups, aliases...) with
@@ -1237,22 +1237,29 @@ an appropriate list of mappings.
   repo_name = os.path.basename(repo_name)
 
   if sbox.repo_url.startswith("http"):
-    prefix = repo_name + ":"
+    default_prefix = repo_name + ":"
   else:
-    prefix = ""
+    default_prefix = ""
 
   if sections:
     for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))
 
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  if not prefixed_rules:
+    prefixed_rules = dict()
+
+  if rules:
+    for p, r in rules.items():
+      prefixed_rules[default_prefix + p] = r
+
+  for p, r in prefixed_rules.items():
+    fp.write("[%s]\n%s\n" % (p, r))
     if tests_verify_dump_load_cross_check():
       # Insert an ACE that lets the dump/load cross-check bypass
       # authz restrictions.
       fp.write(crosscheck_username + " = rw\n")
 
-  if tests_verify_dump_load_cross_check() and '/' not in rules:
+  if tests_verify_dump_load_cross_check() and '/' not in prefixed_rules:
     # We need a repository-root ACE for the dump/load cross-check
     fp.write("[/]\n" + crosscheck_username + " = rw\n")
 
