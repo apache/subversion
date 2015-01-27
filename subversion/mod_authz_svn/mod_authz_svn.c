@@ -244,14 +244,25 @@ static const command_rec authz_svn_cmds[] =
  * per-module loglevel configuration.  It expands to FILE and LINE
  * in older server versions.  ALLOWED is boolean.
  * REPOS_PATH and DEST_REPOS_PATH are information
- * about the request.  DEST_REPOS_PATH may be NULL. */
+ * about the request.  DEST_REPOS_PATH may be NULL.
+ * Non-zero IS_SUBREQ_BYPASS means that this authorization check was
+ * implicitly requested using 'subrequest bypass' callback from
+ * mod_dav_svn.
+ */
 static void
 log_access_verdict(LOG_ARGS_SIGNATURE,
-                   const request_rec *r, int allowed,
+                   const request_rec *r, int allowed, int is_subreq_bypass,
                    const char *repos_path, const char *dest_repos_path)
 {
-  int level = allowed ? APLOG_INFO : APLOG_WARNING;
+  int level = allowed ? APLOG_INFO : APLOG_ERR;
   const char *verdict = allowed ? "granted" : "denied";
+
+  /* Use less important log level for implicit sub-request authorization
+     checks. */
+  if (is_subreq_bypass)
+    level = APLOG_INFO;
+  else if (r->main && r->method_number == M_GET)
+    level = APLOG_INFO;
 
   if (r->user)
     {
@@ -749,7 +760,7 @@ subreq_bypass2(request_rec *r,
   if (!conf->anonymous
       || (! (conf->access_file || conf->repo_relative_access_file)))
     {
-      log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+      log_access_verdict(APLOG_MARK, r, 0, TRUE, repos_path, NULL);
       return HTTP_FORBIDDEN;
     }
 
@@ -778,12 +789,12 @@ subreq_bypass2(request_rec *r,
         }
       if (!authz_access_granted)
         {
-          log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+          log_access_verdict(APLOG_MARK, r, 0, TRUE, repos_path, NULL);
           return HTTP_FORBIDDEN;
         }
     }
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, NULL);
+  log_access_verdict(APLOG_MARK, r, 1, TRUE, repos_path, NULL);
 
   return OK;
 }
@@ -858,7 +869,7 @@ access_checker(request_rec *r)
         return DECLINED;
 
       if (!authn_required)
-        log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
+        log_access_verdict(APLOG_MARK, r, 0, FALSE, repos_path, dest_repos_path);
 
       return HTTP_FORBIDDEN;
     }
@@ -866,7 +877,7 @@ access_checker(request_rec *r)
   if (status != OK)
     return status;
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+  log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
 
   return OK;
 }
@@ -893,7 +904,7 @@ check_user_id(request_rec *r)
   if (status == OK)
     {
       apr_table_setn(r->notes, "authz_svn-anon-ok", (const char*)1);
-      log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+      log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
       return OK;
     }
 
@@ -923,7 +934,7 @@ auth_checker(request_rec *r)
     {
       if (conf->authoritative)
         {
-          log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
+          log_access_verdict(APLOG_MARK, r, 0, FALSE, repos_path, dest_repos_path);
           ap_note_auth_failure(r);
           return HTTP_FORBIDDEN;
         }
@@ -933,7 +944,7 @@ auth_checker(request_rec *r)
   if (status != OK)
     return status;
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+  log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
 
   return OK;
 }

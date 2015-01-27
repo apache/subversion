@@ -49,14 +49,6 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
                               const svn_fs_x__id_t *id,
                               apr_pool_t *scratch_pool);
 
-/* Set *ROOT_ID to the noderev ID for the root of revision REV in
-   filesystem FS.  Do temporary allocations in SCRATCH_POOL. */
-svn_error_t *
-svn_fs_x__rev_get_root(svn_fs_x__id_t *root_id,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *scratch_pool);
-
 /* Verify that representation REP in FS can be accessed.
    Do any allocations in SCRATCH_POOL. */
 svn_error_t *
@@ -79,13 +71,13 @@ svn_fs_x__rep_chain_length(int *chain_length,
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
    not set, bypass fulltext cache lookup for this rep and don't put the
    reconstructed fulltext into cache.
-   Use POOL for allocations. */
+   Allocate *CONTENT_P in RESULT_POOL. */
 svn_error_t *
 svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_t *fs,
                        svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Determine on-disk and expanded sizes of the representation identified
  * by ENTRY in FS and return the result in PACKED_LEN and EXPANDED_LEN,
@@ -117,13 +109,16 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 
 /* Set *STREAM_P to a delta stream turning the contents of the file SOURCE
    into the contents of the file TARGET, allocated in RESULT_POOL.
-   If SOURCE is NULL, an empty string will be used in its stead. */
+   If SOURCE is NULL, an empty string will be used in its stead.
+   Use SCRATCH_POOL for temporary allocations.
+ */
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
                                 svn_fs_x__noderev_t *source,
                                 svn_fs_x__noderev_t *target,
-                                apr_pool_t *result_pool);
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* Set *ENTRIES to an apr_array_header_t of dirent structs that contain
    the directory entries of node-revision NODEREV in filesystem FS.  The
@@ -147,24 +142,31 @@ svn_fs_x__find_dir_entry(apr_array_header_t *entries,
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
-   be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
+   be NULL.  The value referenced by HINT can be used to speed up
+   consecutive calls when travering the directory in name order.
+   Any value is allowed, however APR_SIZE_MAX gives best performance
+   when there has been no previous lookup for the same directory.
+
+   The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
 svn_error_t *
 svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
                                  svn_fs_t *fs,
                                  svn_fs_x__noderev_t *noderev,
                                  const char *name,
+                                 apr_size_t *hint,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
-   node-revision NODEREV as seen in filesystem FS.  Use POOL for
-   temporary allocations. */
+   node-revision NODEREV as seen in filesystem FS.  Allocate the result
+   in RESULT_POOL and use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__get_proplist(apr_hash_t **proplist,
                        svn_fs_t *fs,
                        svn_fs_x__noderev_t *noderev,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.
  * Allocate the result in POOL.

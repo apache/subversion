@@ -2240,7 +2240,7 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
     {
       /* Some callers expect not NULL */
       *conflicts = apr_array_make(result_pool, 0,
-                                  sizeof(svn_wc_conflict_description2_t *));;
+                                  sizeof(svn_wc_conflict_description2_t *));
       return SVN_NO_ERROR;
     }
 

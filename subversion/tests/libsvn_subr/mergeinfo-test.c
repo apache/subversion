@@ -104,7 +104,7 @@ verify_mergeinfo_parse(const char *input,
 
       /* Were we expecting any more ranges? */
       if (j < MAX_NBR_RANGES - 1
-          && !expected_ranges[j].end == 0)
+          && expected_ranges[j].end != 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
                                  "produce the expected number of ranges",

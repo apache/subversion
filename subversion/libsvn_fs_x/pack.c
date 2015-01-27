@@ -2229,19 +2229,19 @@ pack_shard(const char *revs_dir,
   return SVN_NO_ERROR;
 }
 
-struct pack_baton
+typedef struct pack_baton_t
 {
   svn_fs_t *fs;
   svn_fs_pack_notify_t notify_func;
   void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} pack_baton_t;
 
 
 /* The work-horse for svn_fs_x__pack, called with the FS write lock.
    This implements the svn_fs_x__with_write_lock() 'body' callback
-   type.  BATON is a 'struct pack_baton *'.
+   type.  BATON is a 'pack_baton_t *'.
 
    WARNING: if you add a call to this function, please note:
      The code currently assumes that any piece of code running with
@@ -2257,7 +2257,7 @@ static svn_error_t *
 pack_body(void *baton,
           apr_pool_t *scratch_pool)
 {
-  struct pack_baton *pb = baton;
+  pack_baton_t *pb = baton;
   svn_fs_x__data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
   apr_int64_t i;
@@ -2313,7 +2313,7 @@ svn_fs_x__pack(svn_fs_t *fs,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  struct pack_baton pb = { 0 };
+  pack_baton_t pb = { 0 };
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;

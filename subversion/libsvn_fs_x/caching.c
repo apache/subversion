@@ -172,21 +172,21 @@ warn_and_fail_on_cache_errors(svn_error_t *err,
 
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 /* Baton to be used for the dump_cache_statistics() pool cleanup function, */
-struct dump_cache_baton_t
+typedef struct dump_cache_baton_t
 {
   /* the pool about to be cleaned up. Will be used for temp. allocations. */
   apr_pool_t *pool;
 
   /* the cache to dump the statistics for */
   svn_cache__t *cache;
-};
+} dump_cache_baton_t;
 
 /* APR pool cleanup handler that will printf the statistics of the
    cache referenced by the baton in BATON_VOID. */
 static apr_status_t
 dump_cache_statistics(void *baton_void)
 {
-  struct dump_cache_baton_t *baton = baton_void;
+  dump_cache_baton_t *baton = baton_void;
 
   apr_status_t result = APR_SUCCESS;
   svn_cache__info_t info;
@@ -267,7 +267,7 @@ init_callbacks(svn_cache__t *cache,
       /* schedule printing the access statistics upon pool cleanup,
        * i.e. end of FSX session.
        */
-      struct dump_cache_baton_t *baton;
+      dump_cache_baton_t *baton;
 
       baton = apr_palloc(pool, sizeof(*baton));
       baton->pool = pool;

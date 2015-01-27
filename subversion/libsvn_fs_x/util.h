@@ -146,13 +146,13 @@ svn_fs_x__path_revprop_generation(svn_fs_t *fs,
 
 /* Return the path of the pack-related file that for revision REV in FS.
  * KIND specifies the file name base, e.g. "pack".
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_rev_packed(svn_fs_t *fs,
                           svn_revnum_t rev,
                           const char *kind,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool);
 
 /* Return the full path of the rev shard directory that will contain
  * revision REV in FS.  Allocate the result in RESULT_POOL.
@@ -163,15 +163,15 @@ svn_fs_x__path_rev_shard(svn_fs_t *fs,
                          apr_pool_t *result_pool);
 
 /* Return the full path of the non-packed rev file containing revision REV
- * in FS.  Allocate the result in POOL.
+ * in FS.  Allocate the result in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_rev(svn_fs_t *fs,
                    svn_revnum_t rev,
-                   apr_pool_t *pool);
+                   apr_pool_t *result_pool);
 
 /* Set *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate *PATH in POOL.
+   Allocate *PATH in RESULT_POOL.
 
    Note: If the caller does not have the write lock on FS, then the path is
    not guaranteed to be correct or to remain correct after the function
@@ -181,7 +181,7 @@ svn_fs_x__path_rev(svn_fs_t *fs,
 const char *
 svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 /* Return the full path of the revision properties shard directory that
  * will contain the properties of revision REV in FS.
@@ -194,20 +194,21 @@ svn_fs_x__path_revprops_shard(svn_fs_t *fs,
 
 /* Return the full path of the revision properties pack shard directory
  * that will contain the packed properties of revision REV in FS.
- * Allocate the result in POOL.
+ * Allocate the result in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *result_pool);
 
 /* Return the full path of the non-packed revision properties file that
- * contains the props for revision REV in FS.  Allocate the result in POOL.
+ * contains the props for revision REV in FS.
+ * Allocate the result in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_revprops(svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool);
 
 /* Convert the TXN_ID into a string, allocated from RESULT_POOL.
  */
@@ -221,12 +222,12 @@ svn_fs_x__txn_by_name(svn_fs_x__txn_id_t *txn_id,
                       const char *txn_name);
 
 /* Return the path of the directory containing the transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Return the path of the 'transactions' directory in FS.
  * The result will be allocated in RESULT_POOL.
@@ -252,57 +253,57 @@ svn_fs_x__path_txn_proto_revs(svn_fs_t *fs,
                               apr_pool_t *result_pool);
 
 /* Return the path of the changes file for transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_changes(svn_fs_t *fs,
                            svn_fs_x__txn_id_t txn_id,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* Return the path of the file containing the log-to-phys index for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char*
 svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the phys-to-log index for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char*
 svn_fs_x__path_p2l_proto_index(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the transaction properties for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_props(svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Return the path of the file containing the "final" transaction
  * properties for the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_props_final(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the node and copy ID counters for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
                             svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 /* Return the path of the file storing the oldest non-packed revision in FS.
  * The result will be allocated in RESULT_POOL.
@@ -313,66 +314,71 @@ svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs,
 
 /* Return the path of the file containing item_index counter for
  * the transaction identified by TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_item_index(svn_fs_t *fs,
                               svn_fs_x__txn_id_t txn_id,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
                              svn_fs_x__txn_id_t txn_id,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool);
 
 /* Return the path of the proto-revision lock file for transaction TXN_ID
- * in FS.  The result will be allocated in POOL.
+ * in FS.  The result will be allocated in RESULT_POOL.
  */
 const char *
 svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
                                   svn_fs_x__txn_id_t txn_id,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool);
 
 /* Return the path of the file containing the in-transaction node revision
- * identified by ID in FS.  The result will be allocated in POOL.
+ * identified by ID in FS.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_rev(svn_fs_t *fs,
                             const svn_fs_x__id_t *id,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Return the path of the file containing the in-transaction properties of
- * the node identified by ID in FS.  The result will be allocated in POOL.
+ * the node identified by ID in FS.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_props(svn_fs_t *fs,
                               const svn_fs_x__id_t *id,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Return the path of the file containing the directory entries of the
  * in-transaction directory node identified by ID in FS.
- * The result will be allocated in POOL.
+ * The result will be allocated in RESULT_POOL, temporaries in SCRATCH_POOL.
  */
 const char *
 svn_fs_x__path_txn_node_children(svn_fs_t *fs,
                                  const svn_fs_x__id_t *id,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Check that BUF, a nul-terminated buffer of text from file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.
    TITLE contains a user-visible description of the file, usually the
    short file name.
 
-   Uses POOL for temporary allocation. */
+   Uses SCRATCH_POOL for temporary allocation. */
 svn_error_t *
 svn_fs_x__check_file_buffer_numeric(const char *buf,
                                     apr_off_t offset,
                                     const char *path,
                                     const char *title,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
  * by #svn_fs_fs__path_min_unpacked_rev() for FS.
@@ -384,11 +390,11 @@ svn_fs_x__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
                                 apr_pool_t *scratch_pool);
 
 /* Re-read the MIN_UNPACKED_REV member of FS from disk.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__update_min_unpacked_rev(svn_fs_t *fs,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /* Atomically update the 'min-unpacked-rev' file in FS to hold the specifed
  * REVNUM.  Perform temporary allocations in SCRATCH_POOL.
@@ -436,11 +442,11 @@ svn_fs_x__get_file_offset(apr_off_t *offset_p,
                           apr_pool_t *scratch_pool);
 
 /* Read the file FNAME and store the contents in *BUF.
-   Allocations are performed in POOL. */
+   Allocations are performed in RESULT_POOL. */
 svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* Reads a line from STREAM and converts it to a 64 bit integer to be
  * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave

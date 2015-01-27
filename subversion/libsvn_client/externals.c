@@ -1186,6 +1186,17 @@ svn_client__export_externals(apr_hash_t *externals,
                                                                  sub_iterpool),
                                               sub_iterpool));
 
+          /* First notify that we're about to handle an external. */
+          if (ctx->notify_func2)
+            {
+              ctx->notify_func2(
+                       ctx->notify_baton2,
+                       svn_wc_create_notify(item_abspath,
+                                            svn_wc_notify_update_external,
+                                            sub_iterpool),
+                       sub_iterpool);
+            }
+
           SVN_ERR(wrap_external_error(
                           ctx, item_abspath,
                           svn_client_export5(NULL, new_url, item_abspath,

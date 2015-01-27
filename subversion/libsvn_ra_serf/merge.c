@@ -271,7 +271,8 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 static svn_error_t *
 setup_merge_headers(serf_bucket_t *headers,
                     void *baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
 
@@ -337,7 +338,8 @@ static svn_error_t*
 create_merge_body(serf_bucket_t **bkt,
                   void *baton,
                   serf_bucket_alloc_t *alloc,
-                  apr_pool_t *pool)
+                  apr_pool_t *pool /* request pool */,
+                  apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
   serf_bucket_t *body_bkt;
@@ -389,7 +391,6 @@ create_merge_body(serf_bucket_t **bkt,
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                        svn_ra_serf__session_t *session,
-                       svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
                        apr_hash_t *lock_tokens,
                        svn_boolean_t keep_locks,
@@ -418,14 +419,13 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                                            NULL, merge_closed, NULL,
                                            merge_ctx,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "MERGE";
   handler->path = merge_ctx->merge_url;
   handler->body_delegate = create_merge_body;
   handler->body_delegate_baton = merge_ctx;
-  handler->conn = conn;
-  handler->session = session;
 
   handler->header_delegate = setup_merge_headers;
   handler->header_delegate_baton = merge_ctx;
@@ -438,6 +438,14 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
     return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *commit_info = merge_ctx->commit_info;
+
+  /* Sanity check (Reported to be triggered by CodePlex's svnbridge) */
+  if (! SVN_IS_VALID_REVNUM(merge_ctx->commit_info->revision))
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                              _("The MERGE response did not include "
+                                "a new revision"));
+    }
 
   return SVN_NO_ERROR;
 }

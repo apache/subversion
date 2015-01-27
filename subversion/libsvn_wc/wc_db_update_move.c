@@ -2230,6 +2230,19 @@ bump_moved_layer(svn_boolean_t *recurse,
        always have sufficient depth to bump subtree moves. */
     can_bump = TRUE;
 
+  /* Are we allowed to bump */
+  if (can_bump)
+    {
+      svn_boolean_t locked;
+
+      SVN_ERR(svn_wc__db_wclock_owns_lock_internal(&locked, wcroot,
+                                                   dst_relpath,
+                                                   FALSE, scratch_pool));
+
+      if (!locked)
+        can_bump = FALSE;
+    }
+
   if (!can_bump)
     {
       SVN_ERR(bump_mark_tree_conflict(wcroot, src_relpath,
