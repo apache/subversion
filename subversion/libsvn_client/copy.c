@@ -394,6 +394,8 @@ resolve_pinned_externals(apr_hash_t **new_externals,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
+  *new_externals = apr_hash_make(result_pool);
+
   if (svn_path_is_url(pair->src_abspath_or_url))
     {
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url, ra_session,
@@ -439,7 +441,6 @@ resolve_pinned_externals(apr_hash_t **new_externals,
       return SVN_NO_ERROR;
     }
   
-  *new_externals = apr_hash_make(result_pool);
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, externals_props);
        hi;
