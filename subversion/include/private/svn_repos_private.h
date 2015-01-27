@@ -363,6 +363,34 @@ svn_repos__dump_revision_record(svn_stream_t *dump_stream,
                                 svn_boolean_t props_section_always,
                                 apr_pool_t *scratch_pool);
 
+/* Output node headers and props.
+ *
+ * Output HEADERS, content length headers, blank line, and
+ * then PROPS_STR (if non-null) to DUMP_STREAM.
+ *
+ * HEADERS is an array of headers as struct {const char *key, *val;}.
+ * Write them all in the given order.
+ *
+ * PROPS_STR is the property content block, including a terminating
+ * 'PROPS_END\n' line. Iff PROPS_STR is non-null, write a
+ * Prop-content-length header and the prop content block.
+ *
+ * Iff HAS_TEXT is true, write a Text-content length, using the value
+ * TEXT_CONTENT_LENGTH.
+ *
+ * Write a Content-length header, its value being the sum of the
+ * Prop- and Text- content length headers, if props and/or text are present
+ * or if CONTENT_LENGTH_ALWAYS is true.
+ */
+svn_error_t *
+svn_repos__dump_node_record(svn_stream_t *dump_stream,
+                            apr_array_header_t *headers,
+                            svn_stringbuf_t *props_str,
+                            svn_boolean_t has_text,
+                            svn_filesize_t text_content_length,
+                            svn_boolean_t content_length_always,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
