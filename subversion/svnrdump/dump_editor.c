@@ -478,8 +478,8 @@ dump_mkdir(struct dump_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
-/* Dump pending headers and properties for the directory DB,
-   to allow starting the dump of a child node */
+/* Dump pending headers and properties for the directory EB->pending_db (if
+ * not null), to allow starting the dump of a child node */
 static svn_error_t *
 dump_pending_dir(struct dump_edit_baton *eb,
                  apr_pool_t *scratch_pool)
