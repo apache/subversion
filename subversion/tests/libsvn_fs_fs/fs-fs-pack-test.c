@@ -25,8 +25,10 @@
 #include <apr_pools.h>
 
 #include "../svn_test.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
+#include "../../libsvn_fs_fs/util.h"
 
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -1243,6 +1245,134 @@ id_parser_test(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-plain_0_length"
+
+static svn_error_t *
+receive_index(const svn_fs_fs__p2l_entry_t *entry,
+              void *baton,
+              apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *entries = baton;
+  APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *)
+    = apr_pmemdup(entries->pool, entry, sizeof(*entry));
+
+  return SVN_NO_ERROR;
+}
+
+static char *
+stringbuf_find(svn_stringbuf_t *rev_contents,
+               const char *substring)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(substring);
+
+  for (i = 0; i < rev_contents->len - len + 1; ++i)
+      if (!memcmp(rev_contents->data + i, substring, len))
+        return rev_contents->data + i;
+
+  return NULL;
+}
+
+
+static svn_stringbuf_t *
+get_line(svn_stringbuf_t *rev_contents,
+         const char *prefix,
+         apr_pool_t *pool)
+{
+  char *end, *start = stringbuf_find(rev_contents, prefix);
+  if (start == NULL)
+    return svn_stringbuf_create_empty(pool);
+
+  end = strchr(start, '\n');
+  if (end == NULL)
+    return svn_stringbuf_create_empty(pool);
+
+  return svn_stringbuf_ncreate(start, end - start, pool);
+}
+
+static svn_error_t *
+plain_0_length(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  const char *rev_path;
+  svn_stringbuf_t *rev_contents, *props_line;
+  char *text;
+  apr_hash_t *fs_config;
+  svn_filesize_t file_length;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that does not deltify properties and does not share reps
+     on its own - makes it easier to do that later by hand. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+  ffd->deltify_properties = FALSE;
+  ffd->rep_sharing_allowed = FALSE;
+
+  /* Create one file node with matching contents and property reps. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", "END\n", pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "foo", "x", NULL, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Redirect text rep to props rep. */
+  rev_path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
+  SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
+
+  props_line = get_line(rev_contents, "props: ", pool);
+  text = stringbuf_find(rev_contents, "text: ");
+
+  if (text)
+    {
+      /* Explicitly set the last number before the MD5 to 0 */
+      strstr(props_line->data, " 2d29")[-1] = '0';
+
+      /* Add a padding space - in case we shorten the number in TEXT */
+      svn_stringbuf_appendbyte(props_line, ' ');
+
+      /* Make text point to the PLAIN data rep with no expanded size info. */
+      memcpy(text + 6, props_line->data + 7, props_line->len - 7);
+    }
+
+  SVN_ERR(svn_io_write_atomic(rev_path, rev_contents->data,
+                              rev_contents->len, NULL, pool));
+
+  if (svn_fs_fs__use_log_addressing(fs))
+    {
+      /* Refresh index data (checksums). */
+      apr_array_header_t *entries = apr_array_make(pool, 4, sizeof(void *));
+      SVN_ERR(svn_fs_fs__dump_index(fs, rev, receive_index, entries,
+                                    NULL, NULL, pool));
+      SVN_ERR(svn_fs_fs__load_index(fs, rev, entries, pool));
+    }
+
+  /* Create an independent FS instances with separate caches etc. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, fs_config, pool, pool));
+
+  /* Now, check that we get the correct file length. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_file_length(&file_length, root, "foo", pool));
+
+  SVN_TEST_ASSERT(file_length == 4);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1285,6 +1415,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "change revprops with enabled and disabled caching"),
     SVN_TEST_OPTS_PASS(id_parser_test,
                        "id parser test"),
+    SVN_TEST_OPTS_PASS(plain_0_length,
+                       "file with 0 expanded-length, issue #4554"),
     SVN_TEST_NULL
   };
 

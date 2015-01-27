@@ -484,7 +484,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                                NULL, locks_closed, NULL,
                                                lock_ctx,
                                                lock_pool);
-      handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, lock_pool);
+      handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                                  lock_pool);
 
       handler->method = "LOCK";
       handler->path = req_url;
@@ -496,8 +497,6 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       if (session->cur_conn >= session->num_conns)
         session->cur_conn = 0;
-
-      handler->session = session;
 
       handler->header_delegate = set_lock_headers;
       handler->header_delegate_baton = lock_ctx;
@@ -650,12 +649,10 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       req_url = svn_path_url_add_component2(session->session_url.path, lock_ctx->path,
                                             lock_pool);
 
-      handler = svn_ra_serf__create_handler(lock_pool);
+      handler = svn_ra_serf__create_handler(session, lock_pool);
 
       handler->method = "UNLOCK";
       handler->path = req_url;
-      handler->conn = session->conns[0];
-      handler->session = session;
 
       handler->header_delegate = set_unlock_headers;
       handler->header_delegate_baton = lock_ctx;
