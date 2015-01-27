@@ -497,9 +497,8 @@ class DumpParser:
     regex = '([^:]*): (.*)$'
     m = re.match(regex, self.lines[self.current])
     if not m:
-      raise SVNDumpParseError("expected a header '%s' at line %d, but found:\n%s"
-                              % (regex, self.current,
-                                 self.lines[self.current]))
+      raise SVNDumpParseError("expected a header at line %d, but found:\n%s"
+                              % (self.current, self.lines[self.current]))
     self.current += 1
     return m.groups()
 
@@ -509,6 +508,7 @@ class DumpParser:
       key, val = self.parse_header(self)
       headers.append((key, val))
     return headers
+
 
   def parse_boolean(self, header, required):
     return self.parse_line(header + ': (false|true)$', required)
@@ -627,27 +627,42 @@ class DumpParser:
 
   def parse_one_node(self):
     node = {}
-    headers_list = self.parse_headers()
-    headers = { k:v for (k, v) in headers_list }
-    for key, header in [
-        ('kind', 'Node-kind'),
-        ('copyfrom_rev', 'Node-copyfrom-rev'),
-        ('copyfrom_path', 'Node-copyfrom-path'),
-        ('copy_md5', 'Text-copy-source-md5'),
-        ('copy_sha1', 'Text-copy-source-sha1'),
-        ('prop_delta', 'Prop-delta'),
-        ('prop_length', 'Prop-content-length'),
-        ('text_delta', 'Text-delta'),
-        ('text_delta_base_md5', 'Text-delta-base-md5'),
-        ('text_delta_base_sha1', 'Text-delta-base-sha1'),
-        ('text_length', 'Text-content-length'),
-        ('text_md5', 'Text-content-md5'),
-        ('text_sha1', 'Text-content-sha1'),
-        ('content_length', 'Content-length'),
-        ]:
-      node[key] = headers.get(header, None)
 
-    action = headers['Node-action']
+    # optional 'kind' and required 'action' must be next
+    node['kind'] = self.parse_kind()
+    action = self.parse_action()
+
+    # read any remaining headers
+    headers_list = self.parse_headers()
+    headers = dict(headers_list)
+
+    # Content-length must be last, if present
+    if 'Content-length' in headers and headers_list[-1][0] != 'Content-length':
+      raise SVNDumpParseError("'Content-length' header is not last, "
+                              "in header block ending at line %d"
+                              % (self.current,))
+
+    # parse the remaining optional headers and store in specific keys in NODE
+    for key, header, regex in [
+        ('copyfrom_rev',    'Node-copyfrom-rev',    '([0-9]+)$'),
+        ('copyfrom_path',   'Node-copyfrom-path',   '(.*)$'),
+        ('copy_md5',        'Text-copy-source-md5', '([0-9a-z]+)$'),
+        ('copy_sha1',       'Text-copy-source-sha1','([0-9a-z]+)$'),
+        ('prop_length',     'Prop-content-length',  '([0-9]+)$'),
+        ('text_length',     'Text-content-length',  '([0-9]+)$'),
+        ('text_md5',        'Text-content-md5',     '([0-9a-z]+)$'),
+        ('text_sha1',       'Text-content-sha1',    '([0-9a-z]+)$'),
+        ('content_length',  'Content-length',       '([0-9]+)$'),
+        ]:
+      if not header in headers:
+        node[key] = None
+        continue
+      m = re.match(regex, headers[header])
+      if not m:
+        raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                % (regex, self.current,
+                                   self.lines[self.current]))
+      node[key] = m.group(1)
 
     self.parse_blank()
     if node['prop_length']:

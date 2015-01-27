@@ -660,66 +660,6 @@ new_node_record(void **node_baton,
 }
 
 
-/* Output node headers and props.
- *
- * Write HEADERS, content length headers, a blank line, and the properties
- * content section PROPS_STR (if non-null) to DUMP_STREAM.
- *
- * HEADERS is an array of headers as struct {const char *key, *val;}.
- * Write them all in the given order.
- *
- * PROPS_STR is the property content block, including a terminating
- * 'PROPS_END\n' line. Iff PROPS_STR is non-null, write a
- * Prop-content-length header and the prop content block.
- *
- * Iff HAS_TEXT is true, write a Text-content length, using the value
- * TEXT_CONTENT_LENGTH.
- *
- * Always write a Content-length header, its value being the sum of the
- * Prop- and Text- content length headers.
- * ### TODO: Make it optional (only written if props and/or text present).
- */
-static svn_error_t *
-output_node_record(svn_stream_t *dump_stream,
-                   apr_array_header_t *headers,
-                   svn_stringbuf_t *props_str,
-                   svn_boolean_t has_text,
-                   svn_filesize_t text_content_length,
-                   apr_pool_t *scratch_pool)
-{
-  svn_filesize_t content_length = 0;
-
-  /* add content-length headers */
-  if (props_str)
-    {
-      svn_repos__dumpfile_header_pushf(
-        headers, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
-        "%" APR_SIZE_T_FMT, props_str->len);
-      content_length += props_str->len;
-    }
-  if (has_text)
-    {
-      svn_repos__dumpfile_header_pushf(
-        headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-        "%" SVN_FILESIZE_T_FMT, text_content_length);
-      content_length += text_content_length;
-    }
-  svn_repos__dumpfile_header_pushf(
-    headers, SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-    "%" SVN_FILESIZE_T_FMT, content_length);
-
-  /* write the headers */
-  SVN_ERR(svn_repos__dump_headers(dump_stream, headers, TRUE, scratch_pool));
-
-  /* write the props */
-  if (props_str)
-    {
-      SVN_ERR(svn_stream_write(dump_stream, props_str->data, &props_str->len));
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Examine the mergeinfo in INITIAL_VAL, omitting missing merge
    sources or renumbering revisions in rangelists as appropriate, and
    return the (possibly new) mergeinfo in *FINAL_VAL (allocated from
@@ -924,12 +864,13 @@ set_fulltext(svn_stream_t **stream, void *node_baton)
             {
               svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
             }
-          SVN_ERR(output_node_record(nb->rb->pb->out_stream,
-                                     nb->headers,
-                                     nb->has_props ? nb->props : NULL,
-                                     nb->has_text,
-                                     nb->tcl,
-                                     nb->node_pool));
+          SVN_ERR(svn_repos__dump_node_record(nb->rb->pb->out_stream,
+                                              nb->headers,
+                                              nb->has_props ? nb->props : NULL,
+                                              nb->has_text,
+                                              nb->tcl,
+                                              TRUE /*content_length_always*/,
+                                              nb->node_pool));
         }
       *stream = nb->rb->pb->out_stream;
     }
@@ -957,12 +898,13 @@ close_node(void *node_baton)
         {
           svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
         }
-      SVN_ERR(output_node_record(nb->rb->pb->out_stream,
-                                 nb->headers,
-                                 nb->has_props ? nb->props : NULL,
-                                 nb->has_text,
-                                 nb->tcl,
-                                 nb->node_pool));
+      SVN_ERR(svn_repos__dump_node_record(nb->rb->pb->out_stream,
+                                          nb->headers,
+                                          nb->has_props ? nb->props : NULL,
+                                          nb->has_text,
+                                          nb->tcl,
+                                          TRUE /*content_length_always*/,
+                                          nb->node_pool));
     }
 
   /* put an end to node. */
