@@ -1337,10 +1337,9 @@ public interface ISVNClient
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
      * <p>
-     * Behaves like the 1.9 version with options set to their default values.
-     * @deprecated
+     * Behaves like the 1.9 version with <code>options</code> set to
+     * their default values.
      */
-    @Deprecated
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,

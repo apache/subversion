@@ -651,10 +651,6 @@ public class SVNClient implements ISVNClient
                                 boolean ignoreExternals)
             throws ClientException;
 
-    /**
-     * @deprecated
-     */
-    @Deprecated
     public void blame(String path, Revision pegRevision,
                       Revision revisionStart,
                       Revision revisionEnd, boolean ignoreMimeType,
