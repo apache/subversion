@@ -1860,6 +1860,12 @@ response_done(serf_request_t *request,
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
+  if ((handler->sline.code >= 300 && handler->sline.code < 399)
+      && !handler->no_fail_on_http_redirect_status)
+    {
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
   return SVN_NO_ERROR;
 }
 
