@@ -511,6 +511,9 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, scratch_pool));
 
+  if (corrected_url)
+    opt_ctx->handler->no_fail_on_http_redirect_status = TRUE;
+
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   /* If our caller cares about server redirections, and our response

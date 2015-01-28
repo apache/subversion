@@ -206,7 +206,6 @@ def redirected_externals(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_ra_type_dav)
-@XFail()
 def redirected_copy(sbox):
   "redirected copy"
 
