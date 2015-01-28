@@ -90,6 +90,9 @@ svn_diff_file_options_t *DiffOptions::fileOptions(SVN::Pool &resultPool) const
   if (flags & IGNORE_EOL_STYLE)
     opt->ignore_eol_style = TRUE;
 
+  if (flags & SHOW_C_FUNCTION)
+    opt->show_c_function = TRUE;
+
   /* TODO: Support context size */
 
   return opt;
