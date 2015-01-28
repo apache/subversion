@@ -463,8 +463,8 @@ mtcc_verify_create(svn_client__mtcc_t *mtcc,
         return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
     }
 
-  /* mod_dav_svn allows overwriting existing directories. Let's hide that
-     for users of this api */
+  /* mod_dav_svn used to allow overwriting existing directories. Let's hide
+     that for users of this api */
   SVN_ERR(svn_client__mtcc_check_path(&kind, new_relpath, FALSE,
                                       mtcc, scratch_pool));
 
