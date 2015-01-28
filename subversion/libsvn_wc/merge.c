@@ -180,7 +180,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       = prop ? (prop->value ? prop->value->data : NULL) : old_mime_value;
 
     old_is_binary = old_mime_value && svn_mime_type_is_binary(old_mime_value);
-    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);;
+    new_is_binary = new_mime_value && svn_mime_type_is_binary(new_mime_value);
   }
 
   /* See what translations we want to do */
