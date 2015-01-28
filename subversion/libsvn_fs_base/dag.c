@@ -1028,12 +1028,14 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
               void *val;
               svn_fs_dirent_t *dirent;
 
+              svn_pool_clear(subpool);
               apr_hash_this(hi, NULL, NULL, &val);
               dirent = val;
               SVN_ERR(svn_fs_base__dag_delete_if_mutable(fs, dirent->id,
                                                          txn_id, trail,
                                                          subpool));
             }
+          svn_pool_destroy(subpool);
         }
     }
 
