@@ -1136,6 +1136,8 @@ queue_externals_change_path_infos(apr_array_header_t *new_path_infos,
       info->externals = externals_prop;
     }
 
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
