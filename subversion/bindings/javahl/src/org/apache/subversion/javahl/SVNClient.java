@@ -651,11 +651,27 @@ public class SVNClient implements ISVNClient
                                 boolean ignoreExternals)
             throws ClientException;
 
+    /**
+      * @deprecated
+      */
+    @Deprecated
+    public void blame(String path, Revision pegRevision,
+                       Revision revisionStart,
+                       Revision revisionEnd, boolean ignoreMimeType,
+                       boolean includeMergedRevisions,
+                       BlameCallback callback)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, callback, null);
+    }
+
     public native void blame(String path, Revision pegRevision,
-                             Revision revisionStart,
-                             Revision revisionEnd, boolean ignoreMimeType,
-                             boolean includeMergedRevisions,
-                             BlameCallback callback)
+                               Revision revisionStart,
+                               Revision revisionEnd, boolean ignoreMimeType,
+                               boolean includeMergedRevisions,
+                               BlameCallback callback,
+                               DiffOptions options)
             throws ClientException;
 
     public native void setConfigDirectory(String configDir)
