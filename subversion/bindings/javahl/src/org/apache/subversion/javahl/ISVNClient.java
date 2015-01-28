@@ -1323,12 +1323,29 @@ public interface ISVNClient
      *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
+     * @param options       additional options for controlling the output
      * @throws ClientException
+     * @since 1.9
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
-               BlameCallback callback) throws ClientException;
+               BlameCallback callback, DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * <p>
+     * Behaves like the 1.9 version with options set to their default values.
+     * @deprecated
+     */
+    @Deprecated
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions,
+               BlameCallback callback)
+            throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the

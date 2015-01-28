@@ -71,5 +71,26 @@ apr_array_header_t *DiffOptions::optionsArray(SVN::Pool &resultPool) const
   if (flags & SHOW_C_FUNCTION)
     APR_ARRAY_PUSH(opt, const char*) = "--show-c-function";
 
+  /* TODO: Support -U (context size) */
+
+  return opt;
+}
+
+svn_diff_file_options_t *DiffOptions::fileOptions(SVN::Pool &resultPool) const
+{
+  svn_diff_file_options_t *opt;
+
+  opt = svn_diff_file_options_create(resultPool.getPool());
+
+  if (flags & IGNORE_ALL_SPACE)
+    opt->ignore_space = svn_diff_file_ignore_space_all;
+  else if (flags & IGNORE_SPACE_CHANGE)
+    opt->ignore_eol_style = svn_diff_file_ignore_space_change;
+
+  if (flags & IGNORE_EOL_STYLE)
+    opt->ignore_eol_style = TRUE;
+
+  /* TODO: Support context size */
+
   return opt;
 }
