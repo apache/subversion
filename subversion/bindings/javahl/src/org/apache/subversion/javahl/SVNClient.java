@@ -652,14 +652,14 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /**
-      * @deprecated
-      */
+     * @deprecated
+     */
     @Deprecated
     public void blame(String path, Revision pegRevision,
-                       Revision revisionStart,
-                       Revision revisionEnd, boolean ignoreMimeType,
-                       boolean includeMergedRevisions,
-                       BlameCallback callback)
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback)
             throws ClientException
     {
         blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
@@ -667,11 +667,11 @@ public class SVNClient implements ISVNClient
     }
 
     public native void blame(String path, Revision pegRevision,
-                               Revision revisionStart,
-                               Revision revisionEnd, boolean ignoreMimeType,
-                               boolean includeMergedRevisions,
-                               BlameCallback callback,
-                               DiffOptions options)
+                             Revision revisionStart,
+                             Revision revisionEnd, boolean ignoreMimeType,
+                             boolean includeMergedRevisions,
+                             BlameCallback callback,
+                             DiffOptions options)
             throws ClientException;
 
     public native void setConfigDirectory(String configDir)
