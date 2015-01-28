@@ -1853,9 +1853,7 @@ response_done(serf_request_t *request,
   if (handler->server_error)
     return svn_ra_serf__server_error_create(handler, scratch_pool);
 
-  if ((handler->sline.code >= 400 || handler->sline.code <= 199)
-      && !handler->session->pending_error
-      && !handler->no_fail_on_http_failure_status)
+  if (handler->sline.code >= 400 || handler->sline.code <= 199)
     {
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
