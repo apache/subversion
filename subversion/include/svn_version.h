@@ -306,6 +306,11 @@ typedef struct svn_version_extended_t svn_version_extended_t;
  * retrieve (for example, the OS release name, list of shared
  * libraries, etc.).  Use @a pool for all allocations.
  *
+ * @note This function may allocate significant auxiliary resources (memory and
+ * file descriptors) in @a pool.  It is recommended to clear @a pool after
+ * calling this function and copying the returned data to suitable
+ * longer-lived memory.
+ *
  * @since New in 1.8.
  */
 const svn_version_extended_t *
