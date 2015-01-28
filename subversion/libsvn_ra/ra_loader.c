@@ -279,7 +279,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
   const char *store_pp_plaintext
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
-  const char *corrected_url;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -482,7 +481,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  err = vtable->open_session(session, &corrected_url, repos_URL,
+  err = vtable->open_session(session, corrected_url_p,
+                             repos_URL,
                              callbacks, callback_baton, config, sesspool);
 
   if (err)
@@ -495,21 +495,9 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
-  if (corrected_url_p && corrected_url)
+  if (corrected_url_p && *corrected_url_p)
     {
-      if (! svn_path_is_url(corrected_url))
-        {
-          /* RFC1945 and RFC2616 state that the Location header's
-             value (from whence this CORRECTED_URL ultimately comes),
-             if present, must be an absolute URI.  But some Apache
-             versions (those older than 2.2.11, it seems) transmit
-             only the path portion of the URI.  See issue #3775 for
-             details. */
-          apr_uri_t corrected_URI = repos_URI;
-          corrected_URI.path = (char *)corrected_url;
-          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
-        }
-      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
+      /* *session_p = NULL; */
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }
