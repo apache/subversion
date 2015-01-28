@@ -373,6 +373,8 @@ public interface ISVNClient
      * @param makeParents Whether to create intermediate parents
      * @param ignoreExternals Whether or not to process external definitions
      *                        as part of this operation.
+     * @param pinExternals Whether or not to pin external definitions as part
+     *                     of this operation.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -380,6 +382,19 @@ public interface ISVNClient
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
      * @throws NullPointerException if the <code>sources</code> list is empty.
+     */
+    void copy(List<CopySource> sources, String destPath,
+              boolean copyAsChild, boolean makeParents,
+              boolean ignoreExternals,  boolean pinExternals,
+              Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+            throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved.
+     * <p>
+     * Behaves like the 1.9 version with
+     *     <code>pinExternals = false</code> and
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
