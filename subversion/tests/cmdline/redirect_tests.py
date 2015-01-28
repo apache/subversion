@@ -205,6 +205,20 @@ def redirected_externals(sbox):
   verify_url(sbox.ospath('A/C/dirX'), sbox.repo_url + '/A/B/F')
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+@XFail()
+def redirected_copy(sbox):
+  "redirected copy"
+
+  sbox.build(create_wc=False)
+
+  expected_error = "svn: E175011: Repository moved permanently"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url() + '/A',
+                                     '^/copy-of-A')
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -216,6 +230,7 @@ test_list = [ None,
               redirected_update,
               redirected_nonroot_update,
               redirected_externals,
+              redirected_copy,
              ]
 
 if __name__ == '__main__':
