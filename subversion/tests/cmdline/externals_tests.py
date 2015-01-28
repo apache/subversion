@@ -3554,7 +3554,12 @@ def copy_pin_externals(sbox):
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
+  repo_dir       = sbox.repo_dir
   other_repo_url = repo_url + ".other"
+  other_repo_dir = repo_dir + ".other"
+
+  external_youngest_rev = svntest.main.youngest(repo_dir)
+  other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Perform a repos->repos copy, pinning externals
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3572,7 +3577,7 @@ def copy_pin_externals(sbox):
     expected_output = [
       '-r%d %s@%d gamma\n' % (last_changed_rev_gamma, 
                               external_url_for["A/B/gamma"],
-                              last_changed_rev_gamma),
+                              external_youngest_rev),
       '\n',
     ]
     if svntest.sandbox.is_url(base_path_or_url):
@@ -3583,7 +3588,8 @@ def copy_pin_externals(sbox):
                                        'propget', 'svn:externals',
                                        target)
     expected_output = [
-      '-r3 %s@3 exdir_G\n' % external_url_for["A/C/exdir_G"],
+      '-r3 %s@%d exdir_G\n' % (external_url_for["A/C/exdir_G"],
+                               other_external_youngest_rev),
       # Note: A/D/H was last changed in r5, but exdir_H's external
       # definition's URL is already pinned to r1.
       '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
@@ -3598,11 +3604,13 @@ def copy_pin_externals(sbox):
                                        target)
     expected_output = [
       '-r%d %s@%d exdir_A\n' % (last_changed_rev_A,
-                                external_url_for["A/D/exdir_A"],
-                                last_changed_rev_A),
-      '-r3 %s@3 exdir_A/G\n' % external_url_for["A/D/exdir_A/G/"],
+                               external_url_for["A/D/exdir_A"],
+                               other_external_youngest_rev),
+      '-r3 %s@%d exdir_A/G\n' % (external_url_for["A/D/exdir_A/G/"],
+                                 other_external_youngest_rev),
       '-r1 %s@1 exdir_A/H\n' % external_url_for["A/D/exdir_A/H"],
-      '-r4 %s@4 x/y/z/blah\n' % external_url_for["A/D/x/y/z/blah"],
+      '-r4 %s@%d x/y/z/blah\n' % (external_url_for["A/D/x/y/z/blah"],
+                                  other_external_youngest_rev),
       '\n',
     ]
     if svntest.sandbox.is_url(base_path_or_url):
@@ -3626,6 +3634,7 @@ def copy_pin_externals(sbox):
                                      repo_url, wc_dir)
 
   # Perform a repos->wc copy, pinning externals
+  external_youngest_rev = svntest.main.youngest(repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      repo_url + '/A',
@@ -3653,6 +3662,7 @@ def copy_pin_externals(sbox):
                                     '-m', 'remove A_copy')
 
   # Perform a wc->wc copy, pinning externals
+  external_youngest_rev = svntest.main.youngest(repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
@@ -3671,6 +3681,7 @@ def copy_pin_externals(sbox):
   sbox.simple_commit()
   change_external(sbox.ospath('A/B'), '^/A/D/gamma-moved gamma', commit=True)
   sbox.simple_update()
+  external_youngest_rev = svntest.main.youngest(repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
@@ -3691,6 +3702,7 @@ def copy_pin_externals(sbox):
   change_external(sbox.ospath('A/B'), '^/A/D-moved/gamma-moved gamma', commit=False)
   sbox.simple_commit()
   sbox.simple_update()
+  external_youngest_rev = svntest.main.youngest(repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
@@ -3698,13 +3710,8 @@ def copy_pin_externals(sbox):
                                      '--pin-externals')
   # While gamma's path has changed by virtue of being moved along with
   # its parent A/D, gamma's last-changed rev should not have changed.
-  # Therefore, the pinned external should resolve to the pre-move path,
-  # ie. '^/A/D/gamma-moved@11' instead of '^/A/D-moved/gamma-moved@11'.
-  #
-  # Note that the pinned external will use an absolute URLs in this case.
-  # See the "BUG:" comment in libsvn_client's pin_externals_prop() function.
-  external_url_for["A/B/gamma"] = ('%s/A/D/gamma-moved' % repo_url)
   A_copy_D_path = 'A_copy/D-moved'
+  external_url_for["A/B/gamma"] = '^/A/D-moved/gamma-moved'
   verify_pinned_externals(wc_dir)
 
   # Clean up.
@@ -3718,6 +3725,8 @@ def copy_pin_externals(sbox):
                                      other_repo_url + '/A/D/H',
                                      '-m', 'remove A/D/H')
   sbox.simple_update()
+  external_youngest_rev = svntest.main.youngest(repo_dir)
+  other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
@@ -3739,6 +3748,7 @@ def copy_pin_externals(sbox):
                                      repo_url + '/A/D',
                                      '--pin-externals')
   # Test a copy from an old revision with pinning.
+  external_youngest_rev = svntest.main.youngest(repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A@6'),
