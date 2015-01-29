@@ -529,9 +529,10 @@ svn_client_revprop_set2(const char *propname,
 
 /* Helper for the remote case of svn_client_propget.
  *
- * If PROPS is not null, then get the value of property PROPNAME in REVNUM,
-   using RA_LIB and SESSION.  Store the value ('svn_string_t *') in PROPS,
-   under the path key "TARGET_PREFIX/TARGET_RELATIVE" ('const char *').
+ * If PROPS is not null, then get the value of property PROPNAME in
+ * REVNUM, using RA_SESSION.  Store the value ('svn_string_t *') in
+ * PROPS, under the path key "TARGET_PREFIX/TARGET_RELATIVE"
+ * ('const char *').
  *
  * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
  * depth-first ordered array of svn_prop_inherited_item_t * structures
