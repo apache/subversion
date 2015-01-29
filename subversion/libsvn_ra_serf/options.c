@@ -30,6 +30,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
 #include "svn_xml.h"
@@ -511,6 +512,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, scratch_pool));
 
+  opt_ctx->handler->no_fail_on_http_redirect_status = TRUE;
+
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   /* If our caller cares about server redirections, and our response
@@ -519,8 +522,42 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      successfully parsing as XML or somesuch. */
   if (corrected_url && (opt_ctx->handler->sline.code == 301))
     {
-      *corrected_url = apr_pstrdup(result_pool, opt_ctx->handler->location);
+      if (!opt_ctx->handler->location || !*opt_ctx->handler->location)
+        {
+          return svn_error_create(
+                    SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+                    _("Location header not set on redirect response"));
+        }
+      else if (svn_path_is_url(opt_ctx->handler->location))
+        {
+          *corrected_url = svn_uri_canonicalize(opt_ctx->handler->location,
+                                                result_pool);
+        }
+      else
+        {
+          /* RFC1945 and RFC2616 state that the Location header's value
+             (from whence this CORRECTED_URL comes), if present, must be an
+             absolute URI.  But some Apache versions (those older than 2.2.11,
+             it seems) transmit only the path portion of the URI.
+             See issue #3775 for details. */
+
+          apr_uri_t corrected_URI = serf_sess->session_url;
+
+          corrected_URI.path = (char *)corrected_url;
+          *corrected_url = svn_uri_canonicalize(
+                              apr_uri_unparse(scratch_pool, &corrected_URI, 0),
+                              result_pool);
+        }
+
       return SVN_NO_ERROR;
+    }
+  else if (opt_ctx->handler->sline.code >= 300
+           && opt_ctx->handler->sline.code < 399)
+    {
+      return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
+                              _("The repository reports that it was moved "
+                                "to '%s'"),
+                              opt_ctx->handler->location);
     }
 
   if (opt_ctx->handler->sline.code != 200)

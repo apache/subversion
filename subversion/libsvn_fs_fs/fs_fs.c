@@ -1746,7 +1746,6 @@ svn_fs_fs__create_file_tree(svn_fs_t *fs,
                                         pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_current(fs, pool), pool));
   SVN_ERR(svn_fs_fs__write_current(fs, 0, 1, 1, pool));
 
   /* Create the 'uuid' file. */

@@ -3885,11 +3885,46 @@ public class BasicTests extends SVNTests
                      false, false, callback);
         assertEquals(1, callback.numberOfLines());
         BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
-        if (line != null)
-        {
-            assertEquals(1, line.getRevision());
-            assertEquals("jrandom", line.getAuthor());
+        assertNotNull(line);
+        assertEquals(1, line.getRevision());
+        assertEquals("jrandom", line.getAuthor());
+        assertEquals("This is the file 'iota'.", line.getLine());
+    }
+
+    /**
+     * Test blame with diff options.
+     * @since 1.9
+     */
+    public void testBlameWithDiffOptions() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        // Modify the file iota, making only whitespace changes.
+        File iota = new File(thisTest.getWorkingCopy(), "iota");
+        FileOutputStream stream = new FileOutputStream(iota, false);
+        stream.write("This   is   the   file   'iota'.\t".getBytes());
+        stream.close();
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(thisTest.getWCPath());
+        try {
+            client.username("rayjandom");
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("Whitespace-only change in /iota"), null);
+        } finally {
+            client.username("jrandom");
         }
+
+        // Run blame on the result
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.HEAD,
+                     Revision.getInstance(1), Revision.HEAD,
+                     false, false, callback,
+                     new DiffOptions(DiffOptions.Flag.IgnoreWhitespace));
+        assertEquals(1, callback.numberOfLines());
+        BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
+        assertNotNull(line);
+        assertEquals(1, line.getRevision());
+        assertEquals("jrandom", line.getAuthor());
+        assertEquals("This   is   the   file   'iota'.\t", line.getLine());
     }
 
     /**

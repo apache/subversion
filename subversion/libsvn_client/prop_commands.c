@@ -206,6 +206,7 @@ propset_on_url(const char *propname,
 
       item = svn_client_commit_item3_create(pool);
       item->url = target;
+      item->kind = node_kind;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
