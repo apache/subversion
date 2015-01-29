@@ -259,7 +259,7 @@ public class BasicTests extends SVNTests
         tempclient.dispose();
 
         // create Y and Y/Z directories in the repository
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.dir,
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(1);
         urls.add(thisTest.getUrl() + "/Y");
@@ -1004,9 +1004,9 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // create Y and Y/Z directories in the repository
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y", NodeKind.dir,
                               CommitItemStateFlags.Add);
-        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y/Z", NodeKind.none,
+        addExpectedCommitItem(null, thisTest.getUrl().toString(), "Y/Z", NodeKind.dir,
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(2);
         urls.add(thisTest.getUrl() + "/Y");
