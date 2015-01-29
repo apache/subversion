@@ -1350,54 +1350,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
     }
 
-  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
-    {
-      /* Produce a list of new paths to add, and provide it to the
-         mechanism used to acquire a log message. */
-      svn_client_commit_item3_t *item;
-      const char *tmp_file;
-      commit_items = apr_array_make(scratch_pool, copy_pairs->nelts,
-                                    sizeof(item));
-
-      /* Add any intermediate directories to the message */
-      if (make_parents)
-        {
-          for (i = 0; i < new_dirs->nelts; i++)
-            {
-              const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
-
-              item = svn_client_commit_item3_create(scratch_pool);
-              item->url = url;
-              item->kind = svn_node_dir;
-              item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-              APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-            }
-        }
-
-      for (i = 0; i < copy_pairs->nelts; i++)
-        {
-          svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                            svn_client__copy_pair_t *);
-
-          item = svn_client_commit_item3_create(scratch_pool);
-          item->url = pair->dst_abspath_or_url;
-          item->kind = pair->src_kind;
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-        }
-
-      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
-                                      ctx, scratch_pool));
-      if (! message)
-        {
-          svn_pool_destroy(iterpool);
-          svn_pool_destroy(session_pool);
-          return SVN_NO_ERROR;
-        }
-    }
-  else
-    message = "";
-
   cukb.session = ra_session;
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &cukb.repos_root_url, session_pool));
   cukb.should_reparent = FALSE;
@@ -1493,6 +1445,22 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
             = mergeinfo_prop;
         }
     }
+
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
+    {
+      const char *tmp_file;
+
+      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
+                                      ctx, scratch_pool));
+      if (! message)
+        {
+          svn_pool_destroy(iterpool);
+          svn_pool_destroy(session_pool);
+          return SVN_NO_ERROR;
+        }
+    }
+  else
+    message = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
