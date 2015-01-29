@@ -1408,8 +1408,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
-      item->outgoing_prop_changes = apr_array_make(scratch_pool, 1,
-                                                   sizeof(svn_prop_t *));
       /* Repository mergeinfo (or NULL if it's locally added)... */
       if (src_origin)
         SVN_ERR(svn_client__get_repos_mergeinfo(
@@ -1426,18 +1424,24 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                      iterpool));
       else if (! mergeinfo)
         mergeinfo = wc_mergeinfo;
+
       if (mergeinfo)
         {
           /* Push a mergeinfo prop representing MERGEINFO onto the
            * OUTGOING_PROP_CHANGES array. */
 
           svn_prop_t *mergeinfo_prop
-            = apr_palloc(item->outgoing_prop_changes->pool,
-                         sizeof(svn_prop_t));
+                            = apr_palloc(scratch_pool, sizeof(*mergeinfo_prop));
           svn_string_t *prop_value;
 
           SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo,
                                           item->outgoing_prop_changes->pool));
+
+          if (!item->outgoing_prop_changes)
+            {
+              item->outgoing_prop_changes = apr_array_make(scratch_pool, 1,
+                                                           sizeof(svn_prop_t *));
+            }
 
           mergeinfo_prop->name = SVN_PROP_MERGEINFO;
           mergeinfo_prop->value = prop_value;
