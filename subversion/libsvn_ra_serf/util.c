@@ -1751,10 +1751,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
       case 308:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (sline.code == 301)
-                                 ? _("Repository moved permanently to '%s';"
-                                     " please relocate")
-                                 : _("Repository moved temporarily to '%s';"
-                                     " please relocate"), location);
+                                  ? _("Repository moved permanently to '%s'")
+                                  : _("Repository moved temporarily to '%s'"),
+                                 location);
       case 403:
         return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
                                  _("Access to '%s' forbidden"), path);

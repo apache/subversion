@@ -211,15 +211,16 @@ def redirected_copy(sbox):
 
   sbox.build(create_wc=False)
 
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: The repository.*moved"
+
   # This tests the actual copy handling
-  expected_error = "svn: E175011: Repository moved permanently"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url() + '/A',
                                      sbox.redirected_root_url() + '/A_copied')
 
   # This tests the cmdline handling of '^/copy-of-A'
-  expected_error = "svn: E155007: Resolving '\^/': no repository root found"
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url() + '/A',
