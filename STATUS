@@ -177,20 +177,12 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1650834
-   Fix svn_stringbuf_insert and svn_stringbuf_replace when the source is
-   within the target stringbuf and contains NUL bytes.
-   Justification:
-     Result will usually be undefined and the functions may segfault.
-   Votes:
-     +1: stefan2, rhuijben
-
  * r1651759
    Api correctness fix: Duplicate error filename when copying errors
    Justification:
      Simple to fix issue caused error on buildbot.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
@@ -199,13 +191,6 @@ Candidate changes:
      operations.
    Votes:
      +1: rhuijben
-
- * r1653039
-   Allocate correct amount of memory for freeze arguments.
-   Justiciation:
-     Writing beyond allocated memory is undefined behaviour.
-   Votes:
-     +1: philip, rhuijben
 
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
@@ -278,3 +263,18 @@ Approved changes:
      The current error message is very unclear.
    Votes:
      +1: brane, rhuijben, stsp
+
+ * r1650834
+   Fix svn_stringbuf_insert and svn_stringbuf_replace when the source is
+   within the target stringbuf and contains NUL bytes.
+   Justification:
+     Result will usually be undefined and the functions may segfault.
+   Votes:
+     +1: stefan2, rhuijben, ivan
+
+ * r1653039
+   Allocate correct amount of memory for freeze arguments.
+   Justiciation:
+     Writing beyond allocated memory is undefined behaviour.
+   Votes:
+     +1: philip, rhuijben, ivan
