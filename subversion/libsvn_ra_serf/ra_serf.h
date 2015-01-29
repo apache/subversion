@@ -431,9 +431,12 @@ typedef struct svn_ra_serf__handler_t {
      for request. */
   svn_boolean_t no_dav_headers;
 
-  /* If TRUE doesn't end the context directly on certain HTTP errors like 405,
-     408, 500 (see util.c handle_response()) */
+  /* If TRUE doesn't fail requests on HTTP error statuses like 405, 408, 500
+     (see util.c response_done()) */
   svn_boolean_t no_fail_on_http_failure_status;
+
+  /* If TRUE doesn't fail requests on HTTP redirect statuses like 301, 307 */
+  svn_boolean_t no_fail_on_http_redirect_status;
 
   /* Has the request/response been completed?  */
   svn_boolean_t done;
