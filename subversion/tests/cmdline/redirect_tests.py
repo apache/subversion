@@ -212,7 +212,7 @@ def redirected_copy(sbox):
   sbox.build(create_wc=False)
 
   # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
-  expected_error = "svn: E170011: The repository.*moved"
+  expected_error = "svn: E170011: Repository moved permanently"
 
   # This tests the actual copy handling
   svntest.actions.run_and_verify_svn(None, None, expected_error,
@@ -226,6 +226,20 @@ def redirected_copy(sbox):
                                      sbox.redirected_root_url() + '/A',
                                      '^/copy-of-A')
 
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: Repository moved temporarily"
+
+  # This tests the actual copy handling
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     sbox.redirected_root_url(temporary=True) + '/A_copied')
+
+  # This tests the cmdline handling of '^/copy-of-A'
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     '^/copy-of-A')
 #----------------------------------------------------------------------
 
 ########################################################################
