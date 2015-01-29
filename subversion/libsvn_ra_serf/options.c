@@ -555,8 +555,9 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
            && opt_ctx->handler->sline.code < 399)
     {
       return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
-                              _("The repository reports that it was moved "
-                                "to '%s'"),
+                               (opt_ctx->handler->sline.code == 301
+                                ? _("Repository moved permanently to '%s'")
+                                : _("Repository moved temporarily to '%s'")),
                               opt_ctx->handler->location);
     }
 
