@@ -179,7 +179,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 
 /* Pin all externals listed in EXTERNALS_PROP_VAL to their last-changed
  * revision. Return a new property value in *PINNED_EXTERNALS allocated
- * in RESULT_POOL. LOCAL_ABSPATH_OR_URL is the path defining the
+ * in RESULT_POOL. LOCAL_ABSPATH_OR_URL is the path or URL defining the
  * svn:externals property. Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -193,7 +193,6 @@ pin_externals_prop(svn_string_t **pinned_externals,
 {
   svn_stringbuf_t *buf;
   apr_array_header_t *external_items;
-  const char *session_url;
   int i;
   apr_pool_t *iterpool;
 
@@ -208,95 +207,110 @@ pin_externals_prop(svn_string_t **pinned_externals,
   for (i = 0; i < external_items->nelts; i++)
     {
       svn_wc_external_item2_t *item;
+      svn_opt_revision_t external_pegrev;
       const char *pinned_desc;
-      const char *resolved_url;
-      const char *defining_url;
-      svn_ra_session_t *external_ra_session;
-      svn_revnum_t external_youngest_rev;
-      svn_dirent_t *dirent;
+      const char *rev_str;
+      const char *peg_rev_str;
       
       svn_pool_clear(iterpool);
 
-      if (!svn_path_is_url(local_abspath_or_url))
-        SVN_ERR(svn_wc__node_get_url(&defining_url, ctx->wc_ctx,
-                                     local_abspath_or_url,
-                                     iterpool, iterpool));
-      else
-        defining_url = local_abspath_or_url;
-
       item = APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
-      SVN_ERR(svn_wc__resolve_relative_external_url(&resolved_url, item,
-                                                    repos_root_url,
-                                                    defining_url,
-                                                    iterpool,
-                                                    iterpool));
-      SVN_ERR(svn_client__open_ra_session_internal(&external_ra_session,
-                                                   NULL, resolved_url,
-                                                   NULL, NULL, FALSE, FALSE,
-                                                   ctx, iterpool,
-                                                   iterpool));
-      SVN_ERR(svn_ra_get_session_url(external_ra_session, &session_url, scratch_pool));
-      if (item->peg_revision.kind == svn_opt_revision_unspecified ||
-          item->peg_revision.kind == svn_opt_revision_head)
+
+      if (item->peg_revision.kind == svn_opt_revision_date)
         {
-          SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
-                                           &external_youngest_rev,
-                                           iterpool));
+          external_pegrev.kind = svn_opt_revision_date;
+          external_pegrev.value.date = item->peg_revision.value.date;
+        }
+      else if (item->peg_revision.kind == svn_opt_revision_number)
+        {
+          external_pegrev.kind = svn_opt_revision_number;
+          external_pegrev.value.number = item->peg_revision.value.number;
         }
       else
         {
-          if (item->peg_revision.kind == svn_opt_revision_date)
-            {
-              item->peg_revision.kind = svn_opt_revision_number;
-              SVN_ERR(svn_ra_get_dated_revision(external_ra_session,
-                                                &item->peg_revision.value.number,
-                                                item->peg_revision.value.date,
-                                                iterpool));
-            }
+          SVN_ERR_ASSERT(
+            item->peg_revision.kind == svn_opt_revision_head ||
+            item->peg_revision.kind == svn_opt_revision_unspecified);
 
-          SVN_ERR_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
-          external_youngest_rev = item->peg_revision.value.number;
+          if (svn_path_is_url(local_abspath_or_url))
+            {
+              const char *resolved_url;
+              svn_ra_session_t *external_ra_session;
+              svn_revnum_t latest_revnum;
+
+              SVN_ERR(svn_wc__resolve_relative_external_url(
+                        &resolved_url, item, repos_root_url,
+                        local_abspath_or_url, iterpool, iterpool));
+              SVN_ERR(svn_client__open_ra_session_internal(&external_ra_session,
+                                                           NULL, resolved_url,
+                                                           NULL, NULL, FALSE,
+                                                           FALSE, ctx,
+                                                           iterpool,
+                                                           iterpool));
+              SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
+                                               &latest_revnum,
+                                               iterpool));
+
+              external_pegrev.kind = svn_opt_revision_number;
+              external_pegrev.value.number = latest_revnum;
+            }
+          else
+            {
+              const char *external_abspath;
+              svn_node_kind_t external_kind;
+
+              external_abspath = svn_dirent_join(local_abspath_or_url,
+                                                 item->target_dir,
+                                                 iterpool);
+              SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL,
+                                                 NULL, NULL, ctx->wc_ctx,
+                                                 local_abspath_or_url,
+                                                 external_abspath, TRUE,
+                                                 iterpool,
+                                                 iterpool));
+              if (external_kind == svn_node_none)
+                return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                         NULL,
+                                         _("Cannot pin external '%s' defined "
+                                           "in %s at '%s' because it is not "
+                                           "checked out in the working copy "
+                                           "at '%s'"),
+                                           item->url, SVN_PROP_EXTERNALS,
+                                           svn_dirent_local_style(
+                                             local_abspath_or_url, iterpool),
+                                           svn_dirent_local_style(
+                                             external_abspath, iterpool));
+
+              external_pegrev.kind = svn_opt_revision_number;
+              SVN_ERR(svn_wc__node_get_repos_info(&external_pegrev.value.number,
+                                                  NULL, NULL, NULL,
+                                                  ctx->wc_ctx, external_abspath,
+                                                  iterpool, iterpool));
+            }
         }
-        
-      SVN_ERR(svn_ra_stat(external_ra_session, "",
-                          external_youngest_rev,
-                          &dirent,
-                          iterpool));
-      if (dirent == NULL)
-        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("Cannot pin external URL '%s' since it "
-                                   "does not exist at revision %lu"),
-                                 resolved_url, external_youngest_rev);
 
       if (item->revision.kind == svn_opt_revision_date)
-        {
-          item->revision.kind = svn_opt_revision_number;
-          SVN_ERR(svn_ra_get_dated_revision(external_ra_session,
-                                            &item->revision.value.number,
-                                            item->revision.value.date,
-                                            iterpool));
-        }
+        rev_str = apr_psprintf(iterpool, "-r{%s} ",
+                              svn_time_to_cstring(item->revision.value.date,
+                                                  iterpool));
+      else if (item->revision.kind == svn_opt_revision_number)
+        rev_str = apr_psprintf(iterpool, "-r%ld ", item->revision.value.number);
+      else
+        rev_str = "";
 
-      if (item->revision.kind != svn_opt_revision_number)
-        {
-          item->revision.kind = svn_opt_revision_number;
-          item->revision.value.number = dirent->created_rev;
-        }
+      SVN_ERR_ASSERT(external_pegrev.kind == svn_opt_revision_date ||
+                     external_pegrev.kind == svn_opt_revision_number);
+      if (external_pegrev.kind == svn_opt_revision_date)
+        peg_rev_str = apr_psprintf(iterpool, "@{%s}",
+                                   svn_time_to_cstring(
+                                     external_pegrev.value.date,
+                                     iterpool));
+      else
+        peg_rev_str = apr_psprintf(iterpool, "@%ld",
+                                   external_pegrev.value.number);
 
-      if (item->peg_revision.kind != svn_opt_revision_number)
-        {
-          item->peg_revision.kind = svn_opt_revision_number;
-          item->peg_revision.value.number = dirent->created_rev;
-        }
- 
-      SVN_ERR_ASSERT(item->revision.kind == svn_opt_revision_number);
-      SVN_ERR_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
-
-      pinned_desc = apr_psprintf(iterpool, "-r%lu %s@%lu %s\n",
-                                 item->revision.value.number,
-                                 item->url,
-                                 external_youngest_rev,
-                                 item->target_dir);
+      pinned_desc = apr_psprintf(iterpool, "%s%s%s %s\n", rev_str, item->url,
+                                 peg_rev_str, item->target_dir);
       svn_stringbuf_appendcstr(buf, pinned_desc);
     }
   svn_pool_destroy(iterpool);
