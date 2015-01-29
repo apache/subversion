@@ -274,7 +274,7 @@ Approved changes:
 
  * r1653039
    Allocate correct amount of memory for freeze arguments.
-   Justiciation:
+   Justification:
      Writing beyond allocated memory is undefined behaviour.
    Votes:
      +1: philip, rhuijben, ivan
