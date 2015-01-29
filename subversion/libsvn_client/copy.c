@@ -2133,6 +2133,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
             ctx->notify_func2 = notification_adjust_func;
             ctx->notify_baton2 = &nb;
 
+            /* Avoid a chicken-and-egg problem:
+             * If pinning externals we'll need to adjust externals
+             * properties before checking out any externals.
+             * But copy needs to happen before pinning because else there
+             * are no svn:externals properties to pin. */
+            if (pin_externals)
+              ignore_externals = TRUE;
+
             err = svn_client__checkout_internal(&pair->src_revnum, timestamp_sleep,
                                                 pair->src_original,
                                                 tmp_abspath,
@@ -2192,6 +2200,8 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
           apr_hash_index_t *hi;
           apr_pool_t *iterpool;
           const char *repos_root_url;
+          apr_hash_t *new_externals;
+          apr_hash_t *new_depths;
 
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
           SVN_ERR(resolve_pinned_externals(&pinned_externals, pair,
@@ -2219,6 +2229,21 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                        NULL, NULL, /* no extra notification */
                                        iterpool));
             }
+
+          /* Now update all externals in the newly created copy. */
+          SVN_ERR(svn_wc__externals_gather_definitions(&new_externals,
+                                                       &new_depths,
+                                                       ctx->wc_ctx,
+                                                       dst_abspath,
+                                                       svn_depth_infinity,
+                                                       iterpool, iterpool));
+          SVN_ERR(svn_client__handle_externals(new_externals,
+                                               new_depths,
+                                               repos_root_url, dst_abspath,
+                                               svn_depth_infinity,
+                                               timestamp_sleep,
+                                               ra_session,
+                                               ctx, iterpool));
           svn_pool_destroy(iterpool);
         }
     } /* end directory case */
