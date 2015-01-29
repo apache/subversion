@@ -2008,7 +2008,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
         {
           svn_client_copy_source_t *source = APR_ARRAY_IDX(sources, i,
                                                svn_client_copy_source_t *);
-          svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
+          svn_client__copy_pair_t *pair = apr_pcalloc(pool, sizeof(*pair));
           const char *src_basename;
           svn_boolean_t src_is_url = svn_path_is_url(source->path);
 
@@ -2030,6 +2030,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
 
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
+          pair->src_kind = svn_node_unknown;
 
           SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                             &pair->src_op_revision,
@@ -2058,7 +2059,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
   else
     {
       /* Only one source path. */
-      svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
+      svn_client__copy_pair_t *pair = apr_pcalloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
         APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
       svn_boolean_t src_is_url = svn_path_is_url(source->path);
@@ -2070,6 +2071,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
                                         source->path, pool));
       pair->src_op_revision = *source->revision;
       pair->src_peg_revision = *source->peg_revision;
+      pair->src_kind = svn_node_unknown;
 
       SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                         &pair->src_op_revision,

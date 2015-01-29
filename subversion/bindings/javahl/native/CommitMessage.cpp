@@ -94,6 +94,9 @@ CommitMessage::getCommitMessage(const char **log_msg,
 
       jobject jitem = CreateJ::CommitItem(item);
 
+      if (!jitem)
+        return SVN_NO_ERROR; /* Exception thrown */
+
       // store the Java object into the array
       jitems.push_back(jitem);
     }
