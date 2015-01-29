@@ -256,14 +256,6 @@ Candidate changes:
      +1: stefan2
      +0: rhuijben (patch looks sane, but hard to oversee consequences)
 
- * r1655712, r1655738
-   Improve error message when external is shadowed by a versioned path.
-   Justification:
-     The current error message is very unclear.
-   Votes:
-     +1: brane, rhuijben
-     +1: stsp (without r1655738)
-
 Veto-blocked changes:
 =====================
 
@@ -279,3 +271,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1655712, r1655738
+   Improve error message when external is shadowed by a versioned path.
+   Justification:
+     The current error message is very unclear.
+   Votes:
+     +1: brane, rhuijben, stsp
