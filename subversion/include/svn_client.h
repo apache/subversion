@@ -4527,7 +4527,7 @@ svn_client_copy7(const apr_array_header_t *sources,
  * Similar to svn_client_copy7(), but cannot pin externals.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_client_copy6(const apr_array_header_t *sources,
