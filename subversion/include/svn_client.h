@@ -465,13 +465,18 @@ typedef struct svn_client_commit_item3_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
 
-  /** absolute working-copy path of item */
+  /** absolute working-copy path of item. Always set during normal commits
+   * (and copies from a working copy) to the repository. Can only be NULL
+   * when stub commit items are created for operations that only involve
+   * direct repository operations. */
   const char *path;
 
   /** node kind (dir, file) */
   svn_node_kind_t kind;
 
-  /** commit URL for this item */
+  /** commit URL for this item. Points to the repository location of PATH
+   * during commits, or to the final URL of the item when copying from the
+   * working copy to the repository. */
   const char *url;
 
   /** revision of textbase */
