@@ -486,10 +486,15 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                              callbacks, callback_baton, config, sesspool);
 
   if (err)
-    return svn_error_createf(
+    {
+      if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
+        return svn_error_trace(err);
+
+      return svn_error_createf(
                 SVN_ERR_RA_CANNOT_CREATE_SESSION, err,
                 _("Unable to connect to a repository at URL '%s'"),
                 repos_URL);
+    }
 
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
