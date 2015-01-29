@@ -1093,6 +1093,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
               item = svn_client_commit_item3_create(pool);
               item->url = svn_path_url_add_component2(top_url, relpath, pool);
+              item->kind = svn_node_dir;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1106,6 +1107,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item = svn_client_commit_item3_create(pool);
           item->url = svn_path_url_add_component2(top_url, info->dst_path,
                                                   pool);
+          item->kind = info->src_kind;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD
                               | SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           item->copyfrom_url = info->src_url;
@@ -1117,6 +1119,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
               item = svn_client_commit_item3_create(pool);
               item->url = svn_path_url_add_component2(top_url, info->src_path,
                                                       pool);
+              item->kind = info->src_kind;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1365,6 +1368,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
               item = svn_client_commit_item3_create(scratch_pool);
               item->url = url;
+              item->kind = svn_node_dir;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1377,6 +1381,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
           item = svn_client_commit_item3_create(scratch_pool);
           item->url = pair->dst_abspath_or_url;
+          item->kind = pair->src_kind;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -1423,6 +1428,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
           item = svn_client_commit_item3_create(scratch_pool);
           item->url = url;
+          item->kind = svn_node_dir;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           item->incoming_prop_changes = apr_array_make(scratch_pool, 1,
                                                        sizeof(svn_prop_t *));
