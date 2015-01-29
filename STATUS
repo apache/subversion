@@ -229,6 +229,32 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1561419
+   Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
+   Justification:
+     After recovering a repository committed to by 1.8, future commits may
+     use ambiguous IDs.  This patch also fixes the source of the problematic
+     representation info that triggers #4554 in 1.8.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1561419
+   Votes:
+     +1: stefan2
+
+ * r1654932, r1654933, r1654934, r1654937
+   Fix issue #4554, "0 file length reported in FSFS".
+   Justification:
+     This causes 'svnadmin dump' to create corrupted output that fails to
+     load and we provide no way to detect that problem other than loading
+     the respective dump.  We also want to prevent further instances of
+     that issue to be added to the repository.
+   Notes:
+     r1561419 has been removed from this change set and proposed for a
+     separate backport because it is not a necessary part of the #4554 fix.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4554
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
