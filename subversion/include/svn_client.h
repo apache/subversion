@@ -468,7 +468,8 @@ typedef struct svn_client_commit_item3_t
   /** absolute working-copy path of item. Always set during normal commits
    * (and copies from a working copy) to the repository. Can only be NULL
    * when stub commit items are created for operations that only involve
-   * direct repository operations. */
+   * direct repository operations. During WC->REPOS copy operations, this
+   * path is the WC source path of the operation. */
   const char *path;
 
   /** node kind (dir, file) */
