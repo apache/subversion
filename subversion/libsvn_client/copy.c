@@ -1627,13 +1627,15 @@ check_url_kind(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Queue a property change to COMMIT_URL in the COMMIT_ITEMS list.
- * If the list does not already have a commit item for LOCAL_ABSPATH
+/* Queue a property change on a copy of LOCAL_ABSPATH to COMMIT_URL
+ * in the COMMIT_ITEMS list.
+ * If the list does not already have a commit item for COMMIT_URL
  * add a new commit item for the property change.
  * Allocate results in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-queue_prop_change_commit_items(const char *commit_url,
+queue_prop_change_commit_items(const char *local_abspath,
+                               const char *commit_url,
                                apr_array_header_t *commit_items,
                                const char *propname,
                                svn_string_t *propval,
@@ -1660,6 +1662,7 @@ queue_prop_change_commit_items(const char *commit_url,
   if (item == NULL)
     {
       item = svn_client_commit_item3_create(result_pool);
+      item->path = local_abspath;
       item->url = commit_url;
       item->kind = svn_node_dir;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
@@ -1951,6 +1954,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
               svn_string_t *externals_propval = apr_hash_this_val(hi);
               const char *dst_url;
               const char *commit_url;
+              const char *src_abspath;
 
               if (svn_path_is_url(pair->dst_abspath_or_url))
                 dst_url = pair->dst_abspath_or_url;
@@ -1960,7 +1964,10 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                              scratch_pool, iterpool));
               commit_url = svn_path_url_add_component2(dst_url, dst_relpath,
                                                        scratch_pool);
-              SVN_ERR(queue_prop_change_commit_items(commit_url, commit_items,
+              src_abspath = svn_dirent_join(pair->src_abspath_or_url,
+                                            dst_relpath, iterpool);
+              SVN_ERR(queue_prop_change_commit_items(src_abspath,
+                                                     commit_url, commit_items,
                                                      SVN_PROP_EXTERNALS,
                                                      externals_propval,
                                                      scratch_pool, iterpool));
