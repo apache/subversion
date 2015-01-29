@@ -197,7 +197,15 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(svn_wc__get_wcroot(&defining_wcroot_abspath, ctx->wc_ctx,
                                  defining_abspath, pool, pool));
       if (strcmp(wcroot_abspath, defining_wcroot_abspath) == 0)
-        return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("The external '%s' defined in %s at '%s' "
+                                   "cannot be checked out because '%s' is "
+                                   "already a versioned path."),
+                                   url, SVN_PROP_EXTERNALS,
+                                   svn_dirent_local_style(defining_abspath,
+                                                          pool),
+                                   svn_dirent_local_style(local_abspath,
+                                                          pool));
     }
 
   /* If path is a directory, try to update/switch to the correct URL
