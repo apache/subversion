@@ -65,6 +65,7 @@ CommitMessage::getCommitMessage(const char **log_msg,
                                 const apr_array_header_t *commit_items,
                                 apr_pool_t *pool)
 {
+  *log_msg = NULL;
   *tmp_file = NULL;
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -102,7 +103,7 @@ CommitMessage::getCommitMessage(const char **log_msg,
                                                     midCallback,
                                                     CreateJ::Set(jitems));
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   if (jmessage != NULL)
     {
