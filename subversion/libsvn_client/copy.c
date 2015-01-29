@@ -1435,7 +1435,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
           svn_string_t *prop_value;
 
           SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo,
-                                          item->outgoing_prop_changes->pool));
+                                          scratch_pool));
 
           if (!item->outgoing_prop_changes)
             {
