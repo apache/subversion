@@ -238,7 +238,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1561419
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
@@ -254,14 +254,15 @@ Candidate changes:
      ^/subversion/branches/1.8.x-issue4554
    Votes:
      +1: stefan2
+     +0: rhuijben (patch looks sane, but hard to oversee consequences)
 
  * r1655712, r1655738
    Improve error message when external is shadowed by a versioned path.
    Justification:
      The current error message is very unclear.
    Votes:
-     +1: brane
-     +1: stsp, rhuijben (without r1655738)
+     +1: brane, rhuijben
+     +1: stsp (without r1655738)
 
 Veto-blocked changes:
 =====================
