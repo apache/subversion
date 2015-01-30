@@ -257,14 +257,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1650834
-   Fix svn_stringbuf_insert and svn_stringbuf_replace when the source is
-   within the target stringbuf and contains NUL bytes.
-   Justification:
-     Result will usually be undefined and the functions may segfault.
-   Votes:
-     +1: stefan2, rhuijben, ivan
-
  * r1653039
    Allocate correct amount of memory for freeze arguments.
    Justification:
