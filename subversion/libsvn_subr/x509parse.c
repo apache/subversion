@@ -280,9 +280,6 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 }
 
 /*
- *  RelativeDistinguishedName ::=
- *    SET OF AttributeTypeAndValue
- *
  *  AttributeTypeAndValue ::= SEQUENCE {
  *    type     AttributeType,
  *    value     AttributeValue }
@@ -292,31 +289,19 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
  *  AttributeValue ::= ANY DEFINED BY AttributeType
  */
 static svn_error_t *
-x509_get_name(const unsigned char **p, const unsigned char *end,
-              x509_name * cur, apr_pool_t *result_pool)
+x509_get_attribute(const unsigned char **p, const unsigned char *end,
+                   x509_name *cur, apr_pool_t *result_pool)
 {
   svn_error_t *err;
   ptrdiff_t len;
-  const unsigned char *end2;
   x509_buf *oid;
   x509_buf *val;
-
-  err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SET);
-  if (err)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
-
-  end2 = end;
-  end = *p + len;
 
   err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
-  if (*p + len != end)
-    {
-      err = svn_error_create(SVN_ERR_ASN1_LENGTH_MISMATCH, NULL, NULL);
-      return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
-    }
+  end = *p + len;
 
   oid = &cur->oid;
 
@@ -360,15 +345,54 @@ x509_get_name(const unsigned char **p, const unsigned char *end,
       return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
     }
 
+  return SVN_NO_ERROR;
+}
+
+/*
+ *   RelativeDistinguishedName ::=
+ *   SET SIZE (1..MAX) OF AttributeTypeAndValue
+ */
+static svn_error_t *
+x509_get_name(const unsigned char **p, const unsigned char *name_end,
+              x509_name *name, apr_pool_t *result_pool)
+{
+  svn_error_t *err;
+  ptrdiff_t len;
+  const unsigned char *set_end;
+  x509_name *cur = NULL;
+
+  err = asn1_get_tag(p, name_end, &len, ASN1_CONSTRUCTED | ASN1_SET);
+  if (err)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
+
+  set_end = *p + len;
+
   /*
-   * recurse until end of SEQUENCE is reached
+   * iterate until the end of the SET is reached
    */
-  if (*p == end2)
+  while (*p < set_end)
+    {
+      if (!cur)
+        {
+          cur = name;
+        }
+      else
+        {
+          cur->next = apr_palloc(result_pool, sizeof(x509_name));
+          cur = cur->next;
+        }
+      SVN_ERR(x509_get_attribute(p, set_end, cur, result_pool));
+    }
+
+  /*
+   * recurse until end of SEQUENCE (name) is reached
+   */
+  if (*p == name_end)
     return SVN_NO_ERROR;
 
   cur->next = apr_palloc(result_pool, sizeof(x509_name));
 
-  return svn_error_trace(x509_get_name(p, end2, cur->next, result_pool));
+  return svn_error_trace(x509_get_name(p, name_end, cur->next, result_pool));
 }
 
 /* Retrieve the date from the X.509 cert data between *P and END in either

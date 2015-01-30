@@ -470,6 +470,36 @@ static struct x509_test cert_tests[] = {
     "b.example.com",
     "47fa5c76fee6e21e37def6da3746bba84a5a09bf"
   },
+  /* X.509 certificate with multiple Relative Distinguished Names
+   * Borrowed form the Chromium test suite see thier bug here
+   * https://code.google.com/p/chromium/issues/detail?id=101009
+   */
+  { "MIICsDCCAhmgAwIBAgIJAO9sL1fZ/VoPMA0GCSqGSIb3DQEBBQUAMHExbzAJBgNV"
+    "BAYTAlVTMA8GA1UECgwIQ2hyb21pdW0wFgYKCZImiZPyLGQBGRYIQ2hyb21pdW0w"
+    "GgYDVQQDDBNNdWx0aXZhbHVlIFJETiBUZXN0MB0GA1UECwwWQ2hyb21pdW0gbmV0"
+    "X3VuaXR0ZXN0czAeFw0xMTEyMDIwMzQ3MzlaFw0xMjAxMDEwMzQ3MzlaMHExbzAJ"
+    "BgNVBAYTAlVTMA8GA1UECgwIQ2hyb21pdW0wFgYKCZImiZPyLGQBGRYIQ2hyb21p"
+    "dW0wGgYDVQQDDBNNdWx0aXZhbHVlIFJETiBUZXN0MB0GA1UECwwWQ2hyb21pdW0g"
+    "bmV0X3VuaXR0ZXN0czCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAnSMQ7YeC"
+    "sOuk+0n128F7TfDtG/X48sG10oTe65SC8N6LBLfo7YYiQZlWVHEzjsFpaiv0dx4k"
+    "cIFbVghXAky/r5qgM1XiAGuzzFw7R27cBTC9DPlRwHArP3CiEKO3iz8i+qu9x0il"
+    "/9N70LcSSAu/kGLxikDbHRoM9d2SKhy2LGsCAwEAAaNQME4wHQYDVR0OBBYEFI1e"
+    "cfoqc7qfjmMyHF2rh9CrR6u3MB8GA1UdIwQYMBaAFI1ecfoqc7qfjmMyHF2rh9Cr"
+    "R6u3MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQADgYEAGKwN01A47nxVHOkw"
+    "wFdbT8t9FFkY3pIg5meoqO3aATNaSEzkZoUljWtWgWfzr+n4ElwZBxeYv9cPurVk"
+    "a+wXygzWzsOzCUMKBI/aS8ijRervyvh6LpGojPGn1HttnXNLmhy+BLECs7cq6f0Z"
+    "hvImrEWhD5uZGlOxaZk+bFEjQHA=",
+    "C=US, O=Chromium, 0.9.2342.19200300.100.1.25=Chromium, "
+    "CN=Multivalue RDN Test, OU=Chromium net_unittests",
+    "2.5.4.6 2.5.4.10 0.9.2342.19200300.100.1.25 2.5.4.3 2.5.4.11",
+    "C=US, O=Chromium, 0.9.2342.19200300.100.1.25=Chromium, "
+    "CN=Multivalue RDN Test, OU=Chromium net_unittests",
+    "2.5.4.6 2.5.4.10 0.9.2342.19200300.100.1.25 2.5.4.3 2.5.4.11",
+    "2011-12-02T03:47:39.000000Z",
+    "2012-01-01T03:47:39.000000Z",
+    NULL,
+    "99302ca2824f585a117bb41302a388daa0519765"
+  },
   { NULL }
 };
 
