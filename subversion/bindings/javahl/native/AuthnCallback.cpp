@@ -21,9 +21,18 @@
  * @endcopyright
  */
 
+#include "svn_base64.h"
+#include "svn_x509.h"
+
 #include "jniwrapper/jni_stack.hpp"
+#include "jniwrapper/jni_exception.hpp"
+#include "jniwrapper/jni_string.hpp"
+#include "jniwrapper/jni_array.hpp"
+#include "jniwrapper/jni_list.hpp"
 
 #include "AuthnCallback.hpp"
+
+#include "svn_private_config.h"
 
 namespace JavaHL {
 
@@ -176,30 +185,75 @@ AuthnCallback::SSLServerCertInfo::ClassImpl::ClassImpl(
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_ctor(env.GetMethodID(cls, "<init>",
                                "(Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
-                               "Ljava/lang/String;"
+                               "Ljava/lang/String;JJ[B"
+                               "Ljava/util/List;"
                                "Ljava/lang/String;)V"))
 {}
 
 AuthnCallback::SSLServerCertInfo::ClassImpl::~ClassImpl() {}
 
 AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
-    ::Java::Env env,
-    const ::Java::String& hostname,
-    const ::Java::String& fingerprint,
-    const ::Java::String& validFrom,
-    const ::Java::String& validUntil,
-    const ::Java::String& issuer,
-    const ::Java::String& der)
+    ::Java::Env env, const char* ascii_cert)
   : ::Java::Object(env,
                    ::Java::ClassCache::get_authn_ssl_server_cert_info(env))
 {
+  SVN::Pool pool;
+
+  /* Convert header-less PEM to DER by undoing base64 encoding. */
+  const svn_string_t cert_string = { ascii_cert, strlen(ascii_cert) };
+  const svn_string_t* der = svn_base64_decode_string(&cert_string,
+                                                     pool.getPool());
+
+  svn_x509_certinfo_t *certinfo;
+  SVN_JAVAHL_CHECK(env, svn_x509_parse_cert(&certinfo, der->data, der->len,
+                                            pool.getPool(), pool.getPool()));
+
+  const ::Java::String subject(
+      env, svn_x509_certinfo_get_subject(certinfo, pool.getPool()));
+  const ::Java::String issuer(
+      env, svn_x509_certinfo_get_issuer(certinfo, pool.getPool()));
+  const ::Java::String cert(env, ascii_cert);
+  const jlong valid_from =
+    (jlong(svn_x509_certinfo_get_valid_from(certinfo)) + 500) / 1000;
+  const jlong valid_to =
+    (jlong(svn_x509_certinfo_get_valid_to(certinfo)) + 500) / 1000;
+
+  const svn_checksum_t* digest = svn_x509_certinfo_get_digest(certinfo);
+  jsize digest_size;
+  switch (digest->kind)
+    {
+    case svn_checksum_sha1:
+      digest_size = 160 / 8;
+      break;
+
+    case svn_checksum_md5:
+      digest_size = 128 / 8;
+      break;
+
+    default:
+      digest_size = 0;          // Initialize this to avoid compiler warnings
+      ::Java::IllegalArgumentException(env).raise(
+          _("Unknown certificate digest type"));
+    }
+  const ::Java::ByteArray fingerprint(env, digest->digest, digest_size);
+
+  jobject jhostnames = NULL;
+  const apr_array_header_t* hostnames =
+    svn_x509_certinfo_get_hostnames(certinfo);
+  if (hostnames)
+    {
+      ::Java::MutableList< ::Java::String> hn(env, hostnames->nelts);
+      for (int i = 0; i < hostnames->nelts; ++i)
+        hn.add(::Java::String(env, APR_ARRAY_IDX(hostnames, i, const char*)));
+      jhostnames = hn.get();
+    }
+
   set_this(env.NewObject(get_class(), impl().m_mid_ctor,
-                         hostname.get(), fingerprint.get(),
-                         validFrom.get(), validUntil.get(),
-                         issuer.get(), der.get()));
+                         subject.get(), issuer.get(),
+                         valid_from, valid_to,
+                         fingerprint.get(),
+                         jhostnames,
+                         cert.get()));
 }
 
 

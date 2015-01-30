@@ -1016,6 +1016,161 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 }
 
 
+/* Insert the given UCS-4 VALUE into BUF at the given OFFSET. */
+static void
+membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t offset, apr_int32_t value)
+{
+  svn_membuf__resize(buf, (offset + 1) * sizeof(value));
+  ((apr_int32_t*)buf->data)[offset] = value;
+}
+
+/* TODO: Use compiler intrinsics for byte swaps. */
+#define SWAP_SHORT(x)  ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
+#define SWAP_LONG(x)   ((((x) & 0xff) << 24) | (((x) & 0xff00) << 8)    \
+                        | (((x) >> 8) & 0xff00) | (((x) >> 24) & 0xff))
+
+#define IS_UTF16_LEAD_SURROGATE(c)   ((c) >= 0xd800 && (c) <= 0xdbff)
+#define IS_UTF16_TRAIL_SURROGATE(c)  ((c) >= 0xdc00 && (c) <= 0xdfff)
+
+svn_error_t *
+svn_utf__utf16_to_utf8(const svn_string_t **result,
+                       const apr_uint16_t *utf16str,
+                       apr_size_t utf16len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_uint16_t endiancheck = 0xa55a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_uint16_t lead_surrogate;
+  apr_size_t length;
+  apr_size_t offset;
+  svn_membuf_t ucs4buf;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf16len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_uint16_t *endp = utf16str;
+      while (*endp++)
+        ;
+      utf16len = (endp - utf16str);
+    }
+
+  svn_membuf__create(&ucs4buf, utf16len * sizeof(apr_int32_t), scratch_pool);
+
+  for (lead_surrogate = 0, length = 0, offset = 0;
+       offset < utf16len; ++offset)
+    {
+      const apr_uint16_t code =
+        (swap_order ? SWAP_SHORT(utf16str[offset]) : utf16str[offset]);
+
+      if (lead_surrogate)
+        {
+          if (IS_UTF16_TRAIL_SURROGATE(code))
+            {
+              /* Combine the lead and trail currogates into a 32-bit code. */
+              membuf_insert_ucs4(&ucs4buf, length++,
+                                 (0x010000
+                                  + (((lead_surrogate & 0x03ff) << 10)
+                                     | (code & 0x03ff))));
+              lead_surrogate = 0;
+              continue;
+            }
+          else
+            {
+              /* If we didn't find a surrogate pair, just dump the
+                 lead surrogate into the stream. */
+              membuf_insert_ucs4(&ucs4buf, length++, lead_surrogate);
+              lead_surrogate = 0;
+            }
+        }
+
+      if ((offset + 1) < utf16len && IS_UTF16_LEAD_SURROGATE(code))
+        {
+          /* Store a lead surrogate that is followed by at least one
+             code for the next iteration. */
+          lead_surrogate = code;
+          continue;
+        }
+      else
+        membuf_insert_ucs4(&ucs4buf, length++, code);
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, length * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, ucs4buf.data, length, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf__utf32_to_utf8(const svn_string_t **result,
+                       const apr_int32_t *utf32str,
+                       apr_size_t utf32len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_int32_t endiancheck = 0xa5cbbc5a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_size_t length;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf32len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_int32_t *endp = utf32str;
+      while (*endp++)
+        ;
+      utf32len = (endp - utf32str);
+    }
+
+  if (swap_order)
+    {
+      apr_size_t offset;
+      svn_membuf_t ucs4buf;
+
+      svn_membuf__create(&ucs4buf, utf32len * sizeof(apr_int32_t),
+                         scratch_pool);
+
+      for (offset = 0; offset < utf32len; ++offset)
+        {
+          const apr_int32_t code = SWAP_LONG(utf32str[offset]);
+          membuf_insert_ucs4(&ucs4buf, offset, code);
+        }
+      utf32str = ucs4buf.data;
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, utf32len * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, utf32str, utf32len, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
 #ifdef WIN32
 
 
