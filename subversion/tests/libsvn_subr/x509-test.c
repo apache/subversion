@@ -437,6 +437,39 @@ static struct x509_test cert_tests[] = {
     "x509v1.example.com",
     "5730dd65a7f77fdf0dfd90e5a53119f38854af29"
   },
+  /* X.509 v1 certificate with an X.509 v3 Subject Alternative Name
+   * extension.  Although these are ill-formed per RFC 5280 s. 4.1, we
+   * suspect that they could exist in the real world.  Make sure we do
+   * not error out, and that we pick up SAN (b.example.com) from the
+   * extension. */
+  { "MIIDLzCCAhcCAQ8wDQYJKoZIhvcNAQEFBQAwKzEpMCcGA1UEAwwgSW50ZXJuZXQg"
+    "V2lkZ2l0cyBJbnRlcm1lZGlhdGUgQ0EwHhcNMTUwMTI5MDAzMzU1WhcNMTYwMTI5"
+    "MDAzMzU1WjByMQswCQYDVQQGEwJVUzETMBEGA1UECAwKV2FzaGluZ3RvbjETMBEG"
+    "A1UEBwwKTm9ydGggQmVuZDEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkg"
+    "THRkMRYwFAYDVQQDDA1hLmV4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOC"
+    "AQ8AMIIBCgKCAQEAs0hj2xPRQZpecqk0Ih1l4juAuQZeSgv3yD/VtSq/9sTBH6iA"
+    "4XjJQcHROYxYaK0QS/qlCjpl+Q3mOaVIu+59TLy3T2YVgqMYmgB453ntuJPkdF1C"
+    "fJ2j19YAQZHHdOFaP1G+auBwjmHns3+MkG4s7EPuJP7TBCcSFlOmz5D4GUui3NVG"
+    "LBYUog1ZhF4oe/7d4jc2Cn8uypNT/Hc1ViIlCT4rFoAirv9Uob+4zjQ3Z18I1Ql1"
+    "t8oszVCj3kKDboEty2RduwPLx/2ztWYBCvFhd49JGdi/nzMi+j2d5HCI3V8W06pN"
+    "mvrVU4G0ImVRa8wpmQCSm2Tp0s42FAVHWw8yMwIDAQABoxwwGjAYBgNVHREEETAP"
+    "gg1iLmV4YW1wbGUuY29tMA0GCSqGSIb3DQEBBQUAA4IBAQDI/n0NYakuRP/485/A"
+    "dan71qBy3sljjOreq71IfBdtq+GEjCL1B0TD0V338LXki9NicCLeD/MWfceDjV0u"
+    "AjPTxaZEn/NWqXo0mpNC535Y6G46mIHYDGC8JyvCJjaXF+GVstNt6lXzZp2Yn3Si"
+    "K57uVb+zz5zAGSO982I2HACZPnF/oAtp7bwxzwvBsLqSLw3hh0ATVPp6ktE+WMoI"
+    "X75CVcDmU0zjXqzKiFPKeTVjQG6YxgvplMaag/iNngkgEhX4PIrxdIEsHf8l9ogC"
+    "dz51MFxetsC4D2KRq8IblF9i+9r3hlv+Dbf9ovYe9Hu0usloSinImoWOw42iWWmP"
+    "vT4l",
+    "C=US, ST=Washington, L=North Bend, O=Internet Widgits Pty Ltd, "
+    "CN=a.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.10 2.5.4.3",
+    "CN=Internet Widgits Intermediate CA",
+    "2.5.4.3",
+    "2015-01-29T00:33:55.000000Z",
+    "2016-01-29T00:33:55.000000Z",
+    "b.example.com",
+    "47fa5c76fee6e21e37def6da3746bba84a5a09bf"
+  },
   { NULL }
 };
 
