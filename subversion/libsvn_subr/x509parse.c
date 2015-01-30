@@ -1010,7 +1010,7 @@ x509parse_get_hostnames(svn_x509_certinfo_t *ci, x509_cert *crt,
 {
   ci->hostnames = NULL;
 
-  if (crt->dnsnames && crt->dnsnames->nelts > 0)
+  if (crt->dnsnames->nelts > 0)
     {
       int i;
 
@@ -1155,17 +1155,18 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
    *      extensions              [3]      EXPLICIT Extensions OPTIONAL
    *                                               -- If present, version shall be v3
    */
-  if (crt->version == 2 || crt->version == 3)
-    SVN_ERR(x509_get_uid(&p, end, &crt->issuer_id, 1));
+  crt->dnsnames = apr_array_make(scratch_pool, 3, sizeof(x509_buf *));
 
-  if (crt->version == 2 || crt->version == 3)
-    SVN_ERR(x509_get_uid(&p, end, &crt->subject_id, 2));
-
-  if (crt->version == 3)
-    {
-      crt->dnsnames = apr_array_make(scratch_pool, 3, sizeof(x509_buf *));
-      SVN_ERR(x509_get_ext(crt->dnsnames, &p, end));
-    }
+  /* Try to parse issuerUniqueID, subjectUniqueID and extensions for *every*
+   * version (X.509 v1, v2 and v3), not just v2 or v3.  If they aren't present,
+   * we are fine, but we don't want to throw an error if they are.  v1 and v2
+   * certificates with the corresponding extra fields are ill-formed per RFC
+   * 5280 s. 4.1, but we suspect they could exist in the real world.  Other
+   * X.509 parsers (e.g., within OpenSSL or Microsoft CryptoAPI) aren't picky
+   * about these certificates, and we also allow them. */
+  SVN_ERR(x509_get_uid(&p, end, &crt->issuer_id, 1));
+  SVN_ERR(x509_get_uid(&p, end, &crt->subject_id, 2));
+  SVN_ERR(x509_get_ext(crt->dnsnames, &p, end));
 
   if (p != end)
     {
