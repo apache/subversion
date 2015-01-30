@@ -257,13 +257,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1655712, r1655738
-   Improve error message when external is shadowed by a versioned path.
-   Justification:
-     The current error message is very unclear.
-   Votes:
-     +1: brane, rhuijben, stsp
-
  * r1650834
    Fix svn_stringbuf_insert and svn_stringbuf_replace when the source is
    within the target stringbuf and contains NUL bytes.
