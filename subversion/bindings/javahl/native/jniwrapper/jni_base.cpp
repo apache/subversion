@@ -329,6 +329,8 @@ const char* const IndexOutOfBoundsException::m_class_name =
 const char* const IOException::m_class_name =
   "java/io/IOException";
 
+const char* const IllegalArgumentException::m_class_name =
+  "java/lang/IllegalArgumentException";
 
 // Implementation of jni_stack.hpp
 
