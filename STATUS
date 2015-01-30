@@ -256,10 +256,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1653039
-   Allocate correct amount of memory for freeze arguments.
-   Justification:
-     Writing beyond allocated memory is undefined behaviour.
-   Votes:
-     +1: philip, rhuijben, ivan
