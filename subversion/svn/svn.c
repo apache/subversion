@@ -422,7 +422,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"pin-externals", opt_pin_externals, 0,
                        N_("pin externals with no explicit revision to their\n"
                           "                             "
-                          "last-changed revision (recommended when tagging)")},
+                          "current revision (recommended when tagging)")},
 
   /* Long-opt Aliases
    *
