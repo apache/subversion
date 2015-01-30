@@ -2243,8 +2243,8 @@ class SvnClientTest < Test::Unit::TestCase
 
       items = nil
       ctx.cp(path, repos_uri2)
-      assert_equal([nil], items.collect {|item| item.wcprop_changes})
-      assert_equal([nil], items.collect {|item| item.incoming_prop_changes})
+      assert_equal([[]], items.collect {|item| item.wcprop_changes})
+      assert_equal([[]], items.collect {|item| item.incoming_prop_changes})
       assert_equal([nil], items.collect {|item| item.outgoing_prop_changes})
     end
   end

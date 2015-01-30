@@ -71,7 +71,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/types/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;)V");
+                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
+                              "Ljava/lang/String;[B[B[B[B)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -118,6 +119,33 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   jobject joperation = EnumMapper::mapOperation(desc->operation);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jstring jpropRejectAbspath = JNIUtil::makeJString(desc->prop_reject_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueBase = (
+      !desc->prop_value_base ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_base->data,
+                               int(desc->prop_value_base->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueWorking = (
+      !desc->prop_value_working ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_working->data,
+                               int(desc->prop_value_working->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingOld = (
+      !desc->prop_value_incoming_old ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_old->data,
+                               int(desc->prop_value_incoming_old->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingNew = (
+      !desc->prop_value_incoming_new ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_new->data,
+                               int(desc->prop_value_incoming_new->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
@@ -125,7 +153,10 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                                  (jboolean) desc->is_binary, jmimeType,
                                  jconflictAction, jconflictReason, joperation,
                                  jbasePath, jreposPath, juserPath,
-                                 jmergedPath, jsrcLeft, jsrcRight);
+                                 jmergedPath, jsrcLeft, jsrcRight,
+                                 jpropRejectAbspath, jpropValueBase,
+                                 jpropValueWorking, jpropValueIncomingOld,
+                                 jpropValueIncomingNew);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
