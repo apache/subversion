@@ -6696,6 +6696,56 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_prop_and_text_rep_sharing_collision(const svn_test_opts_t *opts,
+                                         apr_pool_t *pool)
+{
+  /* Regression test for issue 4554: Wrong file length with PLAIN
+   * representations in FSFS. */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_fs_root_t *rev_root;
+  svn_revnum_t new_rev;
+  svn_filesize_t length;
+  const char *testdir = "test-prop-and-text-rep-sharing-collision";
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, testdir, opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  /* Set node property for the root. */
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "prop",
+                                  svn_string_create("value", pool),
+                                  pool));
+
+  /* Commit revision r1. */
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Create file with same contents as property representation. */
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/foo",
+                                      "K 4\n"
+                                      "prop\n"
+                                      "V 5\n"
+                                      "value\n"
+                                      "END\n", pool));
+
+  /* Commit revision r2. */
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Check that FS reports correct length for the file (23). */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, pool));
+  SVN_ERR(svn_fs_file_length(&length, rev_root, "/foo", pool));
+
+  SVN_TEST_ASSERT(length == 23);
+  return SVN_NO_ERROR; 
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6825,6 +6875,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test pool lifetime dependencies with txn roots"),
     SVN_TEST_OPTS_PASS(test_modify_txn_being_written,
                        "test modify txn being written in FSFS"),
+    SVN_TEST_OPTS_PASS(test_prop_and_text_rep_sharing_collision,
+                       "test property and text rep-sharing collision"),
     SVN_TEST_NULL
   };
 

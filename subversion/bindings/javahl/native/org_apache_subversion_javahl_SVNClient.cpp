@@ -1646,7 +1646,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_blame
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
- jboolean jincludeMergedRevisions, jobject jblameCallback)
+ jboolean jincludeMergedRevisions, jobject jblameCallback,
+ jobject jdiffOptions)
 {
   JNIEntry(SVNClient, blame);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1671,10 +1672,15 @@ Java_org_apache_subversion_javahl_SVNClient_blame
   if (JNIUtil::isExceptionThrown())
     return;
 
+  DiffOptions options(jdiffOptions);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   BlameCallback callback(jblameCallback);
   cl->blame(path, pegRevision, revisionStart, revisionEnd,
             jignoreMimeType ? true : false,
-            jincludeMergedRevisions ? true : false, &callback);
+            jincludeMergedRevisions ? true : false, &callback,
+            options);
 }
 
 JNIEXPORT void JNICALL

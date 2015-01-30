@@ -1035,6 +1035,28 @@ prep_working(dav_resource_combined *comb)
   comb->res.exists = (kind != svn_node_none);
   comb->res.collection = (kind == svn_node_dir);
 
+  if (comb->res.exists
+      && comb->priv.r->method_number == M_MKCOL
+      && comb->priv.repos->is_svn_client)
+    {
+      /* mod_dav will now continue returning a generic HTTP_METHOD_NOT_ALLOWED
+         error, which doesn't produce nice output on SVN, nor gives any details
+         on why the operation failed.
+
+         Let's error out a bit earlier and produce an error message that is
+         easier to understand for both clients and users. */
+
+      /* It would be nice if we could error out a bit later (see issue #2295),
+         like in create_collection(), but mod_dav outsmarts us by just
+         returning the error when the node exists. */
+
+      return dav_svn__convert_err(
+                  svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                    "Path already exists, path '%s'",
+                                    comb->priv.repos_path),
+                  HTTP_METHOD_NOT_ALLOWED, NULL, pool);
+    }
+
   return NULL;
 }
 
