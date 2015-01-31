@@ -373,8 +373,8 @@ locate_cache(svn_cache__t **cache,
     }
 }
 
-/* Return NODE_P for PATH from ROOT's node cache, or NULL if the node
-   isn't cached; read it from the FS. *NODE_P is allocated in POOL. */
+/* In *NODE_P, return the DAG node for PATH from ROOT's node cache, or NULL
+   if the node isn't cached.  *NODE_P is allocated in POOL. */
 static svn_error_t *
 dag_node_cache_get(dag_node_t **node_p,
                    svn_fs_root_t *root,
@@ -404,7 +404,7 @@ dag_node_cache_get(dag_node_t **node_p,
           if (found && node)
             {
               /* Patch up the FS, since this might have come from an old FS
-              * object. */
+               * object. */
               svn_fs_fs__dag_set_fs(node, root->fs);
 
               /* Retain the DAG node in L1 cache. */
@@ -428,7 +428,7 @@ dag_node_cache_get(dag_node_t **node_p,
       if (found && node)
         {
           /* Patch up the FS, since this might have come from an old FS
-          * object. */
+           * object. */
           svn_fs_fs__dag_set_fs(node, root->fs);
         }
     }
@@ -451,11 +451,7 @@ dag_node_cache_set(svn_fs_root_t *root,
 
   SVN_ERR_ASSERT(*path == '/');
 
-  /* Do *not* attempt to dup and put the node into L1.
-   * dup() is twice as expensive as an L2 lookup (which will set also L1).
-   */
   locate_cache(&cache, &key, root, path, pool);
-
   return svn_cache__set(cache, key, node, pool);
 }
 
