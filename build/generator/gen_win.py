@@ -114,14 +114,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
-    # Generate the build_zlib.bat file
-    if self._libraries['zlib'].is_src:
-      data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
-              'zlib_version': self.zlib_version,
-              'use_ml': self.have_ml and 1 or None}
-      bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
-      self.write_with_template(bat, 'templates/build_zlib.ezt', data)
-
     # Generate the build_locale.bat file
     if self.enable_nls:
       pofiles = []
@@ -198,6 +190,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
                       + self.projects
 
+    install_targets = [x for x in install_targets if not x.when or
+                                                     x.when in self._windows_when]
+
     # Don't create projects for scripts
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
@@ -213,9 +208,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # Drop the ra_serf target if we don't have serf
     if 'serf' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
-    # Drop the serf target if we don't build serf ourselves
-    if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
-      install_targets = [x for x in install_targets if x.name != 'serf']
 
     # Drop the swig targets if we don't have swig or language support
     install_targets = [x for x in install_targets
@@ -234,11 +226,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
 
-    # If we don't build 'ZLib' ourself, remove this target and all the dependencies on it
-    if not self._libraries['zlib'].is_src:
-      install_targets = [x for x in install_targets if x.name != 'zlib']
-      # TODO: Fixup dependencies
-
     # Create DLL targets for libraries
     dll_targets = []
     for target in install_targets:
@@ -251,6 +238,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
+
+    # Fix up targets that can't be linked to libraries
+    if not self.disable_shared:
+      for target in install_targets:
+        if isinstance(target, gen_base.TargetExe) and target.msvc_force_static:
+
+          # Make direct dependencies of all the indirect dependencies
+          linked_deps = {}
+          self.get_linked_win_depends(target, linked_deps)
+
+          for lk in linked_deps.keys():
+            if not isinstance(lk, gen_base.TargetLib) or not lk.msvc_export:
+              self.graph.add(gen_base.DT_LINK, target.name, lk)
+            else:
+              self.graph.remove(gen_base.DT_LINK, target.name, lk)
 
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
@@ -302,9 +304,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       # against the static libraries because they sometimes access internal
       # library functions.
 
-      # ### The magic behavior for 'test' in a name and 'entries-dump' should
-      # ### move to another option in build.conf
-      if dep in deps[key] and key.find("test") == -1 and key != 'entries-dump':
+      if dep in deps[key]:
         deps[key].remove(dep)
         deps[key].append(target)
 
@@ -369,10 +369,20 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "%s -g -target 1.5 -source 1.5 -classpath %s -d %s " \
-                   "-sourcepath %s $(InputPath)" \
+          per_project_flags = ""
+
+          if target.name.find("-compat-"):
+            per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
+                                 " -Xlint:-rawtypes"
+
+          cbuild = ("%s -g -Xlint -Xlint:-options " +
+                    per_project_flags +
+                    " -target 1.5 -source 1.5 -classpath "
+                    " %s -d %s "
+                    " -sourcepath %s $(InputPath)") \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
+
 
           ctarget = self.path(object.filename)
           cdesc = "Compiling %s" % (source)
@@ -566,10 +576,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
-    # Make ZLib a dependency of serf if we build the zlib src
-    if name == 'serf' and self._libraries['zlib'].is_src:
-      depends.extend(self.sections['zlib'].get_targets())
-
     # To set the correct build order of the JavaHL targets, the javahl-javah
     # and libsvnjavahl targets are defined with extra dependencies in build.conf
     # like this:
@@ -725,6 +731,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
+    if self.cpp_defines:
+      fakedefines.extend(self.cpp_defines)
+
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
@@ -743,7 +752,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    # check we have sasl
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
 
@@ -752,8 +760,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
-    fakeincludes = [ "subversion/include",
-                     "subversion" ]
+    fakeincludes = [ "subversion/include" ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
@@ -765,12 +772,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           fakeincludes.extend(lib.include_dirs)
 
-    if target.name == 'mod_authz_svn':
-      fakeincludes.extend([ os.path.join(self.httpd_path, "modules/aaa") ])
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
-    elif (isinstance(target, gen_base.TargetSWIG)
+    if (isinstance(target, gen_base.TargetSWIG)
           or isinstance(target, gen_base.TargetSWIGLib)):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
@@ -812,6 +814,25 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     fakelibdirs = []
 
+    # When nls is enabled, all our projects use it directly via the _() macro,
+    # even though only libsvn_subr references it in build.conf
+    if self.enable_nls:
+      lib = self._libraries['intl']
+      if debug and lib.debug_lib_dir:
+        fakelibdirs.append(lib.debug_lib_dir)
+      else:
+        fakelibdirs.append(lib.lib_dir)
+
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+
+        if debug and lib.debug_lib_dir:
+          fakelibdirs.append(lib.debug_lib_dir)
+        elif lib.lib_dir:
+          fakelibdirs.append(lib.lib_dir)
+
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
         for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
@@ -831,12 +852,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           fakelibdirs.append(lib_dir)
 
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakelibdirs.append(self.apath(self.httpd_path, cfg))
-      if target.name == 'mod_dav_svn':
-        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
-                                      cfg))
-
     return gen_base.unique(fakelibdirs)
 
   def get_win_libs(self, target, cfg):
@@ -852,8 +867,23 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     nondeplibs = target.msvc_libs[:]
 
-    if isinstance(target, gen_base.TargetExe):
-      nondeplibs.append('setargv.obj')
+    # When nls is enabled, all our projects use it directly via the _() macro,
+    # even though only libsvn_subr references it in build.conf
+    if self.enable_nls:
+      lib = self._libraries['intl']
+      if debug and lib.debug_lib_name:
+        nondeplibs.append(lib.debug_lib_name)
+      else:
+        nondeplibs.append(lib.lib_name)
+
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+        if debug and lib.debug_lib_name:
+          nondeplibs.append(lib.debug_lib_name)
+        elif lib.lib_name:
+          nondeplibs.append(lib.lib_name)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
@@ -927,68 +957,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     template.parse_file(os.path.join('build', 'generator', tname))
     template.generate(fout, data)
     self.write_file_if_changed(fname, fout.getvalue())
-
-  def write_zlib_project_file(self, name):
-    if not self._libraries['zlib'].is_src:
-      return
-    zlib_path = os.path.abspath(self.zlib_path)
-    zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),
-                       glob.glob(os.path.join(zlib_path, '*.c')) +
-                       glob.glob(os.path.join(zlib_path,
-                                              'contrib/masmx86/*.c')) +
-                       glob.glob(os.path.join(zlib_path,
-                                              'contrib/masmx86/*.asm')))
-    zlib_headers = map(lambda x : os.path.relpath(x, self.projfilesdir),
-                       glob.glob(os.path.join(zlib_path, '*.h')))
-
-    self.move_proj_file(self.projfilesdir, name,
-                        (('zlib_path', os.path.relpath(zlib_path,
-                                                       self.projfilesdir)),
-                         ('zlib_sources', zlib_sources),
-                         ('zlib_headers', zlib_headers),
-                         ('zlib_version', self.zlib_version),
-                         ('project_guid', self.makeguid('zlib')),
-                         ('use_ml', self.have_ml and 1 or None),
-                        ))
-
-  def write_serf_project_file(self, name):
-    if 'serf' not in self._libraries:
-      return
-      
-    serf = self._libraries['serf']
-    
-    if not serf.is_src:
-      return # Using an installed library
-
-    serf_path = os.path.abspath(self.serf_path)
-    serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
-                       glob.glob(os.path.join(serf_path, '*.c'))
-                       + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
-                       + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.c')))
-    serf_headers = map(lambda x : os.path.relpath(x, self.serf_path),
-                       glob.glob(os.path.join(serf_path, '*.h'))
-                       + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
-                       + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
-
-    apr_static = self.static_apr and 'APR_STATIC=1' or ''
-    openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
-    self.move_proj_file(self.serf_path, name,
-                        (('serf_sources', serf_sources),
-                         ('serf_headers', serf_headers),
-                         ('zlib_path', os.path.relpath(self.zlib_path,
-                                                       self.serf_path)),
-                         ('openssl_path', os.path.relpath(self.openssl_path,
-                                                          self.serf_path)),
-                         ('apr_path', os.path.relpath(self.apr_path,
-                                                      self.serf_path)),
-                         ('apr_util_path', os.path.relpath(self.apr_util_path,
-                                                           self.serf_path)),
-                         ('project_guid', self.makeguid('serf')),
-                         ('apr_static', apr_static),
-                         ('openssl_static', openssl_static),
-                         ('serf_lib', serf.lib_name),
-                        ))
 
   def move_proj_file(self, path, name, params=()):
     ### Move our slightly templatized pre-built project files into place --

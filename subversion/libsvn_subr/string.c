@@ -26,6 +26,7 @@
 
 
 #include <apr.h>
+#include <assert.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_fnmatch.h>
@@ -53,9 +54,9 @@ membuf_create(void **data, apr_size_t *size,
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
    * smaller size. Note that this is safe even if apr_palloc would
-   * use some other aligment or none at all. */
+   * use some other alignment or none at all. */
   minimum_size = APR_ALIGN_DEFAULT(minimum_size);
-  *data = (!minimum_size ? NULL : apr_palloc(pool, minimum_size));
+  *data = apr_palloc(pool, minimum_size);
   *size = minimum_size;
 }
 
@@ -78,14 +79,10 @@ membuf_ensure(void **data, apr_size_t *size,
       apr_size_t new_size = *size;
 
       if (new_size == 0)
-        /* APR will increase odd allocation sizes to the next
-         * multiple for 8, for instance. Take advantage of that
-         * knowledge and allow for the extra size to be used. */
         new_size = minimum_size;
       else
         while (new_size < minimum_size)
           {
-            /* new_size is aligned; doubling it should keep it aligned */
             const apr_size_t prev_size = new_size;
             new_size *= 2;
 
@@ -121,7 +118,10 @@ svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
   const apr_size_t old_size = membuf->size;
 
   membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
-  if (membuf->data && old_data && old_data != membuf->data)
+
+  /* If we re-allocated MEMBUF->DATA, it cannot be NULL.
+   * Statically initialized membuffers (OLD_DATA) may be NULL, though. */
+  if (old_data && old_data != membuf->data)
     memcpy(membuf->data, old_data, old_size);
 }
 
@@ -151,7 +151,7 @@ string_compare(const char *str1,
   if (len1 != len2)
     return FALSE;
 
-  /* now the strings must have identical lenghths */
+  /* now the strings must have identical lengths */
 
   if ((memcmp(str1, str2, len1)) == 0)
     return TRUE;
@@ -240,7 +240,9 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
   new_string->data = data;
   new_string->len = size;
 
-  memcpy(data, bytes, size);
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -393,7 +395,10 @@ svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
-  memcpy(strbuf->data, bytes, size);
+
+  /* If SIZE is 0, NULL is valid for BYTES. */
+  if (size)
+    memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
@@ -590,6 +595,10 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   apr_size_t total_len;
   void *start_address;
 
+  if (!count)
+    /* Allow BYTES to be NULL by avoiding passing it to memcpy. */
+    return;
+
   total_len = str->len + count;  /* total size needed */
 
   /* svn_stringbuf_ensure adds 1 for null terminator. */
@@ -642,23 +651,22 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
                      const char *bytes,
                      apr_size_t count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL. It's a no-op in that case. */
+  if (count == 0)
+    return;
+
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + count > str->data && bytes < str->data + str->blocksize)
-    {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pstrndup(str->pool, bytes, count);
-      svn_stringbuf_insert(str, pos, temp, count);
-    }
-  else
-    {
-      if (pos > str->len)
-        pos = str->len;
+    bytes = apr_pmemdup(str->pool, bytes, count);
 
-      svn_stringbuf_ensure(str, str->len + count);
-      memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
-      memcpy(str->data + pos, bytes, count);
+  if (pos > str->len)
+    pos = str->len;
 
-      str->len += count;
-    }
+  svn_stringbuf_ensure(str, str->len + count);
+  memmove(str->data + pos + count, str->data + pos, str->len - pos + 1);
+  memcpy(str->data + pos, bytes, count);
+
+  str->len += count;
 }
 
 void
@@ -682,32 +690,35 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       const char *bytes,
                       apr_size_t new_count)
 {
+  /* For COUNT==0, we allow BYTES to be NULL.
+   * In that case, this is just a substring removal. */
+  if (new_count == 0)
+    {
+      svn_stringbuf_remove(str, pos, old_count);
+      return;
+    }
+
+  /* special case: BYTES overlaps with this string -> copy the source */
   if (bytes + new_count > str->data && bytes < str->data + str->blocksize)
+    bytes = apr_pmemdup(str->pool, bytes, new_count);
+
+  if (pos > str->len)
+    pos = str->len;
+  if (pos + old_count > str->len)
+    old_count = str->len - pos;
+
+  if (old_count < new_count)
     {
-      /* special case: BYTES overlaps with this string -> copy the source */
-      const char *temp = apr_pstrndup(str->pool, bytes, new_count);
-      svn_stringbuf_replace(str, pos, old_count, temp, new_count);
+      apr_size_t delta = new_count - old_count;
+      svn_stringbuf_ensure(str, str->len + delta);
     }
-  else
-    {
-      if (pos > str->len)
-        pos = str->len;
-      if (pos + old_count > str->len)
-        old_count = str->len - pos;
 
-      if (old_count < new_count)
-        {
-          apr_size_t delta = new_count - old_count;
-          svn_stringbuf_ensure(str, str->len + delta);
-        }
+  if (old_count != new_count)
+    memmove(str->data + pos + new_count, str->data + pos + old_count,
+            str->len - pos - old_count + 1);
 
-      if (old_count != new_count)
-        memmove(str->data + pos + new_count, str->data + pos + old_count,
-                str->len - pos - old_count + 1);
-
-      memcpy(str->data + pos, bytes, new_count);
-      str->len += new_count - old_count;
-    }
+  memcpy(str->data + pos, bytes, new_count);
+  str->len += new_count - old_count;
 }
 
 
@@ -858,7 +869,7 @@ char *
 svn_cstring_tokenize(const char *sep, char **str)
 {
     char *token;
-    const char * next;
+    char *next;
     char csep;
 
     /* check parameters */
@@ -888,8 +899,8 @@ svn_cstring_tokenize(const char *sep, char **str)
       }
     else
       {
-        *(char *)next = '\0';
-        *str = (char *)next + 1;
+        *next = '\0';
+        *str = next + 1;
       }
 
     return token;
@@ -1040,19 +1051,6 @@ svn_cstring_atoi(int *n, const char *str)
   return SVN_NO_ERROR;
 }
 
-
-apr_status_t
-svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
-{
-#if !APR_VERSION_AT_LEAST(1,0,0)
-  errno = 0;
-  *offset = strtol(buf, end, base);
-  return APR_FROM_OS_ERROR(errno);
-#else
-  return apr_strtoff(offset, buf, end, base);
-#endif
-}
-
 unsigned long
 svn__strtoul(const char* buffer, const char** end)
 {
@@ -1070,7 +1068,7 @@ svn__strtoul(const char* buffer, const char** end)
    */
   while (1)
     {
-      unsigned long c = *buffer - '0';
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
       if (c > 9)
         break;
 
@@ -1081,7 +1079,6 @@ svn__strtoul(const char* buffer, const char** end)
   *end = buffer;
   return result;
 }
-
 
 /* "Precalculated" itoa values for 2 places (including leading zeros).
  * For maximum performance, make sure all table entries are word-aligned.
@@ -1179,11 +1176,11 @@ svn__i64toa(char * dest, apr_int64_t number)
     return svn__ui64toa(dest, (apr_uint64_t)number);
 
   *dest = '-';
-  return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
+  return svn__ui64toa(dest + 1, 0 - (apr_uint64_t)number) + 1;
 }
 
 static void
-ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
+ui64toa_sep(apr_uint64_t number, char separator, char *buffer)
 {
   apr_size_t length = svn__ui64toa(buffer, number);
   apr_size_t i;
@@ -1191,7 +1188,7 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
   for (i = length; i > 3; i -= 3)
     {
       memmove(&buffer[i - 2], &buffer[i - 3], length - i + 3);
-      buffer[i-3] = seperator;
+      buffer[i-3] = separator;
       length++;
     }
 
@@ -1199,25 +1196,25 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
 }
 
 char *
-svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool)
+svn__ui64toa_sep(apr_uint64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
-  ui64toa_sep(number, seperator, buffer);
+  ui64toa_sep(number, separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }
 
 char *
-svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
+svn__i64toa_sep(apr_int64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
   if (number < 0)
     {
       buffer[0] = '-';
-      ui64toa_sep((apr_uint64_t)(-number), seperator, &buffer[1]);
+      ui64toa_sep((apr_uint64_t)(-number), separator, &buffer[1]);
     }
   else
-    ui64toa_sep((apr_uint64_t)(number), seperator, buffer);
+    ui64toa_sep((apr_uint64_t)(number), separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }
@@ -1470,4 +1467,17 @@ svn_cstring__reverse_match_length(const char *a,
   return max_len;
 }
 
+const char *
+svn_cstring_skip_prefix(const char *str, const char *prefix)
+{
+  apr_size_t len = strlen(prefix);
 
+  if (strncmp(str, prefix, len) == 0)
+    {
+      return str + len;
+    }
+  else
+    {
+      return NULL;
+    }
+}

@@ -33,9 +33,9 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_version.h"
+#include "svn_time.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -53,6 +53,7 @@
 #include "deprecated.h"
 
 #include "private/svn_ra_private.h"
+#include "svn_private_config.h"
 
 
 
@@ -263,9 +264,10 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
   svn_config_t *servers = NULL;
-  const char *server_group;
+  const char *server_group = NULL;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
+  svn_error_t *err;
 #ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
@@ -277,7 +279,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
   const char *store_pp_plaintext
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
-  const char *corrected_url;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -426,6 +427,10 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
       if (! store_auth_creds)
         svn_auth_set_parameter(callbacks->auth_baton,
                                SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+      if (server_group)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_SERVER_GROUP, server_group);
     }
 
   /* Find the library. */
@@ -476,30 +481,29 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  SVN_ERR_W(vtable->open_session(session, &corrected_url, repos_URL,
-                                 callbacks, callback_baton, config, sesspool),
-            apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
-                         repos_URL));
+  err = vtable->open_session(session, corrected_url_p,
+                             repos_URL,
+                             callbacks, callback_baton, config, sesspool);
+
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
+        return svn_error_trace(err);
+
+      return svn_error_createf(
+                SVN_ERR_RA_CANNOT_CREATE_SESSION, err,
+                _("Unable to connect to a repository at URL '%s'"),
+                repos_URL);
+    }
 
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
-  if (corrected_url_p && corrected_url)
+  if (corrected_url_p && *corrected_url_p)
     {
-      if (! svn_path_is_url(corrected_url))
-        {
-          /* RFC1945 and RFC2616 state that the Location header's
-             value (from whence this CORRECTED_URL ultimately comes),
-             if present, must be an absolute URI.  But some Apache
-             versions (those older than 2.2.11, it seems) transmit
-             only the path portion of the URI.  See issue #3775 for
-             details. */
-          apr_uri_t corrected_URI = repos_URI;
-          corrected_URI.path = (char *)corrected_url;
-          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
-        }
-      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
+      /* *session_p = NULL; */
+      *corrected_url_p = apr_pstrdup(pool, *corrected_url_p);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }
@@ -523,6 +527,45 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
     }
 
   *session_p = session;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_dup_session(svn_ra_session_t **new_session,
+                   svn_ra_session_t *old_session,
+                   const char *session_url,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *session;
+
+  if (session_url)
+    {
+      const char *dummy;
+
+      /* This verifies in new_session_url is in the repository */
+      SVN_ERR(svn_ra_get_path_relative_to_root(old_session,
+                                               &dummy,
+                                               session_url,
+                                               scratch_pool));
+    }
+  else
+    SVN_ERR(svn_ra_get_session_url(old_session, &session_url, scratch_pool));
+
+  /* Create the session object. */
+  session = apr_pcalloc(result_pool, sizeof(*session));
+  session->cancel_func = old_session->cancel_func;
+  session->cancel_baton = old_session->cancel_baton;
+  session->vtable = old_session->vtable;
+  session->pool = result_pool;
+
+  SVN_ERR(old_session->vtable->dup_session(session,
+                                           old_session,
+                                           session_url,
+                                           result_pool,
+                                           scratch_pool));
+
+  *new_session = session;
   return SVN_NO_ERROR;
 }
 
@@ -925,8 +968,104 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
                          svn_dirent_t **dirent,
                          apr_pool_t *pool)
 {
+  svn_error_t *err;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
-  return session->vtable->stat(session, path, revision, dirent, pool);
+  err = session->vtable->stat(session, path, revision, dirent, pool);
+
+  /* svnserve before 1.2 doesn't support the above, so fall back on
+     a far less efficient, but still correct method. */
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      /* ### TODO: Find out if we can somehow move this code in libsvn_ra_svn.
+       */
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+      svn_node_kind_t kind;
+
+      svn_error_clear(err);
+
+      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
+
+      if (kind != svn_node_none)
+        {
+          const char *repos_root_url;
+          const char *session_url;
+
+          SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url,
+                                         scratch_pool));
+          SVN_ERR(svn_ra_get_session_url(session, &session_url,
+                                         scratch_pool));
+
+          if (!svn_path_is_empty(path))
+            session_url = svn_path_url_add_component2(session_url, path,
+                                                      scratch_pool);
+
+          if (strcmp(session_url, repos_root_url) != 0)
+            {
+              svn_ra_session_t *parent_session;
+              apr_hash_t *parent_ents;
+              const char *parent_url, *base_name;
+
+              /* Open another session to the path's parent.  This server
+                 doesn't support svn_ra_reparent anyway, so don't try it. */
+              svn_uri_split(&parent_url, &base_name, session_url,
+                            scratch_pool);
+
+              SVN_ERR(svn_ra_dup_session(&parent_session, session, parent_url,
+                                         scratch_pool, scratch_pool));
+
+              /* Get all parent's entries, no props. */
+              SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
+                                      NULL, "", revision, SVN_DIRENT_ALL,
+                                      scratch_pool));
+
+              /* Get the relevant entry. */
+              *dirent = svn_hash_gets(parent_ents, base_name);
+
+              if (*dirent)
+                *dirent = svn_dirent_dup(*dirent, pool);
+            }
+          else
+            {
+              apr_hash_t *props;
+              const svn_string_t *val;
+
+              /* We can't get the directory entry for the repository root,
+                 but we can still get the information we want.
+                 The created-rev of the repository root must, by definition,
+                 be rev. */
+              *dirent = apr_pcalloc(pool, sizeof(**dirent));
+              (*dirent)->kind = kind;
+              (*dirent)->size = SVN_INVALID_FILESIZE;
+
+              SVN_ERR(svn_ra_get_dir2(session, NULL, NULL, &props,
+                                      "", revision, 0 /* no dirent fields */,
+                                      scratch_pool));
+              (*dirent)->has_props = (apr_hash_count(props) != 0);
+
+              (*dirent)->created_rev = revision;
+
+              SVN_ERR(svn_ra_rev_proplist(session, revision, &props,
+                                          scratch_pool));
+
+              val = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
+              if (val)
+                SVN_ERR(svn_time_from_cstring(&(*dirent)->time, val->data,
+                                              scratch_pool));
+
+              val = svn_hash_gets(props, SVN_PROP_REVISION_AUTHOR);
+              (*dirent)->last_author = val ? apr_pstrdup(pool, val->data)
+                                           : NULL;
+            }
+        }
+      else
+        *dirent = NULL;
+
+      svn_pool_clear(scratch_pool);
+    }
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_uuid2(svn_ra_session_t *session,
@@ -1063,7 +1202,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
 
       SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
     }
@@ -1088,7 +1227,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
 
       SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
     }
@@ -1320,27 +1459,24 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_boolean_t iprop_capable;
-
+  svn_error_t *err;
   /* Path must be relative. */
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
 
-  SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
-                                SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                scratch_pool));
+  err = session->vtable->get_inherited_props(session, iprops, path,
+                                             revision, result_pool,
+                                             scratch_pool);
 
-  if (iprop_capable)
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
-      SVN_ERR(session->vtable->get_inherited_props(session, iprops, path,
-                                                   revision, result_pool,
-                                                   scratch_pool));
-    }
-  else
-    {
+      svn_error_clear(err);
+
       /* Fallback for legacy servers. */
       SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision, iprops,
                                                result_pool, scratch_pool));
     }
+  else
+    SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }

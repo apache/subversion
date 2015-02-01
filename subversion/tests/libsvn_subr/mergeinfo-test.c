@@ -28,7 +28,6 @@
 
 #define SVN_DEPRECATED
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_types.h"
@@ -105,7 +104,7 @@ verify_mergeinfo_parse(const char *input,
 
       /* Were we expecting any more ranges? */
       if (j < MAX_NBR_RANGES - 1
-          && !expected_ranges[j].end == 0)
+          && expected_ranges[j].end != 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
                                  "produce the expected number of ranges",
@@ -115,11 +114,7 @@ verify_mergeinfo_parse(const char *input,
 }
 
 
-/* Some of our own global variables (for simplicity), which map paths
-   -> merge ranges. */
-static apr_hash_t *info1, *info2;
-
-#define NBR_MERGEINFO_VALS 24
+#define NBR_MERGEINFO_VALS 25
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -153,7 +148,8 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/A/:7-8",
     "/A///:7-8",
     "/A/.:7-8",
-    "/A/./B:7-8"
+    "/A/./B:7-8",
+    ":7-8",
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -186,7 +182,8 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/A",
     "/A",
     "/A",
-    "/A/B"
+    "/A/B",
+    "/",
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -213,6 +210,7 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
     { {0, 77, TRUE} },
+    { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
@@ -269,6 +267,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, single_mergeinfo, pool));
 
@@ -302,7 +301,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 27
+#define NBR_BROKEN_MERGEINFO_VALS 26
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -334,8 +333,6 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:",
     "/trunk:2-9\n/branch:",
     "::",
-    /* No path */
-    ":1-3",
     /* Invalid revisions */
     "trunk:a-3",
     "branch:3-four",
@@ -347,6 +344,7 @@ test_parse_broken_mergeinfo(apr_pool_t *pool)
 {
   int i;
   svn_error_t *err;
+  apr_hash_t *info1;
 
   /* Trigger some error(s) with mal-formed input. */
   for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
@@ -566,6 +564,7 @@ test_mergeinfo_intersect(apr_pool_t *pool)
     { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE} };
   svn_rangelist_t *rangelist;
   apr_hash_t *intersection;
+  apr_hash_t *info1, *info2;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16\n/foo: 31", pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12", pool));
@@ -702,6 +701,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
     {
       int j;
       svn_string_t *info2_starting, *info2_ending;
+      apr_hash_t *info1, *info2;
 
       SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo[i].mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo[i].mergeinfo2, pool));
@@ -1110,6 +1110,7 @@ test_rangelist_to_string(apr_pool_t *pool)
   svn_rangelist_t *result;
   svn_string_t *output;
   svn_string_t *expected = svn_string_create("3,5,7-11,13-14", pool);
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
 
@@ -1130,6 +1131,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 {
   svn_string_t *output;
   svn_string_t *expected;
+  apr_hash_t *info1, *info2;
   expected = svn_string_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
@@ -1671,7 +1673,9 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_parse_single_line_mergeinfo,
@@ -1712,3 +1716,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "removal of prefix paths from catalog keys"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

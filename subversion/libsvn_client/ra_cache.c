@@ -275,7 +275,7 @@ find_session_by_url(cached_session_t **cache_entry_p,
     for (hi = apr_hash_first(scratch_pool, ctx->cached_session);
          hi; hi = apr_hash_next(hi))
       {
-        cached_session_t *cache_entry = svn__apr_hash_index_val(hi);
+        cached_session_t *cache_entry = apr_hash_this_val(hi);
 
         if (cache_entry->owner_pool == NULL &&
             svn_uri__is_ancestor(cache_entry->root_url, url))

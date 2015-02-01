@@ -28,6 +28,7 @@
 #define JAVAHL_OPERATION_CONTEXT_H
 
 #include <string>
+#include <memory>
 
 #include "svn_types.h"
 #include "svn_client.h"
@@ -51,7 +52,7 @@ class OperationContext
 
   apr_hash_t * m_config;
 
-  Prompter *m_prompter;
+  std::auto_ptr<Prompter> m_prompter;
   svn_atomic_t m_cancelOperation;
 
  protected:
@@ -59,9 +60,27 @@ class OperationContext
 
   jobject m_jctx;
   jobject m_jcfgcb;
+  jobject m_jtunnelcb;
+
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
   void notifyConfigLoad();
+
+  static svn_boolean_t checkTunnel(
+      void *tunnel_baton, const char *tunnel_name);
+
+  static svn_error_t *openTunnel(
+      svn_stream_t **request, svn_stream_t **response,
+      svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+      void *tunnel_baton,
+      const char *tunnel_name, const char *user,
+      const char *hostname, int port,
+      svn_cancel_func_t cancel_func, void *cancel_baton,
+      apr_pool_t *pool);
+
+  static void closeTunnel(
+      void *tunnel_context, void *tunnel_baton);
+
  public:
   OperationContext(SVN::Pool &pool);
   void attachJavaObject(jobject contextHolder, const char *contextClassType, const char *contextFieldName, jfieldID * ctxFieldID);
@@ -71,7 +90,7 @@ class OperationContext
 
   virtual void username(const char *pi_username);
   virtual void password(const char *pi_password);
-  virtual void setPrompt(Prompter *prompter);
+  virtual void setPrompt(std::auto_ptr<Prompter> prompter);
   svn_auth_baton_t *getAuthBaton(SVN::Pool &in_pool);
 
   void cancelOperation();
@@ -79,10 +98,9 @@ class OperationContext
   virtual bool isCancelledOperation();
   jobject getSelf() const;
   const char *getConfigDirectory() const;
-  jobject getConfigCallback() const;
   const char *getUsername() const;
   const char *getPassword() const;
-  const Prompter& getPrompter() const;
+  std::auto_ptr<Prompter> clonePrompter() const;
 
   /**
    * Set the configuration directory, taking the usual steps to
@@ -92,19 +110,19 @@ class OperationContext
   void setConfigDirectory(const char *configDir);
 
   /**
-   * Set the config ConfigCallback instance to call when configuration
-   * is loaded..
-   */
-  void setConfigCallback(jobject configCallback);
-
-  /**
    * Return configuration data for the context.
    * Read it from config directory if necessary
    */
   apr_hash_t *getConfigData();
 
+  void setConfigEventHandler(jobject jcfgcb);
+  jobject getConfigEventHandler() const;
+
   static svn_error_t * clientName(void *baton, const char **name, apr_pool_t *pool);
   virtual const char * getClientName() const;
+
+  virtual void setTunnelCallback(jobject jtunnelcb);
+  jobject getTunnelCallback() const;
 };
 
 #endif // JAVAHL_OPERATION_CONTEXT_H

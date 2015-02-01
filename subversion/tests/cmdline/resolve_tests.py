@@ -156,7 +156,7 @@ def prop_conflict_resolution(sbox):
 
     """Revert the WC, update it to r2, and set the following properties:
 
-    itoa      : 'propname' = 'local_edit'
+    iota      : 'propname' = 'local_edit'
                 'newprop'  = 'new-val-no-incoming'
     A/mu      : 'propname' = 'local_edit'
     A/D/gamma : 'propname' = 'incoming-no-conflict'
@@ -168,9 +168,9 @@ def prop_conflict_resolution(sbox):
     Using svn propget, check that the resolution results in the following
     properties:
 
-    itoa      : 'propname' = RESOLVED_EDITED_PROP_VAL_OUTPUT
+    iota      : 'propname' = RESOLVED_DELETED_PROP_VAL_OUTPUT
                 'newprop'  = 'new-val-no-incoming'
-    A/mu      : 'propname' = RESOLVED_DELETED_PROP_VAL_OUTPUT
+    A/mu      : 'propname' = RESOLVED_EDITED_PROP_VAL_OUTPUT
     A/D/gamma : 'propname' = 'incoming-no-conflict'
     A/D/H/psi : 'newprop'  = 'new-val-no-incoming'
 
@@ -203,10 +203,16 @@ def prop_conflict_resolution(sbox):
                                        '--accept=postpone', wc_dir)
     svntest.actions.run_and_verify_resolve([iota_path, mu_path], '-R',
                                            '--accept', resolve_accept, wc_dir)
+    if resolved_deleted_prop_val_output:
+      expected_deleted_stderr = []
+    else:
+      expected_deleted_stderr = '.*W200017: Property.*not found'
+
     svntest.actions.run_and_verify_svn(
       'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
       'not resolved as expected;',
-      resolved_deleted_prop_val_output, [], 'pg', 'propname', iota_path)
+      resolved_deleted_prop_val_output, expected_deleted_stderr,
+      'pg', 'propname', iota_path)
     svntest.actions.run_and_verify_svn(
       'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
       'not resolved as expected;',
@@ -367,6 +373,7 @@ def resolved_on_wc_root(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def resolved_on_deleted_item(sbox):
   "resolved on deleted item"
 

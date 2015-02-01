@@ -350,7 +350,7 @@ test_spillbuf_stream(apr_pool_t *pool)
   /* now: two blocks: 8 and 4 bytes  */
 
   readlen = 8;
-  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_ERR(svn_stream_read_full(stream, readbuf, &readlen));
   SVN_TEST_ASSERT(readlen == 8
                   && memcmp(readbuf, "abcdefgh", 8) == 0);
   /* now: one block: 4 bytes  */
@@ -358,7 +358,7 @@ test_spillbuf_stream(apr_pool_t *pool)
   SVN_ERR(svn_stream_write(stream, "mnopqr", &writelen));
   /* now: two blocks: 8 and 2 bytes  */
 
-  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_ERR(svn_stream_read_full(stream, readbuf, &readlen));
   SVN_TEST_ASSERT(readlen == 8
                   && memcmp(readbuf, "ijklmnop", 8) == 0);
   /* now: one block: 2 bytes  */
@@ -368,14 +368,14 @@ test_spillbuf_stream(apr_pool_t *pool)
   SVN_ERR(svn_stream_write(stream, "GHIJKL", &writelen));
   /* now: two blocks: 8 and 6 bytes, and 6 bytes spilled to a file  */
 
-  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_ERR(svn_stream_read_full(stream, readbuf, &readlen));
   SVN_TEST_ASSERT(readlen == 8
                   && memcmp(readbuf, "qrstuvwx", 8) == 0);
   readlen = 6;
-  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_ERR(svn_stream_read_full(stream, readbuf, &readlen));
   SVN_TEST_ASSERT(readlen == 6
                   && memcmp(readbuf, "ABCDEF", 6) == 0);
-  SVN_ERR(svn_stream_read(stream, readbuf, &readlen));
+  SVN_ERR(svn_stream_read_full(stream, readbuf, &readlen));
   SVN_TEST_ASSERT(readlen == 6
                   && memcmp(readbuf, "GHIJKL", 6) == 0);
 
@@ -560,7 +560,10 @@ test_spillbuf_file_attrs_spill_all(apr_pool_t *pool)
 }
 
 /* The test table.  */
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_spillbuf_basic, "basic spill buffer test"),
@@ -589,3 +592,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "check spill file properties (spill-all-data)"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

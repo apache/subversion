@@ -51,11 +51,18 @@ class JNIByteArray
    * at destruction.
    */
   bool m_deleteByteArray;
+
+  /**
+   * False if changes to the array should be committed to the Java VM.
+   */
+  bool m_abortOnRelease;
  public:
   bool isNull() const;
   const signed char *getBytes() const;
   int getLength();
-  JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
+  JNIByteArray(jbyteArray jba,
+               bool deleteByteArray = false,
+               bool abortOnRelease = true);
   ~JNIByteArray();
 };
 

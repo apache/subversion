@@ -121,11 +121,11 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool)
 {
-  string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = pool;
-  result->tables = apr_array_make(pool, 1, sizeof(builder_table_t *));
+  string_table_builder_t *result = apr_palloc(result_pool, sizeof(*result));
+  result->pool = result_pool;
+  result->tables = apr_array_make(result_pool, 1, sizeof(builder_table_t *));
 
   add_table(result);
   
@@ -137,36 +137,36 @@ balance(builder_table_t *table,
         builder_string_t **parent,
         builder_string_t *node)
 {
-  unsigned left_hight = node->left ? node->left->depth + 1 : 0;
-  unsigned right_hight = node->right ? node->right->depth + 1 : 0;
+  apr_size_t left_height = node->left ? node->left->depth + 1 : 0;
+  apr_size_t right_height = node->right ? node->right->depth + 1 : 0;
 
-  if (left_hight > right_hight + 1)
+  if (left_height > right_height + 1)
     {
       builder_string_t *temp = node->left->right;
       node->left->right = node;
       *parent = node->left;
       node->left = temp;
       
-      --left_hight;
+      --left_height;
     }
-  else if (left_hight + 1 < right_hight)
+  else if (left_height + 1 < right_height)
     {
       builder_string_t *temp = node->right->left;
       *parent = node->right;
       node->right->left = node;
       node->right = temp;
 
-      --right_hight;
+      --right_height;
     }
 
-  node->depth = MAX(left_hight, right_hight);
+  node->depth = MAX(left_height, right_height);
 }
 
 static apr_uint16_t
 match_length(const svn_string_t *lhs,
              const svn_string_t *rhs)
 {
-  apr_size_t len = MIN(rhs->len, rhs->len);
+  apr_size_t len = MIN(lhs->len, rhs->len);
   return (apr_uint16_t)svn_cstring__match_length(lhs->data, rhs->data, len);
 }
 
@@ -274,7 +274,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
                                    const char *string,
                                    apr_size_t len)
 {
-  apr_size_t result = -1;
+  apr_size_t result;
   builder_table_t *table = APR_ARRAY_IDX(builder->tables,
                                          builder->tables->nelts - 1,
                                          builder_table_t *);
@@ -284,12 +284,13 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
   string = apr_pstrmemdup(builder->pool, string, len);
   if (len > MAX_SHORT_STRING_LEN)
     {
+      void *idx_void;
       svn_string_t item;
       item.data = string;
       item.len = len;
-      
-      result
-        = (apr_uintptr_t)apr_hash_get(table->long_string_dict, string, len);
+
+      idx_void = apr_hash_get(table->long_string_dict, string, len);
+      result = (apr_uintptr_t)idx_void;
       if (result)
         return result - 1
              + LONG_STRING_MASK
@@ -319,7 +320,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
           || table->max_data_size < len)
         table = add_table(builder);
 
-      item->position = (apr_size_t)table->short_strings->nelts;
+      item->position = table->short_strings->nelts;
       APR_ARRAY_PUSH(table->short_strings, builder_string_t *) = item;
 
       if (table->top == NULL)
@@ -441,9 +442,10 @@ create_table(string_sub_table_t *target,
       string->data = apr_pstrmemdup(pool, string->data, string->len);
     }
 
-  data->len += PADDING; /* there a few extra bytes at then of the buffer
-                           that we want to keep */
+  data->len += PADDING; /* add a few extra bytes at the end of the buffer
+                           that we want to keep valid for chunky access */
   assert(data->len < data->blocksize);
+  memset(data->data + data->len - PADDING, 0, PADDING);
 
   target->data = apr_pmemdup(pool, data->data, data->len);
   target->data_size = data->len;
@@ -583,11 +585,11 @@ svn_fs_x__string_table_get(const string_table_t *table,
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   apr_size_t i, k;
 
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   svn_packed__int_stream_t *table_sizes
     = svn_packed__create_int_stream(root, FALSE, FALSE);
@@ -644,7 +646,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
 
   /* write to target stream */
 
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -673,7 +675,7 @@ svn_fs_x__read_string_table(string_table_t **table_p,
 
   /* create sub-tables */
 
-  table->size = svn_packed__get_uint(table_sizes);
+  table->size = (apr_size_t)svn_packed__get_uint(table_sizes);
   table->sub_tables = apr_pcalloc(result_pool,
                                   table->size * sizeof(*table->sub_tables));
 
@@ -683,7 +685,8 @@ svn_fs_x__read_string_table(string_table_t **table_p,
     {
       string_sub_table_t *sub_table = &table->sub_tables[i];
 
-      sub_table->short_string_count = svn_packed__get_uint(table_sizes);
+      sub_table->short_string_count
+        = (apr_size_t)svn_packed__get_uint(table_sizes);
       if (sub_table->short_string_count)
         {
           sub_table->short_strings
@@ -696,10 +699,10 @@ svn_fs_x__read_string_table(string_table_t **table_p,
             {
               string_header_t *string = &sub_table->short_strings[k];
 
-              string->head_string = svn_packed__get_uint(headers);
-              string->head_length = svn_packed__get_uint(headers);
-              string->tail_start = svn_packed__get_uint(headers);
-              string->tail_length = svn_packed__get_uint(headers);
+              string->head_string = (apr_uint16_t)svn_packed__get_uint(headers);
+              string->head_length = (apr_uint16_t)svn_packed__get_uint(headers);
+              string->tail_start = (apr_uint16_t)svn_packed__get_uint(headers);
+              string->tail_length = (apr_uint16_t)svn_packed__get_uint(headers);
             }
         }
 

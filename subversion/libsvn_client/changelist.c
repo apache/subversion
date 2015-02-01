@@ -27,7 +27,6 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -37,6 +36,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "svn_private_config.h"
 
 
 

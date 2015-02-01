@@ -237,7 +237,8 @@ class Stream(object):
         self.pool = Pool()
         self.buffer = buffer
         self.stream = svn_stream_create(c_void_p(), self.pool)
-        svn_stream_set_read(self.stream, svn_read_fn_t(self._read))
+        svn_stream_set_read2(self.stream, NULL, # only full read support
+                             svn_read_fn_t(self._read))
         svn_stream_set_write(self.stream, svn_write_fn_t(self._write))
         if not disown:
             svn_stream_set_close(self.stream, svn_close_fn_t(self._close))

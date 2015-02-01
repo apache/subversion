@@ -32,13 +32,13 @@
 #include <apr_xlate.h>
 #include <apr_atomic.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
+#include "svn_private_config.h"
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"
@@ -172,7 +172,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", (char *)NULL);
+                     "-xlate-handle", SVN_VA_NULL);
 }
 
 /* Atomically replace the content in *MEM with NEW_VALUE and return
@@ -184,15 +184,9 @@ static APR_INLINE void*
 atomic_swap(void * volatile * mem, void *new_value)
 {
 #if APR_HAS_THREADS
-#if APR_VERSION_AT_LEAST(1,3,0)
   /* Cast is necessary because of APR bug:
      https://issues.apache.org/bugzilla/show_bug.cgi?id=50731 */
    return apr_atomic_xchgptr((volatile void **)mem, new_value);
-#else
-   /* old APRs don't support atomic swaps. Simply return the
-    * input to the caller for further proccessing. */
-   return new_value;
-#endif
 #else
    /* no threads - no sync. necessary */
    void *old_value = (void*)*mem;
@@ -639,7 +633,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
                                          (unsigned char)last[i-valid]),
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -649,7 +643,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
                                            (unsigned char)last[i]),
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"
@@ -934,18 +928,6 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   return err;
 }
 
-
-svn_error_t *
-svn_utf_cstring_from_utf8_ex(const char **dest,
-                             const char *src,
-                             const char *topage,
-                             const char *convset_key,
-                             apr_pool_t *pool)
-{
-  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
-}
-
-
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,
@@ -1032,3 +1014,240 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
   return err;
 }
+
+
+/* Insert the given UCS-4 VALUE into BUF at the given OFFSET. */
+static void
+membuf_insert_ucs4(svn_membuf_t *buf, apr_size_t offset, apr_int32_t value)
+{
+  svn_membuf__resize(buf, (offset + 1) * sizeof(value));
+  ((apr_int32_t*)buf->data)[offset] = value;
+}
+
+/* TODO: Use compiler intrinsics for byte swaps. */
+#define SWAP_SHORT(x)  ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
+#define SWAP_LONG(x)   ((((x) & 0xff) << 24) | (((x) & 0xff00) << 8)    \
+                        | (((x) >> 8) & 0xff00) | (((x) >> 24) & 0xff))
+
+#define IS_UTF16_LEAD_SURROGATE(c)   ((c) >= 0xd800 && (c) <= 0xdbff)
+#define IS_UTF16_TRAIL_SURROGATE(c)  ((c) >= 0xdc00 && (c) <= 0xdfff)
+
+svn_error_t *
+svn_utf__utf16_to_utf8(const svn_string_t **result,
+                       const apr_uint16_t *utf16str,
+                       apr_size_t utf16len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_uint16_t endiancheck = 0xa55a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_uint16_t lead_surrogate;
+  apr_size_t length;
+  apr_size_t offset;
+  svn_membuf_t ucs4buf;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf16len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_uint16_t *endp = utf16str;
+      while (*endp++)
+        ;
+      utf16len = (endp - utf16str);
+    }
+
+  svn_membuf__create(&ucs4buf, utf16len * sizeof(apr_int32_t), scratch_pool);
+
+  for (lead_surrogate = 0, length = 0, offset = 0;
+       offset < utf16len; ++offset)
+    {
+      const apr_uint16_t code =
+        (swap_order ? SWAP_SHORT(utf16str[offset]) : utf16str[offset]);
+
+      if (lead_surrogate)
+        {
+          if (IS_UTF16_TRAIL_SURROGATE(code))
+            {
+              /* Combine the lead and trail currogates into a 32-bit code. */
+              membuf_insert_ucs4(&ucs4buf, length++,
+                                 (0x010000
+                                  + (((lead_surrogate & 0x03ff) << 10)
+                                     | (code & 0x03ff))));
+              lead_surrogate = 0;
+              continue;
+            }
+          else
+            {
+              /* If we didn't find a surrogate pair, just dump the
+                 lead surrogate into the stream. */
+              membuf_insert_ucs4(&ucs4buf, length++, lead_surrogate);
+              lead_surrogate = 0;
+            }
+        }
+
+      if ((offset + 1) < utf16len && IS_UTF16_LEAD_SURROGATE(code))
+        {
+          /* Store a lead surrogate that is followed by at least one
+             code for the next iteration. */
+          lead_surrogate = code;
+          continue;
+        }
+      else
+        membuf_insert_ucs4(&ucs4buf, length++, code);
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, length * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, ucs4buf.data, length, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf__utf32_to_utf8(const svn_string_t **result,
+                       const apr_int32_t *utf32str,
+                       apr_size_t utf32len,
+                       svn_boolean_t big_endian,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  static const apr_int32_t endiancheck = 0xa5cbbc5a;
+  const svn_boolean_t arch_big_endian =
+    (((const char*)&endiancheck)[sizeof(endiancheck) - 1] == '\x5a');
+  const svn_boolean_t swap_order = (!big_endian != !arch_big_endian);
+
+  apr_size_t length;
+  svn_membuf_t resultbuf;
+  svn_string_t *res;
+
+  if (utf32len == SVN_UTF__UNKNOWN_LENGTH)
+    {
+      const apr_int32_t *endp = utf32str;
+      while (*endp++)
+        ;
+      utf32len = (endp - utf32str);
+    }
+
+  if (swap_order)
+    {
+      apr_size_t offset;
+      svn_membuf_t ucs4buf;
+
+      svn_membuf__create(&ucs4buf, utf32len * sizeof(apr_int32_t),
+                         scratch_pool);
+
+      for (offset = 0; offset < utf32len; ++offset)
+        {
+          const apr_int32_t code = SWAP_LONG(utf32str[offset]);
+          membuf_insert_ucs4(&ucs4buf, offset, code);
+        }
+      utf32str = ucs4buf.data;
+    }
+
+  /* Convert the UCS-4 buffer to UTF-8, assuming an average of 2 bytes
+     per code point for encoding. The buffer will grow as
+     necessary. */
+  svn_membuf__create(&resultbuf, utf32len * 2, result_pool);
+  SVN_ERR(svn_utf__encode_ucs4_string(
+              &resultbuf, utf32str, utf32len, &length));
+
+  res = apr_palloc(result_pool, sizeof(*res));
+  res->data = resultbuf.data;
+  res->len = length;
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+#ifdef WIN32
+
+
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             const WCHAR *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int utf8_count = strlen(src);
+  const int prefix_len = (prefix ? lstrlenW(prefix) : 0);
+  WCHAR *wide_str;
+  int wide_count;
+
+  if (0 == prefix_len + utf8_count)
+    {
+      *result = L"";
+      return SVN_NO_ERROR;
+    }
+
+  wide_count = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count, NULL, 0);
+  if (wide_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str = apr_palloc(result_pool,
+                        (prefix_len + wide_count + 1) * sizeof(*wide_str));
+  if (prefix_len)
+    memcpy(wide_str, prefix, prefix_len * sizeof(*wide_str));
+  if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
+                               wide_str + prefix_len, wide_count))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str[prefix_len + wide_count] = 0;
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             const char *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int wide_count = lstrlenW(src);
+  const int prefix_len = (prefix ? strlen(prefix) : 0);
+  char *utf8_str;
+  int utf8_count;
+
+  if (0 == prefix_len + wide_count)
+    {
+      *result = "";
+      return SVN_NO_ERROR;
+    }
+
+  utf8_count = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                                   NULL, 0, NULL, FALSE);
+  if (utf8_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str = apr_palloc(result_pool,
+                        (prefix_len + utf8_count + 1) * sizeof(*utf8_str));
+  if (prefix_len)
+    memcpy(utf8_str, prefix, prefix_len * sizeof(*utf8_str));
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                               utf8_str + prefix_len, utf8_count,
+                               NULL, FALSE))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str[prefix_len + utf8_count] = 0;
+  *result = utf8_str;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */

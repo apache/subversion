@@ -212,6 +212,9 @@ class RegexOutput(ExpectedOutput):
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
 
+  def insert(self, index, line):
+    self.expected.insert(index, line)
+    self.expected_re = re.compile(self.expected)
 
 class RegexListOutput(ExpectedOutput):
   """Matches an ordered list of regular expressions.
@@ -227,7 +230,7 @@ class RegexListOutput(ExpectedOutput):
 
   def __init__(self, expected, match_all=True):
     "EXPECTED is a list of regular expression strings."
-    assert isinstance(expected, list) and expected != []
+    assert isinstance(expected, list)
     ExpectedOutput.__init__(self, expected, match_all)
     self.expected_res = [re.compile(e) for e in expected]
 
@@ -250,6 +253,10 @@ class RegexListOutput(ExpectedOutput):
 
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
+
+  def insert(self, index, line):
+    self.expected.insert(index, line)
+    self.expected_res = [re.compile(e) for e in self.expected]
 
 
 class UnorderedOutput(ExpectedOutput):
@@ -484,6 +491,22 @@ class DumpParser:
     self.current += 1
     return True
 
+  def parse_header(self, header):
+    regex = '([^:]*): (.*)$'
+    m = re.match(regex, self.lines[self.current])
+    if not m:
+      raise SVNDumpParseError("expected a header at line %d, but found:\n%s"
+                              % (self.current, self.lines[self.current]))
+    self.current += 1
+    return m.groups()
+
+  def parse_headers(self):
+    headers = []
+    while self.lines[self.current] != '\n':
+      key, val = self.parse_header(self)
+      headers.append((key, val))
+    return headers
+
   def parse_format(self):
     return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
 
@@ -537,14 +560,37 @@ class DumpParser:
   def parse_text_length(self):
     return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
 
-  # One day we may need to parse individual property name/values into a map
   def get_props(self):
     props = []
     while not re.match('PROPS-END$', self.lines[self.current]):
       props.append(self.lines[self.current])
       self.current += 1
     self.current += 1
-    return props
+
+    # Split into key/value pairs to do an unordered comparison.
+    # This parses the serialized hash under the assumption that it is valid.
+    prophash = {}
+    curprop = [0]
+    while curprop[0] < len(props):
+      def read_key_or_value(curprop):
+        # klen / vlen
+        klen = int(props[curprop[0]].split()[1])
+        curprop[0] += 1
+
+        # key / value
+        key = ''
+        while len(key) != klen + 1:
+          key += props[curprop[0]]
+          curprop[0] += 1
+        key = key[:-1]
+
+        return key
+
+      key = read_key_or_value(curprop)
+      value = read_key_or_value(curprop)
+      prophash[key] = value
+
+    return prophash
 
   def get_content(self, length):
     content = ''
@@ -560,17 +606,43 @@ class DumpParser:
 
   def parse_one_node(self):
     node = {}
+
+    # optional 'kind' and required 'action' must be next
     node['kind'] = self.parse_kind()
     action = self.parse_action()
-    node['copyfrom_rev'] = self.parse_copyfrom_rev()
-    node['copyfrom_path'] = self.parse_copyfrom_path()
-    node['copy_md5'] = self.parse_copy_md5()
-    node['copy_sha1'] = self.parse_copy_sha1()
-    node['prop_length'] = self.parse_prop_length(required=False)
-    node['text_length'] = self.parse_text_length()
-    node['text_md5'] = self.parse_text_md5()
-    node['text_sha1'] = self.parse_text_sha1()
-    node['content_length'] = self.parse_content_length(required=False)
+
+    # read any remaining headers
+    headers_list = self.parse_headers()
+    headers = dict(headers_list)
+
+    # Content-length must be last, if present
+    if 'Content-length' in headers and headers_list[-1][0] != 'Content-length':
+      raise SVNDumpParseError("'Content-length' header is not last, "
+                              "in header block ending at line %d"
+                              % (self.current,))
+
+    # parse the remaining optional headers and store in specific keys in NODE
+    for key, header, regex in [
+        ('copyfrom_rev',    'Node-copyfrom-rev',    '([0-9]+)$'),
+        ('copyfrom_path',   'Node-copyfrom-path',   '(.*)$'),
+        ('copy_md5',        'Text-copy-source-md5', '([0-9a-z]+)$'),
+        ('copy_sha1',       'Text-copy-source-sha1','([0-9a-z]+)$'),
+        ('prop_length',     'Prop-content-length',  '([0-9]+)$'),
+        ('text_length',     'Text-content-length',  '([0-9]+)$'),
+        ('text_md5',        'Text-content-md5',     '([0-9a-z]+)$'),
+        ('text_sha1',       'Text-content-sha1',    '([0-9a-z]+)$'),
+        ('content_length',  'Content-length',       '([0-9]+)$'),
+        ]:
+      if not header in headers:
+        node[key] = None
+        continue
+      m = re.match(regex, headers[header])
+      if not m:
+        raise SVNDumpParseError("expected '%s' at line %d\n%s"
+                                % (regex, self.current,
+                                   self.lines[self.current]))
+      node[key] = m.group(1)
+
     self.parse_blank()
     if node['prop_length']:
       node['props'] = self.get_props()
@@ -643,3 +715,184 @@ def compare_dump_files(message, label, expected, actual):
     raise svntest.Failure('\n' + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
           pprint.pformat(parsed_actual).splitlines())))
+
+##########################################################################################
+## diff verifications
+def is_absolute_url(target):
+  return (target.startswith('file://')
+          or target.startswith('http://')
+          or target.startswith('https://')
+          or target.startswith('svn://')
+          or target.startswith('svn+ssh://'))
+
+def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
+  """Generate the expected diff header for file PATH, with its old and new
+  versions described in parentheses by OLD_TAG and NEW_TAG. SRC_LABEL and
+  DST_LABEL are paths or urls that are added to the diff labels if we're
+  diffing against the repository or diffing two arbitrary paths.
+  Return the header as an array of newline-terminated strings."""
+  if src_label:
+    src_label = src_label.replace('\\', '/')
+    if not is_absolute_url(src_label):
+      src_label = '.../' + src_label
+    src_label = '\t(' + src_label + ')'
+  else:
+    src_label = ''
+  if dst_label:
+    dst_label = dst_label.replace('\\', '/')
+    if not is_absolute_url(dst_label):
+      dst_label = '.../' + dst_label
+    dst_label = '\t(' + dst_label + ')'
+  else:
+    dst_label = ''
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + "\n",
+    "===================================================================\n",
+    "--- " + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+    "+++ " + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
+    ]
+
+def make_no_diff_deleted_header(path, old_tag, new_tag):
+  """Generate the expected diff header for a deleted file PATH when in
+  'no-diff-deleted' mode. (In that mode, no further details appear after the
+  header.) Return the header as an array of newline-terminated strings."""
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + " (deleted)\n",
+    "===================================================================\n",
+    ]
+
+def make_git_diff_header(target_path, repos_relpath,
+                         old_tag, new_tag, add=False, src_label=None,
+                         dst_label=None, delete=False, text_changes=True,
+                         cp=False, mv=False, copyfrom_path=None,
+                         copyfrom_rev=None):
+  """ Generate the expected 'git diff' header for file TARGET_PATH.
+  REPOS_RELPATH is the location of the path relative to the repository root.
+  The old and new versions ("revision X", or "working copy") must be
+  specified in OLD_TAG and NEW_TAG.
+  SRC_LABEL and DST_LABEL are paths or urls that are added to the diff
+  labels if we're diffing against the repository. ADD, DELETE, CP and MV
+  denotes the operations performed on the file. COPYFROM_PATH is the source
+  of a copy or move.  Return the header as an array of newline-terminated
+  strings."""
+
+  path_as_shown = target_path.replace('\\', '/')
+  if src_label:
+    src_label = src_label.replace('\\', '/')
+    src_label = '\t(.../' + src_label + ')'
+  else:
+    src_label = ''
+  if dst_label:
+    dst_label = dst_label.replace('\\', '/')
+    dst_label = '\t(.../' + dst_label + ')'
+  else:
+    dst_label = ''
+
+  output = [
+    "Index: " + path_as_shown + "\n",
+    "===================================================================\n"
+  ]
+  if add:
+    output.extend([
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
+      "new file mode 10644\n",
+    ])
+    if text_changes:
+      output.extend([
+        "--- /dev/null\t(" + old_tag + ")\n",
+        "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
+      ])
+  elif delete:
+    output.extend([
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
+      "deleted file mode 10644\n",
+    ])
+    if text_changes:
+      output.extend([
+        "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
+        "+++ /dev/null\t(" + new_tag + ")\n"
+      ])
+  elif cp:
+    if copyfrom_rev:
+      copyfrom_rev = '@' + copyfrom_rev
+    else:
+      copyfrom_rev = ''
+    output.extend([
+      "diff --git a/" + copyfrom_path + " b/" + repos_relpath + "\n",
+      "copy from " + copyfrom_path + copyfrom_rev + "\n",
+      "copy to " + repos_relpath + "\n",
+    ])
+    if text_changes:
+      output.extend([
+        "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
+        "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
+      ])
+  elif mv:
+    output.extend([
+      "diff --git a/" + copyfrom_path + " b/" + path_as_shown + "\n",
+      "rename from " + copyfrom_path + "\n",
+      "rename to " + repos_relpath + "\n",
+    ])
+    if text_changes:
+      output.extend([
+        "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
+        "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
+      ])
+  else:
+    output.extend([
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
+      "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
+      "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n",
+    ])
+  return output
+
+def make_diff_prop_header(path):
+  """Return a property diff sub-header, as a list of newline-terminated
+     strings."""
+  return [
+    "\n",
+    "Property changes on: " + path.replace('\\', '/') + "\n",
+    "___________________________________________________________________\n"
+  ]
+
+def make_diff_prop_val(plus_minus, pval):
+  "Return diff for prop value PVAL, with leading PLUS_MINUS (+ or -)."
+  if len(pval) > 0 and pval[-1] != '\n':
+    return [plus_minus + pval + "\n","\\ No newline at end of property\n"]
+  return [plus_minus + pval]
+
+def make_diff_prop_deleted(pname, pval):
+  """Return a property diff for deletion of property PNAME, old value PVAL.
+     PVAL is a single string with no embedded newlines.  Return the result
+     as a list of newline-terminated strings."""
+  return [
+    "Deleted: " + pname + "\n",
+    "## -1 +0,0 ##\n"
+  ] + make_diff_prop_val("-", pval)
+
+def make_diff_prop_added(pname, pval):
+  """Return a property diff for addition of property PNAME, new value PVAL.
+     PVAL is a single string with no embedded newlines.  Return the result
+     as a list of newline-terminated strings."""
+  return [
+    "Added: " + pname + "\n",
+    "## -0,0 +1 ##\n",
+  ] + make_diff_prop_val("+", pval)
+
+def make_diff_prop_modified(pname, pval1, pval2):
+  """Return a property diff for modification of property PNAME, old value
+     PVAL1, new value PVAL2.
+
+     PVAL is a single string with no embedded newlines.  A newline at the
+     end is significant: without it, we add an extra line saying '\ No
+     newline at end of property'.
+
+     Return the result as a list of newline-terminated strings.
+  """
+  return [
+    "Modified: " + pname + "\n",
+    "## -1 +1 ##\n",
+  ] + make_diff_prop_val("-", pval1) + make_diff_prop_val("+", pval2)
+

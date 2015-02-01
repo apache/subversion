@@ -57,17 +57,39 @@ public class RemoteFactory
      * Initializing constructor. Any or all of its arguments may be null.
      */
     public RemoteFactory(String configDirectory,
-                         ConfigEvent configHandler,
                          String username, String password,
-                         UserPasswordCallback prompt,
-                         ProgressCallback progress)
+                         AuthnCallback prompt,
+                         ProgressCallback progress,
+                         ConfigEvent configHandler,
+                         TunnelAgent tunnelAgent)
     {
         setConfigDirectory(configDirectory);
-        setConfigEventHandler(configHandler);
         setUsername(username);
         setPassword(password);
         setPrompt(prompt);
         setProgressCallback(progress);
+        setConfigEventHandler(configHandler);
+        setTunnelAgent(tunnelAgent);
+    }
+
+    /**
+     * Initializing constructor. Any or all of its arguments may be null.
+     */
+    @SuppressWarnings("deprecation")
+    public RemoteFactory(String configDirectory,
+                         String username, String password,
+                         UserPasswordCallback prompt,
+                         ProgressCallback progress,
+                         ConfigEvent configHandler,
+                         TunnelAgent tunnelAgent)
+    {
+        setConfigDirectory(configDirectory);
+        setUsername(username);
+        setPassword(password);
+        setPrompt(prompt);
+        setProgressCallback(progress);
+        setConfigEventHandler(configHandler);
+        setTunnelAgent(tunnelAgent);
     }
 
     /**
@@ -103,9 +125,24 @@ public class RemoteFactory
      * arguments accepted by the command-line client.
      * @param prompt the callback interface
      */
+    public void setPrompt(AuthnCallback prompt)
+    {
+        assert(this.deprecatedPrompt == null);
+        this.prompt = prompt;
+    }
+
+    /**
+     * Register callback interface to supply username and password on demand.
+     * This callback can also be used to provide theequivalent of the
+     * <code>--no-auth-cache</code> and <code>--non-interactive</code>
+     * arguments accepted by the command-line client.
+     * @param prompt the callback interface
+     */
+    @SuppressWarnings("deprecation")
     public void setPrompt(UserPasswordCallback prompt)
     {
-        this.prompt = prompt;
+        assert(this.prompt == null);
+        this.deprecatedPrompt = prompt;
     }
 
     /**
@@ -128,13 +165,21 @@ public class RemoteFactory
 
     /**
      * Set an event handler that will be called every time the
-     * configuration is loaded.
+     * configuration is loaded by the ISVNRemote objects created by
+     * this factory.
      */
     public void setConfigEventHandler(ConfigEvent configHandler)
     {
         this.configHandler = configHandler;
     }
 
+    /**
+     * Set callbacks for ra_svn tunnel handling.
+     */
+    public void setTunnelAgent(TunnelAgent tunnelAgent)
+    {
+        this.tunnelAgent = tunnelAgent;
+    }
 
     /**
      * Open a persistent session to a repository.
@@ -152,9 +197,9 @@ public class RemoteFactory
     public ISVNRemote openRemoteSession(String url)
             throws ClientException, SubversionException
     {
-        return open(1, url, null,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(1, url, null, configDirectory,
+                    username, password, prompt, deprecatedPrompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -180,9 +225,9 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, null,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(retryAttempts, url, null, configDirectory,
+                    username, password, prompt, deprecatedPrompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -208,9 +253,9 @@ public class RemoteFactory
     {
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
-        return open(1, url, reposUUID,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(1, url, reposUUID, configDirectory,
+                    username, password, prompt, deprecatedPrompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -243,25 +288,31 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, reposUUID,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(retryAttempts, url, reposUUID, configDirectory,
+                    username, password, prompt, deprecatedPrompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     private String configDirectory;
-    private ConfigEvent configHandler;
     private String username;
     private String password;
-    private UserPasswordCallback prompt;
+    private AuthnCallback prompt;
+    @SuppressWarnings("deprecation")
+    private UserPasswordCallback deprecatedPrompt;
     private ProgressCallback progress;
+    private ConfigEvent configHandler;
+    private TunnelAgent tunnelAgent;
 
     /* Native factory implementation. */
+    @SuppressWarnings("deprecation")
     private static native ISVNRemote open(int retryAttempts,
                                           String url, String reposUUID,
                                           String configDirectory,
-                                          ConfigEvent configHandler,
                                           String username, String password,
-                                          UserPasswordCallback prompt,
-                                          ProgressCallback progress)
+                                          AuthnCallback prompt,
+                                          UserPasswordCallback deprecatedPompt,
+                                          ProgressCallback progress,
+                                          ConfigEvent configHandler,
+                                          TunnelAgent tunnelAgent)
             throws ClientException, SubversionException;
 }

@@ -183,20 +183,6 @@ if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   exit 1
 fi
 
-# Default to 'wget', but allow 'curl' to be used if available.
-HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-O"
-type wget > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  type curl > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Neither curl or wget found."
-    exit 2
-  fi
-  HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-o"
-fi
-
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
@@ -305,6 +291,15 @@ if [ -z "$ZIP" ] ; then
   echo "Running ./autogen.sh in sandbox, to create ./configure ..."
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
+
+# Generate the .pot file, for use by translators.
+echo "Running po-update.sh in sandbox, to create subversion.pot..."
+# Can't use the po-update.sh in the packaged export since it might have CRLF
+# line endings, in which case it won't run.  So first we export it again.
+${svn:-svn} export -q -r "$REVISION"  \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
+     --username none --password none "$DIST_SANDBOX/po-update.sh"
+(cd "$DISTPATH" && ../po-update.sh pot) || exit 1
 
 # Pre-translate the various sql-derived header files
 echo "Generating SQL-derived headers..."

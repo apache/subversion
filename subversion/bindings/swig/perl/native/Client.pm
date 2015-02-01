@@ -41,29 +41,34 @@ SVN::Client - Subversion client functions
 =head1 SYNOPSIS
 
     use SVN::Client;
-    my $client = new SVN::Client(
-      auth => [
-          SVN::Client::get_simple_provider(),
-          SVN::Client::get_simple_prompt_provider(\&simple_prompt,2),
-          SVN::Client::get_username_provider()
-      ]);
+    my $client = new SVN::Client();
 
-    $client->cat(\*STDOUT, 
-              'http://svn.apache.org/repos/asf/subversion/trunk/README', 'HEAD');
+    # setup to handle authentication the same as the command line client
+    my $config_dir = undef; # use default location
+    my $config = SVN:Core::config_get_config($config_dir);
+    my $config_category = $cfg->{SVN::Core::CONFIG_CATEGORY_CONFIG};
+    $client->auth(
+      SVN::Core::cmdline_create_auth_baton(0,           #non_interactive
+                                           undef,       #username
+                                           undef,       #password
+                                           $config_dir,
+                                           0,           #no_auth_cache
+                                           0,           #trust_server_cert
+                                           $config_category,
+                                           undef)       #cancel_callback
+    );
 
-    sub simple_prompt {
-      my ($cred, $realm, $default_username, $may_save, $pool) = @_;
-
-      print "Enter authentication info for realm: $realm\n";
-      print "Username: ";
-      my $username = <>;
-      chomp($username);
-      $cred->username($username);
-      print "Password: ";
-      my $password = <>;
-      chomp($password);
-      $cred->password($password);
+    # Use first argument as target and canonicalize it before using
+    my $target;
+    if (SVN::Core::path_is_url($ARGV[0])) {
+      $target = SVN::Core::uri_canonicalize($ARGV[0]);
+    } else {
+      $target = SVN::Core::dirent_canonicalize($ARGV[0]);
     }
+
+    # fetch the head revision of the target
+    $client->cat(\*STDOUT, $target, 'HEAD');
+
 
 =head1 DESCRIPTION
 
@@ -111,18 +116,24 @@ This is a URL to a subversion repository.
 
 =item $path
 
-This is a path to a file or directory on the local file system.
+This is a path to a file or directory on the local file system.  Paths need
+to be canonicalized before being passed into the Subversion APIs.  Paths on
+the local file system are called dirents and can be canonicalized by calling
+C<SVN::Core::dirent_canonicalize>.
 
 =item $paths
 
-This argument can either be a single path to a file or directory on the local
-file system, or it can be a reference to an array of files or directories on
-the local file system.
+This argument can either be a single $path (as defined above) or a reference
+to an array of them.
 
 =item $target
 
 This is a path to a file or directory in a working copy or a URL to a file or
-directory in a subversion repository.
+directory in a subversion repository.  Both paths and URLs need to be
+canonicalized before being passed into the Subversion APIs.  Paths on the local
+file system are called dirents and can be canonicalized by calling 
+C<SVN::Core::dirent_canonicalize>.  URLs can be canonicalized by calling
+C<SVN::Core::uri_canonicalize>.
 
 =item $targets
 
@@ -748,7 +759,7 @@ object.
 Else, create the directories on disk, and attempt to schedule them for addition.
 In this case returns undef.
 
-If $make_parents is TRUE, create any non-existant parent directories also.
+If $make_parents is TRUE, create any non-existent parent directories also.
 
 If not undef, $revprop_hash is a reference to a hash table holding additional
 custom revision properites (property names mapped to strings) to be set on the
@@ -958,10 +969,10 @@ $path, $status, $pool
 
 $path is the pathname of the file or directory which status is being
 reported.  $status is a svn_wc_status2_t object.  $pool is an apr_pool_t
-object which is cleaned beteween invocations to the callback.
+object which is cleaned between invocations to the callback.
 
 The return of the status_func subroutine can be a svn_error_t object created by
-SVN::Error::create in order to propogate an error up.
+SVN::Error::create in order to propagate an error up.
 
 =item $client-E<gt>switch($path, $url, $revision, $recursive, $pool);
 
@@ -1274,24 +1285,8 @@ sub log_msg {
 =item $client-E<gt>cancel(\&cancel)
 
 Sets the cancellation callback for the client context to a code reference that you
-pass.  It always returns the current codereference set.
-
-The subroutine pointed to by this value will be called to see if the operation
-should be canceled.  If the operation should be canceled, the function may
-return one of the following values:
-
-An svn_error_t object made with SVN::Error::create.
-
-Any true value, in which case the bindings will generate an svn_error_t object
-for you with the error code of SVN_ERR_CANCELLED and the string set to "By
-cancel callback".
-
-A string, in which case the bindings will generate an svn_error_t object for you
-with the error code of SVN_ERR_CANCELLED and the string set to the string you
-returned.
-
-Any other value will be interpreted as wanting to continue the operation.
-Generally, it's best to return 0 to continue the operation.
+pass. See L<"CANCELLATION CALLBACK"> below for details.
+It always returns the current codereference set.
 
 =cut
 
@@ -1476,6 +1471,25 @@ The svn_auth_cred_ssl_client_cert_pw has the following members: password and
 may_save.
 
 =back
+
+=head1 CANCELLATION CALLBACK
+
+This callback will be called periodically to see if the operation
+should be canceled.  If the operation should be canceled, the function may
+return one of the following values:
+
+An svn_error_t object made with SVN::Error::create.
+
+Any true value, in which case the bindings will generate an svn_error_t object
+for you with the error code of SVN_ERR_CANCELLED and the string set to "By
+cancel callback".
+
+A string, in which case the bindings will generate an svn_error_t object for you
+with the error code of SVN_ERR_CANCELLED and the string set to the string you
+returned.
+
+Any other value will be interpreted as wanting to continue the operation.
+Generally, it's best to return 0 to continue the operation.
 
 =head1 OBJECTS
 

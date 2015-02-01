@@ -801,7 +801,16 @@
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */
 #ifdef SWIGPYTHON
-%typemap(in) apr_hash_t *MERGEINFO {
+%typemap(in) apr_hash_t *MERGEINFO
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
   $1 = svn_swig_py_mergeinfo_from_dict($input, _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
@@ -952,5 +961,18 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **providers {
   %append_output(svn_swig_rb_apr_array_to_array_auth_provider_object(*$1));
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_diff_hunk_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(out) apr_array_header_t *hunks {
+  %append_output(svn_swig_py_pointerlist_to_list($1, $descriptor(svn_diff_hunk_t *),
+                                                 _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif

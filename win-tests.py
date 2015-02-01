@@ -117,10 +117,6 @@ cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
 gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
                                                    cp.items('options'))
-all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
-          + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
-
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
@@ -257,9 +253,13 @@ else:
 if not fs_type:
   fs_type = 'fsfs'
 
-# Don't run bdb tests if they want to test fsfs
-if fs_type == 'fsfs':
-  all_tests = gen_obj.test_progs + gen_obj.scripts
+if fs_type == 'bdb':
+  all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
+            + gen_obj.scripts + gen_obj.bdb_scripts
+else:
+  all_tests = gen_obj.test_progs + gen_obj.scripts            
+
+client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
 if run_httpd:
   if not httpd_port:
@@ -335,6 +335,10 @@ def locate_libs():
       src = os.path.join(dir, name)
       if os.path.exists(src):
         copy_changed_file(src, to_dir=abs_builddir, cleanup=False)
+
+    for name in lib.extra_bin:
+      src = os.path.join(dir, name)
+      copy_changed_file(src, to_dir=abs_builddir)
 
 
   # Copy the Subversion library DLLs
@@ -476,15 +480,9 @@ class Httpd:
     self._create_mime_types_file()
     self._create_dontdothat_file()
 
-    # Determine version.
-    if os.path.exists(os.path.join(self.httpd_dir,
-                                   'modules', 'mod_access_compat.so')):
-      self.httpd_ver = 2.3
-    elif os.path.exists(os.path.join(self.httpd_dir,
-                                     'modules', 'mod_auth_basic.so')):
-      self.httpd_ver = 2.2
-    else:
-      self.httpd_ver = 2.0
+    # Obtain version.
+    version_vals = gen_obj._libraries['httpd'].version.split('.')
+    self.httpd_ver = float('%s.%s' % (version_vals[0], version_vals[1]))
 
     # Create httpd config file
     fp = open(self.httpd_config, 'w')
@@ -773,42 +771,62 @@ if not test_javahl and not test_swig:
     os.chdir(old_cwd)
 elif test_javahl:
   failed = False
-  args = (
-          'java.exe',
-          '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
-          '-Dtest.srcdir=' + os.path.join(abs_srcdir,
-                                          'subversion/bindings/javahl'),
-          '-Dtest.rooturl=',
-          '-Dtest.fstype=' + fs_type ,
-          '-Dtest.tests=',
 
-          '-Djava.library.path='
-                    + os.path.join(abs_objdir,
-                                   'subversion/bindings/javahl/native'),
-          '-classpath',
-          os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
-            gen_obj.junit_path
-         )
+  java_exe = None
 
-  sys.stderr.flush()
-  print('Running org.apache.subversion tests:')
-  sys.stdout.flush()
+  for path in os.environ["PATH"].split(os.pathsep):
+    if os.path.isfile(os.path.join(path, 'java.exe')):
+      java_exe = os.path.join(path, 'java.exe')
+      break
 
-  r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
-  sys.stdout.flush()
-  sys.stderr.flush()
-  if (r != 0):
-    print('[Test runner reported failure]')
-    failed = True
+  if not java_exe and 'java_sdk' in gen_obj._libraries:
+    jdk = gen_obj._libraries['java_sdk']
 
-  print('Running org.tigris.subversion tests:')
-  sys.stdout.flush()
-  r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
-  sys.stdout.flush()
-  sys.stderr.flush()
-  if (r != 0):
-    print('[Test runner reported failure]')
-    failed = True
+    if os.path.isfile(os.path.join(jdk.lib_dir, '../bin/java.exe')):
+      java_exe = os.path.join(jdk.lib_dir, '../bin/java.exe')
+
+  if not java_exe:
+    print('Java not found. Skipping Java tests')
+  else:
+    args = (os.path.abspath(java_exe),)
+    if (objdir == 'Debug'):
+      args = args + ('-Xcheck:jni',)
+
+    args = args + (
+            '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
+            '-Dtest.srcdir=' + os.path.join(abs_srcdir,
+                                            'subversion/bindings/javahl'),
+            '-Dtest.rooturl=',
+            '-Dtest.fstype=' + fs_type ,
+            '-Dtest.tests=',
+  
+            '-Djava.library.path='
+                      + os.path.join(abs_objdir,
+                                     'subversion/bindings/javahl/native'),
+            '-classpath',
+            os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
+              gen_obj.junit_path
+           )
+
+    sys.stderr.flush()
+    print('Running org.apache.subversion tests:')
+    sys.stdout.flush()
+
+    r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if (r != 0):
+      print('[Test runner reported failure]')
+      failed = True
+
+    print('Running org.tigris.subversion tests:')
+    sys.stdout.flush()
+    r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if (r != 0):
+      print('[Test runner reported failure]')
+      failed = True
 elif test_swig == 'perl':
   failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')
@@ -848,6 +866,7 @@ elif test_swig == 'perl':
   perl_exe = 'perl.exe'
 
   print('-- Running Swig Perl tests --')
+  sys.stdout.flush()
   old_cwd = os.getcwd()
   try:
     os.chdir(pm_src)
@@ -866,7 +885,6 @@ elif test_swig == 'perl':
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  sys.exit(1)
 elif test_swig == 'python':
   failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')
@@ -898,6 +916,7 @@ elif test_swig == 'python':
                         to_dir=swig_py_svn)
 
   print('-- Running Swig Python tests --')
+  sys.stdout.flush()
 
   pythonpath = swig_py_dir
   if 'PYTHONPATH' in os.environ:
@@ -936,6 +955,7 @@ elif test_swig == 'ruby':
       ]
 
     print('-- Running Swig Ruby tests --')
+    sys.stdout.flush()
     old_cwd = os.getcwd()
     try:
       os.chdir(ruby_subdir)

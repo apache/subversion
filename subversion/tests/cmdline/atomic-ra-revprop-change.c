@@ -118,13 +118,13 @@ change_rev_prop(const char *url,
         }
       else if (! want_error && ! err)
         /* Expectation was matched.  Get out. */
-      	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
       else if (want_error && ! err)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "An error was expected but not seen");
       else
-      	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
-      	return svn_error_trace(err);
+        /* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
+        return svn_error_trace(err);
     }
   else
     /* Running under --server-minor-version? */

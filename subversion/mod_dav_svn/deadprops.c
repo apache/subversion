@@ -323,7 +323,7 @@ db_open(apr_pool_t *p,
   db->p = svn_pool_create(p);
 
   /* ### temp hack */
-  db->work = svn_stringbuf_ncreate("", 0, db->p);
+  db->work = svn_stringbuf_create_empty(db->p);
 
   /* make our path-based authz callback available to svn_repos_* funcs. */
   arb = apr_pcalloc(p, sizeof(*arb));

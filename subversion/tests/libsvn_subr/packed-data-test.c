@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <apr_pools.h>
-#include <apr_poll.h>
 
 #include "../svn_test.h"
 
@@ -118,14 +117,14 @@ test_uint_stream(apr_pool_t *pool)
   enum { COUNT = 8 };
   const apr_uint64_t values[COUNT] =
   {
-    0xffffffffffffffffull,
+    APR_UINT64_MAX,
     0,
-    0xffffffffffffffffull,
-    0x8000000000000000ull,
+    APR_UINT64_MAX,
+    APR_UINT64_C(0x8000000000000000),
     0,
-    0x7fffffffffffffffull,
-    0x1234567890abcdefull,
-    0x0fedcba987654321ull,
+    APR_UINT64_C(0x7fffffffffffffff),
+    APR_UINT64_C(0x1234567890abcdef),
+    APR_UINT64_C(0x0fedcba987654321),
   };
 
   SVN_ERR(verify_uint_stream(values, COUNT, FALSE, pool));
@@ -177,13 +176,13 @@ test_int_stream(apr_pool_t *pool)
   enum { COUNT = 7 };
   const apr_int64_t values[COUNT] =
   {
-     0x7fffffffffffffffll,
-    -0x8000000000000000ll,
-     0,
-     0x7fffffffffffffffll,
-    -0x7fffffffffffffffll,
-     0x1234567890abcdefll,
-    -0x0fedcba987654321ll,
+     APR_INT64_MAX, /* extreme value */
+     APR_INT64_MIN, /* other extreme, creating maximum delta to predecessor */
+     0,             /* delta to predecessor > APR_INT64_MAX */
+     APR_INT64_MAX, /* max value, again */
+    -APR_INT64_MAX, /* _almost_ min value, almost max delta */
+     APR_INT64_C(0x1234567890abcdef),  /* some arbitrary value */
+    -APR_INT64_C(0x0fedcba987654321),  /* arbitrary value, different sign */
   };
 
   SVN_ERR(verify_int_stream(values, COUNT, FALSE, pool));
@@ -267,7 +266,7 @@ typedef struct base_record_t
 enum {SUB_RECORD_COUNT = 7};
 enum {BASE_RECORD_COUNT = 4};
 
-const sub_record_t sub_records[SUB_RECORD_COUNT] =
+static const sub_record_t sub_records[SUB_RECORD_COUNT] =
 {
   { 6, { "this is quite a longish piece of text", 37} },
   { 5, { "x", 1} },
@@ -278,23 +277,29 @@ const sub_record_t sub_records[SUB_RECORD_COUNT] =
   { 0 }
 };
 
-const base_record_t test_data[BASE_RECORD_COUNT] =
+static const base_record_t test_data[BASE_RECORD_COUNT] =
 {
   { 1, { "maximum", 7},
-    0xffffffffffffffffull, 0xffffffffffffffffull, sub_records,
-    0x7fffffffffffffffll,  0x7fffffffffffffffll, 9967, sub_records + 1,
+    APR_UINT64_MAX, APR_UINT64_MAX, sub_records,
+    APR_INT64_MAX,  APR_INT64_MAX, 9967, sub_records + 1,
     { "\0\1\2\3\4\5\6\7\x8\x9\xa", 11} },
+
   { 2, { "minimum", 7},
     0, 0, sub_records + 6,
-    -0x8000000000000000ll, -0x8000000000000000ll, 6029, sub_records + 5,
+    APR_INT64_MIN, APR_INT64_MIN, 6029, sub_records + 5,
     { "X\0\0Y", 4} },
+
   { 3, { "mean", 4},
-    0x8000000000000000ull, 0x8000000000000000ull, sub_records + 2,
+    APR_UINT64_C(0x8000000000000000), APR_UINT64_C(0x8000000000000000),
+                                      sub_records + 2,
     0, 0, 653, sub_records + 3,
     { "\xff\0\1\2\3\4\5\6\7\x8\x9\xa", 12} },
+
   { 4, { "random", 6},
-    0x1234567890abcdefull, 0xfedcba987654321ull, sub_records + 4,
-    0x1234567890abcdll, -0xedcba987654321ll, 7309, sub_records + 1,
+    APR_UINT64_C(0x1234567890abcdef), APR_UINT64_C(0xfedcba987654321),
+                                      sub_records + 4,
+    APR_INT64_C(0x1234567890abcd), APR_INT64_C(-0xedcba987654321), 7309,
+                                   sub_records + 1,
     { "\x80\x7f\0\1\6", 5} }
 };
 
@@ -393,7 +398,7 @@ unpack_subs(svn_packed__int_stream_t *int_stream,
   apr_size_t i;
   for (i = 0; i < count; ++i)
     {
-      records[i].sub_counter = svn_packed__get_int(int_stream);
+      records[i].sub_counter = (int) svn_packed__get_int(int_stream);
       records[i].text.data = svn_packed__get_bytes(text_stream,
                                                    &records[i].text.len);
     }
@@ -432,7 +437,7 @@ unpack(apr_size_t *count,
   
   for (i = 0; i < *count; ++i)
     {
-      data[i].counter = svn_packed__get_int(base_stream);
+      data[i].counter = (int) svn_packed__get_int(base_stream);
       data[i].description.data
         = svn_packed__get_bytes(base_description_stream,
                                 &data[i].description.len);
@@ -444,7 +449,7 @@ unpack(apr_size_t *count,
 
       data[i].large_signed1 = svn_packed__get_int(base_stream);
       data[i].large_signed2 = svn_packed__get_int(base_stream);
-      data[i].prime = svn_packed__get_uint(base_stream);
+      data[i].prime = (unsigned) svn_packed__get_uint(base_stream);
       data[i].right_subs = unpack_subs(right_sub_stream, sub_text_stream,
                       (apr_size_t)svn_packed__get_uint(sub_count_stream),
                       pool);
@@ -548,7 +553,10 @@ test_full_structure(apr_pool_t *pool)
 }
 
 /* An array of all test functions */
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_empty_container,
@@ -565,3 +573,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test nested structure"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

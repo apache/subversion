@@ -23,24 +23,27 @@
 
 
 
-#define UTF8PROC_INLINE
-#include "utf8proc/utf8proc.c"
-
 #include <apr_fnmatch.h>
 
 #include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
-#define UNUSED(x) ((void)(x))
+
+#define UTF8PROC_INLINE
+/* Somehow utf8proc thinks it is nice to use strlen as an argument name,
+   while this function is already defined via apr.h */
+#define strlen svn__strlen_var
+#include "utf8proc/utf8proc.c"
+#undef strlen
 
 
 const char *svn_utf__utf8proc_version(void)
 {
   /* Unused static function warning removal hack. */
-  UNUSED(utf8proc_NFD);
-  UNUSED(utf8proc_NFC);
-  UNUSED(utf8proc_NFKD);
-  UNUSED(utf8proc_NFKC);
+  SVN_UNUSED(utf8proc_NFD);
+  SVN_UNUSED(utf8proc_NFC);
+  SVN_UNUSED(utf8proc_NFKD);
+  SVN_UNUSED(utf8proc_NFKC);
 
   return utf8proc_version();
 }
@@ -155,7 +158,6 @@ ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
   return (lena == lenb ? 0 : (lena < lenb ? -1 : 1));
 }
 
-
 svn_error_t *
 svn_utf__normcmp(int *result,
                  const char *str1, apr_size_t len1,
@@ -182,12 +184,22 @@ svn_utf__normcmp(int *result,
   return SVN_NO_ERROR;
 }
 
+svn_error_t*
+svn_utf__normalize(const char **result,
+                   const char *str, apr_size_t len,
+                   svn_membuf_t *buf)
+{
+  apr_size_t result_length;
+  SVN_ERR(normalize_cstring(&result_length, str, len, buf));
+  *result = (const char*)(buf->data);
+  return SVN_NO_ERROR;
+}
 
 /* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
  * Assume BUFFER is already filled to *LENGTH and return the new size there.
  * This function does *not* nul-terminate the stringbuf!
  *
- * A returned error indicates that the codepoint is invalud.
+ * A returned error indicates that the codepoint is invalid.
  */
 static svn_error_t *
 encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
@@ -206,20 +218,14 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
   return SVN_NO_ERROR;
 }
 
-/* Decode an UCS-4 string to UTF-8, placing the result into BUFFER.
- * While utf8proc does have a similar function, it does more checking
- * and processing than we want here. Return the lenght of the result
- * (excluding the NUL terminator) in *result_length.
- *
- * A returned error indicates that the codepoint is invalud.
- */
-static svn_error_t *
-encode_ucs4_string(svn_membuf_t *buffer,
-                   apr_int32_t *ucs4str, apr_size_t len,
-                   apr_size_t *result_length)
+svn_error_t *
+svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
+                            const apr_int32_t *ucs4str,
+                            apr_size_t length,
+                            apr_size_t *result_length)
 {
   *result_length = 0;
-  while (len-- > 0)
+  while (length-- > 0)
     SVN_ERR(encode_ucs4(buffer, *ucs4str++, result_length));
   svn_membuf__resize(buffer, *result_length + 1);
   ((char*)buffer->data)[*result_length] = '\0';
@@ -250,8 +256,8 @@ svn_utf__glob(svn_boolean_t *match,
      because apr_fnmatch can't handle it.*/
   SVN_ERR(decompose_normalized(&tempbuf_len, pattern, pattern_len, temp_buf));
   if (!sql_like)
-    SVN_ERR(encode_ucs4_string(pattern_buf, temp_buf->data, tempbuf_len,
-                               &patternbuf_len));
+    SVN_ERR(svn_utf__encode_ucs4_string(pattern_buf, temp_buf->data,
+                                        tempbuf_len, &patternbuf_len));
   else
     {
       /* Convert a LIKE pattern to a GLOB pattern that apr_fnmatch can use. */
@@ -326,8 +332,8 @@ svn_utf__glob(svn_boolean_t *match,
 
   /* Now normalize the string */
   SVN_ERR(decompose_normalized(&tempbuf_len, string, string_len, temp_buf));
-  SVN_ERR(encode_ucs4_string(string_buf, temp_buf->data,
-                             tempbuf_len, &tempbuf_len));
+  SVN_ERR(svn_utf__encode_ucs4_string(string_buf, temp_buf->data,
+                                      tempbuf_len, &tempbuf_len));
 
   *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;
@@ -424,7 +430,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
               len = utf8proc_utf8class[(uint8_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
-              if (len > 1 && len <= length - done)
+              if (len > 1 && len <= (apr_ssize_t)(length - done))
                 last = svn_utf__last_valid(p, len);
               else
                 last = NULL;

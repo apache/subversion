@@ -31,6 +31,7 @@
 #include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "private/svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
 #include "private/svn_wc_private.h"
@@ -57,7 +58,8 @@ create_greek_repos(const char **repos_url,
   svn_fs_root_t *txn_root;
 
   /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, name, opts, pool));
+  SVN_ERR(svn_test__create_repos(
+              &repos, svn_test_data_path(name, pool), opts, pool));
 
   /* Prepare and commit a txn containing the Greek tree. */
   SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0 /* rev */,
@@ -67,7 +69,8 @@ create_greek_repos(const char **repos_url,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, name, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(
+              repos_url, svn_test_data_path(name, pool), pool));
   return SVN_NO_ERROR;
 }
 
@@ -331,7 +334,6 @@ test_patch(const svn_test_opts_t *opts,
 {
   const char *repos_url;
   const char *wc_path;
-  const char *cwd;
   svn_opt_revision_t rev;
   svn_opt_revision_t peg_rev;
   svn_client_ctx_t *ctx;
@@ -370,12 +372,11 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-patch-repos", opts, pool));
 
   /* Check out the HEAD revision */
-  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
      unversioned directory prevents the problems. */
-  wc_path = svn_dirent_join(cwd, "test-patch", pool);
+  wc_path = svn_test_data_path("test-patch", pool);
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
@@ -389,8 +390,9 @@ test_patch(const svn_test_opts_t *opts,
                                TRUE, FALSE, ctx, pool));
 
   /* Create the patch file. */
-  patch_file_path = svn_dirent_join_many(pool, cwd,
-                                         "test-patch", "test-patch.diff", NULL);
+  patch_file_path = svn_dirent_join_many(
+      pool, svn_test_data_path("test-patch", pool),
+      "test-patch.diff", SVN_VA_NULL);
   SVN_ERR(svn_io_file_open(&patch_file, patch_file_path,
                            (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE),
                            APR_OS_DEFAULT, pool));
@@ -445,7 +447,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
   committed_rev = 1;
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+  wc_path = svn_test_data_path("test-wc-add", pool);
 
   /* Remove old test data from the previous run */
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
@@ -598,7 +600,7 @@ test_16k_add(const svn_test_opts_t *opts,
   svn_opt_revision_t rev;
   svn_client_ctx_t *ctx;
   const char *repos_url;
-  const char *cwd, *wc_path;
+  const char *wc_path;
   svn_opt_revision_t peg_rev;
   apr_array_header_t *targets;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -608,12 +610,11 @@ test_16k_add(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-16k-repos", opts, pool));
 
   /* Check out the HEAD revision */
-  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
      unversioned directory prevents the problems. */
-  wc_path = svn_dirent_join(cwd, "test-16k", pool);
+  wc_path = svn_test_data_path("test-16k", pool);
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
@@ -735,7 +736,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+  wc_path = svn_test_data_path("test-foreign-repos-copy", pool);
 
   wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 
@@ -769,22 +770,316 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_suggest_mergesources(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  const char *repos_url;
+  svn_client_ctx_t *ctx;
+  svn_client__mtcc_t *mtcc;
+  apr_array_header_t *results;
+  svn_opt_revision_t peg_rev;
+  svn_opt_revision_t head_rev;
+  const char *wc_path;
+
+  peg_rev.kind = svn_opt_revision_unspecified;
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "mergesources", opts, pool));
+
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
+  SVN_ERR(svn_client__mtcc_add_copy("A", 1, "AA", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+
+  SVN_ERR(svn_client_suggest_merge_sources(
+                    &results,
+                    svn_path_url_add_component2(repos_url, "AA", pool),
+                    &peg_rev, ctx, pool));
+  SVN_TEST_ASSERT(results != NULL);
+  SVN_TEST_ASSERT(results->nelts >= 1);
+  SVN_TEST_STRING_ASSERT(APR_ARRAY_IDX(results, 0, const char *),
+                          svn_path_url_add_component2(repos_url, "A", pool));
+
+  /* And now test the same thing with a minimal working copy */
+  wc_path = svn_test_data_path("mergesources-wc", pool);
+  svn_test_add_dir_cleanup(wc_path);
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  head_rev.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_checkout3(NULL,
+                               svn_path_url_add_component2(repos_url, "AA", pool),
+                               wc_path,
+                               &head_rev, &head_rev, svn_depth_empty,
+                               FALSE, FALSE, ctx, pool));
+
+
+  SVN_ERR(svn_client_suggest_merge_sources(&results,
+                                           wc_path,
+                                           &peg_rev, ctx, pool));
+  SVN_TEST_ASSERT(results != NULL);
+  SVN_TEST_ASSERT(results->nelts >= 1);
+  SVN_TEST_STRING_ASSERT(APR_ARRAY_IDX(results, 0, const char *),
+                          svn_path_url_add_component2(repos_url, "A", pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static char
+status_to_char(enum svn_wc_status_kind status)
+{
+
+  switch (status)
+    {
+    case svn_wc_status_none:        return '.';
+    case svn_wc_status_unversioned: return '?';
+    case svn_wc_status_normal:      return '-';
+    case svn_wc_status_added:       return 'A';
+    case svn_wc_status_missing:     return '!';
+    case svn_wc_status_incomplete:  return ':';
+    case svn_wc_status_deleted:     return 'D';
+    case svn_wc_status_replaced:    return 'R';
+    case svn_wc_status_modified:    return 'M';
+    case svn_wc_status_merged:      return 'G';
+    case svn_wc_status_conflicted:  return 'C';
+    case svn_wc_status_obstructed:  return '~';
+    case svn_wc_status_ignored:     return 'I';
+    case svn_wc_status_external:    return 'X';
+    default:                        return '*';
+    }
+}
+
+static int
+compare_status_paths(const void *a, const void *b)
+{
+  const svn_client_status_t *const *const sta = a;
+  const svn_client_status_t *const *const stb = b;
+  return svn_path_compare_paths((*sta)->local_abspath, (*stb)->local_abspath);
+}
+
+static svn_error_t *
+remote_only_status_receiver(void *baton, const char *path,
+                            const svn_client_status_t *status,
+                            apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *results = baton;
+  APR_ARRAY_PUSH(results, const svn_client_status_t *) =
+    svn_client_status_dup(status, results->pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  static const struct remote_only_status_result
+  {
+    const char *relpath;
+    svn_revnum_t revision;
+    enum svn_wc_status_kind node_status;
+    enum svn_wc_status_kind text_status;
+    enum svn_wc_status_kind prop_status;
+    svn_revnum_t ood_changed_rev;
+    enum svn_wc_status_kind repos_node_status;
+    enum svn_wc_status_kind repos_text_status;
+    enum svn_wc_status_kind repos_prop_status;
+  } expected[] = {
+    { ".",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_modified, svn_wc_status_modified, svn_wc_status_none },
+    { "B",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none },
+    { "C",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_deleted,  svn_wc_status_none,     svn_wc_status_none },
+    { "D",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none },
+    { "epsilon",
+      -1, svn_wc_status_none,     svn_wc_status_none,     svn_wc_status_none,
+      +2, svn_wc_status_added,    svn_wc_status_modified, svn_wc_status_none },
+    { "mu",
+      +1, svn_wc_status_normal,   svn_wc_status_normal,   svn_wc_status_none,
+      +2, svn_wc_status_modified, svn_wc_status_normal,   svn_wc_status_none },
+
+    { NULL }
+  };
+
+  const char *repos_url;
+  const char *wc_path;
+  const char *local_path;
+  apr_file_t *local_file;
+  svn_client_ctx_t *ctx;
+  svn_client__mtcc_t *mtcc;
+  svn_opt_revision_t rev;
+  svn_revnum_t result_rev;
+  svn_string_t *contents = svn_string_create("modified\n", pool);
+  svn_stream_t *contentstream = svn_stream_from_string(contents, pool);
+  const struct remote_only_status_result *ex;
+  svn_stream_mark_t *start;
+  apr_array_header_t *targets;
+  apr_array_header_t *results;
+  int i;
+
+  SVN_ERR(svn_stream_mark(contentstream, &start, pool));
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-remote-only-status", opts, pool));
+
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Make some modifications in the repository, creating revision 2. */
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client__mtcc_add_add_file("A/epsilon", contentstream, NULL,
+                                        mtcc, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client__mtcc_add_update_file("A/mu",
+                                           contentstream, NULL, NULL, NULL,
+                                           mtcc, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client__mtcc_add_add_file("A/D/epsilon", contentstream, NULL,
+                                        mtcc, pool));
+  SVN_ERR(svn_stream_seek(contentstream, start));
+  SVN_ERR(svn_client__mtcc_add_update_file("A/B/lambda",
+                                           contentstream, NULL, NULL, NULL,
+                                           mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("A/C", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+
+  /* Check out a sparse root @r1 of the repository */
+  wc_path = svn_test_data_path("test-remote-only-status-wc", pool);
+  /*svn_test_add_dir_cleanup(wc_path);*/
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  rev.kind = svn_opt_revision_number;
+  rev.value.number = 1;
+  SVN_ERR(svn_client_checkout3(NULL,
+                               apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL),
+                               wc_path, &rev, &rev, svn_depth_immediates,
+                               FALSE, FALSE, ctx, pool));
+
+  /* Add a local file; this is a double-check to make sure that
+     remote-only status ignores local changes. */
+  local_path = svn_dirent_join(wc_path, "zeta", pool);
+  SVN_ERR(svn_io_file_create_empty(local_path, pool));
+  SVN_ERR(svn_client_add5(local_path, svn_depth_unknown,
+                          FALSE, FALSE, FALSE, FALSE,
+                          ctx, pool));
+
+  /* Replace a local dir */
+  local_path = svn_dirent_join(wc_path, "B", pool);
+  targets = apr_array_make(pool, 1, sizeof(const char*));
+  APR_ARRAY_PUSH(targets, const char*) = local_path;
+  SVN_ERR(svn_client_delete4(targets, FALSE, FALSE, NULL, NULL, NULL,
+                             ctx, pool));
+  SVN_ERR(svn_client_mkdir4(targets, FALSE, NULL, NULL, NULL,
+                            ctx, pool));
+
+  /* Modify a local dir's props */
+  local_path = svn_dirent_join(wc_path, "D", pool);
+  targets = apr_array_make(pool, 1, sizeof(const char*));
+  APR_ARRAY_PUSH(targets, const char*) = local_path;
+  SVN_ERR(svn_client_propset_local("prop", contents, targets,
+                                   svn_depth_empty, FALSE, NULL,
+                                   ctx, pool));
+
+  /* Modify a local file's contents */
+  local_path = svn_dirent_join(wc_path, "mu", pool);
+  SVN_ERR(svn_io_file_open(&local_file, local_path,
+                           APR_FOPEN_WRITE | APR_FOPEN_TRUNCATE,
+                           0, pool));
+  SVN_ERR(svn_io_file_write_full(local_file,
+                                 contents->data, contents->len,
+                                 NULL, pool));
+  SVN_ERR(svn_io_file_close(local_file, pool));
+
+  /* Run the remote-only status. */
+  results = apr_array_make(pool, 3, sizeof(const svn_client_status_t *));
+  rev.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_status6(
+              &result_rev, ctx, wc_path, &rev, svn_depth_unknown,
+              TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, NULL,
+              remote_only_status_receiver, results, pool));
+
+  SVN_TEST_ASSERT(result_rev == 2);
+
+  /* Compare the number of results with the expected results */
+  for (i = 0, ex = expected; ex->relpath; ++ex, ++i)
+    ;
+  SVN_TEST_ASSERT(results->nelts == i);
+
+  if (opts->verbose)
+    qsort(results->elts, results->nelts, results->elt_size,
+          compare_status_paths);
+
+  for (i = 0; i < results->nelts; ++i)
+    {
+      const svn_client_status_t *st =
+        APR_ARRAY_IDX(results, i, const svn_client_status_t *);
+
+      const char *relpath =
+        svn_dirent_skip_ancestor(wc_path, st->local_abspath);
+      if (!relpath)
+        relpath = st->local_abspath;
+      if (!*relpath)
+        relpath = ".";
+
+      for (ex = expected; ex->relpath; ++ex)
+        {
+          if (0 == strcmp(relpath, ex->relpath))
+            break;
+        }
+      SVN_TEST_ASSERT(ex->relpath != NULL);
+
+      if (opts->verbose)
+        printf("%c%c%c %2ld  %c%c%c %2ld  %s\n",
+               status_to_char(st->node_status),
+               status_to_char(st->text_status),
+               status_to_char(st->prop_status),
+               (long)st->revision,
+               status_to_char(st->repos_node_status),
+               status_to_char(st->repos_text_status),
+               status_to_char(st->repos_prop_status),
+               (long)st->ood_changed_rev,
+               relpath);
+
+      SVN_TEST_ASSERT(st->revision == ex->revision);
+      SVN_TEST_ASSERT(st->ood_changed_rev == ex->ood_changed_rev);
+      SVN_TEST_ASSERT(st->node_status == ex->node_status);
+      SVN_TEST_ASSERT(st->repos_node_status == ex->repos_node_status);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 3;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_elide_mergeinfo_catalog,
                    "test svn_client__elide_mergeinfo_catalog"),
     SVN_TEST_PASS2(test_args_to_target_array,
                    "test svn_client_args_to_target_array"),
-    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
+    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
 #ifdef TEST16K_ADD
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
-    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
+    SVN_TEST_OPTS_PASS(test_suggest_mergesources,
+                       "test svn_client_suggest_merge_sources"),
+    SVN_TEST_OPTS_PASS(test_remote_only_status,
+                       "test svn_client_status6 with ignore_local_mods"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

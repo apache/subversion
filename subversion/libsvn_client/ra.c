@@ -25,7 +25,6 @@
 
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -41,8 +40,10 @@
 #include "mergeinfo.h"
 #include "ra_cache.h"
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* This is the baton that we pass svn_ra_open3(), and is associated with
@@ -351,6 +352,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->get_client_string = get_client_string;
   if (base_dir_abspath)
     cbtable->get_wc_contents = get_wc_contents;
+  cbtable->check_tunnel_func = ctx->check_tunnel_func;
+  cbtable->open_tunnel_func = ctx->open_tunnel_func;
+  cbtable->tunnel_baton = ctx->tunnel_baton;
 
   cb->commit_items = commit_items;
   cb->ctx = ctx;
@@ -428,7 +432,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                 svn_wc_create_notify_url(corrected,
                                          svn_wc_notify_url_redirect,
                                          scratch_pool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+              ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
             }
 
           /* Our caller will want to know what our final corrected URL was. */
@@ -640,8 +644,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                      pool);
   SVN_ERR(svn_error_compose_create(
             err, svn_ra_reparent(ra_session, old_session_url, pool)));
-  qsort((*segments)->elts, (*segments)->nelts,
-        (*segments)->elt_size, compare_segments);
+  svn_sort__array(*segments, compare_segments);
   return SVN_NO_ERROR;
 }
 
@@ -827,7 +830,7 @@ svn_client__repos_locations(const char **start_url,
           svn_boolean_t is_copy;
 
           SVN_ERR(svn_wc__node_get_origin(&is_copy, &peg_revnum, &repos_relpath,
-                                          &repos_root_url, NULL, NULL,
+                                          &repos_root_url, NULL, NULL, NULL,
                                           ctx->wc_ctx, local_abspath_or_url,
                                           FALSE, subpool, subpool));
 
@@ -939,9 +942,9 @@ svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(scratch_pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t path_len = apr_hash_this_key_len(hi);
+      svn_rangelist_t *ranges1 = apr_hash_this_val(hi);
       svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);
@@ -1089,6 +1092,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
       /* The pristine contents refer to the BASE, or to the pristine of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }
@@ -1133,6 +1137,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
       /* The pristine props refer to the BASE, or to the pristine props of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }

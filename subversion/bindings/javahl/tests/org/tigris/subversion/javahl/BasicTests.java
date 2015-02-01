@@ -213,7 +213,16 @@ public class BasicTests extends SVNTests
 
         Status s = client.singleStatus(fileToSVNPath(fileC, false), false);
         if (s != null)
-            fail("File foo.c should not return a status.");
+        {
+            if (s.hasTreeConflict()
+                || s.getTextStatus() != Status.Kind.none
+                || s.getPropStatus() != Status.Kind.none
+                || s.getRepositoryTextStatus() != Status.Kind.none
+                || s.getRepositoryPropStatus() != Status.Kind.none)
+            {
+                fail("File foo.c should not return a status.");
+            }
+        }
 
     }
 
@@ -1250,7 +1259,7 @@ public class BasicTests extends SVNTests
     /**
      * Test the basic SVNClient.cleanup functionality.
      * Without a way to force a lock, this test just verifies
-     * the method can be called succesfully.
+     * the method can be called successfully.
      * @throws Throwable
      */
     public void testBasicCleanup() throws Throwable
@@ -1630,7 +1639,7 @@ public class BasicTests extends SVNTests
         // check the status of the working copy
         thisTest.checkStatus();
 
-        // confirm that the file are realy deleted
+        // confirm that the file are really deleted
         assertFalse("failed to remove text modified file",
                 new File(thisTest.getWorkingCopy(), "A/D/G/rho").exists());
         assertFalse("failed to remove prop modified file",
@@ -1656,7 +1665,7 @@ public class BasicTests extends SVNTests
 
         try
         {
-            // delete non-existant file foo
+            // delete non-existent file foo
             client.remove(new String[] {file.getAbsolutePath()}, null, true);
             fail("missing exception");
         }
@@ -2644,7 +2653,7 @@ public class BasicTests extends SVNTests
                         thisTest.getUrl(), diffOutput.getPath(),
                         Depth.infinity, null, true, true, false);
 
-            fail("This test should fail becaus the relativeToDir parameter " +
+            fail("This test should fail because the relativeToDir parameter " +
                  "does not work with URLs");
         }
         catch (Exception ignored)
@@ -2929,6 +2938,16 @@ public class BasicTests extends SVNTests
         }
     }
 
+    private static class CountingProgressListener implements ProgressListener
+    {
+        public void onProgress(ProgressEvent event)
+        {
+            // TODO: Examine the byte counts from "event".
+            gotProgress = true;
+        }
+        public boolean gotProgress = false;
+    }
+
     public void testDataTransferProgressReport() throws Throwable
     {
         // ### FIXME: This isn't working over ra_local, because
@@ -2938,25 +2957,13 @@ public class BasicTests extends SVNTests
 
         // build the test setup
         OneTest thisTest = new OneTest();
-        ProgressListener listener = new ProgressListener()
-        {
-            public void onProgress(ProgressEvent event)
-            {
-                // TODO: Examine the byte counts from "event".
-                throw new RuntimeException("Progress reported as expected");
-            }
-        };
+        CountingProgressListener listener = new CountingProgressListener();
         client.setProgressListener(listener);
 
         // Perform an update to exercise the progress notification.
-        try
-        {
-            client.update(thisTest.getWCPath(), null, true);
+        client.update(thisTest.getWCPath(), null, true);
+        if (!listener.gotProgress)
             fail("No progress reported");
-        }
-        catch (RuntimeException progressReported)
-        {
-        }
     }
 
     /**
@@ -3360,9 +3367,12 @@ public class BasicTests extends SVNTests
     private class MyChangelistCallback extends HashMap
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
         @SuppressWarnings("unchecked")
         public void doChangelist(String path, String changelist)
         {
+            path = fileToSVNPath(new File(path), true);
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list

@@ -25,7 +25,7 @@
 # This script simplifies preparation of environment for Subversion client
 # communicating with a server via DAV protocol. The prerequisites of such
 # testing are:
-#   - Subversion built using --enable-shared --enable-dso --with-apxs options,
+#   - Subversion built using --enable-shared --with-apxs options,
 #   - Working Apache 2 HTTPD Server with the apxs program reachable through
 #     PATH or specified via the APXS Makefile variable or environment variable,
 #   - Modules dav_module and log_config_module compiled as DSO or built into
@@ -142,7 +142,7 @@ get_loadmodule_config() {
   fi
 
   # maybe it's built-in?
-  "$HTTPD" -l | grep -q "$1\\.c" && return
+  "$HTTPD" -l | grep "$1\\.c" >/dev/null && return
 
   return 1
 }
@@ -224,15 +224,19 @@ fi
 if [ ${MODULE_PATH:+set} ]; then
     MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
     MOD_AUTHZ_SVN="$MODULE_PATH/mod_authz_svn.so"
+    MOD_DONTDOTHAT="$MODULE_PATH/mod_dontdothat.so"
 else
     MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
     MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
+    MOD_DONTDOTHAT="$ABS_BUILDDIR/tools/server-side/mod_dontdothat/.libs/mod_dontdothat.so"
 fi
 
 [ -r "$MOD_DAV_SVN" ] \
-  || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+  || fail "dav_svn_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
 [ -r "$MOD_AUTHZ_SVN" ] \
-  || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+  || fail "authz_svn_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
+[ -r "$MOD_DONTDOTHAT" ] \
+  || fail "dontdothat_module not found, please use '--enable-shared --with-apxs' with your 'configure' script"
 
 for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
   if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
@@ -244,12 +248,10 @@ done
 
 case "`uname`" in
   Darwin*)
-    LDD='otool -L'
     DYLD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$DYLD_LIBRARY_PATH"
     export DYLD_LIBRARY_PATH
     ;;
   *)
-    LDD='ldd'
     LD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$LD_LIBRARY_PATH"
     export LD_LIBRARY_PATH
     ;;
@@ -261,8 +263,6 @@ HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 
 "$HTTPD" -v 1>/dev/null 2>&1 \
   || fail "HTTPD '$HTTPD' doesn't start properly"
-
-say "Using '$HTTPD'..."
 
 HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
   || fail "Could not find htpasswd or htpasswd2"
@@ -332,6 +332,7 @@ HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
 HTTPD_ERROR_LOG="$HTTPD_ROOT/error_log"
 HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
+HTTPD_DONTDOTHAT="$HTTPD_ROOT/dontdothat"
 if [ -z "$BASE_URL" ]; then
   BASE_URL="http://localhost:$HTTPD_PORT"
 else
@@ -403,6 +404,12 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 
 touch $HTTPD_MIME_TYPES
 
+cat >  "$HTTPD_DONTDOTHAT" <<__EOF__
+[recursive-actions]
+/ = deny
+
+__EOF__
+
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_MPM
 $LOAD_MOD_SSL
@@ -419,6 +426,7 @@ $LOAD_MOD_AUTHZ_CORE
 $LOAD_MOD_AUTHZ_USER
 $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
+LoadModule          dontdothat_module "$MOD_DONTDOTHAT"
 
 __EOF__
 
@@ -429,9 +437,17 @@ User                $(id -un)
 Group               $(id -gn)
 __EOF__
 else
+HTTPD_LOCK="$HTTPD_ROOT/lock"
+mkdir "$HTTPD_LOCK" \
+  || fail "couldn't create lock directory '$HTTPD_LOCK'"
   cat >> "$HTTPD_CFG" <<__EOF__
-# TODO: maybe uncomment this for prefork,worker MPMs only?
-# Mutex file:lock mpm-accept
+# worker and prefork MUST have a mpm-accept lockfile in 2.3.0+
+<IfModule worker.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
+<IfModule prefork.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
 __EOF__
 fi
 
@@ -447,7 +463,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
-LogFormat           "%h %l %u %t \"%r\" %>s %b" common
+LogFormat           "%h %l %u %t \"%r\" %>s %b \"%f\"" common
 CustomLog           "$HTTPD_ACCESS_LOG" common
 ErrorLog            "$HTTPD_ERROR_LOG"
 LogLevel            debug
@@ -489,6 +505,19 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /ddt-test-work/repositories>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  ${SVN_PATH_AUTHZ_LINE}
+  DontDoThatConfigFile "$HTTPD_DONTDOTHAT"
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
@@ -549,7 +578,7 @@ if [ $? -ne 0 ]; then
   HTTP_FETCH_OUTPUT='-s -k -o'
 fi
 $HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
-diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
+diff "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
   || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
@@ -573,24 +602,24 @@ else
   TIME_CMD=""
 fi
 
+MAKE=${MAKE:-make}
+
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-$LDD "$CLIENT_CMD" | grep -q 'not found' \
-  && fail "Subversion client couldn't be fully linked at run-time"
 
 if [ "$HTTP_LIBRARY" = "" ]; then
   say "Using default dav library"
-  "$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
+  "$CLIENT_CMD" --version | egrep '^[*] ra_(neon|serf)' >/dev/null \
     || fail "Subversion client couldn't find and/or load ra_dav library"
 else
   say "Requesting dav library '$HTTP_LIBRARY'"
-  "$CLIENT_CMD" --version | egrep -q "^[*] ra_$HTTP_LIBRARY" \
+  "$CLIENT_CMD" --version | egrep "^[*] ra_$HTTP_LIBRARY" >/dev/null \
     || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
 fi
 
 if [ $# = 0 ]; then
-  $TIME_CMD make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"

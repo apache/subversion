@@ -111,12 +111,16 @@
 # define SVN__FORCE_INLINE __forceinline
 # define SVN__PREVENT_INLINE __declspec(noinline)
 #else
-# define SVN__FORCE_INLINE
+# define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
 
 #define SVN__PREDICT_TRUE(x)  (x)
 #define SVN__PREDICT_FALSE(x)  (x)
+
+/* Macro used to specify that a variable is intentionally left unused.
+   Supresses compiler warnings about the variable being unused.  */
+#define SVN_UNUSED(v) ( (void)(v) )
 
 #endif /* SVN_PRIVATE_CONFIG_HW */
 

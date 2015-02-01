@@ -148,6 +148,12 @@ class Processor(object):
       # RELPATH_SKIP_JOIN(x, y, z) skips the x prefix from z and the joins the
       # result after y. In other words it replaces x with y, but follows the
       # relpath rules.
+      #
+      # This matches the C version of:
+      #     svn_relpath_join(y, svn_relpath_skip_ancestor(x, z), pool)
+      # but returns an SQL NULL in case z is not below x.
+      #
+
       line = re.sub(
              r'RELPATH_SKIP_JOIN[(]([?]?[A-Za-z0-9_.]+), ' +
                                  r'([?]?[A-Za-z0-9_.]+), ' +

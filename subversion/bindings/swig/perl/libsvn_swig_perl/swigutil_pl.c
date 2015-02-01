@@ -25,6 +25,9 @@
 #include <apr_general.h>
 #include <apr_portable.h>
 
+/* Windows hack: Allow overriding some <perl.h> defaults */
+#include "swigutil_pl__pre_perl.h"
+
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>
@@ -38,11 +41,11 @@
 #include <io.h>
 #endif
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_private_config.h"
 
 #include "swig_perl_external_runtime.swg"
 
@@ -145,11 +148,13 @@ static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
          * only if croak_on_error is FALSE.
          */
         start = svn_swig_pl_set_revision(&temp_start, 
-                                         *av_fetch(array, 0, 0), croak_on_error);
+                                         *av_fetch(array, 0, 0), 
+                                         croak_on_error, pool);
         if (start == NULL)
             return NULL;
         end = svn_swig_pl_set_revision(&temp_end, 
-                                       *av_fetch(array, 1, 0), croak_on_error);
+                                       *av_fetch(array, 1, 0), 
+                                       croak_on_error, pool);
         if (end == NULL)
             return NULL;
 
@@ -291,7 +296,7 @@ apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
     svn_boolean_t croak_on_error = FALSE;
     svn_opt_revision_range_t *range;
 
-    if (range = convert_pl_revision_range(source, &croak_on_error, pool)) {
+    if ((range = convert_pl_revision_range(source, &croak_on_error, pool))) {
         apr_array_header_t *temp = apr_array_make(pool, 1, 
                                                   sizeof(svn_opt_revision_range_t *));
         temp->nelts = 1;
@@ -427,7 +432,8 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 /* perl -> c svn_opt_revision_t conversion */
 svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
                                              SV *source, 
-                                             svn_boolean_t croak_on_error)
+                                             svn_boolean_t croak_on_error,
+                                             apr_pool_t *pool)
 {
 #define maybe_croak(argv) do { if (croak_on_error) croak argv; \
                                else return NULL; } while (0)
@@ -465,8 +471,8 @@ svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev,
                 maybe_croak(("unknown opt_revision_t string \"%s\": "
                              "missing closing brace for \"{DATE}\"", input));
             *end = '\0';
-            err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
-                                  svn_swig_pl_make_pool ((SV *)NULL));
+            err = svn_parse_date (&matched, &tm, 
+                                  input + 1, apr_time_now(), pool);
             if (err) {
                 svn_error_clear (err);
                 maybe_croak(("unknown opt_revision_t string \"{%s}\": "
@@ -1758,7 +1764,8 @@ svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
         iob->obj = obj;
         iob->io = io;
         *stream = svn_stream_create(iob, pool);
-        svn_stream_set_read(*stream, io_handle_read);
+        svn_stream_set_read2(*stream, NULL /* only full read support */,
+                             io_handle_read);
         svn_stream_set_write(*stream, io_handle_write);
         svn_stream_set_close(*stream, io_handle_close);
         apr_pool_cleanup_register(pool, iob, io_handle_cleanup,

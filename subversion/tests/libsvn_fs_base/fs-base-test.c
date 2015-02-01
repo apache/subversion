@@ -124,7 +124,7 @@ static svn_error_t *
 check_entry_present(svn_fs_root_t *root, const char *path,
                     const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = FALSE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (! present)
@@ -141,7 +141,7 @@ static svn_error_t *
 check_entry_absent(svn_fs_root_t *root, const char *path,
                    const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = TRUE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (present)
@@ -213,7 +213,7 @@ check_id(svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
 static svn_error_t *
 check_id_present(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = FALSE;
   SVN_ERR(check_id(fs, id, &present, pool));
 
   if (! present)
@@ -233,7 +233,7 @@ check_id_present(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 static svn_error_t *
 check_id_absent(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = TRUE;
   SVN_ERR(check_id(fs, id, &present, pool));
 
   if (present)
@@ -1519,7 +1519,9 @@ key_test(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 2;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(create_berkeley_filesystem,
@@ -1546,3 +1548,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "testing sequential alphanumeric key generation"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

@@ -32,6 +32,7 @@ import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -42,10 +43,18 @@ import java.util.Set;
 import java.io.OutputStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     public void dispose()
     {
         if (editorReference != null)
@@ -93,7 +102,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public long getRevisionByDate(Date date) throws ClientException
     {
-        long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
+        long timestamp = MICROSECONDS.convert(date.getTime(), MILLISECONDS);
         return getRevisionByTimestamp(timestamp);
     }
 
@@ -123,18 +132,30 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
                                       CommitCallback commitCallback,
-                                      Set<Lock> lockTokens,
-                                      boolean keepLocks)
+                                      Set<Lock> lockTokens, boolean keepLocks,
+                                      ISVNEditor.ProvideBaseCallback getBase,
+                                      ISVNEditor.ProvidePropsCallback getProps,
+                                      ISVNEditor.GetNodeKindCallback getCopyfromKind)
             throws ClientException
     {
         check_inactive(editorReference, reporterReference);
         ISVNEditor ed =
             CommitEditor.createInstance(this, revisionProperties,
-                                        commitCallback, lockTokens, keepLocks);
+                                        commitCallback, lockTokens, keepLocks,
+                                        getBase, getProps, getCopyfromKind);
         if (editorReference != null)
             editorReference.clear();
         editorReference = new WeakReference<ISVNEditor>(ed);
         return ed;
+    }
+
+    public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                                      CommitCallback commitCallback,
+                                      Set<Lock> lockTokens, boolean keepLocks)
+            throws ClientException
+    {
+        return getCommitEditor(revisionProperties, commitCallback,
+                               lockTokens, keepLocks, null, null, null);
     }
 
     public long getFile(long revision, String path,
@@ -384,7 +405,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     /*
      * Private helper methods.
      */
-    private final static void maybe_clear(Map clearable)
+    private final static<K,V> void maybe_clear(Map<K,V> clearable)
     {
         if (clearable != null && !clearable.isEmpty())
             try {

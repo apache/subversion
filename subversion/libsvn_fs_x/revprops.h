@@ -29,16 +29,15 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Write the CURRENT revprop generation to disk for repository FS.
+/* Auto-create / replace the revprop generation file in FS with its
+ * initial contents.  In any case, FS will not hold an open handle to
+ * it after this function succeeds.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__write_revprop_generation_file(svn_fs_t *fs,
-                                        apr_int64_t current,
-                                        apr_pool_t *pool);
-
-/* Make sure the revprop_namespace member in FS is set. */
-svn_error_t *
-svn_fs_x__cleanup_revprop_namespace(svn_fs_t *fs);
+svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
+                                        apr_pool_t *scratch_pool);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
  * 
@@ -77,6 +76,7 @@ svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                         apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
  *
  * Allocations will be done in POOL.
  */
@@ -84,26 +84,27 @@ svn_error_t *
 svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
+                                svn_boolean_t bypass_cache,
                                 apr_pool_t *pool);
 
 /* Set the revision property list of revision REV in filesystem FS to
-   PROPLIST.  Use POOL for temporary allocations. */
+   PROPLIST.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__set_revision_proplist(svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 apr_hash_t *proplist,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  * Set *MISSING, if the reason is a missing manifest or pack file. 
  */
 svn_boolean_t
 svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
                                    svn_fs_t *fs,
                                    svn_revnum_t revision,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
 
 
 /****** Packing FSX shards *********/

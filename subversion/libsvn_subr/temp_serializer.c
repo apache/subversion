@@ -312,7 +312,7 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
 
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
-  store_current_end_pointer(context, (const void **)s);
+  store_current_end_pointer(context, (const void *const *)s);
 
   /* append the string data */
   if (string)

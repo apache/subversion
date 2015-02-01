@@ -36,6 +36,7 @@
 #include "svn_time.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 
 #include "private/svn_dav_protocol.h"
 
@@ -422,7 +423,43 @@ insert_prop_internal(const dav_resource *resource,
         if (last_author == NULL)
           return DAV_PROP_INSERT_NOTDEF;
 
-        value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
+        if (svn_xml_is_xml_safe(last_author->data, last_author->len)
+            || !resource->info->repos->is_svn_client)
+          value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
+        else
+          {
+            /* We are talking to a Subversion client, which will (like any proper
+               xml parser) error out if we produce control characters in XML.
+
+               However Subversion clients process both the generic
+               <creator-displayname /> as the custom element for svn:author.
+
+               Let's skip outputting the invalid characters here to make the XML
+               valid, so clients can see the custom element.
+
+               Subversion Clients will then either use a slightly invalid
+               author (unlikely) or more likely use the second result, which
+               will be transferred with full escaping capabilities.
+
+               We have tests in place to assert proper behavior over the RA layer.
+             */
+            apr_size_t i;
+            svn_stringbuf_t *buf;
+
+            buf = svn_stringbuf_create_from_string(last_author, scratch_pool);
+
+            for (i = 0; i < buf->len; i++)
+              {
+                char c = buf->data[i];
+
+                if (svn_ctype_iscntrl(c))
+                  {
+                    svn_stringbuf_remove(buf, i--, 1);
+                  }
+              }
+
+            value = apr_xml_quote_string(scratch_pool, buf->data, 1);
+          }
         break;
       }
 
@@ -549,7 +586,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_BC,
                                  resource->info->root.rev, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_checked_in:
@@ -578,7 +615,8 @@ insert_prop_internal(const dav_resource *resource,
             }
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_BASELINE,
-                                 revnum, NULL, 0 /* add_href */, scratch_pool);
+                                 revnum, NULL, FALSE /* add_href */,
+                                 scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -596,7 +634,7 @@ insert_prop_internal(const dav_resource *resource,
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_VERSION,
                                  rev_to_use, resource->info->repos_path,
-                                0 /* add_href */, scratch_pool);
+                                 FALSE /* add_href */, scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -610,7 +648,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_VCC,
                                  SVN_IGNORED_REVNUM, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_version_name:

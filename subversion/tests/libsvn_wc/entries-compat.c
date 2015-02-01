@@ -310,10 +310,7 @@ create_fake_wc(const char *subdir, apr_pool_t *pool)
   SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
-  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool, pool));
-
-  wc_abspath = svn_dirent_join(wc_abspath, "M", pool);
-  SVN_ERR(svn_test__create_fake_wc(wc_abspath, M_TESTING_DATA, pool, pool));
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool));
 
   return SVN_NO_ERROR;
 }
@@ -377,7 +374,7 @@ test_entries_alloc(apr_pool_t *pool)
                                        "fake-wc",
                                        WC_NAME,
                                        "D",
-                                       NULL);
+                                       SVN_VA_NULL);
   SVN_ERR(svn_wc_entry(&entry, local_relpath, adm_access, TRUE, pool));
   SVN_TEST_ASSERT(entry == apr_hash_get(entries, "D", APR_HASH_KEY_STRING));
 
@@ -400,6 +397,7 @@ test_stubs(apr_pool_t *pool)
   const svn_wc_entry_t *stub_entry;
   const svn_wc_entry_t *entry;
   const svn_wc_entry_t *test_entry;
+  const char *M_dir;
   apr_hash_t *entries;
 
 #undef WC_NAME
@@ -407,13 +405,16 @@ test_stubs(apr_pool_t *pool)
 
   SVN_ERR(create_open(&db, &local_abspath, WC_NAME, pool));
 
+  M_dir = svn_dirent_join(local_abspath, "M", pool);
+  SVN_ERR(svn_test__create_fake_wc(M_dir, M_TESTING_DATA, pool));
+
   /* The "M" entry is a subdir. Let's ensure we can reach its stub,
      and the actual contents.  */
   local_relpath = svn_dirent_join_many(pool,
                                        "fake-wc",
                                        WC_NAME,
                                        "M",
-                                       NULL);
+                                       SVN_VA_NULL);
 
   SVN_ERR(svn_wc_adm_open3(&adm_access,
                            NULL /* associated */,
@@ -638,7 +639,9 @@ test_access_baton_like_locking(apr_pool_t *pool)
 }
 
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = -1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_entries_alloc,
@@ -649,3 +652,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "access baton like locks must work with wc-ng"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

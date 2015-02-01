@@ -39,7 +39,7 @@
 
 /* Helpers to create the test data directory. */
 
-#define TEST_DIR "io-test-temp"
+#define TEST_DIR_PREFIX "io-test-temp"
 
 /* The definition for the test data files. */
 struct test_file_definition_t
@@ -66,7 +66,7 @@ struct test_file_definition_t
     char* created_path;
   };
 
-struct test_file_definition_t test_file_definitions[] =
+static struct test_file_definition_t test_file_definitions_template[] =
   {
     {"empty",                 "",      0},
     {"single_a",              "a",     1},
@@ -121,6 +121,7 @@ struct test_file_definition_t test_file_definitions[] =
 
 static svn_error_t *
 create_test_file(struct test_file_definition_t* definition,
+                 const char *testname,
                  apr_pool_t *pool,
                  apr_pool_t *scratch_pool)
 {
@@ -129,6 +130,7 @@ create_test_file(struct test_file_definition_t* definition,
   apr_off_t midpos = definition->size / 2;
   svn_error_t *err = NULL;
   int i;
+  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX, testname, NULL);
 
   if (definition->size < 5)
     SVN_ERR_ASSERT(strlen(definition->data) >= (apr_size_t)definition->size);
@@ -136,9 +138,9 @@ create_test_file(struct test_file_definition_t* definition,
     SVN_ERR_ASSERT(strlen(definition->data) >= 5);
 
 
-  definition->created_path = svn_dirent_join(TEST_DIR,
-                                  definition->name,
-                                  pool);
+  definition->created_path = svn_dirent_join(test_dir,
+                                             definition->name,
+                                             pool);
 
   SVN_ERR(svn_io_file_open(&file_h,
                            definition->created_path,
@@ -176,37 +178,47 @@ create_test_file(struct test_file_definition_t* definition,
 
 /* Function to prepare the whole set of on-disk files to be compared. */
 static svn_error_t *
-create_comparison_candidates(apr_pool_t *scratch_pool)
+create_comparison_candidates(struct test_file_definition_t **definitions,
+                             const char *testname,
+                             apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   struct test_file_definition_t *candidate;
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t count = 0;
+  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX,
+                                     testname, NULL);
 
   /* If there's already a directory named io-test-temp, delete it.
      Doing things this way means that repositories stick around after
      a failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  SVN_ERR(svn_io_check_path(TEST_DIR, &kind, scratch_pool));
+  SVN_ERR(svn_io_check_path(test_dir, &kind, pool));
 
   if (kind == svn_node_dir)
-    SVN_ERR(svn_io_remove_dir2(TEST_DIR, TRUE, NULL, NULL, scratch_pool));
+    SVN_ERR(svn_io_remove_dir2(test_dir, TRUE, NULL, NULL, pool));
   else if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "There is already a file named '%s'",
-                             TEST_DIR);
+                             test_dir);
 
-  SVN_ERR(svn_io_dir_make(TEST_DIR, APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_dir_make(test_dir, APR_OS_DEFAULT, pool));
 
-  svn_test_add_dir_cleanup(TEST_DIR);
+  svn_test_add_dir_cleanup(test_dir);
 
-  for (candidate = test_file_definitions;
+  for (candidate = test_file_definitions_template;
        candidate->name != NULL;
        candidate += 1)
+    count++;
+
+  *definitions = apr_pmemdup(pool, test_file_definitions_template,
+                             (count + 1) * sizeof(**definitions));
+  for (candidate = *definitions; candidate->name != NULL; candidate += 1)
     {
       svn_pool_clear(iterpool);
-      err = create_test_file(candidate, scratch_pool, iterpool);
+      err = create_test_file(candidate, testname, pool, iterpool);
       if (err)
         break;
     }
@@ -229,8 +241,11 @@ test_two_file_size_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_two_file_size_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -280,8 +295,11 @@ test_two_file_content_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_two_file_content_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -333,8 +351,11 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_three_file_size_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -413,8 +434,11 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_three_file_content_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -510,12 +534,14 @@ read_length_line_shouldnt_loop(apr_pool_t *pool)
 }
 
 /* Move the read pointer in FILE to absolute position OFFSET and align
- * the read buffer to multiples of BLOCK_SIZE.  Use POOL for allocations.
+ * the read buffer to multiples of BLOCK_SIZE.  BUFFERED is set only if
+ * FILE actually uses a read buffer.  Use POOL for allocations.
  */
 static svn_error_t *
 aligned_seek(apr_file_t *file,
              apr_size_t block_size,
              apr_size_t offset,
+             svn_boolean_t buffered,
              apr_pool_t *pool)
 {
   apr_off_t block_start;
@@ -527,17 +553,15 @@ aligned_seek(apr_file_t *file,
   /* block start shall be aligned to multiples of block_size.
      If it isn't, it must be aligned to APR's default block size(pre-1.3 APR)
    */
-#if APR_VERSION_AT_LEAST(1,3,0)
-  SVN_TEST_ASSERT(block_start % block_size == 0);
-  SVN_TEST_ASSERT(offset - block_start < block_size);
-#else
-  SVN_TEST_ASSERT(block_start % 0x1000 == 0);
-  SVN_TEST_ASSERT(offset - block_start < 0x1000);
-#endif
+  if (buffered)
+    {
+      SVN_TEST_ASSERT(block_start % block_size == 0);
+      SVN_TEST_ASSERT(offset - block_start < block_size);
+    }
 
   /* we must be at the desired offset */
   current = 0;
-  SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
   SVN_TEST_ASSERT(current == (apr_off_t)offset);
 
   return SVN_NO_ERROR;
@@ -546,6 +570,7 @@ aligned_seek(apr_file_t *file,
 /* Move the read pointer in FILE to absolute position OFFSET, align the
  * read buffer to multiples of BLOCK_SIZE and read one byte from that
  * position.  Verify that it matches the CONTENTS for that offset.
+ * BUFFERED is set only if FILE actually uses a read buffer.
  * Use POOL for allocations.
  */
 static svn_error_t *
@@ -553,10 +578,11 @@ aligned_read_at(apr_file_t *file,
                 svn_stringbuf_t *contents,
                 apr_size_t block_size,
                 apr_size_t offset,
+                svn_boolean_t buffered,
                 apr_pool_t *pool)
 {
   char c;
-  SVN_ERR(aligned_seek(file, block_size, offset,pool));
+  SVN_ERR(aligned_seek(file, block_size, offset, buffered, pool));
 
   /* the data we read must match whatever we wrote there */
   SVN_ERR(svn_io_file_getc(&c, file, pool));
@@ -566,12 +592,14 @@ aligned_read_at(apr_file_t *file,
 }
 
 /* Verify that aligned seek with the given BLOCK_SIZE works for FILE.
- * CONTENTS is the data expected from FILE.  Use POOL for allocations.
+ * CONTENTS is the data expected from FILE.  BUFFERED is set only if FILE
+ * actually uses a read buffer.  Use POOL for allocations.
  */
 static svn_error_t *
 aligned_read(apr_file_t *file,
              svn_stringbuf_t *contents,
              apr_size_t block_size,
+             svn_boolean_t buffered,
              apr_pool_t *pool)
 {
   apr_size_t i;
@@ -581,18 +609,19 @@ aligned_read(apr_file_t *file,
   /* "random" access to different offsets */
   for (i = 0, offset = prime; i < 10; ++i, offset += prime)
     SVN_ERR(aligned_read_at(file, contents, block_size,
-                            offset % contents->len, pool));
+                            offset % contents->len, buffered, pool));
 
   /* we can seek to EOF */
-  SVN_ERR(aligned_seek(file, contents->len, block_size, pool));
+  SVN_ERR(aligned_seek(file, contents->len, block_size, buffered, pool));
 
   /* reversed order access to all bytes */
   for (i = contents->len; i > 0; --i)
-    SVN_ERR(aligned_read_at(file, contents, block_size, i - 1, pool));
+    SVN_ERR(aligned_read_at(file, contents, block_size, i - 1, buffered,
+                            pool));
 
   /* forward order access to all bytes */
   for (i = 0; i < contents->len; ++i)
-    SVN_ERR(aligned_read_at(file, contents, block_size, i, pool));
+    SVN_ERR(aligned_read_at(file, contents, block_size, i, buffered, pool));
 
   return SVN_NO_ERROR;
 }
@@ -627,14 +656,83 @@ aligned_seek_test(apr_pool_t *pool)
   /* now, access read data with varying alignment sizes */
   SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
-  SVN_ERR(aligned_read(f, contents,   0x1000, pool)); /* APR default */
-  SVN_ERR(aligned_read(f, contents,   0x8000, pool)); /* "unusual" 32K */
-  SVN_ERR(aligned_read(f, contents,  0x10000, pool)); /* FSX default */
-  SVN_ERR(aligned_read(f, contents, 0x100000, pool)); /* larger than file */
-  SVN_ERR(aligned_read(f, contents,    10001, pool)); /* odd, larger than
-                                                         APR default */
-  SVN_ERR(aligned_read(f, contents,     1003, pool)); /* odd, smaller than
-                                                         APR default */
+  SVN_ERR(aligned_read(f, contents,   0x1000, TRUE, pool)); /* APR default */
+  SVN_ERR(aligned_read(f, contents,   0x8000, TRUE, pool)); /* "unusual" 32K */
+  SVN_ERR(aligned_read(f, contents,  0x10000, TRUE, pool)); /* FSX default */
+  SVN_ERR(aligned_read(f, contents, 0x100000, TRUE, pool)); /* larger than file */
+  SVN_ERR(aligned_read(f, contents,    10001, TRUE, pool)); /* odd, larger than
+                                                               APR default */
+  SVN_ERR(aligned_read(f, contents,     1003, TRUE, pool)); /* odd, smaller than
+                                                               APR default */
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* now, try read data with buffering disabled.
+     That are a special case because APR reports a buffer size of 0. */
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR(aligned_read(f, contents,   0x1000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,   0x8000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,  0x10000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents, 0x100000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,    10001, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,     1003, FALSE, pool));
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ignore_enoent(apr_pool_t *pool)
+{
+  const char *tmp_dir, *path;
+  const svn_io_dirent2_t *dirent_p;
+  apr_file_t *file;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "ignore_enoent", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Path does not exist. */
+  path = svn_dirent_join(tmp_dir, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+  
+  /* Neither path nor parent exists. */
+  path = svn_dirent_join(path, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  /* File does exist. */
+  path = svn_dirent_join(tmp_dir, "present", pool);
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT,
+                           pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Path does not exist as child of file. */
+  path = svn_dirent_join(path, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -642,7 +740,9 @@ aligned_seek_test(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 3;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_two_file_size_comparison,
@@ -657,5 +757,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "svn_io_read_length_line() shouldn't loop"),
     SVN_TEST_PASS2(aligned_seek_test,
                    "test aligned seek"),
+    SVN_TEST_PASS2(ignore_enoent,
+                   "test ignore-enoent"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN
