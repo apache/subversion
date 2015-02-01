@@ -29,13 +29,9 @@ package org.apache.subversion.javahl.types;
  */
 public class RevisionRange implements Comparable<RevisionRange>, java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 2L;
 
     private Revision from;
@@ -108,8 +104,10 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
             try
             {
                 long revNum = Long.parseLong(revisionElement.trim());
-                this.from = new Revision.Number(revNum);
-                this.to = this.from;
+                if (revNum <= 0)
+                    return;
+                this.to = new Revision.Number(revNum);
+                this.from = new Revision.Number(revNum - 1);
             }
             catch (NumberFormatException e)
             {
@@ -137,8 +135,17 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
     {
         if (from != null && to != null)
         {
-            String rep = (from.equals(to) ? from.toString()
-                          : from.toString() + '-' + to.toString());
+            String rep;
+
+            if (from.getKind() == Revision.Kind.number
+                && to.getKind() == Revision.Kind.number
+                && (((Revision.Number)from).getNumber() + 1
+                    == ((Revision.Number)to).getNumber()))
+                rep = to.toString();
+            else if (from.equals(to)) // Such ranges should never happen
+                rep = from.toString();
+            else
+                rep = from.toString() + '-' + to.toString();
             if (!inheritable)
                 return rep + '*';
             return rep;

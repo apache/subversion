@@ -193,12 +193,6 @@ def _usage_exit(err=None):
   print("  --enable-nls")
   print("           add support for gettext localization")
   print("")
-  print("  --enable-bdb-in-apr-util")
-  print("           configure APR-Util to use Berkeley DB")
-  print("")
-  print("  --enable-ml")
-  print("           enable use of ML assembler with zlib")
-  print("")
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
@@ -209,7 +203,12 @@ def _usage_exit(err=None):
   print("           Use static openssl")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008,")
+  print("           2010, 2012 or 2013)")
+  print("           [only valid in combination with '-t vcproj']")
+  print("")
+  print(" -D NAME[=value]")
+  print("           define NAME macro during compilation")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")
@@ -234,7 +233,7 @@ class Options:
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
+    opts, args = my_getopt(sys.argv[1:], 'st:D:',
                            ['debug',
                             'release',
                             'reload',
@@ -260,18 +259,10 @@ if __name__ == '__main__':
                             'enable-purify',
                             'enable-quantify',
                             'enable-nls',
-                            'enable-bdb-in-apr-util',
-                            'enable-ml',
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
                             'disable-gmock',
-                            # Keep distributions that help by adding a path
-                            # working. On unix this would be filtered by
-                            # configure, but on Windows gen-make.py is used
-                            # directly.
-                            'with-neon=',
-                            'without-neon',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")

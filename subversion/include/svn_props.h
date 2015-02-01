@@ -671,7 +671,7 @@ svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_TXN_PREFIX  SVN_PROP_PREFIX "txn-"
 
-/** Identifies the client version compability level.  For clients
+/** Identifies the client version compatibility level.  For clients
  * compiled against Subversion libraries, this is @c SVN_VER_NUMBER.
  * Third-party implementations are advised to use similar formatting
  * for values of this property.

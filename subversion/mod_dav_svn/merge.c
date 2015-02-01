@@ -85,7 +85,7 @@ send_response(const dav_svn_repos *repos,
                             SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
   rev_to_use = dav_svn__get_safe_cr(root, path, pool);
   vsn_url = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VERSION,
-                               rev_to_use, path, 0 /* add_href */, pool);
+                               rev_to_use, path, FALSE /* add_href */, pool);
   status = ap_fputstrs(output, bb,
                        "<D:response>" DEBUG_CR
                        "<D:href>",
@@ -136,12 +136,13 @@ do_resources(const dav_svn_repos *repos,
       const void *key;
       void *val;
       const char *path;
+      apr_ssize_t path_len;
       svn_fs_path_change2_t *change;
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, &path_len, &val);
       path = key;
       change = val;
 
@@ -170,14 +171,14 @@ do_resources(const dav_svn_repos *repos,
         {
           /* If we haven't already sent this path, send it (and then
              remember that we sent it). */
-          if (! svn_hash_gets(sent, path))
+          if (! apr_hash_get(sent, path, path_len))
             {
               svn_node_kind_t kind;
               SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
               SVN_ERR(send_response(repos, root, path,
                                     kind == svn_node_dir,
                                     output, bb, subpool));
-              svn_hash_sets(sent, path, (void *)1);
+              apr_hash_set(sent, path, path_len, (void *)1);
             }
         }
       if (send_parent)
@@ -241,7 +242,7 @@ dav_svn__merge_response(ap_filter_t *output,
 
   /* the HREF for the baseline is actually the VCC */
   vcc = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VCC, SVN_IGNORED_REVNUM,
-                           NULL, 0 /* add_href */, pool);
+                           NULL, FALSE /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
   rev = apr_psprintf(pool, "%ld", new_rev);

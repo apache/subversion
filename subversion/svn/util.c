@@ -41,7 +41,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
@@ -59,6 +58,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 #include "cl.h"
 
 #include "private/svn_token.h"
@@ -76,7 +76,7 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+    SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld%s.\n"),
                                commit_info->revision,
                                commit_info->revision == 42 &&
                                getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
@@ -164,9 +164,9 @@ svn_cl__merge_file_externally(const char *base_path,
      * is OK to continue with the merge.
      * Any other exit code means there was a real problem. */
     if (exitcode != 0 && exitcode != 1)
-      return svn_error_createf
-        (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-         _("The external merge tool exited with exit code %d"), exitcode);
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+        _("The external merge tool '%s' exited with exit code %d."),
+        merge_tool, exitcode);
     else if (remains_in_conflict)
       *remains_in_conflict = exitcode == 1;
   }
@@ -345,7 +345,7 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
 
-      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, NULL, NULL,
                                             log_msg_str, lmb->message_encoding,
                                             FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
@@ -560,8 +560,8 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
   if (fputs(string, stream) == EOF)
     {
-      if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+      if (apr_get_os_error()) /* is errno on POSIX */
+        return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
@@ -626,7 +626,7 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
   if (string)
     {
       svn_xml_make_open_tag(sb, pool, svn_xml_protect_pcdata,
-                            tagname, NULL);
+                            tagname, SVN_VA_NULL);
       svn_xml_escape_cdata_cstring(sb, string, pool);
       svn_xml_make_close_tag(sb, pool, tagname);
     }
@@ -643,7 +643,7 @@ svn_cl__print_xml_commit(svn_stringbuf_t **sb,
   /* "<commit ...>" */
   svn_xml_make_open_tag(sb, pool, svn_xml_normal, "commit",
                         "revision",
-                        apr_psprintf(pool, "%ld", revision), NULL);
+                        apr_psprintf(pool, "%ld", revision), SVN_VA_NULL);
 
   /* "<author>xx</author>" */
   if (author)
@@ -664,7 +664,7 @@ svn_cl__print_xml_lock(svn_stringbuf_t **sb,
                        apr_pool_t *pool)
 {
   /* "<lock>" */
-  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", NULL);
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", SVN_VA_NULL);
 
   /* "<token>xx</token>" */
   svn_cl__xml_tagged_cdata(sb, pool, "token", lock->token);
@@ -699,7 +699,7 @@ svn_cl__xml_print_header(const char *tagname,
   svn_xml_make_header2(&sb, "UTF-8", pool);
 
   /* "<TAGNAME>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, SVN_VA_NULL);
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }

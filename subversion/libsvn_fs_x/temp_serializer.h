@@ -23,6 +23,7 @@
 #ifndef SVN_LIBSVN_FS__TEMP_SERIALIZER_H
 #define SVN_LIBSVN_FS__TEMP_SERIALIZER_H
 
+#include "private/svn_temp_serializer.h"
 #include "fs.h"
 
 /**
@@ -40,14 +41,16 @@ svn_fs_x__combine_number_and_string(apr_int64_t number,
  */
 void
 svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
-                            node_revision_t * const *noderev_p);
+                            svn_fs_x__noderev_t * const *noderev_p);
 
 /**
- * Deserialize a @a noderev_p within the @a buffer.
+ * Deserialize a @a noderev_p within the @a buffer and associate it with
+ * @a pool.
  */
 void
 svn_fs_x__noderev_deserialize(void *buffer,
-                              node_revision_t **noderev_p);
+                              svn_fs_x__noderev_t **noderev_p,
+                              apr_pool_t *pool);
 
 /**
  * Serialize APR array @a *a within the serialization @a context.
@@ -69,7 +72,7 @@ svn_fs_x__deserialize_apr_array(void *buffer,
 
 /**
  * #svn_txdelta_window_t is not sufficient for caching the data it
- * represents because data read process needs auxilliary information.
+ * represents because data read process needs auxiliary information.
  */
 typedef struct
 {
@@ -144,25 +147,7 @@ svn_fs_x__deserialize_properties(void **out,
                                  apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
- */
-svn_error_t *
-svn_fs_x__serialize_id(void **data,
-                       apr_size_t *data_len,
-                       void *in,
-                       apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__deserialize_func_t for #svn_fs_id_t
- */
-svn_error_t *
-svn_fs_x__deserialize_id(void **out,
-                         void *data,
-                         apr_size_t data_len,
-                         apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__serialize_func_t for #node_revision_t
+ * Implements #svn_cache__serialize_func_t for #svn_fs_x__noderev_t
  */
 svn_error_t *
 svn_fs_x__serialize_node_revision(void **buffer,
@@ -171,7 +156,7 @@ svn_fs_x__serialize_node_revision(void **buffer,
                                   apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for #node_revision_t
+ * Implements #svn_cache__deserialize_func_t for #svn_fs_x__noderev_t
  */
 svn_error_t *
 svn_fs_x__deserialize_node_revision(void **item,
@@ -180,7 +165,7 @@ svn_fs_x__deserialize_node_revision(void **item,
                                     apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for a directory contents hash
+ * Implements #svn_cache__serialize_func_t for a directory contents array
  */
 svn_error_t *
 svn_fs_x__serialize_dir_entries(void **data,
@@ -189,7 +174,7 @@ svn_fs_x__serialize_dir_entries(void **data,
                                 apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for a directory contents hash
+ * Implements #svn_cache__deserialize_func_t for a directory contents array
  */
 svn_error_t *
 svn_fs_x__deserialize_dir_entries(void **out,
@@ -209,9 +194,20 @@ svn_fs_x__get_sharded_offset(void **out,
                              apr_pool_t *pool);
 
 /**
+ * Baton type to be used with svn_fs_x__extract_dir_entry. */
+typedef struct svn_fs_x__ede_baton_t
+{
+  /* Name of the directory entry to find. */
+  const char *name;
+
+  /* Lookup hint [in / out] */
+  apr_size_t hint;
+} svn_fs_x__ede_baton_t;
+
+/**
  * Implements #svn_cache__partial_getter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name (const char @a *baton).
+ * #svn_fs_x__dirent_t within a serialized directory contents hash,
+ * identified by its name (given in @a svn_fs_x__ede_baton_t @a *baton).
  */
 svn_error_t *
 svn_fs_x__extract_dir_entry(void **out,
@@ -232,12 +228,12 @@ typedef struct replace_baton_t
   const char *name;
 
   /** directory entry to insert instead */
-  svn_fs_dirent_t *new_entry;
+  svn_fs_x__dirent_t *new_entry;
 } replace_baton_t;
 
 /**
  * Implements #svn_cache__partial_setter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #svn_fs_x__dirent_t within a serialized directory contents hash,
  * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *
@@ -266,7 +262,7 @@ svn_fs_x__deserialize_rep_header(void **out,
 
 /**
  * Implements #svn_cache__serialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * #svn_fs_x__change_t *.
  */
 svn_error_t *
 svn_fs_x__serialize_changes(void **data,
@@ -276,7 +272,7 @@ svn_fs_x__serialize_changes(void **data,
 
 /**
  * Implements #svn_cache__deserialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * #svn_fs_x__change_t *.
  */
 svn_error_t *
 svn_fs_x__deserialize_changes(void **out,

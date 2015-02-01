@@ -227,8 +227,12 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
   svn_depth_t set_depth;           /* new sticky ambient depth value */
   svn_boolean_t reintegrate;      /* use "reintegrate" merge-source heuristic */
-  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
-                                      otherwise be rejected as "untrusted" */
+  /* trust server SSL certs that would otherwise be rejected as "untrusted" */
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
   int strip; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;   /* do not expand keywords */
   svn_boolean_t reverse_diff;      /* reverse a diff (e.g. when patching) */
@@ -243,6 +247,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t remove_unversioned;/* remove unversioned items */
   svn_boolean_t remove_ignored;    /* remove ignored items */
   svn_boolean_t no_newline;        /* do not output the trailing newline */
+  svn_boolean_t show_passwords;    /* show cached passwords */
 } svn_cl__opt_state_t;
 
 
@@ -256,6 +261,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__auth,
   svn_cl__blame,
   svn_cl__cat,
   svn_cl__changelist,
@@ -319,7 +325,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
- * forget to terminate the argument list with SVN_NO_ERROR.
+ * forget to terminate the argument list with 0 (or APR_SUCCESS).
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,
@@ -531,7 +537,8 @@ svn_cl__merge_file_externally(const char *base_path,
 /* Like svn_cl__merge_file_externally, but using a built-in merge tool
  * with help from an external editor specified by EDITOR_CMD. */
 svn_error_t *
-svn_cl__merge_file(const char *base_path,
+svn_cl__merge_file(svn_boolean_t *remains_in_conflict,
+                   const char *base_path,
                    const char *their_path,
                    const char *my_path,
                    const char *merged_path,
@@ -539,7 +546,8 @@ svn_cl__merge_file(const char *base_path,
                    const char *path_prefix,
                    const char *editor_cmd,
                    apr_hash_t *config,
-                   svn_boolean_t *remains_in_conflict,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool);
 
 

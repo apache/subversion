@@ -23,6 +23,7 @@
  * @file EditorProxy.h
  * @brief Interface of all editor proxy classes
  */
+#include <apr_pools.h>
 
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
@@ -30,10 +31,13 @@
 #include "CreateJ.h"
 #include "EnumMapper.h"
 
-#include <apr_pools.h>
+// Newstyle: stream wrapper
+#include <memory>
+#include "NativeStream.hpp"
+#include "jniwrapper/jni_stack.hpp"
+
 #include "svn_error.h"
 #include "svn_private_config.h"
-
 
 EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
                          const char* repos_root_url, const char* base_relpath,
@@ -55,7 +59,7 @@ EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
   static const svn_editor_cb_many_t editor_many_cb = {
     cb_add_directory, cb_add_file, cb_add_symlink, cb_add_absent,
     cb_alter_directory, cb_alter_file, cb_alter_symlink,
-    cb_delete, cb_copy, cb_move, cb_rotate,
+    cb_delete, cb_copy, cb_move,
     cb_complete, cb_abort
   };
 
@@ -125,6 +129,17 @@ get_editor_method(jmethodID& mid, const char* name, const char* sig)
                  SVN_ERR_RA_SVN_EDIT_ABORTED);
   return SVN_NO_ERROR;
 }
+
+jobject wrap_input_stream(svn_stream_t* stream)
+{
+  std::auto_ptr<JavaHL::NativeInputStream>
+    wrapped(new JavaHL::NativeInputStream());
+  apr_pool_t* const wrapped_pool = wrapped->get_pool().getPool();
+  wrapped->set_stream(svn_stream_disown(stream, wrapped_pool));
+  const jobject jstream = wrapped->create_java_wrapper();
+  wrapped.release();
+  return jstream;
+}
 } // anonymous namespace
 
 svn_error_t*
@@ -188,10 +203,14 @@ EditorProxy::cb_add_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchecksum = CreateJ::Checksum(checksum);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;     // FIXME: input stream proxy
+  jobject jcontents = NULL;
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+
+  if (contents != NULL)
+    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
+                     jcontents = wrap_input_stream(contents));
 
   SVN_JNI_CATCH(
       JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
@@ -331,10 +350,14 @@ EditorProxy::cb_alter_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchecksum = CreateJ::Checksum(checksum);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;     // FIXME: input stream proxy
+  jobject jcontents = NULL;
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+
+  if (contents != NULL)
+    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
+                     jcontents = wrap_input_stream(contents));
 
   SVN_JNI_CATCH(
       JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
@@ -470,15 +493,6 @@ EditorProxy::cb_move(void *baton,
                                         jdst_relpath, jlong(replaces_rev)),
       SVN_ERR_RA_SVN_EDIT_ABORTED);
   return SVN_NO_ERROR;
-}
-
-svn_error_t*
-EditorProxy::cb_rotate(void*,
-                       const apr_array_header_t*,
-                       const apr_array_header_t*,
-                       apr_pool_t*)
-{
-  return svn_error_create(APR_ENOTIMPL, NULL, "EditorProxy::cb_rotate");
 }
 
 svn_error_t*

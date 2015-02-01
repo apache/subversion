@@ -129,10 +129,6 @@ private:
                               const char *dst_relpath,
                               svn_revnum_t replaces_rev,
                               apr_pool_t *scratch_pool);
-  static svn_error_t* cb_rotate(void *baton,
-                                const apr_array_header_t *relpaths,
-                                const apr_array_header_t *revisions,
-                                apr_pool_t *scratch_pool);
   static svn_error_t* cb_complete(void *baton,
                                   apr_pool_t *scratch_pool);
   static svn_error_t* cb_abort(void *baton,

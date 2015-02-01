@@ -204,16 +204,32 @@ def basic_update(sbox):
                                         expected_status)
 
   # Unversioned paths, those that are not immediate children of a versioned
-  # path, are skipped and do not raise an error
+  # path, are skipped and do raise an error if they are the only targets
   xx_path = sbox.ospath('xx/xx')
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
+  expected_err = "svn: E155007: "
+  svntest.actions.run_and_verify_svn(
     "update xx/xx",
-    ["Skipped '"+xx_path+"'\n",
-    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
-    [], 'update', xx_path)
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", [], [],
+    ["Skipped '"+xx_path+"'\n", ],
+    expected_err,
+    'update', xx_path)
+  svntest.actions.run_and_verify_svn(
+    "update xx/xx", [], expected_err,
     'update', '--quiet', xx_path)
+
+  # Unversioned paths, that are not the only targets of the command are
+  # skipped without an error
+  svntest.actions.run_and_verify_svn(
+    "update A/mu xx/xx",
+    ["Updating '"+mu_path+"':\n",
+     "At revision 2.\n",
+     "Skipped '"+xx_path+"'\n",
+     "Summary of updates:\n",
+     "  Updated '"+mu_path+"' to r2.\n"
+    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
+    [], 'update', mu_path, xx_path)
+  svntest.actions.run_and_verify_svn(
+    "update A/mu xx/xx",
+    [], [], 'update', '--quiet', mu_path, xx_path)
 
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
@@ -225,7 +241,8 @@ def basic_mkdir_url(sbox):
   Y_Z_url = sbox.repo_url + '/Y/Z'
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg', Y_url, Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
@@ -263,18 +280,20 @@ def basic_mkdir_url_with_parents(sbox):
   U_V_url = sbox.repo_url + '/U/V'
   U_V_W_url = sbox.repo_url + '/U/V/W'
   svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
-                                     [],
+                                     None,
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
   svntest.actions.run_and_verify_svn("mkdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg',
                                      X_url, U_url)
 
   svntest.actions.run_and_verify_svn("mkdir --parents",
-                                     ["\n", "Committed revision 3.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 3.\n"], [],
                                      'mkdir', '-m', 'log_msg', '--parents',
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
@@ -666,6 +685,7 @@ def basic_conflict(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -674,6 +694,7 @@ def basic_conflict(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -1245,7 +1266,8 @@ def basic_delete(sbox):
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
 
@@ -1501,7 +1523,7 @@ def nonexistent_repository(sbox):
     'log', 'file:///nonexistent_path')
 
   for line in errput:
-    if re.match(".*Unable to open an ra_local session to URL.*", line):
+    if re.match(".*Unable to connect to a repository at URL.*", line):
       return
 
   # Else never matched the expected error output, so the test failed.
@@ -1981,22 +2003,63 @@ def delete_keep_local_twice(sbox):
     logger.warn('Directory was really deleted')
     raise svntest.Failure
 
-def windows_paths_in_repos(sbox):
+@XFail(svntest.main.is_mod_dav_url_quoting_broken)
+def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
   sbox.build(create_wc = False)
+  test_file_source = os.path.join(sbox.repo_dir, 'format')
   repo_url       = sbox.repo_url
 
-  chi_url = sbox.repo_url + '/c:hi'
+  test_urls = [ sbox.repo_url + '/c:hi',
+                sbox.repo_url + '/C:',
+                sbox.repo_url + '/C&',
+                sbox.repo_url + '/C<',
+                sbox.repo_url + '/C# hi',
+                sbox.repo_url + '/C?',
+                sbox.repo_url + '/C+',
+                sbox.repo_url + '/C%']
 
-  # do some manipulations on a folder containing a windows drive name.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', '-m', 'log_msg',
-                                     chi_url)
+  # On Windows Apache HTTPD breaks '\' for us :(
+  if not (svntest.main.is_os_windows() and
+          svntest.main.is_ra_type_dav()):
+    test_urls += [ sbox.repo_url + '/C\\ri' ]
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '-m', 'log_msg',
-                                     chi_url)
+  for test_url in test_urls:
+    test_file_url = test_url + '/' + test_url[test_url.rindex('/')+1:]
+
+    # do some manipulations on a folder which problematic names
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'mkdir', '-m', 'log_msg',
+                                       test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                           '-m', 'log_msg',
+                                           'put', test_file_source,
+                                           test_file_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_url)
+
+    svntest.actions.run_and_verify_svn(None, 'propvalue', [],
+                                       'propget', 'propname', test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, 'propvalue', [],
+                                       'propget', 'propname', test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_url)
+
 
 def basic_rm_urls_one_repo(sbox):
   "remotely remove directories from one repository"
@@ -2184,6 +2247,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'lambda'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for lambda",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for lambda",
                                           ">>>>>>> .r2",
@@ -2192,6 +2256,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -2200,6 +2265,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -2208,6 +2274,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'tau'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for tau",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for tau",
                                           ">>>>>>> .r2",
@@ -2216,6 +2283,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for omega",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for omega",
                                           ">>>>>>> .r2",
@@ -2318,6 +2386,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for omega",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for omega",
                                           ">>>>>>> .r2",
@@ -3077,6 +3146,31 @@ def basic_youngest(sbox):
                                            'youngest', path)
 
 
+# With 'svn mkdir --parents' the target directory may already exist on disk.
+# In that case it was wrongly performing a recursive 'add' on its contents.
+def mkdir_parents_target_exists_on_disk(sbox):
+  "mkdir parents target exists on disk"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Y_path = sbox.ospath('Y')
+  Y_Z_path = sbox.ospath('Y/Z')
+
+  os.mkdir(Y_path)
+  os.mkdir(Y_Z_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '--parents', Y_path)
+
+  # Y should be added, and Z should not. There was a regression in which Z
+  # was also added.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -3119,7 +3213,7 @@ test_list = [ None,
               ls_space_in_repo_name,
               delete_keep_local,
               delete_keep_local_twice,
-              windows_paths_in_repos,
+              special_paths_in_repos,
               basic_rm_urls_one_repo,
               basic_rm_urls_multi_repos,
               automatic_conflict_resolution,
@@ -3146,6 +3240,7 @@ test_list = [ None,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
               basic_youngest,
+              mkdir_parents_target_exists_on_disk,
              ]
 
 if __name__ == '__main__':

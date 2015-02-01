@@ -100,7 +100,7 @@ print_info_xml(void *baton,
                                   path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
-                        NULL);
+                        SVN_VA_NULL);
 
   /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
@@ -115,13 +115,14 @@ print_info_xml(void *baton,
                                                    info->repos_root_URL,
                                                    info->URL, pool),
                                                pool),
-                                           NULL));
+                                           SVN_VA_NULL));
     }
 
   if (info->repos_root_URL || info->repos_UUID)
     {
       /* "<repository>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repository", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repository",
+                            SVN_VA_NULL);
 
       /* "<root> xx </root>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "root", info->repos_root_URL);
@@ -136,7 +137,8 @@ print_info_xml(void *baton,
   if (info->wc_info)
     {
       /* "<wc-info>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info",
+                            SVN_VA_NULL);
 
       /* "<wcroot-abspath> xx </wcroot-abspath>" */
       if (info->wc_info->wcroot_abspath)
@@ -641,9 +643,12 @@ svn_cl__info(apr_getopt_t *os,
           SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
         }
 
-      err = svn_client_info3(truepath,
+      err = svn_client_info4(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             opt_state->depth, TRUE, TRUE,
+                             opt_state->depth,
+                             TRUE /* fetch_excluded */,
+                             TRUE /* fetch_actual_only */,
+                             opt_state->include_externals,
                              opt_state->changelists,
                              receiver, (void *) path_prefix,
                              ctx, subpool);

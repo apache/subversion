@@ -119,8 +119,13 @@ def add_with_symlink_in_path(sbox):
   sbox.simple_append('A/B/kappa', 'xyz', True)
   sbox.simple_add('Z/B/kappa')
 
+def is_posix_os_and_not_root():
+  if not svntest.main.is_posix_os():
+    return False
+  return os.getuid() != 0
+
 @Issue(4118)
-@SkipUnless(svntest.main.is_posix_os)
+@SkipUnless(is_posix_os_and_not_root)
 def status_with_inaccessible_wc_db(sbox):
   """inaccessible .svn/wc.db"""
 

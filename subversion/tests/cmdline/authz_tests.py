@@ -169,7 +169,7 @@ def authz_read_access(sbox):
   fws_empty_folder_url = fws_url + '/empty folder'
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -291,7 +291,7 @@ def authz_write_access(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E220004: Access denied.*"
 
@@ -387,7 +387,7 @@ def authz_checkout_test(sbox):
 
   # write an authz file with *= on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -524,7 +524,7 @@ def authz_log_and_tracing_test(sbox):
 
   # write an authz file with *=rw on /
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -555,7 +555,7 @@ def authz_log_and_tracing_test(sbox):
   # now disable read access on the first version of rho, keep the copy in
   # /A/D readable.
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -576,8 +576,8 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: E220001: Unreadable path encountered; " \
-                    "access denied.*"
+    expected_err2 = ".*svn: E220001: ((Unreadable path encountered; " \
+                    "access denied)|(Item is not readable)).*"
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
@@ -644,7 +644,7 @@ def authz_aliases(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -691,7 +691,7 @@ def authz_validate(sbox):
                            "/A/B" : "@undefined_group = rw" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -711,7 +711,7 @@ devs2 = @admins, dev2
 devs = @devs1, dev3, dev4""" })
 
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   elif sbox.repo_url.startswith("svn"):
     expected_err = ".*Invalid authz configuration"
   else:
@@ -751,9 +751,11 @@ def authz_locking(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
+    expected_status = 1
   else:
-    expected_err = ".*svn: E170001: Authorization failed.*"
+    expected_err = ".*svn: warning: W170001: Authorization failed.*"
+    expected_status = 0
 
   root_url = sbox.repo_url
   wc_dir = sbox.wc_dir
@@ -763,18 +765,18 @@ def authz_locking(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # lock a file url, target is readonly: should fail
-  svntest.actions.run_and_verify_svn(None,
-                                     None, expected_err,
-                                     'lock',
-                                     '-m', 'lock msg',
-                                     iota_url)
+  svntest.actions.run_and_verify_svn2(None,
+                                      None, expected_err, expected_status,
+                                      'lock',
+                                      '-m', 'lock msg',
+                                      iota_url)
 
   # lock a file path, target is readonly: should fail
-  svntest.actions.run_and_verify_svn(None,
-                                     None, expected_err,
-                                     'lock',
-                                     '-m', 'lock msg',
-                                     iota_path)
+  svntest.actions.run_and_verify_svn2(None,
+                                      None, expected_err, expected_status,
+                                      'lock',
+                                      '-m', 'lock msg',
+                                      iota_path)
 
   # Test for issue 2700: we have write access in folder /A, but not in root.
   # Get a lock on /A/mu and try to commit it.
@@ -797,6 +799,36 @@ def authz_locking(sbox):
                                         [],
                                         None,
                                         mu_path)
+
+  # Lock two paths one of which fails. First add read access to '/' so
+  # that OPTIONS on common ancestor works.
+  write_authz_file(sbox, {"/": "jrandom = r", "/A": "jrandom = rw"})
+
+  # Two unlocked paths
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('iota'))
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('A/mu'))
+
+  ### Crazy serf SVN_ERR_FS_LOCK_OWNER_MISMATCH warning! Issue 3801?
+  if sbox.repo_url.startswith('http'):
+    expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
+    expected_status = 0
+
+  svntest.actions.run_and_verify_svn2(None,
+                                      None, expected_err, expected_status,
+                                      'lock',
+                                      '-m', 'lock msg',
+                                      mu_path,
+                                      iota_path)
+
+  # One path locked, one still unlocked
+  svntest.actions.run_and_verify_info([{'Lock Token' : None}],
+                                      sbox.ospath('iota'))
+  svntest.actions.run_and_verify_info([{'Lock Token' : 'opaquelocktoken:.*'}],
+                                      sbox.ospath('A/mu'))
+
+
 
 # test for issue #2712: if anon-access == read, svnserve should also check
 # authz to determine whether a checkout/update is actually allowed for
@@ -980,7 +1012,7 @@ def multiple_matches(sbox):
   root_url = sbox.repo_url
   write_restrictive_svnserve_conf(sbox.repo_dir)
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*[Ff]orbidden.*"
+    expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
 
@@ -1221,17 +1253,17 @@ def authz_tree_conflict(sbox):
   # And now create an obstruction
   sbox.simple_mkdir('A/C')
 
-  expected_output = svntest.wc.State(wc_dir, {})
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/C', status='A ', wc_rev='0')
-  expected_status.tweak('A', '', status='! ', wc_rev='1')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C' : Item(status='  ', treeconflict='C'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/C', status='R ', treeconflict='C')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
                                         expected_status,
-                                        "Failed to mark '.*C' (server|absent):",
-                                        None, None, None, None, 0,
+                                        None, None, None, None, None, 0,
                                         '-r', '1', wc_dir)
 
 @Issue(3900)
@@ -1261,7 +1293,7 @@ def wc_delete(sbox):
 
   expected_err = ".*svn: E155035: .*excluded by server*"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'rm', sbox.ospath('A/B/E'))
+                                     'rm', sbox.ospath('A/B/E'), '--force')
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'rm', sbox.ospath('A'))
 
@@ -1281,7 +1313,7 @@ def wc_commit_error_handling(sbox):
   write_authz_file(sbox, {'/'   : '* = r', })
 
   # Creating editor fail: unfriendly error
-  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+  expected_err = "(svn: E175013: .*[Ff]orbidden.*)|" + \
                  "(svn: E170001: Authorization failed)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
@@ -1315,7 +1347,7 @@ def wc_commit_error_handling(sbox):
 
   # Allow a generic dav error and the ra_svn specific one that is returned
   # on editor->edit_close().
-  expected_err = "(svn: E175013: .*orbidden.*)|" + \
+  expected_err = "(svn: E175013: .*[Ff]orbidden.*)|" + \
                  "(svn: E220004: Access denied)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
@@ -1532,9 +1564,7 @@ def authz_del_from_subdir(sbox):
                                       '-m', '')
 
 
-@XFail()
 @SkipUnless(svntest.main.is_ra_type_dav) # dontdothat is dav only
-@SkipUnless(svntest.main.is_os_windows) # until the buildbots are configured
 def log_diff_dontdothat(sbox):
   "log --diff on dontdothat"
   sbox.build(create_wc = False)
@@ -1547,9 +1577,48 @@ def log_diff_dontdothat(sbox):
 
   # We should expect a PASS or a proper error message instead of
   # svn: E175009: XML parsing failed: (403 Forbidden)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  expected_err = ".*E175013: Access to '.*authz_tests-28.*' forbidden"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                       'log', ddt_url,
                                       '-c', 1, '--diff')
+
+@Issue(4422)
+@Skip(svntest.main.is_ra_type_file)
+def authz_file_external_to_authz(sbox):
+  "replace file external with authz node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  write_authz_file(sbox, {"/": "* = rw"})
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  sbox.simple_propset('svn:externals', 'Z ' + repo_url + '/iota', '')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+    'Z' : Item(status='  ', wc_rev='1', switched='X'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/A',
+                                           repo_url + '/Z',
+                                      '-m', 'Add Z')
+
+  write_authz_file(sbox, {"/": "* = rw", "/Z": "* = "})
+
+  expected_status.tweak(wc_rev=2)
+
+  # ### This used to assert with
+  # ### svn: E235000: In file 'update_editor.c' line 3043: assertion failed
+  # ###               (status != svn_wc__db_status_normal)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status)
 
 
 ########################################################################
@@ -1585,6 +1654,7 @@ test_list = [ None,
               authz_svnserve_groups,
               authz_del_from_subdir,
               log_diff_dontdothat,
+              authz_file_external_to_authz,
              ]
 serial_only = True
 

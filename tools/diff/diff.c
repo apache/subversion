@@ -43,9 +43,11 @@ do_diff(svn_stream_t *ostream,
 
   SVN_ERR(svn_diff_file_diff_2(&diff, original, modified, options, pool));
   *has_changes = svn_diff_contains_diffs(diff);
-  return svn_diff_file_output_unified3(ostream, diff, original, modified,
+  return svn_diff_file_output_unified4(ostream, diff, original, modified,
                                        NULL, NULL, SVN_APR_LOCALE_CHARSET,
-                                       NULL, show_c_function, pool);
+                                       NULL, show_c_function,
+                                       options->context_size,
+                                       NULL, NULL, pool);
 }
 
 static void
@@ -112,7 +114,16 @@ int main(int argc, const char *argv[])
               diff_options->ignore_space = svn_diff_file_ignore_space_all;
               continue;
             }
+
           APR_ARRAY_PUSH(options_array, const char *) = argv[i];
+
+          /* Special case: '-U' takes an argument, so capture the 
+           * next argument in the array. */
+          if (argv[i][1] == 'U' && !argv[i][2])
+            {
+              i++;
+              APR_ARRAY_PUSH(options_array, const char *) = argv[i];
+            }
         }
       else
         {

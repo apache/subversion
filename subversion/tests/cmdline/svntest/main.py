@@ -36,6 +36,7 @@ import xml
 import urllib
 import logging
 import hashlib
+import zipfile
 from urlparse import urlparse
 
 try:
@@ -141,23 +142,27 @@ stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
+# The locations of the svn binaries.
 # Use --bin to override these defaults.
-svn_binary = os.path.abspath('../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
-svnrdump_binary = os.path.abspath('../../svnrdump/svnrdump' + _exe)
-svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
-svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
-svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
-                                       _exe)
-svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
-entriesdump_binary = os.path.abspath('entries-dump' + _exe)
-atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
-                                                  _exe)
-wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
-wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
+def P(relpath,
+      head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
+      ):
+  return os.path.join(head, relpath)
+svn_binary = P('svn/svn')
+svnadmin_binary = P('svnadmin/svnadmin')
+svnlook_binary = P('svnlook/svnlook')
+svnrdump_binary = P('svnrdump/svnrdump')
+svnsync_binary = P('svnsync/svnsync')
+svnversion_binary = P('svnversion/svnversion')
+svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
+svnmucc_binary = P('svnmucc/svnmucc')
+svnfsfs_binary = P('svnfsfs/svnfsfs')
+entriesdump_binary = P('tests/cmdline/entries-dump')
+lock_helper_binary = P('tests/cmdline/lock-helper')
+atomic_ra_revprop_change_binary = P('tests/cmdline/atomic-ra-revprop-change')
+wc_lock_tester_binary = P('tests/libsvn_wc/wc-lock-tester')
+wc_incomplete_tester_binary = P('tests/libsvn_wc/wc-incomplete-tester')
+del P
 
 ######################################################################
 # The location of svnauthz binary, relative to the only scripts that
@@ -539,6 +544,15 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
        and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
+  valgrind_diagnostic = False
+  # A valgrind diagnostic will raise a failure if the command is
+  # expected to run without error.  When an error is expected any
+  # subsequent error pattern matching is usually lenient and will not
+  # detect the diagnostic so make sure a failure is raised here.
+  if error_expected and stderr_lines:
+    if any(map(lambda arg: re.match('==[0-9]+==', arg), stderr_lines)):
+      valgrind_diagnostic = True
+
   stop = time.time()
   logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
@@ -546,7 +560,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   for x in stderr_lines:
     logger.info(x.rstrip())
 
-  if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
+  if (((not error_expected) and ((stderr_lines) or (exit_code != 0)))
+      or valgrind_diagnostic):
     for x in stderr_lines:
       logger.warning(x.rstrip())
     if len(varargs) <= 5:
@@ -702,7 +717,17 @@ def run_svn(error_expected, *varargs):
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnadmin_binary, 1, False, *varargs)
+
+  use_binary = ('dump' in varargs)
+
+  exit_code, stdout_lines, stderr_lines = \
+                       run_command(svnadmin_binary, 1, use_binary, *varargs)
+
+  if use_binary and sys.platform == 'win32':
+    # Callers don't expect binary output on stderr
+    stderr_lines = [x.replace('\r', '') for x in stderr_lines]
+
+  return exit_code, stdout_lines, stderr_lines
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
@@ -745,6 +770,16 @@ def run_svnauthz_validate(*varargs):
   """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
   stderr as list of lines (including line terminators)."""
   return run_command(svnauthz_validate_binary, 1, False, *varargs)
+
+def run_svnfsfs(*varargs):
+  """Run svnfsfs with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnfsfs_binary, 1, False, *varargs)
+
+def run_lock_helper(repo, path, user, seconds):
+  """Run lock-helper to lock path in repo by username for seconds"""
+
+  return run_command(lock_helper_binary, 1, False, repo, path, user, seconds)
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
@@ -883,47 +918,10 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
-# For creating blank new repositories
-def create_repos(path, minor_version = None):
-  """Create a brand-new SVN repository at PATH.  If PATH does not yet
-  exist, create it."""
-
-  if not os.path.exists(path):
-    os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-
-  opts = ("--bdb-txn-nosync",)
-  if not minor_version or minor_version > options.server_minor_version:
-    minor_version = options.server_minor_version
-  opts += ("--compatible-version=1.%d" % (minor_version),)
-  if options.fs_type is not None:
-    opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False, "create",
-                                          path, *opts)
-
-  # Skip tests if we can't create the repository.
-  if stderr:
-    stderr_lines = 0
-    not_using_fsfs_backend = (options.fs_type != "fsfs")
-    backend_deprecation_warning = False
-    for line in stderr:
-      stderr_lines += 1
-      if line.find('Unknown FS type') != -1:
-        raise Skip
-      if not_using_fsfs_backend:
-        if 0 < line.find('repository back-end is deprecated, consider using'):
-          backend_deprecation_warning = True
-
-    # Creating BDB repositories will cause svnadmin to print a warning
-    # which should be ignored.
-    if (stderr_lines == 1
-        and not_using_fsfs_backend
-        and backend_deprecation_warning):
-      pass
-    else:
-      # If the FS type is known and we noticed more than just the
-      # BDB-specific warning, assume the repos couldn't be created
-      # (e.g. due to a missing 'svnadmin' binary).
-      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+# For setting up authz and hooks in existing repos
+def _post_create_repos(path, minor_version = None):
+  """Set default access right configurations for svnserve and mod_dav
+  as well as hooks etc. in the SVN repository at PATH."""
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
@@ -941,8 +939,16 @@ def create_repos(path, minor_version = None):
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
-    if options.config_file is not None:
-      shutil.copy(options.config_file, get_fsfs_conf_file_path(path))
+    if options.config_file is not None and \
+       (not minor_version or minor_version >= 6):
+      config_file = open(options.config_file, 'r')
+      fsfsconf = open(get_fsfs_conf_file_path(path), 'w')
+      for line in config_file.readlines():
+        fsfsconf.write(line)
+        if options.memcached_server and line == '[memcached-servers]\n':
+            fsfsconf.write('key = %s\n' % options.memcached_server)
+      config_file.close()
+      fsfsconf.close()
 
     # format file
     if options.fsfs_sharding is not None:
@@ -972,7 +978,7 @@ def create_repos(path, minor_version = None):
     # post-commit
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
-    if options.fsfs_packing:
+    if options.fsfs_packing and minor_version >=6:
       # some tests chdir.
       abs_path = os.path.abspath(path)
       create_python_hook_script(get_post_commit_hook_path(abs_path),
@@ -984,6 +990,73 @@ def create_repos(path, minor_version = None):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
+
+def _unpack_precooked_repos(path, template):
+  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
+  zipfile.ZipFile(repozip, 'r').extractall(path)
+
+# For creating new, pre-cooked greek repositories
+def unpack_greek_repos(path):
+  template = "greek-fsfs-v%d.zip" % options.fsfs_version
+  _unpack_precooked_repos(path, template)
+  _post_create_repos(path, options.server_minor_version)
+
+# For creating blank new repositories
+def create_repos(path, minor_version = None):
+  """Create a brand-new SVN repository at PATH.  If PATH does not yet
+  exist, create it."""
+
+  if not os.path.exists(path):
+    os.makedirs(path) # this creates all the intermediate dirs, if necessary
+
+  if options.fsfs_version is None:
+    if options.fs_type == "bdb":
+      opts = ("--bdb-txn-nosync",)
+    else:
+      opts = ()
+    if minor_version is None or minor_version > options.server_minor_version:
+      minor_version = options.server_minor_version
+    opts += ("--compatible-version=1.%d" % (minor_version),)
+    if options.fs_type is not None:
+      opts += ("--fs-type=" + options.fs_type,)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "create", path, *opts)
+  else:
+    # Copy a pre-cooked FSFS repository
+    assert options.fs_type == "fsfs"
+    template = "empty-fsfs-v%d.zip" % options.fsfs_version
+    _unpack_precooked_repos(path, template)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "setuuid", path)
+
+  # Skip tests if we can't create the repository.
+  if stderr:
+    stderr_lines = 0
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
+    for line in stderr:
+      stderr_lines += 1
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+
+  # Configure the new repository.
+  _post_create_repos(path, minor_version)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
@@ -1303,6 +1376,9 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def tests_use_prepacakaged_repository():
+  return options.fsfs_version is not None
+
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
 
@@ -1335,6 +1411,22 @@ def is_fs_type_fsx():
 
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
+
+def is_fs_log_addressing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 9)
+
+def fs_has_rep_sharing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_pack():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_unique_freeze():
+  return (is_fs_type_fsfs() and options.server_minor_version >= 9
+          or is_fs_type_bdb())
 
 def is_os_windows():
   return os.name == 'nt'
@@ -1391,6 +1483,17 @@ def is_plaintext_password_storage_disabled():
   except:
     return False
   return True
+
+
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+__mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.26',
+    '2.4.9',
+])
+def is_mod_dav_url_quoting_broken():
+    if is_ra_type_dav():
+        return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
+    return None
 
 ######################################################################
 
@@ -1453,8 +1556,18 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-proxy-username=' + options.http_proxy_username)
     if options.http_proxy_password:
       args.append('--http-proxy-password=' + options.http_proxy_password)
+    if options.httpd_version:
+      args.append('--httpd-version=' + options.httpd_version)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
+    if options.memcached_server:
+      args.append('--memcached-server=' + options.memcached_server)
+    if options.fsfs_sharding:
+      args.append('--fsfs-sharding=' + str(options.fsfs_sharding))
+    if options.fsfs_packing:
+      args.append('--fsfs-packing')
+    if options.fsfs_version:
+      args.append('--fsfs-version=' + str(options.fsfs_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1777,6 +1890,8 @@ def _create_parser():
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
+  parser.add_option('--fsfs-version', type='int', action='store',
+                    help='FSFS version (fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
@@ -1804,10 +1919,14 @@ def _create_parser():
                     help='Username for the HTTP Proxy.')
   parser.add_option('--http-proxy-password', action='store',
                     help='Password for the HTTP Proxy.')
+  parser.add_option('--httpd-version', action='store',
+                    help='Assume HTTPD is this version.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
   parser.add_option('--exclusive-wc-locks', action='store_true',
                     help='Use sqlite exclusive locking for working copies')
+  parser.add_option('--memcached-server', action='store',
+                    help='Use memcached server at specified URL (FSFS only)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1843,6 +1962,25 @@ def _parse_options(arglist=sys.argv[1:]):
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  # Make sure the server-minor-version matches the fsfs-version parameter.
+  if options.fsfs_version:
+    if options.fsfs_version == 6:
+      if options.server_minor_version \
+        and options.server_minor_version != 8 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=6 requires --server-minor-version=8")
+      options.server_minor_version = 8
+    if options.fsfs_version == 4:
+      if options.server_minor_version \
+        and options.server_minor_version != 7 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=4 requires --server-minor-version=7")
+      options.server_minor_version = 7
+    pass
+    # ### Add more tweaks here if and when we support pre-cooked versions
+    # ### of FSFS repositories.
+  pass
 
   return (parser, args)
 
@@ -1944,6 +2082,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
+  global svnrdump_binary
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
@@ -2061,6 +2200,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(options.svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(options.svn_bin, 'svnlook' + _exe)
+      svnrdump_binary = os.path.join(options.svn_bin, 'svnrdump' + _exe)
       svnsync_binary = os.path.join(options.svn_bin, 'svnsync' + _exe)
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
@@ -2142,7 +2282,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not options.is_child_process and not options.keep_local_tmp:
-    safe_rmtree(temp_dir, 1)
+    try:
+      safe_rmtree(temp_dir, 1)
+    except:
+      logger.error("ERROR: cleanup of '%s' directory failed." % temp_dir)
+      exit_code = 1
 
   # Cleanup after ourselves.
   svntest.sandbox.cleanup_deferred_test_paths()

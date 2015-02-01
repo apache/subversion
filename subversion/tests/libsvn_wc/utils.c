@@ -107,37 +107,36 @@ WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 svn_error_t *
 svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
   const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
                                                scratch_pool);
-  const char *db_abspath = svn_dirent_join(dotsvn_abspath, "wc.db",
-                                           scratch_pool);
   svn_sqlite__db_t *sdb;
   const char **my_statements;
   int i;
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */
-  my_statements = apr_palloc(result_pool, 6 * sizeof(const char *));
+  my_statements = apr_palloc(scratch_pool, 7 * sizeof(const char *));
   my_statements[0] = statements[STMT_CREATE_SCHEMA];
   my_statements[1] = statements[STMT_CREATE_NODES];
   my_statements[2] = statements[STMT_CREATE_NODES_TRIGGERS];
   my_statements[3] = statements[STMT_CREATE_EXTERNALS];
-  my_statements[4] = extra_statements;
-  my_statements[5] = NULL;
+  my_statements[4] = statements[STMT_INSTALL_SCHEMA_STATISTICS];
+  my_statements[5] = extra_statements;
+  my_statements[6] = NULL;
 
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
-
-  svn_error_clear(svn_io_remove_file2(db_abspath, FALSE, scratch_pool));
   SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
                                   svn_sqlite__mode_rwcreate,
-                                  FALSE /* exclusive */, my_statements,
-                                  result_pool, scratch_pool));
+                                  FALSE /* exclusive */, 0 /* timeout */,
+                                  my_statements,
+                                  scratch_pool, scratch_pool));
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
+
+  SVN_ERR(svn_sqlite__close(sdb));
 
   return SVN_NO_ERROR;
 }
@@ -174,7 +173,8 @@ sbox_wc_add(svn_test__sandbox_t *b, const char *path)
   parent_abspath = svn_dirent_dirname(path, b->pool);
   SVN_ERR(svn_wc__acquire_write_lock(NULL, b->wc_ctx, parent_abspath, FALSE,
                                      b->pool, b->pool));
-  SVN_ERR(svn_wc_add_from_disk2(b->wc_ctx, path, NULL /*props*/,
+  SVN_ERR(svn_wc_add_from_disk3(b->wc_ctx, path, NULL /*props*/,
+                                FALSE /* skip checks */,
                                 NULL, NULL, b->pool));
   SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, parent_abspath, b->pool));
   return SVN_NO_ERROR;
@@ -229,6 +229,45 @@ sbox_wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
 }
 
 svn_error_t *
+sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
+                 svn_revnum_t revision, const char *to_path)
+{
+  apr_pool_t *scratch_pool = b->pool;
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t rev = { svn_opt_revision_unspecified, {0} };
+  svn_client_copy_source_t* src;
+  apr_array_header_t *sources = apr_array_make(
+                                        scratch_pool, 1,
+                                        sizeof(svn_client_copy_source_t *));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
+  ctx->wc_ctx = b->wc_ctx;
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      rev.kind = svn_opt_revision_number;
+      rev.value.number = revision;
+    }
+
+  src = apr_pcalloc(scratch_pool, sizeof(*src));
+
+  src->path = from_url;
+  src->revision = &rev;
+  src->peg_revision = &rev;
+
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = src;
+
+  SVN_ERR(svn_client_copy6(sources, sbox_wc_path(b, to_path),
+                           FALSE, FALSE, FALSE, NULL, NULL, NULL,
+                           ctx, scratch_pool));
+
+  ctx->wc_ctx = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = sbox_wc_path(b, path);
@@ -243,7 +282,7 @@ sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
   SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
                                      dir_abspath, FALSE /* lock_anchor */,
                                      b->pool, b->pool));
-  SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+  SVN_ERR(svn_wc_revert5(b->wc_ctx, abspath, depth, FALSE, NULL, FALSE,
                          NULL, NULL, /* cancel baton + func */
                          NULL, NULL, /* notify baton + func */
                          b->pool));
@@ -292,15 +331,26 @@ sbox_wc_commit_ex(svn_test__sandbox_t *b,
                   svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  apr_pool_t *scratch_pool = svn_pool_create(b->pool);
+  svn_error_t *err;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
   ctx->wc_ctx = b->wc_ctx;
-  return svn_client_commit6(targets, depth,
-                            FALSE /* keep_locks */,
-                            FALSE /* keep_changelist */,
-                            TRUE  /* commit_as_operations */,
-                            TRUE  /* include_file_externals */,
-                            FALSE /* include_dir_externals */,
-                            NULL, NULL, NULL, NULL, ctx, b->pool);
+
+  /* A successfull commit doesn't close the ra session, but leaves that
+     to the caller. This leaves the BDB handle open, which might cause
+     problems in further test code. (op_depth_tests.c's repo_wc_copy) */
+  err = svn_client_commit6(targets, depth,
+                           FALSE /* keep_locks */,
+                           FALSE /* keep_changelist */,
+                           TRUE  /* commit_as_operations */,
+                           TRUE  /* include_file_externals */,
+                           FALSE /* include_dir_externals */,
+                           NULL, NULL, NULL, NULL, ctx, scratch_pool);
+
+  svn_pool_destroy(scratch_pool);
+
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -326,8 +376,15 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
                                              sizeof(const char *));
   svn_opt_revision_t revision;
 
-  revision.kind = svn_opt_revision_number;
-  revision.value.number = revnum;
+  if (SVN_IS_VALID_REVNUM(revnum))
+    {
+      revision.kind = svn_opt_revision_number;
+      revision.value.number = revnum;
+    }
+  else
+    {
+      revision.kind = svn_opt_revision_head;
+    }
 
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
@@ -354,7 +411,7 @@ sbox_wc_switch(svn_test__sandbox_t *b,
   svn_revnum_t result_rev;
   svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
-  url = apr_pstrcat(b->pool, b->repos_url, url, (char*)NULL);
+  url = apr_pstrcat(b->pool, b->repos_url, url, SVN_VA_NULL);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
   return svn_client_switch3(&result_rev, sbox_wc_path(b, path), url,
@@ -437,6 +494,24 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,
                                   NULL, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_relocate(svn_test__sandbox_t *b,
+                 const char *new_repos_url)
+{
+  apr_pool_t *scratch_pool = b->pool;
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
+  ctx->wc_ctx = b->wc_ctx;
+
+  SVN_ERR(svn_client_relocate2(b->wc_abspath, b->repos_url,
+                               new_repos_url, FALSE, ctx,scratch_pool));
+
+  b->repos_url = apr_pstrdup(b->pool, new_repos_url);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

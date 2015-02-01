@@ -338,10 +338,15 @@ create_open(svn_wc__db_t **db,
             apr_pool_t *pool)
 {
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
-                                  svn_dirent_join("fake-wc", subdir, pool),
+                                  svn_dirent_join(
+                                        svn_test_data_path("db-test", pool),
+                                        subdir, pool),
                                   pool));
+
+  SVN_ERR(svn_io_remove_dir2(*local_abspath, TRUE, NULL, NULL, pool));
+
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
-  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
+  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool));
 
   svn_test_add_dir_cleanup(*local_abspath);
 
@@ -1269,7 +1274,7 @@ test_global_relocate(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* Test relocating to a repos not existant in the db */
+  /* Test relocating to a repos not existent in the db */
   SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
@@ -1521,7 +1526,9 @@ test_externals_store(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 2;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_getting_info,
@@ -1546,3 +1553,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "externals store"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

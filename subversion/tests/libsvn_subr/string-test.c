@@ -59,9 +59,8 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 
 /* Some of our own global variables, for simplicity.  Yes,
    simplicity. */
-svn_stringbuf_t *a = NULL, *b = NULL, *c = NULL;
-const char *phrase_1 = "hello, ";
-const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
+static const char *phrase_1 = "hello, ";
+static const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 
@@ -69,7 +68,7 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 static svn_error_t *
 test1(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((a->len == strlen(phrase_1)) && ((strcmp(a->data, phrase_1)) == 0))
@@ -82,7 +81,7 @@ test1(apr_pool_t *pool)
 static svn_error_t *
 test2(apr_pool_t *pool)
 {
-  b = svn_stringbuf_ncreate(phrase_2, 16, pool);
+  svn_stringbuf_t *b = svn_stringbuf_ncreate(phrase_2, 16, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((b->len == 16) && ((strncmp(b->data, phrase_2, 16)) == 0))
@@ -98,8 +97,8 @@ test3(apr_pool_t *pool)
   char *tmp;
   size_t old_len;
 
-  a = svn_stringbuf_create(phrase_1, pool);
-  b = svn_stringbuf_ncreate(phrase_2, 16, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_ncreate(phrase_2, 16, pool);
 
   tmp = apr_palloc(pool, (a->len + b->len + 1));
   strcpy(tmp, a->data);
@@ -118,7 +117,7 @@ test3(apr_pool_t *pool)
 static svn_error_t *
 test4(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendcstr(a, "new bytes to append");
 
   /* Test that length, data, and null-termination are correct. */
@@ -133,7 +132,7 @@ test4(apr_pool_t *pool)
 static svn_error_t *
 test5(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendbytes(a, "new bytes to append", 9);
 
   /* Test that length, data, and null-termination are correct. */
@@ -148,9 +147,9 @@ test5(apr_pool_t *pool)
 static svn_error_t *
 test6(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
-  b = svn_stringbuf_create(phrase_2, pool);
-  c = svn_stringbuf_dup(a, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_dup(a, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((svn_stringbuf_compare(a, c)) && (! svn_stringbuf_compare(b, c)))
@@ -166,7 +165,7 @@ test7(apr_pool_t *pool)
   char *tmp;
   size_t tmp_len;
 
-  c = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_create(phrase_2, pool);
 
   tmp_len = c->len;
   tmp = apr_palloc(pool, c->len + 1);
@@ -186,7 +185,7 @@ test7(apr_pool_t *pool)
 static svn_error_t *
 test8(apr_pool_t *pool)
 {
-  c = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_create(phrase_2, pool);
 
   svn_stringbuf_setempty(c);
 
@@ -200,7 +199,7 @@ test8(apr_pool_t *pool)
 static svn_error_t *
 test9(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
 
   svn_stringbuf_fillchar(a, '#');
 
@@ -380,7 +379,7 @@ test_find_char_backward(const char* data,
 {
   apr_size_t i;
 
-  a = svn_stringbuf_create(data, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(data, pool);
   i = svn_stringbuf_find_char_backward(a, ch);
 
   if (i == pos)
@@ -392,7 +391,7 @@ test_find_char_backward(const char* data,
 static svn_error_t *
 test13(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test, test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test, test", pool);
 
   return test_find_char_backward(a->data, a->len, ',', 4, pool);
 }
@@ -400,7 +399,7 @@ test13(apr_pool_t *pool)
 static svn_error_t *
 test14(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(",test test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(",test test", pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -408,7 +407,7 @@ test14(apr_pool_t *pool)
 static svn_error_t *
 test15(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("testing,", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("testing,", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
@@ -420,7 +419,7 @@ test15(apr_pool_t *pool)
 static svn_error_t *
 test16(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *a = svn_stringbuf_create_empty(pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -428,7 +427,7 @@ test16(apr_pool_t *pool)
 static svn_error_t *
 test17(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test test test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test test test", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
@@ -444,7 +443,7 @@ test_first_non_whitespace(const char *str,
 {
   apr_size_t i;
 
-  a = svn_stringbuf_create(str, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(str, pool);
 
   i = svn_stringbuf_first_non_whitespace(a);
 
@@ -475,8 +474,8 @@ test20(apr_pool_t *pool)
 static svn_error_t *
 test21(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("    \ttest\t\t  \t  ", pool);
-  b = svn_stringbuf_create("test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("    \ttest\t\t  \t  ", pool);
+  svn_stringbuf_t *b = svn_stringbuf_create("test", pool);
 
   svn_stringbuf_strip_whitespace(a);
 
@@ -491,8 +490,8 @@ test_stringbuf_unequal(const char* str1,
                        const char* str2,
                        apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(str1, pool);
-  b = svn_stringbuf_create(str2, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(str1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_create(str2, pool);
 
   if (svn_stringbuf_compare(a, b))
     return fail(pool, "test failed");
@@ -522,19 +521,19 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__i64toa(buffer, 0x8000000000000000ll);
+  length = svn__i64toa(buffer, APR_INT64_MIN);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
 
-  length = svn__i64toa(buffer, 0x7fffffffffffffffll);
+  length = svn__i64toa(buffer, APR_INT64_MAX);
   SVN_TEST_ASSERT(length == 19);
   SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
 
-  length = svn__ui64toa(buffer, 0ull);
+  length = svn__ui64toa(buffer, 0u);
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
+  length = svn__ui64toa(buffer, APR_UINT64_MAX);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
 
@@ -568,10 +567,10 @@ static svn_error_t *
 test_base36(apr_pool_t *pool)
 {
   SVN_ERR(sub_test_base36(0, "0"));
-  SVN_ERR(sub_test_base36(1234567890ull, "kf12oi"));
-  SVN_ERR(sub_test_base36(0x7fffffffffffffffull, "1y2p0ij32e8e7"));
-  SVN_ERR(sub_test_base36(0x8000000000000000ull, "1y2p0ij32e8e8"));
-  SVN_ERR(sub_test_base36(0xffffffffffffffffull, "3w5e11264sgsf"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(1234567890), "kf12oi"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(0x7fffffffffffffff), "1y2p0ij32e8e7"));
+  SVN_ERR(sub_test_base36(APR_UINT64_C(0x8000000000000000), "1y2p0ij32e8e8"));
+  SVN_ERR(sub_test_base36(APR_UINT64_MAX, "3w5e11264sgsf"));
 
   return SVN_NO_ERROR;
 }
@@ -590,7 +589,7 @@ expect_stringbuf_equal(const svn_stringbuf_t* str1,
 static svn_error_t *
 test_stringbuf_insert(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("st , ", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("st , ", pool);
 
   svn_stringbuf_insert(a, 0, "teflon", 2);
   SVN_TEST_STRING_ASSERT(a->data, "test , ");
@@ -605,13 +604,25 @@ test_stringbuf_insert(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "test hello, world");
 
   svn_stringbuf_insert(a, 1200, "!", 1);
-  return expect_stringbuf_equal(a, "test hello, world!", pool);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world!");
+
+  svn_stringbuf_insert(a, 4, "\0-\0", 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test\0-\0 hello, world!",
+                                          21, pool)));
+
+  svn_stringbuf_insert(a, 14, a->data + 4, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test\0-\0 hello,\0-\0 world!",
+                                          24, pool)));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 test_stringbuf_remove(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test hello, world!", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test hello, world!", pool);
 
   svn_stringbuf_remove(a, 0, 2);
   SVN_TEST_STRING_ASSERT(a->data, "st hello, world!");
@@ -629,7 +640,7 @@ test_stringbuf_remove(apr_pool_t *pool)
 static svn_error_t *
 test_stringbuf_replace(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("odd with some world?", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("odd with some world?", pool);
 
   svn_stringbuf_replace(a, 0, 3, "tester", 4);
   SVN_TEST_STRING_ASSERT(a->data, "test with some world?");
@@ -644,8 +655,24 @@ test_stringbuf_replace(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "test hello, world!");
 
   svn_stringbuf_replace(a, 1200, 199, "!!", 2);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world!!!");
 
-  return expect_stringbuf_equal(a, "test hello, world!!!", pool);
+  svn_stringbuf_replace(a, 10, 2, "\0-\0", 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!!!",
+                                          21, pool)));
+
+  svn_stringbuf_replace(a, 10, 3, a->data + 10, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!!!",
+                                          21, pool)));
+
+  svn_stringbuf_replace(a, 19, 1, a->data + 10, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!\0-\0!",
+                                          23, pool)));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -656,7 +683,7 @@ test_string_similarity(apr_pool_t *pool)
     const char *stra;
     const char *strb;
     apr_size_t lcs;
-    int score;
+    unsigned int score;
   } tests[] =
       {
 #define SCORE(lcs, len) ((2000 * (lcs) + (len)/2) / (len))
@@ -826,6 +853,27 @@ test_string_matching(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_string_skip_prefix(apr_pool_t *pool)
+{
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "12345"),
+                         "");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "123"),
+                         "45");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", ""),
+                         "12345");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "23"),
+                         NULL);
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("1", "12"),
+                         NULL);
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("", ""),
+                         "");
+  SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("", "12"),
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -834,7 +882,10 @@ test_string_matching(apr_pool_t *pool)
 */
 
 /* An array of all test functions */
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test1,
@@ -870,7 +921,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test16,
                    "find_char_backward; len = 0 case"),
     SVN_TEST_PASS2(test17,
-                   "find_char_backward; no occurence case"),
+                   "find_char_backward; no occurrence case"),
     SVN_TEST_PASS2(test18,
                    "check whitespace removal; common case"),
     SVN_TEST_PASS2(test19,
@@ -897,5 +948,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test string similarity scores"),
     SVN_TEST_PASS2(test_string_matching,
                    "test string matching"),
+    SVN_TEST_PASS2(test_string_skip_prefix,
+                   "test svn_cstring_skip_prefix()"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

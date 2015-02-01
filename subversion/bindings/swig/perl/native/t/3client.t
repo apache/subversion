@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 297;
+use Test::More tests => 302;
 use strict;
 
 # shut up about variables that are only used once.
@@ -1119,6 +1119,45 @@ isa_ok($ph2,'HASH','propget returns HASH');
 is(scalar(keys %$ph2),0,
    'No properties after deleting a property');
 
+# test cancel callback
+my $cancel_cb_called = 0;
+$ctx->cancel(sub { $cancel_cb_called++; 0 });
+my $log_entries_received = 0;
+$ctx->log5($reposurl,
+              'HEAD',['HEAD',1],0, # peg rev, rev ranges, limit
+              1,1,0, # discover_changed_paths, strict_node_history, include_merged_revisions
+              undef, # revprops
+              sub { $log_entries_received++ });
+# TEST
+ok($cancel_cb_called, 'cancel callback was called');
+# TEST
+is($log_entries_received, $current_rev, 'log entries received');
+
+my $cancel_msg = "stop the presses";
+$ctx->cancel(sub { $cancel_msg });
+$svn_error = $ctx->log5($reposurl,
+              'HEAD',['HEAD',1],0, # peg rev, rev ranges, limit
+              1,1,0, # discover_changed_paths, strict_node_history, include_merged_revisions
+              undef, # revprops
+              sub { });
+# TEST
+isa_ok($svn_error, '_p_svn_error_t', 'return of a cancelled operation');
+# TEST
+is($svn_error->apr_err, $SVN::Error::CANCELLED, "SVN_ERR_CANCELLED");
+{
+    # If we're running a debug build, $svn_error may be the top of a
+    # chain of svn_error_t's (all with message "traced call"), we need 
+    # to get to the bottom svn_error_t to check for the original message.
+    my $chained = $svn_error;
+    $chained = $chained->child while $chained->child;
+    # TEST
+    is($chained->message, $cancel_msg, 'cancellation message');
+}
+
+$svn_error->clear(); # don't leak this
+$ctx->cancel(undef); # reset cancel callback
+
+
 SKIP: {
     # This is ugly.  It is included here as an aide to understand how
     # to test this and because it makes my life easier as I only have
@@ -1236,7 +1275,7 @@ SKIP: {
   my $result = SVN::Core::auth_set_gnome_keyring_unlock_prompt_func(
                    $ctx->auth(), $callback);
   # TEST
-  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals paramter');
+  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals parameter');
 }
 
 END {

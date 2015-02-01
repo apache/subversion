@@ -196,7 +196,8 @@ inprocess_cache_get_internal(char **buffer,
 
       /* duplicate the buffer entry */
       *buffer = apr_palloc(result_pool, entry->size);
-      memcpy(*buffer, entry->value, entry->size);
+      if (entry->size)
+        memcpy(*buffer, entry->value, entry->size);
 
       *size = entry->size;
     }

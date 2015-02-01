@@ -127,10 +127,6 @@ typedef struct item_baton_t {
   /* File/dir copied? */
   svn_boolean_t copyfrom;
 
-  /* Does the client need to fetch additional properties for this
-     item? */
-  svn_boolean_t fetch_props;
-
   /* Array of const char * names of removed properties.  (Used only
      for copied files/dirs in skelta mode.)  */
   apr_array_header_t *removed_props;
@@ -257,13 +253,13 @@ send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
     {
       href = dav_svn__build_uri(baton->uc->resource->info->repos,
                                 DAV_SVN__BUILD_URI_REVROOT,
-                                revision, path, 0 /* add_href */, pool);
+                                revision, path, FALSE /* add_href */, pool);
     }
   else
     {
       href = dav_svn__build_uri(baton->uc->resource->info->repos,
                                 DAV_SVN__BUILD_URI_VERSION,
-                                revision, path, 0 /* add_href */, pool);
+                                revision, path, FALSE /* add_href */, pool);
     }
 
   return dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
@@ -321,7 +317,6 @@ add_helper(svn_boolean_t is_dir,
 {
   item_baton_t *child;
   update_ctx_t *uc = parent->uc;
-  const char *bc_url = NULL;
 
   child = make_child_baton(parent, path, pool);
   child->added = TRUE;
@@ -345,12 +340,14 @@ add_helper(svn_boolean_t is_dir,
         {
           /* we send baseline-collection urls when we add a directory */
           svn_revnum_t revision;
+          const char *bc_url;
+
           revision = dav_svn__get_safe_cr(child->uc->rev_root, real_path,
                                           pool);
           bc_url = dav_svn__build_uri(child->uc->resource->info->repos,
                                       DAV_SVN__BUILD_URI_BC,
                                       revision, real_path,
-                                      0 /* add_href */, pool);
+                                      FALSE /* add_href */, pool);
           bc_url = svn_urlpath__canonicalize(bc_url, pool);
 
           /* ugh, build_uri ignores the path and just builds the root
@@ -364,6 +361,8 @@ add_helper(svn_boolean_t is_dir,
 
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
+
+          bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
         }
       else
         {
@@ -376,9 +375,6 @@ add_helper(svn_boolean_t is_dir,
               apr_psprintf(pool, " sha1-checksum=\"%s\"",
                            svn_checksum_to_cstring(sha1_checksum, pool));
         }
-
-      if (bc_url)
-        bc_url_str = apr_psprintf(pool, " bc-url=\"%s\"", bc_url);
 
       if (copyfrom_path == NULL)
         {
@@ -465,12 +461,6 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton, apr_pool_t *pool)
                                           DEBUG_CR, qname));
         }
     }
-
-  /* If our client need to fetch properties, let it know. */
-  if (baton->fetch_props)
-    SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                    "<S:fetch-props/>" DEBUG_CR));
-
 
   /* Let's tie it off, nurse. */
   if (baton->added)
@@ -694,8 +684,8 @@ upd_change_xxx_prop(void *baton,
 
           /* That said, beginning in Subversion 1.8, clients might
              request even in skelta mode that we transmit properties
-             on newly added files explicitly. */
-          if ((! b->copyfrom) && value && b->uc->include_props)
+             on added files and directories explicitly. */
+          if (value && b->uc->include_props)
             {
               SVN_ERR(send_propchange(b, name, value, pool));
             }
@@ -913,9 +903,8 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname,
                                    "' element is malformed; there "
                                    "is a problem with the client.",
-                                   (char *)NULL);
-  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
-                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                                   SVN_VA_NULL);
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, errstr);
 }
 
 
@@ -934,7 +923,7 @@ validate_input_revision(svn_revnum_t revision,
                         const dav_resource *resource)
 {
   if (! SVN_IS_VALID_REVNUM(revision))
-    return SVN_NO_ERROR;
+    return NULL;
 
   if (revision > youngest)
     {
@@ -958,7 +947,7 @@ validate_input_revision(svn_revnum_t revision,
                                   "Invalid revision found in update report "
                                   "request.", resource->pool);
     }
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 
@@ -999,22 +988,18 @@ dav_svn__update_report(const dav_resource *resource,
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
       && (resource->info->restype != DAV_SVN_RESTYPE_ME))
-    return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0,
                                   "This report can only be run against "
-                                  "a VCC or root-stub URI.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "a VCC or root-stub URI");
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have an "
                                     "svn:target-revision element. That element "
-                                    "is required.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "is required");
     }
 
   /* SVNAllowBulkUpdates On/Prefer: server configuration permits bulk updates
@@ -1152,6 +1137,11 @@ dav_svn__update_report(const dav_resource *resource,
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
+          /* This flag is not used since Subversion 1.1.x
+             There are some remains in libsvn_ra_neon, where it can
+             be enabled via a static function flag.
+             Disabled since  r852220 (aka r12146)
+             "Prefer correctness over efficiency." */
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
@@ -1200,12 +1190,10 @@ dav_svn__update_report(const dav_resource *resource,
      sending a style of report that we no longer allow. */
   if (! src_path)
     {
-      return dav_svn__new_error_tag
+      return dav_svn__new_error_svn
         (resource->pool, HTTP_BAD_REQUEST, 0,
          "The request did not contain the '<src-path>' element.\n"
-         "This may indicate that your client is too old.",
-         SVN_DAV_ERROR_NAMESPACE,
-         SVN_DAV_ERROR_TAG);
+         "This may indicate that your client is too old");
     }
 
   uc.svndiff_version = resource->info->svndiff_version;

@@ -27,7 +27,6 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -37,6 +36,7 @@
 #include "svn_path.h"
 
 #include "client.h"
+#include "svn_private_config.h"
 
 #include "private/svn_wc_private.h"
 
@@ -176,8 +176,8 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *child_abspath = svn__apr_hash_index_key(hi);
-          const char *child_repos_relpath = svn__apr_hash_index_val(hi);
+          const char *child_abspath = apr_hash_this_key(hi);
+          const char *child_repos_relpath = apr_hash_this_val(hi);
           const char *url;
           apr_array_header_t *inherited_props;
           svn_error_t *err;
@@ -243,6 +243,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 {
   const char *old_session_url;
   svn_error_t *err;
+
+  *wcroot_iprops = NULL;
 
   if (!SVN_IS_VALID_REVNUM(revision))
     return SVN_NO_ERROR;

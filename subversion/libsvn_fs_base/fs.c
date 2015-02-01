@@ -28,8 +28,6 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
-#define SVN_WANT_BDB
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -45,6 +43,8 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
@@ -729,7 +729,10 @@ populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
 }
 
 static svn_error_t *
-base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_create(svn_fs_t *fs,
+            const char *path,
+            svn_mutex__t *common_pool_lock,
+            apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
@@ -738,12 +741,27 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        format = 1;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        format = 2;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        format = 3;
+      svn_version_t *compatible_version;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0:
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          default:format = SVN_FS_BASE__FORMAT_NUMBER;
+        }
     }
 
   /* Create the environment and databases. */
@@ -805,7 +823,10 @@ check_format(int format)
 }
 
 static svn_error_t *
-base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_open(svn_fs_t *fs,
+          const char *path,
+          svn_mutex__t *common_pool_lock,
+          apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
   int format;
@@ -888,7 +909,10 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_open_for_recovery(svn_fs_t *fs,
+                       const char *path,
+                       svn_mutex__t *common_pool_lock,
+                       apr_pool_t *pool,
                        apr_pool_t *common_pool)
 {
   /* Just stash the path in the fs pointer - it's all we really need. */
@@ -904,6 +928,7 @@ base_upgrade(svn_fs_t *fs,
              void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
+             svn_mutex__t *common_pool_lock,
              apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
@@ -946,7 +971,7 @@ base_upgrade(svn_fs_t *fs,
          But it's better to use the existing encapsulation of "opening
          the filesystem" rather than duplicating (or worse, partially
          duplicating) that logic here.  */
-      SVN_ERR(base_open(fs, path, subpool, common_pool));
+      SVN_ERR(base_open(fs, path, common_pool_lock, subpool, common_pool));
 
       /* Fetch the youngest rev, and record it */
       SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
@@ -968,6 +993,7 @@ base_verify(svn_fs_t *fs, const char *path,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_mutex__t *common_pool_lock,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
@@ -992,6 +1018,7 @@ base_bdb_pack(svn_fs_t *fs,
               void *notify_baton,
               svn_cancel_func_t cancel,
               void *cancel_baton,
+              svn_mutex__t *common_pool_lock,
               apr_pool_t *pool,
               apr_pool_t *common_pool)
 {
@@ -1057,7 +1084,7 @@ svn_fs_base__clean_logs(const char *live_path,
 
   {  /* Process unused logs from live area */
     int idx;
-    apr_pool_t *sub_pool = svn_pool_create(pool);
+    apr_pool_t *subpool = svn_pool_create(pool);
 
     /* Process log files. */
     for (idx = 0; idx < logfiles->nelts; idx++)
@@ -1066,9 +1093,9 @@ svn_fs_base__clean_logs(const char *live_path,
         const char *live_log_path;
         const char *backup_log_path;
 
-        svn_pool_clear(sub_pool);
-        live_log_path = svn_dirent_join(live_path, log_file, sub_pool);
-        backup_log_path = svn_dirent_join(backup_path, log_file, sub_pool);
+        svn_pool_clear(subpool);
+        live_log_path = svn_dirent_join(live_path, log_file, subpool);
+        backup_log_path = svn_dirent_join(backup_path, log_file, subpool);
 
         { /* Compare files. No point in using MD5 and wasting CPU cycles as we
              got full copies of both logs */
@@ -1085,17 +1112,17 @@ svn_fs_base__clean_logs(const char *live_path,
             SVN_ERR(svn_io_files_contents_same_p(&files_match,
                                                  live_log_path,
                                                  backup_log_path,
-                                                 sub_pool));
+                                                 subpool));
 
           /* If log files do not match, go to the next log file. */
           if (!files_match)
             continue;
         }
 
-        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, sub_pool));
+        SVN_ERR(svn_io_remove_file2(live_log_path, FALSE, subpool));
       }
 
-    svn_pool_destroy(sub_pool);
+    svn_pool_destroy(subpool);
   }
 
   return SVN_NO_ERROR;
@@ -1264,9 +1291,13 @@ base_hotcopy(svn_fs_t *src_fs,
              const char *dest_path,
              svn_boolean_t clean_logs,
              svn_boolean_t incremental,
+             svn_fs_hotcopy_notify_t notify_func,
+             void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
-             apr_pool_t *pool)
+             svn_mutex__t *common_pool_lock,
+             apr_pool_t *pool,
+             apr_pool_t *common_pool)
 {
   svn_error_t *err;
   u_int32_t pagesize;
@@ -1451,6 +1482,7 @@ base_set_svn_fs_open(svn_fs_t *fs,
                      svn_error_t *(*svn_fs_open_)(svn_fs_t **,
                                                   const char *,
                                                   apr_hash_t *,
+                                                  apr_pool_t *,
                                                   apr_pool_t *))
 {
   return SVN_NO_ERROR;
@@ -1484,6 +1516,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
     {
       { "svn_subr",  svn_subr_version },
       { "svn_delta", svn_delta_version },
+      { "svn_fs_util", svn_fs_util__version },
       { NULL, NULL }
     };
 

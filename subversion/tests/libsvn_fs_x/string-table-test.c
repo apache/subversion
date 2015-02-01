@@ -30,7 +30,7 @@
  * generate strings of arbitrary length.
  */
 enum { STRING_COUNT = 12 };
-const char *basic_strings[STRING_COUNT] =
+static const char *basic_strings[STRING_COUNT] =
   {
      "some string",
      "this is another string",
@@ -171,8 +171,11 @@ large_string_table_body(svn_boolean_t do_load_store,
   builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
-      strings[i] = generate_string(0x1234567876543210ull * (i + 1), 73000 + 1000 * i,  pool);
-      indexes[i] = svn_fs_x__string_table_builder_add(builder, strings[i]->data, strings[i]->len);
+      strings[i] = generate_string(APR_UINT64_C(0x1234567876543210) * (i + 1),
+                                   73000 + 1000 * i,  pool);
+      indexes[i] = svn_fs_x__string_table_builder_add(builder,
+                                                      strings[i]->data,
+                                                      strings[i]->len);
     }
 
   table = svn_fs_x__string_table_create(builder, pool);
@@ -197,8 +200,8 @@ static svn_error_t *
 many_strings_table_body(svn_boolean_t do_load_store,
                         apr_pool_t *pool)
 {
-  /* cause multiple sub-tables to be created */
-  enum { COUNT = 1000 };
+  /* cause multiple sub-tables (6 to be exact) to be created */
+  enum { COUNT = 100 };
 
   svn_stringbuf_t *strings[COUNT] = { 0 };
   apr_size_t indexes[COUNT] = { 0 };
@@ -210,7 +213,7 @@ many_strings_table_body(svn_boolean_t do_load_store,
   builder = svn_fs_x__string_table_builder_create(pool);
   for (i = 0; i < COUNT; ++i)
     {
-      strings[i] = generate_string(0x1234567876543210ull * (i + 1),
+      strings[i] = generate_string(APR_UINT64_C(0x1234567876543210) * (i + 1),
                                    (i * i) % 23000,  pool);
       indexes[i] = svn_fs_x__string_table_builder_add(builder,
                                                       strings[i]->data,
@@ -288,7 +291,9 @@ store_load_many_strings_table(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 4;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(create_empty_table,
@@ -309,3 +314,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "store and load string table with many strings"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

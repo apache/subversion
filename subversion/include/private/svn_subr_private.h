@@ -26,6 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_io.h"
+#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -111,12 +112,12 @@ svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 svn_filesize_t
 svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf);
 
-/* Retreive the name of the spill file. The returned value can be NULL
+/* Retrieve the name of the spill file. The returned value can be NULL
    if the file has not been created yet. */
 const char *
 svn_spillbuf__get_filename(const svn_spillbuf_t *buf);
 
-/* Retreive the handle of the spill file. The returned value can be
+/* Retrieve the handle of the spill file. The returned value can be
    NULL if the file has not been created yet. */
 apr_file_t *
 svn_spillbuf__get_file(const svn_spillbuf_t *buf);
@@ -173,7 +174,8 @@ svn_spillbuf__process(svn_boolean_t *exhausted,
 typedef struct svn_spillbuf_reader_t svn_spillbuf_reader_t;
 
 
-/* Create a spill-buffer and a reader for it.  */
+/* Create a spill-buffer and a reader for it, using the same arguments as
+   svn_spillbuf__create().  */
 svn_spillbuf_reader_t *
 svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_size_t maxsize,
@@ -210,15 +212,22 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
                            apr_pool_t *scratch_pool);
 
 
-/* Return a stream built on top of a spillbuf, using the same arguments as
-   svn_spillbuf__create().  This stream can be used for reading and writing,
-   but implements the same basic sematics of a spillbuf for the underlying
-   storage. */
+/* Return a stream built on top of a spillbuf.
+
+   This stream can be used for reading and writing, but implements the
+   same basic semantics of a spillbuf for the underlying storage. */
 svn_stream_t *
 svn_stream__from_spillbuf(svn_spillbuf_t *buf,
                           apr_pool_t *result_pool);
 
 /** @} */
+
+/*----------------------------------------------------*/
+
+/**
+ * @defgroup svn_checksum_private Checksumming helper APIs
+ * @{
+ */
 
 /**
  * Internal function for creating a MD5 checksum from a binary digest.
@@ -238,6 +247,76 @@ svn_checksum__from_digest_md5(const unsigned char *digest,
 svn_checksum_t *
 svn_checksum__from_digest_sha1(const unsigned char *digest,
                                apr_pool_t *result_pool);
+
+/**
+ * Internal function for creating a 32 bit FNV-1a checksum from a binary
+ * digest.
+ *
+ * @since New in 1.9
+ */
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32(const unsigned char *digest,
+                                   apr_pool_t *result_pool);
+
+/**
+ * Internal function for creating a modified 32 bit FNV-1a checksum from
+ * a binary digest.
+ *
+ * @since New in 1.9
+ */
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
+                                     apr_pool_t *result_pool);
+
+
+/**
+ * Return a stream that calculates a checksum of type @a kind over all
+ * data written to the @a inner_stream.  When the returned stream gets
+ * closed, write the checksum to @a *checksum.
+ * Allocate the result in @a pool.
+ *
+ * @note The stream returned only supports #svn_stream_write and
+ * #svn_stream_close.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream(svn_checksum_t **checksum,
+                                svn_stream_t *inner_stream,
+                                svn_checksum_kind_t kind,
+                                apr_pool_t *pool);
+
+/**
+ * Return a stream that calculates a 32 bit modified FNV-1a checksum
+ * over all data written to the @a inner_stream and writes the digest
+ * to @a *digest when the returned stream gets closed.
+ * Allocate the stream in @a pool.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream_fnv1a_32x4(apr_uint32_t *digest,
+                                           svn_stream_t *inner_stream,
+                                           apr_pool_t *pool);
+
+/**
+ * Return a 32 bit FNV-1a checksum for the first @a len bytes in @a input.
+ *
+ * @since New in 1.9
+ */
+apr_uint32_t
+svn__fnv1a_32(const void *input, apr_size_t len);
+
+/**
+ * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
+ * @a input.
+ * 
+ * @note This is a proprietary checksumming algorithm based FNV-1a with
+ *       approximately the same strength.  It is up to 4 times faster
+ *       than plain FNV-1a for longer data blocks.
+ *
+ * @since New in 1.9
+ */
+apr_uint32_t
+svn__fnv1a_32x4(const void *input, apr_size_t len);
+
+/** @} */
 
 
 /**
@@ -300,6 +379,54 @@ svn_hash__get_bool(apr_hash_t *hash,
  */
 apr_hash_t *
 svn_hash__make(apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * @defgroup svn_hash_read Reading serialized hash tables
+ * @{
+ */
+
+/** Struct that represents a key value pair read from a serialized hash
+ * representation.  There are special cases that can also be represented:
+ * a #NULL @a key signifies the end of the hash, a #NULL @a val for non-
+ * NULL keys is only possible in incremental mode describes a deletion.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_hash__entry_t
+{
+  /** 0-terminated Key.  #NULL if this contains no data at all because we
+   * encountered the end of the hash. */
+  char *key;
+
+  /** Length of @a key.  Must be 0 if @a key is #NULL. */
+  apr_size_t keylen;
+
+  /** 0-terminated value stored with the key.  If this is #NULL for a
+   * non-NULL @a key, then this means that the key shall be removed from
+   * the hash (only used in incremental mode).  Must be #NULL if @a key is
+   * #NULL. */
+  char *val;
+
+  /** Length of @a val.  Must be 0 if @a val is #NULL. */
+  apr_size_t vallen;
+} svn_hash__entry_t;
+
+/** Reads a single key-value pair from @a stream and returns it in the
+ * caller-provided @a *entry (members don't need to be pre-initialized).
+ * @a pool is used to allocate members of @a *entry and for tempoaries.
+ * 
+ * @see #svn_hash_read2 for more details.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_hash__read_entry(svn_hash__entry_t *entry,
+                     svn_stream_t *stream,
+                     const char *terminator,
+                     svn_boolean_t incremental,
+                     apr_pool_t *pool);
 
 /** @} */
 
@@ -429,6 +556,132 @@ svn__decompress(svn_stringbuf_t *in,
 
 /** @} */
 
+/**
+ * @defgroup svn_root_pools Recycle-able root pools API
+ * @{
+ */
+
+/* Opaque thread-safe container for unused / recylcleable root pools.
+ *
+ * Recyling root pools (actually, their allocators) circumvents a
+ * scalability bottleneck in the OS memory management when multi-threaded
+ * applications frequently create and destroy allocators.
+ */
+typedef struct svn_root_pools__t svn_root_pools__t;
+
+/* Create a new root pools container and return it in *POOLS.
+ */
+svn_error_t *
+svn_root_pools__create(svn_root_pools__t **pools);
+
+/* Return a currently unused pool from POOLS.  If POOLS is empty, create a
+ * new root pool and return that.  The pool returned is not thread-safe.
+ */
+apr_pool_t *
+svn_root_pools__acquire_pool(svn_root_pools__t *pools);
+
+/* Clear and release the given root POOL and put it back into POOLS.
+ * If that fails, destroy POOL.
+ */
+void
+svn_root_pools__release_pool(apr_pool_t *pool,
+                             svn_root_pools__t *pools);
+
+/** @} */
+
+/**
+ * @defgroup svn_config_private Private configuration handling API
+ * @{
+ */
+
+/* Future attempts to modify CFG will trigger an assertion. */
+void
+svn_config__set_read_only(svn_config_t *cfg,
+                          apr_pool_t *scratch_pool);
+
+/* Return TRUE, if CFG cannot be modified. */
+svn_boolean_t
+svn_config__is_read_only(svn_config_t *cfg);
+
+/* Return TRUE, if OPTION in SECTION in CFG exists and does not require
+ * further expansion (due to either containing no placeholders or already
+ * having been expanded). */
+svn_boolean_t
+svn_config__is_expanded(svn_config_t *cfg,
+                        const char *section,
+                        const char *option);
+
+/* Return a shallow copy of SCR in POOL.  If SRC is read-only, different
+ * shallow copies may be used from different threads.
+ *
+ * Any single r/o svn_config_t or shallow copy is not thread-safe because
+ * it contains shared buffers for tempoary data.
+ */
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool);
+
+/* Add / replace SECTION in TARGET with the same section from SOURCE by
+ * simply adding a reference to it.  If TARGET is read-only, the sections
+ * list in target gets duplicated before the modification.
+ *
+ * This is an API tailored for use by the svn_repos__authz_pool_t API to
+ * prevent breach of encapsulation.
+ */
+void
+svn_config__shallow_replace_section(svn_config_t *target,
+                                    svn_config_t *source,
+                                    const char *section);
+
+/* Allocate *CFG_HASH and populate it with default, empty,
+ * svn_config_t for the configuration categories (@c
+ * SVN_CONFIG_CATEGORY_SERVERS, @c SVN_CONFIG_CATEGORY_CONFIG, etc.).
+ * This returns a hash equivalent to svn_config_get_config when the
+ * config files are empty.
+ */
+svn_error_t *
+svn_config__get_default_config(apr_hash_t **cfg_hash,
+                               apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup svn_bit_array Packed bit array handling API
+ * @{
+ */
+
+/* This opaque data struct is an alternative to an INT->VOID hash.
+ * 
+ * Technically, it is an automatically growing packed bit array.
+ * All indexes not previously set are implicitly 0 and setting it will
+ * grow the array as needed.
+ */
+typedef struct svn_bit_array__t svn_bit_array__t;
+
+/* Return a new bit array allocated in POOL.  MAX is a mere hint for
+ * the initial size of the array in bits.
+ */
+svn_bit_array__t *
+svn_bit_array__create(apr_size_t max,
+                      apr_pool_t *pool);
+
+/* Set bit at index IDX in ARRAY to VALUE.  If necessary, grow the
+ * underlying data buffer, i.e. any IDX is valid unless we run OOM.
+ */
+void
+svn_bit_array__set(svn_bit_array__t *array,
+                   apr_size_t idx,
+                   svn_boolean_t value);
+
+/* Get the bit value at index IDX in ARRAY.  Bits not previously accessed
+ * are implicitly 0 (or FALSE).  That implies IDX can never be out-of-range.
+ */
+svn_boolean_t
+svn_bit_array__get(svn_bit_array__t *array,
+                   apr_size_t idx);
+
+/** @} */
 
 #ifdef __cplusplus
 }

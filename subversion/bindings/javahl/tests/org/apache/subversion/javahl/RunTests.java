@@ -71,7 +71,7 @@ public class RunTests
                     try
                     {
                         Class<?> clazz = Class.forName(className);
-                        final Class<?>[] argTypes = new Class[] { String.class };
+                        final Class<?>[] argTypes = new Class<?>[] { String.class };
                         Constructor<?> ctor =
                             clazz.getDeclaredConstructor(argTypes);
                         methodName = methodName.substring(i + 1);

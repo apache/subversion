@@ -108,7 +108,7 @@ add_file_or_directory(const char *file_or_directory,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  *added_baton = (void *)eb;
+  *added_baton = eb;
 
   if (! copyfrom_path)
     SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
@@ -135,7 +135,7 @@ open_file_or_directory(const char *file_or_directory,
 {
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
-  *opened_baton = (void *)eb;
+  *opened_baton = eb;
   return dav_svn__brigade_printf(eb->bb, eb->output,
                                  "<S:open-%s name=\"%s\" rev=\"%ld\"/>"
                                  DEBUG_CR,
@@ -401,13 +401,12 @@ make_editor(const svn_delta_editor_t **editor,
 static dav_error *
 malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
-  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0,
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0,
                                 apr_pstrcat(pool,
                                             "The request's '", tagname,
                                             "' element is malformed; there "
                                             "is a problem with the client.",
-                                            (char *)NULL),
-                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                                            SVN_VA_NULL));
 }
 
 
@@ -456,13 +455,11 @@ dav_svn__replay_report(const dav_resource *resource,
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "The request does not contain the 'svn:' "
                                   "namespace, so it is not going to have an "
                                   "svn:revision element. That element is "
-                                  "required.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "required");
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
@@ -521,16 +518,14 @@ dav_svn__replay_report(const dav_resource *resource,
     }
 
   if (! SVN_IS_VALID_REVNUM(rev))
-    return dav_svn__new_error_tag
+    return dav_svn__new_error_svn
              (resource->pool, HTTP_BAD_REQUEST, 0,
-              "Request was missing the revision argument.",
-              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+              "Request was missing the revision argument");
 
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
-    return dav_svn__new_error_tag
+    return dav_svn__new_error_svn
              (resource->pool, HTTP_BAD_REQUEST, 0,
-              "Request was missing the low-water-mark argument.",
-              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+              "Request was missing the low-water-mark argument");
 
   if (! base_dir)
     base_dir = "";

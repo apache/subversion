@@ -118,6 +118,27 @@ apache_minor_version=AP_SERVER_MINORVERSION],
   CPPFLAGS="$old_CPPFLAGS"
 fi
 
+# check for some busted versions of mod_dav
+# in particular 2.2.25, 2.4.5, and 2.4.6 had the following bugs which are
+# troublesome for Subversion:
+# PR 55304: https://issues.apache.org/bugzilla/show_bug.cgi?id=55304
+# PR 55306: https://issues.apache.org/bugzilla/show_bug.cgi?id=55306
+# PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
+if test -n "$APXS" && test "$APXS" != "no"; then
+  AC_MSG_CHECKING([mod_dav version])
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+  blacklisted_versions_regex=["\"2\" \"\.\" (\"2\" \"\.\" \"25\"|\"4\" \"\.\" \"[56]\")"]
+  AC_EGREP_CPP([apache_version= *$blacklisted_versions_regex],
+               [
+#include "$APXS_INCLUDE/ap_release.h"
+apache_version=AP_SERVER_BASEREVISION],
+               [AC_MSG_RESULT([broken])
+                AC_MSG_ERROR([Apache httpd version includes a broken mod_dav; use a newer version of httpd])],
+               [AC_MSG_RESULT([acceptable])])
+  CPPFLAGS="$old_CPPFLAGS"
+fi
+
 AC_ARG_WITH(apache-libexecdir,
             [AS_HELP_STRING([[--with-apache-libexecdir[=PATH]]],
                             [Install Apache modules to Apache's configured
@@ -136,9 +157,16 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
     fi
 
+    AC_CHECK_HEADERS(unistd.h, [AC_CHECK_FUNCS(getpid)], [])
+
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
+    HTTPD="`$APXS -q sbindir`/`$APXS -q PROGNAME`"
+    if ! test -e $HTTPD ; then
+      HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
+    fi
+    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's@^.*/\([0-9.]*\)\(.*$\)@\1@ ; 1q'`"]
 
     case $host in
       *-*-cygwin*)
@@ -157,6 +185,7 @@ AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
 AC_SUBST(INSTALL_APACHE_MODS)
+AC_SUBST(HTTPD_VERSION)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS" && test "$APXS" != "no"; then

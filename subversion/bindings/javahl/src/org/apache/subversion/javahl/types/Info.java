@@ -35,13 +35,9 @@ import org.apache.subversion.javahl.ISVNClient;
  */
 public class Info implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 1L;
 
     /**
@@ -287,6 +283,16 @@ public class Info implements java.io.Serializable
             return null;
         else
             return new Date(lastChangedDate/1000);
+    }
+
+    /**
+     * Returns the last date the item was changed measured in the
+     * number of microseconds since 00:00:00 January 1, 1970 UTC.
+     * @return the last time the item was changed.
+     */
+    public long getLastChangedDateMicros()
+    {
+        return lastChangedDate;
     }
 
     /**

@@ -619,6 +619,7 @@ def blame_file_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
+@SkipUnless(server_has_mergeinfo)
 def blame_output_after_merge(sbox):
   "blame -g output with inserted lines"
 
@@ -630,7 +631,8 @@ def blame_output_after_merge(sbox):
   A_url = sbox.repo_url + '/A'
 
   # r2: mv greek tree in trunk.
-  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+                                            "Committed revision 2.\n"], [],
                                      'mv', "--parents", A_url, trunk_A_url,
                                      "-m", "move greek tree to trunk")
 
@@ -654,7 +656,8 @@ def blame_output_after_merge(sbox):
 
   # r4: create branches/br from trunk
   branches_br_url = sbox.repo_url + "/branches/br"
-  svntest.actions.run_and_verify_svn(None, ["\n","Committed revision 4.\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+                                            "Committed revision 4.\n"], [],
                                     'cp', '--parents',
                                      trunk_url, branches_br_url,
                                      "-m", "create branch")
@@ -816,53 +819,33 @@ def blame_multiple_targets(sbox):
   sbox.build()
 
   # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
-  svntest.main.file_append(iota, "New contents for iota\n")
-  svntest.main.run_svn(None, 'ci', '-m', '', iota)
+  sbox.simple_append('iota', "New contents for iota\n")
+  sbox.simple_commit()
+  iota = sbox.ospath('iota')
 
   expected_output = [
     "     1    jrandom This is the file 'iota'.\n",
     "     2    jrandom New contents for iota\n",
     ]
 
-  def multiple_wc_targets():
-    "multiple wc targets"
+  # We use --force to avoid an early bail from the current blame code,
+  # that performs a property check before the actual blame.
 
-    non_existent = os.path.join(sbox.wc_dir, 'non-existent')
+  non_existent = os.path.join(sbox.wc_dir, 'non-existent')
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*W155010: The node.*non-existent'.*",
+                                     'blame', non_existent, iota,
+                                     '--force')
 
-    expected_err = ".*W155010.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
+  iota_url = sbox.repo_url + '/iota'
+  non_existent_url = sbox.repo_url + '/non-existent'
 
-    exit_code, output, error = svntest.main.run_svn(1, 'blame',
-                                                    non_existent, iota)
+  # SVN_ERR_FS_NOT_FILE | SVN_ERR_FS_NOT_FOUND
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*W1600(13|17): '.*non-existent' .*not",
+                                     'blame', non_existent_url, iota_url,
+                                     '--force')
 
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('blame failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-    svntest.verify.verify_outputs(None, output, None, expected_output, None)
-
-  def multiple_url_targets():
-    "multiple url targets"
-
-    iota_url = sbox.repo_url + '/iota'
-    non_existent = sbox.repo_url + '/non-existent'
-
-    expected_err = ".*(W160017|W160013|W150000).*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
-
-    exit_code, output, error = svntest.main.run_svn(1, 'blame',
-                                                    non_existent, iota_url)
-
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('blame failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-    svntest.verify.verify_outputs(None, output, None, expected_output, None)
-
-  # Test one by one
-  multiple_wc_targets()
-  multiple_url_targets()
 
 @Issue(4034)
 def blame_eol_handling(sbox):

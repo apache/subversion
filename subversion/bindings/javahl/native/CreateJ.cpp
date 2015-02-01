@@ -71,7 +71,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/types/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;)V");
+                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
+                              "Ljava/lang/String;[B[B[B[B)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -118,6 +119,33 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   jobject joperation = EnumMapper::mapOperation(desc->operation);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jstring jpropRejectAbspath = JNIUtil::makeJString(desc->prop_reject_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueBase = (
+      !desc->prop_value_base ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_base->data,
+                               int(desc->prop_value_base->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueWorking = (
+      !desc->prop_value_working ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_working->data,
+                               int(desc->prop_value_working->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingOld = (
+      !desc->prop_value_incoming_old ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_old->data,
+                               int(desc->prop_value_incoming_old->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingNew = (
+      !desc->prop_value_incoming_new ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_new->data,
+                               int(desc->prop_value_incoming_new->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
@@ -125,7 +153,10 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                                  (jboolean) desc->is_binary, jmimeType,
                                  jconflictAction, jconflictReason, joperation,
                                  jbasePath, jreposPath, juserPath,
-                                 jmergedPath, jsrcLeft, jsrcRight);
+                                 jmergedPath, jsrcLeft, jsrcRight,
+                                 jpropRejectAbspath, jpropValueBase,
+                                 jpropValueWorking, jpropValueIncomingOld,
+                                 jpropValueIncomingNew);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -523,8 +554,8 @@ CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
         hi = apr_hash_next(hi), ++i)
     {
-      const char *key = (const char *) svn__apr_hash_index_key(hi);
-      const svn_lock_t *lock = (const svn_lock_t *) svn__apr_hash_index_val(hi);
+      const char *key = (const char *) apr_hash_this_key(hi);
+      const svn_lock_t *lock = (const svn_lock_t *) apr_hash_this_val(hi);
 
       jstring jpath = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())
@@ -631,7 +662,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "ZZL"JAVA_PACKAGE"/types/Depth;"
+                             "ZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
@@ -657,27 +691,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jMovedFromAbspath = NULL;
   jstring jMovedToAbspath = NULL;
 
-  enum svn_wc_status_kind text_status = status->node_status;
-
-  /* Avoid using values that might come from prop changes */
-  if (text_status == svn_wc_status_modified
-      || text_status == svn_wc_status_conflicted)
-    text_status = status->text_status;
-
-  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
-
-  if (repos_text_status == svn_wc_status_modified
-      || repos_text_status == svn_wc_status_conflicted)
-    repos_text_status = status->repos_text_status;
-
-  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
-  jobject jTextType = EnumMapper::mapStatusKind(text_status);
+  jobject jNodeType = EnumMapper::mapStatusKind(status->node_status);
+  jobject jTextType = EnumMapper::mapStatusKind(status->text_status);
   jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
-  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
-  jobject jRepositoryPropType = EnumMapper::mapStatusKind(
-                                                  status->repos_prop_status);
-  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jobject jRpNodeType = EnumMapper::mapStatusKind(status->repos_node_status);
+  jobject jRpTextType = EnumMapper::mapStatusKind(status->repos_text_status);
+  jobject jRpPropType = EnumMapper::mapStatusKind(status->repos_prop_status);
+  jobject jDepth = EnumMapper::mapDepth(status->depth);
   jboolean jIsLocked = (status->wc_is_locked == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
   jboolean jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
   jboolean jIsFileExternal = (status->file_external == 1) ? JNI_TRUE
                                                           : JNI_FALSE;
@@ -743,9 +766,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
 
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
-                               jLastCommitAuthor, jTextType, jPropType,
-                               jRepositoryTextType, jRepositoryPropType,
-                               jIsLocked, jIsCopied, jIsConflicted,
+                               jLastCommitAuthor,
+                               jNodeType, jTextType, jPropType,
+                               jRpNodeType, jRpTextType, jRpPropType,
+                               jIsLocked, jIsCopied, jDepth, jIsConflicted,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
@@ -778,12 +802,13 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/types/Lock;"
-                               "Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/util/List;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
                                "JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/types/RevisionRange;"
+                               "Ljava/lang/String;"
                                "Ljava/lang/String;Ljava/lang/String;"
                                "Ljava/util/Map;JJJJJJI)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
@@ -811,7 +836,9 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jErr = JNIUtil::makeSVNErrorMessage(wcNotify->err);
+  jstring jErr;
+  jobject jErrStack;
+  JNIUtil::makeSVNErrorMessage(wcNotify->err, &jErr, &jErrStack);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -839,6 +866,10 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
         POP_AND_RETURN_NULL;
     }
 
+  jstring jUrl = JNIUtil::makeJString(wcNotify->url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jstring jpathPrefix = JNIUtil::makeJString(wcNotify->path_prefix);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -858,7 +889,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
   jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
-  if (jhunkFuzz != wcNotify->hunk_fuzz)
+  if (jhunkFuzz < 0 || jhunkFuzz != wcNotify->hunk_fuzz)
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C svn_linenum_t to Java int");
@@ -867,10 +898,10 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
-                                 jKind, jMimeType, jLock, jErr,
+                                 jKind, jMimeType, jLock, jErr, jErrStack,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange, jpathPrefix, jpropName,
+                                 jMergeRange, jUrl, jpathPrefix, jpropName,
                                  jrevProps, joldRevision,
                                  jhunkOriginalStart, jhunkOriginalLength,
                                  jhunkModifiedStart, jhunkModifiedLength,
@@ -1096,8 +1127,7 @@ void fill_property_map(jobject map,
                        apr_hash_t* prop_hash, apr_array_header_t* prop_diffs,
                        apr_pool_t* scratch_pool, jmethodID put_mid)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (!map || (prop_hash == NULL && prop_diffs == NULL))
     return;
@@ -1178,7 +1208,7 @@ void fill_property_map(jobject map,
     {
       for (int i = 0; i < prop_diffs->nelts; ++i)
         {
-          svn_prop_t* prop = APR_ARRAY_IDX(prop_diffs, i, svn_prop_t*);
+          svn_prop_t* prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
           loop_body(prop->name, prop->value);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NOTHING();
@@ -1189,8 +1219,7 @@ void fill_property_map(jobject map,
 jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,
                      apr_pool_t* scratch_pool)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (prop_hash == NULL && prop_diffs == NULL)
     return NULL;

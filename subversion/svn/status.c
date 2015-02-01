@@ -26,8 +26,6 @@
 
 
 /*** Includes. ***/
-
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
@@ -35,6 +33,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "cl.h"
+#include "svn_private_config.h"
 #include "cl-conflicts.h"
 #include "private/svn_wc_private.h"
 
@@ -285,15 +284,14 @@ print_status(const char *target_abspath,
 
       if (tree_conflicted)
         {
-          const svn_wc_conflict_description3_t *tree_conflict;
+          const svn_wc_conflict_description2_t *tree_conflict;
           SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
                                             local_abspath, pool, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
 
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                            &desc, svn_wc__cd3_to_cd2(tree_conflict, pool),
-                            pool));
+                            &desc, tree_conflict, pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
         }
@@ -319,7 +317,7 @@ print_status(const char *target_abspath,
                                     apr_psprintf(pool,
                                                  _("swapped places with %s"),
                                                  relpath),
-                                    (char *)NULL);
+                                    SVN_VA_NULL);
     }
   else if (status->moved_from_abspath || status->moved_to_abspath)
     {
@@ -334,7 +332,7 @@ print_status(const char *target_abspath,
           moved_from_line = apr_pstrcat(pool, "\n        > ",
                                         apr_psprintf(pool, _("moved from %s"),
                                                      relpath),
-                                        (char *)NULL);
+                                        SVN_VA_NULL);
         }
 
       if (status->moved_to_abspath)
@@ -346,7 +344,7 @@ print_status(const char *target_abspath,
           moved_to_line = apr_pstrcat(pool, "\n        > ",
                                       apr_psprintf(pool, _("moved to %s"),
                                                    relpath),
-                                      (char *)NULL);
+                                      SVN_VA_NULL);
         }
     }
 
@@ -492,7 +490,8 @@ svn_cl__print_status_xml(const char *target_abspath,
   path = make_relpath(target_abspath, target_path, path, pool, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(path, pool), NULL);
+                        "path", svn_dirent_local_style(path, pool),
+                        SVN_VA_NULL);
 
   att_hash = apr_hash_make(pool);
   svn_hash_sets(att_hash, "item",
@@ -562,7 +561,7 @@ svn_cl__print_status_xml(const char *target_abspath,
                             generate_status_desc(combined_repos_status(status)),
                             "props",
                             generate_status_desc(status->repos_prop_status),
-                            NULL);
+                            SVN_VA_NULL);
       if (status->repos_lock)
         svn_cl__print_xml_lock(&sb, status->repos_lock, pool);
 

@@ -21,7 +21,6 @@
  * @endcopyright
  */
 
-#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -30,6 +29,7 @@
 
 #include "wc.h"
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
@@ -52,7 +52,7 @@ svn_wc_info_dup(const svn_wc_info_t *info,
       for (i = 0; i < info->conflicts->nelts; i++)
         {
           APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description2_t *)
-            = svn_wc__conflict_description2_dup(
+            = svn_wc_conflict_description2_dup(
                 APR_ARRAY_IDX(info->conflicts, i,
                               const svn_wc_conflict_description2_t *),
                 pool);
@@ -191,7 +191,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__internal_get_origin(NULL, &tmpinfo->rev,
                                               &repos_relpath,
                                               &tmpinfo->repos_root_URL,
-                                              &tmpinfo->repos_UUID, NULL,
+                                              &tmpinfo->repos_UUID, NULL, NULL,
                                               db, local_abspath, TRUE,
                                               result_pool, scratch_pool));
         }
@@ -310,16 +310,10 @@ build_info_for_node(svn_wc__info2_t **info,
                                 local_abspath, result_pool, scratch_pool));
 
   if (conflicted)
-    {
-      const apr_array_header_t *conflicts;
-
-      SVN_ERR(svn_wc__read_conflicts(&conflicts, db,
-                                     local_abspath,
-                                     TRUE /* ### create tempfiles */,
-                                     result_pool, scratch_pool));
-      wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
-                                                          result_pool);
-    }
+    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
+                                   local_abspath,
+                                   TRUE /* ### create tempfiles */,
+                                   result_pool, scratch_pool));
   else
     wc_info->conflicts = NULL;
 
@@ -539,8 +533,8 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   for (hi = apr_hash_first(scratch_pool, fe_baton.tree_conflicts); hi;
        hi = apr_hash_next(hi))
     {
-      const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_wc_conflict_description3_t *tree_conflict;
+      const char *this_abspath = apr_hash_this_key(hi);
+      const svn_wc_conflict_description2_t *tree_conflict;
       svn_wc__info2_t *info;
       const apr_array_header_t *conflicts;
 
@@ -572,14 +566,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
         continue;
 
       tree_conflict = APR_ARRAY_IDX(conflicts, 0,
-                                    const svn_wc_conflict_description3_t *);
+                                    const svn_wc_conflict_description2_t *);
 
       if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
                           tree_conflict->node_kind, iterpool))
         continue;
 
-      info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
-                                                                iterpool);
+      info->wc_info->conflicts = conflicts;
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);

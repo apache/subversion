@@ -74,7 +74,7 @@ blame_receiver_xml(void *baton,
                         "line-number",
                         apr_psprintf(pool, "%" APR_INT64_T_FMT,
                                      line_no + 1),
-                        NULL);
+                        SVN_VA_NULL);
 
   if (SVN_IS_VALID_REVNUM(revision))
     svn_cl__print_xml_commit(&sb, revision,
@@ -88,7 +88,7 @@ blame_receiver_xml(void *baton,
     {
       /* "<merged>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "merged",
-                            "path", merged_path, NULL);
+                            "path", merged_path, SVN_VA_NULL);
 
       svn_cl__print_xml_commit(&sb, merged_revision,
                              svn_prop_get_value(merged_rev_props,
@@ -350,7 +350,7 @@ svn_cl__blame(apr_getopt_t *os,
           if (! svn_path_is_url(target))
             outpath = svn_dirent_local_style(truepath, subpool);
           svn_xml_make_open_tag(&bl.sbuf, pool, svn_xml_normal, "target",
-                                "path", outpath, NULL);
+                                "path", outpath, SVN_VA_NULL);
 
           receiver = blame_receiver_xml;
         }

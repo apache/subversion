@@ -50,6 +50,7 @@ class Revision
    * Make a Revision Java object.
    */
   static jobject makeJRevision(svn_revnum_t rev);
+  static jobject makeJRevision(const svn_opt_revision_t& rev);
 };
 
 #endif // REVISION_H

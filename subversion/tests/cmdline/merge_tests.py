@@ -247,7 +247,7 @@ def textual_merges_galore(sbox):
 
   inject_conflict_into_expected_state('A/D/G/tau', expected_disk,
                                       expected_status, other_tau_text, tau_text,
-                                      3)
+                                      1, 3)
 
   expected_skip = wc.State('', { })
 
@@ -336,7 +336,7 @@ def textual_merges_galore(sbox):
                                })
 
   inject_conflict_into_expected_state('tau', expected_disk, expected_status,
-                                      other_tau_text, tau_text, 3)
+                                      other_tau_text, tau_text, 1, 3)
 
   # Do the merge, but check svn:mergeinfo props separately since
   # run_and_verify_merge would attempt to proplist tau's conflict
@@ -355,7 +355,7 @@ def textual_merges_galore(sbox):
     svntest.tree.detect_conflict_files, list(tau_conflict_support_files))
 
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(other_wc,
                                                   "A", "D", "G", "rho"))
@@ -645,8 +645,10 @@ def simple_property_merges(sbox):
   def error_message(property, old_value, new_value):
     return "Trying to change property '%s'\n" \
            "but the property has been locally deleted.\n" \
-           "<<<<<<< (local property value)\n=======\n" \
-           "%s>>>>>>> (incoming property value)\n" % (property, new_value)
+           "<<<<<<< (local property value)\n" \
+           "||||||| (incoming 'changed from' value)\n" \
+           "%s=======\n" \
+           "%s>>>>>>> (incoming 'changed to' value)\n" % (property, old_value, new_value)
 
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
@@ -684,7 +686,8 @@ def simple_property_merges(sbox):
   A_url = sbox.repo_url + '/A'
   A2_url = sbox.repo_url + '/A2'
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'], [],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
                                      A_url, A2_url)
 
@@ -1057,6 +1060,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                           (svntest.tree.get_text('mu'), orig_mu_text))
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(785)
 def merge_with_implicit_target_using_r(sbox):
   "merging a file w/no explicit target path using -r"
@@ -1326,7 +1330,7 @@ def merge_in_new_file_and_diff(sbox):
   expected_output = [
     "Index: " + url_branch_path + "/newfile\n",
     "===================================================================\n",
-    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
+    "--- "+ url_branch_path + "/newfile	(nonexistent)\n",
     "+++ "+ url_branch_path + "/newfile	(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+newfile\n",
@@ -1339,6 +1343,7 @@ def merge_in_new_file_and_diff(sbox):
     "Property changes on: " + url_branch_path + "\n",
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
+    "## -0,0 +0,1 ##\n",
     "   Merged /A/B/E:r2-3\n",
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
@@ -1977,7 +1982,7 @@ def merge_binary_with_common_ancestry(sbox):
   # Commit the second branch
   expected_output = wc.State(wc_dir, {
     'L'       : Item(verb='Adding'),
-    'L/theta' : Item(verb='Adding  (bin)'),
+    'L/theta' : Item(verb='Replacing'),
     })
 
   expected_status.add({
@@ -2999,7 +3004,7 @@ def cherry_pick_text_conflict(sbox):
     })
   expected_disk = wc.State('', {
     'mu'        : Item("This is the file 'mu'.\n"
-                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 4)),
+                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 3, 4)),
     'B'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(),
@@ -3222,7 +3227,7 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
   # Normally we'd simply update the whole working copy, but since that would
   # defeat the purpose of this test (see the comment below), instead we'll
   # update only "." using --depth empty.  This preserves the intent of the
-  # orginal mixed-rev test for this issue, but allows the merge tracking
+  # original mixed-rev test for this issue, but allows the merge tracking
   # logic to consider r3 as valid for reverse merging.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--depth', 'empty', wc_dir)
@@ -3514,6 +3519,7 @@ def merge_conflict_markers_matching_eol(sbox):
     'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
       "<<<<<<< .working" + eolchar +
       "Conflicting appended text for mu" + eolchar +
+      "||||||| .merge-left.r" + str(cur_rev - 1) + eolchar +
       "=======" + eolchar +
       "Original appended text for mu" + eolchar +
       ">>>>>>> .merge-right.r" + str(cur_rev) + eolchar),
@@ -4222,7 +4228,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
 
   copy_of_A_D_wc_rev = cur_rev
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n',
+                                     ['Committing transaction...\n',
                                       'Committed revision ' + str(cur_rev+1) +
                                       '.\n'],
                                      [],
@@ -4890,7 +4896,7 @@ def mergeinfo_elision(sbox):
   svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
 
   # Once again A_COPY/B/E/beta has no mergeinfo.
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
                                      'propget', SVN_PROP_MERGEINFO,
                                      beta_COPY_path)
 
@@ -5844,7 +5850,7 @@ def empty_mergeinfo(sbox):
   #   B) Empty mergeinfo elides to empty mergeinfo.
   #
   #   C) If a merge sets empty mergeinfo on its target and that target has
-  #      no ancestor in either the WC or the repository with explict
+  #      no ancestor in either the WC or the repository with explicit
   #      mergeinfo, then the target's mergeinfo is removed (a.k.a. elides
   #      to nothing).
   sbox.build()
@@ -5973,7 +5979,8 @@ def empty_mergeinfo(sbox):
                                      A_COPY_path)
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
   # Check that A_COPY's mergeinfo is gone.
-  svntest.actions.run_and_verify_svn(None, [], [], 'pg', 'svn:mergeinfo',
+  svntest.actions.run_and_verify_svn(None, [], '.*W200017: Property.*not found',
+                                     'pg', 'svn:mergeinfo',
                                      A_COPY_path)
 
 #----------------------------------------------------------------------
@@ -6454,10 +6461,12 @@ def update_loses_mergeinfo(sbox):
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
@@ -6574,10 +6583,12 @@ def merge_loses_mergeinfo(sbox):
   A_B_url = sbox.repo_url + '/A/B'
   A_B_J_url = sbox.repo_url + '/A/B/J'
   A_B_K_url = sbox.repo_url + '/A/B/K'
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [],
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
@@ -7718,7 +7729,8 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
                                         wc_status, None, wc_dir)
 
   # Move A to A_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv A to A_MOVED',
                                      A_url, A_MOVED_url)
 
@@ -8126,7 +8138,8 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   mu_MOVED_path = sbox.ospath('A/mu_MOVED')
 
   # Copy mu to mu_COPY
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 2.\n'],
                                      [], 'cp', '-m', 'cp mu to mu_COPY',
                                      mu_url, mu_COPY_url)
 
@@ -8139,7 +8152,8 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                         expected_status, None, wc_dir)
 
   # Move mu to mu_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv mu to mu_MOVED',
                                      mu_url, mu_MOVED_url)
 
@@ -8217,7 +8231,8 @@ def merge_with_auto_rev_range_detection(sbox):
                                         expected_status, None, wc_dir)
 
   # Copy A to A_COPY
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 3.\n'],
                                      [], 'cp', '-m', 'cp A to A_COPY',
                                      A_url, A_COPY_url)
 
@@ -9137,7 +9152,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Move A to A_MOVED
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 7.\n'],
+  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+                                            'Committed revision 7.\n'],
                                      [], 'mv', '-m', 'mv A to A_MOVED',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED')
@@ -9562,7 +9578,7 @@ def new_subtrees_should_not_break_merge(sbox):
   wc_status.tweak(wc_rev=9)
 
   # Yet another test for issue #3067.  Merge -rX:Y, where X>Y (reverse merge)
-  # and the merge target has a subtree that came into existance at some rev
+  # and the merge target has a subtree that came into existence at some rev
   # N where X < N < Y.  This merge should simply delete the subtree.
   #
   # For this test merge -r9:2 to A_COPY.  This should revert all the merges
@@ -9883,7 +9899,8 @@ def dont_add_mergeinfo_from_own_history(sbox):
   # out, leaving the only the mergeinfo created from the merge itself:
   # '/A_COPY:7'.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 8.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 8.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/A_MOVED',
@@ -10188,6 +10205,7 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(3094)
 def merge_range_predates_history(sbox):
   "merge range predates history"
@@ -10536,9 +10554,11 @@ def merge_added_subtree(sbox):
   A_COPY_url = url + "/A_COPY"
   A_path = sbox.ospath('A')
 
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 2.\n"], [],
                                      "cp", "-m", "", A_url, A_COPY_url)
-  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 3.\n"], [],
+  svntest.actions.run_and_verify_svn("",["Committing transaction...\n",
+                                         "Committed revision 3.\n"], [],
                                      "cp", "-m", "",
                                      A_COPY_url + '/D',
                                      A_COPY_url + '/D2')
@@ -10797,7 +10817,8 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r6.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 6.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 6.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -10949,7 +10970,8 @@ def set_up_renamed_subtree(sbox):
 
   # Copy 'A/D/H' to 'H_COPY' in r5.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -11816,7 +11838,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                 psi_COPY_path : '/A/D/H/psi:3,8' })
 
   # Now test a reverse merge where part of the requested range postdates
-  # a subtree's existance.  Merge -r12:1 to A_COPY.  This should revert
+  # a subtree's existence.  Merge -r12:1 to A_COPY.  This should revert
   # all of the merges done thus far.  The fact that A/D/H/psi no longer
   # exists after r7 shouldn't break the subtree merge into A_COPY/D/H/psi.
   # A_COPY/D/H/psi should simply have r3 reverse merged.  No paths under
@@ -12093,6 +12115,7 @@ def subtrees_with_empty_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3240 'commits to subtrees added by merge
 # corrupt working copy and repos'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3240)
 def commit_to_subtree_added_by_merge(sbox):
   "commits to subtrees added by merge wreak havoc"
@@ -13549,7 +13572,8 @@ def no_self_referential_filtering_on_added_path(sbox):
 
   # r10: Move A/C to A/C_MOVED.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 10.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 10.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/C',
                                      sbox.repo_url + '/A/C_MOVED',
@@ -13762,7 +13786,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                         wc_status, None, wc_dir)
 
   # r12 - Move A/D/H/nu to A/D/H/nu_moved
-  svntest.actions.run_and_verify_svn(None, ["\n",
+  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
                                             "Committed revision 12.\n"], [],
                                      'move', sbox.repo_url + '/A/D/H/nu',
                                      sbox.repo_url + '/A/D/H/nu_moved',
@@ -14012,18 +14036,21 @@ def set_up_natural_history_gap(sbox):
 
   # r6: Delete 'A'
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 6.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 6.\n"], [],
     'delete', sbox.repo_url + '/A', '-m', 'Delete A')
 
   # r7: Resurrect 'A' by copying 'A@2' to 'A'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 7.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 7.\n"], [],
     'copy', sbox.repo_url + '/A@2', sbox.repo_url + '/A',
     '-m', 'Resurrect A from A@2')
 
   # r8: Branch the resurrected 'A' to 'A_COPY'.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, "(Committed revision 8.)|(\n)", [],
+    None, ["Committing transaction...\n",
+           "Committed revision 8.\n"], [],
     'copy', sbox.repo_url + '/A', sbox.repo_url + '/A_COPY',
     '-m', 'Copy A to A_COPY')
 
@@ -14469,6 +14496,7 @@ def noop_file_merge(sbox):
                                      chi_COPY_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(2690)
 def copy_then_replace_via_merge(sbox):
   "copy then replace via merge"
@@ -14832,6 +14860,8 @@ def merge_automatic_conflict_resolution(sbox):
     })
   expected_disk.tweak('D/H/psi', contents="<<<<<<< .working\n"
                       "BASE.\n"
+                      "||||||| .merge-left.r2\n"
+                      "This is the file 'psi'.\n"
                       "=======\n"
                       "New content>>>>>>> .merge-right.r3\n")
   expected_status.tweak('D/H/psi', status='C ')
@@ -14951,6 +14981,7 @@ def merge_automatic_conflict_resolution(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3440 'Skipped paths get incorrect override mergeinfo
 # during merge'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3440)
 def skipped_files_get_correct_mergeinfo(sbox):
   "skipped files get correct mergeinfo set"
@@ -15081,7 +15112,8 @@ def committed_case_only_move_and_revert(sbox):
 
   # r3: A case-only file rename on the server
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 3.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/mu',
                                      sbox.repo_url + '/A/MU',
@@ -15185,7 +15217,8 @@ def committed_case_only_move_and_revert(sbox):
 
   # r5: A case-only directory rename on the server
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 5.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 5.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A/C',
                                      sbox.repo_url + '/A/c',
@@ -15225,6 +15258,7 @@ def committed_case_only_move_and_revert(sbox):
 #----------------------------------------------------------------------
 # This is a test for issue #3221 'Unable to merge into working copy of
 # deleted branch'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3221)
 def merge_into_wc_for_deleted_branch(sbox):
   "merge into WC of deleted branch should work"
@@ -15486,6 +15520,7 @@ def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3646 'cyclic --record-only merges create self-referential
 # mergeinfo'
+@SkipUnless(server_has_mergeinfo)
 @Issue(3646)
 def record_only_merge_creates_self_referential_mergeinfo(sbox):
   "merge creates self referential mergeinfo"
@@ -15595,7 +15630,7 @@ def dav_skelta_mode_causes_spurious_conflicts(sbox):
   A_branch_path = sbox.ospath('A-branch')
   C_branch_path = sbox.ospath('A-branch/C')
 
-  # r2 - Set some intial properties:
+  # r2 - Set some initial properties:
   #
   #  'dir-prop'='value1' on A/C.
   #  'svn:eol-style'='native' on A/mu.
@@ -15837,6 +15872,7 @@ def merge_into_locally_added_directory(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2915 'Handle mergeinfo for subtrees missing due to removal
 # by non-svn command'
+@SkipUnless(server_has_mergeinfo)
 @Issue(2915)
 def merge_with_os_deleted_subtrees(sbox):
   "merge tracking fails if target missing subtrees"
@@ -16123,6 +16159,7 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
 # Test for issue #3686 'executable flag not correctly set on merge'
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3686
 @Issue(3686)
+@SkipUnless(server_has_mergeinfo)
 @SkipUnless(svntest.main.is_posix_os)
 def merge_change_to_file_with_executable(sbox):
   "executable flag is maintained during binary merge"
@@ -17142,7 +17179,8 @@ def reverse_merge_with_rename(sbox):
 
   # r7 - Rename ^/A to ^/trunk.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 7.\n'],
+                                     ['Committing transaction...\n',
+                                      'Committed revision 7.\n'],
                                      [], 'move',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/trunk',
@@ -17729,6 +17767,7 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
+@SkipUnless(server_has_mergeinfo)
 @Issue(3405) # seems to be the wrong issue number
 def merge_properties_on_adds(sbox):
   "merged directory properties are added"
@@ -18690,6 +18729,167 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
   # Commit the merge.
   #sbox.simple_commit()
 
+def conflict_naming(sbox):
+  "verify conflict file naming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_append('file.txt', 'This is the initial content\n')
+  sbox.simple_add('file.txt')
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is the new content\n', truncate=True)
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3'       : Item(contents="This is the new content\n"),
+    'file.txt.r2'       : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine\n" \
+                               "This is conflicting content\n" \
+                               "||||||| .r3\n" \
+                               "This is the new content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2\n"),
+    'file.txt.mine'     : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '-r', '2')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3.txt'   : Item(contents="This is the new content\n"),
+    'file.txt.r2.txt'   : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine.txt\n" \
+                               "This is conflicting content\n" \
+                               "||||||| .r3.txt\n" \
+                               "This is the new content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2.txt\n"),
+    'file.txt.mine.txt' : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(
+                      wc_dir,
+                      expected_output, expected_disk, expected_status,
+                      None, None, None, None, None, None,
+                      wc_dir, '-r', '2',
+                      '--config-option',
+                      'config:miscellany:preserved-conflict-file-exts=' +
+                      'c txt h')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2': Item(contents="This is the initial content\n"),
+    'file.txt'               : Item(contents="<<<<<<< .working\n" \
+                                    "This is conflicting content\n" \
+                                    "||||||| .merge-left.r3\n" \
+                                    "This is the new content\n" \
+                                    "=======\n" \
+                                    "This is the initial content\n" \
+                                    ">>>>>>> .merge-right.r2\n"),
+    'file.txt.working'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(wc_dir, None, [],
+                                     'merge', '-c-3', '^/', sbox.ospath(''))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3.txt' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2.txt': Item(contents="This is the initial content\n"),
+    'file.txt'                   : Item(contents="<<<<<<< .working.txt\n" \
+                                        "This is conflicting content\n" \
+                                        "||||||| .merge-left.r3.txt\n" \
+                                        "This is the new content\n" \
+                                        "=======\n" \
+                                        "This is the initial content\n" \
+                                        ">>>>>>> .merge-right.r2.txt\n"),
+    'file.txt.working.txt'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(
+                           wc_dir, None, [],
+                           'merge', '-c-3', '^/', sbox.ospath(''),
+                           '--config-option',
+                           'config:miscellany:preserved-conflict-file-exts=' +
+                           'c txt h')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+def merge_dir_delete_force(sbox):
+  "merge a directory delete with --force"
+
+  sbox.build()
+
+  sbox.simple_rm('A/D/G')
+  sbox.simple_commit() # r2
+
+  sbox.simple_update(revision=1)
+
+  # Just merging r2 on r1 succeeds
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry')
+
+  # Bring working copy to r1 again
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'revert', '-R', sbox.wc_dir)
+
+  # But when using --force this same merge caused a segfault in 1.8.0-1.8.8
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry', '--force')
+
 ########################################################################
 # Run the tests
 
@@ -18835,6 +19035,8 @@ test_list = [ None,
               single_editor_drive_merge_notifications,
               conflicted_split_merge_with_resolve,
               merge_to_empty_target_merge_to_infinite_target,
+              conflict_naming,
+              merge_dir_delete_force,
              ]
 
 if __name__ == '__main__':

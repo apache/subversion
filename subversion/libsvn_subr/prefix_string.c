@@ -184,7 +184,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
           : 0;
 
       /* any (partially) matching sub-nodes? */
-      if (idx == node->sub_node_count
+      if (idx == (int)node->sub_node_count
           || node->sub_nodes[idx]->key.data[0] != s[node->length])
         break;
 
@@ -219,7 +219,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
       new_node->sub_nodes = apr_palloc(tree->pool, sizeof(node_t *));
       new_node->sub_nodes[0] = sub_node;
 
-      memcpy(sub_node->key.data, sub_node->key.data + match, 8 - match);
+      memmove(sub_node->key.data, sub_node->key.data + match, 8 - match);
 
       /* replace old sub-node with new one and continue lookup */
       sub_node->key.prefix = new_node;
@@ -267,7 +267,7 @@ svn_prefix_string__expand(const svn_prefix_string__t *s,
   apr_size_t len = s->prefix->length + s_len;
   char *buffer = apr_palloc(pool, len + 1);
 
-  svn_string_t *result = apr_pcalloc(pool, sizeof(result));
+  svn_string_t *result = apr_pcalloc(pool, sizeof(*result));
   result->data = buffer;
   result->len = len;
   buffer[len] = '\0';

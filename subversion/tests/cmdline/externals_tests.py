@@ -1588,6 +1588,7 @@ def wc_repos_file_externals(sbox):
                                         True)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.server_has_mergeinfo)
 @Issue(3843)
 def merge_target_with_externals(sbox):
   "merge target with externals"
@@ -2794,23 +2795,26 @@ def include_immediate_dir_externals(sbox):
 
 
 @Issue(4085)
-@XFail()
 def shadowing(sbox):
   "external shadows an existing dir"
 
-  sbox.build(read_only=True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # Setup external: /A/B/F as 'C' child of /A
   externals_prop = "^/A/B/F C\n"
+  change_external(sbox.ospath('A'), externals_prop, commit=False)
 
-  raised = False
-  try:
-    change_external(sbox.ospath('A'), externals_prop, commit=False)
-  except:
-    raised = True
-  if not raised:
-    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+  # An update errors out because the external is shadowed by an existing dir
+  svntest.main.run_svn("W205011: Error handling externals definition for '%s'"
+    % (sbox.wc_dir) + "/A/C", 'update', wc_dir)
+
+  # Remove the shadowed directory to unblock the external
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/A/C', '-m', 'remove A/C')
+
+  # The next update should fetch the external and not error out
+  sbox.simple_update()
+
 
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
@@ -3028,9 +3032,9 @@ def duplicate_targets(sbox):
     'svn:externals', '^/A/B/E ././barf\n^/A/D/G .//barf', wc_dir)
 
   # svn pg svn:externals .
-  expected_stdout = []
+  expected_stderr = '.*W200017: Property.*not found'
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
+  actions.run_and_verify_svn2('OUTPUT', [], expected_stderr, 1, 'pg',
     'svn:externals', wc_dir)
 
   # svn ps svn:externals "^/A/B/E ok" .
@@ -3117,7 +3121,7 @@ def move_with_file_externals(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-@Issue(4185)
+@Issue(4185,4529)
 def pinned_externals(sbox):
   "pinned external"
 
@@ -3130,6 +3134,7 @@ def pinned_externals(sbox):
   sbox.simple_mkdir('Z')
   sbox.simple_commit('')
 
+  repo_X_C = repo_url + '/X/C'
   repo_X_mu = repo_url + '/X/mu'
 
   expected_output = verify.RegexOutput(
@@ -3149,20 +3154,18 @@ def pinned_externals(sbox):
                           'old-rev       -r 1  ' + repo_X_mu + '\n' +
                                     repo_X_mu + ' new-plain\n' +
                           '-r1  ' + repo_X_mu + ' new-rev\n' +
-                                    repo_X_mu + '@1 new-peg\n',
+                                    repo_X_mu + '@1 new-peg\n'
+                          '-r1  ' + repo_X_C + ' new-dir-rev\n',
                       'Z')
 
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D'               : Item(status=' U'),
-    'A/D/exdir_E/beta'  : Item(status='A '),
-    'A/D/exdir_E/alpha' : Item(status='A '),
-  })
   expected_error = "svn: E205011: Failure.*externals"
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-rev'         : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-dir-rev'     : Item(),
 
     # And verifying X
     'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
@@ -3227,7 +3230,6 @@ def update_dir_external_shallow(sbox):
                                         sbox.ospath('A/B/E'))
 
 @Issue(4411)
-@XFail()
 def switch_parent_relative_file_external(sbox):
   "switch parent-relative file external"
 
@@ -3263,6 +3265,287 @@ def switch_parent_relative_file_external(sbox):
   # Bug: The branch working copy can no longer be updated.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'update', branch_wc)
+
+@Issue(4420)
+def file_external_unversioned_obstruction(sbox):
+  """file externals unversioned obstruction"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = verify.RegexOutput('r2 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r2: set external',
+                           'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
+
+  sbox.simple_append('A/mu-ext', 'unversioned obstruction')
+
+  # Update reports a tree-conflict but status doesn't show any such
+  # conflict.  I'm no sure whether this is correct.
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(status='  ', treeconflict='A'),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/mu-ext' : Item('unversioned obstruction'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+      'A/mu-ext' : Item(status='M ', wc_rev='2', switched='X'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+@Issue(4001)
+@XFail()
+def file_external_versioned_obstruction(sbox):
+  """file externals versioned obstruction"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = verify.RegexOutput('r2 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r2: set external',
+                           'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(status='A '),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/mu-ext' : Item('This is the file \'mu\'.\n'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+      'A/mu-ext' : Item(status='  ', wc_rev='2', switched='X'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+  # Update skips adding the versioned node because of the file
+  # external obstruction then when the external is deleted the
+  # versioned node is missing from disk and wc.db.  Not really sure
+  # what should happen, perhaps a not-present node?
+  expected_output = verify.RegexOutput('r3 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r3: copy file',
+                           'cp', 'head', 'A/mu', 'A/mu-ext',
+                           'propdel', 'svn:externals', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(verb='Removed external', prev_verb='Skipped'),
+      })
+  expected_disk.tweak('A/mu-ext', content='This is the file \'mu\'.\n')
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A/mu-ext', switched=None)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+@Issue(4495)
+@XFail()
+def update_external_peg_rev(sbox):
+  "update external peg rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B/E/alpha')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  sbox.simple_propset('svn:externals', '^/A/B/E@1 xE', 'A/B/F')
+  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/F/xE/alpha' : Item(status='A '),
+      'A/B/F/xE/beta'  : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.add({
+      'A/B/F/xE'       : Item(),
+      'A/B/F/xE/alpha' : Item('This is the file \'alpha\'.\n'),
+      'A/B/F/xE/beta'  : Item('This is the file \'beta\'.\n'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+      'A/B/F/xE'       : Item(status='  ', wc_rev='1', prev_status='X '),
+      'A/B/F/xE/alpha' : Item(status='  ', wc_rev='1'),
+      'A/B/F/xE/beta'  : Item(status='  ', wc_rev='1'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  sbox.simple_propset('svn:externals', '^/A/B/E@2 xE', 'A/B/F')
+  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/F/xE/alpha' : Item(status='D '),
+  })
+  expected_disk.remove('A/B/F/xE/alpha')
+  expected_status.remove('A/B/F/xE/alpha')
+  expected_status.tweak(wc_rev=4)
+  expected_status.tweak('A/B/F/xE', 'A/B/F/xE/beta', wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # XFAIL: EXTERNALS.def_revision and EXTERNALS.def_operational_revision
+  # are still r1 for 'A/B/F/xE' so status is not against the expected r2.
+  # No testsuite support for ood marker so examine status output manually.
+  expected_output = [
+    "X                    %s\n" % sbox.ospath('A/B/F/xE'),
+    "Status against revision:      4\n",
+    "\n",
+    "Performing status on external item at '%s':\n" % sbox.ospath('A/B/F/xE'),
+    "Status against revision:      2\n",
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', '-u', sbox.wc_dir)
+
+def update_deletes_file_external(sbox):
+  "update deletes a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:externals', '../D/gamma gamma', 'A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     '-m', 'create branch',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/A_copy')
+
+  # Update the working copy
+  sbox.simple_update()
+
+  # Remove the branch
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     '-m', 'remove branch',
+                                     sbox.repo_url + '/A_copy')
+
+  # As of r1448345, this update fails:
+  # E000002: Can't remove directory '.../A_copy/C': No such file or directory
+  sbox.simple_update()
+  
+
+@Issue(4519)
+def switch_relative_externals(sbox):
+  "switch relative externals"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', '1', 'A', 'trunk',
+                                         'cp', '1', 'A', 'branches/A',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'trunk/B',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'branches/A/B')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url + '/trunk', wc)
+
+  # This forgets to update some externals data
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', sbox.repo_url + '/branches/A', wc)
+
+  # This upgrade makes the following update fail
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', wc)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc)
+
+
+def copy_file_external_to_repo(sbox):
+  "explicitly copy file external to repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  change_external(sbox.ospath('A'), '^/A/mu ext')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--message', 'external copy',
+                                     sbox.ospath('A/ext'),
+                                     sbox.repo_url + '/ext_copy')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'ext_copy' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/ext'    : Item('This is the file \'mu\'.\n'),
+      'ext_copy' : Item('This is the file \'mu\'.\n'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk, None)
+
+@Issue(4550)
+def replace_tree_with_foreign_external(sbox):
+  "replace tree with foreign external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
+
+  sbox.simple_propset('svn:externals', other_repo_url + '/A/B X', 'A')
+  sbox.simple_commit()
+  sbox.simple_propdel('svn:externals', 'A')
+  sbox.simple_mkdir('A/X')
+  sbox.simple_mkdir('A/X/E')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/X'         : Item(status='D '),
+      'A'           : Item(status=' U'),
+      'A/X/lambda'  : Item(status='A '),
+      'A/X/E'       : Item(status='A '),
+      'A/X/E/alpha' : Item(status='A '),
+      'A/X/E/beta'  : Item(status='A '),
+      'A/X/F'       : Item(status='A '),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/X'         : Item(status='  ', wc_rev=1, prev_status='X '),
+    'A/X/E'       : Item(status='  ', wc_rev=1, prev_status='  '),
+    'A/X/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/X/E/beta'  : Item(status='  ', wc_rev=1),
+    'A/X/F'       : Item(status='  ', wc_rev=1),
+    'A/X/lambda'  : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '2', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -3317,6 +3600,13 @@ test_list = [ None,
               pinned_externals,
               update_dir_external_shallow,
               switch_parent_relative_file_external,
+              file_external_unversioned_obstruction,
+              file_external_versioned_obstruction,
+              update_external_peg_rev,
+              update_deletes_file_external,
+              switch_relative_externals,
+              copy_file_external_to_repo,
+              replace_tree_with_foreign_external,
              ]
 
 if __name__ == '__main__':

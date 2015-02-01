@@ -79,10 +79,11 @@ module SvnTestUtil
     @wc_path = File.join(@tmp_path, "wc")
     @import_path = File.join(@tmp_path, "import")
     @repos_path = File.join(@tmp_path, "repos")
+    @svnserve_pid_file = File.join(@tmp_path, "svnserve.pid")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 
-    @config_path = "config"
+    @config_path = File.join(@tmp_path, "config")
     @greek = Greek.new(@tmp_path, @import_path, @wc_path, @repos_uri)
   end
 
@@ -233,6 +234,7 @@ realm = #{@realm}
       cred.username = @author
       cred.may_save = false
     end
+    ctx.config = Svn::Core::Config.config(@config_path)
     setup_auth_baton(ctx.auth_baton)
     return ctx unless block_given?
     begin

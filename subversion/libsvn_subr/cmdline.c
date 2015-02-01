@@ -34,6 +34,7 @@
 #else
 #include <crtdbg.h>
 #include <io.h>
+#include <conio.h>
 #endif
 
 #include <apr.h>                /* for STDIN_FILENO */
@@ -42,7 +43,6 @@
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
@@ -63,15 +63,32 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
+#include "svn_private_config.h"
+
 #include "win32_crashrpt.h"
+
+#if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
+/* Before Visual Studio 2005, the C runtime didn't handle encodings for the
+   for the stdio output handling. */
+#define CMDLINE_USE_CUSTOM_ENCODING
 
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
 /* The stdout encoding. If null, it's the same as the native encoding. */
 static const char *output_encoding = NULL;
+#elif defined(WIN32) && defined(_MSC_VER)
+/* For now limit this code to Visual C++, as the result is highly dependent
+   on the CRT implementation */
+#define USE_WIN32_CONSOLE_SHORTCUT
+
+/* When TRUE, stdout/stderr is directly connected to a console */
+static svn_boolean_t shortcut_stdout_to_console = FALSE;
+static svn_boolean_t shortcut_stderr_to_console = FALSE;
+#endif
 
 
 int
@@ -113,7 +130,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif
 
 #ifdef WIN32
-#if _MSC_VER < 1400
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -127,7 +144,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
-#endif /* _MSC_VER < 1400 */
+#endif /* CMDLINE_USE_CUSTOM_ENCODING */
 
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   if (!getenv("SVN_CMDLINE_DISABLE_CRASH_HANDLER"))
@@ -248,6 +265,31 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  if (_isatty(STDOUT_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+       /* stdout is a char device handle, but is it the console? */
+       if (GetConsoleMode(stdout_handle, &ignored))
+        shortcut_stdout_to_console = TRUE;
+
+       /* Don't close stdout_handle */
+    }
+  if (_isatty(STDERR_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+
+       /* stderr is a char device handle, but is it the console? */
+      if (GetConsoleMode(stderr_handle, &ignored))
+          shortcut_stderr_to_console = TRUE;
+
+      /* Don't close stderr_handle */
+    }
+#endif
+
   return EXIT_SUCCESS;
 }
 
@@ -257,10 +299,12 @@ svn_cmdline_cstring_from_utf8(const char **dest,
                               const char *src,
                               apr_pool_t *pool)
 {
-  if (output_encoding == NULL)
-    return svn_utf_cstring_from_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (output_encoding != NULL)
     return svn_utf_cstring_from_utf8_ex2(dest, src, output_encoding, pool);
+#endif
+
+  return svn_utf_cstring_from_utf8(dest, src, pool);
 }
 
 
@@ -278,10 +322,12 @@ svn_cmdline_cstring_to_utf8(const char **dest,
                             const char *src,
                             apr_pool_t *pool)
 {
-  if (input_encoding == NULL)
-    return svn_utf_cstring_to_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (input_encoding != NULL)
     return svn_utf_cstring_to_utf8_ex2(dest, src, input_encoding, pool);
+#endif
+
+  return svn_utf_cstring_to_utf8(dest, src, pool);
 }
 
 
@@ -337,6 +383,45 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
   svn_error_t *err;
   const char *out;
 
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  /* For legacy reasons the Visual C++ runtime converts output to the console
+     from the native 'ansi' encoding, to unicode, then back to 'ansi' and then
+     onwards to the console which is implemented as unicode.
+
+     For operations like 'svn status -v' this may cause about 70% of the total
+     processing time, with absolutely no gain.
+
+     For this specific scenario this shortcut exists. It has the nice side
+     effect of allowing full unicode output to the console.
+
+     Note that this shortcut is not used when the output is redirected, as in
+     that case the data is put on the pipe/file after the first conversion to
+     ansi. In this case the most expensive conversion is already avoided.
+   */
+  if ((stream == stdout && shortcut_stdout_to_console)
+      || (stream == stderr && shortcut_stderr_to_console))
+    {
+      WCHAR *result;
+
+      if (string[0] == '\0')
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_cmdline_fflush(stream)); /* Flush existing output */
+
+      SVN_ERR(svn_utf__win32_utf8_to_utf16(&result, string, NULL, pool));
+
+      if (_cputws(result))
+        {
+          if (apr_get_os_error())
+          {
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
+          }
+        }
+
+      return SVN_NO_ERROR;
+    }
+#endif
+
   err = svn_cmdline_cstring_from_utf8(&out, string, pool);
 
   if (err)
@@ -357,7 +442,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -380,7 +465,7 @@ svn_cmdline_fflush(FILE *stream)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -394,10 +479,12 @@ svn_cmdline_fflush(FILE *stream)
 
 const char *svn_cmdline_output_encoding(apr_pool_t *pool)
 {
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   if (output_encoding)
     return apr_pstrdup(pool, output_encoding);
-  else
-    return SVN_APR_LOCALE_CHARSET;
+#endif
+
+  return SVN_APR_LOCALE_CHARSET;
 }
 
 int
@@ -420,31 +507,50 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+struct trust_server_cert_non_interactive_baton {
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
+};
+
 /* This implements 'svn_auth_ssl_server_trust_prompt_func_t'.
 
    Don't actually prompt.  Instead, set *CRED_P to valid credentials
-   iff FAILURES is empty or is exactly SVN_AUTH_SSL_UNKNOWNCA.  If
-   there are any other failure bits, then set *CRED_P to null (that
-   is, reject the cert).
+   iff FAILURES is empty or may be accepted according to the flags
+   in BATON. If there are any other failure bits, then set *CRED_P
+   to null (that is, reject the cert).
 
    Ignore MAY_SAVE; we don't save certs we never prompted for.
 
-   Ignore BATON, REALM, and CERT_INFO,
+   Ignore REALM and CERT_INFO,
 
    Ignore any further films by George Lucas. */
 static svn_error_t *
-ssl_trust_unknown_server_cert
-  (svn_auth_cred_ssl_server_trust_t **cred_p,
-   void *baton,
-   const char *realm,
-   apr_uint32_t failures,
-   const svn_auth_ssl_server_cert_info_t *cert_info,
-   svn_boolean_t may_save,
-   apr_pool_t *pool)
+trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  apr_uint32_t failures,
+                                  const svn_auth_ssl_server_cert_info_t
+                                    *cert_info,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool)
 {
+  struct trust_server_cert_non_interactive_baton *b = baton;
   *cred_p = NULL;
 
-  if (failures == 0 || failures == SVN_AUTH_SSL_UNKNOWNCA)
+  if (failures == 0 ||
+      (b->trust_server_cert_unknown_ca &&
+       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
+      (b->trust_server_cert_cn_mismatch &&
+       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
+      (b->trust_server_cert_expired &&
+       (failures & SVN_AUTH_SSL_EXPIRED)) ||
+      (b->trust_server_cert_not_yet_valid &&
+        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
+      (b->trust_server_cert_other_failure &&
+        (failures & SVN_AUTH_SSL_OTHER)))
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
@@ -455,17 +561,22 @@ ssl_trust_unknown_server_cert
 }
 
 svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
+                               svn_boolean_t non_interactive,
+                               const char *auth_username,
+                               const char *auth_password,
+                               const char *config_dir,
+                               svn_boolean_t no_auth_cache,
+                               svn_boolean_t trust_server_cert_unknown_ca,
+                               svn_boolean_t trust_server_cert_cn_mismatch,
+                               svn_boolean_t trust_server_cert_expired,
+                               svn_boolean_t trust_server_cert_not_yet_valid,
+                               svn_boolean_t trust_server_cert_other_failure,
+                               svn_config_t *cfg,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
+
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -505,15 +616,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-  /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                  "windows",
-                                                  "ssl_server_trust",
-                                                  pool));
-
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -575,11 +677,22 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
         }
     }
-  else if (trust_server_cert)
+  else if (trust_server_cert_unknown_ca || trust_server_cert_cn_mismatch ||
+           trust_server_cert_expired || trust_server_cert_not_yet_valid ||
+           trust_server_cert_other_failure)
     {
+      struct trust_server_cert_non_interactive_baton *b;
+
+      b = apr_palloc(pool, sizeof(*b));
+      b->trust_server_cert_unknown_ca = trust_server_cert_unknown_ca;
+      b->trust_server_cert_cn_mismatch = trust_server_cert_cn_mismatch;
+      b->trust_server_cert_expired = trust_server_cert_expired;
+      b->trust_server_cert_not_yet_valid = trust_server_cert_not_yet_valid;
+      b->trust_server_cert_other_failure = trust_server_cert_other_failure;
+
       /* Remember, only register this provider if non_interactive. */
       svn_auth_get_ssl_server_trust_prompt_provider
-        (&provider, ssl_trust_unknown_server_cert, NULL, pool);
+        (&provider, trust_server_cert_non_interactive, b, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -681,12 +794,12 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
       "name", propname,
-      "encoding", encoding, NULL);
+      "encoding", encoding, SVN_VA_NULL);
   else
     svn_xml_make_open_tag(
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
-      "name", propname, NULL);
+      "name", propname, SVN_VA_NULL);
 
   svn_stringbuf_appendcstr(*outstr, xml_safe);
 
@@ -912,7 +1025,7 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
           svn_xml_make_open_tag(
             outstr, pool, svn_xml_self_closing,
             inherited_props ? "inherited_property" : "property",
-            "name", pname, NULL);
+            "name", pname, SVN_VA_NULL);
         }
       else
         {
@@ -1267,7 +1380,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+          err = svn_subst_translate_string2(edited_contents, NULL, NULL,
                                             *edited_contents, encoding, FALSE,
                                             pool, pool);
           if (err)

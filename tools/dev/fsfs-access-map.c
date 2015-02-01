@@ -52,9 +52,15 @@ typedef struct file_stats_t
   /* number of lseek calls to clusters not previously read */
   apr_int64_t uncached_seek_count;
 
+  /* number of lseek counts not followed by a read */
+  apr_int64_t unnecessary_seeks;
+
   /* number of read() calls */
   apr_int64_t read_count;
 
+  /* number of read() calls that returned 0 bytes */
+  apr_int64_t empty_reads;
+  
   /* total number of bytes returned by those reads */
   apr_int64_t read_size;
 
@@ -86,6 +92,8 @@ typedef struct handle_info_t
   /* bytes read so far in the current series of reads started (default: 0) */
   apr_int64_t last_read_size;
 
+  /* number of read() calls in this series */
+  apr_int64_t read_count;
 } handle_info_t;
 
 /* useful typedef */
@@ -139,6 +147,11 @@ store_read_info(handle_info_t *handle_info)
             ++*count;
         }
     }
+  else if (handle_info->read_count == 0)
+    {
+      /* two consecutive seeks */
+      handle_info->file->unnecessary_seeks++;
+    }
 }
 
 /* Handle a open() call.  Ensures that a file_info_t for the given NAME
@@ -155,18 +168,18 @@ open_file(const char *name, int handle)
   if (!file)
     {
       apr_pool_t *pool = apr_hash_pool_get(files);
-      apr_pool_t *sub_pool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       apr_file_t *apr_file = NULL;
       apr_finfo_t finfo = { 0 };
-      apr_size_t cluster_count = 0;
+      int cluster_count = 0;
 
       /* determine file size (if file still exists) */
       apr_file_open(&apr_file, name,
-                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
+                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, subpool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      svn_pool_destroy(sub_pool);
+      svn_pool_destroy(subpool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
@@ -174,7 +187,7 @@ open_file(const char *name, int handle)
 
       /* pre-allocate cluster map accordingly
        * (will be auto-expanded later if necessary) */
-      cluster_count = (apr_size_t)(1 + (file->size - 1) / cluster_size);
+      cluster_count = (int)(1 + (file->size - 1) / cluster_size);
       file->read_map = apr_array_make(pool, file->size
                                           ? cluster_count
                                           : 1, sizeof(word));
@@ -231,9 +244,13 @@ read_file(int handle, apr_int64_t count)
     {
       /* known file handle -> expand current read sequence */
 
+      handle_info->read_count++;
       handle_info->last_read_size += count;
       handle_info->file->read_count++;
       handle_info->file->read_size += count;
+
+      if (count == 0)
+        handle_info->file->empty_reads++;
     }
 }
 
@@ -253,6 +270,7 @@ seek_file(int handle, apr_int64_t location)
 
       handle_info->last_read_size = 0;
       handle_info->last_read_start = location;
+      handle_info->read_count = 0;
       handle_info->file->seek_count++;
 
       /* if we seek to a location that had not been read from before,
@@ -335,7 +353,7 @@ static void
 parse_file(apr_file_t *file)
 {
   apr_pool_t *pool = svn_pool_create(NULL);
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* limit lines to 4k (usually, we need less than 200 bytes) */
   svn_stringbuf_t *line = svn_stringbuf_create_ensure(4096, pool);
@@ -345,13 +363,13 @@ parse_file(apr_file_t *file)
       svn_error_t *err = NULL;
 
       line->len = line->blocksize-1;
-      err = svn_io_read_length_line(file, line->data, &line->len, iter_pool);
+      err = svn_io_read_length_line(file, line->data, &line->len, iterpool);
       svn_error_clear(err);
       if (err)
         break;
 
       parse_line(line);
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
     }
   while (line->len > 0);
 }
@@ -535,9 +553,9 @@ add_sample(color_t color,
  */
 static void
 scale_line(color_t* out,
-           apr_size_t out_len,
+           int out_len,
            color_t *in,
-           apr_size_t in_len)
+           int in_len)
 {
   double scaling_factor = (double)(in_len) / (double)(out_len);
   
@@ -577,14 +595,14 @@ scale_line(color_t* out,
  */
 static void
 write_bitmap(apr_array_header_t *info,
-             apr_size_t max_x,
+             int max_x,
              apr_file_t *file,
              apr_pool_t *pool)
 {
   int ysize = info->nelts;
   int xsize = 0;
   int x, y;
-  int row_size;
+  apr_size_t row_size;
   apr_size_t written;
   color_t *line, *scaled_line;
   svn_boolean_t do_scale = max_x > 0;
@@ -678,6 +696,8 @@ print_stats(apr_pool_t *pool)
   apr_int64_t clusters_read = 0;
   apr_int64_t unique_clusters_read = 0;
   apr_int64_t uncached_seek_count = 0;
+  apr_int64_t unnecessary_seek_count = 0;
+  apr_int64_t empty_read_count = 0;
 
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, files); hi; hi = apr_hash_next(hi))
@@ -695,13 +715,17 @@ print_stats(apr_pool_t *pool)
       clusters_read += file->clusters_read;
       unique_clusters_read += file->unique_clusters_read;
       uncached_seek_count += file->uncached_seek_count;
+      unnecessary_seek_count += file->unnecessary_seeks;
+      empty_read_count += file->empty_reads;
     }
 
   printf("%20s files\n", svn__i64toa_sep(apr_hash_count(files), ',', pool));
   printf("%20s files opened\n", svn__i64toa_sep(open_count, ',', pool));
   printf("%20s seeks\n", svn__i64toa_sep(seek_count, ',', pool));
+  printf("%20s unnecessary seeks\n", svn__i64toa_sep(unnecessary_seek_count, ',', pool));
   printf("%20s uncached seeks\n", svn__i64toa_sep(uncached_seek_count, ',', pool));
   printf("%20s reads\n", svn__i64toa_sep(read_count, ',', pool));
+  printf("%20s empty reads\n", svn__i64toa_sep(empty_read_count, ',', pool));
   printf("%20s unique clusters read\n", svn__i64toa_sep(unique_clusters_read, ',', pool));
   printf("%20s clusters read\n", svn__i64toa_sep(clusters_read, ',', pool));
   printf("%20s bytes read\n", svn__i64toa_sep(read_size, ',', pool));

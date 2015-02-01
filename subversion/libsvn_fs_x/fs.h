@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -55,6 +54,7 @@ extern "C" {
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
 #define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
@@ -81,6 +81,8 @@ extern "C" {
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
+#define PATH_TXN_PROPS_FINAL "props-final" /* Final transaction properties
+                                              before moving to revprops */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
@@ -104,6 +106,7 @@ extern "C" {
 #define CONFIG_SECTION_DELTIFICATION     "deltification"
 #define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
 #define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
+#define CONFIG_OPTION_COMPRESSION_LEVEL  "compression-level"
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
@@ -111,24 +114,40 @@ extern "C" {
 #define CONFIG_OPTION_BLOCK_SIZE         "block-size"
 #define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
 #define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
+#define CONFIG_SECTION_DEBUG             "debug"
+#define CONFIG_OPTION_PACK_AFTER_COMMIT  "pack-after-commit"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
-   independent of any other FS back ends. */
+   independent of any other FS back ends.
+
+   Note: If you bump this, please update the switch statement in
+         svn_fs_x__create() as well.
+ */
 #define SVN_FS_X__FORMAT_NUMBER   1
+
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_X__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_X__USE_LOCK_MUTEX 0
+#endif
 
 /* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
    allocated in their own subpool of the common pool. */
-typedef struct fs_x_shared_txn_data_t
+typedef struct svn_fs_x__shared_txn_data_t
 {
   /* The next transaction in the list, or NULL if there is no following
      transaction. */
-  struct fs_x_shared_txn_data_t *next;
+  struct svn_fs_x__shared_txn_data_t *next;
 
   /* ID of this transaction. */
-  svn_fs_x__id_part_t txn_id;
+  svn_fs_x__txn_id_t txn_id;
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current
@@ -139,33 +158,28 @@ typedef struct fs_x_shared_txn_data_t
   /* The pool in which this object has been allocated; a subpool of the
      common pool. */
   apr_pool_t *pool;
-} fs_x_shared_txn_data_t;
-
-/* On most operating systems apr implements file locks per process, not
-   per file.  On Windows apr implements the locking as per file handle
-   locks, so we don't have to add our own mutex for just in-process
-   synchronization. */
-/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
-#if APR_HAS_THREADS && !defined(WIN32)
-#define SVN_FS_X__USE_LOCK_MUTEX 1
-#else
-#define SVN_FS_X__USE_LOCK_MUTEX 0
-#endif
+} svn_fs_x__shared_txn_data_t;
 
 /* Private FSX-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
-typedef struct fs_x_shared_data_t
+typedef struct svn_fs_x__shared_data_t
 {
   /* A list of shared transaction objects for each transaction that is
      currently active, or NULL if none are.  All access to this list,
      including the contents of the objects stored in it, is synchronised
      under TXN_LIST_LOCK. */
-  fs_x_shared_txn_data_t *txns;
+  svn_fs_x__shared_txn_data_t *txns;
 
   /* A free transaction object, or NULL if there is no free object.
      Access to this object is synchronised under TXN_LIST_LOCK. */
-  fs_x_shared_txn_data_t *free_txn;
+  svn_fs_x__shared_txn_data_t *free_txn;
+
+  /* The following lock must be taken out in reverse order of their
+     declaration here.  Any subset may be acquired and held at any given
+     time but their relative acquisition order must not change.
+
+     (lock 'txn-current' before 'pack' before 'write' before 'txn-list') */
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
@@ -174,6 +188,10 @@ typedef struct fs_x_shared_data_t
      repository write lock. */
   svn_mutex__t *fs_write_lock;
 
+  /* A lock for intra-process synchronization when grabbing the
+     repository pack operation lock. */
+  svn_mutex__t *fs_pack_lock;
+
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
   svn_mutex__t *txn_current_lock;
@@ -181,52 +199,57 @@ typedef struct fs_x_shared_data_t
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
   apr_pool_t *common_pool;
-} fs_x_shared_data_t;
+} svn_fs_x__shared_data_t;
 
 /* Data structure for the 1st level DAG node cache. */
-typedef struct fs_x_dag_cache_t fs_x_dag_cache_t;
+typedef struct svn_fs_x__dag_cache_t svn_fs_x__dag_cache_t;
 
 /* Key type for all caches that use revision + offset / counter as key.
 
-   NOTE: always initialize this using calloc() or '= {0};'!  This is used
-   as a cahe key and the padding bytes on 32 bit archs should be zero for
-   cache effectiveness. */
-typedef struct pair_cache_key_t
+   Note: Cache keys should be 16 bytes for best performance and there
+         should be no padding. */
+typedef struct svn_fs_x__pair_cache_key_t
 {
-  svn_revnum_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  apr_uint64_t second;
-} pair_cache_key_t;
+  /* Sub-address: item index, revprop generation, packed flag, etc. */
+  apr_int64_t second;
+} svn_fs_x__pair_cache_key_t;
 
-/* Key type that identifies a represenation / rep header. */
-typedef struct representation_cache_key_t
+/* Key type that identifies a representation / rep header.
+
+   Note: Cache keys should require no padding. */
+typedef struct svn_fs_x__representation_cache_key_t
 {
   /* Revision that contains the representation */
-  apr_uint32_t revision;
+  apr_int64_t revision;
 
-  /* Packed or non-packed representation? */
-  svn_boolean_t is_packed;
+  /* Packed or non-packed representation (boolean)? */
+  apr_int64_t is_packed;
 
   /* Item index of the representation */
   apr_uint64_t item_index;
-} representation_cache_key_t;
+} svn_fs_x__representation_cache_key_t;
 
-/* Key type that identifies a txdelta window. */
-typedef struct window_cache_key_t
+/* Key type that identifies a txdelta window.
+
+   Note: Cache keys should require no padding. */
+typedef struct svn_fs_x__window_cache_key_t
 {
-  /* Revision that contains the representation */
-  apr_uint32_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  /* Window number within that representation */
-  int chunk_index;
+  /* Window number within that representation. */
+  apr_int64_t chunk_index;
 
   /* Item index of the representation */
   apr_uint64_t item_index;
-} window_cache_key_t;
+} svn_fs_x__window_cache_key_t;
 
 /* Private (non-shared) FSX-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
-typedef struct fs_x_data_t
+typedef struct svn_fs_x__data_t
 {
   /* The format number of this FS. */
   int format;
@@ -234,9 +257,11 @@ typedef struct fs_x_data_t
   /* The maximum number of files to store per directory. */
   int max_files_per_dir;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
@@ -246,19 +271,18 @@ typedef struct fs_x_data_t
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
-  /* The fsx.conf file, parsed.  Allocated in FS->pool. */
-  svn_config_t *config;
-
-  /* Caches of immutable data.  (Note that if these are created with
-     svn_cache__create_memcache, the data can be shared between
+  /* Caches of immutable data.  (Note that these may be shared between
      multiple svn_fs_t's for the same filesystem.) */
 
-  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache__t *rev_root_id_cache;
+  /* Access to the configured memcached instances.  May be NULL. */
+  svn_memcache_t *memcache;
+
+  /* If TRUE, don't ignore any cache-related errors.  If FALSE, errors from
+     e.g. memcached may be ignored as caching is an optional feature. */
+  svn_boolean_t fail_stop;
 
   /* Caches native dag_node_t* instances and acts as a 1st level cache */
-  fs_x_dag_cache_t *dag_node_cache;
+  svn_fs_x__dag_cache_t *dag_node_cache;
 
   /* DAG node cache for immutable nodes.  Maps (revision, fspath)
      to (dag_node_t *). This is the 2nd level cache for DAG nodes. */
@@ -266,24 +290,16 @@ typedef struct fs_x_data_t
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
-     names to (svn_fs_dirent_t *). */
+     names to (svn_fs_x__dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key (revision/offset) to svn_string_t. */
+     rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
   /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
+     the first access.  May be also get closed and set to NULL again. */
+  apr_file_t *revprop_generation_file;
 
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
@@ -297,11 +313,12 @@ typedef struct fs_x_data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is window_cache_key_t */
+  /* Cache for txdelta_window_t objects;
+   * the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
-     the key is window_cache_key_t */
+     the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
   /* Cache for svn_fs_x__rep_header_t objects;
@@ -312,8 +329,8 @@ typedef struct fs_x_data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *noderevs_container_cache;
 
-  /* Cache for change lists as APR arrays of change_t * objects; the key
-     is the revision */
+  /* Cache for change lists as APR arrays of svn_fs_x__change_t * objects;
+     the key is the revision */
   svn_cache__t *changes_cache;
 
   /* Cache for change_list_t containers;
@@ -357,15 +374,8 @@ typedef struct fs_x_data_t
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;
 
-  /* If set, there are or have been more than one concurrent transaction */
-  svn_boolean_t concurrent_transactions;
-
-  /* Temporary cache for changed directories yet to be committed; maps from
-     unparsed FS ID to ###x.  NULL outside transactions. */
-  svn_cache__t *txn_dir_cache;
-
   /* Data shared between all svn_fs_t objects for a given filesystem. */
-  fs_x_shared_data_t *shared;
+  svn_fs_x__shared_data_t *shared;
 
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
@@ -395,37 +405,45 @@ typedef struct fs_x_data_t
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
 
+  /* Compression level to use with txdelta storage format in new revs. */
+  int delta_compression_level;
+
+  /* Pack after every commit. */
+  svn_boolean_t pack_after_commit;
+
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
+
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
-                               apr_pool_t *);
-} fs_x_data_t;
+                               apr_pool_t *, apr_pool_t *);
+} svn_fs_x__data_t;
 
 
 /*** Filesystem Transaction ***/
-typedef struct transaction_t
+typedef struct svn_fs_x__transaction_t
 {
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
 
-  /* node revision id of the root node.  */
-  const svn_fs_id_t *root_id;
-
-  /* node revision id of the node which is the root of the revision
-     upon which this txn is base.  (unfinished only) */
-  const svn_fs_id_t *base_id;
+  /* revision upon which this txn is base.  (unfinished only) */
+  svn_revnum_t base_rev;
 
   /* copies list (const char * copy_ids), or NULL if there have been
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
-} transaction_t;
+} svn_fs_x__transaction_t;
 
 
 /*** Representation ***/
 /* If you add fields to this, check to see if you need to change
  * svn_fs_x__rep_copy. */
-typedef struct representation_t
+typedef struct svn_fs_x__representation_t
 {
   /* Checksums digests for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
@@ -442,11 +460,8 @@ typedef struct representation_t
   unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* Revision where this representation is located. */
-  svn_revnum_t revision;
-
-  /* Item index with the the revision. */
-  apr_uint64_t item_index;
+  /* Change set and item number where this representation is located. */
+  svn_fs_x__id_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -455,35 +470,26 @@ typedef struct representation_t
   /* The size of the fulltext of the representation. */
   svn_filesize_t expanded_size;
 
-  /* Is this representation a transaction? */
-  svn_fs_x__id_part_t txn_id;
-
-  /* For rep-sharing, we need a way of uniquifying node-revs which share the
-     same representation (see svn_fs_x__noderev_same_rep_key() ).  So, we
-     store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content. */
-  struct
-  {
-    svn_fs_x__id_part_t txn_id;
-    apr_uint64_t number;
-  } uniquifier;
-} representation_t;
+} svn_fs_x__representation_t;
 
 
 /*** Node-Revision ***/
 /* If you add fields to this, check to see if you need to change
  * copy_node_revision in dag.c. */
-typedef struct node_revision_t
+typedef struct svn_fs_x__noderev_t
 {
-  /* node kind */
-  svn_node_kind_t kind;
+  /* Predecessor node revision id.  Will be "unused" if there is no
+     predecessor for this node revision. */
+  svn_fs_x__id_t predecessor_id;
 
-  /* The node-id for this node-rev. */
-  const svn_fs_id_t *id;
+  /* The ID of this noderev */
+  svn_fs_x__id_t noderev_id;
 
-  /* predecessor node revision id, or NULL if there is no predecessor
-     for this node revision */
-  const svn_fs_id_t *predecessor_id;
+  /* Identifier of the node that this noderev belongs to. */
+  svn_fs_x__id_t node_id;
+
+  /* Copy identifier of this line of history. */
+  svn_fs_x__id_t copy_id;
 
   /* If this node-rev is a copy, where was it copied from? */
   const char *copyfrom_path;
@@ -494,17 +500,19 @@ typedef struct node_revision_t
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
-  /* number of predecessors this node revision has (recursively), or
-     -1 if not known (for backward compatibility). */
+  /* node kind */
+  svn_node_kind_t kind;
+
+  /* number of predecessors this node revision has (recursively). */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
-  representation_t *prop_rep;
+  svn_fs_x__representation_t *prop_rep;
 
   /* representation for this node's data.  may be NULL if there is
      no data. */
-  representation_t *data_rep;
+  svn_fs_x__representation_t *data_rep;
 
   /* path at which this node first came into existence.  */
   const char *created_path;
@@ -512,25 +520,54 @@ typedef struct node_revision_t
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
 
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
+
   /* Number of nodes with svn:mergeinfo properties that are
      descendants of this node (including it itself) */
   apr_int64_t mergeinfo_count;
 
-  /* Does this node itself have svn:mergeinfo? */
-  svn_boolean_t has_mergeinfo;
+} svn_fs_x__noderev_t;
 
-} node_revision_t;
+
+/** The type of a directory entry.  */
+typedef struct svn_fs_x__dirent_t
+{
+
+  /** The name of this directory entry.  */
+  const char *name;
+
+  /** The node revision ID it names.  */
+  svn_fs_x__id_t id;
+
+  /** The node kind. */
+  svn_node_kind_t kind;
+} svn_fs_x__dirent_t;
 
 
 /*** Change ***/
-typedef struct change_t
+typedef struct svn_fs_x__change_t
 {
   /* Path of the change. */
   svn_string_t path;
 
-  /* API compatible change description */
-  svn_fs_path_change2_t info;
-} change_t;
+  /* node revision id of changed path */
+  svn_fs_x__id_t noderev_id;
+
+  /* See svn_fs_path_change2_t for a description for the remaining elements.
+   */
+  svn_fs_path_change_kind_t change_kind;
+
+  svn_boolean_t text_mod;
+  svn_boolean_t prop_mod;
+  svn_node_kind_t node_kind;
+
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  svn_tristate_t mergeinfo_mod;
+} svn_fs_x__change_t;
 
 
 #ifdef __cplusplus

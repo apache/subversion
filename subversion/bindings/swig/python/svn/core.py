@@ -169,6 +169,8 @@ class Stream:
     self._stream = stream
 
   def read(self, amt=None):
+    if self._stream is None:
+      raise ValueError
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
@@ -183,8 +185,15 @@ class Stream:
     return svn_stream_read(self._stream, int(amt))
 
   def write(self, buf):
+    if self._stream is None:
+      raise ValueError
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
+
+  def close(self):
+    if self._stream is not None:
+      svn_stream_close(self._stream)
+      self._stream = None
 
 def secs_from_timestr(svn_datetime, pool=None):
   """Convert a Subversion datetime string into seconds since the Epoch."""
@@ -316,7 +325,6 @@ def run_app(func, *args, **kw):
 # 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
 # 'apr_time_ansi_put'
 # 'run_app'
-# 'svn__apr_hash_index_key' 'svn__apr_hash_index_klen' 'svn__apr_hash_index_val'
 # 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
 # 'svn_tristate__from_word' 'svn_tristate__to_word'
 __all__ = filter(lambda s: (s.startswith('svn_')

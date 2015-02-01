@@ -101,14 +101,14 @@ echo change C6 >> dir6/file4
 svn commit -m "copy dir, then make a change"
 
 # add a binary file and set property to binary value
-echo -e "\x00\x01\x02\x03\x04" > file11
+printf "\x00\x01\x02\x03\x04\n" > file11
 svn add file11
 svn ps svn:mime-type application/octect-stream file11
 svn ps prop2 -F file11 file9 
 svn commit -m "add binary file"
 
 # change the binary file and set property to non binary value
-echo -e "\x20\x01\x02\x20" > file11
+printf "\x20\x01\x02\x20\n" > file11
 svn ps prop2 propval2 file9 
 svn commit -m "change binary file"
 

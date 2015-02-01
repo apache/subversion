@@ -537,7 +537,7 @@ def diff_symlink_to_dir(sbox):
   expected_output = [
     "Index: link\n",
     "===================================================================\n",
-    "--- link\t(revision 0)\n",
+    "--- link\t(nonexistent)\n",
     "+++ link\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+link A/D\n",
@@ -1221,6 +1221,64 @@ def incoming_symlink_changes(sbox):
                                         None, None, None, None, None,
                                         True)
 
+#----------------------------------------------------------------------
+@Issue(4479)
+def multiline_special(sbox):
+  "multiline file with svn:special"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('iota', 'A second line.\n')
+  sbox.simple_commit();
+  tmp = sbox.get_tempname()
+  svntest.main.file_write(tmp, '*', 'w+')
+  svntest.main.run_svnmucc('propsetf', 'svn:special', tmp,
+                           sbox.repo_url + '/iota',
+                           '-m', 'set svn:special')
+
+  sbox.simple_update(revision=1);
+  sbox.simple_update();
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak()
+  expected_disk.tweak('iota',
+                      contents="This is the file 'iota'.\nA second line.\n",
+                      props={'svn:special' : '*'})
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
+
+#----------------------------------------------------------------------
+@Issue(4482)
+@XFail(svntest.main.is_posix_os)
+def multiline_symlink_special(sbox):
+  "multiline link file with svn:special"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('dodgy-link1', 'link foo\n')
+  sbox.simple_append('dodgy-link2', 'link foo\nbar\n')
+  svntest.main.run_svnmucc('put', sbox.ospath('dodgy-link1'), 'dodgy-link1',
+                           'put', sbox.ospath('dodgy-link2'), 'dodgy-link2',
+                           'propset', 'svn:special', 'X', 'dodgy-link1',
+                           'propset', 'svn:special', 'X', 'dodgy-link2',
+                           '-U', sbox.repo_url,
+                           '-m', 'Create dodgy symlinks')
+  os.remove(sbox.ospath('dodgy-link1'))
+  os.remove(sbox.ospath('dodgy-link2'))
+
+  sbox.simple_update();
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+      'dodgy-link1' : Item(status='  ', wc_rev=2),
+      'dodgy-link2' : Item(status='  ', wc_rev=2),
+      })
+  # XFAIL: Only content before \n used when creating the link but all
+  # content used when detecting modifications, so the pristine working
+  # copy shows up as modified.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1252,6 +1310,8 @@ test_list = [ None,
               externals_as_symlink_targets,
               cat_added_symlink,
               incoming_symlink_changes,
+              multiline_special,
+              multiline_symlink_special,
              ]
 
 if __name__ == '__main__':

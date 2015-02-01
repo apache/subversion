@@ -31,7 +31,6 @@
 #include <apr_strings.h>
 #include <apr_hash.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"

@@ -67,15 +67,16 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -131,7 +132,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                     &arb, resource->pool);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
@@ -141,7 +142,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                                    resource->pool);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
@@ -159,7 +160,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }

@@ -68,7 +68,7 @@ the cost of maintainability.  That said, "maintainability" isn't the
 opposite of algorithmic complexity.  Good documentation and minimal
 obfuscation go a long way toward making complex algorithms and
 approaches maintainable.  Also, isolating that complexity helps
-maintainability (versus propogating obscure concepts all over the
+maintainability (versus propagating obscure concepts all over the
 codebase in public APIs, etc.).
 
 As for long-term performance, the oft-asked question is, "Why is

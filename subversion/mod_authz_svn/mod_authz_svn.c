@@ -91,7 +91,8 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
 /* canonicalize ACCESS_FILE based on the type of argument.
  * If SERVER_RELATIVE is true, ACCESS_FILE is a relative
  * path then ACCESS_FILE is converted to an absolute
- * path rooted at the server root. */
+ * path rooted at the server root.
+ * Returns NULL if path is not valid.*/
 static const char *
 canonicalize_access_file(const char *access_file,
                          svn_boolean_t server_relative,
@@ -104,7 +105,11 @@ canonicalize_access_file(const char *access_file,
   else if (!svn_path_is_repos_relative_url(access_file))
     {
       if (server_relative)
-        access_file = ap_server_root_relative(pool, access_file);
+        {
+          access_file = ap_server_root_relative(pool, access_file);
+          if (access_file == NULL)
+            return NULL;
+        }
 
       access_file = svn_dirent_internal_style(access_file, pool);
     }
@@ -126,6 +131,8 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
            "directives are mutually exclusive.";
 
   conf->access_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+  if (!conf->access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -145,6 +152,9 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   conf->repo_relative_access_file = canonicalize_access_file(arg1, FALSE,
                                                              cmd->pool);
 
+  if (!conf->repo_relative_access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
+
   return NULL;
 }
 
@@ -154,6 +164,9 @@ AuthzSVNGroupsFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   authz_svn_config_rec *conf = config;
 
   conf->groups_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+
+  if (!conf->groups_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -231,14 +244,25 @@ static const command_rec authz_svn_cmds[] =
  * per-module loglevel configuration.  It expands to FILE and LINE
  * in older server versions.  ALLOWED is boolean.
  * REPOS_PATH and DEST_REPOS_PATH are information
- * about the request.  DEST_REPOS_PATH may be NULL. */
+ * about the request.  DEST_REPOS_PATH may be NULL.
+ * Non-zero IS_SUBREQ_BYPASS means that this authorization check was
+ * implicitly requested using 'subrequest bypass' callback from
+ * mod_dav_svn.
+ */
 static void
 log_access_verdict(LOG_ARGS_SIGNATURE,
-                   const request_rec *r, int allowed,
+                   const request_rec *r, int allowed, int is_subreq_bypass,
                    const char *repos_path, const char *dest_repos_path)
 {
   int level = allowed ? APLOG_INFO : APLOG_ERR;
   const char *verdict = allowed ? "granted" : "denied";
+
+  /* Use less important log level for implicit sub-request authorization
+     checks. */
+  if (is_subreq_bypass)
+    level = APLOG_INFO;
+  else if (r->main && r->method_number == M_GET)
+    level = APLOG_INFO;
 
   if (r->user)
     {
@@ -348,7 +372,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   svn_error_t *svn_err = SVN_NO_ERROR;
   dav_error *dav_err;
 
-  dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
+  dav_err = dav_svn_get_repos_path2(r, conf->base_path, &repos_path, scratch_pool);
   if (dav_err)
     {
       ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
@@ -363,7 +387,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
         {
           access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
                                              conf->repo_relative_access_file,
-                                             NULL);
+                                             SVN_VA_NULL);
         }
     }
   else
@@ -404,7 +428,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     }
 
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
-                          access_file, groups_file, (char *)NULL);
+                          access_file, groups_file, SVN_VA_NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
@@ -572,7 +596,7 @@ req_check_access(request_rec *r,
     repos_path = svn_fspath__canonicalize(repos_path, r->pool);
 
   *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
-                                (char *)NULL);
+                                SVN_VA_NULL);
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
@@ -620,7 +644,7 @@ req_check_access(request_rec *r,
         dest_repos_path = svn_fspath__canonicalize(dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
-                                         dest_repos_path, (char *)NULL);
+                                         dest_repos_path, SVN_VA_NULL);
     }
 
   /* Retrieve/cache authorization file */
@@ -736,7 +760,7 @@ subreq_bypass2(request_rec *r,
   if (!conf->anonymous
       || (! (conf->access_file || conf->repo_relative_access_file)))
     {
-      log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+      log_access_verdict(APLOG_MARK, r, 0, TRUE, repos_path, NULL);
       return HTTP_FORBIDDEN;
     }
 
@@ -765,12 +789,12 @@ subreq_bypass2(request_rec *r,
         }
       if (!authz_access_granted)
         {
-          log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
+          log_access_verdict(APLOG_MARK, r, 0, TRUE, repos_path, NULL);
           return HTTP_FORBIDDEN;
         }
     }
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, NULL);
+  log_access_verdict(APLOG_MARK, r, 1, TRUE, repos_path, NULL);
 
   return OK;
 }
@@ -845,7 +869,7 @@ access_checker(request_rec *r)
         return DECLINED;
 
       if (!authn_required)
-        log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
+        log_access_verdict(APLOG_MARK, r, 0, FALSE, repos_path, dest_repos_path);
 
       return HTTP_FORBIDDEN;
     }
@@ -853,7 +877,7 @@ access_checker(request_rec *r)
   if (status != OK)
     return status;
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+  log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
 
   return OK;
 }
@@ -880,7 +904,7 @@ check_user_id(request_rec *r)
   if (status == OK)
     {
       apr_table_setn(r->notes, "authz_svn-anon-ok", (const char*)1);
-      log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+      log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
       return OK;
     }
 
@@ -910,7 +934,7 @@ auth_checker(request_rec *r)
     {
       if (conf->authoritative)
         {
-          log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
+          log_access_verdict(APLOG_MARK, r, 0, FALSE, repos_path, dest_repos_path);
           ap_note_auth_failure(r);
           return HTTP_FORBIDDEN;
         }
@@ -920,7 +944,7 @@ auth_checker(request_rec *r)
   if (status != OK)
     return status;
 
-  log_access_verdict(APLOG_MARK, r, 1, repos_path, dest_repos_path);
+  log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
 
   return OK;
 }

@@ -27,7 +27,6 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_compat.h"
@@ -40,6 +39,7 @@
 
 #include "client.h"
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 #include <assert.h>
@@ -96,6 +96,7 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                             svn_revnum_t *original_revision,
                             const char *path_or_url,
                             const svn_opt_revision_t *revision,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -103,18 +104,50 @@ svn_client__get_copy_source(const char **original_repos_relpath,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { 0 };
   apr_pool_t *sesspool = svn_pool_create(scratch_pool);
-  svn_ra_session_t *ra_session;
   svn_client__pathrev_t *at_loc;
+  const char *old_session_url = NULL;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
   copyfrom_info.rev = SVN_INVALID_REVNUM;
   copyfrom_info.pool = result_pool;
 
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
-                                            path_or_url, NULL,
-                                            revision, revision,
-                                            ctx, sesspool));
+  if (!ra_session)
+    {
+      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
+                                                path_or_url, NULL,
+                                                revision, revision,
+                                                ctx, sesspool));
+    }
+  else
+    {
+      const char *url;
+      if (svn_path_is_url(path_or_url))
+        url = path_or_url;
+      else
+        {
+          SVN_ERR(svn_client_url_from_path2(&url, path_or_url, ctx, sesspool,
+                                            sesspool));
+
+          if (! url)
+            return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                     _("'%s' has no URL"), path_or_url);
+        }
+
+      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                                url, sesspool));
+
+      err = svn_client__resolve_rev_and_url(&at_loc, ra_session, path_or_url,
+                                            revision, revision, ctx,
+                                            sesspool);
+
+      /* On error reparent back (and return), otherwise reparent to new
+         location */
+      SVN_ERR(svn_error_compose_create(
+                err,
+                svn_ra_reparent(ra_session, err ? old_session_url
+                                                : at_loc->url, sesspool)));
+    }
 
   /* Find the copy source.  Walk the location segments to find the revision
      at which this node was created (copied or added). */
@@ -123,6 +156,11 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                                      SVN_INVALID_REVNUM,
                                      copyfrom_info_receiver, &copyfrom_info,
                                      scratch_pool);
+
+  if (old_session_url)
+    err = svn_error_compose_create(
+                    err,
+                    svn_ra_reparent(ra_session, old_session_url, sesspool));
 
   svn_pool_destroy(sesspool);
 
@@ -814,10 +852,12 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_ra_session_t *ra_session;
   const char *old_session_url;
   const char *ra_target;
+  const char *path_or_url;
   svn_opt_revision_t youngest_opt_rev;
   svn_revnum_t youngest_rev;
   svn_revnum_t oldest_rev;
   svn_opt_revision_t peg_rev;
+  svn_client__pathrev_t *ra_session_loc;
   svn_client__pathrev_t *actual_loc;
   apr_array_header_t *log_segments;
   apr_array_header_t *revision_ranges;
@@ -837,7 +877,7 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(resolve_log_targets(&relative_targets, &ra_target, &peg_rev,
                               targets, ctx, pool, pool));
 
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, NULL,
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &ra_session_loc,
                                             ra_target, NULL, &peg_rev, &peg_rev,
                                             ctx, pool));
 
@@ -851,27 +891,40 @@ svn_client_log5(const apr_array_header_t *targets,
                                                    opt_rev_ranges, &peg_rev,
                                                    ctx, pool,  pool));
 
+  /* For some peg revisions we must resolve revision and url via a local path
+     so use the original RA_TARGET. For others, use the potentially corrected
+     (redirected) ra session URL. */
+  if (peg_rev.kind == svn_opt_revision_previous ||
+      peg_rev.kind == svn_opt_revision_base ||
+      peg_rev.kind == svn_opt_revision_committed ||
+      peg_rev.kind == svn_opt_revision_working)
+    path_or_url = ra_target;
+  else
+    path_or_url = ra_session_loc->url;
+
   /* Make ACTUAL_LOC and RA_SESSION point to the youngest operative rev. */
   youngest_opt_rev.kind = svn_opt_revision_number;
   youngest_opt_rev.value.number = youngest_rev;
   SVN_ERR(svn_client__resolve_rev_and_url(&actual_loc, ra_session,
-                                          ra_target, &peg_rev,
+                                          path_or_url, &peg_rev,
                                           &youngest_opt_rev, ctx, pool));
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             actual_loc->url, pool));
 
   /* Save us an RA layer round trip if we are on the repository root and
-     know the result in advance.  All the revision data has already been
-     validated.
+     know the result in advance, or if we don't need multiple ranges.
+     All the revision data has already been validated.
    */
-  if (strcmp(actual_loc->url, actual_loc->repos_root_url) == 0)
+  if (strcmp(actual_loc->url, actual_loc->repos_root_url) == 0
+      || opt_rev_ranges->nelts <= 1)
     {
       svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
       log_segments = apr_array_make(pool, 1, sizeof(segment));
 
       segment->range_start = oldest_rev;
       segment->range_end = actual_loc->rev;
-      segment->path = "";
+      segment->path = svn_uri_skip_ancestor(actual_loc->repos_root_url,
+                                            actual_loc->url, pool);
       APR_ARRAY_PUSH(log_segments, svn_location_segment_t *) = segment;
     }
   else
@@ -890,8 +943,8 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(run_ra_get_log(revision_ranges, relative_targets, log_segments,
                          actual_loc, ra_session, targets, limit,
                          discover_changed_paths, strict_node_history,
-                         include_merged_revisions, revprops, real_receiver,
-                         real_receiver_baton, ctx, pool));
+                         include_merged_revisions, revprops,
+                         real_receiver, real_receiver_baton, ctx, pool));
 
   SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;

@@ -234,7 +234,7 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   svn_error_t *err;
 
   /* Open up the repository and find the transaction root */
-  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, pool));
+  SVN_ERR(svn_repos_open3(&repos, repos_path, NULL, pool, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
@@ -382,42 +382,6 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 #undef EXIT_FAILURE
 #define EXIT_FAILURE 2
 
-/* Similar to svn_cmdline_handle_exit_error but with an exit_code argument
-   so we can comply with our contract and exit with 2 for internal failures.
-   Also is missing the pool argument since we don't need it given
-   main/sub_main. */
-static int
-handle_exit_error(svn_error_t *err, const char *prefix, int exit_code)
-{
-  /* Issue #3014:
-   * Don't print anything on broken pipes. The pipe was likely
-   * closed by the process at the other end. We expect that
-   * process to perform error reporting as necessary.
-   *
-   * ### This assumes that there is only one error in a chain for
-   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
-  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
-    svn_handle_error2(err, stderr, FALSE, prefix);
-  svn_error_clear(err);
-  return exit_code;
-}
-
-/* Report and clear the error ERR, and return EXIT_FAILURE. */
-#define EXIT_ERROR(err, exit_code)                               \
-  handle_exit_error(err, "svnauthz: ", exit_code)
-
-/* A redefinition of the public SVN_INT_ERR macro, that suppresses the
- * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR, amd with the
- * program name 'svnauthz' instead of 'svn'. */
-#undef SVN_INT_ERR
-#define SVN_INT_ERR(expr)                                        \
-  do {                                                           \
-    svn_error_t *svn_err__temp = (expr);                         \
-    if (svn_err__temp)                                           \
-      return EXIT_ERROR(svn_err__temp, EXIT_FAILURE);            \
-  } while (0)
-
-
 /* Return TRUE if the UI of 'svnauthz-validate' (svn 1.7 and earlier)
    should be emulated, given argv[0]. */
 static svn_boolean_t
@@ -485,8 +449,13 @@ canonicalize_access_file(const char **canonicalized_access_file,
   return SVN_NO_ERROR;
 }
 
-static int
-sub_main(int argc, const char *argv[], apr_pool_t *pool)
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -497,7 +466,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   int i;
 
   /* Initialize the FS library. */
-  SVN_INT_ERR(svn_fs_initialize(pool));
+  SVN_ERR(svn_fs_initialize(pool));
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -506,7 +475,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   opt_state.txn = opt_state.repos_path = opt_state.groups_file = NULL;
 
   /* Parse options. */
-  SVN_INT_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
   os->interleave = 1;
 
   if (!use_compat_mode(argv[0], pool))
@@ -521,8 +490,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             break;
           if (status != APR_SUCCESS)
             {
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
 
           /* Stash the option code in an array before parsing it. */
@@ -535,7 +505,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               opt_state.help = TRUE;
               break;
             case 't':
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.txn, arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.txn, arg, pool));
               break;
             case 'R':
               opt_state.recursive = TRUE;
@@ -544,28 +514,29 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               opt_state.version = TRUE;
               break;
             case svnauthz__username:
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.username, arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.username, arg, pool));
               break;
             case svnauthz__path:
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.fspath, arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fspath, arg, pool));
               opt_state.fspath = svn_fspath__canonicalize(opt_state.fspath,
                                                           pool);
               break;
             case svnauthz__repos:
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_name, arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_name, arg, pool));
               break;
             case svnauthz__is:
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.is, arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.is, arg, pool));
               break;
             case svnauthz__groups_file:
-              SVN_INT_ERR(
+              SVN_ERR(
                   svn_utf_cstring_to_utf8(&opt_state.groups_file,
                                           arg, pool));
               break;
             default:
                 {
-                  SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-                  return EXIT_FAILURE;
+                  SVN_ERR(subcommand_help(NULL, NULL, pool));
+                  *exit_code = EXIT_FAILURE;
+                  return SVN_NO_ERROR;
                 }
             }
         }
@@ -603,8 +574,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             {
               svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                         ("subcommand argument required\n")));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -616,14 +588,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
               const char *first_arg_utf8;
 
               os->ind++;
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
+              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
                                                   first_arg, pool));
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     ("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -637,13 +610,12 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           if (os->ind +2 != argc)
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     ("Repository and authz file arguments "
-                                      "required"));
-              return EXIT_ERROR(err, EXIT_FAILURE);
+              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      ("Repository and authz file arguments "
+                                       "required"));
             }
 
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_path, os->argv[os->ind],
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_path, os->argv[os->ind],
                                               pool));
           os->ind++;
 
@@ -653,24 +625,23 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       /* Exactly 1 non-option argument */
       if (os->ind + 1 != argc)
         {
-          err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 ("Authz file argument required"));
-          return EXIT_ERROR(err, EXIT_FAILURE);
+          return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  ("Authz file argument required"));
         }
 
       /* Grab AUTHZ_FILE from argv. */
-      SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.authz_file, os->argv[os->ind],
+      SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.authz_file, os->argv[os->ind],
                                           pool));
 
       /* Canonicalize opt_state.authz_file appropriately. */
-      SVN_INT_ERR(canonicalize_access_file(&opt_state.authz_file,
+      SVN_ERR(canonicalize_access_file(&opt_state.authz_file,
                                            opt_state.authz_file,
                                            opt_state.txn != NULL, pool));
 
       /* Same for opt_state.groups_file if it is present. */
       if (opt_state.groups_file)
         {
-          SVN_INT_ERR(canonicalize_access_file(&opt_state.groups_file,
+          SVN_ERR(canonicalize_access_file(&opt_state.groups_file,
                                                opt_state.groups_file,
                                                opt_state.txn != NULL, pool));
         }
@@ -696,13 +667,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+            SVN_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                             ("Subcommand '%s' doesn't accept option '%s'\n"
                              "Type 'svnauthz help %s' for usage.\n"),
                             subcommand->name, optstr, subcommand->name));
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -724,7 +696,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           /* Follow our contract that says we exit with 1 if the file does not
              validate. */
-          return EXIT_ERROR(err, 1);
+          *exit_code = 1;
+          return err;
         }
       else if (err->apr_err == SVN_ERR_AUTHZ_UNREADABLE
                || err->apr_err == SVN_ERR_AUTHZ_UNWRITABLE
@@ -732,31 +705,22 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           /* Follow our contract that says we exit with 3 if --is does not
            * match. */
-          return EXIT_ERROR(err, 3);
+          *exit_code = 3;
+          return err;
         }
 
-
-      return EXIT_ERROR(err, EXIT_FAILURE);
-    }
-  else
-    {
-      /* Ensure that everything is written to stdout, so the user will
-         see any print errors. */
-      err = svn_cmdline_fflush(stdout);
-      if (err)
-        {
-          return EXIT_ERROR(err, EXIT_FAILURE);
-        }
-      return EXIT_SUCCESS;
+      return err;
     }
 
+  return SVN_NO_ERROR;
 }
 
 int
 main(int argc, const char *argv[])
 {
   apr_pool_t *pool;
-  int exit_code;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
 
   /* Initialize the app.  Send all error messages to 'stderr'.  */
   if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
@@ -764,7 +728,18 @@ main(int argc, const char *argv[])
 
   pool = svn_pool_create(NULL);
 
-  exit_code = sub_main(argc, argv, pool);
+  err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
+  if (err)
+    {
+      if (exit_code == 0)
+        exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnauthz: ");
+    }
 
   svn_pool_destroy(pool);
   return exit_code;

@@ -32,13 +32,9 @@ import org.apache.subversion.javahl.callback.ReposNotifyCallback;
  */
 public class ReposNotifyInformation extends EventObject
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 1L;
 
     /**
@@ -200,7 +196,37 @@ public class ReposNotifyInformation extends EventObject
          * The structure of a revision is being verified.
          * @since 1.8
          */
-        verify_rev_structure;
+        verify_rev_structure,
+
+        /**
+         * A revision is found with corruption/errors.
+         * @since 1.9
+         */
+        failure,
+
+        /**
+         * A revprop shard got packed. @
+         * @since 1.9
+         */
+        pack_revprops,
+
+        /**
+         * A non-packed revprop shard got removed.
+         * @since 1.9
+         */
+        cleanup_revprops,
+
+        /**
+         * The repository format got bumped.
+         * @since 1.9
+         */
+        format_bumped,
+
+        /**
+         * A revision range was copied.
+         * @since 1.9
+         */
+        hotcopy_rev_range;
     }
 
     public enum NodeAction

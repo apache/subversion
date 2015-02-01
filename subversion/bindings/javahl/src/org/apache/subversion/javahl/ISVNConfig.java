@@ -59,6 +59,7 @@ public interface ISVNConfig
     public static final String LOG_ENCODING              = "log-encoding";
     public static final String USE_COMMIT_TIMES          = "use-commit-times";
     public static final String ENABLE_AUTO_PROPS         = "enable-auto-props";
+    public static final String ENABLE_MAGIC_FILE         = "enable-magic-file";
     public static final String NO_UNLOCK                 = "no-unlock";
     public static final String MIMETYPES_FILE            = "mime-types-file";
     public static final String PRESERVED_CF_EXTS         = "preserved-conflict-file-exts";
@@ -73,6 +74,7 @@ public interface ISVNConfig
     public static final String SECTION_WORKING_COPY  = "working-copy";
     public static final String SQLITE_EXCLUSIVE          = "exclusive-locking";
     public static final String SQLITE_EXCLUSIVE_CLIENTS  = "exclusive-locking-clients";
+    public static final String SQLITE_BUSY_TIMEOUT       = "busy-timeout";
 
     /**
      * Returns a reference to the "servers" configuration category.
@@ -110,21 +112,23 @@ public interface ISVNConfig
     public static final String HTTP_BULK_UPDATES         = "http-bulk-updates";
     public static final String HTTP_MAX_CONNECTIONS      = "http-max-connections";
     public static final String HTTP_CHUNKED_REQUESTS     = "http-chunked-requests";
+    public static final String SERF_LOG_COMPONENTS       = "serf-log-components";
+    public static final String SERF_LOG_LEVEL            = "serf-log-level";
 
     /**
-     * "true" value in configuraition. One of the values returned by
+     * "true" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String TRUE = "TRUE";
 
     /**
-     * "false" value in configuraition. One of the values returned by
+     * "false" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String FALSE = "FALSE";
 
     /**
-     * "ask" value in configuraition. One of the values returned by
+     * "ask" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String ASK = "ASK";
@@ -132,7 +136,7 @@ public interface ISVNConfig
     /**
      * Interface for reading and modifying configuration
      * categories. Returned by {@link #config()} and
-     * {@link servers()}.
+     * {@link #servers()}.
      */
     public interface Category
     {
@@ -160,7 +164,7 @@ public interface ISVNConfig
 
         /**
          * Returns the long integer value of a configuration option.
-         * @see #get(String,String,Boolean)
+         * @see #get(String,String,boolean)
          */
         long get(String section,
                  String option,
@@ -169,8 +173,8 @@ public interface ISVNConfig
 
         /**
          * Returns the {@link Tristate} value of a configuration option.
-         * @param unknown The value used for {@link Tristate.Unknown}.
-         * @see #get(String,String,Boolean)
+         * @param unknown The value used for {@link Tristate#Unknown}.
+         * @see #get(String,String,boolean)
          */
         Tristate get(String section,
                      String option,
@@ -181,7 +185,7 @@ public interface ISVNConfig
         /**
          * Check that the configuration option's value is true, false
          * or "ask". The boolean representations are the same as those
-         * understood by {@link #get(String,String,Boolean)}. If the
+         * understood by {@link #get(String,String,boolean)}. If the
          * option is not found, the default value will be parsed
          * instead.
          * @return {@link ISVNConfig#TRUE}, {@link ISVNConfig#FALSE}
@@ -207,7 +211,7 @@ public interface ISVNConfig
 
         /**
          * Set the value of a configuration option to represent a boolean.
-         * @see @set(String,String,String)
+         * @see #set(String,String,String)
          */
         void set(String section,
                  String option,
@@ -215,7 +219,7 @@ public interface ISVNConfig
 
         /**
          * Set the value of a configuration option to represent a long integer.
-         * @see @set(String,String,String)
+         * @see #set(String,String,String)
          */
         void set(String section,
                  String option,

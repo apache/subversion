@@ -713,6 +713,8 @@ fp.close()"""
                     ]
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
+# From r1293375 until fixed in r1303856, 'svnlook changed' and 'svnlook diff'
+# produced no output on a property delete.
 def property_delete(sbox):
   "property delete"
 
@@ -724,8 +726,6 @@ def property_delete(sbox):
   sbox.simple_propdel('foo', 'A/mu')
   sbox.simple_commit()
 
-  # XFail since r1293375, changed and diff produce no output on a
-  # property delete
   svntest.actions.run_and_verify_svnlook(None, ["_U  A/mu\n"], [],
                                          'changed', repo_dir)
 

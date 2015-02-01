@@ -106,7 +106,7 @@ svn_cl__changelist(apr_getopt_t *os,
                errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR));
+               0));
     }
   else
     {
@@ -117,7 +117,7 @@ svn_cl__changelist(apr_getopt_t *os,
                errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR));
+               0));
     }
 
   if (errors->nelts > 0)

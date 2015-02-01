@@ -152,7 +152,7 @@ public:
     }
 
   /**
-   * Retreive the value associated with @a key.
+   * Retrieve the value associated with @a key.
    */
   value_type get(const Key& key) const throw()
     {
@@ -311,7 +311,7 @@ public:
     }
 
   /**
-   * Retreive the value associated with @a key.
+   * Retrieve the value associated with @a key.
    */
   value_type get(const Key& key) const throw()
     {

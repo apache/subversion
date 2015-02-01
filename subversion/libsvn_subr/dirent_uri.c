@@ -38,6 +38,7 @@
 
 #include "dirent_uri.h"
 #include "private/svn_fspath.h"
+#include "private/svn_cert.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
@@ -1293,6 +1294,29 @@ svn_relpath_split(const char **dirpath,
     *base_name = svn_relpath_basename(relpath, pool);
 }
 
+const char *
+svn_relpath_limit(const char *relpath,
+                  int max_components,
+                  apr_pool_t *result_pool)
+{
+  const char *end;
+  assert(relpath_is_canonical(relpath));
+
+  if (max_components <= 0)
+    return "";
+
+  for (end = relpath; *end; end++)
+    {
+      if (*end == '/')
+        {
+          if (!--max_components)
+            break;
+        }
+    }
+
+  return apr_pstrmemdup(result_pool, relpath, end-relpath);
+}
+
 char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
@@ -2319,7 +2343,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                                "prefix"), url);
 
   /* Find the HOSTNAME portion and the PATH portion of the URL.  The host
-     name is between the "file://" prefix and the next occurence of '/'.  We
+     name is between the "file://" prefix and the next occurrence of '/'.  We
      are considering everything from that '/' until the end of the URL to be
      the absolute path portion of the URL.
      If we got just "file://", treat it the same as "file:///". */
@@ -2398,7 +2422,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                                      "no path"), url);
 
         /* We still know that the path starts with a slash. */
-        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, NULL);
+        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, SVN_VA_NULL);
       }
     else
       *dirent = dup_path;
@@ -2431,18 +2455,18 @@ svn_uri_get_file_url_from_dirent(const char **url,
   if (dirent[0] == '/' && dirent[1] == '\0')
     dirent = NULL; /* "file://" is the canonical form of "file:///" */
 
-  *url = apr_pstrcat(pool, "file://", dirent, (char *)NULL);
+  *url = apr_pstrcat(pool, "file://", dirent, SVN_VA_NULL);
 #else
   if (dirent[0] == '/')
     {
       /* Handle UNC paths //server/share -> file://server/share */
       assert(dirent[1] == '/'); /* Expect UNC, not non-absolute */
 
-      *url = apr_pstrcat(pool, "file:", dirent, NULL);
+      *url = apr_pstrcat(pool, "file:", dirent, SVN_VA_NULL);
     }
   else
     {
-      char *uri = apr_pstrcat(pool, "file:///", dirent, NULL);
+      char *uri = apr_pstrcat(pool, "file:///", dirent, SVN_VA_NULL);
       apr_size_t len = 8 /* strlen("file:///") */ + strlen(dirent);
 
       /* "C:/" is a canonical dirent on Windows,
@@ -2476,7 +2500,7 @@ svn_fspath__canonicalize(const char *fspath,
     return "/";
 
   return apr_pstrcat(pool, "/", svn_relpath_canonicalize(fspath, pool),
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -2509,7 +2533,7 @@ svn_fspath__dirname(const char *fspath,
     return apr_pstrdup(pool, fspath);
   else
     return apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
-                       (char *)NULL);
+                       SVN_VA_NULL);
 }
 
 
@@ -2553,9 +2577,9 @@ svn_fspath__join(const char *fspath,
   if (relpath[0] == '\0')
     result = apr_pstrdup(result_pool, fspath);
   else if (fspath[1] == '\0')
-    result = apr_pstrcat(result_pool, "/", relpath, (char *)NULL);
+    result = apr_pstrcat(result_pool, "/", relpath, SVN_VA_NULL);
   else
-    result = apr_pstrcat(result_pool, fspath, "/", relpath, (char *)NULL);
+    result = apr_pstrcat(result_pool, fspath, "/", relpath, SVN_VA_NULL);
 
   assert(svn_fspath__is_canonical(result));
   return result;
@@ -2574,7 +2598,7 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
                        svn_relpath_get_longest_ancestor(fspath1 + 1,
                                                         fspath2 + 1,
                                                         result_pool),
-                       (char *)NULL);
+                       SVN_VA_NULL);
 
   assert(svn_fspath__is_canonical(result));
   return result;
@@ -2601,4 +2625,82 @@ svn_urlpath__canonicalize(const char *uri,
       uri = svn_path_uri_encode(uri, pool);
     }
   return uri;
+}
+
+
+/* -------------- The cert API (see private/svn_cert.h) ------------- */
+
+svn_boolean_t
+svn_cert__match_dns_identity(svn_string_t *pattern, svn_string_t *hostname)
+{
+  apr_size_t pattern_pos = 0, hostname_pos = 0;
+
+  /* support leading wildcards that composed of the only character in the
+   * left-most label. */
+  if (pattern->len >= 2 &&
+      pattern->data[pattern_pos] == '*' &&
+      pattern->data[pattern_pos + 1] == '.')
+    {
+      while (hostname_pos < hostname->len &&
+             hostname->data[hostname_pos] != '.')
+        {
+          hostname_pos++;
+        }
+      /* Assume that the wildcard must match something.  Rule 2 says
+       * that *.example.com should not match example.com.  If the wildcard
+       * ends up not matching anything then it matches .example.com which
+       * seems to be essentially the same as just example.com */
+      if (hostname_pos == 0)
+        return FALSE;
+
+      pattern_pos++;
+    }
+
+  while (pattern_pos < pattern->len && hostname_pos < hostname->len)
+    {
+      char pattern_c = pattern->data[pattern_pos];
+      char hostname_c = hostname->data[hostname_pos];
+
+      /* fold case as described in RFC 4343.
+       * Note: We actually convert to lowercase, since our URI
+       * canonicalization code converts to lowercase and generally
+       * most certs are issued with lowercase DNS names, meaning
+       * this avoids the fold operation in most cases.  The RFC
+       * suggests the opposite transformation, but doesn't require
+       * any specific implementation in any case.  It is critical
+       * that this folding be locale independent so you can't use
+       * tolower(). */
+      pattern_c = canonicalize_to_lower(pattern_c);
+      hostname_c = canonicalize_to_lower(hostname_c);
+
+      if (pattern_c != hostname_c)
+        {
+          /* doesn't match */
+          return FALSE;
+        }
+      else
+        {
+          /* characters match so skip both */
+          pattern_pos++;
+          hostname_pos++;
+        }
+    }
+
+  /* ignore a trailing period on the hostname since this has no effect on the
+   * security of the matching.  See the following for the long explanation as
+   * to why:
+   * https://bugzilla.mozilla.org/show_bug.cgi?id=134402#c28
+   */
+  if (pattern_pos == pattern->len &&
+      hostname_pos == hostname->len - 1 &&
+      hostname->data[hostname_pos] == '.')
+    hostname_pos++;
+
+  if (pattern_pos != pattern->len || hostname_pos != hostname->len)
+    {
+      /* end didn't match */
+      return FALSE;
+    }
+
+  return TRUE;
 }

@@ -60,15 +60,10 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
     dump = [ dump ]
 
   # Does the caller want the stderr?
-  try:
-      varargs.index('-q')
+  if '-q' in varargs or '--quiet' in varargs:
       expected_errput = None # Stderr with -q or --quiet is a real error!
-  except:
-      try:
-          varargs.index('--quiet')
-          expected_errput = None
-      except:
-          expected_errput = svntest.verify.AnyOutput
+  else:
+      expected_errput = svntest.verify.AnyOutput
   ## TODO: Should we handle exit_code?
   exit_code, output, errput = svntest.main.run_command_stdin(
     svntest.main.svndumpfilter_binary, expected_errput, bufsize, True,
@@ -283,7 +278,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |
@@ -323,9 +318,9 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # --skip-missing-merge-soruces which should strip out any revisions < 6.
   # Then we'll load the filtered result into an empty repository.  This
   # should offset the incoming mergeinfo by -5.  In addition, any mergeinfo
-  # revisions that are adjusted to r1 should be removed because that implies
-  # a merge of -r0:1, which is impossible.  The resulting mergeinfo should
-  # look like this:
+  # referring to the initial revision in the dump file (r6) should be
+  # removed because the change it refers to (r5:6) is not wholly within the
+  # dumpfile.  The resulting mergeinfo should look like this:
   #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
@@ -511,7 +506,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |
@@ -559,7 +554,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   full_dump_contents = open(full_dump).read()
   filtered_dumpfile, filtered_out = filter_and_return_output(
       full_dump_contents,
-      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      16384, # Set a sufficiently large bufsize to avoid a deadlock
       "exclude", "branches/B2",
       "--skip-missing-merge-sources", "--drop-empty-revs")
 

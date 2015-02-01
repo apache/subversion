@@ -184,15 +184,17 @@ def add_executable(sbox):
     file_ospath = sbox.ospath(fileName)
     if executable:
       expected_out = ["*\n"]
+      expected_err = []
     else:
       expected_out = []
+      expected_err = '.*W200017: Property.*not found'
 
     # create an empty file
     open(file_ospath, "w")
 
     os.chmod(file_ospath, perm)
     sbox.simple_add(fileName)
-    svntest.actions.run_and_verify_svn(None, expected_out, [],
+    svntest.actions.run_and_verify_svn(None, expected_out, expected_err,
                                        'propget', "svn:executable", file_ospath)
 
   test_cases = [
