@@ -35,7 +35,7 @@
 #define RCTX_DBG(x) while(0)
 #endif
 
-typedef struct cached_session_s
+typedef struct cached_session_t
 {
   svn_ra_session_t *session;
 
@@ -61,7 +61,7 @@ typedef struct cached_session_s
   apr_off_t progress;
 } cached_session_t;
 
-struct svn_client__ra_cache_s
+struct svn_client__ra_cache_t
 {
   /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
    * are CACHED_SESION_T pointers. */
