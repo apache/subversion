@@ -21,8 +21,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_ra_cache_H
-#define SVN_LIBSVN_ra_cache_H
+#ifndef SVN_LIBSVN_CLIENT_RA_CACHE_H
+#define SVN_LIBSVN_CLIENT_RA_CACHE_H
 
 #include <apr_pools.h>
 
@@ -34,13 +34,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct svn_client__ra_cache_s svn_client__ra_cache_t;
+typedef struct svn_client__ra_cache_t svn_client__ra_cache_t;
 
 /* Allocates ra_cache structure in POOL. Will use CONFIG for
    for RA sessions created in this context. */
 svn_client__ra_cache_t *
 svn_client__ra_cache_create(apr_hash_t *config,
-                          apr_pool_t *pool);
+                            apr_pool_t *pool);
 
 /* Open new repository access session to the repository at BASE_URL or
    reuses existing session cached in CTX.
@@ -54,22 +54,22 @@ svn_client__ra_cache_create(apr_hash_t *config,
    Uses SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
-                                const char **corrected_p,
-                                svn_client__ra_cache_t *ctx,
-                                const char *base_url,
-                                const char *uuid,
-                                svn_ra_callbacks2_t *cbtable,
-                                void *callback_baton,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+                                  const char **corrected_p,
+                                  svn_client__ra_cache_t *ctx,
+                                  const char *base_url,
+                                  const char *uuid,
+                                  svn_ra_callbacks2_t *cbtable,
+                                  void *callback_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Returns RA SESSION back to CTX. */
 void
 svn_client__ra_cache_release_session(svn_client__ra_cache_t *ctx,
-                                   svn_ra_session_t *session);
+                                     svn_ra_session_t *session);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_ra_cache_H */
+#endif /* SVN_LIBSVN_CLIENT_RA_CACHE_H */
