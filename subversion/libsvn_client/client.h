@@ -50,7 +50,7 @@ extern "C" {
  *
  * This is what is actually allocated by svn_client_create_context2(),
  * which then returns the address of the public_ctx member. */
-typedef struct client_ctx_t
+typedef struct svn_client__private_ctx_t
 {
   /* Reserved field, always zero, to detect misuse of the private
      context as a public client context. */
@@ -65,12 +65,12 @@ typedef struct client_ctx_t
 
   /* The public context. */
   svn_client_ctx_t public_ctx;
-} client_ctx_t;
+} svn_client__private_ctx_t;
 
 
 /* Given a public client context CTX, return the private context
    within which it is allocated. */
-client_ctx_t *
+svn_client__private_ctx_t *
 svn_client__get_private_ctx(svn_client_ctx_t *ctx);
 
 
