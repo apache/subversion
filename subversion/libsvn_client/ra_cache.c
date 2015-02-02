@@ -32,7 +32,7 @@
 #if 0
 #define RCTX_DBG(x) SVN_DBG(x)
 #else
-#define RCTX_DBG(x) while(0)
+#define RCTX_DBG(x)
 #endif
 
 typedef struct cached_session_t
@@ -89,7 +89,7 @@ cleanup_session(void *data)
 
 svn_client__ra_cache_t *
 svn_client__ra_cache_create(apr_hash_t *config,
-                          apr_pool_t *pool)
+                            apr_pool_t *pool)
 {
   svn_client__ra_cache_t *ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -113,7 +113,7 @@ get_wc_contents(void *baton,
       *contents = NULL;
       return SVN_NO_ERROR;
   }
-  
+
   return b->cb_table->get_wc_contents(b->cb_baton, contents, checksum, pool);
 }
 
