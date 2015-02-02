@@ -417,9 +417,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           /* Try to open the RA session.  If this is our last attempt,
              don't accept corrected URLs from the RA provider. */
           SVN_ERR(svn_client__ra_cache_open_session(
-                    ra_session, attempts_left == 0 ? NULL : &corrected,
-                    ctx, base_url, uuid, cbtable, cb, 
-                    result_pool, scratch_pool));
+                      ra_session, attempts_left == 0 ? NULL : &corrected,
+                      ctx, base_url, uuid, cbtable, cb,
+                      result_pool, scratch_pool));
 
           /* No error and no corrected URL?  We're done here. */
           if (! corrected)
@@ -451,9 +451,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
   else
     {
-      SVN_ERR(svn_client__ra_cache_open_session(ra_session, NULL, ctx,
-                                              base_url, uuid, cbtable,
-                                              cb, result_pool, scratch_pool));
+      SVN_ERR(svn_client__ra_cache_open_session(
+                  ra_session, NULL, ctx, base_url, uuid, cbtable,
+                  cb, result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
