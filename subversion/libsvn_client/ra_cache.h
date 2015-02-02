@@ -31,44 +31,11 @@
 #include "svn_ra.h"
 #include "svn_types.h"
 
+#include "client.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-typedef struct client_ra_cache_t
-{
-  /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
-   * are CLIENT_RA_SESION_T pointers. */
-  apr_hash_t *cached_session;
-  apr_pool_t *pool;
-  apr_hash_t *config;
-
-  /* Next ID for RA sessions. Used only for diagnostics purpose. */
-  int next_id;
-} client_ra_cache_t;
-
-
-/* Private client context.
- * This is what is actually allocated by context constructor. */
-typedef struct client_ctx_t
-{
-  /* Reserved field, always zero, to detect misuse of the private
-     context as a public client context. */
-  apr_uint64_t magic_null;
-
-  /* Reserved field, always set to a known magic number, to identify
-     this struct as the private client context. */
-  apr_uint64_t magic_id;
-
-  /* The RA session cache. */
-  client_ra_cache_t ra_cache;
-
-  /* The public context. */
-  svn_client_ctx_t ctx;
-} client_ctx_t;
-
-
-#define CLIENT_CTX_MAGIC APR_UINT64_C(0xDEADBEEF600DF00D)
 
 
 /* Initializes the CTX->ra_cache structure. Will use CONFIG for for RA
