@@ -301,7 +301,8 @@ progress_func(apr_off_t progress,
 {
   callback_baton_t *b = baton;
   svn_client_ctx_t *public_ctx = b->ctx;
-  client_ctx_t *private_ctx = svn_client__get_private_ctx(public_ctx);
+  svn_client__private_ctx_t *private_ctx =
+    svn_client__get_private_ctx(public_ctx);
 
   private_ctx->total_progress += (progress - b->last_progress);
   b->last_progress = progress;
