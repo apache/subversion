@@ -1050,13 +1050,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.9.
    */
   void *tunnel_baton;
-
-  /** A RA session cache for the client operation to use.
-   * This is initialized by svn_client_create_context() and should never
-   * be directly used or changed.
-   *
-   * @since New in 1.9.  */
-  void *ra_cache;
 } svn_client_ctx_t;
 
 /** Initialize a client context.

@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include <stddef.h>
 #include <apr_pools.h>
 
 #include "svn_dirent_uri.h"
@@ -35,7 +36,7 @@
 #define RCTX_DBG(x)
 #endif
 
-typedef struct cached_session_t
+typedef struct client_ra_session_t
 {
   svn_ra_session_t *session;
 
@@ -59,45 +60,53 @@ typedef struct cached_session_t
 
   /* Accumulated progress since last session open. */
   apr_off_t progress;
-} cached_session_t;
+} client_ra_session_t;
 
-struct svn_client__ra_cache_t
-{
-  /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
-   * are CACHED_SESION_T pointers. */
-  apr_hash_t *cached_session;
-  apr_pool_t *pool;
-  apr_hash_t *config;
-
-  /* Next ID for RA sessions. Used only for diagnostics purpose. */
-  int next_id;
-};
 
 static apr_status_t
 cleanup_session(void *data)
 {
-  cached_session_t *cache_entry = data;
+  client_ra_session_t *cache_entry = data;
 
   cache_entry->owner_pool = NULL;
   cache_entry->cb_table = NULL;
   cache_entry->cb_baton = NULL;
 
-  RCTX_DBG(("SESSION(%d): Released\r\n", cache_entry->id));
+  RCTX_DBG(("SESSION(%d): Released\n", cache_entry->id));
 
   return APR_SUCCESS;
 }
 
-svn_client__ra_cache_t *
-svn_client__ra_cache_create(apr_hash_t *config,
-                            apr_pool_t *pool)
+/* Check that the private context struct is valid. */
+static void
+verify_client_context(client_ctx_t *private_ctx)
 {
-  svn_client__ra_cache_t *ctx = apr_pcalloc(pool, sizeof(*ctx));
+  SVN_ERR_ASSERT_NO_RETURN(0 == private_ctx->magic_null);
+  SVN_ERR_ASSERT_NO_RETURN(CLIENT_CTX_MAGIC == private_ctx->magic_id);
+}
 
-  ctx->pool = pool;
-  ctx->cached_session = apr_hash_make(pool);
-  ctx->config = config;
+/* Convert a public client context pointer to a private client context
+   pointer. */
+static client_ra_cache_t *
+get_private_ra_cache(svn_client_ctx_t *ctx)
+{
+  client_ctx_t *const private_ctx =
+    (void*)((char *)ctx - offsetof(client_ctx_t, ctx));
+  SVN_ERR_ASSERT_NO_RETURN(&private_ctx->ctx == ctx);
+  verify_client_context(private_ctx);
+  return &private_ctx->ra_cache;
+}
 
-  return ctx;
+void
+svn_client__ra_cache_init(client_ctx_t *private_ctx,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  verify_client_context(private_ctx);
+
+  private_ctx->ra_cache.pool = pool;
+  private_ctx->ra_cache.cached_session = apr_hash_make(pool);
+  private_ctx->ra_cache.config = config;
 }
 
 static svn_error_t *
@@ -106,7 +115,7 @@ get_wc_contents(void *baton,
                 const svn_checksum_t *checksum,
                 apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (!b->cb_table->get_wc_contents)
   {
@@ -122,7 +131,7 @@ open_tmp_file(apr_file_t **fp,
               void *baton,
               apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
   return svn_error_trace(b->cb_table->open_tmp_file(fp, b->cb_baton, pool));
 }
 
@@ -134,7 +143,7 @@ get_wc_prop(void *baton,
             const svn_string_t **value,
             apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (b->cb_table->get_wc_prop)
     {
@@ -157,7 +166,7 @@ push_wc_prop(void *baton,
              const svn_string_t *value,
              apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (b->cb_table->push_wc_prop)
     {
@@ -180,7 +189,7 @@ set_wc_prop(void *baton,
             const svn_string_t *value,
             apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
   if (b->cb_table->set_wc_prop)
     {
       return svn_error_trace(
@@ -200,7 +209,7 @@ invalidate_wc_props(void *baton,
                     const char *prop_name,
                     apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (b->cb_table->invalidate_wc_props)
     {
@@ -219,7 +228,7 @@ get_client_string(void *baton,
                   const char **name,
                   apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (b->cb_table->get_client_string)
     {
@@ -236,7 +245,7 @@ get_client_string(void *baton,
 static svn_error_t *
 cancel_callback(void *baton)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   if (b->cb_table->cancel_func)
     {
@@ -254,7 +263,7 @@ progress_func(apr_off_t progress,
               void *baton,
               apr_pool_t *pool)
 {
-  cached_session_t *b = baton;
+  client_ra_session_t *b = baton;
 
   b->progress += (progress - b->last_progress);
   b->last_progress = progress;
@@ -265,17 +274,17 @@ progress_func(apr_off_t progress,
 }
 
 static svn_error_t *
-find_session_by_url(cached_session_t **cache_entry_p,
-                    svn_client__ra_cache_t *ctx,
+find_session_by_url(client_ra_session_t **cache_entry_p,
+                    client_ra_cache_t *ra_cache,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
     apr_hash_index_t *hi;
 
-    for (hi = apr_hash_first(scratch_pool, ctx->cached_session);
+    for (hi = apr_hash_first(scratch_pool, ra_cache->cached_session);
          hi; hi = apr_hash_next(hi))
       {
-        cached_session_t *cache_entry = apr_hash_this_val(hi);
+        client_ra_session_t *cache_entry = apr_hash_this_val(hi);
 
         if (cache_entry->owner_pool == NULL &&
             svn_uri__is_ancestor(cache_entry->root_url, url))
@@ -292,7 +301,7 @@ find_session_by_url(cached_session_t **cache_entry_p,
 svn_error_t *
 svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                   const char **corrected_p,
-                                  svn_client__ra_cache_t *ctx,
+                                  svn_client_ctx_t *ctx,
                                   const char *base_url,
                                   const char *uuid,
                                   svn_ra_callbacks2_t *cbtable,
@@ -300,12 +309,13 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  cached_session_t *cache_entry;
+  client_ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
+  client_ra_session_t *cache_entry;
 
   if (corrected_p)
       *corrected_p = NULL;
 
-  SVN_ERR(find_session_by_url(&cache_entry, ctx, base_url, scratch_pool));
+  SVN_ERR(find_session_by_url(&cache_entry, ra_cache, base_url, scratch_pool));
 
   if (cache_entry)
     {
@@ -349,9 +359,9 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       svn_ra_callbacks2_t *cbtable_sink;
       svn_ra_session_t *session;
 
-      cache_entry = apr_pcalloc(ctx->pool, sizeof(*cache_entry));
+      cache_entry = apr_pcalloc(ra_cache->pool, sizeof(*cache_entry));
 
-      SVN_ERR(svn_ra_create_callbacks(&cbtable_sink, ctx->pool));
+      SVN_ERR(svn_ra_create_callbacks(&cbtable_sink, ra_cache->pool));
       cbtable_sink->open_tmp_file = open_tmp_file;
       cbtable_sink->get_wc_prop = get_wc_prop;
       cbtable_sink->set_wc_prop = set_wc_prop;
@@ -367,10 +377,10 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       cache_entry->owner_pool = result_pool;
       cache_entry->cb_table = cbtable;
       cache_entry->cb_baton = callback_baton;
-      cache_entry->id = ctx->next_id;
+      cache_entry->id = ra_cache->next_id;
 
       SVN_ERR(svn_ra_open4(&session, corrected_p, base_url, uuid, cbtable_sink,
-                           cache_entry, ctx->config, ctx->pool));
+                           cache_entry, ra_cache->config, ra_cache->pool));
 
       if (corrected_p && *corrected_p)
         {
@@ -382,13 +392,13 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       cache_entry->session = session;
 
       SVN_ERR(svn_ra_get_repos_root2(session, &cache_entry->root_url,
-                                     ctx->pool));
+                                     ra_cache->pool));
 
       RCTX_DBG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
 
-      apr_hash_set(ctx->cached_session, &cache_entry->session,
+      apr_hash_set(ra_cache->cached_session, &cache_entry->session,
                    sizeof(cache_entry->session), cache_entry);
-      ctx->next_id++;
+      ++ra_cache->next_id;
     }
 
   cache_entry->owner_pool = result_pool;
@@ -404,11 +414,12 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
 }
 
 void
-svn_client__ra_cache_release_session(svn_client__ra_cache_t *ctx,
+svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
                                      svn_ra_session_t *session)
 {
-  cached_session_t *cache_entry = apr_hash_get(ctx->cached_session,
-                                               &session, sizeof(session));
+  client_ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
+  client_ra_session_t *cache_entry = apr_hash_get(ra_cache->cached_session,
+                                                  &session, sizeof(session));
 
   SVN_ERR_ASSERT_NO_RETURN(cache_entry != NULL);
   SVN_ERR_ASSERT_NO_RETURN(cache_entry->owner_pool != NULL);
