@@ -1020,11 +1020,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
-  /** Total number of bytes transferred over network.
-   *
-   * @since New in 1.9. */
-  apr_off_t progress;
-
   /** Check-tunnel callback
    *
    * If not @c NULL, and open_tunnel_func is also not @c NULL, this

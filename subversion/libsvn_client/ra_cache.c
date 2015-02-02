@@ -77,23 +77,12 @@ cleanup_session(void *data)
   return APR_SUCCESS;
 }
 
-/* Check that the private context struct is valid. */
-static void
-verify_client_context(client_ctx_t *private_ctx)
-{
-  SVN_ERR_ASSERT_NO_RETURN(0 == private_ctx->magic_null);
-  SVN_ERR_ASSERT_NO_RETURN(CLIENT_CTX_MAGIC == private_ctx->magic_id);
-}
-
 /* Convert a public client context pointer to a private client context
    pointer. */
 static client_ra_cache_t *
-get_private_ra_cache(svn_client_ctx_t *ctx)
+get_private_ra_cache(svn_client_ctx_t *public_ctx)
 {
-  client_ctx_t *const private_ctx =
-    (void*)((char *)ctx - offsetof(client_ctx_t, ctx));
-  SVN_ERR_ASSERT_NO_RETURN(&private_ctx->ctx == ctx);
-  verify_client_context(private_ctx);
+  client_ctx_t *const private_ctx = svn_client__get_private_ctx(public_ctx);
   return &private_ctx->ra_cache;
 }
 
@@ -102,8 +91,6 @@ svn_client__ra_cache_init(client_ctx_t *private_ctx,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  verify_client_context(private_ctx);
-
   private_ctx->ra_cache.pool = pool;
   private_ctx->ra_cache.cached_session = apr_hash_make(pool);
   private_ctx->ra_cache.config = config;
