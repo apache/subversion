@@ -418,7 +418,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
              don't accept corrected URLs from the RA provider. */
           SVN_ERR(svn_client__ra_cache_open_session(
                     ra_session, attempts_left == 0 ? NULL : &corrected,
-                    ctx->ra_cache, base_url, uuid, cbtable, cb, 
+                    ctx, base_url, uuid, cbtable, cb, 
                     result_pool, scratch_pool));
 
           /* No error and no corrected URL?  We're done here. */
@@ -451,7 +451,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
   else
     {
-      SVN_ERR(svn_client__ra_cache_open_session(ra_session, NULL, ctx->ra_cache,
+      SVN_ERR(svn_client__ra_cache_open_session(ra_session, NULL, ctx,
                                               base_url, uuid, cbtable,
                                               cb, result_pool, scratch_pool));
     }
@@ -1192,6 +1192,6 @@ svn_error_t *
 svn_client__ra_session_release(svn_client_ctx_t *ctx,
                                svn_ra_session_t *session)
 {
-    svn_client__ra_cache_release_session(ctx->ra_cache, session);
+    svn_client__ra_cache_release_session(ctx, session);
     return SVN_NO_ERROR;
 }

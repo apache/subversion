@@ -84,25 +84,29 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
 {
   svn_config_t *cfg_config;
 
-  *ctx = apr_pcalloc(pool, sizeof(svn_client_ctx_t));
+  client_ctx_t *const private_ctx = apr_pcalloc(pool, sizeof(*private_ctx));
+  svn_client_ctx_t *const public_ctx = &private_ctx->ctx;
 
-  (*ctx)->notify_func2 = call_notify_func;
-  (*ctx)->notify_baton2 = *ctx;
+  private_ctx->magic_null = 0;
+  private_ctx->magic_id = CLIENT_CTX_MAGIC;
 
-  (*ctx)->conflict_func2 = call_conflict_func;
-  (*ctx)->conflict_baton2 = *ctx;
+  private_ctx->ctx.notify_func2 = call_notify_func;
+  private_ctx->ctx.notify_baton2 = public_ctx;
 
-  (*ctx)->config = cfg_hash;
+  private_ctx->ctx.conflict_func2 = call_conflict_func;
+  private_ctx->ctx.conflict_baton2 = public_ctx;
+
+  private_ctx->ctx.config = cfg_hash;
 
   if (cfg_hash)
     cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
   else
     cfg_config = NULL;
 
-  SVN_ERR(svn_wc_context_create(&(*ctx)->wc_ctx, cfg_config, pool,
-                                pool));
-
-  (*ctx)->ra_cache = svn_client__ra_cache_create(cfg_hash, pool);
+  SVN_ERR(svn_wc_context_create(&private_ctx->ctx.wc_ctx, cfg_config,
+                                pool, pool));
+  svn_client__ra_cache_init(private_ctx, cfg_hash, pool);
+  *ctx = public_ctx;
 
   return SVN_NO_ERROR;
 }
