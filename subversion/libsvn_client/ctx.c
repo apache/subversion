@@ -82,11 +82,11 @@ call_conflict_func(svn_wc_conflict_result_t **result,
 /* The magic number in client_ctx_t.magic_id. */
 #define CLIENT_CTX_MAGIC APR_UINT64_C(0xDEADBEEF600DF00D)
 
-client_ctx_t *
+svn_client__private_ctx_t *
 svn_client__get_private_ctx(svn_client_ctx_t *ctx)
 {
-  client_ctx_t *const private_ctx =
-    (void*)((char *)ctx - offsetof(client_ctx_t, public_ctx));
+  svn_client__private_ctx_t *const private_ctx =
+    (void*)((char *)ctx - offsetof(svn_client__private_ctx_t, public_ctx));
   SVN_ERR_ASSERT_NO_RETURN(&private_ctx->public_ctx == ctx);
   SVN_ERR_ASSERT_NO_RETURN(0 == private_ctx->magic_null);
   SVN_ERR_ASSERT_NO_RETURN(CLIENT_CTX_MAGIC == private_ctx->magic_id);
@@ -100,7 +100,8 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
 {
   svn_config_t *cfg_config;
 
-  client_ctx_t *const private_ctx = apr_pcalloc(pool, sizeof(*private_ctx));
+  svn_client__private_ctx_t *const private_ctx =
+    apr_pcalloc(pool, sizeof(*private_ctx));
   svn_client_ctx_t *const public_ctx = &private_ctx->public_ctx;
 
   private_ctx->magic_null = 0;

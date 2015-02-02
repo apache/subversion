@@ -38,11 +38,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Initializes the CTX->ra_cache structure. Will use CONFIG for for RA
-   sessions created in this context. Assumes that CTX was allocated
-   from POOL. */
+/* Initializes the PRIVATE_CTX->ra_cache structure. Will use CONFIG
+   for for RA sessions created in this context. Assumes that CTX was
+   allocated from POOL. */
 void
-svn_client__ra_cache_init(client_ctx_t *private_ctx,
+svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
                           apr_hash_t *config,
                           apr_pool_t *pool);
 

@@ -79,15 +79,16 @@ cleanup_session(void *data)
 
 /* Convert a public client context pointer to a private client context
    pointer. */
-static client_ra_cache_t *
+static svn_client__ra_cache_t *
 get_private_ra_cache(svn_client_ctx_t *public_ctx)
 {
-  client_ctx_t *const private_ctx = svn_client__get_private_ctx(public_ctx);
+  svn_client__private_ctx_t *const private_ctx =
+    svn_client__get_private_ctx(public_ctx);
   return &private_ctx->ra_cache;
 }
 
 void
-svn_client__ra_cache_init(client_ctx_t *private_ctx,
+svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
@@ -262,7 +263,7 @@ progress_func(apr_off_t progress,
 
 static svn_error_t *
 find_session_by_url(client_ra_session_t **cache_entry_p,
-                    client_ra_cache_t *ra_cache,
+                    svn_client__ra_cache_t *ra_cache,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
@@ -296,7 +297,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  client_ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
+  svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
   client_ra_session_t *cache_entry;
 
   if (corrected_p)
@@ -404,7 +405,7 @@ void
 svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
                                      svn_ra_session_t *session)
 {
-  client_ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
+  svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
   client_ra_session_t *cache_entry = apr_hash_get(ra_cache->cached_session,
                                                   &session, sizeof(session));
 

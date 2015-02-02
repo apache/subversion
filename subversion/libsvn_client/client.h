@@ -47,7 +47,7 @@ extern "C" {
 
 
 /* RA session cache */
-typedef struct client_ra_cache_t
+typedef struct svn_client__ra_cache_t
 {
   /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
    * are CLIENT_RA_SESION_T pointers. */
@@ -57,14 +57,14 @@ typedef struct client_ra_cache_t
 
   /* Next ID for RA sessions. Used only for diagnostics purpose. */
   int next_id;
-} client_ra_cache_t;
+} svn_client__ra_cache_t;
 
 
 /* Private client context.
  *
  * This is what is actually allocated by svn_client_create_context2(),
  * which then returns the address of the public_ctx member. */
-typedef struct client_ctx_t
+typedef struct svn_client__private_ctx_t
 {
   /* Reserved field, always zero, to detect misuse of the private
      context as a public client context. */
@@ -78,16 +78,16 @@ typedef struct client_ctx_t
   apr_off_t total_progress;
 
   /* The RA session cache. */
-  client_ra_cache_t ra_cache;
+  svn_client__ra_cache_t ra_cache;
 
   /* The public context. */
   svn_client_ctx_t public_ctx;
-} client_ctx_t;
+} svn_client__private_ctx_t;
 
 
 /* Given a public client context CTX, return the private context
    within which it is allocated. */
-client_ctx_t *
+svn_client__private_ctx_t *
 svn_client__get_private_ctx(svn_client_ctx_t *ctx);
 
 
