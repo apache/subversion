@@ -691,6 +691,21 @@ svn_test_get_srcdir(const char **srcdir,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_test__init_auth_baton(svn_auth_baton_t **ab,
+                          apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_cmdline_create_auth_baton(ab,
+                                        TRUE  /* non_interactive */,
+                                        "jrandom", "rayjandom",
+                                        NULL,
+                                        TRUE  /* no_auth_cache */,
+                                        FALSE /* trust_server_cert */,
+                                        NULL, NULL, NULL, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Standard svn test program */
 int
 svn_test_main(int argc, const char *argv[], int max_threads,

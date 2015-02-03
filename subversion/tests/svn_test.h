@@ -34,6 +34,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -276,6 +277,11 @@ svn_error_t *
 svn_test_get_srcdir(const char **srcdir,
                     const svn_test_opts_t *opts,
                     apr_pool_t *pool);
+
+/* Initializes a standard auth baton for accessing the repositories */
+svn_error_t *
+svn_test__init_auth_baton(svn_auth_baton_t **baton,
+                          apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }
