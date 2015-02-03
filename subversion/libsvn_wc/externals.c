@@ -158,7 +158,8 @@ find_and_remove_externals_revision(int *rev_idx,
 }
 
 svn_error_t *
-svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
+svn_wc__parse_externals_description(apr_array_header_t **externals_p,
+                                    apr_array_header_t **description_formats_p,
                                     const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
@@ -166,6 +167,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 {
   int i;
   apr_array_header_t *externals = NULL;
+  apr_array_header_t *description_formats = NULL;
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   const char *defining_directory_display = svn_path_is_url(defining_directory) ?
     defining_directory : svn_dirent_local_style(defining_directory, pool);
@@ -174,6 +176,10 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
    * untouched. So, store the list in a local var first. */
   if (externals_p)
     externals = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
+
+  if (description_formats_p)
+    description_formats =
+      apr_array_make(pool, 1, sizeof(svn_wc__external_description_format_t));
 
   for (i = 0; i < lines->nelts; i++)
     {
@@ -186,6 +192,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       const char *token1;
       svn_boolean_t token0_is_url;
       svn_boolean_t token1_is_url;
+      svn_wc__external_description_format_t format;
 
       /* Index into line_parts where the revision specification
          started. */
@@ -290,12 +297,14 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
           SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url,
                                      token0, pool));
           item->target_dir = token1;
+          format = svn_wc__external_description_format_2;
         }
       else
         {
           item->target_dir = token0;
           item->url = token1;
           item->peg_revision = item->revision;
+          format = svn_wc__external_description_format_1;
         }
 
       SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
@@ -333,12 +342,32 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       if (externals)
         APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
+      if (description_formats)
+        APR_ARRAY_PUSH(description_formats,
+                       svn_wc__external_description_format_t) = format;
     }
 
   if (externals_p)
     *externals_p = externals;
+  if (description_formats_p)
+    *description_formats_p = description_formats;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
+                                    const char *defining_directory,
+                                    const char *desc,
+                                    svn_boolean_t canonicalize_url,
+                                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_wc__parse_externals_description(externals_p,
+                                                             NULL,
+                                                             defining_directory,
+                                                             desc,
+                                                             canonicalize_url,
+                                                             pool));
 }
 
 svn_error_t *
