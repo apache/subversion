@@ -158,6 +158,12 @@ remove_r0_mergeinfo(const svn_string_t **str,
           svn_stringbuf_appendbytes(new_str, line, colon + 1 - line);
           svn_stringbuf_appendcstr(new_str, rangelist);
         }
+      else
+        {
+          if (new_str->len)
+            svn_stringbuf_appendbyte(new_str, '\n');
+          svn_stringbuf_appendcstr(new_str, line);
+        }
     }
 
   if (strcmp((*str)->data, new_str->data) != 0)
