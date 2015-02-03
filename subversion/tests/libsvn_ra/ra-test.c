@@ -49,28 +49,20 @@ static const char tunnel_repos_name[] = "test-repo-tunnel";
 
 
 static svn_error_t *
-make_and_open_local_repos(svn_ra_session_t **session,
-                          const char *repos_name,
-                          const svn_test_opts_t *opts,
-                          apr_pool_t *pool)
+make_and_open_repos(svn_ra_session_t **session,
+                    const char *repos_name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
-  svn_repos_t *repos;
   const char *url;
   svn_ra_callbacks2_t *cbtable;
 
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
-  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
 
-  SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &url, NULL, repos_name, opts,
+                                  pool, pool));
   SVN_ERR(svn_ra_initialize(pool));
-
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&url, repos_name, pool));
 
   SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
 
@@ -272,9 +264,9 @@ location_segments_test(const svn_test_opts_t *opts,
   b.segments = segments;
   b.pool = pool;
 
-  SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-locsegs", opts,
-                                    pool));
+  SVN_ERR(make_and_open_repos(&session,
+                              "test-repo-locsegs", opts,
+                              pool));
 
   /* ### This currently tests only a small subset of what's possible. */
   SVN_ERR(commit_changes(session, pool));
@@ -438,9 +430,20 @@ expect_error(const char *path,
 {
   svn_lock_t *lock;
   struct lock_result_t *result = svn_hash_gets(results, path);
+  svn_error_t *err;
 
-  SVN_TEST_ASSERT(result && !result->lock && result->err);
-  SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
+  SVN_TEST_ASSERT(result && result->err);
+  SVN_TEST_ASSERT(!result->lock);
+  err = svn_ra_get_lock(session, &lock, path, scratch_pool);
+  if (err) /* ra_serf reports SVN_ERR_FS_NOT_FOUND. ### Consistency? */
+    {
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      lock = NULL;
+    }
+
   SVN_TEST_ASSERT(!lock);
   return SVN_NO_ERROR;
 }
@@ -488,8 +491,7 @@ lock_test(const svn_test_opts_t *opts,
   struct lock_baton_t baton;
   apr_hash_index_t *hi;
 
-  SVN_ERR(make_and_open_local_repos(&session, "test-repo-lock", opts,
-                                    pool));
+  SVN_ERR(make_and_open_repos(&session, "test-repo-lock", opts, pool));
   SVN_ERR(commit_tree(session, pool));
 
   baton.results = apr_hash_make(pool);
@@ -564,11 +566,31 @@ lock_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_ra_get_dir2(). */
+static svn_error_t *
+get_dir_test(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_ra_session_t *session;
+  apr_hash_t *dirents;
+
+  SVN_ERR(make_and_open_repos(&session, "test-get-dir", opts, pool));
+  SVN_ERR(commit_tree(session, pool));
+
+  /* This call used to block on ra-svn for 1.8.0...r1656713 */
+  SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(session, &dirents, NULL, NULL,
+                                        "non/existing/relpath", 1,
+                                        SVN_DIRENT_KIND, pool),
+                        SVN_ERR_FS_NOT_FOUND);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
 
-static int max_threads = 1;
+static int max_threads = 2;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
@@ -581,6 +603,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test ra_svn tunnel creation callbacks"),
     SVN_TEST_OPTS_PASS(lock_test,
                        "lock multiple paths"),
+    SVN_TEST_OPTS_PASS(get_dir_test,
+                       "test ra_get_dir2"),
     SVN_TEST_NULL
   };
 
