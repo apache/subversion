@@ -420,16 +420,16 @@ class Sandbox:
     repo_dir_a_n, repo_url_a_n = self.add_repo_path('load_a_n')
     svntest.main.create_repos(repo_dir_a_n)
     svntest.actions.enable_revprop_changes(repo_dir_a_n)
-    svntest.actions.run_and_verify_svnrdump(dumpfile_a_n,
-                                            svntest.verify.AnyOutput,
-                                            [], 0, 'load', repo_url_a_n)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_n, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_n,
+      svntest.main.svnrdump_crosscheck_authentication)
 
     repo_dir_a_d, repo_url_a_d = self.add_repo_path('load_a_d')
     svntest.main.create_repos(repo_dir_a_d)
     svntest.actions.enable_revprop_changes(repo_dir_a_d)
-    svntest.actions.run_and_verify_svnrdump(dumpfile_a_d,
-                                            svntest.verify.AnyOutput,
-                                            [], 0, 'load', repo_url_a_d)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_d, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_d,
+      svntest.main.svnrdump_crosscheck_authentication)
 
     repo_dir_r_d, repo_url_r_d = self.add_repo_path('load_r_d')
     svntest.main.create_repos(repo_dir_r_d)
