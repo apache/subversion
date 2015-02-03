@@ -430,7 +430,6 @@ expect_error(const char *path,
 {
   svn_lock_t *lock;
   struct lock_result_t *result = svn_hash_gets(results, path);
-  svn_error_t *err;
 
   SVN_TEST_ASSERT(result && result->err);
   SVN_TEST_ASSERT(!result->lock);
