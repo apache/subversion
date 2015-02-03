@@ -8,12 +8,19 @@ all changes made in the branch.
 
 STATUS
 ======
-+ Initial implementation
-- Do not call svn_ra_* methods in find_session_by_url() because callback
-  table may be destroyed at that time.
+
+done:
+- Initial implementation.
+- Separate active and inactive session lists.
+
+todo:
+- Fix timeout in davautocheck tests at log_tests.py::log_diff_moved.
+- Limit the number of unused open sessions.
+- Run performance comparisons between trunk and branch to prove that
+  the RA session cache does in fact speed things up.
 - Add new RA capability to signal if RA session is stateless and reusable.
-- Implement svn_client_close_all_sessions()
-- Merge to trunk and start switching code to use new functions.
+- Implement svn_client_close_all_sessions().
+- Switch code to use new functions.
 
 PROBLEM
 =======
@@ -21,7 +28,7 @@ PROBLEM
 Currently Subversion client layer creates new RA session for every
 svn_client_* call. Even more: for some operations like svn_client_merge() it
 creates 10-15 RA sessions. Each session creation takes significant amount of
-time: TCP connection, SSL handshake, authentication and initial handshake. It 
+time: TCP connection, SSL handshake, authentication and initial handshake. It
 easily could take several seconds over WAN.
 
 PROPOSED SOLUTION
