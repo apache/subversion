@@ -1398,6 +1398,7 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote.FileRevision rev = result.get(0);
         assertEquals("/iota", rev.getPath());
         assertFalse(rev.isResultOfMerge());
+        assertTrue(rev.hasTextDelta());
     }
 
     // This test is a result of a threading bug that was identified in

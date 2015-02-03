@@ -336,7 +336,7 @@ run_locks(svn_ra_serf__session_t *sess,
                 {
                   svn_lock_t *report_lock = NULL;
 
-                  if (locking)
+                  if (locking && ctx->lock->token)
                     report_lock = ctx->lock;
 
                   cb_err = lock_func(lock_baton, ctx->path, locking,

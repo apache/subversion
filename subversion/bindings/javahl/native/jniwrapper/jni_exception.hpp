@@ -286,6 +286,25 @@ private:
   static const char* const m_class_name;
 };
 
+/**
+ * Generator class for exceptions of type @c java.lang.IllegalArgumentException.
+ *
+ * @since New in 1.9.
+ */
+class IllegalArgumentException : public Exception
+{
+public:
+  /**
+   * Constructs an exception generator object.
+   */
+  explicit IllegalArgumentException(Env env)
+    : Exception(env, m_class_name)
+    {}
+
+private:
+  static const char* const m_class_name;
+};
+
 } // namespace Java
 
 #endif // SVN_JAVAHL_JNIWRAPPER_ENV_HPP
