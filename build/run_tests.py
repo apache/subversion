@@ -385,6 +385,22 @@ class TestHarness:
     if self.config_file is not None:
       cmdline.append('--config-file=' + self.config_file)
 
+    if self.base_url is not None:
+      subdir = 'subversion/tests/cmdline/svn-test-work'
+
+      cmdline.append('--repos-url=%s' % self.base_url +
+                        '/svn-test-work/repositories')
+      cmdline.append('--repos-dir=%s'
+                     % os.path.abspath(
+                         os.path.join(self.builddir, subdir, 'repositories')))
+
+      # Enable access for http
+      if self.base_url.startswith('http'):
+        open(os.path.join(self.builddir, 'authz'), 'w').write(
+                '[/]\n' +
+                '* = rw\n')
+
+    # ### Support --repos-template
     if self.verbose is not None:
       cmdline.append('--verbose')
     if self.cleanup is not None:
