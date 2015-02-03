@@ -77,11 +77,11 @@ initialize_com(void *baton, apr_pool_t* pool)
   return SVN_NO_ERROR;
 }
 
-typedef struct svn_subr__win32_xlate_t
+struct svn_subr__win32_xlate_t
 {
   UINT from_page_id;
   UINT to_page_id;
-} svn_subr__win32_xlate_t;
+};
 
 static apr_status_t
 get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
