@@ -59,6 +59,12 @@ static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 static svn_mutex__t *xlate_handle_mutex = NULL;
 static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
 
+#if defined(WIN32)
+typedef win32_xlate_t xlate_handle_t;
+#else
+typedef apr_xlate_t xlate_handle_t;
+#endif
+
 /* The xlate handle cache is a global hash table with linked lists of xlate
  * handles.  In multi-threaded environments, a thread "borrows" an xlate
  * handle from the cache during a translation and puts it back afterwards.
@@ -69,7 +75,7 @@ static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
  * is the number of simultanous handles in use for that key. */
 
 typedef struct xlate_handle_node_t {
-  apr_xlate_t *handle;
+  xlate_handle_t *handle;
   /* FALSE if the handle is not valid, since its pool is being
      destroyed. */
   svn_boolean_t valid;
@@ -205,7 +211,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_xlate_t *handle;
+  xlate_handle_t *handle;
   const char *name;
 
   /* The error handling doesn't support the following cases, since we don't
@@ -217,7 +223,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 
   /* Try to create a handle. */
 #if defined(WIN32)
-  apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
+  apr_err = svn_subr__win32_xlate_open(&handle, topage,
                                        frompage, pool);
   name = "win32-xlate: ";
 #else
@@ -486,9 +492,8 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 #ifdef WIN32
   apr_status_t apr_err;
 
-  apr_err = svn_subr__win32_xlate_to_stringbuf((win32_xlate_t *) node->handle,
-                                               src_data, src_length,
-                                               dest, pool);
+  apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
+                                               src_length, dest, pool);
 #else
   apr_size_t buflen = src_length * 2;
   apr_status_t apr_err;
