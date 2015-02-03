@@ -450,7 +450,6 @@ test_replace_tree(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
   SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
 
-  /* Update a file as root operation */
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_delete("A", mtcc, pool));
