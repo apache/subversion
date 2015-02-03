@@ -25,6 +25,8 @@
 
 #include <apr_pools.h>
 #include "svn_error.h"
+#include "svn_client.h"
+
 #include "../svn_test.h"
 
 #ifdef __cplusplus
@@ -53,6 +55,8 @@ typedef struct svn_test__sandbox_t
   svn_wc_context_t *wc_ctx;
   /* The repository URL. */
   const char *repos_url;
+  /* Local path to the repository */
+  const char *repos_dir;
   /* The absolute local path of the WC root. */
   const char *wc_abspath;
   /* A pool that can be used for all allocations. */
@@ -183,6 +187,13 @@ svn_error_t *
 svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
                          apr_pool_t *scratch_pool);
+
+
+/* Create a client context for the specified sandbox */
+svn_error_t *
+svn_test__create_client_ctx(svn_client_ctx_t **ctx,
+                            svn_test__sandbox_t *sbox,
+                            apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

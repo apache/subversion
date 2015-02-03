@@ -531,11 +531,11 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 }
 
 svn_error_t *
-svn_ra_dup_session(svn_ra_session_t **new_session,
-                   svn_ra_session_t *old_session,
-                   const char *session_url,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_ra__dup_session(svn_ra_session_t **new_session,
+                    svn_ra_session_t *old_session,
+                    const char *session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *session;
 
@@ -1010,8 +1010,8 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
               svn_uri_split(&parent_url, &base_name, session_url,
                             scratch_pool);
 
-              SVN_ERR(svn_ra_dup_session(&parent_session, session, parent_url,
-                                         scratch_pool, scratch_pool));
+              SVN_ERR(svn_ra__dup_session(&parent_session, session, parent_url,
+                                          scratch_pool, scratch_pool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,

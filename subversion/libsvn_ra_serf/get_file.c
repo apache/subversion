@@ -397,9 +397,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
           handler = svn_ra_serf__create_handler(session, pool);
 
-          /* What connection should we go on? */
-          handler->conn = session->conns[session->cur_conn];
-
           handler->method = "GET";
           handler->path = fetch_url;
 
