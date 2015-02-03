@@ -246,7 +246,7 @@ Candidate changes:
    Justification:
      Causes a connection stall in custom repository browsers that get
      into this code path by not verifying if the directory exists before
-     calling this function.
+     calling this function. Regression against <= 1.7.x.
    Votes:
      +1: rhuijben
 
