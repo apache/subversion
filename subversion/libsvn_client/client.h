@@ -28,6 +28,7 @@
 
 
 #include <apr_pools.h>
+#include <apr_ring.h>
 
 #include "svn_types.h"
 #include "svn_opt.h"
@@ -46,14 +47,24 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Forward declaration of the cached RA session structure. */
+struct svn_client__ra_session_t;
+
 /* RA session cache */
 typedef struct svn_client__ra_cache_t
 {
-  /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
-   * are CLIENT_RA_SESION_T pointers. */
-  apr_hash_t *cached_session;
+  /* The pool that defines the lifetime of the cache. */
   apr_pool_t *pool;
+
+  /* The config hash used to create new sessions. */
   apr_hash_t *config;
+
+  /* Cached active RA sessions.
+     Keys are RA_SESSION_T and values are CLIENT_RA_SESION_T pointers. */
+  apr_hash_t *active;
+
+  /* List of inactive sessions available for reuse. */
+  APR_RING_HEAD(, svn_client__ra_session_t) freelist;
 
   /* Next ID for RA sessions. Used only for diagnostics purpose. */
   int next_id;

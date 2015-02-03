@@ -21,7 +21,7 @@
  * ====================================================================
  */
 
-#include <stddef.h>
+#include <assert.h>
 #include <apr_pools.h>
 
 #include "svn_dirent_uri.h"
@@ -36,8 +36,17 @@
 #define RCTX_DBG(x)
 #endif
 
-typedef struct client_ra_session_t
+typedef struct svn_client__ra_session_t
 {
+  /* The free-list link for this session. */
+  APR_RING_ENTRY(svn_client__ra_session_t) freelist;
+
+  /* The cache that owns this session. Will be set to NULL in the
+     cache cleanup handler to prevent access through dangling pointers
+     during session release. */
+  svn_client__ra_cache_t* ra_cache;
+
+  /* The actual RA session. */
   svn_ra_session_t *session;
 
   /* POOL that owns this session. NULL if session is not used. */
@@ -52,21 +61,38 @@ typedef struct client_ra_session_t
   /* Repository root URL. */
   const char *root_url;
 
-  /* ID of RA session. Used only for diagnostics purpose. */
-  int id;
-
   /* Last progress reported by this session. */
   apr_off_t last_progress;
 
   /* Accumulated progress since last session open. */
   apr_off_t progress;
-} client_ra_session_t;
+
+  /* ID of RA session. Used only for diagnostics. */
+  int id;
+} svn_client__ra_session_t;
 
 
 static apr_status_t
-cleanup_session(void *data)
+release_session(void *data)
 {
-  client_ra_session_t *cache_entry = data;
+  svn_client__ra_session_t *cache_entry = data;
+  svn_client__ra_cache_t *ra_cache = cache_entry->ra_cache;
+
+  /* Remove the session from the active table and insert it into the
+     inactive list. */
+  if (ra_cache)
+    {
+#ifdef SVN_DEBUG
+      /* Double-check that this entry is not part of the freelist. */
+      assert(cache_entry == APR_RING_NEXT(cache_entry, freelist));
+      assert(cache_entry == APR_RING_PREV(cache_entry, freelist));
+#endif /* SVN_DEBUG */
+
+      apr_hash_set(ra_cache->active, &cache_entry->session,
+                   sizeof(cache_entry->session), NULL);
+      APR_RING_INSERT_HEAD(&ra_cache->freelist, cache_entry,
+                           svn_client__ra_session_t, freelist);
+    }
 
   cache_entry->owner_pool = NULL;
   cache_entry->cb_table = NULL;
@@ -77,14 +103,28 @@ cleanup_session(void *data)
   return APR_SUCCESS;
 }
 
-/* Convert a public client context pointer to a private client context
-   pointer. */
-static svn_client__ra_cache_t *
-get_private_ra_cache(svn_client_ctx_t *public_ctx)
+static apr_status_t
+cleanup_ra_cache(void *data)
 {
-  svn_client__private_ctx_t *const private_ctx =
-    svn_client__get_private_ctx(public_ctx);
-  return &private_ctx->ra_cache;
+  svn_client__ra_cache_t *ra_cache = data;
+  svn_client__ra_session_t *cache_entry;
+  apr_hash_index_t *hi;
+
+  /* Reset the cache owner pointers on all the cached sessions. */
+  for (hi = apr_hash_first(ra_cache->pool, ra_cache->active);
+       hi; hi = apr_hash_next(hi))
+    {
+      cache_entry = apr_hash_this_val(hi);
+      cache_entry->ra_cache = NULL;
+    }
+
+  APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
+                   svn_client__ra_session_t, freelist)
+    cache_entry->ra_cache = NULL;
+
+  RCTX_DBG(("RA_CACHE: Cleanup\n"));
+
+  return APR_SUCCESS;
 }
 
 void
@@ -92,9 +132,19 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
+  RCTX_DBG(("RA_CACHE: Init\n"));
+
   private_ctx->ra_cache.pool = pool;
-  private_ctx->ra_cache.cached_session = apr_hash_make(pool);
   private_ctx->ra_cache.config = config;
+  private_ctx->ra_cache.active = apr_hash_make(pool);
+  APR_RING_INIT(&private_ctx->ra_cache.freelist,
+                svn_client__ra_session_t, freelist);
+
+  /* This cleanup must always be registered last (i.e., after the hash
+     table of active sessions is created), so that all the bits of the
+     cache remain valid when it is run. */
+  apr_pool_cleanup_register(pool, &private_ctx->ra_cache, cleanup_ra_cache,
+                            apr_pool_cleanup_null);
 }
 
 static svn_error_t *
@@ -103,7 +153,7 @@ get_wc_contents(void *baton,
                 const svn_checksum_t *checksum,
                 apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (!b->cb_table->get_wc_contents)
   {
@@ -119,7 +169,7 @@ open_tmp_file(apr_file_t **fp,
               void *baton,
               apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
   return svn_error_trace(b->cb_table->open_tmp_file(fp, b->cb_baton, pool));
 }
 
@@ -131,7 +181,7 @@ get_wc_prop(void *baton,
             const svn_string_t **value,
             apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (b->cb_table->get_wc_prop)
     {
@@ -154,7 +204,7 @@ push_wc_prop(void *baton,
              const svn_string_t *value,
              apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (b->cb_table->push_wc_prop)
     {
@@ -177,7 +227,7 @@ set_wc_prop(void *baton,
             const svn_string_t *value,
             apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
   if (b->cb_table->set_wc_prop)
     {
       return svn_error_trace(
@@ -197,7 +247,7 @@ invalidate_wc_props(void *baton,
                     const char *prop_name,
                     apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (b->cb_table->invalidate_wc_props)
     {
@@ -216,7 +266,7 @@ get_client_string(void *baton,
                   const char **name,
                   apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (b->cb_table->get_client_string)
     {
@@ -233,7 +283,7 @@ get_client_string(void *baton,
 static svn_error_t *
 cancel_callback(void *baton)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   if (b->cb_table->cancel_func)
     {
@@ -251,7 +301,7 @@ progress_func(apr_off_t progress,
               void *baton,
               apr_pool_t *pool)
 {
-  client_ra_session_t *b = baton;
+  svn_client__ra_session_t *b = baton;
 
   b->progress += (progress - b->last_progress);
   b->last_progress = progress;
@@ -262,28 +312,37 @@ progress_func(apr_off_t progress,
 }
 
 static svn_error_t *
-find_session_by_url(client_ra_session_t **cache_entry_p,
+find_session_by_url(svn_client__ra_session_t **cache_entry_p,
                     svn_client__ra_cache_t *ra_cache,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
-    apr_hash_index_t *hi;
+  svn_client__ra_session_t *cache_entry;
 
-    for (hi = apr_hash_first(scratch_pool, ra_cache->cached_session);
-         hi; hi = apr_hash_next(hi))
-      {
-        client_ra_session_t *cache_entry = apr_hash_this_val(hi);
+  APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
+                   svn_client__ra_session_t, freelist)
+    {
+      SVN_ERR_ASSERT(cache_entry->owner_pool == NULL);
 
-        if (cache_entry->owner_pool == NULL &&
-            svn_uri__is_ancestor(cache_entry->root_url, url))
-          {
-            *cache_entry_p = cache_entry;
-            return SVN_NO_ERROR;
-          }
-      }
+      if (svn_uri__is_ancestor(cache_entry->root_url, url))
+        {
+          *cache_entry_p = cache_entry;
+          return SVN_NO_ERROR;
+        }
+    }
 
     *cache_entry_p = NULL;
     return SVN_NO_ERROR;
+}
+
+/* Convert a public client context pointer to a pointer to the RA
+   session cache in the private client context. */
+static svn_client__ra_cache_t *
+get_private_ra_cache(svn_client_ctx_t *public_ctx)
+{
+  svn_client__private_ctx_t *const private_ctx =
+    svn_client__get_private_ctx(public_ctx);
+  return &private_ctx->ra_cache;
 }
 
 svn_error_t *
@@ -298,7 +357,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                   apr_pool_t *scratch_pool)
 {
   svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
-  client_ra_session_t *cache_entry;
+  svn_client__ra_session_t *cache_entry;
 
   if (corrected_p)
       *corrected_p = NULL;
@@ -339,6 +398,10 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
             }
         }
 
+      /* Remove the session from the freelist. */
+      APR_RING_REMOVE(cache_entry, freelist);
+      APR_RING_ELEM_INIT(cache_entry, freelist);
+
       RCTX_DBG(("SESSION(%d): Reused\n", cache_entry->id));
     }
   else
@@ -348,6 +411,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       svn_ra_session_t *session;
 
       cache_entry = apr_pcalloc(ra_cache->pool, sizeof(*cache_entry));
+      APR_RING_ELEM_INIT(cache_entry, freelist);
 
       SVN_ERR(svn_ra_create_callbacks(&cbtable_sink, ra_cache->pool));
       cbtable_sink->open_tmp_file = open_tmp_file;
@@ -384,8 +448,9 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
 
       RCTX_DBG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
 
-      apr_hash_set(ra_cache->cached_session, &cache_entry->session,
+      apr_hash_set(ra_cache->active, &cache_entry->session,
                    sizeof(cache_entry->session), cache_entry);
+      cache_entry->ra_cache = ra_cache;
       ++ra_cache->next_id;
     }
 
@@ -393,7 +458,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
   cache_entry->cb_table = cbtable;
   cache_entry->cb_baton = callback_baton;
   cache_entry->progress = 0;
-  apr_pool_cleanup_register(result_pool, cache_entry, cleanup_session,
+  apr_pool_cleanup_register(result_pool, cache_entry, release_session,
                             apr_pool_cleanup_null);
 
   *session_p = cache_entry->session;
@@ -406,12 +471,13 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
                                      svn_ra_session_t *session)
 {
   svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
-  client_ra_session_t *cache_entry = apr_hash_get(ra_cache->cached_session,
-                                                  &session, sizeof(session));
+  svn_client__ra_session_t *cache_entry =
+    apr_hash_get(ra_cache->active, &session, sizeof(session));
 
   SVN_ERR_ASSERT_NO_RETURN(cache_entry != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(cache_entry->session == session);
   SVN_ERR_ASSERT_NO_RETURN(cache_entry->owner_pool != NULL);
 
   apr_pool_cleanup_run(cache_entry->owner_pool, cache_entry,
-                       cleanup_session);
+                       release_session);
 }
