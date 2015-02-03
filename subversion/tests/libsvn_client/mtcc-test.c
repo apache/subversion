@@ -466,6 +466,158 @@ test_replace_tree(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Baton for handle_rev */
+struct handle_rev_baton
+{
+  svn_revnum_t last;
+  svn_boolean_t up;
+  svn_boolean_t first;
+};
+
+/* Helper for test_file_revs_both_ways */
+static svn_error_t *
+handle_rev(void *baton,
+           const char *path,
+           svn_revnum_t rev,
+           apr_hash_t *rev_props,
+           svn_boolean_t result_of_merge,
+           svn_txdelta_window_handler_t *delta_handler,
+           void **delta_baton,
+           apr_array_header_t *prop_diffs,
+           apr_pool_t *pool)
+{
+  struct handle_rev_baton *hrb = baton;
+  svn_revnum_t expected_rev = hrb->up ? (hrb->last + 1) : (hrb->last - 1);
+
+  SVN_TEST_ASSERT(rev == expected_rev);
+  SVN_TEST_ASSERT(apr_hash_count(rev_props) >= 3);
+  SVN_TEST_STRING_ASSERT(path, (rev < 5) ? "/iota" : "/mu");
+
+  if (!hrb->first && rev == (hrb->up ? 5 : 4))
+    SVN_TEST_ASSERT(delta_handler == NULL);
+  else
+    SVN_TEST_ASSERT(delta_handler != NULL);
+
+  if (delta_handler)
+    {
+      *delta_handler = svn_delta_noop_window_handler;
+      *delta_baton = NULL;
+    }
+
+  hrb->last = rev;
+  hrb->first = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_file_revs_both_ways(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  svn_client__mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  const char *repos_url;
+  svn_ra_session_t *ra;
+  struct handle_rev_baton hrb;
+
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-file-revs",
+                                  opts, pool, subpool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_add_file("iota",
+                                        cstr_stream("revision-1", subpool),
+                                        NULL /* src_checksum */,
+                                        mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 1, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_update_file("iota",
+                                           cstr_stream("revision-2", subpool),
+                                           NULL /* src_checksum */, NULL, NULL,
+                                           mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 2, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_update_file("iota",
+                                           cstr_stream("revision-3", subpool),
+                                           NULL /* src_checksum */, NULL, NULL,
+                                           mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 3, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 3, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_update_file("iota",
+                                           cstr_stream("revision-4", subpool),
+                                           NULL /* src_checksum */, NULL, NULL,
+                                           mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 4, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 4, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_move("iota", "mu", mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 5, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 5, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_update_file("mu",
+                                           cstr_stream("revision-6", subpool),
+                                           NULL /* src_checksum */, NULL, NULL,
+                                           mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 6, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 6, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_delete("mu", mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 7, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client_open_ra_session2(&ra, repos_url, NULL, ctx, pool, subpool));
+
+  svn_pool_clear(subpool);
+  hrb.up = FALSE;
+  hrb.last = 5;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "iota", 4, 1, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 1);
+
+  svn_pool_clear(subpool);
+  hrb.up = TRUE;
+  hrb.last = 0;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "iota", 1, 4, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 4);
+
+  svn_pool_clear(subpool);
+  hrb.up = FALSE;
+  hrb.last = 7;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 6, 1, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 1);
+
+  svn_pool_clear(subpool);
+  hrb.up = TRUE;
+  hrb.last = 0;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 1, 6, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 6);
+  
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -490,6 +642,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test mtcc anchoring for root operations"),
     SVN_TEST_OPTS_PASS(test_replace_tree,
                        "test mtcc replace tree"),
+    SVN_TEST_OPTS_PASS(test_file_revs_both_ways,
+                       "test ra_get_file_revs2 both ways"),
     SVN_TEST_NULL
   };
 
