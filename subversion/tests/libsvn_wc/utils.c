@@ -22,6 +22,7 @@
 
 #include "svn_error.h"
 #include "svn_client.h"
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 
 #include "utils.h"
@@ -33,9 +34,30 @@
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
 
+svn_error_t *
+svn_test__create_client_ctx(svn_client_ctx_t **ctx,
+                            svn_test__sandbox_t *sbox,
+                            apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_client_create_context2(ctx, NULL, result_pool));
+
+  SVN_ERR(svn_cmdline_create_auth_baton(&(*ctx)->auth_baton,
+                                        TRUE  /* non_interactive */,
+                                        "jrandom", "rayjandom",
+                                        NULL,
+                                        TRUE  /* no_auth_cache */,
+                                        FALSE /* trust_server_cert */,
+                                        NULL, NULL, NULL, result_pool));
+
+  if (sbox)
+    (*ctx)->wc_ctx = sbox->wc_ctx;
+
+  return SVN_NO_ERROR;
+}
 
 /* Create an empty repository and WC for the test TEST_NAME.  Set *REPOS_URL
- * to the URL of the new repository and *WC_ABSPATH to the root path of the
+ * to the URL of the new repository, *REPOS_DIR to its local path and
+ * *WC_ABSPATH to the root path of the
  * new WC.
  *
  * Create the repository and WC in subdirectories called
@@ -45,6 +67,7 @@
  * Register the repo and WC to be cleaned up when the test suite exits. */
 static svn_error_t *
 create_repos_and_wc(const char **repos_url,
+                    const char **repos_dir,
                     const char **wc_abspath,
                     const char *test_name,
                     const svn_test_opts_t *opts,
@@ -65,8 +88,6 @@ create_repos_and_wc(const char **repos_url,
 
   /* Create a repos. Register it for clean-up. Set *REPOS_URL to its path. */
   {
-    svn_repos_t *repos;
-
     /* Use a subpool to create the repository and then destroy the subpool
        so the repository's underlying filesystem is closed.  If opts->fs_type
        is BDB this prevents any attempt to open a second environment handle
@@ -74,8 +95,8 @@ create_repos_and_wc(const char **repos_url,
        only a single environment handle to be open per process. */
     apr_pool_t *subpool = svn_pool_create(pool);
 
-    SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, subpool));
-    SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
+    SVN_ERR(svn_test__create_repos2(NULL, repos_url, repos_dir, repos_path,
+                                    opts, pool, subpool));
     svn_pool_destroy(subpool);
   }
 
@@ -85,7 +106,7 @@ create_repos_and_wc(const char **repos_url,
     svn_client_ctx_t *ctx;
     svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
-    SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
+    SVN_ERR(svn_test__create_client_ctx(&ctx, NULL, subpool));
     SVN_ERR(svn_dirent_get_absolute(wc_abspath, wc_path, pool));
     SVN_ERR(svn_client_checkout3(NULL, *repos_url, *wc_abspath,
                                  &head_rev, &head_rev, svn_depth_infinity,
@@ -100,7 +121,6 @@ create_repos_and_wc(const char **repos_url,
 
   return SVN_NO_ERROR;
 }
-
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
@@ -149,7 +169,8 @@ svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
                          apr_pool_t *pool)
 {
   sandbox->pool = pool;
-  SVN_ERR(create_repos_and_wc(&sandbox->repos_url, &sandbox->wc_abspath,
+  SVN_ERR(create_repos_and_wc(&sandbox->repos_url, &sandbox->repos_dir,
+                              &sandbox->wc_abspath,
                               test_name, opts, pool));
   SVN_ERR(svn_wc_context_create(&sandbox->wc_ctx, NULL, pool, pool));
   return SVN_NO_ERROR;
@@ -240,8 +261,7 @@ sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
                                         scratch_pool, 1,
                                         sizeof(svn_client_copy_source_t *));
 
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, scratch_pool));
 
   if (SVN_IS_VALID_REVNUM(revision))
     {
@@ -334,8 +354,7 @@ sbox_wc_commit_ex(svn_test__sandbox_t *b,
   apr_pool_t *scratch_pool = svn_pool_create(b->pool);
   svn_error_t *err;
 
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, scratch_pool));
 
   /* A successfull commit doesn't close the ra session, but leaves that
      to the caller. This leaves the BDB handle open, which might cause
@@ -387,8 +406,8 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
     }
 
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+
   return svn_client_update4(&result_revs, paths, &revision, depth,
                             sticky, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);
@@ -412,8 +431,8 @@ sbox_wc_switch(svn_test__sandbox_t *b,
   svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
   url = apr_pstrcat(b->pool, b->repos_url, url, SVN_VA_NULL);
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+
   return svn_client_switch3(&result_rev, sbox_wc_path(b, path), url,
                             &head_rev, &head_rev, depth,
                             FALSE /* depth_is_sticky */,
@@ -464,8 +483,8 @@ sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
   apr_array_header_t *paths = apr_array_make(b->pool, 1,
                                              sizeof(const char *));
 
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, src);
   return svn_client_move7(paths, sbox_wc_path(b, dst),
                           FALSE /* move_as_child */,
@@ -488,8 +507,8 @@ sbox_wc_propset(svn_test__sandbox_t *b,
                                              sizeof(const char *));
   svn_string_t *pval = value ? svn_string_create(value, b->pool) : NULL;
 
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,
@@ -503,8 +522,7 @@ sbox_wc_relocate(svn_test__sandbox_t *b,
   apr_pool_t *scratch_pool = b->pool;
   svn_client_ctx_t *ctx;
 
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
-  ctx->wc_ctx = b->wc_ctx;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, scratch_pool));
 
   SVN_ERR(svn_client_relocate2(b->wc_abspath, b->repos_url,
                                new_repos_url, FALSE, ctx,scratch_pool));
