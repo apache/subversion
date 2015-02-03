@@ -396,7 +396,7 @@ class TestHarness:
 
       # Enable access for http
       if self.base_url.startswith('http'):
-        open(os.path.join(self.builddir, 'authz'), 'w').write(
+        open(os.path.join(self.builddir, subdir, 'authz'), 'w').write(
                 '[/]\n' +
                 '* = rw\n')
 
