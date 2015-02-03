@@ -3588,9 +3588,7 @@ def copy_pin_externals(sbox):
     expected_output = [
       'exdir_G -r%d %s\n' % (other_external_youngest_rev,
                              external_url_for["A/C/exdir_G"]),
-      # Note: A/D/H was last changed in r5, but exdir_H's external
-      # definition's URL is already pinned to r1.
-      '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
+      '%s exdir_H\n' % external_url_for["A/C/exdir_H"],
       '\n',
     ]
     if svntest.sandbox.is_url(base_path_or_url):

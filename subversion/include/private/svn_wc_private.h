@@ -1268,14 +1268,31 @@ typedef enum svn_wc__external_description_format_t
   svn_wc__external_description_format_2
 } svn_wc__external_description_format_t;
 
+/* Additional information about what the external's parser has parsed. */
+typedef struct svn_wc__externals_parser_info_t
+{
+  /* The syntax format used by the external description. */
+  svn_wc__external_description_format_t format;
+
+  /* The string used for defining the operative revision, i.e.
+     "-rN", "-rHEAD", or "-r{DATE}".
+     NULL if revision was not given. */
+  const char *rev_str;
+
+  /* The string used for defining the peg revision (equals rev_str in
+     format 1, is "@N", or "@HEAD" or "@{DATE}" in format 2).
+     NULL if peg revision was not given. */
+  const char *peg_rev_str;
+
+} svn_wc__externals_parser_info_t;
+
 /* Like svn_wc_parse_externals_description3() but returns an additional array
- * with elements of type svn_wc__external_description_format_t. Each element
- * of which indicates the format of the syntax used to define the corresponding
- * external. @a description_formats_p may be NULL if not required by the caller.
+ * with elements of type svn_wc__externals_parser_info_t in @a *parser_infos_p.
+ * @a parser_infos_p may be NULL if not required by the caller.
  */
 svn_error_t *
 svn_wc__parse_externals_description(apr_array_header_t **externals_p,
-                                    apr_array_header_t **description_formats_p,
+                                    apr_array_header_t **parser_infos_p,
                                     const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
