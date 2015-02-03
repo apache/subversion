@@ -212,39 +212,114 @@ svn_test__create_fs(svn_fs_t **fs_p,
 }
 
 svn_error_t *
-svn_test__create_repos(svn_repos_t **repos_p,
-                       const char *name,
-                       const svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+svn_test__create_repos2(svn_repos_t **repos_p,
+                        const char **repos_url,
+                        const char **repos_dirent,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
+  const char *repos_abspath;
+  apr_pool_t *repos_pool = repos_p ? result_pool : scratch_pool;
+  svn_boolean_t init_svnserve = FALSE;
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
-                                         opts->server_minor_version, pool);
+                                         opts->server_minor_version,
+                                         repos_pool);
+
+  if (repos_url && opts->repos_dir && opts->repos_url)
+    {
+      name = apr_psprintf(scratch_pool, "%s-%s", opts->prog_name,
+                          svn_dirent_basename(name, NULL));
+
+      repos_abspath = svn_dirent_join(opts->repos_dir, name, scratch_pool);
+
+      SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath,
+                                      scratch_pool));
+
+      SVN_ERR(svn_io_make_dir_recursively(repos_abspath, scratch_pool));
+
+      *repos_url = svn_path_url_add_component2(opts->repos_url, name,
+                                               result_pool);
+
+      if (strstr(opts->repos_url, "svn://"))
+        init_svnserve = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_dirent_get_absolute(&repos_abspath, name, scratch_pool));
+
+      if (repos_url)
+        SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_abspath,
+                                                 result_pool));
+    }
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_dir2(repos_abspath, TRUE, NULL, NULL, scratch_pool));
 
-  SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
-                           fs_config, pool));
+  SVN_ERR(svn_repos_create(&repos, repos_abspath, NULL, NULL, NULL,
+                           fs_config, repos_pool));
+
+  SVN_DBG(("Created repository at %s", repos_abspath));
 
   /* Register this repo for cleanup. */
-  svn_test_add_dir_cleanup(name);
+  svn_test_add_dir_cleanup(repos_abspath);
 
   SVN_ERR(maybe_install_fs_conf(svn_repos_fs(repos), opts, &must_reopen,
-                                pool));
+                                scratch_pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_repos_open3(&repos, name, NULL, pool, pool));
-      svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+      SVN_ERR(svn_repos_open3(&repos, repos_abspath, NULL, repos_pool,
+                              scratch_pool));
     }
 
-  *repos_p = repos;
+  svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+
+  if (init_svnserve)
+    {
+      const char *cfg;
+      const char *pwd;
+
+      cfg = svn_dirent_join(repos_abspath, "conf/svnserve.conf", scratch_pool);
+      SVN_ERR(svn_io_remove_file2(cfg, FALSE, scratch_pool));
+      SVN_ERR(svn_io_file_create(cfg,
+                                 "[general]\n"
+                                 "auth-access = write\n"
+                                 "password-db = passwd\n",
+                                 scratch_pool));
+
+      pwd = svn_dirent_join(repos_abspath, "conf/passwd", scratch_pool);
+      SVN_ERR(svn_io_remove_file2(pwd, FALSE, scratch_pool));
+      SVN_ERR(svn_io_file_create(pwd,
+                                 "[users]\n"
+                                 "jrandom = rayjandom\n"
+                                 "jconstant = rayjandom\n",
+                                 scratch_pool));
+    }
+
+  if (repos_p)
+    *repos_p = repos;
+  if (repos_dirent)
+    *repos_dirent = apr_pstrdup(result_pool, repos_abspath);
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_test__create_repos(svn_repos_t **repos_p,
+                       const char *name,
+                       const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  return svn_error_trace(
+            svn_test__create_repos2(repos_p, NULL, NULL, name,
+                                    opts, pool, pool));
 }
 
 svn_error_t *
