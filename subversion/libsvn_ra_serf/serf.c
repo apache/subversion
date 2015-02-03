@@ -776,6 +776,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
                                new_sess);
 
   new_sess->num_conns = 1;
+  new_sess->cur_conn = 0;
 
   new_session->priv = new_sess;
 
