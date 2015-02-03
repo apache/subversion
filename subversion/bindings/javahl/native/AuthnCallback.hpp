@@ -153,13 +153,7 @@ public:
     /**
      * Creates and initializes a wrapped object;
      */
-    explicit SSLServerCertInfo(::Java::Env env,
-                               const ::Java::String& hostname,
-                               const ::Java::String& fingerprint,
-                               const ::Java::String& validFrom,
-                               const ::Java::String& validUntil,
-                               const ::Java::String& issuer,
-                               const ::Java::String& der);
+    explicit SSLServerCertInfo(::Java::Env env, const char* ascii_cert);
 
   private:
     /**

@@ -3123,6 +3123,18 @@ def commit_mergeinfo_ood(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'commit', sbox.ospath(''), '-m', 'M')
 
+@Issue(2295)
+def mkdir_conflict_proper_error(sbox):
+  "mkdir conflict should produce a proper error"
+
+  sbox.build(create_wc=False)
+  repo_url = sbox.repo_url
+
+  expected_error = "svn: E160020: .* already exists.*'/A'"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'mkdir', repo_url + '/A',
+                                     '-m', '')
+
 ########################################################################
 # Run the tests
 
@@ -3198,6 +3210,7 @@ test_list = [ None,
               commit_cp_with_deep_delete,
               commit_deep_deleted,
               commit_mergeinfo_ood,
+              mkdir_conflict_proper_error,
              ]
 
 if __name__ == '__main__':

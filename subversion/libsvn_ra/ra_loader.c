@@ -279,7 +279,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
   const char *store_pp_plaintext
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
-  const char *corrected_url;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -482,34 +481,29 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  err = vtable->open_session(session, &corrected_url, repos_URL,
+  err = vtable->open_session(session, corrected_url_p,
+                             repos_URL,
                              callbacks, callback_baton, config, sesspool);
 
   if (err)
-    return svn_error_createf(
+    {
+      if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
+        return svn_error_trace(err);
+
+      return svn_error_createf(
                 SVN_ERR_RA_CANNOT_CREATE_SESSION, err,
                 _("Unable to connect to a repository at URL '%s'"),
                 repos_URL);
+    }
 
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
-  if (corrected_url_p && corrected_url)
+  if (corrected_url_p && *corrected_url_p)
     {
-      if (! svn_path_is_url(corrected_url))
-        {
-          /* RFC1945 and RFC2616 state that the Location header's
-             value (from whence this CORRECTED_URL ultimately comes),
-             if present, must be an absolute URI.  But some Apache
-             versions (those older than 2.2.11, it seems) transmit
-             only the path portion of the URI.  See issue #3775 for
-             details. */
-          apr_uri_t corrected_URI = repos_URI;
-          corrected_URI.path = (char *)corrected_url;
-          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
-        }
-      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
+      /* *session_p = NULL; */
+      *corrected_url_p = apr_pstrdup(pool, *corrected_url_p);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }
@@ -537,11 +531,11 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 }
 
 svn_error_t *
-svn_ra_dup_session(svn_ra_session_t **new_session,
-                   svn_ra_session_t *old_session,
-                   const char *session_url,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_ra__dup_session(svn_ra_session_t **new_session,
+                    svn_ra_session_t *old_session,
+                    const char *session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *session;
 
@@ -1016,8 +1010,8 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
               svn_uri_split(&parent_url, &base_name, session_url,
                             scratch_pool);
 
-              SVN_ERR(svn_ra_dup_session(&parent_session, session, parent_url,
-                                         scratch_pool, scratch_pool));
+              SVN_ERR(svn_ra__dup_session(&parent_session, session, parent_url,
+                                          scratch_pool, scratch_pool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,

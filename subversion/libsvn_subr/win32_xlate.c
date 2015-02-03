@@ -77,11 +77,11 @@ initialize_com(void *baton, apr_pool_t* pool)
   return SVN_NO_ERROR;
 }
 
-typedef struct win32_xlate_t
+typedef struct svn_subr__win32_xlate_t
 {
   UINT from_page_id;
   UINT to_page_id;
-} win32_xlate_t;
+} svn_subr__win32_xlate_t;
 
 static apr_status_t
 get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
@@ -166,12 +166,12 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
 }
 
 apr_status_t
-svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
+svn_subr__win32_xlate_open(svn_subr__win32_xlate_t **xlate_p, const char *topage,
                            const char *frompage, apr_pool_t *pool)
 {
   UINT from_page_id, to_page_id;
   apr_status_t apr_err = APR_SUCCESS;
-  win32_xlate_t *xlate;
+  svn_subr__win32_xlate_t *xlate;
 
   apr_err = get_page_id_from_name(&to_page_id, topage, pool);
   if (apr_err == APR_SUCCESS)
@@ -190,7 +190,7 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
 }
 
 apr_status_t
-svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
+svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
                                    const char *src_data,
                                    apr_size_t src_length,
                                    svn_stringbuf_t **dest,
