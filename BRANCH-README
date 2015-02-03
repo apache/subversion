@@ -27,7 +27,7 @@ PROBLEM
 
 Currently Subversion client layer creates new RA session for every
 svn_client_* call. Even more: some operations like svn_client_merge() used
-to creates 10-15 RA sessions around the release of 1.8 (most bad cases
+to creates 10-15 RA sessions around the release of 1.8 (the worst cases
 were fixed on trunk short after branching). Each session creation takes
 significant amount of time: TCP connection, SSL handshake, authentication
 and initial handshake. It easily could take several seconds over WAN.
