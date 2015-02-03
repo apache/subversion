@@ -772,6 +772,15 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   opts.prog_name = svn_dirent_basename(opts.prog_name, NULL);
 
 #ifdef WIN32
+  /* Abuse cast in strstr() to remove .exe extension.
+     Value is allocated in pool by svn_dirent_internal_style() */
+  {
+    char *exe_ext = strstr(opts.prog_name, ".exe");
+
+    if (exe_ext)
+      *exe_ext = '\0';
+  }
+
 #if _MSC_VER >= 1400
   /* ### This should work for VC++ 2002 (=1300) and later */
   /* Show the abort message on STDERR instead of a dialog to allow
