@@ -266,8 +266,6 @@ svn_test__create_repos2(svn_repos_t **repos_p,
   SVN_ERR(svn_repos_create(&repos, repos_abspath, NULL, NULL, NULL,
                            fs_config, repos_pool));
 
-  SVN_DBG(("Created repository at %s", repos_abspath));
-
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup(repos_abspath);
 
