@@ -41,13 +41,8 @@ svn_test__create_client_ctx(svn_client_ctx_t **ctx,
 {
   SVN_ERR(svn_client_create_context2(ctx, NULL, result_pool));
 
-  SVN_ERR(svn_cmdline_create_auth_baton(&(*ctx)->auth_baton,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, result_pool));
+  SVN_ERR(svn_test__init_auth_baton(&(*ctx)->auth_baton,
+                                    result_pool));
 
   if (sbox)
     (*ctx)->wc_ctx = sbox->wc_ctx;

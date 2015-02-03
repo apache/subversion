@@ -87,6 +87,8 @@ make_greek_tree(const char *repos_url,
   subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, subpool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
 
   for (i = 0; svn_test__greek_tree_nodes[i].path; i++)
@@ -121,16 +123,14 @@ test_mkdir(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-mkdir", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-mkdir",
+                                  opts, pool, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_mkdir("branches", mtcc, pool));
@@ -151,18 +151,16 @@ test_mkgreek(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-mkgreek", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-mkgreek",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
@@ -178,18 +176,16 @@ test_swap(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-swap", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-swap",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_move("A/B", "B", mtcc, pool));
@@ -207,18 +203,16 @@ test_propset(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-propset", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-propset",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_propset("iota", "key",
@@ -281,18 +275,15 @@ test_update_files(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-update-files", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
-
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-update-files",
+                                  opts, pool, pool));
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   /* Update iota with knowledge of the old data */
@@ -331,18 +322,16 @@ test_overwrite(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-overwrite", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-overwrite",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client__mtcc_add_copy("A", 1, "AA", mtcc, pool));
@@ -365,18 +354,15 @@ test_anchoring(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-anchoring", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-anchoring",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
 
   /* Update a file as root operation */
   SVN_ERR(svn_client__mtcc_create(&mtcc,
@@ -454,18 +440,15 @@ test_replace_tree(const svn_test_opts_t *opts,
 {
   svn_client__mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
-  const char *repos_abspath;
   const char *repos_url;
-  svn_repos_t* repos;
 
-  repos_abspath = svn_test_data_path("mtcc-replace_tree", pool);
-  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
-  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-replace_tree",
+                                  opts, pool, pool));
 
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
 
   /* Update a file as root operation */
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
