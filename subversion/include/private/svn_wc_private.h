@@ -1259,7 +1259,28 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+typedef enum svn_wc__external_description_format_t
+{
+  /* LOCALPATH [-r PEG] URL */
+  svn_wc__external_description_format_1 = 0,
 
+  /* [-r REV] URL[@PEG] LOCALPATH, introduced in Subversion 1.5 */
+  svn_wc__external_description_format_2
+} svn_wc__external_description_format_t;
+
+/* Like svn_wc_parse_externals_description3() but returns an additional array
+ * with elements of type svn_wc__external_description_format_t. Each element
+ * of which indicates the format of the syntax used to define the corresponding
+ * external. @a description_formats_p may be NULL if not required by the caller.
+ */
+svn_error_t *
+svn_wc__parse_externals_description(apr_array_header_t **externals_p,
+                                    apr_array_header_t **description_formats_p,
+                                    const char *defining_directory,
+                                    const char *desc,
+                                    svn_boolean_t canonicalize_url,
+                                    apr_pool_t *pool);
+  
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates
  * #svn_wc_status3_t structures and sends them through @a status_func /

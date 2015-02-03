@@ -3586,8 +3586,8 @@ def copy_pin_externals(sbox):
                                        'propget', 'svn:externals',
                                        target)
     expected_output = [
-      '%s@%d exdir_G\n' % (external_url_for["A/C/exdir_G"],
-                           other_external_youngest_rev),
+      'exdir_G -r%d %s\n' % (other_external_youngest_rev,
+                             external_url_for["A/C/exdir_G"]),
       # Note: A/D/H was last changed in r5, but exdir_H's external
       # definition's URL is already pinned to r1.
       '-r1 %s exdir_H\n' % external_url_for["A/C/exdir_H"],
@@ -3605,7 +3605,7 @@ def copy_pin_externals(sbox):
                            other_external_youngest_rev),
       '%s@%d exdir_A/G\n' % (external_url_for["A/D/exdir_A/G/"],
                              other_external_youngest_rev),
-      '-r1 %s@1 exdir_A/H\n' % external_url_for["A/D/exdir_A/H"],
+      'exdir_A/H -r1 %s\n' % external_url_for["A/D/exdir_A/H"],
       '%s@%d x/y/z/blah\n' % (external_url_for["A/D/x/y/z/blah"],
                               other_external_youngest_rev),
       '\n',

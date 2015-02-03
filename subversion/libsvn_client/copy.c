@@ -193,10 +193,12 @@ pin_externals_prop(svn_string_t **pinned_externals,
 {
   svn_stringbuf_t *buf;
   apr_array_header_t *external_items;
+  apr_array_header_t *description_formats;
   int i;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_wc_parse_externals_description3(&external_items,
+  SVN_ERR(svn_wc__parse_externals_description(&external_items,
+                                              &description_formats,
                                               local_abspath_or_url,
                                               externals_prop_val->data,
                                               FALSE /* canonicalize_url */,
@@ -207,6 +209,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
   for (i = 0; i < external_items->nelts; i++)
     {
       svn_wc_external_item2_t *item;
+      svn_wc__external_description_format_t format;
       svn_opt_revision_t external_pegrev;
       const char *pinned_desc;
       const char *rev_str;
@@ -215,6 +218,8 @@ pin_externals_prop(svn_string_t **pinned_externals,
       svn_pool_clear(iterpool);
 
       item = APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
+      format = APR_ARRAY_IDX(description_formats, i,
+                             svn_wc__external_description_format_t);
 
       if (item->peg_revision.kind == svn_opt_revision_date)
         {
@@ -309,8 +314,29 @@ pin_externals_prop(svn_string_t **pinned_externals,
         peg_rev_str = apr_psprintf(iterpool, "@%ld",
                                    external_pegrev.value.number);
 
-      pinned_desc = apr_psprintf(iterpool, "%s%s%s %s\n", rev_str, item->url,
-                                 peg_rev_str, item->target_dir);
+      switch (format)
+        {
+          case svn_wc__external_description_format_1:
+            if (rev_str[0] == '\0')
+              rev_str = apr_psprintf(iterpool, "-r%ld ",
+                                     external_pegrev.value.number);
+            pinned_desc = apr_psprintf(iterpool, "%s %s%s\n", item->target_dir,
+                                       rev_str, item->url);
+            break;
+
+          case svn_wc__external_description_format_2:
+            pinned_desc = apr_psprintf(iterpool, "%s%s%s %s\n", rev_str, item->url,
+                                       peg_rev_str, item->target_dir);
+            break;
+
+          default:
+            return svn_error_createf(
+                     SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+                     _("%s property defined at '%s' is using an unsupported "
+                       "syntax"), SVN_PROP_EXTERNALS,
+                     svn_dirent_local_style(local_abspath_or_url, iterpool));
+        }
+
       svn_stringbuf_appendcstr(buf, pinned_desc);
     }
   svn_pool_destroy(iterpool);
