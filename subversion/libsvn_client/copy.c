@@ -193,12 +193,12 @@ pin_externals_prop(svn_string_t **pinned_externals,
 {
   svn_stringbuf_t *buf;
   apr_array_header_t *external_items;
-  apr_array_header_t *description_formats;
+  apr_array_header_t *parser_infos;
   int i;
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_wc__parse_externals_description(&external_items,
-                                              &description_formats,
+                                              &parser_infos,
                                               local_abspath_or_url,
                                               externals_prop_val->data,
                                               FALSE /* canonicalize_url */,
@@ -209,7 +209,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
   for (i = 0; i < external_items->nelts; i++)
     {
       svn_wc_external_item2_t *item;
-      svn_wc__external_description_format_t format;
+      svn_wc__externals_parser_info_t *info;
       svn_opt_revision_t external_pegrev;
       const char *pinned_desc;
       const char *rev_str;
@@ -218,8 +218,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
       svn_pool_clear(iterpool);
 
       item = APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
-      format = APR_ARRAY_IDX(description_formats, i,
-                             svn_wc__external_description_format_t);
+      info = APR_ARRAY_IDX(parser_infos, i, svn_wc__externals_parser_info_t *);
 
       if (item->peg_revision.kind == svn_opt_revision_date)
         {
@@ -294,37 +293,40 @@ pin_externals_prop(svn_string_t **pinned_externals,
             }
         }
 
-      if (item->revision.kind == svn_opt_revision_date)
-        rev_str = apr_psprintf(iterpool, "-r{%s} ",
-                              svn_time_to_cstring(item->revision.value.date,
-                                                  iterpool));
-      else if (item->revision.kind == svn_opt_revision_number)
-        rev_str = apr_psprintf(iterpool, "-r%ld ", item->revision.value.number);
-      else
-        rev_str = "";
-
       SVN_ERR_ASSERT(external_pegrev.kind == svn_opt_revision_date ||
                      external_pegrev.kind == svn_opt_revision_number);
-      if (external_pegrev.kind == svn_opt_revision_date)
-        peg_rev_str = apr_psprintf(iterpool, "@{%s}",
-                                   svn_time_to_cstring(
-                                     external_pegrev.value.date,
-                                     iterpool));
-      else
-        peg_rev_str = apr_psprintf(iterpool, "@%ld",
-                                   external_pegrev.value.number);
 
-      switch (format)
+      switch (info->format)
         {
           case svn_wc__external_description_format_1:
-            if (rev_str[0] == '\0')
-              rev_str = apr_psprintf(iterpool, "-r%ld ",
-                                     external_pegrev.value.number);
+            if (info->rev_str && item->revision.kind != svn_opt_revision_head)
+              rev_str = apr_psprintf(iterpool, "%s ", info->rev_str);
+            else
+              {
+                SVN_ERR_ASSERT(external_pegrev.kind == svn_opt_revision_number);
+                rev_str = apr_psprintf(iterpool, "-r%ld ",
+                                       external_pegrev.value.number);
+              }
+
             pinned_desc = apr_psprintf(iterpool, "%s %s%s\n", item->target_dir,
                                        rev_str, item->url);
             break;
 
           case svn_wc__external_description_format_2:
+            if (info->rev_str && item->revision.kind != svn_opt_revision_head)
+              rev_str = apr_psprintf(iterpool, "%s ", info->rev_str);
+            else
+              rev_str = "";
+
+            if (info->peg_rev_str &&
+                item->peg_revision.kind != svn_opt_revision_head)
+              peg_rev_str = info->peg_rev_str;
+            else
+              {
+                SVN_ERR_ASSERT(external_pegrev.kind == svn_opt_revision_number);
+                peg_rev_str = apr_psprintf(iterpool, "@%ld",
+                                           external_pegrev.value.number);
+              }
             pinned_desc = apr_psprintf(iterpool, "%s%s%s %s\n", rev_str, item->url,
                                        peg_rev_str, item->target_dir);
             break;
