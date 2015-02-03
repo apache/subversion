@@ -1751,10 +1751,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
       case 308:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (sline.code == 301)
-                                 ? _("Repository moved permanently to '%s';"
-                                     " please relocate")
-                                 : _("Repository moved temporarily to '%s';"
-                                     " please relocate"), location);
+                                  ? _("Repository moved permanently to '%s'")
+                                  : _("Repository moved temporarily to '%s'"),
+                                 location);
       case 403:
         return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
                                  _("Access to '%s' forbidden"), path);
@@ -1853,9 +1852,13 @@ response_done(serf_request_t *request,
   if (handler->server_error)
     return svn_ra_serf__server_error_create(handler, scratch_pool);
 
-  if ((handler->sline.code >= 400 || handler->sline.code <= 199)
-      && !handler->session->pending_error
-      && !handler->no_fail_on_http_failure_status)
+  if (handler->sline.code >= 400 || handler->sline.code <= 199)
+    {
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
+  if ((handler->sline.code >= 300 && handler->sline.code < 399)
+      && !handler->no_fail_on_http_redirect_status)
     {
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }

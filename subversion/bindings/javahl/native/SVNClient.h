@@ -82,7 +82,7 @@ class SVNClient :public SVNBase
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
              bool ignoreMimeType, bool includeMergedRevisions,
-             BlameCallback *callback);
+             BlameCallback *callback, DiffOptions const& options);
   void relocate(const char *from, const char *to, const char *path,
                 bool ignoreExternals);
   apr_hash_t *streamFileContent(const char *path,

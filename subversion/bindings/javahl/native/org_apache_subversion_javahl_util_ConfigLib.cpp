@@ -41,8 +41,10 @@
 #include "JNICriticalSection.h"
 
 #include "svn_auth.h"
+#include "svn_base64.h"
 #include "svn_config.h"
 #include "svn_hash.h"
+#include "svn_x509.h"
 
 #include "svn_private_config.h"
 
@@ -140,41 +142,14 @@ jobject build_credential(Java::Env env, apr_hash_t* cred,
   else if (0 == strcmp(cred_kind, SVN_AUTH_CRED_SSL_SERVER_TRUST))
     {
       entry = static_cast<svn_string_t*>(
-          svn_hash_gets(cred, SVN_CONFIG_AUTHN_HOSTNAME_KEY));
-      const char* hostname = (entry ? entry->data : NULL);
-
-      entry = static_cast<svn_string_t*>(
-          svn_hash_gets(cred, SVN_CONFIG_AUTHN_FINGERPRINT_KEY));
-      const char* fingerprint = (entry ? entry->data : NULL);
-
-      entry = static_cast<svn_string_t*>(
-          svn_hash_gets(cred, SVN_CONFIG_AUTHN_VALID_FROM_KEY));
-      const char* valid_from = (entry ? entry->data : NULL);
-
-      entry = static_cast<svn_string_t*>(
-          svn_hash_gets(cred, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY));
-      const char* valid_until = (entry ? entry->data : NULL);
-
-      entry = static_cast<svn_string_t*>(
-          svn_hash_gets(cred, SVN_CONFIG_AUTHN_ISSUER_DN_KEY));
-      const char* issuer = (entry ? entry->data : NULL);
-
-      entry = static_cast<svn_string_t*>(
           svn_hash_gets(cred, SVN_CONFIG_AUTHN_ASCII_CERT_KEY));
-      const char* der = (entry ? entry->data : NULL);
+      const char* ascii_cert = (entry ? entry->data : NULL);
 
       entry = static_cast<svn_string_t*>(
           svn_hash_gets(cred, SVN_CONFIG_AUTHN_FAILURES_KEY));
       jint failflags = (!entry ? 0 : jint(apr_atoi64(entry->data)));
 
-      info = JavaHL::AuthnCallback
-        ::SSLServerCertInfo(env,
-                            Java::String(env, hostname),
-                            Java::String(env, fingerprint),
-                            Java::String(env, valid_from),
-                            Java::String(env, valid_until),
-                            Java::String(env, issuer),
-                            Java::String(env, der)).get();
+      info = JavaHL::AuthnCallback::SSLServerCertInfo(env, ascii_cert).get();
       failures = JavaHL::AuthnCallback
         ::SSLServerCertFailures(env, failflags).get();
     }
@@ -370,6 +345,19 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
         const ::Java::Env m_env;
         ::Java::MutableList<JavaHL::Credential> m_credentials;
 
+        bool match_array(const char* pattern,
+                         const apr_array_header_t* hostnames)
+          {
+            for (int i = 0; i < hostnames->nelts; ++i)
+              {
+                const char* const hostname =
+                  APR_ARRAY_IDX(hostnames, i, const char*);
+                if (!apr_fnmatch(pattern, hostname, 0))
+                  return true;
+              }
+            return false;
+          }
+
       public:
         explicit Callback(::Java::Env ctor_env,
                           const char* ctor_cred_kind,
@@ -411,25 +399,41 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                 svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_PASSTYPE_KEY));
             const char* const store = (entry ? entry->data : NULL);
 
-            entry = static_cast<svn_string_t*>(
-                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_HOSTNAME_KEY));
-            const char* const hostname = (entry ? entry->data : NULL);
+            const svn_string_t* ascii_cert = static_cast<svn_string_t*>(
+                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_ASCII_CERT_KEY));
 
-            entry = static_cast<svn_string_t*>(
-                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_FINGERPRINT_KEY));
-            const char* const fingerprint = (entry ? entry->data : NULL);
+            /* Parsed certificate data. */
+            const char* subject = NULL;
+            const char* issuer = NULL;
+            const char* fingerprint = NULL;
+            const apr_array_header_t* hostnames = NULL;
 
-            entry = static_cast<svn_string_t*>(
-                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_VALID_FROM_KEY));
-            const char* const valid_from = (entry ? entry->data : NULL);
-
-            entry = static_cast<svn_string_t*>(
-                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY));
-            const char* const valid_until = (entry ? entry->data : NULL);
-
-            entry = static_cast<svn_string_t*>(
-                svn_hash_gets(cb_cred_hash, SVN_CONFIG_AUTHN_ISSUER_DN_KEY));
-            const char* const issuer = (entry ? entry->data : NULL);
+            if (ascii_cert)
+              {
+                const svn_string_t* const der =
+                  svn_base64_decode_string(ascii_cert, cb_scratch_pool);
+                svn_x509_certinfo_t* certinfo;
+                svn_error_t* err = svn_x509_parse_cert(
+                    &certinfo, der->data, der->len,
+                    cb_scratch_pool, cb_scratch_pool);
+                if (err)
+                  {
+                    // Ignore credentials that can't be parsed.
+                    svn_error_clear(err);
+                    return SVN_NO_ERROR;
+                  }
+                else
+                  {
+                    subject = svn_x509_certinfo_get_subject(
+                        certinfo, cb_scratch_pool);
+                    issuer = svn_x509_certinfo_get_issuer(
+                        certinfo, cb_scratch_pool);
+                    fingerprint = svn_checksum_to_cstring_display(
+                        svn_x509_certinfo_get_digest(certinfo),
+                        cb_scratch_pool);
+                    hostnames = svn_x509_certinfo_get_hostnames(certinfo);
+                  }
+              }
 
             bool match = (m_realm_pattern
                           && !apr_fnmatch(m_realm_pattern, cb_realmstring, 0));
@@ -441,8 +445,8 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
 
             if (!match && m_hostname_pattern)
               match = (match
-                       || (hostname
-                           && !apr_fnmatch(m_hostname_pattern, hostname, 0)));
+                       || (hostnames
+                           &&  match_array(m_hostname_pattern, hostnames)));
 
             if (!match && m_text_pattern)
               match = (match
@@ -450,16 +454,14 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
                            && !apr_fnmatch(m_text_pattern, username, 0))
                        || (store
                            && !apr_fnmatch(m_text_pattern, store, 0))
-                       || (hostname
-                           && !apr_fnmatch(m_text_pattern, hostname, 0))
+                       || (subject
+                           && !apr_fnmatch(m_text_pattern, subject, 0))
+                       || (issuer
+                           && !apr_fnmatch(m_text_pattern, issuer, 0))
                        || (fingerprint
                            && !apr_fnmatch(m_text_pattern, fingerprint, 0))
-                       || (valid_from
-                           && !apr_fnmatch(m_text_pattern, valid_from, 0))
-                       || (valid_until
-                           && !apr_fnmatch(m_text_pattern, valid_until, 0))
-                       || (issuer
-                           && !apr_fnmatch(m_text_pattern, issuer, 0)));
+                       || (hostnames
+                           && match_array(m_text_pattern, hostnames)));
 
             if (match)
               m_credentials.add(
