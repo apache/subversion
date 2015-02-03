@@ -25,6 +25,8 @@
 
 #include <apr_pools.h>
 #include "svn_error.h"
+#include "svn_client.h"
+
 #include "../svn_test.h"
 
 #ifdef __cplusplus
@@ -186,8 +188,6 @@ svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
                          apr_pool_t *scratch_pool);
 
-
-typedef struct svn_client_ctx_t svn_client_ctx_t;
 
 /* Create a client context for the specified sandbox */
 svn_error_t *
