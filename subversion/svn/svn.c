@@ -1300,7 +1300,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Removes versioned props in working copy.\n"
      "  2. Removes unversioned remote prop on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"),
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'q', 'R', opt_depth, 'r', opt_revprop, opt_changelist} },
 
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
@@ -1312,7 +1314,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"
-     "  See 'svn help propset' for more on setting properties.\n"),
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
@@ -1333,7 +1335,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  By default, an extra newline is printed after the property value so that\n"
      "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
      "  --show-inherited-props, you can use the --strict option to disable this\n"
-     "  (useful when redirecting a binary property value to a file, for example).\n"),
+     "  (useful when redirecting a binary property value to a file, for example).\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
@@ -1350,7 +1354,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     TARGET only determines which repository to access.\n"
      "\n"
      "  With --verbose, the property values are printed as well, like 'svn propget\n"
-     "  --verbose'.  With --quiet, the paths are not printed.\n"),
+     "  --verbose'.  With --quiet, the paths are not printed.\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist,
      opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
