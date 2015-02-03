@@ -117,12 +117,20 @@ extern "C" {
  */
 typedef struct svn_test_opts_t
 {
+  /* The name of the application (to generate unique names) */
+  const char *prog_name;
   /* Description of the fs backend that should be used for testing. */
   const char *fs_type;
   /* Config file. */
   const char *config_file;
   /* Source dir. */
   const char *srcdir;
+  /* Repository dir: temporary directory to create repositories in as subdir */
+  const char *repos_dir;
+  /* Repository url: The url to access REPOS_DIR as */
+  const char *repos_url;
+  /* Repository template: pre-created repository to copy for tests */
+  const char *repos_template;
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;

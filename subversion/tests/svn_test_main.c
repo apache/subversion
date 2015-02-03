@@ -101,6 +101,9 @@ enum test_options_e {
   server_minor_version_opt,
   allow_segfault_opt,
   srcdir_opt,
+  reposdir_opt,
+  reposurl_opt,
+  repostemplate_opt,
   mode_filter_opt,
   sqlite_log_opt,
   parallel_opt,
@@ -135,6 +138,12 @@ static const apr_getopt_option_t cl_options[] =
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
                     N_("directory which contains test's C source files")},
+  {"repos-dir",     reposdir_opt, 1,
+                    N_("directory to create repositories in")},
+  {"repos-url",     reposurl_opt, 1,
+                    N_("the url to access reposdir as")},
+  {"repos-template",repostemplate_opt, 1,
+                    N_("the repository to use as template")},
   {"sqlite-logging", sqlite_log_opt, 0,
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
@@ -687,7 +696,6 @@ int
 svn_test_main(int argc, const char *argv[], int max_threads,
               struct svn_test_descriptor_t *test_funcs)
 {
-  const char *prog_name;
   int i;
   svn_boolean_t got_error = FALSE;
   apr_pool_t *pool, *test_pool;
@@ -745,19 +753,8 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   os->interleave = TRUE; /* Let options and arguments be interleaved */
 
   /* Strip off any leading path components from the program name.  */
-  prog_name = strrchr(argv[0], '/');
-  if (prog_name)
-    prog_name++;
-  else
-    {
-      /* Just check if this is that weird platform that uses \ instead
-         of / for the path separator. */
-      prog_name = strrchr(argv[0], '\\');
-      if (prog_name)
-        prog_name++;
-      else
-        prog_name = argv[0];
-    }
+  opts.prog_name = svn_dirent_internal_style(argv[0], pool);
+  opts.prog_name = svn_dirent_basename(opts.prog_name, NULL);
 
 #ifdef WIN32
 #if _MSC_VER >= 1400
@@ -781,7 +778,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #endif
 
   if (err)
-    return svn_cmdline_handle_exit_error(err, pool, prog_name);
+    return svn_cmdline_handle_exit_error(err, pool, opts.prog_name);
   while (1)
     {
       const char *opt_arg;
@@ -800,7 +797,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 
       switch (opt_id) {
         case help_opt:
-          help(prog_name, pool);
+          help(opts.prog_name, pool);
           exit(0);
         case cleanup_opt:
           cleanup_mode = TRUE;
@@ -814,6 +811,20 @@ svn_test_main(int argc, const char *argv[], int max_threads,
         case srcdir_opt:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.srcdir, opt_arg, pool));
           opts.srcdir = svn_dirent_internal_style(opts.srcdir, pool);
+          break;
+        case reposdir_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_dir, opt_arg, pool));
+          opts.repos_dir = svn_dirent_internal_style(opts.repos_dir, pool);
+          break;
+        case reposurl_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_url, opt_arg, pool));
+          opts.repos_url = svn_uri_canonicalize(opts.repos_url, pool);
+          break;
+        case repostemplate_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_template, opt_arg,
+                                              pool));
+          opts.repos_template = svn_dirent_internal_style(opts.repos_template,
+                                                          pool);
           break;
         case list_opt:
           list_mode = TRUE;
@@ -903,7 +914,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                        "------  -----  ----------------\n";
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, test_funcs,
+              if (do_test_num(opts.prog_name, i, test_funcs,
                               TRUE, &opts, &header_msg, test_pool))
                 got_error = TRUE;
 
@@ -924,7 +935,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                     continue;
 
                   ran_a_test = TRUE;
-                  if (do_test_num(prog_name, test_num, test_funcs,
+                  if (do_test_num(opts.prog_name, test_num, test_funcs,
                                   FALSE, &opts, NULL, test_pool))
                     got_error = TRUE;
 
@@ -946,7 +957,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
         {
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, test_funcs,
+              if (do_test_num(opts.prog_name, i, test_funcs,
                               FALSE, &opts, NULL, test_pool))
                 got_error = TRUE;
 
@@ -958,7 +969,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #if APR_HAS_THREADS
       else
         {
-          got_error = do_tests_concurrently(prog_name, test_funcs,
+          got_error = do_tests_concurrently(opts.prog_name, test_funcs,
                                             array_size, max_threads,
                                             &opts, test_pool);
 
