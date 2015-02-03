@@ -718,7 +718,7 @@ repo_wc_copies(svn_test__sandbox_t *b)
       }
 
     /* Perform each copy. */
-    SVN_ERR(svn_client_create_context(&ctx, b->pool));
+    SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
     for (subtest = subtests; subtest->from_path; subtest++)
       {
         svn_opt_revision_t rev = { svn_opt_revision_number, { 1 } };
@@ -9690,7 +9690,6 @@ static svn_error_t *
 repo_wc_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
-  const char *repos_dir;
   const char *new_repos_dir;
   const char *new_repos_url;
 
@@ -9718,15 +9717,13 @@ repo_wc_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "AA", nodes));
   }
 
-  SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, b.repos_url,
-                                           pool));
-  new_repos_dir = apr_pstrcat(pool, repos_dir, "-2", SVN_VA_NULL);
+  new_repos_dir = apr_pstrcat(pool, b.repos_dir, "-2", SVN_VA_NULL);
   new_repos_url = apr_pstrcat(pool, b.repos_url, "-2", SVN_VA_NULL);
 
   svn_test_add_dir_cleanup(new_repos_dir);
 
   SVN_ERR(svn_io_remove_dir2(new_repos_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_copy_dir_recursively(repos_dir,
+  SVN_ERR(svn_io_copy_dir_recursively(b.repos_dir,
                                       svn_dirent_dirname(new_repos_dir, pool),
                                       svn_dirent_basename(new_repos_dir, pool),
                                       FALSE, NULL, NULL, pool));
