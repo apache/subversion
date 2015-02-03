@@ -2807,7 +2807,7 @@ svn_fs_unlock(svn_fs_t *fs,
 /** If @a path is locked in @a fs, set @a *lock to an svn_lock_t which
  *  represents the lock, allocated in @a pool.
  *
- * If @a path is not locked, set @a *lock to NULL.
+ * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
  */
 svn_error_t *
 svn_fs_get_lock(svn_lock_t **lock,

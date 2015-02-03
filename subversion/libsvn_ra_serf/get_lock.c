@@ -321,8 +321,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
     return svn_error_trace(
              svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
                               _("Server does not support locking features")));
-  else if (err)
-    return svn_error_trace(err);
+  else if (svn_error_find_cause(err, SVN_ERR_FS_NOT_FOUND))
+    svn_error_clear(err); /* Behave like the other RA layers */
   else if (handler->sline.code != 207)
     return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
