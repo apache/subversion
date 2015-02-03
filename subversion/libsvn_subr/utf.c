@@ -60,7 +60,7 @@ static svn_mutex__t *xlate_handle_mutex = NULL;
 static svn_boolean_t assume_native_charset_is_utf8 = FALSE;
 
 #if defined(WIN32)
-typedef win32_xlate_t xlate_handle_t;
+typedef svn_subr__win32_xlate_t xlate_handle_t;
 #else
 typedef apr_xlate_t xlate_handle_t;
 #endif
