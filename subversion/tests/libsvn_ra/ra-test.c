@@ -434,15 +434,8 @@ expect_error(const char *path,
 
   SVN_TEST_ASSERT(result && result->err);
   SVN_TEST_ASSERT(!result->lock);
-  err = svn_ra_get_lock(session, &lock, path, scratch_pool);
-  if (err) /* ra_serf reports SVN_ERR_FS_NOT_FOUND. ### Consistency? */
-    {
-      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
-      lock = NULL;
-    }
+  /* RA layers shouldn't report SVN_ERR_FS_NOT_FOUND */
+  SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
 
   SVN_TEST_ASSERT(!lock);
   return SVN_NO_ERROR;

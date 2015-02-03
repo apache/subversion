@@ -1906,8 +1906,12 @@ svn_ra_unlock(svn_ra_session_t *session,
 
 /**
  * If @a path is locked, set @a *lock to an svn_lock_t which
- * represents the lock, allocated in @a pool.  If @a path is not
- * locked, set @a *lock to NULL.
+ * represents the lock, allocated in @a pool.
+ *
+ * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
+ *
+ * @note Before 1.9, this function could return SVN_ERR_FS_NOT_FOUND
+ * when @a path didn't exist in HEAD on specific ra layers.
  *
  * @since New in 1.2.
  */
