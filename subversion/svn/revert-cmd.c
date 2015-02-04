@@ -70,6 +70,7 @@ svn_cl__revert(apr_getopt_t *os,
   err = svn_client_revert3(targets, opt_state->depth,
                            opt_state->changelists,
                            FALSE /* clear_changelists */,
+                           FALSE /* metadata_only */,
                            ctx, scratch_pool);
   if (err
       && (err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH)
