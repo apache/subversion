@@ -12575,7 +12575,6 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
   for (i = relpath_depth(local_relpath); i > shadowing_op_depth; --i)
     {
       const char *ancestor_moved_to;
-      svn_boolean_t have_row;
 
       ancestor_relpath = svn_relpath_dirname(ancestor_relpath, scratch_pool);
 
