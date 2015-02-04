@@ -37,6 +37,8 @@
 #define RA_CACHE_DBG(x)
 #endif
 
+
+/* The session cache entry. */
 typedef struct svn_client__ra_session_t
 {
   /* The free-list link for this session. */
@@ -73,38 +75,165 @@ typedef struct svn_client__ra_session_t
 } svn_client__ra_session_t;
 
 
-static apr_status_t
-close_ra_session(void *data)
+/*
+ * Forwarding session callbacks.
+ */
+
+/* svn_ra_callbacks2_t::open_tmp_file */
+static svn_error_t *
+open_tmp_file(apr_file_t **fp, void *baton, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *cache_entry = data;
-  svn_client__ra_cache_t *ra_cache = cache_entry->ra_cache;
-
-  if (ra_cache)
-    {
-      svn_ra_session_t *const session = cache_entry->session;
-
-      /* Remove the session from the active table and/or the inactive list. */
-      apr_hash_set(ra_cache->active, &cache_entry->session,
-                   sizeof(cache_entry->session), NULL);
-      APR_RING_REMOVE(cache_entry, freelist);
-      APR_RING_ELEM_INIT(cache_entry, freelist);
-
-      /* Close and invalidate the session. */
-      cache_entry->session = NULL;
-      svn_ra__close(session);
-
-      RA_CACHE_DBG(("SESSION(%d): Closed\n", cache_entry->id));
-    }
-  else
-    {
-      /* The cache is being destroyed; don't do anything, since the
-         sessions will have already been closed in the session pool
-         cleanup handlers by the time we get here. */
-      RA_CACHE_DBG(("SESSION(%d): Cleanup\n", cache_entry->id));
-    }
-
-  return APR_SUCCESS;
+  svn_client__ra_session_t *const b = baton;
+  return svn_error_trace(b->cb_table->open_tmp_file(fp, b->cb_baton, pool));
 }
+
+/* svn_ra_callbacks2_t::get_wc_prop */
+static svn_error_t *
+get_wc_prop(void *baton, const char *relpath, const char *name,
+            const svn_string_t **value, apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->get_wc_prop)
+    return svn_error_trace(
+        b->cb_table->get_wc_prop(b->cb_baton, relpath, name, value, pool));
+
+  *value = NULL;
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::set_wc_prop */
+static svn_error_t *
+set_wc_prop(void *baton, const char *path, const char *name,
+            const svn_string_t *value, apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->set_wc_prop)
+    return svn_error_trace(
+        b->cb_table->set_wc_prop(b->cb_baton, path, name, value, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::push_wc_prop */
+static svn_error_t *
+push_wc_prop(void *baton, const char *relpath, const char *name,
+             const svn_string_t *value, apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->push_wc_prop)
+    return svn_error_trace(
+        b->cb_table->push_wc_prop(b->cb_baton, relpath, name, value, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::invalidate_wc_props */
+static svn_error_t *
+invalidate_wc_props(void *baton, const char *path, const char *prop_name,
+                    apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->invalidate_wc_props)
+      return svn_error_trace(
+          b->cb_table->invalidate_wc_props(b->cb_baton, path,
+                                           prop_name, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::progress_func */
+static void
+progress_func(apr_off_t progress, apr_off_t total, void *baton,
+              apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+
+  b->progress += (progress - b->last_progress);
+  b->last_progress = progress;
+
+  /* FIXME: We're ignoring the total progress counter. */
+  if (b->cb_table->progress_func)
+    b->cb_table->progress_func(b->progress, -1, b->cb_table->progress_baton,
+                               pool);
+}
+
+/* svn_ra_callbacks2_t::cancel_func */
+static svn_error_t *
+cancel_func(void *baton)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->cancel_func)
+    return svn_error_trace(b->cb_table->cancel_func(b->cb_baton));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::get_client_string */
+static svn_error_t *
+get_client_string(void *baton, const char **name, apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->get_client_string)
+    return svn_error_trace(
+        b->cb_table->get_client_string(b->cb_baton, name, pool));
+
+  *name = NULL;
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::get_wc_contents */
+static svn_error_t *
+get_wc_contents(void *baton, svn_stream_t **contents,
+                const svn_checksum_t *checksum, apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = baton;
+  if (b->cb_table->get_wc_contents)
+    return svn_error_trace(
+        b->cb_table->get_wc_contents(b->cb_baton, contents, checksum, pool));
+
+  *contents = NULL;
+  return SVN_NO_ERROR;
+}
+
+/* svn_ra_callbacks2_t::check_tunnel_func */
+static svn_boolean_t
+check_tunnel_func(void *tunnel_baton, const char *tunnel_name)
+{
+  svn_client__ra_session_t *const b = tunnel_baton;
+  if (b->cb_table->check_tunnel_func)
+    return b->cb_table->check_tunnel_func(b->cb_table->tunnel_baton,
+                                          tunnel_name);
+
+  return FALSE;
+}
+
+/* svn_ra_callbacks2_t::open_tunnel_func */
+static svn_error_t *
+open_tunnel_func(svn_stream_t **request, svn_stream_t **response,
+                 svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+                 void *tunnel_baton, const char *tunnel_name, const char *user,
+                 const char *hostname, int port,
+                 svn_cancel_func_t cancel_func, void *cancel_baton,
+                 apr_pool_t *pool)
+{
+  svn_client__ra_session_t *const b = tunnel_baton;
+  if (b->cb_table->open_tunnel_func)
+    return svn_error_trace(
+        b->cb_table->open_tunnel_func(
+            request, response, close_func, close_baton,
+            b->cb_table->tunnel_baton, tunnel_name, user, hostname, port,
+            cancel_func, cancel_baton, pool));
+
+  /* If this point in is ever reached, it means that the original session
+     callbacks have a check-tunnel function that returned TRUE, but do
+     not have an open-tunnel function. */
+  SVN_ERR_MALFUNCTION();
+}
+
+
+/*
+ * Cache management
+ */
 
 static apr_status_t
 cleanup_ra_cache(void *data)
@@ -150,168 +279,41 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
                                 cleanup_ra_cache);
 }
 
-static svn_error_t *
-get_wc_contents(void *baton,
-                svn_stream_t **contents,
-                const svn_checksum_t *checksum,
-                apr_pool_t *pool)
+/*
+ * Session management
+ */
+
+static apr_status_t
+close_ra_session(void *data)
 {
-  svn_client__ra_session_t *b = baton;
+  svn_client__ra_session_t *cache_entry = data;
+  svn_client__ra_cache_t *ra_cache = cache_entry->ra_cache;
 
-  if (!b->cb_table->get_wc_contents)
-  {
-      *contents = NULL;
-      return SVN_NO_ERROR;
-  }
-
-  return b->cb_table->get_wc_contents(b->cb_baton, contents, checksum, pool);
-}
-
-static svn_error_t *
-open_tmp_file(apr_file_t **fp,
-              void *baton,
-              apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-  return svn_error_trace(b->cb_table->open_tmp_file(fp, b->cb_baton, pool));
-}
-
-/* This implements the 'svn_ra_get_wc_prop_func_t' interface. */
-static svn_error_t *
-get_wc_prop(void *baton,
-            const char *relpath,
-            const char *name,
-            const svn_string_t **value,
-            apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-
-  if (b->cb_table->get_wc_prop)
+  if (ra_cache)
     {
-      return svn_error_trace(
-               b->cb_table->get_wc_prop(b->cb_baton, relpath, name, value,
-               pool));
+      svn_ra_session_t *const session = cache_entry->session;
+
+      /* Remove the session from the active table and/or the inactive list. */
+      apr_hash_set(ra_cache->active, &cache_entry->session,
+                   sizeof(cache_entry->session), NULL);
+      APR_RING_REMOVE(cache_entry, freelist);
+      APR_RING_ELEM_INIT(cache_entry, freelist);
+
+      /* Close and invalidate the session. */
+      cache_entry->session = NULL;
+      svn_ra__close(session);
+
+      RA_CACHE_DBG(("SESSION(%d): Closed\n", cache_entry->id));
     }
   else
     {
-      *value = NULL;
-      return SVN_NO_ERROR;
+      /* The cache is being destroyed; don't do anything, since the
+         sessions will have already been closed in the session pool
+         cleanup handlers by the time we get here. */
+      RA_CACHE_DBG(("SESSION(%d): Cleanup\n", cache_entry->id));
     }
-}
 
-/* This implements the 'svn_ra_push_wc_prop_func_t' interface. */
-static svn_error_t *
-push_wc_prop(void *baton,
-             const char *relpath,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-
-  if (b->cb_table->push_wc_prop)
-    {
-      return svn_error_trace(
-               b->cb_table->push_wc_prop(b->cb_baton, relpath, name, value,
-                                         pool));
-    }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
-}
-
-
-/* This implements the 'svn_ra_set_wc_prop_func_t' interface. */
-static svn_error_t *
-set_wc_prop(void *baton,
-            const char *path,
-            const char *name,
-            const svn_string_t *value,
-            apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-  if (b->cb_table->set_wc_prop)
-    {
-      return svn_error_trace(
-               b->cb_table->set_wc_prop(b->cb_baton, path, name, value,
-                                        pool));
-    }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
-}
-
-/* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
-static svn_error_t *
-invalidate_wc_props(void *baton,
-                    const char *path,
-                    const char *prop_name,
-                    apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-
-  if (b->cb_table->invalidate_wc_props)
-    {
-      return svn_error_trace(
-               b->cb_table->invalidate_wc_props(b->cb_baton, path,
-                                                prop_name, pool));
-    }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
-}
-
-static svn_error_t *
-get_client_string(void *baton,
-                  const char **name,
-                  apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-
-  if (b->cb_table->get_client_string)
-    {
-      return svn_error_trace(
-               b->cb_table->get_client_string(b->cb_baton, name, pool));
-    }
-  else
-    {
-      *name = NULL;
-      return SVN_NO_ERROR;
-    }
-}
-
-static svn_error_t *
-cancel_callback(void *baton)
-{
-  svn_client__ra_session_t *b = baton;
-
-  if (b->cb_table->cancel_func)
-    {
-      return svn_error_trace(b->cb_table->cancel_func(b->cb_baton));
-    }
-  else
-    {
-      return SVN_NO_ERROR;
-    }
-}
-
-static void
-progress_func(apr_off_t progress,
-              apr_off_t total,
-              void *baton,
-              apr_pool_t *pool)
-{
-  svn_client__ra_session_t *b = baton;
-
-  b->progress += (progress - b->last_progress);
-  b->last_progress = progress;
-
-  if (b->cb_table->progress_func)
-    b->cb_table->progress_func(b->progress, -1, b->cb_table->progress_baton,
-                               pool);
+  return APR_SUCCESS;
 }
 
 static svn_error_t *
@@ -410,32 +412,36 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
   else
     {
       /* No existing RA session found. Open new one. */
-      svn_ra_callbacks2_t *cbtable_sink;
+      svn_ra_callbacks2_t *ra_callbacks;
       svn_ra_session_t *session;
 
       cache_entry = apr_pcalloc(ra_cache->pool, sizeof(*cache_entry));
       APR_RING_ELEM_INIT(cache_entry, freelist);
 
-      SVN_ERR(svn_ra_create_callbacks(&cbtable_sink, ra_cache->pool));
-      cbtable_sink->open_tmp_file = open_tmp_file;
-      cbtable_sink->get_wc_prop = get_wc_prop;
-      cbtable_sink->set_wc_prop = set_wc_prop;
-      cbtable_sink->push_wc_prop = push_wc_prop;
-      cbtable_sink->invalidate_wc_props = invalidate_wc_props;
-      cbtable_sink->auth_baton = cbtable->auth_baton; /* new-style */
-      cbtable_sink->progress_func = progress_func;
-      cbtable_sink->progress_baton = cache_entry;
-      cbtable_sink->cancel_func = cancel_callback;
-      cbtable_sink->get_client_string = get_client_string;
-      cbtable_sink->get_wc_contents = get_wc_contents;
+      SVN_ERR(svn_ra_create_callbacks(&ra_callbacks, ra_cache->pool));
+      ra_callbacks->open_tmp_file = open_tmp_file;
+      ra_callbacks->get_wc_prop = get_wc_prop;
+      ra_callbacks->set_wc_prop = set_wc_prop;
+      ra_callbacks->push_wc_prop = push_wc_prop;
+      ra_callbacks->invalidate_wc_props = invalidate_wc_props;
+      ra_callbacks->auth_baton = cbtable->auth_baton; /* new-style */
+      ra_callbacks->progress_func = progress_func;
+      ra_callbacks->progress_baton = cache_entry;
+      ra_callbacks->cancel_func = cancel_func;
+      ra_callbacks->get_client_string = get_client_string;
+      ra_callbacks->get_wc_contents = get_wc_contents;
+      ra_callbacks->check_tunnel_func = check_tunnel_func;
+      ra_callbacks->open_tunnel_func = open_tunnel_func;
+      ra_callbacks->tunnel_baton = cache_entry;
 
       cache_entry->owner_pool = result_pool;
       cache_entry->cb_table = cbtable;
       cache_entry->cb_baton = callback_baton;
       cache_entry->id = ra_cache->next_id;
 
-      SVN_ERR(svn_ra_open4(&session, corrected_p, base_url, uuid, cbtable_sink,
-                           cache_entry, ra_cache->config, ra_cache->pool));
+      SVN_ERR(svn_ra_open4(&session, corrected_p, base_url, uuid,
+                           ra_callbacks, cache_entry,
+                           ra_cache->config, ra_cache->pool));
 
       if (corrected_p && *corrected_p)
         {
