@@ -245,7 +245,8 @@ svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
                        const svn_fs_x__id_t *id,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   dag_node_t *new_node;
   svn_fs_x__noderev_t *noderev;
@@ -257,12 +258,14 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   new_node->hint = APR_SIZE_MAX;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id,
+                                      result_pool, scratch_pool));
   new_node->node_pool = result_pool;
-  SVN_ERR(get_node_revision(&noderev, new_node));
+  new_node->node_revision = noderev;
 
   /* Initialize the KIND and CREATED_PATH attributes */
   new_node->kind = noderev->kind;
-  new_node->created_path = apr_pstrdup(result_pool, noderev->created_path);
+  new_node->created_path = noderev->created_path;
 
   /* Support our quirky svn_fs_node_created_rev API.
      Untouched txn roots report the base rev as theirs. */
@@ -469,7 +472,8 @@ make_entry(dag_node_t **child_p,
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR(svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
-                                 &new_noderev.noderev_id, result_pool));
+                                 &new_noderev.noderev_id, result_pool,
+                                 scratch_pool));
 
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
@@ -654,12 +658,14 @@ svn_error_t *
 svn_fs_x__dag_revision_root(dag_node_t **node_p,
                             svn_fs_t *fs,
                             svn_revnum_t rev,
-                            apr_pool_t *result_pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t root_id;
 
   svn_fs_x__init_rev_root(&root_id, rev);
-  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool);
+  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool,
+                                scratch_pool);
 }
 
 
@@ -667,12 +673,14 @@ svn_error_t *
 svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t root_id;
 
   svn_fs_x__init_txn_root(&root_id, txn_id);
-  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool);
+  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool,
+                                scratch_pool);
 }
 
 
@@ -755,7 +763,8 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
     }
 
   /* Initialize the youngster. */
-  return svn_fs_x__dag_get_node(child_p, fs, new_node_id, result_pool);
+  return svn_fs_x__dag_get_node(child_p, fs, new_node_id, result_pool,
+                                scratch_pool);
 }
 
 
@@ -774,7 +783,7 @@ delete_if_mutable(svn_fs_t *fs,
   dag_node_t *node;
 
   /* Get the node. */
-  SVN_ERR(svn_fs_x__dag_get_node(&node, fs, id, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_get_node(&node, fs, id, scratch_pool, scratch_pool));
 
   /* If immutable, do nothing and return immediately. */
   if (! svn_fs_x__dag_check_mutable(node))
@@ -1192,7 +1201,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
 
   /* Now get the node that was requested. */
   return svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
-                                &node_id, result_pool);
+                                &node_id, result_pool, scratch_pool);
 }
 
 
