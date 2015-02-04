@@ -31,14 +31,33 @@
 #include "ra_cache.h"
 #include "private/svn_debug.h"
 
+/*
+ * Debugging
+ */
+
+#if 0
+#define RA_CACHE_LOG(x) SVN_DBG(x)
+#else
+#define RA_CACHE_LOG(x)
+#endif
+
 #if 0
 #define RA_CACHE_DBG(x) SVN_DBG(x)
 #else
 #define RA_CACHE_DBG(x)
 #endif
 
+#if APR_SIZEOF_VOIDP == 8
+#define DBG_PTR_FMT "16"APR_UINT64_T_HEX_FMT
+#else
+#define DBG_PTR_FMT "8"APR_UINT64_T_HEX_FMT
+#endif
 
-/* The session cache entry. */
+
+/*
+ * The session cache entry.
+ */
+
 typedef struct svn_client__ra_session_t
 {
   /* The free-list link for this session. */
@@ -254,7 +273,7 @@ cleanup_ra_cache(void *data)
                    svn_client__ra_session_t, freelist)
       cache_entry->ra_cache = NULL;
 
-  RA_CACHE_DBG(("RA_CACHE: Cleanup\n"));
+  RA_CACHE_LOG(("RA_CACHE: Cleanup\n"));
 
   return APR_SUCCESS;
 }
@@ -264,7 +283,7 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  RA_CACHE_DBG(("RA_CACHE: Init\n"));
+  RA_CACHE_LOG(("RA_CACHE: Init\n"));
 
   private_ctx->ra_cache.pool = pool;
   private_ctx->ra_cache.config = config;
@@ -294,8 +313,11 @@ close_ra_session(void *data)
       svn_ra_session_t *const session = cache_entry->session;
 
       /* Remove the session from the active table and/or the inactive list. */
-      apr_hash_set(ra_cache->active, &cache_entry->session,
-                   sizeof(cache_entry->session), NULL);
+      apr_hash_set(ra_cache->active, &session, sizeof(session), NULL);
+
+      RA_CACHE_DBG(("close_ra_session: removed from active:         %"
+                    DBG_PTR_FMT"\n", (apr_uint64_t)session));
+
       APR_RING_REMOVE(cache_entry, freelist);
       APR_RING_ELEM_INIT(cache_entry, freelist);
 
@@ -303,14 +325,14 @@ close_ra_session(void *data)
       cache_entry->session = NULL;
       svn_ra__close(session);
 
-      RA_CACHE_DBG(("SESSION(%d): Closed\n", cache_entry->id));
+      RA_CACHE_LOG(("SESSION(%d): Closed\n", cache_entry->id));
     }
   else
     {
       /* The cache is being destroyed; don't do anything, since the
          sessions will have already been closed in the session pool
          cleanup handlers by the time we get here. */
-      RA_CACHE_DBG(("SESSION(%d): Cleanup\n", cache_entry->id));
+      RA_CACHE_LOG(("SESSION(%d): Cleanup\n", cache_entry->id));
     }
 
   return APR_SUCCESS;
@@ -407,7 +429,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       APR_RING_REMOVE(cache_entry, freelist);
       APR_RING_ELEM_INIT(cache_entry, freelist);
 
-      RA_CACHE_DBG(("SESSION(%d): Reused\n", cache_entry->id));
+      RA_CACHE_LOG(("SESSION(%d): Reused\n", cache_entry->id));
     }
   else
     {
@@ -455,14 +477,19 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       SVN_ERR(svn_ra_get_repos_root2(session, &cache_entry->root_url,
                                      ra_cache->pool));
 
-      RA_CACHE_DBG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
+      RA_CACHE_LOG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
 
-      apr_hash_set(ra_cache->active, &cache_entry->session,
-                   sizeof(cache_entry->session), cache_entry);
-      cache_entry->ra_cache = ra_cache;
       ++ra_cache->next_id;
     }
 
+  /* Add the session to the active list. */
+  apr_hash_set(ra_cache->active, &cache_entry->session,
+               sizeof(cache_entry->session), cache_entry);
+
+  RA_CACHE_DBG(("ra_cache_open_session: added to active:        %"
+                DBG_PTR_FMT"\n", (apr_uint64_t)cache_entry->session));
+
+  cache_entry->ra_cache = ra_cache;
   cache_entry->owner_pool = result_pool;
   cache_entry->cb_table = cbtable;
   cache_entry->cb_baton = callback_baton;
@@ -483,6 +510,10 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
   svn_client__ra_session_t *cache_entry =
     apr_hash_get(ra_cache->active, &session, sizeof(session));
 
+  RA_CACHE_DBG(("ra_cache_release_session: search active:       %"
+                DBG_PTR_FMT"%s\n", (apr_uint64_t)session,
+                (cache_entry ? " (found)" : " (not found)")));
+
   SVN_ERR_ASSERT_NO_RETURN(cache_entry != NULL);
   SVN_ERR_ASSERT_NO_RETURN(cache_entry->session == session);
   SVN_ERR_ASSERT_NO_RETURN(cache_entry->owner_pool != NULL);
@@ -497,6 +528,9 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
   apr_hash_set(ra_cache->active, &cache_entry->session,
                sizeof(cache_entry->session), NULL);
 
+  RA_CACHE_DBG(("ra_cache_release_session: removed from active: %"
+                DBG_PTR_FMT"\n", (apr_uint64_t)session));
+
 #ifdef SVN_DEBUG
   /* Double-check that this entry is not part of the freelist. */
   assert(cache_entry == APR_RING_NEXT(cache_entry, freelist));
@@ -510,5 +544,5 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
   cache_entry->cb_table = NULL;
   cache_entry->cb_baton = NULL;
 
-  RA_CACHE_DBG(("SESSION(%d): Released\n", cache_entry->id));
+  RA_CACHE_LOG(("SESSION(%d): Released\n", cache_entry->id));
 }
