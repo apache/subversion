@@ -261,12 +261,15 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @param clearChangelists If set, will clear changelist association
      *                         from the reverted paths.
+     * @param metadataOnly Revert just the metadata (including conflict data)
+     *                     and not the working files/dirs
      * @throws ClientException
      * @since 1.9
      */
     void revert(Set<String> paths, Depth depth,
                 Collection<String> changelists,
-                boolean clearChangelists)
+                boolean clearChangelists,
+                boolean metadataOnly)
             throws ClientException;
 
     /**

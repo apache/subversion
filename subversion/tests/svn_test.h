@@ -34,6 +34,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,12 +118,20 @@ extern "C" {
  */
 typedef struct svn_test_opts_t
 {
+  /* The name of the application (to generate unique names) */
+  const char *prog_name;
   /* Description of the fs backend that should be used for testing. */
   const char *fs_type;
   /* Config file. */
   const char *config_file;
   /* Source dir. */
   const char *srcdir;
+  /* Repository dir: temporary directory to create repositories in as subdir */
+  const char *repos_dir;
+  /* Repository url: The url to access REPOS_DIR as */
+  const char *repos_url;
+  /* Repository template: pre-created repository to copy for tests */
+  const char *repos_template;
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;
@@ -268,6 +277,11 @@ svn_error_t *
 svn_test_get_srcdir(const char **srcdir,
                     const svn_test_opts_t *opts,
                     apr_pool_t *pool);
+
+/* Initializes a standard auth baton for accessing the repositories */
+svn_error_t *
+svn_test__init_auth_baton(svn_auth_baton_t **baton,
+                          apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }
