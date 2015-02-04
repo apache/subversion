@@ -1132,7 +1132,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
                            FALSE, TRUE, externals_to_pin,
                            NULL, NULL, NULL, ctx, pool));
 
-  /* Verify that externals where pinned as expected. */
+  /* Verify that externals were pinned as expected. */
   SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_EXTERNALS,
                               A_copy_url, &peg_rev, &rev, NULL,
                               svn_depth_empty, NULL, ctx, pool, pool));
