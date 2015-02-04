@@ -168,18 +168,23 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  * AUTHZ_READ_BATON and FS) to check whether each changed-path (and
  * copyfrom_path) is readable:
  *
+ *     - If absolutely every changed-path (and copyfrom_path) is
+ *     readable, then return the full CHANGED hash, and set
+ *     *ACCESS_LEVEL to svn_repos_revision_access_full.
+ *
  *     - If some paths are readable and some are not, then silently
- *     omit the unreadable paths from the CHANGED hash, and return
- *     SVN_ERR_AUTHZ_PARTIALLY_READABLE.
+ *     omit the unreadable paths from the CHANGED hash, and set
+ *     *ACCESS_LEVEL to svn_repos_revision_access_partial.
  *
  *     - If absolutely every changed-path (and copyfrom_path) is
- *     unreadable, then return an empty CHANGED hash and
- *     SVN_ERR_AUTHZ_UNREADABLE.  (This is to distinguish a revision
- *     which truly has no changed paths from a revision in which all
- *     paths are unreadable.)
+ *     unreadable, then return an empty CHANGED hash, and set
+ *     *ACCESS_LEVEL to svn_repos_revision_access_none.  (This is
+ *     to distinguish a revision which truly has no changed paths
+ *     from a revision in which all paths are unreadable.)
  */
 static svn_error_t *
-detect_changed(apr_hash_t **changed,
+detect_changed(svn_repos_revision_access_level_t *access_level,
+               apr_hash_t **changed,
                svn_fs_root_t *root,
                svn_fs_t *fs,
                apr_hash_t *prefetched_changes,
@@ -213,9 +218,12 @@ detect_changed(apr_hash_t **changed,
     }
 
   if (apr_hash_count(changes) == 0)
-    /* No paths changed in this revision?  Uh, sure, I guess the
-       revision is readable, then.  */
-    return SVN_NO_ERROR;
+    {
+      /* No paths changed in this revision?  Uh, sure, I guess the
+         revision is readable, then.  */
+      *access_level = svn_repos_revision_access_full;
+      return SVN_NO_ERROR;
+    }
 
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
@@ -364,16 +372,21 @@ detect_changed(apr_hash_t **changed,
   svn_pool_destroy(iterpool);
 
   if (! found_readable)
-    /* Every changed-path was unreadable. */
-    return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE,
-                            NULL, NULL);
+    {
+      /* Every changed-path was unreadable. */
+      *access_level = svn_repos_revision_access_none;
+    }
+  else if (found_unreadable)
+    {
+      /* At least one changed-path was unreadable. */
+      *access_level = svn_repos_revision_access_partial;
+    }
+  else
+    {
+      /* Every changed-path was readable. */
+      *access_level = svn_repos_revision_access_full;
+    }
 
-  if (found_unreadable)
-    /* At least one changed-path was unreadable. */
-    return svn_error_create(SVN_ERR_AUTHZ_PARTIALLY_READABLE,
-                            NULL, NULL);
-
-  /* Every changed-path was readable. */
   return SVN_NO_ERROR;
 }
 
@@ -1078,33 +1091,27 @@ fill_log_entry(svn_log_entry_t *log_entry,
       && (authz_read_func || discover_changed_paths))
     {
       svn_fs_root_t *newroot;
-      svn_error_t *patherr;
+      svn_repos_revision_access_level_t access_level;
 
       SVN_ERR(svn_fs_revision_root(&newroot, fs, rev, pool));
-      patherr = detect_changed(&changed_paths,
-                               newroot, fs, prefetched_changes,
-                               authz_read_func, authz_read_baton,
-                               pool);
+      SVN_ERR(detect_changed(&access_level, &changed_paths,
+                             newroot, fs, prefetched_changes,
+                             authz_read_func, authz_read_baton,
+                             pool));
 
-      if (patherr
-          && patherr->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
+      if (access_level == svn_repos_revision_access_none)
         {
           /* All changed-paths are unreadable, so clear all fields. */
-          svn_error_clear(patherr);
           changed_paths = NULL;
           get_revprops = FALSE;
         }
-      else if (patherr
-               && patherr->apr_err == SVN_ERR_AUTHZ_PARTIALLY_READABLE)
+      else if (access_level == svn_repos_revision_access_partial)
         {
           /* At least one changed-path was unreadable, so censor all
              but author and date.  (The unreadable paths are already
              missing from the hash.) */
-          svn_error_clear(patherr);
           censor_revprops = TRUE;
         }
-      else if (patherr)
-        return patherr;
 
       /* It may be the case that an authz func was passed in, but
          the user still doesn't want to see any changed-paths. */
