@@ -2840,6 +2840,7 @@ svn_client_revert2(const apr_array_header_t *paths,
                                             depth,
                                             changelists,
                                             FALSE /* clear_changelists */,
+                                            FALSE /* metadata_only */,
                                             ctx,
                                             pool));
 }

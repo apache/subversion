@@ -194,21 +194,22 @@ public class SVNClient implements ISVNClient
 
     public native void revert(Set<String> paths, Depth depth,
                               Collection<String> changelists,
-                              boolean clearChangelists)
+                              boolean clearChangelists,
+                              boolean metadataOnly)
             throws ClientException;
 
     public void revert(Set<String> paths, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(paths, depth, changelists, false);
+        revert(paths, depth, changelists, false, false);
     }
 
     public void revert(String path, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(Collections.singleton(path), depth, changelists, false);
+        revert(Collections.singleton(path), depth, changelists, false, false);
     }
 
     public native void add(String path, Depth depth, boolean force,

@@ -161,7 +161,7 @@ class SVNClient :public SVNBase
   void add(const char *path, svn_depth_t depth, bool force,
            bool no_ignore, bool no_autoprops, bool add_parents);
   void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists,
-              bool clear_changelists);
+              bool clear_changelists, bool metadata_only);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, PropertyTable &revprops,
               CommitCallback *callback);

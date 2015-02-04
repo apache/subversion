@@ -339,7 +339,8 @@ void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
 
 void SVNClient::revert(StringArray &paths, svn_depth_t depth,
                        StringArray &changelists,
-                       bool clear_changelists)
+                       bool clear_changelists,
+                       bool metadata_only)
 {
     SVN::Pool subPool(pool);
 
@@ -352,6 +353,7 @@ void SVNClient::revert(StringArray &paths, svn_depth_t depth,
     SVN_JNI_ERR(svn_client_revert3(targets.array(subPool), depth,
                                    changelists.array(subPool),
                                    clear_changelists,
+                                   metadata_only,
                                    ctx, subPool.getPool()), );
 }
 
