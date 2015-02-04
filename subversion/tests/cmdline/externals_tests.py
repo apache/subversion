@@ -3757,6 +3757,54 @@ def copy_pin_externals(sbox):
   external_url_for["A/B/gamma"] = '^/A/D/gamma'
   verify_pinned_externals(wc_dir)
 
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R', wc_dir)
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A_copy'))
+
+  # Cannot pin WC externals with local mods.
+  svntest.main.file_append(sbox.ospath('A/C/exdir_G/pi'), 'this file changed')
+  expected_stderr = verify.RegexOutput(".*Cannot pin.*local modifications.*",
+                                       match_all=False)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
+                                     '--pin-externals')
+
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'revert', '-R',
+                                    sbox.ospath('A/C/exdir_G/pi'))
+
+  # Cannot pin WC externals with switched subtrees.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '--ignore-ancestry', '^/A/B',
+                                     sbox.ospath('A/D-moved/exdir_A/C'))
+  expected_stderr = verify.RegexOutput(".*Cannot pin.*switched subtree.*",
+                                       match_all=False)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
+                                     '--pin-externals')
+  # Clean up.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '--ignore-ancestry', '^/A/C',
+                                     sbox.ospath('A/D-moved/exdir_A/C'))
+
+  # Cannot pin WC externals with mixed revisions
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r1',
+                                     sbox.ospath('A/D-moved/exdir_A/mu'))
+  expected_stderr = verify.RegexOutput(".*Cannot pin.*mixed-revision.*",
+                                       match_all=False)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'copy',
+                                     os.path.join(wc_dir, 'A'),
+                                     os.path.join(wc_dir, 'A_copy'),
+                                     '--pin-externals')
+
 
 ########################################################################
 # Run the tests

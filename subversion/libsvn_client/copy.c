@@ -366,6 +366,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
             {
               const char *external_abspath;
               svn_node_kind_t external_kind;
+              svn_revnum_t external_checked_out_rev;
 
               external_abspath = svn_dirent_join(local_abspath_or_url,
                                                  item->target_dir,
@@ -388,12 +389,83 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                              local_abspath_or_url, iterpool),
                                            svn_dirent_local_style(
                                              external_abspath, iterpool));
+              else if (external_kind == svn_node_dir)
+                {
+                  svn_boolean_t is_switched;
+                  svn_boolean_t is_modified;
+                  svn_revnum_t min_rev;
+                  svn_revnum_t max_rev;
+
+                  /* Perform some sanity checks on the checked-out external. */
+
+                  SVN_ERR(svn_wc__has_switched_subtrees(&is_switched,
+                                                        ctx->wc_ctx,
+                                                        external_abspath, NULL,
+                                                        iterpool));
+                  if (is_switched)
+                    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                             NULL,
+                                             _("Cannot pin external '%s' defined "
+                                               "in %s at '%s' because '%s' has "
+                                               "switched subtrees (switches "
+                                               "cannot be represented in %s)"),
+                                             item->url, SVN_PROP_EXTERNALS,
+                                             svn_dirent_local_style(
+                                               local_abspath_or_url, iterpool),
+                                             svn_dirent_local_style(
+                                               external_abspath, iterpool),
+                                             SVN_PROP_EXTERNALS);
+
+                  SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
+                                                 external_abspath,
+                                                 ctx->cancel_func,
+                                                 ctx->cancel_baton,
+                                                 iterpool));
+                  if (is_modified)
+                    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                             NULL,
+                                             _("Cannot pin external '%s' defined "
+                                               "in %s at '%s' because '%s' has "
+                                               "local modifications (local "
+                                               "modifications cannot be "
+                                               "represented in %s)"),
+                                             item->url, SVN_PROP_EXTERNALS,
+                                             svn_dirent_local_style(
+                                               local_abspath_or_url, iterpool),
+                                             svn_dirent_local_style(
+                                               external_abspath, iterpool),
+                                             SVN_PROP_EXTERNALS);
+
+                  SVN_ERR(svn_wc__min_max_revisions(&min_rev, &max_rev, ctx->wc_ctx,
+                                                    external_abspath, FALSE,
+                                                    iterpool));
+                  if (min_rev != max_rev)
+                    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                             NULL,
+                                             _("Cannot pin external '%s' defined "
+                                               "in %s at '%s' because '%s' is a "
+                                               "mixed-revision working copy "
+                                               "(mixed-revisions cannot be "
+                                               "represented in %s)"),
+                                             item->url, SVN_PROP_EXTERNALS,
+                                             svn_dirent_local_style(
+                                               local_abspath_or_url, iterpool),
+                                             svn_dirent_local_style(
+                                               external_abspath, iterpool),
+                                             SVN_PROP_EXTERNALS);
+                  external_checked_out_rev = min_rev;
+                }
+              else
+                {
+                  SVN_ERR_ASSERT(external_kind == svn_node_file);
+                  SVN_ERR(svn_wc__node_get_repos_info(&external_checked_out_rev,
+                                                      NULL, NULL, NULL,
+                                                      ctx->wc_ctx, external_abspath,
+                                                      iterpool, iterpool));
+                }
 
               external_pegrev.kind = svn_opt_revision_number;
-              SVN_ERR(svn_wc__node_get_repos_info(&external_pegrev.value.number,
-                                                  NULL, NULL, NULL,
-                                                  ctx->wc_ctx, external_abspath,
-                                                  iterpool, iterpool));
+              external_pegrev.value.number = external_checked_out_rev;
             }
         }
 
