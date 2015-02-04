@@ -7539,6 +7539,10 @@ svn_wc_relocate(const char *path,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared.
  *
+ * If @a metadata_only is TRUE, the working copy files are untouched, but
+ * if there are conflict marker files attached to these files these
+ * markers are removed.
+ *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
  * error (typically #SVN_ERR_CANCELLED), return that error
@@ -7564,6 +7568,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                svn_boolean_t use_commit_times,
                const apr_array_header_t *changelist_filter,
                svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -7571,7 +7576,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_revert5() but with @a clear_changelists always set to
- * FALSE.
+ * FALSE and @a metadata_only set to FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
