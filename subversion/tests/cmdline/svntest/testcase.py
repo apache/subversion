@@ -28,7 +28,8 @@ import os, types, sys
 import svntest
 
 # if somebody does a "from testcase import *", they only get these names
-__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless']
+__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless',
+           '_SkipDumpLoadCrossCheck']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -135,7 +136,7 @@ class FunctionTestCase(TestCase):
   is derived from the file name in which FUNC was defined)
   """
 
-  def __init__(self, func, issues=None):
+  def __init__(self, func, issues=None, skip_cross_check=False):
     # it better be a function that accepts an sbox parameter and has a
     # docstring on it.
     assert isinstance(func, types.FunctionType)
@@ -161,6 +162,7 @@ class FunctionTestCase(TestCase):
 
     TestCase.__init__(self, doc=doc, issues=issues)
     self.func = func
+    self.skip_cross_check = skip_cross_check
 
   def get_function_name(self):
     return self.func.func_name
@@ -173,7 +175,9 @@ class FunctionTestCase(TestCase):
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox):
-    return self.func(sandbox)
+    result = self.func(sandbox)
+    sandbox.verify(skip_cross_check = self.skip_cross_check)
+    return result
 
 
 class _XFail(TestCase):
@@ -261,11 +265,22 @@ class _SkipUnless(_Skip):
     _Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
-def create_test_case(func, issues=None):
+class _SkipDumpLoadCrossCheck(TestCase):
+  """A test that will skip the post-test dump/load cross-check."""
+
+  def __init__(self, test_case, cond_func=lambda: True, wip=None,
+               issues=None):
+    TestCase.__init__(self,
+                      create_test_case(test_case, skip_cross_check=True),
+                      cond_func, wip=wip, issues=issues)
+
+
+def create_test_case(func, issues=None, skip_cross_check=False):
   if isinstance(func, TestCase):
     return func
   else:
-    return FunctionTestCase(func, issues=issues)
+    return FunctionTestCase(func, issues=issues,
+                            skip_cross_check=skip_cross_check)
 
 
 # Various decorators to make declaring tests as such simpler
@@ -321,6 +336,16 @@ def Issues_deco(*issues):
       return create_test_case(func, issues=issues)
 
   return _second
+
+def SkipDumpLoadCrossCheck_deco(cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _SkipDumpLoadCrossCheck(func, cond_func, issues=func.issues)
+    else:
+      return _SkipDumpLoadCrossCheck(func, cond_func)
+
+  return _second
+
 
 # Create a singular alias, for linguistic correctness
 Issue_deco = Issues_deco
