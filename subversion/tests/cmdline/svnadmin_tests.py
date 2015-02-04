@@ -1238,6 +1238,10 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
     ".*Revision 3 has a non-file where its revprops file should be.*"):
     raise svntest.Failure
 
+  # Restore the r3 revprops file, thus repairing the repository.
+  os.rmdir(revprop_3)
+  os.rename(revprop_was_3, revprop_3)
+
 
 #----------------------------------------------------------------------
 
@@ -2151,6 +2155,9 @@ def verify_keep_going(sbox):
                                    None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
 
+  # Don't leave a corrupt repository
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_invalid_path_changes(sbox):
   "detect invalid changed path list entries"
@@ -2289,6 +2296,9 @@ def verify_invalid_path_changes(sbox):
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
                                    None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
+
+  # Don't leave a corrupt repository
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
 
 
 def verify_denormalized_names(sbox):
@@ -2668,6 +2678,9 @@ def verify_quickly(sbox):
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
+
+  # Don't leave a corrupt repository
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
 
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)

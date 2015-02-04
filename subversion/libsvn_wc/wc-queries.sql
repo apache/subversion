@@ -452,16 +452,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND moved_to IS NOT NULL
 ORDER BY op_depth DESC
 
 -- STMT_SELECT_OP_DEPTH_MOVED_TO
-SELECT n.op_depth, n.moved_to, p.repos_path, p.revision
-FROM nodes p
-LEFT JOIN nodes n
-  ON p.wc_id=n.wc_id AND p.local_relpath = n.local_relpath
- AND  n.op_depth = (SELECT MIN(d.op_depth)
-                    FROM nodes d
-                    WHERE d.wc_id = ?1
-                      AND d.local_relpath = n.local_relpath
-                      AND d.op_depth > ?3)
-WHERE p.wc_id = ?1 AND p.local_relpath = ?2 AND p.op_depth = ?3
+SELECT op_depth, moved_to
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
+  AND EXISTS(SELECT * from nodes
+             WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3)
+ORDER BY op_depth ASC
 LIMIT 1
 
 -- STMT_SELECT_MOVED_TO

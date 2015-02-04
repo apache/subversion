@@ -3100,10 +3100,6 @@ block_read_noderev(svn_fs_x__noderev_t **noderev_p,
 
   SVN_ERR(svn_fs_x__read_noderev(noderev_p, stream, result_pool,
                                  scratch_pool));
-
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  (*noderev_p)->is_fresh_txn_root = FALSE;
-
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, key, *noderev_p,
                            scratch_pool));
