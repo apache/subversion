@@ -225,14 +225,14 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
   return SVN_NO_ERROR;
 }
 
+/* -------------------------------------------------------------- */
+
+/*** Private Inter-Library Interfaces ***/
 void
 svn_ra__close(svn_ra_session_t *session)
 {
-  /* Just clear the pool here. Do not destroy it, because we don't own
-     it and we don't know how many references there may be to this
-     pool elsewhere. */
   if (session && session->pool)
-    apr_pool_clear(session->pool);
+    apr_pool_destroy(session->pool);
 }
 
 /* -------------------------------------------------------------- */
