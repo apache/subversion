@@ -170,6 +170,7 @@ svn_cl__copy(apr_getopt_t *os,
   err = svn_client_copy7(sources, dst_path, TRUE,
                          opt_state->parents, opt_state->ignore_externals,
                          opt_state->pin_externals,
+                         NULL, /* pin all externals */
                          opt_state->revprop_table,
                          (opt_state->quiet ? NULL : svn_cl__print_commit_info),
                          NULL,

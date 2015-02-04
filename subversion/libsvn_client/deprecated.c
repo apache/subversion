@@ -640,7 +640,7 @@ svn_client_copy6(const apr_array_header_t *sources,
 {
   return svn_error_trace(svn_client_copy7(sources, dst_path, copy_as_child,
                                           make_parents, ignore_externals,
-                                          FALSE, revprop_table,
+                                          FALSE, NULL, revprop_table,
                                           commit_callback, commit_baton,
                                           ctx, pool));
 }
