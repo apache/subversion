@@ -26,6 +26,7 @@ import shutil
 import copy
 import urllib
 import logging
+import re
 
 import svntest
 
@@ -45,6 +46,8 @@ class Sandbox:
     self._set_name("%s-%d" % (module, idx))
     # This flag is set to True by build() and returned by is_built()
     self._is_built = False
+
+    self.was_cwd = os.getcwd()
 
   def _set_name(self, name, read_only=False):
     """A convenience method for renaming a sandbox, useful when
@@ -380,6 +383,116 @@ class Sandbox:
                      'youngest', self.repo_dir)
     youngest = int(output[0])
     return youngest
+
+  def verify_repo(self):
+    """
+    """
+    svnrdump_headers_missing = re.compile(
+        "Text-content-sha1: .*|Text-copy-source-md5: .*|"
+        "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+    )
+    svnrdump_headers_always = re.compile(
+        "Prop-delta: .*"
+    )
+
+    dumpfile_a_n = svntest.actions.run_and_verify_dump(self.repo_dir,
+                                                       deltas=False)
+    dumpfile_a_d = svntest.actions.run_and_verify_dump(self.repo_dir,
+                                                       deltas=True)
+    dumpfile_r_d = svntest.actions.run_and_verify_svnrdump(
+      None, svntest.verify.AnyOutput, [], 0, 'dump', '-q', self.repo_url,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    # Compare the two deltas dumpfiles, ignoring expected differences
+    dumpfile_a_d_cmp = [l for l in dumpfile_a_d
+                       if not svnrdump_headers_missing.match(l)
+                                and not svnrdump_headers_always.match(l)]
+    dumpfile_r_d_cmp = [l for l in dumpfile_r_d
+                       if not svnrdump_headers_always.match(l)]
+    # Ignore differences in number of blank lines between node records,
+    # as svnrdump puts 3 whereas svnadmin puts 2 after a replace-with-copy.
+    svntest.verify.compare_dump_files(None, None,
+                                      dumpfile_a_d_cmp,
+                                      dumpfile_r_d_cmp,
+                                      ignore_number_of_blank_lines=True)
+
+    # Try loading the dump files.
+    # For extra points, load each with the other tool:
+    #   svnadmin dump | svnrdump load
+    #   svnrdump dump | svnadmin load
+    repo_dir_a_n, repo_url_a_n = self.add_repo_path('load_a_n')
+    svntest.main.create_repos(repo_dir_a_n)
+    svntest.actions.enable_revprop_changes(repo_dir_a_n)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_n, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_n,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    repo_dir_a_d, repo_url_a_d = self.add_repo_path('load_a_d')
+    svntest.main.create_repos(repo_dir_a_d)
+    svntest.actions.enable_revprop_changes(repo_dir_a_d)
+    svntest.actions.run_and_verify_svnrdump(
+      dumpfile_a_d, svntest.verify.AnyOutput, [], 0, 'load', repo_url_a_d,
+      svntest.main.svnrdump_crosscheck_authentication)
+
+    repo_dir_r_d, repo_url_r_d = self.add_repo_path('load_r_d')
+    svntest.main.create_repos(repo_dir_r_d)
+    svntest.actions.run_and_verify_load(repo_dir_r_d, dumpfile_r_d)
+
+    # Dump the loaded repositories in the same way; expect exact equality
+    reloaded_dumpfile_a_n = svntest.actions.run_and_verify_dump(repo_dir_a_n)
+    reloaded_dumpfile_a_d = svntest.actions.run_and_verify_dump(repo_dir_a_d)
+    reloaded_dumpfile_r_d = svntest.actions.run_and_verify_dump(repo_dir_r_d)
+    svntest.verify.compare_dump_files(None, None,
+                                      reloaded_dumpfile_a_n,
+                                      reloaded_dumpfile_a_d,
+                                      ignore_uuid=True)
+    svntest.verify.compare_dump_files(None, None,
+                                      reloaded_dumpfile_a_d,
+                                      reloaded_dumpfile_r_d,
+                                      ignore_uuid=True)
+
+    # Run each dump through svndumpfilter and check for no further change.
+    for dumpfile in [dumpfile_a_n,
+                     dumpfile_a_d,
+                     dumpfile_r_d
+                     ]:
+      ### No buffer size seems to work for update_tests-2. So skip that test?
+      ### (Its dumpfile size is ~360 KB non-delta, ~180 KB delta.)
+      if len(''.join(dumpfile)) > 100000:
+        continue
+
+      exit_code, dumpfile2, errput = svntest.main.run_command_stdin(
+        svntest.main.svndumpfilter_binary, None, -1, True,
+        dumpfile, '--quiet', 'include', '/')
+      assert not exit_code and not errput
+      # Ignore empty prop sections in the input file during comparison, as
+      # svndumpfilter strips them.
+      # Ignore differences in number of blank lines between node records,
+      # as svndumpfilter puts 3 instead of 2 after an add or delete record.
+      svntest.verify.compare_dump_files(None, None, dumpfile, dumpfile2,
+                                        expect_content_length_always=True,
+                                        ignore_empty_prop_sections=True,
+                                        ignore_number_of_blank_lines=True)
+
+  def verify(self, skip_cross_check=False):
+    """Do additional testing that should hold for any sandbox, such as
+       verifying that the repository can be dumped.
+    """
+    if (not skip_cross_check
+        and svntest.main.tests_verify_dump_load_cross_check()):
+      if self.is_built() and not self.read_only:
+        # verify that we can in fact dump the repo
+        # (except for the few tests that deliberately corrupt the repo)
+        os.chdir(self.was_cwd)
+        if os.path.exists(self.repo_dir):
+          logger.info("VERIFY: running dump/load cross-check")
+          self.verify_repo()
+      else:
+        logger.info("VERIFY: WARNING: skipping dump/load cross-check:"
+                    " is-built=%s, read-only=%s"
+                    % (self.is_built() and "true" or "false",
+                       self.read_only and "true" or "false"))
+    pass
 
 def is_url(target):
   return (target.startswith('^/')
