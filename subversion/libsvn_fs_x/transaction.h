@@ -79,12 +79,10 @@ svn_boolean_t
 svn_fs_x__is_fresh_txn_root(svn_fs_x__noderev_t *noderev);
 
 /* Store NODEREV as the node-revision in the transaction defined by NODEREV's
-   ID within FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do
-   any necessary temporary allocation in SCRATCH_POOL. */
+   ID within FS.  Do any necessary temporary allocation in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
                             svn_fs_x__noderev_t *noderev,
-                            svn_boolean_t fresh_txn_root,
                             apr_pool_t *scratch_pool);
 
 /* Find the paths which were changed in transaction TXN_ID of

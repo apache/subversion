@@ -786,13 +786,10 @@ svn_fs_x__is_fresh_txn_root(svn_fs_x__noderev_t *noderev)
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
                             svn_fs_x__noderev_t *noderev,
-                            svn_boolean_t fresh_txn_root,
                             apr_pool_t *scratch_pool)
 {
   apr_file_t *noderev_file;
   const svn_fs_x__id_t *id = &noderev->noderev_id;
-
-  noderev->is_fresh_txn_root = fresh_txn_root;
 
   if (! svn_fs_x__is_txn(id->change_set))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -1192,7 +1189,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   /* For the transaction root, the copyroot never changes. */
   svn_fs_x__init_txn_root(&noderev->noderev_id, txn_id);
 
-  return svn_fs_x__put_node_revision(fs, noderev, TRUE, scratch_pool);
+  return svn_fs_x__put_node_revision(fs, noderev, scratch_pool);
 }
 
 /* A structure used by get_and_increment_txn_key_body(). */
@@ -1675,7 +1672,7 @@ svn_fs_x__create_node(svn_fs_t *fs,
   SVN_ERR(allocate_item_index(&noderev->noderev_id.number, fs, txn_id,
                               scratch_pool));
 
-  SVN_ERR(svn_fs_x__put_node_revision(fs, noderev, FALSE, scratch_pool));
+  SVN_ERR(svn_fs_x__put_node_revision(fs, noderev, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1771,8 +1768,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
       rep->id.number = SVN_FS_X__ITEM_INDEX_UNUSED;
 
       /* Save noderev to disk. */
-      SVN_ERR(svn_fs_x__put_node_revision(fs, parent_noderev, FALSE,
-                                          subpool));
+      SVN_ERR(svn_fs_x__put_node_revision(fs, parent_noderev, subpool));
     }
   else
     {
@@ -2415,8 +2411,7 @@ rep_write_contents_close(void *baton)
   apr_pool_cleanup_kill(b->local_pool, b, rep_write_cleanup);
 
   /* Write out the new node-rev information. */
-  SVN_ERR(svn_fs_x__put_node_revision(b->fs, b->noderev, FALSE,
-                                      b->local_pool));
+  SVN_ERR(svn_fs_x__put_node_revision(b->fs, b->noderev, b->local_pool));
   if (!old_rep)
     {
       svn_fs_x__p2l_entry_t entry;
@@ -2503,7 +2498,7 @@ svn_fs_x__create_successor(svn_fs_t *fs,
         = svn_fs_x__get_revnum(new_noderev->noderev_id.change_set);
     }
 
-  SVN_ERR(svn_fs_x__put_node_revision(fs, new_noderev, FALSE, scratch_pool));
+  SVN_ERR(svn_fs_x__put_node_revision(fs, new_noderev, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2538,7 +2533,7 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
       noderev->prop_rep->id.change_set = id->change_set;
       SVN_ERR(allocate_item_index(&noderev->prop_rep->id.number, fs,
                                   txn_id, scratch_pool));
-      SVN_ERR(svn_fs_x__put_node_revision(fs, noderev, FALSE, scratch_pool));
+      SVN_ERR(svn_fs_x__put_node_revision(fs, noderev, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -3007,9 +3002,6 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   /* don't serialize SHA1 for props to disk (waste of space) */
   if (noderev->prop_rep)
     noderev->prop_rep->has_sha1 = FALSE;
-
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  noderev->is_fresh_txn_root = FALSE;
 
   /* Write out our new node-revision. */
   if (at_root)
