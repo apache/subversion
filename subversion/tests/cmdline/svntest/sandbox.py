@@ -409,9 +409,12 @@ class Sandbox:
                                 and not svnrdump_headers_always.match(l)]
     dumpfile_r_d_cmp = [l for l in dumpfile_r_d
                        if not svnrdump_headers_always.match(l)]
+    # Ignore differences in number of blank lines between node records,
+    # as svnrdump puts 3 whereas svnadmin puts 2 after a replace-with-copy.
     svntest.verify.compare_dump_files(None, None,
                                       dumpfile_a_d_cmp,
-                                      dumpfile_r_d_cmp)
+                                      dumpfile_r_d_cmp,
+                                      ignore_number_of_blank_lines=True)
 
     # Try loading the dump files.
     # For extra points, load each with the other tool:
@@ -464,9 +467,12 @@ class Sandbox:
       assert not exit_code and not errput
       # Ignore empty prop sections in the input file during comparison, as
       # svndumpfilter strips them.
+      # Ignore differences in number of blank lines between node records,
+      # as svndumpfilter puts 3 instead of 2 after an add or delete record.
       svntest.verify.compare_dump_files(None, None, dumpfile, dumpfile2,
                                         expect_content_length_always=True,
-                                        ignore_empty_prop_sections=True)
+                                        ignore_empty_prop_sections=True,
+                                        ignore_number_of_blank_lines=True)
 
   def verify(self, skip_cross_check=False):
     """Do additional testing that should hold for any sandbox, such as

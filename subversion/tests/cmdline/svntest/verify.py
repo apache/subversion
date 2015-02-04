@@ -676,9 +676,7 @@ class DumpParser:
     blanks = 0
     while self.current < len(self.lines) and self.parse_blank(required=False):
       blanks += 1
-    ### disable temporarily, as svnrdump behaves differently from svnadmin
-    ### on a replace-with-copy (bug -- should file an issue)
-    #node['blanks'] = blanks
+    node['blanks'] = blanks
     return action, node
 
   def parse_all_nodes(self):
@@ -728,7 +726,8 @@ class DumpParser:
 def compare_dump_files(message, label, expected, actual,
                        ignore_uuid=False,
                        expect_content_length_always=False,
-                       ignore_empty_prop_sections=False):
+                       ignore_empty_prop_sections=False,
+                       ignore_number_of_blank_lines=False):
   """Parse two dump files EXPECTED and ACTUAL, both of which are lists
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
@@ -762,6 +761,8 @@ def compare_dump_files(message, label, expected, actual,
                 del action_record['props']
                 old_content_length = int(action_record['content_length'])
                 action_record['content_length'] = str(old_content_length - 10)
+            if ignore_number_of_blank_lines:
+              action_record['blanks'] = 0
 
   if parsed_expected != parsed_actual:
     print 'DIFF of raw dumpfiles (including expected differences)'
