@@ -252,7 +252,7 @@ public class SVNClient implements ISVNClient
                      CommitMessageCallback handler, CommitCallback callback)
             throws ClientException
     {
-        copy(sources, destPath, copyAsChild, markeParents, ignoreExternals,
+        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
              false, revpropTable, handler, callback);
     }
 
