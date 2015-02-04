@@ -888,6 +888,7 @@ parse_packed_revprops(svn_fs_t *fs,
   apr_off_t offset;
   const char *header_end;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_boolean_t cache_all = has_revprop_cache(fs, scratch_pool);
 
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
@@ -968,14 +969,23 @@ parse_packed_revprops(svn_fs_t *fs,
 
       if (revision == revprops->revision)
         {
+          /* Parse (and possibly cache) the one revprop list we care about. */
           SVN_ERR(parse_revprop(&revprops->properties, fs, revision,
                                 revprops->generation, &serialized,
                                 result_pool, iterpool));
           revprops->serialized_size = serialized.len;
 
           /* If we only wanted the revprops for REVISION then we are done. */
-          if (!read_all)
+          if (!read_all && !cache_all)
             break;
+        }
+      else if (cache_all)
+        {
+          /* Parse and cache all other revprop lists. */
+          apr_hash_t *properties;
+          SVN_ERR(parse_revprop(&properties, fs, revision,
+                                revprops->generation, &serialized,
+                                iterpool, iterpool));
         }
 
       if (read_all)
