@@ -12518,7 +12518,7 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
   return SVN_NO_ERROR;
 }
 
-/* ###
+/* ### Recursive helper for svn_wc__db_follow_moved_to()
  */
 static svn_error_t *
 follow_moved_to(svn_wc__db_wcroot_t *wcroot,
@@ -12530,11 +12530,13 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  int working_op_depth;
+  int shadowing_op_depth;
   const char *ancestor_relpath;
   const char *node_moved_to = NULL;
   int i;
 
+  /* Obtain the depth of the node directly shadowing local_relpath
+     as it exists at OP_DEPTH, and perhaps moved to info */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_OP_DEPTH_MOVED_TO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
@@ -12542,7 +12544,7 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      working_op_depth = svn_sqlite__column_int(stmt, 0);
+      shadowing_op_depth = svn_sqlite__column_int(stmt, 0);
       node_moved_to = svn_sqlite__column_text(stmt, 1, result_pool);
 
       if (node_moved_to)
@@ -12550,7 +12552,7 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
           struct svn_wc__db_moved_to_t *moved_to;
 
           moved_to = apr_palloc(result_pool, sizeof(*moved_to));
-          moved_to->op_depth = working_op_depth;
+          moved_to->op_depth = shadowing_op_depth;
           moved_to->local_relpath = node_moved_to;
           APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
         }
@@ -12559,25 +12561,28 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             path_for_error_message(wcroot, local_relpath,
-                                                    scratch_pool));
+    {
+      /* Node is not shadowed, so not moved */
+      return SVN_NO_ERROR;
+    }
   else if (node_moved_to)
-    return SVN_NO_ERROR;
-
+    {
+      /* Moved directly, so we have the final location */
+      return SVN_NO_ERROR;
+    }
   /* Need to handle being moved via an ancestor. */
   ancestor_relpath = local_relpath;
-  for (i = relpath_depth(local_relpath); i > working_op_depth; --i)
+  for (i = relpath_depth(local_relpath); i > shadowing_op_depth; --i)
     {
       const char *ancestor_moved_to;
+      svn_boolean_t have_row;
 
       ancestor_relpath = svn_relpath_dirname(ancestor_relpath, scratch_pool);
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_MOVED_TO));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, ancestor_relpath,
-                                working_op_depth));
+                                shadowing_op_depth));
       SVN_ERR(svn_sqlite__step_row(stmt));
 
       ancestor_moved_to = svn_sqlite__column_text(stmt, 0, scratch_pool);
@@ -12593,7 +12598,7 @@ follow_moved_to(svn_wc__db_wcroot_t *wcroot,
                                  result_pool);
 
           moved_to = apr_palloc(result_pool, sizeof(*moved_to));
-          moved_to->op_depth = working_op_depth;
+          moved_to->op_depth = shadowing_op_depth;
           moved_to->local_relpath = node_moved_to;
           APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
 
