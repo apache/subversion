@@ -698,17 +698,18 @@ parse_revprop(apr_hash_t **properties,
  * If the data could not be read due to an otherwise recoverable error,
  * leave *PROPERTIES unchanged. No error will be returned in that case.
  *
- * Allocations will be done in POOL.
+ * Allocate *PROPERTIES in RESULT_POOL and temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 read_non_packed_revprop(apr_hash_t **properties,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         apr_int64_t generation,
-                        apr_pool_t *pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *content = NULL;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t missing = FALSE;
   int i;
 
@@ -727,7 +728,7 @@ read_non_packed_revprop(apr_hash_t **properties,
   if (content)
     SVN_ERR(parse_revprop(properties, fs, rev, generation,
                           svn_stringbuf__morph_into_string(content),
-                          pool, iterpool));
+                          result_pool, iterpool));
 
   svn_pool_clear(iterpool);
 
@@ -1006,7 +1007,8 @@ parse_packed_revprops(svn_fs_t *fs,
  * *REVPROPS.  Use GENERATION to populate the revprop cache, if enabled.
  * If you want to modify revprop contents / update REVPROPS, READ_ALL
  * must be set.  Otherwise, only the properties of REV are being provided.
- * Allocate data in POOL.
+ *
+ * Allocate *PROPERTIES in RESULT_POOL and temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 read_pack_revprop(packed_revprops_t **revprops,
@@ -1014,9 +1016,10 @@ read_pack_revprop(packed_revprops_t **revprops,
                   svn_revnum_t rev,
                   apr_int64_t generation,
                   svn_boolean_t read_all,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t missing = FALSE;
   svn_error_t *err;
   packed_revprops_t *result;
@@ -1031,7 +1034,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                               _("No such packed revision %ld"), rev);
 
   /* initialize the result data structure */
-  result = apr_pcalloc(pool, sizeof(*result));
+  result = apr_pcalloc(result_pool, sizeof(*result));
   result->revision = rev;
   result->generation = generation;
 
@@ -1047,7 +1050,7 @@ read_pack_revprop(packed_revprops_t **revprops,
       /* there might have been concurrent writes.
        * Re-read the manifest and the pack file.
        */
-      SVN_ERR(get_revprop_packname(fs, result, pool, iterpool));
+      SVN_ERR(get_revprop_packname(fs, result, result_pool, iterpool));
       file_path  = svn_dirent_join(result->folder,
                                    result->filename,
                                    iterpool);
@@ -1055,15 +1058,15 @@ read_pack_revprop(packed_revprops_t **revprops,
                                 &missing,
                                 file_path,
                                 i + 1 < SVN_FS_X__RECOVERABLE_RETRY_COUNT,
-                                pool));
+                                result_pool));
 
       /* If we could not find the file, there was a write.
        * So, we should refresh our revprop generation info as well such
        * that others may find data we will put into the cache.  They would
        * consider it outdated, otherwise.
        */
-      if (missing && has_revprop_cache(fs, pool))
-        SVN_ERR(read_revprop_generation(&result->generation, fs, pool));
+      if (missing && has_revprop_cache(fs, iterpool))
+        SVN_ERR(read_revprop_generation(&result->generation, fs, iterpool));
     }
 
   /* the file content should be available now */
@@ -1072,7 +1075,7 @@ read_pack_revprop(packed_revprops_t **revprops,
                   _("Failed to read revprop pack file for r%ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
-  err = parse_packed_revprops(fs, result, read_all, pool, iterpool);
+  err = parse_packed_revprops(fs, result, read_all, result_pool, iterpool);
   svn_pool_destroy(iterpool);
   if (err)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
@@ -1092,7 +1095,8 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 svn_boolean_t bypass_cache,
-                                apr_pool_t *pool)
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_int64_t generation = 0;
@@ -1101,20 +1105,20 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   *proplist_p = NULL;
 
   /* should they be available at all? */
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* Try cache lookup first. */
-  if (!bypass_cache && has_revprop_cache(fs, pool))
+  if (!bypass_cache && has_revprop_cache(fs, scratch_pool))
     {
       svn_boolean_t is_cached;
       svn_fs_x__pair_cache_key_t key = { 0 };
 
-      SVN_ERR(read_revprop_generation(&generation, fs, pool));
+      SVN_ERR(read_revprop_generation(&generation, fs, scratch_pool));
 
       key.revision = rev;
       key.second = generation;
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                             ffd->revprop_cache, &key, pool));
+                             ffd->revprop_cache, &key, result_pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
@@ -1125,7 +1129,8 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   if (!svn_fs_x__is_packed_revprop(fs, rev))
     {
       svn_error_t *err = read_non_packed_revprop(proplist_p, fs, rev,
-                                                 generation, pool);
+                                                 generation, result_pool,
+                                                 scratch_pool);
       if (err)
         {
           if (!APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1142,7 +1147,8 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   if (!*proplist_p)
     {
       packed_revprops_t *revprops;
-      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, FALSE, pool));
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, FALSE,
+                                result_pool, scratch_pool));
       *proplist_p = revprops->properties;
     }
 
@@ -1440,7 +1446,8 @@ write_packed_revprop(const char **final_path,
     SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
   /* read contents of the current pack file */
-  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, TRUE, pool));
+  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, TRUE, pool,
+                            pool));
 
   /* serialize the new revprops */
   serialized = svn_stringbuf_create_empty(pool);
