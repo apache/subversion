@@ -73,6 +73,11 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
                          void *baton,
                          apr_pool_t *scratch_pool);
 
+/* Return TRUE, iff NODEREV is the root node of a transaction that has not
+   seen any modifications, yet. */
+svn_boolean_t
+svn_fs_x__is_fresh_txn_root(svn_fs_x__noderev_t *noderev);
+
 /* Store NODEREV as the node-revision in the transaction defined by NODEREV's
    ID within FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do
    any necessary temporary allocation in SCRATCH_POOL. */
