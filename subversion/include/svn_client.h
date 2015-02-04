@@ -4493,8 +4493,16 @@ typedef struct svn_client_copy_source_t
  * as part of this operation.
  *
  * If @a pin_externals is set, pin URLs in copied externals definitions
- * to their last-changed revision unless they were already pinned to a
- * particular revision.
+ * to their current revision unless they were already pinned to a
+ * particular revision. If non-NULL, @a externals_to_pin restricts pinning
+ * to a subset of externals. It is a hash table keyed by either a local
+ * absolute path or a URL at which an svn:externals property is set.
+ * The hash table contains apr_array_header_t* elements as returned
+ * by svn_wc_parse_externals_description3(). These arrays contain elements
+ * of type svn_wc_external_item2_t*. Externals corresponding to these
+ * items will be pinned, other externals will not be pinned.
+ * If @a externals_to_pin is @c NULL then all externals are pinned.
+ * If @a pin_externals is @c FALSE then @a externals_to_pin is ignored.
  *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
@@ -4523,6 +4531,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
                  svn_boolean_t pin_externals,
+                 const apr_hash_t *externals_to_pin,
                  const apr_hash_t *revprop_table,
                  svn_commit_callback2_t commit_callback,
                  void *commit_baton,
