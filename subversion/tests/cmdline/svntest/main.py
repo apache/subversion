@@ -132,6 +132,10 @@ else:
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by svnrdump in dump/load cross-checks
+crosscheck_username = '__dumpster__'
+crosscheck_password = '__loadster__'
+
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
@@ -693,14 +697,25 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+class svnrdump_crosscheck_authentication:
+  pass
+
 def _with_auth(args):
   assert '--password' not in args
-  args = args + ('--password', wc_passwd,
+  if svnrdump_crosscheck_authentication in args:
+    args = filter(lambda x: x is not svnrdump_crosscheck_authentication, args)
+    auth_username = crosscheck_username
+    auth_password = crosscheck_password
+  else:
+    auth_username = wc_author
+    auth_password = wc_passwd
+
+  args = args + ('--password', auth_password,
                  '--no-auth-cache' )
   if '--username' in args:
     return args
   else:
-    return args + ('--username', wc_author )
+    return args + ('--username', auth_username )
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -934,8 +949,13 @@ def _post_create_repos(path, minor_version = None):
     # This actually creates TWO [users] sections in the file (one of them is
     # uncommented in `svnadmin create`'s template), so we exercise the .ini
     # files reading code's handling of duplicates, too. :-)
-    file_append(os.path.join(path, "conf", "passwd"),
-                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+    users = ("[users]\n"
+             "jrandom = rayjandom\n"
+             "jconstant = rayjandom\n")
+    if tests_verify_dump_load_cross_check():
+      # Insert a user for the dump/load cross-check.
+      users += (crosscheck_username + " = " + crosscheck_password + "\n")
+    file_append(os.path.join(path, "conf", "passwd"), users)
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
@@ -1201,7 +1221,7 @@ def write_restrictive_svnserve_conf_with_groups(repo_dir,
 # parallel execution at the bottom like so
 #   if __name__ == '__main__':
 #     svntest.main.run_tests(test_list, serial_only = True)
-def write_authz_file(sbox, rules, sections=None):
+def write_authz_file(sbox, rules, sections=None, prefixed_rules=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
 the rules. You can add sections SECTIONS (ex. groups, aliases...) with
@@ -1217,15 +1237,32 @@ an appropriate list of mappings.
   repo_name = os.path.basename(repo_name)
 
   if sbox.repo_url.startswith("http"):
-    prefix = repo_name + ":"
+    default_prefix = repo_name + ":"
   else:
-    prefix = ""
+    default_prefix = ""
+
   if sections:
     for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))
 
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  if not prefixed_rules:
+    prefixed_rules = dict()
+
+  if rules:
+    for p, r in rules.items():
+      prefixed_rules[default_prefix + p] = r
+
+  for p, r in prefixed_rules.items():
+    fp.write("[%s]\n%s\n" % (p, r))
+    if tests_verify_dump_load_cross_check():
+      # Insert an ACE that lets the dump/load cross-check bypass
+      # authz restrictions.
+      fp.write(crosscheck_username + " = rw\n")
+
+  if tests_verify_dump_load_cross_check() and '/' not in prefixed_rules:
+    # We need a repository-root ACE for the dump/load cross-check
+    fp.write("[/]\n" + crosscheck_username + " = rw\n")
+
   fp.close()
 
 # See the warning about parallel test execution in write_authz_file
@@ -1378,6 +1415,9 @@ def make_log_msg():
 
 def tests_use_prepacakaged_repository():
   return options.fsfs_version is not None
+
+def tests_verify_dump_load_cross_check():
+  return options.dump_load_cross_check
 
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
@@ -1568,6 +1608,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-packing')
     if options.fsfs_version:
       args.append('--fsfs-version=' + str(options.fsfs_version))
+    if options.dump_load_cross_check:
+      args.append('--dump-load-cross-check')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1892,6 +1934,11 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-version', type='int', action='store',
                     help='FSFS version (fsfs)')
+  parser.add_option('--dump-load-cross-check', action='store_true',
+                    help="After every test, run a series of dump and load " +
+                         "tests with svnadmin, svnrdump and svndumpfilter " +
+                         " on the testcase repositories to cross-check " +
+                         " dump file compatibility.")
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',

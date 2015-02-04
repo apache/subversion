@@ -115,6 +115,7 @@ remove_r0_mergeinfo(const svn_string_t **str,
     {
       char *line = APR_ARRAY_IDX(lines, i, char *);
       char *colon;
+      char *rangelist;
 
       /* split at the last colon */
       colon = strrchr(line, ':');
@@ -124,13 +125,11 @@ remove_r0_mergeinfo(const svn_string_t **str,
                                  _("Missing colon in svn:mergeinfo "
                                    "property"));
 
+      rangelist = colon + 1;
+
       /* remove r0 */
       if (colon[1] == '0')
         {
-          char *rangelist;
-
-          rangelist = colon + 1;
-
           if (strncmp(rangelist, "0*,", 3) == 0)
             {
               rangelist += 3;
@@ -151,18 +150,15 @@ remove_r0_mergeinfo(const svn_string_t **str,
             {
               rangelist[0] = '1';
             }
+        }
 
-          /* reassemble */
+      /* reassemble */
+      if (rangelist[0])
+        {
           if (new_str->len)
             svn_stringbuf_appendbyte(new_str, '\n');
           svn_stringbuf_appendbytes(new_str, line, colon + 1 - line);
           svn_stringbuf_appendcstr(new_str, rangelist);
-        }
-      else
-        {
-          if (new_str->len)
-            svn_stringbuf_appendbyte(new_str, '\n');
-          svn_stringbuf_appendcstr(new_str, line);
         }
     }
 

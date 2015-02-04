@@ -2489,7 +2489,7 @@ change_dir_prop(void *dir_baton,
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
-  propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
+  propchange->value = svn_string_dup(value, db->pool);
 
   if (!db->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_directory_edited(db, pool));
@@ -3805,7 +3805,7 @@ change_file_prop(void *file_baton,
   /* Push a new propchange to the file baton's array of propchanges */
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
-  propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
+  propchange->value = svn_string_dup(value, fb->pool);
 
   if (!fb->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));

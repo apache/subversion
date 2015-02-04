@@ -301,8 +301,9 @@ svn_string_isempty(const svn_string_t *str)
 svn_string_t *
 svn_string_dup(const svn_string_t *original_string, apr_pool_t *pool)
 {
-  return (svn_string_ncreate(original_string->data,
-                             original_string->len, pool));
+  return (original_string ? svn_string_ncreate(original_string->data,
+                                               original_string->len, pool)
+                          : NULL);
 }
 
 

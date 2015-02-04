@@ -144,23 +144,27 @@ props_hash_to_text(apr_hash_t *props, apr_pool_t *pool)
   return str->len ? str->data : NULL;
 }
 
-/* Return a human-readable string representing ROW. */
+/* Return a human-readable string representing ROW. With a tiny bit of editting
+   this can be used to create expected results */
 static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
 {
+  const char *relpath_str, *presence_str;
   const char *file_external_str, *moved_here_str, *moved_to_str, *props;
 
   if (row == NULL)
     return "(null)";
 
+  relpath_str = apr_psprintf(result_pool, "\"%s\",", row->local_relpath);
+  presence_str = apr_psprintf(result_pool, "\"%s\",", row->presence);
   if (row->moved_to)
-    moved_to_str = apr_psprintf(result_pool, ", moved-to %s", row->moved_to);
+    moved_to_str = apr_psprintf(result_pool, ", \"%s\"", row->moved_to);
   else
     moved_to_str = "";
 
   if (row->moved_here)
-    moved_here_str = ", moved-here";
+    moved_here_str = ", MOVED_HERE";
   else
     moved_here_str = "";
 
@@ -175,19 +179,17 @@ print_row(const nodes_row_t *row,
     props = "";
 
   if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\"%s%s%s%s",
-                        row->op_depth, row->local_relpath, row->presence,
+    return apr_psprintf(result_pool, "%d, %-20s%-15s NO_COPY_FROM%s%s%s%s",
+                        row->op_depth, relpath_str, presence_str,
                         moved_here_str, moved_to_str,
                         file_external_str, props);
   else
-    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\", %s ^/%s@%d%s%s%s%s",
-                        row->op_depth, row->local_relpath, row->presence,
-                        row->op_depth == 0 ? "base" : "copyfrom",
-                        row->repo_relpath, (int)row->repo_revnum,
+    return apr_psprintf(result_pool, "%d, %-20s%-15s %d, \"%s\"%s%s%s%s",
+                        row->op_depth, relpath_str, presence_str,
+                        (int)row->repo_revnum, row->repo_relpath,
                         moved_here_str, moved_to_str,
                         file_external_str, props);
 }
-
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
 typedef struct comparison_baton_t {
     apr_hash_t *expected_hash;  /* Maps "OP_DEPTH PATH" to nodes_row_t. */
@@ -9965,6 +9967,172 @@ nested_move_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_within_mixed_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_within_mixed_move", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_delete(&b, "iota"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  /* Make A mixed revision */
+  SVN_ERR(sbox_wc_update(&b, "A/B/E", 2));
+
+  /* Single rev moves.. ok */
+  SVN_ERR(sbox_wc_move(&b, "A/D", "A/D_mv"));
+  SVN_ERR(sbox_wc_move(&b, "A/C", "C_mv"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                 "normal",       0, ""},
+      {0, "A",                "normal",       1, "A"},
+      {0, "A/B",              "normal",       1, "A/B"},
+      {0, "A/B/E",            "normal",       2, "A/B/E"},
+      {0, "A/B/E/alpha",      "normal",       2, "A/B/E/alpha"},
+      {0, "A/B/E/beta",       "normal",       2, "A/B/E/beta"},
+      {0, "A/B/F",            "normal",       1, "A/B/F"},
+      {0, "A/B/lambda",       "normal",       1, "A/B/lambda"},
+      {0, "A/C",              "normal",       1, "A/C"},
+      {0, "A/D",              "normal",       1, "A/D"},
+      {0, "A/D/G",            "normal",       1, "A/D/G"},
+      {0, "A/D/G/pi",         "normal",       1, "A/D/G/pi"},
+      {0, "A/D/G/rho",        "normal",       1, "A/D/G/rho"},
+      {0, "A/D/G/tau",        "normal",       1, "A/D/G/tau"},
+      {0, "A/D/gamma",        "normal",       1, "A/D/gamma"},
+      {0, "A/D/H",            "normal",       1, "A/D/H"},
+      {0, "A/D/H/chi",        "normal",       1, "A/D/H/chi"},
+      {0, "A/D/H/omega",      "normal",       1, "A/D/H/omega"},
+      {0, "A/D/H/psi",        "normal",       1, "A/D/H/psi"},
+      {0, "A/mu",             "normal",       1, "A/mu"},
+      {0, "iota",             "not-present",  2, "iota"},
+      {1, "C_mv",             "normal",       1, "A/C", MOVED_HERE},
+      {2, "A/C",              "base-deleted", NO_COPY_FROM, "C_mv"},
+      {2, "A/D",              "base-deleted", NO_COPY_FROM, "A/D_mv"},
+      {2, "A/D/G",            "base-deleted", NO_COPY_FROM},
+      {2, "A/D/G/pi",         "base-deleted", NO_COPY_FROM},
+      {2, "A/D/G/rho",        "base-deleted", NO_COPY_FROM},
+      {2, "A/D/G/tau",        "base-deleted", NO_COPY_FROM},
+      {2, "A/D/gamma",        "base-deleted", NO_COPY_FROM},
+      {2, "A/D/H",            "base-deleted", NO_COPY_FROM},
+      {2, "A/D/H/chi",        "base-deleted", NO_COPY_FROM},
+      {2, "A/D/H/omega",      "base-deleted", NO_COPY_FROM},
+      {2, "A/D/H/psi",        "base-deleted", NO_COPY_FROM},
+      {2, "A/D_mv",           "normal",       1, "A/D", MOVED_HERE},
+      {2, "A/D_mv/G",         "normal",       1, "A/D/G", MOVED_HERE},
+      {2, "A/D_mv/G/pi",      "normal",       1, "A/D/G/pi", MOVED_HERE},
+      {2, "A/D_mv/G/rho",     "normal",       1, "A/D/G/rho", MOVED_HERE},
+      {2, "A/D_mv/G/tau",     "normal",       1, "A/D/G/tau", MOVED_HERE},
+      {2, "A/D_mv/gamma",     "normal",       1, "A/D/gamma", MOVED_HERE},
+      {2, "A/D_mv/H",         "normal",       1, "A/D/H", MOVED_HERE},
+      {2, "A/D_mv/H/chi",     "normal",       1, "A/D/H/chi", MOVED_HERE},
+      {2, "A/D_mv/H/omega",   "normal",       1, "A/D/H/omega", MOVED_HERE},
+      {2, "A/D_mv/H/psi",     "normal",       1, "A/D/H/psi", MOVED_HERE},
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* Mixed rev move... breaks recordings "A/D" -> "A/D_mv"  */
+  SVN_ERR(sbox_wc_move(&b, "A", "A_mv"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                 "normal",       0, ""},
+      {0, "A",                "normal",       1, "A"},
+      {0, "A/B",              "normal",       1, "A/B"},
+      {0, "A/B/E",            "normal",       2, "A/B/E"},
+      {0, "A/B/E/alpha",      "normal",       2, "A/B/E/alpha"},
+      {0, "A/B/E/beta",       "normal",       2, "A/B/E/beta"},
+      {0, "A/B/F",            "normal",       1, "A/B/F"},
+      {0, "A/B/lambda",       "normal",       1, "A/B/lambda"},
+      {0, "A/C",              "normal",       1, "A/C"},
+      {0, "A/D",              "normal",       1, "A/D"},
+      {0, "A/D/G",            "normal",       1, "A/D/G"},
+      {0, "A/D/G/pi",         "normal",       1, "A/D/G/pi"},
+      {0, "A/D/G/rho",        "normal",       1, "A/D/G/rho"},
+      {0, "A/D/G/tau",        "normal",       1, "A/D/G/tau"},
+      {0, "A/D/gamma",        "normal",       1, "A/D/gamma"},
+      {0, "A/D/H",            "normal",       1, "A/D/H"},
+      {0, "A/D/H/chi",        "normal",       1, "A/D/H/chi"},
+      {0, "A/D/H/omega",      "normal",       1, "A/D/H/omega"},
+      {0, "A/D/H/psi",        "normal",       1, "A/D/H/psi"},
+      {0, "A/mu",             "normal",       1, "A/mu"},
+      {0, "iota",             "not-present",  2, "iota"},
+      {1, "A",                "base-deleted", NO_COPY_FROM },
+      {1, "A/B",              "base-deleted", NO_COPY_FROM },
+      {1, "A/B/E",            "base-deleted", NO_COPY_FROM },
+      {1, "A/B/E/alpha",      "base-deleted", NO_COPY_FROM },
+      {1, "A/B/E/beta",       "base-deleted", NO_COPY_FROM },
+      {1, "A/B/F",            "base-deleted", NO_COPY_FROM },
+      {1, "A/B/lambda",       "base-deleted", NO_COPY_FROM },
+      {1, "A/C",              "base-deleted", NO_COPY_FROM, "C_mv"},
+      {1, "A/D",              "base-deleted", NO_COPY_FROM, "A/D_mv" },
+      {1, "A/D/G",            "base-deleted", NO_COPY_FROM },
+      {1, "A/D/G/pi",         "base-deleted", NO_COPY_FROM },
+      {1, "A/D/G/rho",        "base-deleted", NO_COPY_FROM },
+      {1, "A/D/G/tau",        "base-deleted", NO_COPY_FROM },
+      {1, "A/D/gamma",        "base-deleted", NO_COPY_FROM },
+      {1, "A/D/H",            "base-deleted", NO_COPY_FROM },
+      {1, "A/D/H/chi",        "base-deleted", NO_COPY_FROM },
+      {1, "A/D/H/omega",      "base-deleted", NO_COPY_FROM },
+      {1, "A/D/H/psi",        "base-deleted", NO_COPY_FROM },
+      {1, "A/mu",             "base-deleted", NO_COPY_FROM },
+      {1, "A_mv",             "normal",       1, "A"},
+      {1, "A_mv/B",           "normal",       1, "A/B"},
+      {1, "A_mv/B/E",         "not-present",  2, "A/B/E"},
+      {1, "A_mv/B/F",         "normal",       1, "A/B/F"},
+      {1, "A_mv/B/lambda",    "normal",       1, "A/B/lambda"},
+      {1, "A_mv/C",           "normal",       1, "A/C"},
+      {1, "A_mv/D",           "normal",       1, "A/D"},
+      {1, "A_mv/D/G",         "normal",       1, "A/D/G"},
+      {1, "A_mv/D/G/pi",      "normal",       1, "A/D/G/pi"},
+      {1, "A_mv/D/G/rho",     "normal",       1, "A/D/G/rho"},
+      {1, "A_mv/D/G/tau",     "normal",       1, "A/D/G/tau"},
+      {1, "A_mv/D/gamma",     "normal",       1, "A/D/gamma"},
+      {1, "A_mv/D/H",         "normal",       1, "A/D/H"},
+      {1, "A_mv/D/H/chi",     "normal",       1, "A/D/H/chi"},
+      {1, "A_mv/D/H/omega",   "normal",       1, "A/D/H/omega"},
+      {1, "A_mv/D/H/psi",     "normal",       1, "A/D/H/psi"},
+      {1, "A_mv/mu",          "normal",       1, "A/mu"},
+      {1, "C_mv",             "normal",       1, "A/C", MOVED_HERE},
+      {2, "A_mv/C",           "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D",           "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/G",         "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/G/pi",      "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/G/rho",     "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/G/tau",     "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/gamma",     "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/H",         "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/H/chi",     "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/H/omega",   "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D/H/psi",     "base-deleted", NO_COPY_FROM },
+      {2, "A_mv/D_mv",        "normal",       1, "A/D", MOVED_HERE},
+      {2, "A_mv/D_mv/G",      "normal",       1, "A/D/G", MOVED_HERE},
+      {2, "A_mv/D_mv/G/pi",   "normal",       1, "A/D/G/pi", MOVED_HERE},
+      {2, "A_mv/D_mv/G/rho",  "normal",       1, "A/D/G/rho", MOVED_HERE},
+      {2, "A_mv/D_mv/G/tau",  "normal",       1, "A/D/G/tau", MOVED_HERE},
+      {2, "A_mv/D_mv/gamma",  "normal",       1, "A/D/gamma", MOVED_HERE},
+      {2, "A_mv/D_mv/H",      "normal",       1, "A/D/H", MOVED_HERE},
+      {2, "A_mv/D_mv/H/chi",  "normal",       1, "A/D/H/chi", MOVED_HERE},
+      {2, "A_mv/D_mv/H/omega","normal",       1, "A/D/H/omega", MOVED_HERE},
+      {2, "A_mv/D_mv/H/psi",  "normal",       1, "A/D/H/psi", MOVED_HERE},
+      {3, "A_mv/B/E",         "normal",       2, "A/B/E"},
+      {3, "A_mv/B/E/alpha",   "normal",       2, "A/B/E/alpha"},
+      {3, "A_mv/B/E/beta",    "normal",       2, "A/B/E/beta"},
+
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -10160,6 +10328,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "break move in delete (issue 4491)"),
     SVN_TEST_OPTS_PASS(nested_move_delete,
                        "nested move delete"),
+    SVN_TEST_OPTS_XFAIL(move_within_mixed_move,
+                        "move within mixed move"),
     SVN_TEST_NULL
   };
 

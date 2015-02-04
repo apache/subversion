@@ -786,7 +786,7 @@ set_node_property(void *baton,
 
   prop = apr_palloc(nb->rb->pool, sizeof (*prop));
   prop->name = apr_pstrdup(pool, name);
-  prop->value = value ? svn_string_dup(value, pool) : NULL;
+  prop->value = svn_string_dup(value, pool);
   svn_hash_sets(nb->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
