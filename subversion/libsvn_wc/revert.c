@@ -656,14 +656,14 @@ revert_wc_data(svn_boolean_t *run_wq,
                           SVN_ERR(svn_io_set_file_executable(local_abspath,
                                                              TRUE, FALSE,
                                                              scratch_pool));
-                          notify_required = TRUE;
+                          *notify_required = TRUE;
                         }
                       else if (!executable_prop && executable)
                         {
                           SVN_ERR(svn_io_set_file_executable(local_abspath,
                                                              FALSE, FALSE,
                                                              scratch_pool));
-                          notify_required = TRUE;
+                          *notify_required = TRUE;
                         }
                     }
 #endif
