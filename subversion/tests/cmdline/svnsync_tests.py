@@ -578,9 +578,72 @@ def fd_leak_sync_from_serf_to_local(sbox):
 @Issue(4476)
 def mergeinfo_contains_r0(sbox):
   "mergeinfo contains r0"
-  run_test(sbox, "mergeinfo-contains-r0.dump",
-           exp_dump_file_name="mergeinfo-contains-r0.expected.dump",
-           bypass_prop_validation=True)
+
+  def make_node_record(node_name, mi):
+    """Return a dumpfile node-record for adding a (directory) node named
+       NODE_NAME with mergeinfo MI. Return it as a list of newline-terminated
+       lines.
+    """
+    headers_tmpl = """\
+Node-path: %s
+Node-kind: dir
+Node-action: add
+Prop-content-length: %d
+Content-length: %d
+"""
+    content_tmpl = """\
+K 13
+svn:mergeinfo
+V %d
+%s
+PROPS-END
+"""
+    content = content_tmpl % (len(mi), mi)
+    headers = headers_tmpl % (node_name, len(content), len(content))
+    record = headers + '\n' + content + '\n\n'
+    return record.splitlines(True)
+
+  # The test case mergeinfo (before, after) syncing, separated here with
+  # spaces instead of newlines
+  test_mi = [
+    ("",            ""),  # unchanged
+    ("/a:1",        "/a:1"),
+    ("/a:1 /b:1*,2","/a:1 /b:1*,2"),
+    ("/:0:1",       "/:0:1"),  # unchanged; colon-zero in filename
+    ("/a:0",        ""),  # dropped entirely
+    ("/a:0*",       ""),
+    ("/a:0 /b:0*",  ""),
+    ("/a:1 /b:0",   "/a:1"),  # one kept, one dropped
+    ("/a:0 /b:1",   "/b:1"),
+    ("/a:0,1 /b:1", "/a:1 /b:1"),  # one kept, one changed
+    ("/a:1 /b:0,1", "/a:1 /b:1"),
+    ("/a:0,1 /b:0*,1 /c:0,2 /d:0-1 /e:0-1,3 /f:0-2 /g:0-3",
+     "/a:1 /b:1 /c:2 /d:1 /e:1,3 /f:1-2 /g:1-3"),  # all changed
+    ("/a:0:0-1",    "/a:0:1"),  # changed; colon-zero in filename
+    ]
+
+  # Get the constant prefix for each dumpfile
+  dump_file_name = "mergeinfo-contains-r0.dump"
+  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnsync_tests_data')
+  dump_in = open(os.path.join(svnsync_tests_dir, dump_file_name),
+                 'rb').readlines()
+  dump_out = list(dump_in)  # duplicate the list
+
+  # Add dumpfile node records containing the test mergeinfo
+  for n, mi in enumerate(test_mi):
+    node_name = "D" + str(n)
+
+    mi_in = mi[0].replace(' ', '\n')
+    mi_out = mi[1].replace(' ', '\n')
+    dump_in.extend(make_node_record(node_name, mi_in))
+    dump_out.extend(make_node_record(node_name, mi_out))
+
+  # Run the sync
+  dest_sbox = setup_and_sync(sbox, dump_in, bypass_prop_validation=True)
+
+  # Compare the dump produced by the mirror repository with expected
+  verify_mirror(dest_sbox, dump_out)
 
 
 ########################################################################
