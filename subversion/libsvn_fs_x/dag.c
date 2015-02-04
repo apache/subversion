@@ -656,25 +656,10 @@ svn_fs_x__dag_revision_root(dag_node_t **node_p,
                             svn_revnum_t rev,
                             apr_pool_t *result_pool)
 {
-  dag_node_t *new_node;
+  svn_fs_x__id_t root_id;
 
-  /* Construct the node. */
-  new_node = apr_pcalloc(result_pool, sizeof(*new_node));
-  new_node->fs = fs;
-  new_node->revision = rev;
-  svn_fs_x__init_rev_root(&new_node->id, rev);
-
-  /* Grab the contents so we can inspect the node's kind and created path. */
-  new_node->node_pool = result_pool;
-
-  /* Initialize the KIND and CREATED_PATH attributes */
-  new_node->kind = svn_node_dir;
-  new_node->created_path = "/";
-  new_node->hint = APR_SIZE_MAX;
-
-  /* Return a fresh new node */
-  *node_p = new_node;
-  return SVN_NO_ERROR;
+  svn_fs_x__init_rev_root(&root_id, rev);
+  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool);
 }
 
 
@@ -688,23 +673,6 @@ svn_fs_x__dag_txn_root(dag_node_t **node_p,
 
   svn_fs_x__init_txn_root(&root_id, txn_id);
   return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool);
-}
-
-
-svn_error_t *
-svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
-                            svn_fs_t *fs,
-                            svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  svn_fs_x__id_t base_root_id;
-  svn_revnum_t base_rev;
-
-  SVN_ERR(svn_fs_x__get_base_rev(&base_rev, fs, txn_id, scratch_pool));
-
-  svn_fs_x__init_rev_root(&base_root_id, base_rev);
-  return svn_fs_x__dag_get_node(node_p, fs, &base_root_id, result_pool);
 }
 
 
@@ -788,21 +756,6 @@ svn_fs_x__dag_clone_child(dag_node_t **child_p,
 
   /* Initialize the youngster. */
   return svn_fs_x__dag_get_node(child_p, fs, new_node_id, result_pool);
-}
-
-
-
-svn_error_t *
-svn_fs_x__dag_clone_root(dag_node_t **root_p,
-                         svn_fs_t *fs,
-                         svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *result_pool)
-{
-  svn_fs_x__id_t root_id;
-  svn_fs_x__init_txn_root(&root_id, txn_id);
-
-  /* One way or another, root_id now identifies a cloned root node. */
-  return svn_fs_x__dag_get_node(root_p, fs, &root_id, result_pool);
 }
 
 

@@ -261,40 +261,12 @@ svn_fs_x__dag_revision_root(dag_node_t **node_p,
 
 
 /* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
-   from RESULT_POOL.
-
-   Note that the root node of TXN_ID is not necessarily mutable.  If
-   no changes have been made in the transaction, then it may share its
-   root directory with its base revision.  To get a mutable root node
-   for a transaction, call svn_fs_x__dag_clone_root.  */
+   from RESULT_POOL. */
 svn_error_t *
 svn_fs_x__dag_txn_root(dag_node_t **node_p,
                        svn_fs_t *fs,
                        svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *result_pool);
-
-
-/* Set *NODE_P to the base root of transaction TXN_ID in FS,
-   allocating from RESULT_POOL.  Allocate the node in TRAIL->pool.
-   Use SCRATCH_POOL for temporaries. */
-svn_error_t *
-svn_fs_x__dag_txn_base_root(dag_node_t **node_p,
-                            svn_fs_t *fs,
-                            svn_fs_x__txn_id_t txn_id,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-
-/* Clone the root directory of TXN_ID in FS, and update the
-   `transactions' table entry to point to it, unless this has been
-   done already.  In either case, set *ROOT_P to a reference to the
-   root directory clone.  Allocate *ROOT_P in RESULT_POOL.  */
-svn_error_t *
-svn_fs_x__dag_clone_root(dag_node_t **root_p,
-                         svn_fs_t *fs,
-                         svn_fs_x__txn_id_t txn_id,
-                         apr_pool_t *result_pool);
-
 
 
 /* Directories.  */

@@ -598,8 +598,8 @@ mutable_root_node(dag_node_t **node_p,
   if (root->is_txn_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_clone_root(node_p, root->fs, root_txn_id(root),
-                                      result_pool);
+      return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
+                                    result_pool);
     }
   else
     /* If it's not a transaction root, we can't change its contents.  */
@@ -2111,8 +2111,10 @@ merge_changes(dag_node_t *ancestor_node,
 
   if (ancestor_node == NULL)
     {
-      SVN_ERR(svn_fs_x__dag_txn_base_root(&ancestor_node, fs, txn_id,
-                                          scratch_pool, scratch_pool));
+      svn_revnum_t base_rev;
+      SVN_ERR(svn_fs_x__get_base_rev(&base_rev, fs, txn_id, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_revision_root(&ancestor_node, fs, base_rev,
+                                          scratch_pool));
     }
 
   SVN_ERR(svn_fs_x__dag_related_node(&related, ancestor_node, txn_root_node));
