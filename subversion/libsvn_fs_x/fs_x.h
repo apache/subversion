@@ -69,15 +69,6 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
                                  apr_pool_t *scratch_pool);
 
-/* Set *PROPLIST to be an apr_hash_t containing the property list of
-   revision REV as seen in filesystem FS.  Use POOL for temporary
-   allocations. */
-svn_error_t *
-svn_fs_x__revision_proplist(apr_hash_t **proplist,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool);
-
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV. */
 svn_error_t *

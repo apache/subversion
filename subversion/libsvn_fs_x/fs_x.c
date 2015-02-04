@@ -690,17 +690,6 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                            _("No such revision %ld"), rev);
 }
 
-svn_error_t *
-svn_fs_x__revision_proplist(apr_hash_t **proplist_p,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool)
-{
-  SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, FALSE, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_x__file_length(svn_filesize_t *length,
@@ -1116,7 +1105,7 @@ svn_fs_x__revision_prop(svn_string_t **value_p,
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_x__revision_proplist(&table, fs, rev, pool));
+  SVN_ERR(svn_fs_x__get_revision_proplist(&table, fs, rev, FALSE, pool));
 
   *value_p = svn_hash_gets(table, propname);
 
@@ -1143,7 +1132,11 @@ change_rev_prop_body(void *baton,
   change_rev_prop_baton_t *cb = baton;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs_x__revision_proplist(&table, cb->fs, cb->rev, scratch_pool));
+  /* Read current revprop values from disk (never from cache).
+     Even if somehow the cache got out of sync, we want to make sure that
+     we read, update and write up-to-date data. */
+  SVN_ERR(svn_fs_x__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
+                                          scratch_pool));
 
   if (cb->old_value_p)
     {
