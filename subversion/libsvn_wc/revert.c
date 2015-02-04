@@ -300,29 +300,33 @@ revert_restore(svn_boolean_t *run_wq,
   apr_time_t recorded_time;
   svn_boolean_t copied_here;
   svn_node_kind_t reverted_kind;
-  svn_boolean_t is_wcroot;
-
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, scratch_pool));
-  if (is_wcroot && !revert_root)
+  if (!revert_root)
     {
-      /* Issue #4162: Obstructing working copy. We can't access the working
-         copy data from the parent working copy for this node by just using
-         local_abspath */
+      svn_boolean_t is_wcroot;
 
-      if (notify_func)
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, scratch_pool));
+      if (is_wcroot)
         {
-          svn_wc_notify_t *notify = svn_wc_create_notify(
+          /* Issue #4162: Obstructing working copy. We can't access the working
+             copy data from the parent working copy for this node by just using
+             local_abspath */
+
+          if (notify_func)
+            {
+              svn_wc_notify_t *notify =
+                        svn_wc_create_notify(
                                         local_abspath,
                                         svn_wc_notify_update_skip_obstruction,
                                         scratch_pool);
 
-          notify_func(notify_baton, notify, scratch_pool);
-        }
+              notify_func(notify_baton, notify, scratch_pool);
+            }
 
-      return SVN_NO_ERROR; /* We don't revert obstructing working copies */
+          return SVN_NO_ERROR; /* We don't revert obstructing working copies */
+        }
     }
 
   SVN_ERR(svn_wc__db_revert_list_read(&notify_required,
@@ -439,12 +443,12 @@ revert_restore(svn_boolean_t *run_wq,
           *run_wq = FALSE;
         }
 
-      if (notify_func)
-        SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
-                                              db, local_abspath, iterpool));
-
       svn_pool_destroy(iterpool);
     }
+
+  if (notify_func && (revert_root || kind == svn_node_dir))
+    SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
+                                          db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
