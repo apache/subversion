@@ -12,15 +12,16 @@ STATUS
 done:
 - Initial implementation.
 - Separate active and inactive session lists.
+- Introduce explicit session reuse and closing.
 
 todo:
-- Fix timeout in davautocheck tests at log_tests.py::log_diff_moved.
-- Limit the number of unused open sessions.
+- Add explicit session reuse throughout libsvn_client.
+- Add new RA method (svn_ra__ping?) to verify that a session
+  about to be reused is valid.
+- Limit the number of idle open sessions in the cache.
 - Run performance comparisons between trunk and branch to prove that
   the RA session cache does in fact speed things up.
-- Add new RA capability to signal if RA session is stateless and reusable.
 - Implement svn_client_close_all_sessions().
-- Switch code to use new functions.
 
 PROBLEM
 =======

@@ -39,6 +39,17 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * Close the conneection managed by @a session and destroy the
+ * session. When this function returns, the @a session pointer
+ * is no longer valid.
+ *
+ * @since New in 1.9.
+ */
+void
+svn_ra__close(svn_ra_session_t *session);
+
+
 /* Equivalent to svn_ra__assert_capable_server()
    for SVN_RA_CAPABILITY_MERGEINFO. */
 svn_error_t *
