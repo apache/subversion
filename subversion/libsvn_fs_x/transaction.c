@@ -758,6 +758,31 @@ purge_shared_txn(svn_fs_t *fs,
 }
 
 
+svn_boolean_t
+svn_fs_x__is_fresh_txn_root(svn_fs_x__noderev_t *noderev)
+{
+  /* Is it a root node? */
+  if (noderev->noderev_id.number != SVN_FS_X__ITEM_INDEX_ROOT_NODE)
+    return FALSE;
+
+  /* ... in a transaction? */
+  if (!svn_fs_x__is_txn(noderev->noderev_id.change_set))
+    return FALSE;
+
+  /* ... with no prop change in that txn?
+     (Once we set a property, the prop rep will never become NULL again.) */
+  if (noderev->prop_rep && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
+    return FALSE;
+
+  /* ... and no sub-tree change?
+     (Once we set a text, the data rep will never become NULL again.) */
+  if (noderev->data_rep && svn_fs_x__is_txn(noderev->data_rep->id.change_set))
+    return FALSE;
+
+  /* Root node of a txn with no changes. */
+  return TRUE;
+}
+
 svn_error_t *
 svn_fs_x__put_node_revision(svn_fs_t *fs,
                             svn_fs_x__noderev_t *noderev,

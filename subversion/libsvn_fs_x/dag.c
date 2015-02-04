@@ -267,7 +267,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   /* Support our quirky svn_fs_node_created_rev API.
      Untouched txn roots report the base rev as theirs. */
   new_node->revision
-    = (  noderev->is_fresh_txn_root
+    = (  svn_fs_x__is_fresh_txn_root(noderev)
        ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
        : svn_fs_x__get_revnum(id->change_set));
 
