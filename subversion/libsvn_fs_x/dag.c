@@ -267,7 +267,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   /* Support our quirky svn_fs_node_created_rev API.
      Untouched txn roots report the base rev as theirs. */
   new_node->revision
-    = (  noderev->is_fresh_txn_root
+    = (  svn_fs_x__is_fresh_txn_root(noderev)
        ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
        : svn_fs_x__get_revnum(id->change_set));
 
@@ -618,7 +618,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
     }
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev, FALSE, scratch_pool);
+  return svn_fs_x__put_node_revision(node->fs, noderev, scratch_pool);
 }
 
 svn_error_t *
@@ -644,7 +644,7 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
   noderev->has_mergeinfo = has_mergeinfo;
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev, FALSE, scratch_pool);
+  return svn_fs_x__put_node_revision(node->fs, noderev, scratch_pool);
 }
 
 
@@ -1401,6 +1401,6 @@ svn_fs_x__dag_update_ancestry(dag_node_t *target,
   target_noderev->predecessor_count = source_noderev->predecessor_count;
   target_noderev->predecessor_count++;
 
-  return svn_fs_x__put_node_revision(target->fs, target_noderev, FALSE,
+  return svn_fs_x__put_node_revision(target->fs, target_noderev,
                                      scratch_pool);
 }
