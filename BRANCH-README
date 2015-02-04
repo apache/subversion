@@ -10,9 +10,6 @@ TODO before reintegrating to trunk:
     dump/load tests are relying on the parser to do that checking. It has
     been temporarily downgraded here in favour of more generic parsing.
 
-  - Bypass authz when dumping with svnrdump, otherwise a partial dump is
-    obtained for tests using authz, making those tests fail.
-
   - Fix FAIL: svnmucc_tests.py 2: a no-op content-change is reported
     differently in different cases. (Fix it how? I'd prefer to make the
     output of a no-op change the same as a no-change.)
