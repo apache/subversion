@@ -575,6 +575,7 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
 
               local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
                                               dst_relpath, iterpool);
+              /* ### use a work queue? */
               SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                        SVN_PROP_EXTERNALS, externals_propval,
                                        svn_depth_empty, TRUE /* skip_checks */,
@@ -2301,6 +2302,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 
               local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
                                               dst_relpath, iterpool);
+              /* ### use a work queue? */
               SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                        SVN_PROP_EXTERNALS, externals_propval,
                                        svn_depth_empty, TRUE /* skip_checks */,
