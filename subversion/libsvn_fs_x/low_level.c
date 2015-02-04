@@ -48,7 +48,6 @@
 #define HEADER_PRED        "pred"
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
-#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
 #define HEADER_MINFO_HERE  "minfo-here"
 #define HEADER_MINFO_CNT   "minfo-cnt"
 
@@ -560,10 +559,6 @@ svn_fs_x__read_noderev(svn_fs_x__noderev_t **noderev_p,
                                                   result_pool);
     }
 
-  /* Get whether this is a fresh txn root. */
-  value = svn_hash_gets(headers, HEADER_FRESHTXNRT);
-  noderev->is_fresh_txn_root = (value != NULL);
-
   /* Get the mergeinfo count. */
   value = svn_hash_gets(headers, HEADER_MINFO_CNT);
   if (value)
@@ -690,9 +685,6 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                               noderev->copyroot_rev,
                               auto_escape_path(noderev->copyroot_path,
                                                scratch_pool)));
-
-  if (noderev->is_fresh_txn_root)
-    SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
 
   if (noderev->mergeinfo_count > 0)
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_MINFO_CNT ": %"
