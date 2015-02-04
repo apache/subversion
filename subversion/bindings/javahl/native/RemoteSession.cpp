@@ -1174,7 +1174,9 @@ public:
         static_cast<FileRevisionHandler*>(baton);
       SVN_ERR_ASSERT(self->m_jcallback != NULL);
       self->call(path, revision, revision_props,
-                result_of_merge, prop_diffs, scratch_pool);
+                result_of_merge, prop_diffs,
+                (delta_handler != NULL),
+                scratch_pool);
       SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
       return SVN_NO_ERROR;
     }
@@ -1199,6 +1201,7 @@ private:
            apr_hash_t* revision_props,
            svn_boolean_t result_of_merge,
            apr_array_header_t* prop_diffs,
+           svn_boolean_t has_text_delta,
            apr_pool_t* scratch_pool)
     {
       JNIEnv* env = JNIUtil::getEnv();
@@ -1211,7 +1214,7 @@ private:
         {
           mid = env->GetMethodID(cls, "<init>",
                                  "(Ljava/lang/String;JZ"
-                                 "Ljava/util/Map;Ljava/util/Map;)V");
+                                 "Ljava/util/Map;Ljava/util/Map;Z)V");
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -1229,7 +1232,8 @@ private:
       env->CallVoidMethod(m_jcallback, m_call_mid,
                           env->NewObject(cls, mid, jpath, jlong(revision),
                                          jboolean(result_of_merge),
-                                         jrevprops, jpropdelta));
+                                         jrevprops, jpropdelta,
+                                         jboolean(has_text_delta)));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       env->DeleteLocalRef(jpath);

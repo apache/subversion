@@ -52,6 +52,7 @@
 #include "private/svn_diff_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_io_private.h"
+#include "private/svn_ra_private.h"
 
 #include "svn_private_config.h"
 
@@ -1805,8 +1806,8 @@ diff_repos_repos(const char **root_relpath,
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
-  SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra__dup_session(&extra_ra_session, ra_session, anchor1,
+                              scratch_pool, scratch_pool));
 
   if (ddi)
     {

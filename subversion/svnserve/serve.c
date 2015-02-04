@@ -1725,6 +1725,11 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &ab, root, full_path,
                           pool));
 
+  /* Fetch the directories' entries before starting the response, to allow
+     proper error handling in cases like when FULL_PATH doesn't exist */
+  if (want_contents)
+      SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
+
   /* Begin response ... */
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(r(!", "success", rev));
   SVN_ERR(svn_ra_svn__write_proplist(conn, pool, props));
@@ -1735,8 +1740,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       /* Use epoch for a placeholder for a missing date.  */
       const char *missing_date = svn_time_to_cstring(0, pool);
-
-      SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
       /* Transform the hash table's FS entries into dirents.  This probably
        * belongs in libsvn_repos. */
