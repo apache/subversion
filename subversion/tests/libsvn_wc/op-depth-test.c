@@ -144,23 +144,27 @@ props_hash_to_text(apr_hash_t *props, apr_pool_t *pool)
   return str->len ? str->data : NULL;
 }
 
-/* Return a human-readable string representing ROW. */
+/* Return a human-readable string representing ROW. With a tiny bit of editting
+   this can be used to create expected results */
 static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
 {
+  const char *relpath_str, *presence_str;
   const char *file_external_str, *moved_here_str, *moved_to_str, *props;
 
   if (row == NULL)
     return "(null)";
 
+  relpath_str = apr_psprintf(result_pool, "\"%s\",", row->local_relpath);
+  presence_str = apr_psprintf(result_pool, "\"%s\",", row->presence);
   if (row->moved_to)
-    moved_to_str = apr_psprintf(result_pool, ", moved-to %s", row->moved_to);
+    moved_to_str = apr_psprintf(result_pool, ", \"%s\"", row->moved_to);
   else
     moved_to_str = "";
 
   if (row->moved_here)
-    moved_here_str = ", moved-here";
+    moved_here_str = ", MOVED_HERE";
   else
     moved_here_str = "";
 
@@ -175,19 +179,17 @@ print_row(const nodes_row_t *row,
     props = "";
 
   if (row->repo_revnum == SVN_INVALID_REVNUM)
-    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\"%s%s%s%s",
-                        row->op_depth, row->local_relpath, row->presence,
+    return apr_psprintf(result_pool, "%d, %-20s%-15s NO_COPY_FROM%s%s%s%s",
+                        row->op_depth, relpath_str, presence_str,
                         moved_here_str, moved_to_str,
                         file_external_str, props);
   else
-    return apr_psprintf(result_pool, "%d, \"%s\", \"%s\", %s ^/%s@%d%s%s%s%s",
-                        row->op_depth, row->local_relpath, row->presence,
-                        row->op_depth == 0 ? "base" : "copyfrom",
-                        row->repo_relpath, (int)row->repo_revnum,
+    return apr_psprintf(result_pool, "%d, %-20s%-15s %d, \"%s\"%s%s%s%s",
+                        row->op_depth, relpath_str, presence_str,
+                        (int)row->repo_revnum, row->repo_relpath,
                         moved_here_str, moved_to_str,
                         file_external_str, props);
 }
-
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
 typedef struct comparison_baton_t {
     apr_hash_t *expected_hash;  /* Maps "OP_DEPTH PATH" to nodes_row_t. */
