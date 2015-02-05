@@ -123,7 +123,7 @@
  * Use a simple mutex on Windows.  Because there is one mutex per segment,
  * large machines should (and usually can) be configured with large caches
  * such that read contention is kept low.  This is basically the situation
- * we head before 1.8.
+ * we had before 1.8.
  */
 #ifdef WIN32
 #  define USE_SIMPLE_MUTEX 1
