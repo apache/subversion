@@ -662,13 +662,12 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     }
 
  cleanup:
-  if (!err && new_ra_session && ra_session)
-    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
-
   err = svn_error_compose_create(
             err,
             svn_wc__release_write_lock(ctx->wc_ctx, lockroot_abspath, pool));
 
+  if (!err && new_ra_session && ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return svn_error_trace(err);
 }
 

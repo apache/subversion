@@ -10533,8 +10533,11 @@ merge_locked(conflict_report_t **conflict_report,
                  ctx, result_pool, scratch_pool);
 
   /* Close our temporary RA sessions. */
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session2));
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session1));
+  if (!err)
+    {
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session2));
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session1));
+    }
   svn_pool_destroy(sesspool);
 
   if (use_sleep)
@@ -11697,8 +11700,11 @@ merge_reintegrate_locked(conflict_report_t **conflict_report,
                                                ctx,
                                                result_pool, scratch_pool);
 
-  SVN_ERR(svn_client__ra_session_release(ctx, source_ra_session));
-  SVN_ERR(svn_client__ra_session_release(ctx, target_ra_session));
+  if (!err)
+    {
+      SVN_ERR(svn_client__ra_session_release(ctx, source_ra_session));
+      SVN_ERR(svn_client__ra_session_release(ctx, target_ra_session));
+    }
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
