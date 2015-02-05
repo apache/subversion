@@ -12735,12 +12735,13 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
          find the base for each sutree, and then here use the oldest base
          among all subtrees. */
       apr_array_header_t *merge_sources;
-      svn_ra_session_t *ra_session = NULL;
+      svn_ra_session_t *ra_session;
 
       /* Normalize our merge sources, do_merge() requires this.  See the
          'MERGEINFO MERGE SOURCE NORMALIZATION' global comment. */
-      SVN_ERR(ensure_ra_session_url(&ra_session, merge->right->url,
-                                    target->abspath, ctx, scratch_pool));
+      SVN_ERR(svn_client_open_ra_session2(&ra_session, merge->right->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
       SVN_ERR(normalize_merge_sources_internal(
         &merge_sources, merge->right,
         svn_rangelist__initialize(merge->yca->rev, merge->right->rev, TRUE,
@@ -12754,6 +12755,8 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                      force_delete, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
                      ctx, result_pool, scratch_pool);
+      if (!err)
+        SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
     }
 
   if (use_sleep)
