@@ -9732,7 +9732,7 @@ do_merge(apr_hash_t **modified_subtrees,
   const char *preserved_exts_str;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
-  svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
+  svn_ra_session_t *ra_session1 = NULL;
   const char *old_src_session_url = NULL;
   apr_pool_t *iterpool;
   const svn_diff_tree_processor_t *processor;
@@ -9864,6 +9864,7 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_source_t *source =
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
       single_range_conflict_report_t *conflicted_range_report;
+      svn_ra_session_t *ra_session2;
 
       svn_pool_clear(iterpool);
 
@@ -9876,8 +9877,10 @@ do_merge(apr_hash_t **modified_subtrees,
       /* Establish RA sessions to our URLs, reuse where possible. */
       SVN_ERR(ensure_ra_session_url(&ra_session1, source->loc1->url,
                                     target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&ra_session2, source->loc2->url,
-                                    target->abspath, ctx, scratch_pool));
+
+      SVN_ERR(svn_client_open_ra_session2(&ra_session2, source->loc2->url,
+                                          target->abspath, ctx, iterpool,
+                                          iterpool));
 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
@@ -9952,6 +9955,8 @@ do_merge(apr_hash_t **modified_subtrees,
             break;
         }
       while (source);
+
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session2));
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
       if (! dry_run)
