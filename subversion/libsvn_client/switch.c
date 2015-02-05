@@ -369,6 +369,8 @@ switch_internal(svn_revnum_t *result_rev,
                                            ctx, pool));
     }
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
     {

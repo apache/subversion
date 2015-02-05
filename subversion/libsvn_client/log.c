@@ -106,6 +106,7 @@ svn_client__get_copy_source(const char **original_repos_relpath,
   apr_pool_t *sesspool = svn_pool_create(scratch_pool);
   svn_client__pathrev_t *at_loc;
   const char *old_session_url = NULL;
+  svn_boolean_t new_ra_session = FALSE;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
@@ -118,6 +119,7 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                                                 path_or_url, NULL,
                                                 revision, revision,
                                                 ctx, sesspool));
+      new_ra_session = TRUE;
     }
   else
     {
@@ -162,6 +164,8 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                     err,
                     svn_ra_reparent(ra_session, old_session_url, sesspool));
 
+  if (!err && new_ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(sesspool);
 
   if (err)
@@ -242,6 +246,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
               continue;
             }
 
+          /* RA_CACHE TODO: release RA session */
           if (rb->ra_session == NULL)
             SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
                                                 rb->ra_session_url, NULL,
@@ -268,6 +273,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
     }
   else
     {
+      /* RA_CACHE TODO: release RA session */
       if (rb->ra_session == NULL)
         SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
                                             rb->ra_session_url, NULL,

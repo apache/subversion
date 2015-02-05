@@ -403,6 +403,7 @@ check_url_kind(void *baton,
   /* If we don't have a session or can't use the session, get one */
   if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
     {
+      /* RA_CACHE TODO: release RA session */
       SVN_ERR(svn_client_open_ra_session2(&cukb->session, url, NULL, cukb->ctx,
                                           cukb->pool, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(cukb->session, &cukb->repos_root_url,
@@ -516,7 +517,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   struct capture_baton_t cb;
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session = NULL;
   const char *log_msg;
   const char *base_abspath;
   const char *base_url;
@@ -993,6 +994,13 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
-                                          pool));
+  {
+    svn_error_t *const final_err =
+      svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err, pool));
+
+    if (!final_err && ra_session)
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+
+    return final_err;
+  }
 }

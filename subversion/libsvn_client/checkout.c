@@ -81,6 +81,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 {
   svn_node_kind_t kind;
   svn_client__pathrev_t *pathrev;
+  svn_boolean_t new_ra_session = FALSE;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(local_abspath != NULL);
@@ -122,6 +123,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
                                                 url, NULL, peg_revision,
                                                 revision, ctx, scratch_pool));
+      new_ra_session = TRUE;
     }
 
   SVN_ERR(svn_ra_check_path(ra_session, "", pathrev->rev, &kind, scratch_pool));
@@ -192,6 +194,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                       FALSE, FALSE, ra_session,
                                       ctx, scratch_pool));
 
+  if (new_ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

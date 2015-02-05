@@ -570,6 +570,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_opt_revision_t peg_revision = *revision;
   apr_hash_t *conflicted_paths
     = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
+  const svn_boolean_t new_ra_session = !ra_session;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(! (innerupdate && make_parents));
@@ -661,6 +662,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     }
 
  cleanup:
+  if (!err && new_ra_session && ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+
   err = svn_error_compose_create(
             err,
             svn_wc__release_write_lock(ctx->wc_ctx, lockroot_abspath, pool));
