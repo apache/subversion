@@ -12650,9 +12650,8 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
   if (reintegrate_like)
     {
       merge_source_t source;
-      svn_ra_session_t *base_ra_session = NULL;
-      svn_ra_session_t *right_ra_session = NULL;
-      svn_ra_session_t *target_ra_session = NULL;
+      svn_ra_session_t *base_ra_session;
+      svn_ra_session_t *right_ra_session;
 
       if (record_only)
         return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -12672,28 +12671,37 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                                   "and the force_delete option "
                                   "cannot be used with this kind of merge"));
 
-      SVN_ERR(ensure_ra_session_url(&base_ra_session, merge->base->url,
-                                    target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&right_ra_session, merge->right->url,
-                                    target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
-                                    target->abspath, ctx, scratch_pool));
+      SVN_ERR(svn_client_open_ra_session2(&right_ra_session, merge->right->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
 
       /* Check for and reject any abnormalities -- such as revisions that
        * have not yet been merged in the opposite direction -- that a
        * 'reintegrate' merge would have rejected. */
       {
         merge_source_t *source2;
+        svn_ra_session_t *target_ra_session;
+
+        SVN_ERR(svn_client_open_ra_session2(&target_ra_session,
+                                            target->loc.url, target->abspath,
+                                            ctx, scratch_pool, scratch_pool));
 
         SVN_ERR(find_reintegrate_merge(&source2, NULL,
                                        right_ra_session, merge->right,
                                        target_ra_session, target,
                                        ctx, scratch_pool, scratch_pool));
+
+        SVN_ERR(svn_client__ra_session_release(ctx, target_ra_session));
       }
 
       source.loc1 = merge->base;
       source.loc2 = merge->right;
       source.ancestral = ! merge->is_reintegrate_like;
+
+      SVN_ERR(svn_client_open_ra_session2(&base_ra_session,
+                                          merge->base->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
 
       err = merge_cousins_and_supplement_mergeinfo(conflict_report,
                                                    &use_sleep,
@@ -12709,6 +12717,11 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                                                    merge_options,
                                                    ctx,
                                                    result_pool, scratch_pool);
+      if (!err)
+        {
+          SVN_ERR(svn_client__ra_session_release(ctx, base_ra_session));
+          SVN_ERR(svn_client__ra_session_release(ctx, right_ra_session));
+        }
     }
   else /* ! merge->is_reintegrate_like */
     {
