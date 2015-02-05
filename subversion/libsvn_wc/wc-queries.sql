@@ -313,6 +313,18 @@ SELECT
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
+-- STMT_SELECT_NO_LONGER_MOVED_RV
+SELECT d.local_relpath, RELPATH_SKIP_JOIN(?2, ?4, d.local_relpath) srp
+FROM nodes d
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND op_depth = ?3
+  AND NOT EXISTS(SELECT * FROM nodes s
+                 WHERE s.wc_id = ?1
+                   AND s.local_relpath = srp
+                   AND s.op_depth = ?5)
+ORDER BY d.local_relpath DESC
+
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath, kind FROM nodes
 WHERE wc_id = ?1 
@@ -1599,16 +1611,29 @@ UPDATE nodes SET moved_to = NULL
    AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 -- STMT_SELECT_MOVED_PAIR3
-SELECT local_relpath, moved_to, op_depth, kind FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
-  AND moved_to IS NOT NULL
+SELECT n.local_relpath, d.moved_to, d.op_depth, n.kind
+FROM nodes n
+JOIN nodes d ON d.wc_id = ?1 AND d.local_relpath = n.local_relpath
+ AND d.op_depth = (SELECT MIN(dd.op_depth)
+                    FROM nodes dd
+                    WHERE dd.wc_id = ?1
+                      AND dd.local_relpath = d.local_relpath
+                      AND dd.op_depth > ?3)
+WHERE n.wc_id = ?1 AND n.local_relpath = ?2 AND n.op_depth = ?3
+  AND d.moved_to IS NOT NULL
 UNION ALL
-SELECT local_relpath, moved_to, op_depth, kind FROM nodes
-WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth > ?3
-  AND moved_to IS NOT NULL
-ORDER BY local_relpath, op_depth
+SELECT n.local_relpath, d.moved_to, d.op_depth, n.kind
+FROM nodes n
+JOIN nodes d ON d.wc_id = ?1 AND d.local_relpath = n.local_relpath
+ AND d.op_depth = (SELECT MIN(dd.op_depth)
+                    FROM nodes dd
+                    WHERE dd.wc_id = ?1
+                      AND dd.local_relpath = d.local_relpath
+                      AND dd.op_depth > ?3)
+WHERE n.wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND n.op_depth = ?3
+  AND d.moved_to IS NOT NULL
+ORDER BY n.local_relpath
 
 -- STMT_SELECT_MOVED_OUTSIDE
 SELECT local_relpath, moved_to, op_depth FROM nodes

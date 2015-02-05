@@ -1530,12 +1530,6 @@ update_moved_away_node(update_move_baton_t *b,
     {
       SVN_ERR(tc_editor_delete(b, dst_relpath, shadowed,
                                scratch_pool));
-
-      /* And perform some work that in some ways belongs in
-         replace_moved_layer() after creating all conflicts */
-      SVN_ERR(delete_move_leaf(b->wcroot, dst_relpath,
-                               relpath_depth(b->move_root_dst_relpath),
-                               scratch_pool));
     }
 
   if (src_kind != svn_node_none && src_kind != dst_kind)
@@ -1659,10 +1653,10 @@ update_moved_away_node(update_move_baton_t *b,
    rooted at DST_RELPATH to make it match the move source subtree
    rooted at SRC_RELPATH. */
 static svn_error_t *
-replace_moved_layer(const char *src_op_relpath,
-                    const char *dst_op_relpath,
+replace_moved_layer(svn_wc__db_wcroot_t *wcroot,
+                    const char *src_op_relpath,
                     int src_op_depth,
-                    svn_wc__db_wcroot_t *wcroot,
+                    const char *dst_op_relpath,
                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt, *stmt2;
@@ -1760,10 +1754,35 @@ replace_moved_layer(const char *src_op_relpath,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  /* And now remove the records that are no longer needed */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NO_LONGER_MOVED_RV));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdsd", wcroot->wc_id,
+                            dst_op_relpath, dst_op_depth,
+                            src_op_relpath, src_op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *dst_relpath;
+
+      svn_pool_clear(iterpool);
+
+      dst_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+
+      err = delete_move_leaf(wcroot, dst_relpath, dst_op_depth,
+                             iterpool);
+
+      if (err)
+        break;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(svn_error_compose_create(err,
-                                                  svn_sqlite__reset(stmt)));
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+  return SVN_NO_ERROR;
 }
 
 /* Transfer changes from the move source to the move destination.
@@ -1812,8 +1831,8 @@ drive_tree_conflict_editor(update_move_baton_t *b,
                                  dst_relpath, FALSE /* never shadowed */,
                                  db, scratch_pool));
 
-  SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, src_op_depth,
-                              wcroot, scratch_pool));
+  SVN_ERR(replace_moved_layer(wcroot, src_relpath, src_op_depth, dst_relpath,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2244,21 +2263,16 @@ bump_moved_layer(svn_boolean_t *recurse,
                  const char *local_relpath,
                  int op_depth,
                  const char *src_relpath,
-                 int src_op_depth,
-                 svn_node_kind_t src_kind,
+                 int src_del_depth,
                  svn_depth_t src_depth,
                  const char *dst_relpath,
-                 apr_hash_t *src_done,
                  svn_wc__db_t *db,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_skel_t *conflict;
   svn_boolean_t can_bump;
-
-  const char *src_root_relpath = src_relpath;
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
 
@@ -2268,7 +2282,7 @@ bump_moved_layer(svn_boolean_t *recurse,
                                     STMT_HAS_LAYER_BETWEEN));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "isdd", wcroot->wc_id, local_relpath,
-                            op_depth, src_op_depth));
+                            op_depth, src_del_depth));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -2297,34 +2311,33 @@ bump_moved_layer(svn_boolean_t *recurse,
         can_bump = FALSE;
     }
 
-  if (!can_bump)
-    {
-      SVN_ERR(bump_mark_tree_conflict(wcroot, src_relpath,
-                                      src_root_relpath, dst_relpath,
-                                      db, scratch_pool));
+  {
+    const char *src_root_relpath = src_relpath;
+    while (relpath_depth(src_root_relpath) > src_del_depth)
+      src_root_relpath = svn_relpath_dirname(src_root_relpath, scratch_pool);
 
-      return SVN_NO_ERROR;
-    }
+    if (!can_bump)
+      {
+        SVN_ERR(bump_mark_tree_conflict(wcroot, src_relpath,
+                                        src_root_relpath, dst_relpath,
+                                        db, scratch_pool));
 
-  while (relpath_depth(src_root_relpath) > src_op_depth)
-    src_root_relpath = svn_relpath_dirname(src_root_relpath, scratch_pool);
+        return SVN_NO_ERROR;
+      }
 
-
-  if (svn_hash_gets(src_done, src_relpath))
-    return SVN_NO_ERROR;
-
-  svn_hash_sets(src_done, apr_pstrdup(result_pool, src_relpath), "");
-
-  SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
-                                            src_root_relpath,
-                                            scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
+                                              src_root_relpath,
+                                              scratch_pool, scratch_pool));
+  }
 
   /* ### TODO: check this is the right sort of tree-conflict? */
   if (!conflict)
     {
       /* ### TODO: verify moved_here? */
-      SVN_ERR(replace_moved_layer(src_relpath, dst_relpath,
-                                 op_depth, wcroot, scratch_pool));
+      SVN_ERR(replace_moved_layer(wcroot,
+                                  src_relpath, op_depth,
+                                  dst_relpath,
+                                  scratch_pool));
 
       *recurse = TRUE;
     }
@@ -2332,28 +2345,34 @@ bump_moved_layer(svn_boolean_t *recurse,
   return SVN_NO_ERROR;
 }
 
+/* Internal storage for bump_moved_away() */
+struct bump_pair_t
+{
+  const char *src_relpath;
+  const char *dst_relpath;
+  int src_del_op_depth;
+  svn_node_kind_t src_kind;
+};
 
 /* Bump moves of LOCAL_RELPATH and all its descendants that were
    originally below LOCAL_RELPATH at op-depth OP_DEPTH.
-
-   SRC_DONE is a hash with keys that are 'const char *' relpaths
-   that have already been bumped.  Any bumped paths are added to
-   SRC_DONE. */
+ */
 static svn_error_t *
 bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 const char *local_relpath,
                 int op_depth,
-                apr_hash_t *src_done,
                 svn_depth_t depth,
                 svn_wc__db_t *db,
-                apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool;
-  svn_error_t *err = NULL;
+  int i;
+  apr_array_header_t *pairs = apr_array_make(scratch_pool, 32,
+                                             sizeof(struct bump_pair_t*));
 
+  /* Build an array, as we can't execute the same Sqlite query recursively */
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -2363,51 +2382,52 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while(have_row)
     {
-      const char *src_relpath, *dst_relpath;
-      int src_op_depth;
-      svn_node_kind_t src_kind;
-      svn_depth_t src_depth;
+      struct bump_pair_t *bp = apr_pcalloc(scratch_pool, sizeof(*bp));
+
+      bp->src_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+      bp->dst_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      bp->src_del_op_depth = svn_sqlite__column_int(stmt, 2);
+      bp->src_kind = svn_sqlite__column_token(stmt, 3, kind_map);
+
+      APR_ARRAY_PUSH(pairs, struct bump_pair_t *) = bp;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  for (i = 0; i < pairs->nelts; i++)
+    {
+      struct bump_pair_t *bp = APR_ARRAY_IDX(pairs, i, struct bump_pair_t *);
       svn_boolean_t skip;
+      svn_depth_t src_wc_depth;
 
       svn_pool_clear(iterpool);
 
-      src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
-      dst_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
-      src_op_depth = svn_sqlite__column_int(stmt, 2);
-      src_kind = svn_sqlite__column_token(stmt, 3, kind_map);
 
-      err = check_bump_layer(&skip, &src_depth, local_relpath, depth,
-          src_relpath, src_kind, iterpool);
-
-      if (err)
-        break;
+      SVN_ERR(check_bump_layer(&skip, &src_wc_depth, local_relpath, depth,
+                               bp->src_relpath, bp->src_kind, iterpool));
 
       if (!skip)
         {
           svn_boolean_t recurse;
 
-          err = bump_moved_layer(&recurse, wcroot,
-                                 local_relpath, op_depth,
-                                 src_relpath, src_op_depth, src_kind, src_depth,
-                                 dst_relpath,
-                                 src_done, db, result_pool, iterpool);
+          SVN_ERR(bump_moved_layer(&recurse, wcroot,
+                                   local_relpath, op_depth,
+                                   bp->src_relpath, bp->src_del_op_depth,
+                                   src_wc_depth, bp->dst_relpath,
+                                   db, iterpool));
 
-          if (!err && recurse)
-            err = bump_moved_away(wcroot, dst_relpath, relpath_depth(dst_relpath),
-                                  src_done, depth, db, result_pool, iterpool);
+          if (recurse)
+            SVN_ERR(bump_moved_away(wcroot, bp->dst_relpath,
+                                    relpath_depth(bp->dst_relpath),
+                                    depth, db, iterpool));
         }
-
-      if (err)
-        break;
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2417,8 +2437,6 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
-  apr_hash_t *src_done;
-
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
 
@@ -2463,9 +2481,7 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
         }
     }
 
-  src_done = apr_hash_make(scratch_pool);
-  SVN_ERR(bump_moved_away(wcroot, local_relpath, 0, src_done, depth, db,
-                          scratch_pool, scratch_pool));
+  SVN_ERR(bump_moved_away(wcroot, local_relpath, 0, depth, db, scratch_pool));
 
   return SVN_NO_ERROR;
 }
