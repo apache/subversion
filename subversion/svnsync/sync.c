@@ -509,7 +509,7 @@ change_file_prop(void *file_baton,
       SVN_ERR(normalize_string(&value, &was_normalized,
                                eb->source_prop_encoding, pool, pool));
       /* Correct malformed mergeinfo. */
-      if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+      if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
         {
           SVN_ERR(remove_r0_mergeinfo(&value, &mergeinfo_tweaked,
                                       pool, pool));
@@ -619,7 +619,7 @@ change_dir_prop(void *dir_baton,
       SVN_ERR(normalize_string(&value, &was_normalized, eb->source_prop_encoding,
                                pool, pool));
       /* Maybe adjust svn:mergeinfo. */
-      if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+      if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
         {
           SVN_ERR(remove_r0_mergeinfo(&value, &mergeinfo_tweaked,
                                       pool, pool));
