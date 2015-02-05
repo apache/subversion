@@ -3547,6 +3547,43 @@ def replace_tree_with_foreign_external(sbox):
                                         None, None, None, None, None, 1,
                                         '-r', '2', wc_dir)
 
+def nested_notification(sbox):
+  "notification for nested externals"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  sbox.simple_mkdir('D1')
+  sbox.simple_mkdir('D2')
+  sbox.simple_mkdir('D3')
+  sbox.simple_mkdir('D4')
+  sbox.simple_propset('svn:externals', '^/D2 X', 'D1')
+  sbox.simple_propset('svn:externals', '^/D3 X', 'D2')
+  sbox.simple_propset('svn:externals', '^/D4 X', 'D3')
+  sbox.simple_commit()
+  expected_output = [
+    'Updating \'' + sbox.ospath('D1') + '\':\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X') + '\':\n',
+    ' U   ' + sbox.ospath('D1/X') + '\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X/X') + '\':\n',
+    ' U   ' + sbox.ospath('D1/X/X') + '\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X/X/X') + '\':\n',
+    'Updated external to revision 2.\n',
+    '\n',
+    'External at revision 2.\n',
+    '\n',
+    'External at revision 2.\n',
+    '\n',
+    'At revision 2.\n'
+    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', sbox.ospath('D1'))
+
+
 ########################################################################
 # Run the tests
 
@@ -3607,6 +3644,7 @@ test_list = [ None,
               switch_relative_externals,
               copy_file_external_to_repo,
               replace_tree_with_foreign_external,
+              nested_notification,
              ]
 
 if __name__ == '__main__':
