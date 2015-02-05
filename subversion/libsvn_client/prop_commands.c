@@ -1016,7 +1016,8 @@ svn_client_revprop_get(const char *propname,
   err = svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
 
   /* Close RA session */
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(subpool);
   return svn_error_trace(err);
 }

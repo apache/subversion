@@ -554,8 +554,6 @@ svn_client_lock(const apr_array_header_t *targets,
   /* Lock the paths. */
   err = svn_ra_lock(ra_session, path_revs, comment,
                     steal_lock, store_locks_callback, &cb, pool);
-  if (!err)
-    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
 
 release_locks:
   if (lock_abspaths)
@@ -573,6 +571,8 @@ release_locks:
         }
     }
 
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return svn_error_trace(err);
 }
 
@@ -629,8 +629,6 @@ svn_client_unlock(const apr_array_header_t *targets,
   /* Unlock the paths. */
   err = svn_ra_unlock(ra_session, path_tokens, break_lock,
                       store_locks_callback, &cb, pool);
-  if (!err)
-    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
 
 release_locks:
   if (lock_abspaths)
@@ -648,6 +646,8 @@ release_locks:
         }
     }
 
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return svn_error_trace(err);
 }
 

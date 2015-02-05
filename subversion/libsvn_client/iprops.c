@@ -213,10 +213,10 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
             {
               if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
                 return svn_error_trace(err);
+              svn_error_clear(err);
 
               if (new_ra_session)
                 SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
-              svn_error_clear(err);
               continue;
             }
 
