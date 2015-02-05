@@ -291,7 +291,7 @@ FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = ?3
-  AND presence = MAP_NORMAL
+  AND presence in (MAP_NORMAL, MAP_INCOMPLETE)
 ORDER BY local_relpath DESC
 
 -- STMT_COPY_NODE_MOVE
@@ -314,11 +314,17 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_NO_LONGER_MOVED_RV
-SELECT d.local_relpath, RELPATH_SKIP_JOIN(?2, ?4, d.local_relpath) srp
+SELECT d.local_relpath, RELPATH_SKIP_JOIN(?2, ?4, d.local_relpath) srp,
+       b.presence, b.op_depth
 FROM nodes d
-WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = ?3
+LEFT OUTER JOIN nodes b ON b.wc_id = ?1 AND b.local_relpath = d.local_relpath
+            AND b.op_depth = (SELECT MAX(x.op_depth) FROM nodes x
+                              WHERE x.wc_id = ?1
+                                AND x.local_relpath = b.local_relpath
+                                AND x.op_depth < ?3)
+WHERE d.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(d.local_relpath, ?2)
+  AND d.op_depth = ?3
   AND NOT EXISTS(SELECT * FROM nodes s
                  WHERE s.wc_id = ?1
                    AND s.local_relpath = srp
@@ -967,17 +973,6 @@ INSERT INTO nodes (
     wc_id, local_relpath, op_depth,
     parent_relpath, presence, kind)
 VALUES(?1, ?2, ?3, ?4, MAP_BASE_DELETED, ?5)
-
--- STMT_DELETE_NO_LOWER_LAYER
-DELETE FROM nodes
- WHERE wc_id = ?1
-   AND local_relpath = ?2
-   AND op_depth = ?3
-   AND NOT EXISTS (SELECT 1 FROM nodes n
-                    WHERE n.wc_id = ?1
-                    AND n.local_relpath = nodes.local_relpath
-                    AND n.op_depth = ?4
-                    AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE))
 
 -- STMT_REPLACE_WITH_BASE_DELETED
 INSERT OR REPLACE INTO nodes (wc_id, local_relpath, op_depth, parent_relpath,
