@@ -1080,8 +1080,8 @@ lock_cb_error(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-obtain_write_lock_failure_test(const svn_test_opts_t *opts,
-                               apr_pool_t *pool)
+obtain_write_lock_failure(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_revnum_t newrev;
@@ -1095,15 +1095,15 @@ obtain_write_lock_failure_test(const svn_test_opts_t *opts,
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will test FSFS repositories only");
 
-  SVN_ERR(create_greek_fs(&fs, &newrev, "obtain-write-lock-failure-test",
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-obtain-write-lock-failure",
                           opts, pool));
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
   SVN_ERR(svn_fs_set_access(fs, access));
 
   /* Make a read only 'write-lock' file.  This prevents any write operations
      from being executed. */
-  SVN_ERR(svn_io_set_file_read_only("obtain-write-lock-failure-test/write-lock",
-                                    TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only("test-obtain-write-lock-failure/write-lock",
+                                    FALSE, pool));
 
   baton.results = apr_hash_make(pool);
   baton.pool = pool;
@@ -1169,7 +1169,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "lock multiple paths"),
     SVN_TEST_OPTS_PASS(lock_cb_error,
                        "lock callback error"),
-    SVN_TEST_OPTS_PASS(obtain_write_lock_failure_test,
+    SVN_TEST_OPTS_PASS(obtain_write_lock_failure,
                        "lock/unlock when 'write-lock' couldn't be obtained"),
     SVN_TEST_NULL
   };
