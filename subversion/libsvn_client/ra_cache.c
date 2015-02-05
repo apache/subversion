@@ -35,17 +35,27 @@
  * Debugging
  */
 
+/* Trace usage of svn_client__ra_session_t objects */
 #if 0
 #define RA_CACHE_LOG(x) SVN_DBG(x)
 #else
 #define RA_CACHE_LOG(x)
 #endif
 
+/* Trace usage of svn_ra_session_t objects */
 #if 0
 #define RA_CACHE_DBG(x) SVN_DBG(x)
 #else
 #define RA_CACHE_DBG(x)
 #endif
+
+/* Trace cache statistics */
+#if 0
+#define RA_CACHE_STATS(x) x
+#else
+#define RA_CACHE_STATS(x)
+#endif
+
 
 #if APR_SIZEOF_VOIDP == 8
 #define DBG_PTR_FMT "16"APR_UINT64_T_HEX_FMT
@@ -55,9 +65,10 @@
 
 
 /*
- * The session cache entry.
+ * The session cache.
  */
 
+/* Cache entry */
 typedef struct svn_client__ra_session_t
 {
   /* The free-list link for this session. */
@@ -92,6 +103,35 @@ typedef struct svn_client__ra_session_t
   /* ID of RA session. Used only for diagnostics. */
   int id;
 } svn_client__ra_session_t;
+
+
+/* RA session cache */
+struct svn_client__ra_cache_t
+{
+  /* The pool that defines the lifetime of the cache. */
+  apr_pool_t *pool;
+
+  /* The config hash used to create new sessions. */
+  apr_hash_t *config;
+
+  /* Cached active RA sessions.
+     Keys are RA_SESSION_T and values are CLIENT_RA_SESION_T pointers. */
+  apr_hash_t *active;
+
+  /* List of inactive sessions available for reuse. */
+  APR_RING_HEAD(, svn_client__ra_session_t) freelist;
+
+  /* Next ID for RA sessions. Used only for diagnostics purpose. */
+  int next_id;
+
+  RA_CACHE_STATS(struct {
+    apr_uint64_t request;       /* number of requests for a session */
+    apr_uint64_t open;          /* number of calls to svn_ra_open */
+    apr_uint64_t close;         /* number of calls to svn_ra__close */
+    apr_uint64_t release;       /* number of releases to cache */
+    apr_uint64_t reuse;         /* number of reuses from cache */
+  } stat;)
+};
 
 
 /*
@@ -275,6 +315,18 @@ cleanup_ra_cache(void *data)
 
   RA_CACHE_LOG(("RA_CACHE: Cleanup\n"));
 
+  RA_CACHE_STATS(SVN_DBG(("RA_CACHE_STATS:"
+                          " request:%"APR_UINT64_T_FMT
+                          " open:%"APR_UINT64_T_FMT
+                          " close:%"APR_UINT64_T_FMT
+                          " release:%"APR_UINT64_T_FMT
+                          " reuse:%"APR_UINT64_T_FMT"\n",
+                          ra_cache->stat.request,
+                          ra_cache->stat.open,
+                          ra_cache->stat.close,
+                          ra_cache->stat.release,
+                          ra_cache->stat.reuse)));
+
   return APR_SUCCESS;
 }
 
@@ -285,16 +337,17 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
 {
   RA_CACHE_LOG(("RA_CACHE: Init\n"));
 
-  private_ctx->ra_cache.pool = pool;
-  private_ctx->ra_cache.config = config;
-  private_ctx->ra_cache.active = apr_hash_make(pool);
-  APR_RING_INIT(&private_ctx->ra_cache.freelist,
+  private_ctx->ra_cache = apr_pcalloc(pool, sizeof(*private_ctx->ra_cache));
+  private_ctx->ra_cache->pool = pool;
+  private_ctx->ra_cache->config = config;
+  private_ctx->ra_cache->active = apr_hash_make(pool);
+  APR_RING_INIT(&private_ctx->ra_cache->freelist,
                 svn_client__ra_session_t, freelist);
 
   /* This cleanup must be registered to run before the subpools (which
      include pools of cached sessions) are destroyed, so that the
      close_ra_session handler behaves correctly. */
-  apr_pool_pre_cleanup_register(pool, &private_ctx->ra_cache,
+  apr_pool_pre_cleanup_register(pool, private_ctx->ra_cache,
                                 cleanup_ra_cache);
 }
 
@@ -326,6 +379,7 @@ close_ra_session(void *data)
       svn_ra__close(session);
 
       RA_CACHE_LOG(("SESSION(%d): Closed\n", cache_entry->id));
+      RA_CACHE_STATS(++ra_cache->stat.close);
     }
   else
     {
@@ -333,6 +387,7 @@ close_ra_session(void *data)
          sessions will have already been closed in the session pool
          cleanup handlers by the time we get here. */
       RA_CACHE_LOG(("SESSION(%d): Cleanup\n", cache_entry->id));
+      RA_CACHE_STATS(SVN_DBG(("RA_CACHE_STATS: cleanup:1\n")));
     }
 
   return APR_SUCCESS;
@@ -369,7 +424,7 @@ get_private_ra_cache(svn_client_ctx_t *public_ctx)
 {
   svn_client__private_ctx_t *const private_ctx =
     svn_client__get_private_ctx(public_ctx);
-  return &private_ctx->ra_cache;
+  return private_ctx->ra_cache;
 }
 
 svn_error_t *
@@ -430,6 +485,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       APR_RING_ELEM_INIT(cache_entry, freelist);
 
       RA_CACHE_LOG(("SESSION(%d): Reused\n", cache_entry->id));
+      RA_CACHE_STATS(++ra_cache->stat.reuse);
     }
   else
     {
@@ -478,6 +534,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                      ra_cache->pool));
 
       RA_CACHE_LOG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
+      RA_CACHE_STATS(++ra_cache->stat.open);
 
       ++ra_cache->next_id;
     }
@@ -499,6 +556,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
 
   *session_p = cache_entry->session;
 
+  RA_CACHE_STATS(++ra_cache->stat.request);
   return SVN_NO_ERROR;
 }
 
@@ -545,4 +603,5 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
   cache_entry->cb_baton = NULL;
 
   RA_CACHE_LOG(("SESSION(%d): Released\n", cache_entry->id));
+  RA_CACHE_STATS(++ra_cache->stat.release);
 }

@@ -47,29 +47,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Forward declaration of the cached RA session structure. */
-struct svn_client__ra_session_t;
-
 /* RA session cache */
-typedef struct svn_client__ra_cache_t
-{
-  /* The pool that defines the lifetime of the cache. */
-  apr_pool_t *pool;
-
-  /* The config hash used to create new sessions. */
-  apr_hash_t *config;
-
-  /* Cached active RA sessions.
-     Keys are RA_SESSION_T and values are CLIENT_RA_SESION_T pointers. */
-  apr_hash_t *active;
-
-  /* List of inactive sessions available for reuse. */
-  APR_RING_HEAD(, svn_client__ra_session_t) freelist;
-
-  /* Next ID for RA sessions. Used only for diagnostics purpose. */
-  int next_id;
-} svn_client__ra_cache_t;
-
+typedef struct svn_client__ra_cache_t svn_client__ra_cache_t;
 
 /* Private client context.
  *
@@ -89,7 +68,7 @@ typedef struct svn_client__private_ctx_t
   apr_off_t total_progress;
 
   /* The RA session cache. */
-  svn_client__ra_cache_t ra_cache;
+  svn_client__ra_cache_t *ra_cache;
 
   /* The public context. */
   svn_client_ctx_t public_ctx;
