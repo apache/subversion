@@ -263,24 +263,35 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth > ?3
 
--- STMT_SELECT_LOCAL_RELPATH_OP_DEPTH
-SELECT local_relpath, kind
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+/* Full layer replacement check code for handling moves
+The op_root must exist (or there is no layer to replace) and an op-root
+   always has presence 'normal' */
+-- STMT_SELECT_LAYER_FOR_REPLACE
+SELECT s.local_relpath, s.kind,
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, 'normal', 0
+FROM nodes s
+WHERE s.wc_id = ?1 AND s.local_relpath = ?2 AND s.op_depth = ?3
 UNION ALL
-SELECT local_relpath, kind
-FROM nodes
-WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = ?3
-ORDER BY local_relpath
+SELECT s.local_relpath, s.kind,
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, d.presence,
+  EXISTS(SELECT * FROM nodes sh
+         WHERE sh.wc_id = ?1 AND sh.op_depth > ?5
+           AND sh.local_relpath = d.local_relpath) shadowed
+FROM nodes s
+LEFT OUTER JOIN nodes d ON d.wc_id= ?1 AND d.op_depth = ?5
+     AND d.local_relpath = drp
+WHERE s.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
+  AND s.op_depth = ?3
+ORDER BY s.local_relpath
 
--- STMT_SELECT_CHILDREN_OP_DEPTH
+-- STMT_SELECT_DESCENDANTS_OP_DEPTH_RV
 SELECT local_relpath, kind
 FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = ?3
+  AND presence = MAP_NORMAL
 ORDER BY local_relpath DESC
 
 -- STMT_COPY_NODE_MOVE

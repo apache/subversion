@@ -1171,8 +1171,10 @@ tc_editor_delete(update_move_baton_t *b,
       svn_node_kind_t del_kind;
       const char *del_abspath;
 
+      /* Get all descendants of the node in reverse order (so children are
+         handled before their parents, but not strictly depth first) */
       SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_SELECT_CHILDREN_OP_DEPTH));
+                                        STMT_SELECT_DESCENDANTS_OP_DEPTH_RV));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
                                 op_depth));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -1541,8 +1543,9 @@ update_moved_away_node(update_move_baton_t *b,
       if (shadowed)
         {
           SVN_ERR(svn_wc__db_extend_parent_delete(
+                        NULL,
                         b->wcroot, dst_relpath, src_kind,
-                        relpath_depth(b->move_root_dst_relpath), 
+                        relpath_depth(b->move_root_dst_relpath),
                         scratch_pool));
         }
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
@@ -1656,60 +1659,111 @@ update_moved_away_node(update_move_baton_t *b,
    rooted at DST_RELPATH to make it match the move source subtree
    rooted at SRC_RELPATH. */
 static svn_error_t *
-replace_moved_layer(const char *src_relpath,
-                    const char *dst_relpath,
+replace_moved_layer(const char *src_op_relpath,
+                    const char *dst_op_relpath,
                     int src_op_depth,
                     svn_wc__db_wcroot_t *wcroot,
                     apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__stmt_t *stmt, *stmt2;
   svn_boolean_t have_row;
-  int dst_op_depth = relpath_depth(dst_relpath);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int dst_op_depth = relpath_depth(dst_op_relpath);
+  svn_error_t *err = NULL;
 
-  SVN_ERR(verify_write_lock(wcroot, src_relpath, scratch_pool));
-  SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
+  SVN_ERR(verify_write_lock(wcroot, src_op_relpath, scratch_pool));
+  SVN_ERR(verify_write_lock(wcroot, dst_op_relpath, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt2, wcroot->sdb,
+                                    STMT_COPY_NODE_MOVE));
 
   /* Replace entire subtree at one op-depth. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_LOCAL_RELPATH_OP_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                            src_relpath, src_op_depth));
+                                    STMT_SELECT_LAYER_FOR_REPLACE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdsd", wcroot->wc_id,
+                            src_op_relpath, src_op_depth,
+                            dst_op_relpath, dst_op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      svn_error_t *err;
-      svn_sqlite__stmt_t *stmt2;
-      const char *src_cp_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      svn_node_kind_t kind = svn_sqlite__column_token(stmt, 1, kind_map);
-      const char *dst_cp_relpath
-        = svn_relpath_join(dst_relpath,
-                           svn_relpath_skip_ancestor(src_relpath,
-                                                     src_cp_relpath),
-                           scratch_pool);
+      const char *src_relpath;
+      const char *dst_relpath;
+      svn_boolean_t exists;
 
-      err = svn_sqlite__get_statement(&stmt2, wcroot->sdb,
-                                      STMT_COPY_NODE_MOVE);
-      if (!err)
-        err = svn_sqlite__bindf(stmt2, "isdsds", wcroot->wc_id,
-                                src_cp_relpath, src_op_depth,
-                                dst_cp_relpath, dst_op_depth,
-                                svn_relpath_dirname(dst_cp_relpath,
-                                                    scratch_pool));
+      svn_pool_clear(iterpool);
+
+      src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+      dst_relpath = svn_sqlite__column_text(stmt, 2, iterpool);
+
+      exists = !svn_sqlite__column_is_null(stmt, 3);
+
+      err = svn_sqlite__bindf(stmt2, "isdsds", wcroot->wc_id,
+                              src_relpath, src_op_depth,
+                              dst_relpath, dst_op_depth,
+                              svn_relpath_dirname(dst_relpath, iterpool));
       if (!err)
         err = svn_sqlite__step_done(stmt2);
 
-      if (!err && strlen(dst_cp_relpath) > strlen(dst_relpath))
-        err = svn_wc__db_extend_parent_delete(wcroot, dst_cp_relpath, kind,
-                                              dst_op_depth, scratch_pool);
+      /* stmt2 is reset (never modified or by step_done) */
 
       if (err)
-        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+        break;
+
+      if (strlen(dst_relpath) > strlen(dst_op_relpath))
+        {
+          svn_boolean_t added_delete = FALSE;
+          svn_node_kind_t kind = svn_sqlite__column_token(stmt, 1, kind_map);
+
+          /* The op root can't be shadowed, so extension of a parent delete
+             is only needed when the parent can be deleted */
+          if (relpath_depth(dst_relpath) > (dst_op_depth+1))
+            {
+              err = svn_wc__db_extend_parent_delete(&added_delete,
+                                                    wcroot, dst_relpath, kind,
+                                                    dst_op_depth, iterpool);
+
+              if (err)
+                break;
+            }
+
+          if (exists)
+            {
+              svn_wc__db_status_t presence;
+
+              presence = svn_sqlite__column_token(stmt, 3, presence_map);
+
+              if (presence == svn_wc__db_status_not_present)
+                exists = FALSE;
+            }
+
+          /* ### Fails in a few tests... Needs further research */
+          /*SVN_ERR_ASSERT(!(exists && added_delete));*/
+
+          if (!exists)
+            {
+              svn_boolean_t shadowed;
+
+              shadowed = svn_sqlite__column_int(stmt, 4);
+
+              /*if (!shadowed && !added_delete)
+                {
+                  err = svn_error_createf(
+                              SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                              _("Node '%s' was unexpectedly added unshadowed"),
+                                path_for_error_message(wcroot, dst_relpath,
+                                                       iterpool));
+                  break;
+                }*/
+            }
+        }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
 
-  return SVN_NO_ERROR;
+  svn_pool_destroy(iterpool);
+
+  return svn_error_trace(svn_error_compose_create(err,
+                                                  svn_sqlite__reset(stmt)));
 }
 
 /* Transfer changes from the move source to the move destination.

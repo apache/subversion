@@ -570,7 +570,8 @@ blank_ibb(insert_base_baton_t *pibb)
 
 
 svn_error_t *
-svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+svn_wc__db_extend_parent_delete(svn_boolean_t *added_delete,
+                                svn_wc__db_wcroot_t *wcroot,
                                 const char *local_relpath,
                                 svn_node_kind_t kind,
                                 int op_depth,
@@ -582,6 +583,9 @@ svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
   const char *parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   SVN_ERR_ASSERT(local_relpath[0]);
+
+  if (added_delete)
+    *added_delete = FALSE;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
@@ -609,6 +613,9 @@ svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                     local_relpath, parent_op_depth,
                                     parent_relpath, kind_map, kind));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+          if (added_delete)
+            *added_delete = TRUE;
         }
     }
 
@@ -833,7 +840,8 @@ insert_base_node(const insert_base_baton_t *pibb,
               || (pibb->status == svn_wc__db_status_incomplete))
           && ! pibb->file_external)
         {
-          SVN_ERR(svn_wc__db_extend_parent_delete(wcroot, local_relpath,
+          SVN_ERR(svn_wc__db_extend_parent_delete(NULL,
+                                                  wcroot, local_relpath,
                                                   pibb->kind, 0,
                                                   scratch_pool));
         }

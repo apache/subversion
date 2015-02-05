@@ -432,9 +432,13 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
 
    In the example above A/B/C/D and A/B/C/D/E are the nodes that get
    the extended delete, A/B/C is already deleted.
+
+   If ADDED_DELETE is not NULL, set *ADDED_DELETE to TRUE if a new delete
+   was recorded, otherwise to FALSE.
  */
 svn_error_t *
-svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
+svn_wc__db_extend_parent_delete(svn_boolean_t *added_delete,
+                                svn_wc__db_wcroot_t *wcroot,
                                 const char *local_relpath,
                                 svn_node_kind_t kind,
                                 int op_depth,
