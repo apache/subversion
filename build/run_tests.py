@@ -398,9 +398,11 @@ class TestHarness:
 
       # Enable access for http
       if self.base_url.startswith('http'):
-        open(os.path.join(self.builddir, subdir, 'authz'), 'w').write(
-                '[/]\n' +
-                '* = rw\n')
+        authzparent = os.path.join(self.builddir, subdir)
+        if not os.path.exists(authzparent):
+          os.makedirs(authzparent);
+        open(os.path.join(authzparent, 'authz'), 'w').write('[/]\n'
+                                                            '* = rw\n')
 
     # ### Support --repos-template
     if self.verbose is not None:
