@@ -331,6 +331,7 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
 
           /* Open an RA session to (ultimately) the root of the
              repository in which URI is found.  */
+          /* RA_CACHE TODO: release RA session */
           SVN_ERR(svn_client_open_ra_session2(&ra_session, uri, NULL,
                                               ctx, pool, pool));
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));

@@ -802,6 +802,7 @@ svn_client__repos_locations(const char **start_url,
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  svn_boolean_t new_ra_session = FALSE;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Ensure that we are given some real revision data to work with.
@@ -882,8 +883,11 @@ svn_client__repos_locations(const char **start_url,
 
   /* Open a RA session to this URL if we don't have one already. */
   if (! ra_session)
-    SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
-                                        ctx, subpool, subpool));
+    {
+      SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
+                                          ctx, subpool, subpool));
+      new_ra_session = TRUE;
+    }
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
@@ -915,6 +919,9 @@ svn_client__repos_locations(const char **start_url,
                           ra_session, url, peg_revnum,
                           start_revnum, end_revnum, youngest_rev,
                           pool, subpool));
+
+  if (new_ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
@@ -1001,10 +1008,10 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sesspool = NULL;
   apr_hash_t *history1, *history2;
   svn_boolean_t has_rev_zero_history1;
   svn_boolean_t has_rev_zero_history2;
+  svn_boolean_t new_ra_session = FALSE;
 
   if (strcmp(loc1->repos_root_url, loc2->repos_root_url) != 0)
     {
@@ -1015,9 +1022,9 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
   /* Open an RA session for the two locations. */
   if (session == NULL)
     {
-      sesspool = svn_pool_create(scratch_pool);
       SVN_ERR(svn_client_open_ra_session2(&session, loc1->url, NULL, ctx,
-                                          sesspool, sesspool));
+                                          scratch_pool, scratch_pool));
+      new_ra_session = TRUE;
     }
 
   /* We're going to cheat and use history-as-mergeinfo because it
@@ -1034,9 +1041,10 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, scratch_pool));
+
   /* Close the ra session if we opened one. */
-  if (sesspool)
-    svn_pool_destroy(sesspool);
+  if (new_ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, session));
 
   SVN_ERR(svn_client__calc_youngest_common_ancestor(ancestor_p,
                                                     loc1, history1,

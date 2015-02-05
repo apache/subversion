@@ -1128,7 +1128,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
-        return SVN_NO_ERROR;
+        {
+          SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+          return SVN_NO_ERROR;
+        }
     }
   else
     message = "";
@@ -1202,7 +1205,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 
   /* Close the edit. */
-  return svn_error_trace(editor->close_edit(edit_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  return SVN_NO_ERROR;
 }
 
 /* Baton for check_url_kind */
@@ -1458,6 +1463,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                       ctx, scratch_pool));
       if (! message)
         {
+          SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
           svn_pool_destroy(iterpool);
           svn_pool_destroy(session_pool);
           return SVN_NO_ERROR;
@@ -1523,6 +1529,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                   NULL, ctx, session_pool, session_pool),
             _("Commit failed (details follow):"));
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(iterpool);
   svn_pool_destroy(session_pool);
 
@@ -1921,6 +1928,8 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                             copy_pairs, top_dst_path, ignore_externals,
                             ra_session, ctx, pool),
     ctx->wc_ctx, lock_abspath, FALSE, pool);
+
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

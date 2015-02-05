@@ -1448,6 +1448,8 @@ svn_client_export5(svn_revnum_t *result_rev,
                                    from_path_or_url);
         }
       /* kind == svn_node_unknown not handled */
+
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
     }
   else
     {

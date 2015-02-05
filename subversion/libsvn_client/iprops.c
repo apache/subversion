@@ -139,6 +139,7 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_pool_t *session_pool = NULL;
+  const svn_boolean_t new_ra_session = !ra_session;
   *wcroot_iprops = apr_hash_make(result_pool);
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
@@ -213,6 +214,8 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
               if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
                 return svn_error_trace(err);
 
+              if (new_ra_session)
+                SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
               svn_error_clear(err);
               continue;
             }
@@ -220,6 +223,9 @@ get_inheritable_props(apr_hash_t **wcroot_iprops,
           svn_hash_sets(*wcroot_iprops,
                         apr_pstrdup(result_pool, child_abspath),
                         inherited_props);
+
+          if (new_ra_session)
+            SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
         }
 
 
