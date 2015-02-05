@@ -137,29 +137,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1611380, r1611381, r1619071, r1647339
-   Use simple apr_thread_mutex_t instead of apr_thread_rwlock_t as a workaround
-   for performance and consistency problems in APR read/write locks
-   implementation on Windows. The APR read/write locks implementation is
-   currently known for two long standing problems:
-   - Windows and OS/2 rwlock sometimes allows a writer to take the lock while
-     a reader has the lock (APR issue 45455)
-   - Read-write locks are very slow on Windows due usage of kernel-mode
-     CreateMutex instead lightweight criticial section used for apr_mutex_t.
-   Justification:
-   - In memory cache data corruption in race-condition on Windows
-   - 10-15% performance regression since 1.7.x   Discussion:
-     Subject: FSFS caching and apr_thread_rwlock_t performance on Windows
-     http://svn.haxx.se/dev/archive-2014-12/0112.shtml
-   Notes:
-     r1611380 contains the fix itself.
-     r1611381 and r1619071 are the follow-up commits to fix compilation errors.
-     r1647339 fixes error leak introduced in r1611380.
-   Branch:
-     ^/subversion/branches/1.8.x-r1611380
-   Votes:
-     +1: ivan, rhuijben
-
  * r1650531
    Fix a redirect handling bug in 'svn log' over HTTP. 
    Justification:
@@ -265,3 +242,26 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1611380, r1611381, r1619071, r1647339
+   Use simple apr_thread_mutex_t instead of apr_thread_rwlock_t as a workaround
+   for performance and consistency problems in APR read/write locks
+   implementation on Windows. The APR read/write locks implementation is
+   currently known for two long standing problems:
+   - Windows and OS/2 rwlock sometimes allows a writer to take the lock while
+     a reader has the lock (APR issue 45455)
+   - Read-write locks are very slow on Windows due usage of kernel-mode
+     CreateMutex instead lightweight criticial section used for apr_mutex_t.
+   Justification:
+   - In memory cache data corruption in race-condition on Windows
+   - 10-15% performance regression since 1.7.x   Discussion:
+     Subject: FSFS caching and apr_thread_rwlock_t performance on Windows
+     http://svn.haxx.se/dev/archive-2014-12/0112.shtml
+   Notes:
+     r1611380 contains the fix itself.
+     r1611381 and r1619071 are the follow-up commits to fix compilation errors.
+     r1647339 fixes error leak introduced in r1611380.
+   Branch:
+     ^/subversion/branches/1.8.x-r1611380
+   Votes:
+     +1: ivan, rhuijben, kotkov
