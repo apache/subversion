@@ -763,7 +763,8 @@ def run_svnrdump(stdin_input, *varargs):
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, False, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr

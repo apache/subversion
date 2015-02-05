@@ -63,13 +63,9 @@ def run_sync(url, source_url=None, expected_error=None,
              source_prop_encoding=None):
   "Synchronize the mirror repository with the master"
   if source_url is not None:
-    args = ["synchronize", url, source_url,
-      "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd]
+    args = ["synchronize", url, source_url]
   else: # Allow testing of old source-URL-less syntax
-    args = ["synchronize", url,
-      "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd]
+    args = ["synchronize", url]
   if source_prop_encoding:
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
@@ -95,9 +91,7 @@ def run_sync(url, source_url=None, expected_error=None,
 def run_copy_revprops(url, source_url, expected_error=None,
                       source_prop_encoding=None):
   "Copy revprops to the mirror repository from the master"
-  args = ["copy-revprops", url, source_url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd]
+  args = ["copy-revprops", url, source_url]
   if source_prop_encoding:
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
@@ -123,9 +117,7 @@ def run_copy_revprops(url, source_url, expected_error=None,
 
 def run_init(dst_url, src_url, source_prop_encoding=None):
   "Initialize the mirror repository from the master"
-  args = ["initialize", dst_url, src_url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd]
+  args = ["initialize", dst_url, src_url]
   if source_prop_encoding:
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
@@ -142,9 +134,7 @@ def run_init(dst_url, src_url, source_prop_encoding=None):
 def run_info(url, expected_error=None):
   "Print synchronization information of the repository"
   exit_code, output, errput = svntest.main.run_svnsync(
-    "info", url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "info", url)
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -434,9 +424,7 @@ def info_synchronized(sbox):
   run_sync(dest_sbox.repo_url)
 
   exit_code, output, errput = svntest.main.run_svnsync(
-    "info", dest_sbox.repo_url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "info", dest_sbox.repo_url)
   if errput:
       raise SVNUnexpectedStderr(errput)
 
