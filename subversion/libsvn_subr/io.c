@@ -352,6 +352,25 @@ file_open(apr_file_t **f,
 
   if (retry_on_failure)
     {
+#ifdef WIN32
+      if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+        {
+          if ((flag & (APR_CREATE | APR_EXCL)) == (APR_CREATE | APR_EXCL))
+            return status; /* Can't create if there is something */
+
+          if (flag & (APR_WRITE | APR_CREATE))
+            {
+              apr_finfo_t finfo;
+
+              if (!apr_stat(&finfo, fname_apr, SVN__APR_FINFO_READONLY, pool))
+                {
+                  if (finfo.protection & APR_FREADONLY)
+                    return status; /* Retrying won't fix this */
+                }
+            }
+        }
+#endif
+
       WIN32_RETRY_LOOP(status, apr_file_open(f, fname_apr, flag, perm, pool));
     }
   return status;
