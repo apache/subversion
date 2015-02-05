@@ -331,7 +331,6 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
 
           /* Open an RA session to (ultimately) the root of the
              repository in which URI is found.  */
-          /* RA_CACHE TODO: release RA session */
           SVN_ERR(svn_client_open_ra_session2(&ra_session, uri, NULL,
                                               ctx, pool, pool));
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
@@ -412,6 +411,15 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
                                   revprop_table, commit_callback,
                                   commit_baton, ctx, iterpool));
     }
+
+  /* Release all RA sessions. */
+  for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
+    {
+      struct repos_deletables_t *repos_deletables = apr_hash_this_val(hi);
+      SVN_ERR(svn_client__ra_session_release(ctx,
+                                             repos_deletables->ra_session));
+    }
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
