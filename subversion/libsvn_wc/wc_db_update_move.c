@@ -1233,7 +1233,7 @@ tc_editor_delete(update_move_baton_t *b,
   return SVN_NO_ERROR;
 }
 
-/* Delete handling for both WORKING and shadowed nodes */
+/* Delete handling for a node and its shadowing */
 static svn_error_t *
 delete_move_leaf(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
@@ -1276,21 +1276,13 @@ delete_move_leaf(svn_wc__db_wcroot_t *wcroot,
   else
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_WORKING_OP_DEPTH));
+                                        STMT_DELETE_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
                                 op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* Retract any base-delete for descendants. */
-  {
-    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_WORKING_BASE_DELETE));
-    SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                              op_depth));
-    SVN_ERR(svn_sqlite__step_done(stmt));
-  }
-  /* And for the node itself */
+  /* Retract base-delete for the node itself */
   SVN_ERR(svn_wc__db_retract_parent_delete(wcroot, local_relpath, op_depth,
                                            scratch_pool));
 
@@ -1534,14 +1526,6 @@ update_moved_away_node(update_move_baton_t *b,
 
   if (src_kind != svn_node_none && src_kind != dst_kind)
     {
-      if (shadowed)
-        {
-          SVN_ERR(svn_wc__db_extend_parent_delete(
-                        NULL,
-                        b->wcroot, dst_relpath, src_kind,
-                        relpath_depth(b->move_root_dst_relpath),
-                        scratch_pool));
-        }
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
         {
           SVN_ERR(tc_editor_add_file(b, dst_relpath,
