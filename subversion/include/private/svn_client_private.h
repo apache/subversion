@@ -152,7 +152,14 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-/* Release repository access SESSION back to CTX session cache. */
+/* Release repository access SESSION back to CTX's session cache.
+
+   The caller *MUST* ensure that SESSION is in a valid state:
+     - it has a valid connection to the server;
+     - if using a stateful protocol (i.e., ra_svn), a new series
+       of commands can be safely begun;
+     - any previous errors did not make the session unusable.
+*/
 svn_error_t *
 svn_client__ra_session_release(svn_client_ctx_t *ctx,
                                svn_ra_session_t *session);
