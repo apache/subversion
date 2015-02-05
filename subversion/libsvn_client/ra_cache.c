@@ -35,7 +35,7 @@
  * Debugging
  */
 
-/* Trace usage of svn_client__ra_session_t objects */
+/* Trace usage of ra_session_t objects */
 #if 0
 #define RA_CACHE_LOG(x) SVN_DBG(x)
 #else
@@ -69,10 +69,10 @@
  */
 
 /* Cache entry */
-typedef struct svn_client__ra_session_t
+typedef struct ra_session_t
 {
   /* The free-list link for this session. */
-  APR_RING_ENTRY(svn_client__ra_session_t) freelist;
+  APR_RING_ENTRY(ra_session_t) freelist;
 
   /* The cache that owns this session. Will be set to NULL in the
      cache cleanup handler to prevent access through dangling pointers
@@ -102,7 +102,7 @@ typedef struct svn_client__ra_session_t
 
   /* ID of RA session. Used only for diagnostics. */
   int id;
-} svn_client__ra_session_t;
+} ra_session_t;
 
 
 /* RA session cache */
@@ -119,7 +119,7 @@ struct svn_client__ra_cache_t
   apr_hash_t *active;
 
   /* List of inactive sessions available for reuse. */
-  APR_RING_HEAD(, svn_client__ra_session_t) freelist;
+  APR_RING_HEAD(, ra_session_t) freelist;
 
   /* Next ID for RA sessions. Used only for diagnostics purpose. */
   int next_id;
@@ -142,7 +142,7 @@ struct svn_client__ra_cache_t
 static svn_error_t *
 open_tmp_file(apr_file_t **fp, void *baton, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   return svn_error_trace(b->cb_table->open_tmp_file(fp, b->cb_baton, pool));
 }
 
@@ -151,7 +151,7 @@ static svn_error_t *
 get_wc_prop(void *baton, const char *relpath, const char *name,
             const svn_string_t **value, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->get_wc_prop)
     return svn_error_trace(
         b->cb_table->get_wc_prop(b->cb_baton, relpath, name, value, pool));
@@ -165,7 +165,7 @@ static svn_error_t *
 set_wc_prop(void *baton, const char *path, const char *name,
             const svn_string_t *value, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->set_wc_prop)
     return svn_error_trace(
         b->cb_table->set_wc_prop(b->cb_baton, path, name, value, pool));
@@ -178,7 +178,7 @@ static svn_error_t *
 push_wc_prop(void *baton, const char *relpath, const char *name,
              const svn_string_t *value, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->push_wc_prop)
     return svn_error_trace(
         b->cb_table->push_wc_prop(b->cb_baton, relpath, name, value, pool));
@@ -191,7 +191,7 @@ static svn_error_t *
 invalidate_wc_props(void *baton, const char *path, const char *prop_name,
                     apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->invalidate_wc_props)
       return svn_error_trace(
           b->cb_table->invalidate_wc_props(b->cb_baton, path,
@@ -205,7 +205,7 @@ static void
 progress_func(apr_off_t progress, apr_off_t total, void *baton,
               apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
 
   b->progress += (progress - b->last_progress);
   b->last_progress = progress;
@@ -220,7 +220,7 @@ progress_func(apr_off_t progress, apr_off_t total, void *baton,
 static svn_error_t *
 cancel_func(void *baton)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->cancel_func)
     return svn_error_trace(b->cb_table->cancel_func(b->cb_baton));
 
@@ -231,7 +231,7 @@ cancel_func(void *baton)
 static svn_error_t *
 get_client_string(void *baton, const char **name, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->get_client_string)
     return svn_error_trace(
         b->cb_table->get_client_string(b->cb_baton, name, pool));
@@ -245,7 +245,7 @@ static svn_error_t *
 get_wc_contents(void *baton, svn_stream_t **contents,
                 const svn_checksum_t *checksum, apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = baton;
+  ra_session_t *const b = baton;
   if (b->cb_table->get_wc_contents)
     return svn_error_trace(
         b->cb_table->get_wc_contents(b->cb_baton, contents, checksum, pool));
@@ -258,7 +258,7 @@ get_wc_contents(void *baton, svn_stream_t **contents,
 static svn_boolean_t
 check_tunnel_func(void *tunnel_baton, const char *tunnel_name)
 {
-  svn_client__ra_session_t *const b = tunnel_baton;
+  ra_session_t *const b = tunnel_baton;
   if (b->cb_table->check_tunnel_func)
     return b->cb_table->check_tunnel_func(b->cb_table->tunnel_baton,
                                           tunnel_name);
@@ -275,7 +275,7 @@ open_tunnel_func(svn_stream_t **request, svn_stream_t **response,
                  svn_cancel_func_t cancel_func, void *cancel_baton,
                  apr_pool_t *pool)
 {
-  svn_client__ra_session_t *const b = tunnel_baton;
+  ra_session_t *const b = tunnel_baton;
   if (b->cb_table->open_tunnel_func)
     return svn_error_trace(
         b->cb_table->open_tunnel_func(
@@ -298,7 +298,7 @@ static apr_status_t
 cleanup_ra_cache(void *data)
 {
   svn_client__ra_cache_t *ra_cache = data;
-  svn_client__ra_session_t *cache_entry;
+  ra_session_t *cache_entry;
   apr_hash_index_t *hi;
 
   /* Reset the cache owner pointers on all the cached sessions. */
@@ -310,7 +310,7 @@ cleanup_ra_cache(void *data)
     }
 
   APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
-                   svn_client__ra_session_t, freelist)
+                   ra_session_t, freelist)
       cache_entry->ra_cache = NULL;
 
   RA_CACHE_LOG(("RA_CACHE: Cleanup\n"));
@@ -342,7 +342,7 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
   private_ctx->ra_cache->config = config;
   private_ctx->ra_cache->active = apr_hash_make(pool);
   APR_RING_INIT(&private_ctx->ra_cache->freelist,
-                svn_client__ra_session_t, freelist);
+                ra_session_t, freelist);
 
   /* This cleanup must be registered to run before the subpools (which
      include pools of cached sessions) are destroyed, so that the
@@ -358,7 +358,7 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
 static apr_status_t
 close_ra_session(void *data)
 {
-  svn_client__ra_session_t *cache_entry = data;
+  ra_session_t *cache_entry = data;
   svn_client__ra_cache_t *ra_cache = cache_entry->ra_cache;
 
   if (ra_cache)
@@ -394,15 +394,15 @@ close_ra_session(void *data)
 }
 
 static svn_error_t *
-find_session_by_url(svn_client__ra_session_t **cache_entry_p,
+find_session_by_url(ra_session_t **cache_entry_p,
                     svn_client__ra_cache_t *ra_cache,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
-  svn_client__ra_session_t *cache_entry;
+  ra_session_t *cache_entry;
 
   APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
-                   svn_client__ra_session_t, freelist)
+                   ra_session_t, freelist)
     {
       SVN_ERR_ASSERT(cache_entry->owner_pool == NULL);
 
@@ -439,7 +439,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                   apr_pool_t *scratch_pool)
 {
   svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
-  svn_client__ra_session_t *cache_entry;
+  ra_session_t *cache_entry;
 
   if (corrected_p)
       *corrected_p = NULL;
@@ -565,7 +565,7 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
                                      svn_ra_session_t *session)
 {
   svn_client__ra_cache_t *const ra_cache = get_private_ra_cache(ctx);
-  svn_client__ra_session_t *cache_entry =
+  ra_session_t *cache_entry =
     apr_hash_get(ra_cache->active, &session, sizeof(session));
 
   RA_CACHE_DBG(("ra_cache_release_session: search active:       %"
@@ -596,7 +596,7 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
 #endif /* SVN_DEBUG */
 
   APR_RING_INSERT_HEAD(&ra_cache->freelist, cache_entry,
-                       svn_client__ra_session_t, freelist);
+                       ra_session_t, freelist);
 
   cache_entry->owner_pool = NULL;
   cache_entry->cb_table = NULL;
