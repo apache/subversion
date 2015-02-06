@@ -622,41 +622,41 @@ tc_editor_add_directory(node_move_baton_t *nmb,
 {
   update_move_baton_t *b = nmb->umb;
   const char *move_dst_repos_relpath;
-  svn_node_kind_t move_dst_kind;
   const char *local_abspath;
   svn_node_kind_t old_kind;
   svn_skel_t *work_item = NULL;
   svn_wc_notify_action_t action = svn_wc_notify_update_add;
-  svn_error_t *err;
   svn_skel_t *conflict = NULL;
 
   SVN_ERR(mark_parent_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  /* Update NODES, only the bits not covered by the later call to
-     replace_moved_layer. */
-  err = svn_wc__db_depth_get_info(NULL, &move_dst_kind, NULL,
-                                  &move_dst_repos_relpath, NULL, NULL, NULL,
-                                  NULL, NULL, NULL, NULL, NULL, NULL,
-                                  b->wcroot, relpath, b->dst_op_depth,
-                                  scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      old_kind = svn_node_none;
-      move_dst_repos_relpath = NULL;
-    }
-  else
-    {
-      SVN_ERR(err);
-      old_kind = move_dst_kind;
-    }
+  /* We can't read the information from the pre-add node to obtain the
+     relpath, but in WORKING we can just calculate it from the op-root */
+  {
+    const char *dst_op_root_relpath = svn_relpath_limit(nmb->pb->dst_relpath,
+                                                        b->dst_op_depth,
+                                                        scratch_pool);
+    SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
+                                      &move_dst_repos_relpath, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL,
+                                      b->wcroot, dst_op_root_relpath,
+                                      b->dst_op_depth,
+                                      scratch_pool, scratch_pool));
+
+    move_dst_repos_relpath =
+            svn_relpath_join(move_dst_repos_relpath,
+                             svn_relpath_skip_ancestor(dst_op_root_relpath,
+                                                       relpath),
+                             scratch_pool);
+  }
 
   if (nmb->shadowed)
     {
       SVN_ERR(mark_tc_on_op_root(nmb,
-                                 old_kind, svn_node_dir,
+                                 svn_node_none, svn_node_dir,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_action_add,
                                  scratch_pool));
@@ -707,41 +707,41 @@ tc_editor_add_file(node_move_baton_t *nmb,
 {
   update_move_baton_t *b = nmb->umb;
   const char *move_dst_repos_relpath;
-  svn_node_kind_t move_dst_kind;
   svn_node_kind_t old_kind;
   const char *local_abspath;
   svn_skel_t *work_item = NULL;
   svn_skel_t *conflict = NULL;
-  svn_error_t *err;
 
   SVN_ERR(mark_parent_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  /* Update NODES, only the bits not covered by the later call to
-     replace_moved_layer. */
-  err = svn_wc__db_depth_get_info(NULL, &move_dst_kind, NULL,
-                                  &move_dst_repos_relpath, NULL, NULL, NULL,
-                                  NULL, NULL, NULL, NULL, NULL, NULL,
-                                  b->wcroot, relpath, b->dst_op_depth,
-                                  scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      old_kind = svn_node_none;
-      move_dst_repos_relpath = NULL;
-    }
-  else
-    {
-      SVN_ERR(err);
-      old_kind = move_dst_kind;
-    }
+  /* We can't read the information from the pre-add node to obtain the
+     relpath, but in WORKING we can just calculate it from the op-root */
+  {
+    const char *dst_op_root_relpath = svn_relpath_limit(nmb->pb->dst_relpath,
+                                                        b->dst_op_depth,
+                                                        scratch_pool);
+    SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
+                                      &move_dst_repos_relpath, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL,
+                                      b->wcroot, dst_op_root_relpath,
+                                      b->dst_op_depth,
+                                      scratch_pool, scratch_pool));
+
+    move_dst_repos_relpath =
+            svn_relpath_join(move_dst_repos_relpath,
+                             svn_relpath_skip_ancestor(dst_op_root_relpath,
+                                                       relpath),
+                             scratch_pool);
+  }
 
   /* Check for NODES tree-conflict. */
   if (nmb->shadowed)
     {
       SVN_ERR(mark_tc_on_op_root(nmb,
-                                 old_kind, svn_node_file,
+                                 svn_node_none, svn_node_file,
                                  move_dst_repos_relpath,
                                  svn_wc_conflict_action_add,
                                  scratch_pool));
