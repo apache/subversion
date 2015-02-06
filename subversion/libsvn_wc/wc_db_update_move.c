@@ -522,7 +522,6 @@ tc_editor_add_directory(svn_boolean_t *tree_conflicted,
 {
   const char *move_dst_repos_relpath;
   svn_node_kind_t move_dst_kind;
-  svn_boolean_t is_conflicted = FALSE;
   const char *local_abspath;
   svn_node_kind_t old_kind;
   svn_skel_t *work_item = NULL;
@@ -582,7 +581,6 @@ tc_editor_add_directory(svn_boolean_t *tree_conflicted,
                                    scratch_pool, scratch_pool));
       *tree_conflicted = TRUE;
       action = svn_wc_notify_tree_conflict;
-      is_conflicted = TRUE;
       break;
 
     case svn_node_none:
