@@ -413,8 +413,8 @@ find_session_by_url(cache_entry_t **cache_entry_p,
         }
     }
 
-    *cache_entry_p = NULL;
-    return SVN_NO_ERROR;
+  *cache_entry_p = NULL;
+  return SVN_NO_ERROR;
 }
 
 /* Convert a public client context pointer to a pointer to the RA
