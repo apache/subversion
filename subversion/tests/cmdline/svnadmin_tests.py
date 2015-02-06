@@ -427,20 +427,8 @@ def set_changed_path_list(sbox, revision, changes):
 def test_create(sbox, minor_version=None):
   "'svnadmin create'"
 
-
-  repo_dir = sbox.repo_dir
+  sbox.build(empty=True, minor_version=minor_version)
   wc_dir = sbox.wc_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.main.safe_rmtree(wc_dir)
-
-  svntest.main.create_repos(repo_dir, minor_version)
-
-  svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
-                                     ["Checked out revision 0.\n"], [],
-                                     "checkout",
-                                     sbox.repo_url, wc_dir)
-
 
   svntest.actions.run_and_verify_svn(
     "Running status",
@@ -1249,14 +1237,8 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 
+  sbox.build(create_wc=False, empty=True)
   repo_dir = sbox.repo_dir
-  wc_dir = sbox.wc_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.main.safe_rmtree(wc_dir)
-
-  # This should succeed
-  svntest.main.create_repos(repo_dir)
 
   success = False
   try:
@@ -1287,12 +1269,8 @@ def create_in_repo_subdir(sbox):
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
+  sbox.build(create_wc=False, empty=True)
   repo_dir = sbox.repo_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-
-  # This should succeed
-  svntest.main.create_repos(repo_dir)
 
   # Run a test verify
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -1531,13 +1509,11 @@ def hotcopy_symlink(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
 
+  # Create a repository.
+  sbox.build(create_wc=False, empty=True)
   original_repo = sbox.repo_dir
 
   hotcopy_repo, hotcopy_url = sbox.add_repo_path('hotcopy')
-
-  # Create a repository.
-  svntest.main.safe_rmtree(original_repo, 1)
-  svntest.main.create_repos(original_repo)
 
   # Create a file, a dir and a missing path outside the repoitory.
   svntest.main.safe_rmtree(sbox.wc_dir, 1)
@@ -2078,8 +2054,7 @@ def mergeinfo_race(sbox):
 @Skip(svntest.main.is_fs_type_fsx)
 def recover_old_empty(sbox):
   "recover empty --compatible-version=1.3"
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  sbox.build(create_wc=False, empty=True, minor_version=3)
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                                           "recover", sbox.repo_dir)
 
@@ -2304,9 +2279,7 @@ def verify_invalid_path_changes(sbox):
 def verify_denormalized_names(sbox):
   "detect denormalized names and name collisions"
 
-  sbox.build(create_wc = False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -2382,10 +2355,8 @@ def load_ignore_dates(sbox):
   # All revisions in the loaded repository should come after this time.
   start_time = time.localtime()
   time.sleep(1)
-  
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+
+  sbox.build(create_wc=False, empty=True)
 
   dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
@@ -2695,9 +2666,7 @@ def fsfs_hotcopy_progress(sbox):
     raise svntest.Skip
 
   # Create an empty repository, configure three files per shard.
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
   patch_format(sbox.repo_dir, shard_size=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
@@ -2811,9 +2780,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
     raise svntest.Skip
 
   # Create an empty repository, commit several revisions and hotcopy it.
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
 
   for i in range(6):
     svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
@@ -2858,9 +2825,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
 def fsfs_hotcopy_progress_old(sbox):
   "hotcopy --compatible-version=1.3 progress"
 
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  sbox.build(create_wc=False, empty=True, minor_version=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 

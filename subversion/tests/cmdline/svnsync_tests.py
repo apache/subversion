@@ -49,16 +49,6 @@ Item = svntest.wc.StateItem
 # Helper routines
 
 
-def build_repos(sbox):
-  """Avoid the use sbox.build() because we're working with a repos
-  other than the Greek tree."""
-  # Cleanup after the last run by removing any left-over repository.
-  svntest.main.safe_rmtree(sbox.repo_dir)
-
-  # Create an empty repository.
-  svntest.main.create_repos(sbox.repo_dir)
-
-
 def run_sync(url, source_url=None, expected_error=None,
              source_prop_encoding=None):
   "Synchronize the mirror repository with the master"
@@ -158,7 +148,7 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX. If is_src_ra_local or is_dest_ra_local is True, then run_init, run_sync, and run_copy_revprops will use the file:// scheme for the source and destination URLs.  Return the mirror sandbox."""
 
   # Create the empty master repository.
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Load the repository from DUMP_FILE_PATH.
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_file_contents,
@@ -166,7 +156,7 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
 
   # Create the empty destination repository.
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   # Setup the mirror repository.  Feed it the UUID of the source repository.
   exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
@@ -336,7 +326,7 @@ def detect_meddling(sbox):
   sbox.build("svnsync-meddling")
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   # Make our own destination checkout (have to do it ourself because
   # it is not greek).
@@ -417,7 +407,7 @@ def info_synchronized(sbox):
   src_uuid = output[0].strip()
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
   run_init(dest_sbox.repo_url, sbox.repo_url)
