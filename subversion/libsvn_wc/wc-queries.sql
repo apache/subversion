@@ -1634,16 +1634,13 @@ WHERE wc_id = ?1
 
 -- STMT_SELECT_OP_DEPTH_MOVED_PAIR
 SELECT n.local_relpath, p.kind, n.moved_to, p.repos_path
-FROM nodes AS n
-JOIN (SELECT local_relpath, kind, repos_path
-      FROM nodes AS o
-        WHERE o.wc_id = ?1
-          AND o.op_depth=(SELECT MAX(d.op_depth)
-                          FROM nodes AS d
-                          WHERE d.wc_id = ?1
-                            AND d.local_relpath = o.local_relpath
-                            AND d.op_depth < ?3)) AS p
-  ON n.local_relpath = p.local_relpath
+FROM nodes n
+JOIN nodes p ON p.wc_id = ?1 AND p.local_relpath = ?2
+ AND p.op_depth=(SELECT MAX(d.op_depth)
+                 FROM nodes d
+                 WHERE d.wc_id = ?1
+                 AND d.local_relpath = p.local_relpath
+                 AND d.op_depth < ?3)
 WHERE n.wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
   AND n.op_depth = ?3
