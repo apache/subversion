@@ -1638,9 +1638,8 @@ FROM nodes n
 JOIN nodes p ON p.wc_id = ?1 AND p.local_relpath = ?2
  AND p.op_depth=(SELECT MAX(d.op_depth)
                  FROM nodes d
-                 WHERE d.wc_id = ?1
-                 AND d.local_relpath = p.local_relpath
-                 AND d.op_depth < ?3)
+                 WHERE d.wc_id = ?1 AND d.local_relpath = ?2
+                   AND d.op_depth < ?3)
 WHERE n.wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
   AND n.op_depth = ?3
