@@ -401,6 +401,24 @@ find_session_by_url(cache_entry_t **cache_entry_p,
 {
   cache_entry_t *cache_entry;
 
+  /* Try to find RA session with exact session URL match first because
+   * the svn_ra_reparent() for svn:// protocol requires network round-trip.
+   */
+  APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
+                   cache_entry_t, freelist)
+    {
+      const char *session_url;
+      SVN_ERR_ASSERT(cache_entry->owner_pool == NULL);
+
+      SVN_ERR(svn_ra_get_session_url(cache_entry->session, &session_url,
+                                     scratch_pool));
+      if (strcmp(session_url, url) == 0)
+        {
+          *cache_entry_p = cache_entry;
+          return SVN_NO_ERROR;
+        }
+    }
+
   APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
                    cache_entry_t, freelist)
     {
