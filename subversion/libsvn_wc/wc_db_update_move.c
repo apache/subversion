@@ -907,71 +907,64 @@ update_working_props(svn_wc_notify_state_t *prop_state,
 static svn_error_t *
 tc_editor_alter_directory(node_move_baton_t *nmb,
                           const char *dst_relpath,
+                          apr_hash_t *old_props,
                           apr_hash_t *new_props,
                           apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
-  const char *move_dst_repos_relpath;
-  svn_revnum_t move_dst_revision;
-  svn_node_kind_t move_dst_kind;
   working_node_version_t old_version, new_version;
-  svn_wc__db_status_t status;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
+  const char *local_abspath = svn_dirent_join(b->wcroot->abspath, dst_relpath,
+                                              scratch_pool);
+  svn_wc_notify_state_t prop_state;
+  apr_hash_t *actual_props;
+  apr_array_header_t *propchanges;
 
-  if (new_props)
-    SVN_ERR(mark_node_edited(nmb, scratch_pool));
+  SVN_ERR(mark_node_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__db_depth_get_info(&status, &move_dst_kind, &move_dst_revision,
-                                    &move_dst_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, &old_version.checksum, NULL,
-                                    NULL, &old_version.props,
-                                    b->wcroot, dst_relpath, b->dst_op_depth,
-                                    scratch_pool, scratch_pool));
-
-
 
   old_version.location_and_kind = b->old_version;
   new_version.location_and_kind = b->new_version;
 
+  old_version.checksum = NULL; /* not a file */
+  old_version.props = old_props;
   new_version.checksum = NULL; /* not a file */
-  new_version.props = new_props ? new_props : old_version.props;
+  new_version.props = new_props;
 
-  if (new_props)
+  SVN_ERR(update_working_props(&prop_state, &conflict_skel,
+                                &propchanges, &actual_props,
+                                b, dst_relpath,
+                                &old_version, &new_version,
+                                scratch_pool, scratch_pool));
+
+  if (conflict_skel)
     {
-      const char *dst_abspath = svn_dirent_join(b->wcroot->abspath,
-                                                dst_relpath,
-                                                scratch_pool);
-      svn_wc_notify_state_t prop_state;
-      apr_hash_t *actual_props;
-      apr_array_header_t *propchanges;
+      const char *move_dst_repos_relpath;
 
-      /* ### TODO: Only do this when there is no higher WORKING layer */
-      SVN_ERR(update_working_props(&prop_state, &conflict_skel,
-                                   &propchanges, &actual_props,
-                                   b, dst_relpath,
-                                   &old_version, &new_version,
-                                   scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
+                                        &move_dst_repos_relpath, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL,
+                                        b->wcroot, dst_relpath,
+                                        b->dst_op_depth,
+                                        scratch_pool, scratch_pool));
 
-      if (conflict_skel)
-        {
-          SVN_ERR(create_conflict_markers(&work_items, dst_abspath,
-                                          b->db, move_dst_repos_relpath,
-                                          conflict_skel, b->operation,
-                                          &old_version, &new_version,
-                                          svn_node_dir,
-                                          scratch_pool, scratch_pool));
-        }
-
-    SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
-                                 svn_wc_notify_update_update,
-                                 svn_node_dir,
-                                 svn_wc_notify_state_inapplicable,
-                                 prop_state,
-                                 conflict_skel, work_items, scratch_pool));
+      SVN_ERR(create_conflict_markers(&work_items, local_abspath,
+                                      b->db, move_dst_repos_relpath,
+                                      conflict_skel, b->operation,
+                                      &old_version, &new_version,
+                                      svn_node_dir,
+                                      scratch_pool, scratch_pool));
     }
+
+  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
+                               svn_wc_notify_update_update,
+                               svn_node_dir,
+                               svn_wc_notify_state_inapplicable,
+                               prop_state,
+                               conflict_skel, work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -996,12 +989,13 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
 static svn_error_t *
 tc_editor_alter_file(node_move_baton_t *nmb,
                      const char *dst_relpath,
+                     const svn_checksum_t *old_checksum,
                      const svn_checksum_t *new_checksum,
+                     apr_hash_t *old_props,
                      apr_hash_t *new_props,
                      apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
-  const char *move_dst_repos_relpath;
   working_node_version_t old_version, new_version;
   const char *local_abspath = svn_dirent_join(b->wcroot->abspath,
                                               dst_relpath,
@@ -1019,19 +1013,13 @@ tc_editor_alter_file(node_move_baton_t *nmb,
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
-                                    &move_dst_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, &old_version.checksum, NULL,
-                                    NULL, &old_version.props,
-                                    b->wcroot, dst_relpath, b->dst_op_depth,
-                                    scratch_pool, scratch_pool));
-
   old_version.location_and_kind = b->old_version;
   new_version.location_and_kind = b->new_version;
 
-  /* If new checksum is null that means no change; similarly props. */
-  new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
-  new_version.props = new_props ? new_props : old_version.props;
+  old_version.checksum = old_checksum;
+  old_version.props = old_props;
+  new_version.checksum = new_checksum;
+  new_version.props = new_props;
 
   /* ### TODO: Only do this when there is no higher WORKING layer */
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
@@ -1106,6 +1094,16 @@ tc_editor_alter_file(node_move_baton_t *nmb,
    * too. */
   if (conflict_skel)
     {
+      const char *move_dst_repos_relpath;
+
+      SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
+                                        &move_dst_repos_relpath, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL,
+                                        b->wcroot, dst_relpath,
+                                        b->dst_op_depth,
+                                        scratch_pool, scratch_pool));
+
       SVN_ERR(create_conflict_markers(&work_item, local_abspath, b->db,
                                       move_dst_repos_relpath, conflict_skel,
                                       b->operation, &old_version, &new_version,
@@ -1520,28 +1518,22 @@ update_moved_away_node(node_move_baton_t *nmb,
     }
   else if (src_kind != svn_node_none)
     {
-      svn_boolean_t match;
-      apr_hash_t *props;
+      svn_boolean_t props_equal;
 
-      SVN_ERR(props_match(&match, src_props, dst_props, scratch_pool));
-      props = match ? NULL: src_props;
+      SVN_ERR(props_match(&props_equal, src_props, dst_props, scratch_pool));
 
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
         {
-          if (svn_checksum_match(src_checksum, dst_checksum))
-            src_checksum = NULL;
-
-          if (props || src_checksum)
-            SVN_ERR(tc_editor_alter_file(nmb, dst_relpath, src_checksum,
-                                         props, scratch_pool));
+          if (!props_equal || !svn_checksum_match(src_checksum, dst_checksum))
+            SVN_ERR(tc_editor_alter_file(nmb, dst_relpath,
+                                         dst_checksum, src_checksum,
+                                         dst_props, src_props, scratch_pool));
         }
       else if (src_kind == svn_node_dir)
         {
-          apr_array_header_t *children
-            = children_match(src_children, dst_children) ? NULL : src_children;
-
-          if (props || children)
-            SVN_ERR(tc_editor_alter_directory(nmb, dst_relpath, props,
+          if (!props_equal)
+            SVN_ERR(tc_editor_alter_directory(nmb, dst_relpath,
+                                              dst_props, src_props,
                                               scratch_pool));
         }
     }
