@@ -34,6 +34,7 @@ import re, urllib
 import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
+from svntest.verify import AnyOutput
 from svntest.main import server_has_partial_replay
 
 # (abbreviation)
@@ -49,8 +50,9 @@ Item = svntest.wc.StateItem
 # Helper routines
 
 
-def run_sync(url, source_url=None, expected_error=None,
-             source_prop_encoding=None):
+def run_sync(url, source_url=None,
+             source_prop_encoding=None,
+             expected_output=AnyOutput, expected_error=[]):
   "Synchronize the mirror repository with the master"
   if source_url is not None:
     args = ["synchronize", url, source_url]
@@ -60,54 +62,26 @@ def run_sync(url, source_url=None, expected_error=None,
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
 
-  exit_code, output, errput = svntest.main.run_svnsync(*args)
-  # Ignore "consider upgrade" warnings to allow regression tests to pass
-  # when run against a 1.6 mod_dav_svn.
-  for index, line in enumerate(errput[:]):
-    if re.search("warning: W200007", line):
-      del errput[index]
-  if errput:
-    if expected_error is None:
-      raise SVNUnexpectedStderr(errput)
-    else:
-      expected_error = svntest.verify.RegexOutput(expected_error,
-                                                  match_all=False)
-      svntest.verify.compare_and_display_lines(None, "STDERR",
-                                               expected_error, errput)
-  elif expected_error is not None:
-    raise SVNExpectedStderr
-  if not output and not expected_error:
-    # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
-    raise SVNUnexpectedStdout("Missing stdout")
+  # Normal expected output is of the form:
+  #            ['Transmitting file data .......\n',  # optional
+  #             'Committed revision 1.\n',
+  #             'Copied properties for revision 1.\n', ...]
+  svntest.actions.run_and_verify_svnsync(expected_output, expected_error,
+                                         *args)
 
-def run_copy_revprops(url, source_url, expected_error=None,
-                      source_prop_encoding=None):
+def run_copy_revprops(url, source_url,
+                      source_prop_encoding=None,
+                      expected_output=AnyOutput, expected_error=[]):
   "Copy revprops to the mirror repository from the master"
   args = ["copy-revprops", url, source_url]
   if source_prop_encoding:
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
 
-  exit_code, output, errput = svntest.main.run_svnsync(*args)
-  # Ignore "consider upgrade" warnings to allow regression tests to pass
-  # when run against a 1.6 mod_dav_svn.
-  for index, line in enumerate(errput[:]):
-    if re.search("warning: W200007", line):
-      del errput[index]
-  if errput:
-    if expected_error is None:
-      raise SVNUnexpectedStderr(errput)
-    else:
-      expected_error = svntest.verify.RegexOutput(expected_error,
-                                                  match_all=False)
-      svntest.verify.compare_and_display_lines(None, "STDERR",
-                                               expected_error, errput)
-  elif expected_error is not None:
-    raise SVNExpectedStderr
-  if not output and not expected_error:
-    # should be: ['Copied properties for revision 1.\n',
-    #             'Copied properties for revision 2.\n']
-    raise SVNUnexpectedStdout("Missing stdout")
+  # Normal expected output is of the form:
+  #            ['Copied properties for revision 1.\n', ...]
+  svntest.actions.run_and_verify_svnsync(expected_output, expected_error,
+                                         *args)
 
 def run_init(dst_url, src_url, source_prop_encoding=None):
   "Initialize the mirror repository from the master"
@@ -116,36 +90,17 @@ def run_init(dst_url, src_url, source_prop_encoding=None):
     args.append("--source-prop-encoding")
     args.append(source_prop_encoding)
 
-  exit_code, output, errput = svntest.main.run_svnsync(*args)
-  # Ignore "consider upgrade" warnings to allow regression tests to pass
-  # when run against a 1.6 mod_dav_svn.
-  for index, line in enumerate(errput[:]):
-    if re.search("warning: W200007", line):
-      del errput[index]
-  if errput:
-    raise SVNUnexpectedStderr(errput)
-  if output != ['Copied properties for revision 0.\n']:
-    raise SVNUnexpectedStdout(output)
+  expected_output = ['Copied properties for revision 0.\n']
+  svntest.actions.run_and_verify_svnsync(expected_output, [], *args)
 
-def run_info(url, expected_error=None):
+def run_info(url, expected_output=AnyOutput, expected_error=[]):
   "Print synchronization information of the repository"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "info", url)
-  if errput:
-    if expected_error is None:
-      raise SVNUnexpectedStderr(errput)
-    else:
-      expected_error = svntest.verify.RegexOutput(expected_error,
-                                                  match_all=False)
-      svntest.verify.compare_and_display_lines(None, "STDERR",
-                                               expected_error, errput)
-  elif expected_error is not None:
-    raise SVNExpectedStderr
-  if not output and not expected_error:
-    # should be: ['From URL: http://....\n',
-    #             'From UUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\n',
-    #             'Last Merged Revision: XXX\n']
-    raise SVNUnexpectedStdout("Missing stdout")
+  # Normal expected output is of the form:
+  #            ['From URL: http://....\n',
+  #             'From UUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\n',
+  #             'Last Merged Revision: XXX\n']
+  svntest.actions.run_and_verify_svnsync(expected_output, expected_error,
+                                         "info", url)
 
 
 def setup_and_sync(sbox, dump_file_contents, subdir=None,
@@ -366,8 +321,9 @@ def detect_meddling(sbox):
                                      '-m', 'msg',
                                      dest_sbox.wc_dir)
 
+  expected_error = r".*Destination HEAD \(2\) is not the last merged revision \(1\).*"
   run_sync(dest_sbox.repo_url, None,
-           ".*Destination HEAD \\(2\\) is not the last merged revision \\(1\\).*")
+           expected_output=[], expected_error=expected_error)
 
 def url_encoding(sbox):
   "test url encoding issues"
@@ -419,20 +375,12 @@ def info_synchronized(sbox):
   run_init(dest_sbox.repo_url, sbox.repo_url)
   run_sync(dest_sbox.repo_url)
 
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "info", dest_sbox.repo_url)
-  if errput:
-      raise SVNUnexpectedStderr(errput)
-
   expected_out = ['Source URL: %s\n' % sbox.repo_url,
                   'Source Repository UUID: %s\n' % src_uuid,
                   'Last Merged Revision: 1\n',
                   ]
-
-  svntest.verify.compare_and_display_lines(None,
-                                           'INFO',
-                                           expected_out,
-                                           output)
+  svntest.actions.run_and_verify_svnsync(expected_out, [],
+                                         "info", dest_sbox.repo_url)
 
 def info_not_synchronized(sbox):
   "test info cmd on an un-synchronized repo"
@@ -440,7 +388,7 @@ def info_not_synchronized(sbox):
   sbox.build("svnsync-info-not-syncd", False)
 
   run_info(sbox.repo_url,
-           ".*Repository '%s' is not initialized.*" % sbox.repo_url)
+           [], ".*Repository '%s' is not initialized.*" % sbox.repo_url)
 
 #----------------------------------------------------------------------
 
