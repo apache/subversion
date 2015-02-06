@@ -1098,7 +1098,6 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
   int op_depth = relpath_depth(b->move_root_dst_relpath);
   const char *move_dst_repos_relpath;
   svn_node_kind_t move_dst_kind;
-  svn_boolean_t is_conflicted = FALSE;
   svn_boolean_t must_delete_wc_nodes = FALSE;
   const char *local_abspath;
   svn_boolean_t have_row;
@@ -1159,7 +1158,6 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
           reason = svn_wc_conflict_reason_deleted;
           must_delete_wc_nodes = TRUE;
         }
-      is_conflicted = TRUE;
       SVN_ERR(create_tree_conflict(&conflict,
                                    relpath, b->wcroot, b->db, b->old_version,
                                    b->new_version, b->move_root_dst_relpath,
