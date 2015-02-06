@@ -407,6 +407,34 @@ def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
   return exit_code, out, err
 
 
+def run_and_verify_svnsync(expected_stdout, expected_stderr,
+                           *varargs):
+  """Run svnsync command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnsync2(expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnsync2(expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnmucc command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnsync(*varargs)
+
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
+  for index, line in enumerate(err[:]):
+    if re.search("warning: W200007", line):
+      del err[index]
+
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
               bypass_prop_validation = False):
   "Loads the dumpfile into sbox"
