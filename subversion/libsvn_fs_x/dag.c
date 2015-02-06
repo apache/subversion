@@ -376,6 +376,12 @@ dir_entry_id_from_node(svn_fs_x__id_t *id_p,
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
                             _("Can't get entries of non-directory"));
 
+  /* Make sure that NAME is a single path component. */
+  if (! svn_path_is_single_path_component(name))
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
+       "Attempted to open node with an illegal name '%s'", name);
+
   /* Get a dirent hash for this directory. */
   SVN_ERR(svn_fs_x__rep_contents_dir_entry(&dirent, parent->fs, noderev,
                                            name, &parent->hint,
@@ -1192,12 +1198,6 @@ svn_fs_x__dag_open(dag_node_t **child_p,
       *child_p = NULL;
       return SVN_NO_ERROR;
     }
-
-  /* Make sure that NAME is a single path component. */
-  if (! svn_path_is_single_path_component(name))
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to open node with an illegal name '%s'", name);
 
   /* Now get the node that was requested. */
   return svn_fs_x__dag_get_node(child_p, svn_fs_x__dag_get_fs(parent),
