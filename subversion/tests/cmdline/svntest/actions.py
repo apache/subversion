@@ -374,6 +374,8 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   if sys.platform == 'win32':
     err = map(lambda x : x.replace('\r\n', '\n'), err)
 
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
   for index, line in enumerate(err[:]):
     if re.search("warning: W200007", line):
       del err[index]
