@@ -635,6 +635,8 @@ read_lock_cache(svn_membuffer_t *cache)
 }
 
 /* If locking is supported for CACHE, acquire a write lock for it.
+ * Set *SUCCESS to FALSE, if we couldn't acquire the write lock;
+ * leave it untouched otherwise.
  */
 static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
@@ -691,7 +693,7 @@ force_write_lock_cache(svn_membuffer_t *cache)
 }
 
 /* If locking is supported for CACHE, release the current lock
- * (read or write).
+ * (read or write).  Return ERR upon success.
  */
 static svn_error_t *
 unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
@@ -715,8 +717,8 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 #endif
 }
 
-/* If supported, guard the execution of EXPR with a read lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a read lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  */
 #define WITH_READ_LOCK(cache, expr)         \
 do {                                        \
@@ -724,8 +726,8 @@ do {                                        \
   SVN_ERR(unlock_cache(cache, (expr)));     \
 } while (0)
 
-/* If supported, guard the execution of EXPR with a write lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a write lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  *
  * The write lock process is complicated if we don't allow to wait for
  * the lock: If we didn't get the lock, we may still need to remove an
