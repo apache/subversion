@@ -1026,11 +1026,30 @@ WHERE wc_id = ?1
  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
  AND op_depth = ?3
 
--- STMT_UPDATE_OP_DEPTH_RECURSIVE
-UPDATE nodes SET op_depth = ?4, moved_here = NULL
-WHERE wc_id = ?1
- AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
- AND op_depth = ?3
+/* Duplicated SELECT body to avoid creating temporary table */
+-- STMT_COPY_OP_DEPTH_RECURSIVE
+INSERT INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target, moved_here, moved_to )
+SELECT
+    wc_id, local_relpath, ?4, parent_relpath, repos_id,
+    repos_path, revision, presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target, NULL, NULL
+FROM nodes
+WHERE wc_id = ?1 AND op_depth = ?3 AND local_relpath = ?2
+UNION ALL
+SELECT
+    wc_id, local_relpath, ?4, parent_relpath, repos_id,
+    repos_path, revision, presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target, NULL, NULL
+FROM nodes
+WHERE wc_id = ?1 AND op_depth = ?3
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+ORDER BY local_relpath
 
 -- STMT_DOES_NODE_EXIST
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2

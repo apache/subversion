@@ -406,6 +406,14 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
                                   svn_skel_t *work_items,
                                   apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_op_make_copy but with wcroot, local_relpath */
+svn_error_t *
+svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 const svn_skel_t *conflicts,
+                                 const svn_skel_t *work_items,
+                                 apr_pool_t *scratch_pool);
+
 
 /* Extract the moved-to information for LOCAL_RELPATH at OP-DEPTH by
    examining the lowest working node above OP_DEPTH.  The output paths

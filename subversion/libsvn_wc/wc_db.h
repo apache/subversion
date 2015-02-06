@@ -3246,9 +3246,21 @@ svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
                                         apr_pool_t *scratch_pool);
 
 
-/* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
-   leaving any subtree additions and copies as-is.  This allows the
-   base node tree to be removed. */
+/* When local_abspath has no WORKING layer, copy the base tree at
+   LOCAL_ABSPATH into the working tree as copy, leaving any subtree
+   additions and copies as-is.  This may introduce multiple layers if
+   the tree is mixed revision.
+
+   When local_abspath has a WORKING node, but is not an op-root, copy
+   all descendants at the same op-depth to the op-depth of local_abspath,
+   thereby turning this node in a copy of what was already there.
+
+   Fails with a SVN_ERR_WC_PATH_UNEXPECTED_STATUS error if LOCAL_RELPATH
+   is already an op-root (as in that case it can't be copied as that
+   would overwrite what is already there).
+
+   After this operation the copied layer (E.g. BASE) can be removed, without
+   the WORKING nodes chaning. Typical usecase: tree conflict handling */
 svn_error_t *
 svn_wc__db_op_make_copy(svn_wc__db_t *db,
                         const char *local_abspath,
