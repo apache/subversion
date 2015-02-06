@@ -354,12 +354,12 @@ def run_and_verify_load(repo_dir, dump_file_content,
 def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
   if deltas:
-    exit_code, output, errput = main.run_svnadmin('dump', '--deltas',
+    exit_code, output, errput = main.run_svnadmin('dump', '--quiet', '--deltas',
                                                   repo_dir)
   else:
-    exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
+    exit_code, output, errput = main.run_svnadmin('dump', '--quiet', repo_dir)
   verify.verify_outputs("Missing expected output(s)", output, errput,
-                        verify.AnyOutput, verify.AnyOutput)
+                        verify.AnyOutput, [])
   return output
 
 
