@@ -424,25 +424,6 @@ def set_changed_path_list(sbox, revision, changes):
 
 #----------------------------------------------------------------------
 
-def test_create(sbox, minor_version=None):
-  "'svnadmin create'"
-
-  sbox.build(empty=True, minor_version=minor_version)
-  wc_dir = sbox.wc_dir
-
-  svntest.actions.run_and_verify_svn(
-    "Running status",
-    [], [],
-    "status", wc_dir)
-
-  svntest.actions.run_and_verify_svn(
-    "Running verbose status",
-    ["                 0        0  ?           %s\n" % wc_dir], [],
-    "status", "--verbose", wc_dir)
-
-  # success
-
-
 # dump stream tests need a dump file
 
 def clean_dumpfile():
@@ -474,7 +455,7 @@ dumpfile_revisions = \
 def extra_headers(sbox):
   "loading of dumpstream with extra headers"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -489,7 +470,7 @@ def extra_headers(sbox):
 def extra_blockcontent(sbox):
   "load success on oversized Content-length"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -507,7 +488,7 @@ def extra_blockcontent(sbox):
 def inconsistent_headers(sbox):
   "load failure on undersized Content-length"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -523,7 +504,7 @@ def inconsistent_headers(sbox):
 def empty_date(sbox):
   "preserve date-less revisions in load"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -1028,7 +1009,7 @@ def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -1126,7 +1107,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
@@ -1321,7 +1302,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
   # Create an empty repos.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # PART 1: Load a full dump to an empty repository.
   #
@@ -1410,7 +1391,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load the three incremental dump files in sequence.
   load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
@@ -1430,7 +1411,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load this skeleton repos into the empty target:
   #
@@ -1481,7 +1462,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load this skeleton repos into the empty target:
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
@@ -1610,7 +1591,7 @@ text
 
 
 """
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
@@ -1635,8 +1616,8 @@ def verify_non_utf8_paths(sbox):
 
   # Corruption only possible in physically addressed revisions created
   # with pre-1.6 servers.
-  test_create(sbox,
-              minor_version = min(svntest.main.options.server_minor_version,8))
+  sbox.build(empty=True,
+             minor_version=min(svntest.main.options.server_minor_version,8))
 
   # Load the dumpstream
   load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
@@ -1778,7 +1759,7 @@ def load_ranges(sbox):
   "'svnadmin load --revision X:Y'"
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -2920,7 +2901,7 @@ def upgrade(sbox):
 def load_txdelta(sbox):
   "exercising svn_txdelta_target on BDB"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # This dumpfile produced a BDB repository that generated cheksum
   # mismatches on read caused by the improper handling of
