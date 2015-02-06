@@ -19,10 +19,10 @@ TODO:
 - Add explicit session reuse in the MTCC implementation.
 - Add new RA method (svn_ra__ping?) to verify that a session
   about to be reused is valid.
+- Expire and close idle sessions after a given timeout.
 - Limit the number of idle open sessions in the cache.
 - Run performance comparisons between trunk and branch to prove that
   the RA session cache does in fact speed things up.
-- Implement svn_client_close_all_sessions().
 - Find and resolve all 'RA_CACHE TODO' comments.
 
 PROBLEM
