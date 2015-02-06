@@ -32,13 +32,18 @@
 import re
 import sys
 
-stat_rx = re.compile(r'^DBG:\s.+\sRA_CACHE_STATS:\s+(?:'
+stat_rx = re.compile(r'^DBG:\s.+\sRA_CACHE_STATS:\s+'
+                     r'(?:'
                      r'request:(?P<request>\d+)\s+'
                      r'open:(?P<open>\d+)\s+'
                      r'close:(?P<close>\d+)\s+'
                      r'release:(?P<release>\d+)\s+'
-                     r'reuse:(?P<reuse>\d+)|'
-                     r'cleanup:(?P<cleanup>\d+))\s*$')
+                     r'reuse:(?P<reuse>\d+)\s+'
+                     r'expunge:(?P<reuse>\d+)\s+'
+                     r'expire:(?P<reuse>\d+)'
+                     r'|'
+                     r'cleanup:(?P<cleanup>\d+)'
+                     r')\s*$')
 
 request = open = close = release = reuse = cleanup = 0
 
