@@ -976,8 +976,10 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
   return SVN_NO_ERROR;
 }
 
-
-/* Merge the difference between OLD_VERSION and NEW_VERSION into
+/* Edit the file found at the move destination, which is initially at
+ * the old state.  Merge the changes into the "working"/"actual" file.
+ *
+ * Merge the difference between OLD_VERSION and NEW_VERSION into
  * the working file at LOCAL_RELPATH.
  *
  * The term 'old' refers to the pre-update state, which is the state of
@@ -992,16 +994,17 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
  * Set *WORK_ITEMS to any required work items, allocated in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-update_working_file(update_move_baton_t *b,
-                    const char *local_relpath,
-                    const char *repos_relpath,
-                    svn_wc_operation_t operation,
-                    const working_node_version_t *old_version,
-                    const working_node_version_t *new_version,
-                    apr_pool_t *scratch_pool)
+tc_editor_alter_file(node_move_baton_t *nmb,
+                     const char *dst_relpath,
+                     const svn_checksum_t *new_checksum,
+                     apr_hash_t *new_props,
+                     apr_pool_t *scratch_pool)
 {
+  update_move_baton_t *b = nmb->umb;
+  const char *move_dst_repos_relpath;
+  working_node_version_t old_version, new_version;
   const char *local_abspath = svn_dirent_join(b->wcroot->abspath,
-                                              local_relpath,
+                                              dst_relpath,
                                               scratch_pool);
   const char *old_pristine_abspath;
   const char *new_pristine_abspath;
@@ -1012,13 +1015,31 @@ update_working_file(update_move_baton_t *b,
   svn_wc_notify_state_t prop_state, content_state;
   svn_skel_t *work_item, *work_items = NULL;
 
+  SVN_ERR(mark_node_edited(nmb, scratch_pool));
+  if (nmb->skip)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
+                                    &move_dst_repos_relpath, NULL, NULL, NULL,
+                                    NULL, NULL, &old_version.checksum, NULL,
+                                    NULL, &old_version.props,
+                                    b->wcroot, dst_relpath, b->dst_op_depth,
+                                    scratch_pool, scratch_pool));
+
+  old_version.location_and_kind = b->old_version;
+  new_version.location_and_kind = b->new_version;
+
+  /* If new checksum is null that means no change; similarly props. */
+  new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
+  new_version.props = new_props ? new_props : old_version.props;
+
   /* ### TODO: Only do this when there is no higher WORKING layer */
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
-                               &actual_props, b, local_relpath,
-                               old_version, new_version,
+                               &actual_props, b, dst_relpath,
+                               &old_version, &new_version,
                                scratch_pool, scratch_pool));
 
-  if (!svn_checksum_match(new_version->checksum, old_version->checksum))
+  if (!svn_checksum_match(new_version.checksum, old_version.checksum))
     {
       svn_boolean_t is_locally_modified;
 
@@ -1049,11 +1070,11 @@ update_working_file(update_move_baton_t *b,
            */
           SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
                                                b->db, b->wcroot->abspath,
-                                               old_version->checksum,
+                                               old_version.checksum,
                                                scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
                                                b->db, b->wcroot->abspath,
-                                               new_version->checksum,
+                                               new_version.checksum,
                                                scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
                                          &merge_outcome, b->db,
@@ -1086,64 +1107,20 @@ update_working_file(update_move_baton_t *b,
   if (conflict_skel)
     {
       SVN_ERR(create_conflict_markers(&work_item, local_abspath, b->db,
-                                      repos_relpath, conflict_skel,
-                                      operation, old_version, new_version,
+                                      move_dst_repos_relpath, conflict_skel,
+                                      b->operation, &old_version, &new_version,
                                       svn_node_file,
                                       scratch_pool, scratch_pool));
 
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  SVN_ERR(update_move_list_add(b->wcroot, local_relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
                                svn_wc_notify_update_update,
                                svn_node_file,
                                content_state,
                                prop_state,
                                conflict_skel, work_items, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Edit the file found at the move destination, which is initially at
- * the old state.  Merge the changes into the "working"/"actual" file.
- */
-static svn_error_t *
-tc_editor_alter_file(node_move_baton_t *nmb,
-                     const char *dst_relpath,
-                     const svn_checksum_t *new_checksum,
-                     apr_hash_t *new_props,
-                     apr_pool_t *scratch_pool)
-{
-  update_move_baton_t *b = nmb->umb;
-  const char *move_dst_repos_relpath;
-  working_node_version_t old_version, new_version;
-
-  SVN_ERR(mark_node_edited(nmb, scratch_pool));
-  if (nmb->skip)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
-                                    &move_dst_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, &old_version.checksum, NULL,
-                                    NULL, &old_version.props,
-                                    b->wcroot, dst_relpath, b->dst_op_depth,
-                                    scratch_pool, scratch_pool));
-
-  old_version.location_and_kind = b->old_version;
-  new_version.location_and_kind = b->new_version;
-
-  /* If new checksum is null that means no change; similarly props. */
-  new_version.checksum = new_checksum ? new_checksum : old_version.checksum;
-  new_version.props = new_props ? new_props : old_version.props;
-
-  /* Update file and prop contents if the update has changed them. */
-  if (!svn_checksum_match(new_checksum, old_version.checksum) || new_props)
-    {
-      SVN_ERR(update_working_file(b, dst_relpath, move_dst_repos_relpath,
-                                  b->operation, &old_version, &new_version,
-                                  scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
