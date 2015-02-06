@@ -34,7 +34,6 @@ from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import server_has_partial_replay
-from svnadmin_tests import test_create
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -466,7 +465,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   "don't drop mergeinfo revs in incremental svnrdump"
 
   # Create an empty repos.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -572,7 +571,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -607,7 +606,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -668,7 +667,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
