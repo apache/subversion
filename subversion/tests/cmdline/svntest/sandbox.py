@@ -33,6 +33,60 @@ import svntest
 logger = logging.getLogger()
 
 
+def make_mirror(sbox, source_prop_encoding=None):
+  """Make a mirror of the repository in SBOX.
+  """
+  # Set up the mirror repository.
+  dest_sbox = sbox.clone_dependent()
+  dest_sbox.build(create_wc=False, empty=True)
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+                                           'setuuid', dest_sbox.repo_dir,
+                                           output[0][:-1])
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  repo_url = sbox.repo_url
+  dest_repo_url = dest_sbox.repo_url
+
+  # Synchronize it.
+  args = (svntest.main.svnrdump_crosscheck_authentication,)
+  if source_prop_encoding:
+    args = args + ("--source-prop-encoding=" + source_prop_encoding,)
+  svntest.actions.run_and_verify_svnsync(svntest.verify.AnyOutput, [],
+                                         "initialize",
+                                         dest_repo_url, repo_url, *args)
+  svntest.actions.run_and_verify_svnsync(None, [],
+                                         "synchronize",
+                                         dest_repo_url, repo_url, *args)
+
+  return dest_sbox
+
+def verify_mirror(repo_url, repo_dir, expected_dumpfile):
+  """Compare the repository content at REPO_URL/REPO_DIR with that in
+     EXPECTED_DUMPFILE (which is a non-delta dump).
+  """
+  # Remove some SVNSync-specific housekeeping properties from the
+  # mirror repository in preparation for the comparison dump.
+  for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
+                    "svn:sync-last-merged-rev"):
+    svntest.actions.run_and_verify_svn(
+      None, None, [], "propdel", "--revprop", "-r", "0",
+      prop_name, repo_url)
+  # Create a dump file from the mirror repository.
+  dumpfile_s_n = svntest.actions.run_and_verify_dump(repo_dir)
+  # Compare the mirror's dumpfile, ignoring any expected differences:
+  # The original dumpfile in some cases lacks 'Text-content-sha1' headers;
+  # the mirror dump always has them -- ### Why?
+  svnsync_headers_always = re.compile("Text-content-sha1: ")
+  dumpfile_a_n_cmp = [l for l in expected_dumpfile
+                      if not svnsync_headers_always.match(l)]
+  dumpfile_s_n_cmp = [l for l in dumpfile_s_n
+                      if not svnsync_headers_always.match(l)]
+  svntest.verify.compare_dump_files(None, None,
+                                    dumpfile_a_n_cmp,
+                                    dumpfile_s_n_cmp)
+
+
 class Sandbox:
   """Manages a sandbox (one or more repository/working copy pairs) for
   a test to operate within."""
@@ -475,6 +529,13 @@ class Sandbox:
                                         expect_content_length_always=True,
                                         ignore_empty_prop_sections=True,
                                         ignore_number_of_blank_lines=True)
+
+    # Run the repository through 'svnsync' and check that this does not
+    # change the repository content. (Don't bother if it's already been
+    # created by svnsync.)
+    if "svn:sync-from-url\n" not in dumpfile_a_n:
+      dest_sbox = make_mirror(self)
+      verify_mirror(dest_sbox.repo_url, dest_sbox.repo_dir, dumpfile_a_n)
 
   def verify(self, skip_cross_check=False):
     """Do additional testing that should hold for any sandbox, such as
