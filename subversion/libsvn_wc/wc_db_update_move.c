@@ -488,9 +488,9 @@ check_node_shadowed(svn_boolean_t *shadowed,
   return SVN_NO_ERROR;
 }
 
-/* Set a tree conflict for the shadowed node LOCAL_RELPATH, on the
-   ROOT OF THE OBSTRUCTION if such a tree-conflict does not already
-   exist.  KIND is the kind of the incoming LOCAL_RELPATH. */
+/* Set a tree conflict for the shadowed node LOCAL_RELPATH, which is
+   the ROOT OF THE OBSTRUCTION if such a tree-conflict does not
+   already exist.  KIND is the kind of the incoming LOCAL_RELPATH. */
 static svn_error_t *
 mark_tc_on_op_root(node_move_baton_t *nmb,
                    svn_node_kind_t old_kind,
@@ -505,24 +505,9 @@ mark_tc_on_op_root(node_move_baton_t *nmb,
   const char *dummy2, *move_src_op_root_relpath;
   svn_skel_t *conflict;
 
-  SVN_ERR_ASSERT(nmb->shadowed);
+  SVN_ERR_ASSERT(nmb->shadowed && !nmb->pb->shadowed);
 
   nmb->skip = TRUE;
-
-  while (nmb->pb && nmb->pb->shadowed)
-    {
-      nmb = nmb->pb;
-
-      conflict_root_relpath = nmb->dst_relpath;
-
-      old_kind = new_kind = svn_node_dir;
-      if (old_repos_relpath)
-        old_repos_relpath = svn_relpath_dirname(old_repos_relpath,
-                                                scratch_pool);
-      action = svn_wc_conflict_action_edit;
-
-      nmb->skip = TRUE;
-    }
 
   SVN_ERR(svn_wc__db_op_depth_moved_to(&move_dst_relpath,
                                        &dummy1,
