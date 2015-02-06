@@ -9332,6 +9332,19 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
 
+  {
+    conflict_info_t conflicts[] = {
+      {"A", FALSE, FALSE, TRUE},
+      {"B", FALSE, FALSE, TRUE},
+      {"C/A", FALSE, FALSE, TRUE},
+      {"D/A/A", FALSE, FALSE, TRUE},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+
+
   /* Resolve a few conflicts manually */
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
@@ -9339,6 +9352,52 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
                           svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",           "normal",       2, ""},
+      {0, "A",          "normal",       2, "A"},
+      {0, "A/A",        "normal",       2, "A/A"},
+      {0, "B",          "normal",       2, "B"},
+      {0, "B/A",        "normal",       2, "B/A"},
+      {0, "C",          "normal",       2, "C"},
+      {0, "C/A",        "normal",       2, "C/A"},
+      {0, "D",          "normal",       2, "D"},
+      {0, "D/A",        "normal",       2, "D/A"},
+      {1, "A",          "normal",       2, "B", MOVED_HERE},
+      {1, "A/A",        "normal",       2, "B/A", MOVED_HERE},
+      {1, "AAA_1",      "normal",       1, "A/A/A"},
+      {1, "AAA_1/A",    "normal",       1, "A/A/A/A"},
+      {1, "AAA_2",      "normal",       1, "B/A/A"},
+      {1, "AAA_2/A",    "normal",       1, "B/A/A/A"},
+      {1, "AAA_3",      "normal",       1, "C/A/A"},
+      {1, "AAA_3/A",    "normal",       1, "C/A/A/A"},
+      {1, "B",          "base-deleted", NO_COPY_FROM, "A"},
+      {1, "B/A",        "base-deleted", NO_COPY_FROM},
+      {2, "A/A",        "normal",       2, "C/A", MOVED_HERE},
+      {2, "C/A",        "base-deleted", NO_COPY_FROM, "A/A"},
+      {3, "A/A/A",      "normal",       1, "D/A/A"},
+      {3, "A/A/A/A",    "normal",       1, "D/A/A/A"},
+
+      { 0 },
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+  {
+    conflict_info_t conflicts[] = {
+      /* Not resolved yet */
+      {"D/A/A", FALSE, FALSE, TRUE},
+
+      /* New */
+      {"A/A", FALSE, FALSE, TRUE},
+      {"A/A/A", FALSE, FALSE, TRUE},
+
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
 
   /* ### These can currently only be resolved to merged ???? */
   SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
