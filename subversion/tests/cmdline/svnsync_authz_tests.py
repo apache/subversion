@@ -41,7 +41,7 @@ from svntest.main import write_authz_file
 from svntest.main import server_has_partial_replay
 
 # Shared helpers
-from svnsync_tests import build_repos, run_init, run_sync, run_test
+from svnsync_tests import run_init, run_sync, run_test
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -62,7 +62,7 @@ def basic_authz(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -140,7 +140,7 @@ def copy_from_unreadable_dir(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -251,7 +251,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -340,7 +340,7 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -416,7 +416,7 @@ def specific_deny_authz(sbox):
   sbox.build()
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -477,7 +477,7 @@ def copy_delete_unreadable_child(sbox):
 
   # Create the destination.
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   # Lock down the source.
