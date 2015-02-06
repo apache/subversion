@@ -257,12 +257,6 @@ WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
 
--- STMT_DELETE_WORKING_OP_DEPTH_ABOVE
-DELETE FROM nodes
-WHERE wc_id = ?1 
-  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND op_depth > ?3
-
 /* Full layer replacement check code for handling moves
 The op_root must exist (or there is no layer to replace) and an op-root
    always has presence 'normal' */
