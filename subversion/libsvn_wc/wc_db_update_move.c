@@ -1099,7 +1099,7 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
   const char *move_dst_repos_relpath;
   svn_node_kind_t move_dst_kind;
   svn_boolean_t is_conflicted = FALSE;
-  svn_boolean_t must_delete_working_nodes = FALSE;
+  svn_boolean_t must_delete_wc_nodes = FALSE;
   const char *local_abspath;
   svn_boolean_t have_row;
   svn_boolean_t is_modified, is_all_deletes;
@@ -1140,6 +1140,12 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
         {
           /* No conflict means no NODES rows at the relpath op-depth
              so it's easy to convert the modified tree into a copy. */
+
+          /* ### Similar to svn_wc__db_op_make_copy(), except that this
+                 function doesn't support copy from working yet.
+                 
+             ### Note that this breaks DB consistency with the repository
+             ### until the layer is updated after the operation */
           SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                           STMT_UPDATE_OP_DEPTH_RECURSIVE));
           SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
@@ -1150,15 +1156,8 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
         }
       else
         {
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                      STMT_DELETE_WORKING_OP_DEPTH_ABOVE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, relpath,
-                                    op_depth));
-          SVN_ERR(svn_sqlite__step_done(stmt));
-
           reason = svn_wc_conflict_reason_deleted;
-          must_delete_working_nodes = TRUE;
+          must_delete_wc_nodes = TRUE;
         }
       is_conflicted = TRUE;
       SVN_ERR(create_tree_conflict(&conflict,
@@ -1172,8 +1171,10 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
                                    scratch_pool, scratch_pool));
       *tree_conflicted = TRUE;
     }
+  else
+    must_delete_wc_nodes = TRUE;
 
-  if (!is_conflicted || must_delete_working_nodes)
+  if (must_delete_wc_nodes)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       svn_node_kind_t del_kind;
