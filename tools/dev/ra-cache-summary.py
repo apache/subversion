@@ -39,13 +39,13 @@ stat_rx = re.compile(r'^DBG:\s.+\sRA_CACHE_STATS:\s+'
                      r'close:(?P<close>\d+)\s+'
                      r'release:(?P<release>\d+)\s+'
                      r'reuse:(?P<reuse>\d+)\s+'
-                     r'expunge:(?P<reuse>\d+)\s+'
-                     r'expire:(?P<reuse>\d+)'
+                     r'expunge:(?P<expunge>\d+)\s+'
+                     r'expire:(?P<expire>\d+)'
                      r'|'
                      r'cleanup:(?P<cleanup>\d+)'
                      r')\s*$')
 
-request = open = close = release = reuse = cleanup = 0
+request = open = close = release = reuse = expire = expunge = cleanup = 0
 
 for line in sys.stdin:
     match = stat_rx.match(line)
@@ -59,10 +59,13 @@ for line in sys.stdin:
         close   += int(match.group('close'))
         release += int(match.group('release'))
         reuse   += int(match.group('reuse'))
+        expire  += int(match.group('expire'))
+        expunge += int(match.group('expunge'))
     else:
         cleanup += int(match.group('cleanup'))
 
 sys.stdout.write('DBG: RA_CACHE_STATS: TOTAL:'
-                 ' request:%d open:%d close:%d'
-                 ' release:%d reuse:%d cleanup:%d\n'
-                 % (request, open, close, release, reuse, cleanup))
+                 ' request:%d open:%d close:%d release:%d'
+                 ' reuse:%d expire:%d expunge:%d cleanup:%d\n'
+                 % (request, open, close, release,
+                     reuse, expire, expunge, cleanup))
