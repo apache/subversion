@@ -50,6 +50,7 @@ XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
+SkipDumpLoadCrossCheck = svntest.testcase.SkipDumpLoadCrossCheck_deco
 Item = svntest.wc.StateItem
 
 def check_hotcopy_bdb(src, dst):
@@ -424,37 +425,6 @@ def set_changed_path_list(sbox, revision, changes):
 
 #----------------------------------------------------------------------
 
-def test_create(sbox, minor_version=None):
-  "'svnadmin create'"
-
-
-  repo_dir = sbox.repo_dir
-  wc_dir = sbox.wc_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.main.safe_rmtree(wc_dir)
-
-  svntest.main.create_repos(repo_dir, minor_version)
-
-  svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
-                                     ["Checked out revision 0.\n"], [],
-                                     "checkout",
-                                     sbox.repo_url, wc_dir)
-
-
-  svntest.actions.run_and_verify_svn(
-    "Running status",
-    [], [],
-    "status", wc_dir)
-
-  svntest.actions.run_and_verify_svn(
-    "Running verbose status",
-    ["                 0        0  ?           %s\n" % wc_dir], [],
-    "status", "--verbose", wc_dir)
-
-  # success
-
-
 # dump stream tests need a dump file
 
 def clean_dumpfile():
@@ -486,7 +456,7 @@ dumpfile_revisions = \
 def extra_headers(sbox):
   "loading of dumpstream with extra headers"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -501,7 +471,7 @@ def extra_headers(sbox):
 def extra_blockcontent(sbox):
   "load success on oversized Content-length"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -519,7 +489,7 @@ def extra_blockcontent(sbox):
 def inconsistent_headers(sbox):
   "load failure on undersized Content-length"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -535,7 +505,7 @@ def inconsistent_headers(sbox):
 def empty_date(sbox):
   "preserve date-less revisions in load"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile = clean_dumpfile()
 
@@ -1040,7 +1010,7 @@ def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -1138,7 +1108,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
@@ -1249,14 +1219,8 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 
+  sbox.build(create_wc=False, empty=True)
   repo_dir = sbox.repo_dir
-  wc_dir = sbox.wc_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.main.safe_rmtree(wc_dir)
-
-  # This should succeed
-  svntest.main.create_repos(repo_dir)
 
   success = False
   try:
@@ -1284,15 +1248,12 @@ def create_in_repo_subdir(sbox):
 
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipDumpLoadCrossCheck()
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
+  sbox.build(create_wc=False, empty=True)
   repo_dir = sbox.repo_dir
-
-  svntest.main.safe_rmtree(repo_dir, 1)
-
-  # This should succeed
-  svntest.main.create_repos(repo_dir)
 
   # Run a test verify
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -1343,7 +1304,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
   # Create an empty repos.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # PART 1: Load a full dump to an empty repository.
   #
@@ -1432,7 +1393,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load the three incremental dump files in sequence.
   load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
@@ -1452,7 +1413,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load this skeleton repos into the empty target:
   #
@@ -1503,7 +1464,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load this skeleton repos into the empty target:
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
@@ -1531,13 +1492,11 @@ def hotcopy_symlink(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
 
+  # Create a repository.
+  sbox.build(create_wc=False, empty=True)
   original_repo = sbox.repo_dir
 
   hotcopy_repo, hotcopy_url = sbox.add_repo_path('hotcopy')
-
-  # Create a repository.
-  svntest.main.safe_rmtree(original_repo, 1)
-  svntest.main.create_repos(original_repo)
 
   # Create a file, a dir and a missing path outside the repoitory.
   svntest.main.safe_rmtree(sbox.wc_dir, 1)
@@ -1634,7 +1593,7 @@ text
 
 
 """
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
@@ -1659,8 +1618,8 @@ def verify_non_utf8_paths(sbox):
 
   # Corruption only possible in physically addressed revisions created
   # with pre-1.6 servers.
-  test_create(sbox,
-              minor_version = min(svntest.main.options.server_minor_version,8))
+  sbox.build(empty=True,
+             minor_version=min(svntest.main.options.server_minor_version,8))
 
   # Load the dumpstream
   load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
@@ -1802,7 +1761,7 @@ def load_ranges(sbox):
   "'svnadmin load --revision X:Y'"
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -2078,8 +2037,7 @@ def mergeinfo_race(sbox):
 @Skip(svntest.main.is_fs_type_fsx)
 def recover_old_empty(sbox):
   "recover empty --compatible-version=1.3"
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  sbox.build(create_wc=False, empty=True, minor_version=3)
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                                           "recover", sbox.repo_dir)
 
@@ -2304,9 +2262,7 @@ def verify_invalid_path_changes(sbox):
 def verify_denormalized_names(sbox):
   "detect denormalized names and name collisions"
 
-  sbox.build(create_wc = False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
@@ -2382,10 +2338,8 @@ def load_ignore_dates(sbox):
   # All revisions in the loaded repository should come after this time.
   start_time = time.localtime()
   time.sleep(1)
-  
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+
+  sbox.build(create_wc=False, empty=True)
 
   dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
@@ -2695,9 +2649,7 @@ def fsfs_hotcopy_progress(sbox):
     raise svntest.Skip
 
   # Create an empty repository, configure three files per shard.
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
   patch_format(sbox.repo_dir, shard_size=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
@@ -2811,9 +2763,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
     raise svntest.Skip
 
   # Create an empty repository, commit several revisions and hotcopy it.
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
 
   for i in range(6):
     svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
@@ -2858,9 +2808,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
 def fsfs_hotcopy_progress_old(sbox):
   "hotcopy --compatible-version=1.3 progress"
 
-  sbox.build(create_wc=False)
-  svntest.main.safe_rmtree(sbox.repo_dir, True)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  sbox.build(create_wc=False, empty=True, minor_version=3)
 
   inc_backup_dir, inc_backup_url = sbox.add_repo_path('incremental-backup')
 
@@ -2955,7 +2903,7 @@ def upgrade(sbox):
 def load_txdelta(sbox):
   "exercising svn_txdelta_target on BDB"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # This dumpfile produced a BDB repository that generated cheksum
   # mismatches on read caused by the improper handling of

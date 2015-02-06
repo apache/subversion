@@ -1241,10 +1241,10 @@ def move_missing(sbox):
 def nested_replaces(sbox):
   "nested replaces"
 
-  repo_dir, repo_url = sbox.add_repo_path('blank')
-  wc_dir = sbox.add_wc_path('blank')
-  svntest.main.create_repos(repo_dir)
-  ospath = lambda dirent: sbox.ospath(dirent, wc_dir)
+  sbox.build(create_wc=False, empty=True)
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+  ospath = sbox.ospath
 
   ## r1: setup
   svntest.actions.run_and_verify_svnmucc(None, None, [],

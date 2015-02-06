@@ -569,9 +569,8 @@ def status_add_deleted_directory(sbox):
 def add_recursive_already_versioned(sbox):
   "'svn add' should traverse already-versioned dirs"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = sbox.ospath('delta')
