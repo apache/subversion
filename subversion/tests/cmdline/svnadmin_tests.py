@@ -50,6 +50,7 @@ XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
+SkipDumpLoadCrossCheck = svntest.testcase.SkipDumpLoadCrossCheck_deco
 Item = svntest.wc.StateItem
 
 def check_hotcopy_bdb(src, dst):
@@ -1247,6 +1248,7 @@ def create_in_repo_subdir(sbox):
 
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipDumpLoadCrossCheck()
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
