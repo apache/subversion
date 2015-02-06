@@ -61,6 +61,8 @@ def run_sync(url, source_url=None, expected_error=None,
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
   for index, line in enumerate(errput[:]):
     if re.search("warning: W200007", line):
       del errput[index]
@@ -87,6 +89,8 @@ def run_copy_revprops(url, source_url, expected_error=None,
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
   for index, line in enumerate(errput[:]):
     if re.search("warning: W200007", line):
       del errput[index]
@@ -113,6 +117,8 @@ def run_init(dst_url, src_url, source_prop_encoding=None):
     args.append(source_prop_encoding)
 
   exit_code, output, errput = svntest.main.run_svnsync(*args)
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
   for index, line in enumerate(errput[:]):
     if re.search("warning: W200007", line):
       del errput[index]
