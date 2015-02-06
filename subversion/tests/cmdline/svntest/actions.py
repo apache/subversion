@@ -338,28 +338,22 @@ def run_and_verify_load(repo_dir, dump_file_content,
   if not isinstance(dump_file_content, list):
     raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
+  args = ()
   if bypass_prop_validation:
-    exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
-      'load', '--force-uuid', '--quiet', '--bypass-prop-validation', repo_dir)
-  else:
-    exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
-      'load', '--force-uuid', '--quiet', repo_dir)
-
-  verify.verify_outputs("Unexpected stderr output", None, errput,
-                        None, expected_stderr)
+    args += ('--bypass-prop-validation',)
+  main.run_command_stdin(
+    main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
+    'load', '--force-uuid', '--quiet', repo_dir, *args)
 
 
 def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
+  args = ()
   if deltas:
-    exit_code, output, errput = main.run_svnadmin('dump', '--quiet', '--deltas',
-                                                  repo_dir)
-  else:
-    exit_code, output, errput = main.run_svnadmin('dump', '--quiet', repo_dir)
-  verify.verify_outputs("Missing expected output(s)", output, errput,
-                        verify.AnyOutput, [])
+    args += ('--deltas',)
+  exit_code, output, errput = run_and_verify_svnadmin(
+                                None, verify.AnyOutput, [],
+                                'dump', '--quiet', repo_dir, *args)
   return output
 
 
