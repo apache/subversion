@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <apr_pools.h>
+#include <apr_time.h>
 
 #include "svn_dirent_uri.h"
 #include "private/svn_ra_private.h"
@@ -68,10 +69,19 @@
  * The session cache.
  */
 
+/* The maximum number of inactive sessions allowed in the cache. */
+/* RA_CACHE TODO: pick a better value */
+#define MAX_INACTIVE_SESSIONS    13
+
+/* Inactive session expiry time. */
+/* RA_CACHE TODO: pick a better value */
+#define INACTIVE_SESSION_TIMEOUT apr_time_from_sec(5*60)
+
+
 /* Cache entry */
 typedef struct cache_entry_t
 {
-  /* The free-list link for this session. */
+  /* The inactive-list link for this session. */
   APR_RING_ENTRY(cache_entry_t) freelist;
 
   /* The cache that owns this session. Will be set to NULL in the
@@ -100,6 +110,9 @@ typedef struct cache_entry_t
   /* Accumulated progress since last session open. */
   apr_off_t progress;
 
+  /* The time when this cache entry was released to the inactive list. */
+  apr_time_t released;
+
   /* ID of RA session. Used only for diagnostics. */
   int id;
 } cache_entry_t;
@@ -121,6 +134,9 @@ struct svn_client__ra_cache_t
   /* List of inactive sessions available for reuse. */
   APR_RING_HEAD(, cache_entry_t) freelist;
 
+  /* The number of entries in the inactive session list. */
+  int inactive_count;
+
   /* Next ID for RA sessions. Used only for diagnostics purpose. */
   int next_id;
 
@@ -130,6 +146,9 @@ struct svn_client__ra_cache_t
     apr_uint64_t close;         /* number of calls to svn_ra__close */
     apr_uint64_t release;       /* number of releases to cache */
     apr_uint64_t reuse;         /* number of reuses from cache */
+    apr_uint64_t expunge;       /* number of inactive sessions closed
+                                   to limit cache size */
+    apr_uint64_t expire;        /* number of expired inactive sessions */
   } stat;)
 };
 
@@ -294,6 +313,10 @@ open_tunnel_func(svn_stream_t **request, svn_stream_t **response,
  * Cache management
  */
 
+/* Pool cleanup handler for the RA session cache.
+   Iterates through the active and inactive lists in the cache and
+   sets the cache_entry_t::ra_cache back-pointers to NULL, so that
+   close_ra_session does not attempt to access freed memory. */
 static apr_status_t
 cleanup_ra_cache(void *data)
 {
@@ -320,12 +343,16 @@ cleanup_ra_cache(void *data)
                           " open:%"APR_UINT64_T_FMT
                           " close:%"APR_UINT64_T_FMT
                           " release:%"APR_UINT64_T_FMT
-                          " reuse:%"APR_UINT64_T_FMT"\n",
+                          " reuse:%"APR_UINT64_T_FMT
+                          " expunge:%"APR_UINT64_T_FMT
+                          " expire:%"APR_UINT64_T_FMT"\n",
                           ra_cache->stat.request,
                           ra_cache->stat.open,
                           ra_cache->stat.close,
                           ra_cache->stat.release,
-                          ra_cache->stat.reuse)));
+                          ra_cache->stat.reuse
+                          ra_cache->stat.expunge
+                          ra_cache->stat.expire)));
 
   return APR_SUCCESS;
 }
@@ -355,6 +382,9 @@ svn_client__ra_cache_init(svn_client__private_ctx_t *private_ctx,
  * Session management
  */
 
+/* Pool cleanup handler for the session.
+   This handler is called when the pool that was intended to be the
+   session's owner is cleared or destroyed. */
 static apr_status_t
 close_ra_session(void *data)
 {
@@ -371,8 +401,13 @@ close_ra_session(void *data)
       RA_CACHE_DBG(("close_ra_session: removed from active:         %"
                     DBG_PTR_FMT"\n", (apr_uint64_t)session));
 
-      APR_RING_REMOVE(cache_entry, freelist);
-      APR_RING_ELEM_INIT(cache_entry, freelist);
+      if (cache_entry != APR_RING_NEXT(cache_entry, freelist)
+          && cache_entry != APR_RING_PREV(cache_entry, freelist))
+        {
+          APR_RING_REMOVE(cache_entry, freelist);
+          APR_RING_ELEM_INIT(cache_entry, freelist);
+          --ra_cache->inactive_count;
+        }
 
       /* Close and invalidate the session. */
       cache_entry->session = NULL;
@@ -393,23 +428,91 @@ close_ra_session(void *data)
   return APR_SUCCESS;
 }
 
+/* Removes CACHE_ENTRY from the inactive list of RA_CACHE.
+   Callers must make sure that the CACHE_ENTRY is indeed in the
+   inactive list. if EXPIRED is true, the session expired; otherwise,
+   it is being removed in order to limit the size of the inactive
+   list. */
+static void
+remove_inactive_entry(svn_client__ra_cache_t *ra_cache,
+                      cache_entry_t *cache_entry,
+                      svn_boolean_t expired)
+{
+  svn_ra_session_t *const session = cache_entry->session;
+
+  APR_RING_REMOVE(cache_entry, freelist);
+  APR_RING_ELEM_INIT(cache_entry, freelist);
+  --ra_cache->inactive_count;
+
+  /* Close and invalidate the session. */
+  cache_entry->session = NULL;
+  svn_ra__close(session);
+
+  RA_CACHE_LOG(("SESSION(%d): Closed (%s)\n", cache_entry->id,
+                (expired ? "expired" : "expunged")));
+  RA_CACHE_STATS(
+      if (expired)
+        ++ra_cache->stat.expired;
+      else
+        ++ra_cache->stat.expunged);
+}
+
+/* Limit the size of the inactive session list in RA_CACHE and remove
+   all remaining sessions that have expired as of NOW. */
+static void
+expunge_cache_entries(svn_client__ra_cache_t *ra_cache, apr_time_t now)
+{
+  cache_entry_t *cache_entry;
+
+  /* Limit the size of the inactive list. */
+  while (ra_cache->inactive_count > MAX_INACTIVE_SESSIONS)
+    {
+      cache_entry = APR_RING_LAST(&ra_cache->freelist);
+      remove_inactive_entry(ra_cache, cache_entry, FALSE);
+    }
+
+  /* Remove expired inactive cache entries. */
+  cache_entry = APR_RING_LAST(&ra_cache->freelist);
+  while (ra_cache->inactive_count > 0
+         && now > cache_entry->released + INACTIVE_SESSION_TIMEOUT)
+    {
+      remove_inactive_entry(ra_cache, cache_entry, TRUE);
+      cache_entry = APR_RING_LAST(&ra_cache->freelist);
+    }
+}
+
+/* Find an inactive session in RA_CACHE that can be reused to connect
+   to URL. Set *CACHE_ENTRY_P to the point to the session's cache
+   entry, or to NULL if a suitable session was not found. */
 static svn_error_t *
 find_session_by_url(cache_entry_t **cache_entry_p,
                     svn_client__ra_cache_t *ra_cache,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
+  const apr_time_t now = apr_time_now();
+  cache_entry_t *found_entry = NULL;
   cache_entry_t *cache_entry;
 
-  /* Try to find RA session with exact session URL match first because
-   * the svn_ra_reparent() for svn:// protocol requires network round-trip.
-   */
   APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
                    cache_entry_t, freelist)
     {
       const char *session_url;
       SVN_ERR_ASSERT(cache_entry->owner_pool == NULL);
 
+      /* Do not use the session if it has expired. Since the inactive
+         list is sorted by descending release time, once we find an
+         expired session, we know that all the following sessions in
+         the inactive list have expired, too. */
+      if (now > cache_entry->released + INACTIVE_SESSION_TIMEOUT)
+        {
+          expunge_cache_entries(ra_cache, now);
+          break;
+        }
+
+      /* Try to find RA session with exact session URL match first
+        because the svn_ra_reparent() for svn:// protocol requires
+        network round-trip. */
       SVN_ERR(svn_ra_get_session_url(cache_entry->session, &session_url,
                                      scratch_pool));
       if (strcmp(session_url, url) == 0)
@@ -417,21 +520,13 @@ find_session_by_url(cache_entry_t **cache_entry_p,
           *cache_entry_p = cache_entry;
           return SVN_NO_ERROR;
         }
+
+      /* If such a session can't be found, use the first matching session. */
+      if (!found_entry && svn_uri__is_ancestor(cache_entry->root_url, url))
+        found_entry = cache_entry;
     }
 
-  APR_RING_FOREACH(cache_entry, &ra_cache->freelist,
-                   cache_entry_t, freelist)
-    {
-      SVN_ERR_ASSERT(cache_entry->owner_pool == NULL);
-
-      if (svn_uri__is_ancestor(cache_entry->root_url, url))
-        {
-          *cache_entry_p = cache_entry;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *cache_entry_p = NULL;
+  *cache_entry_p = found_entry;
   return SVN_NO_ERROR;
 }
 
@@ -501,6 +596,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
       /* Remove the session from the freelist. */
       APR_RING_REMOVE(cache_entry, freelist);
       APR_RING_ELEM_INIT(cache_entry, freelist);
+      --ra_cache->inactive_count;
 
       RA_CACHE_LOG(("SESSION(%d): Reused\n", cache_entry->id));
       RA_CACHE_STATS(++ra_cache->stat.reuse);
@@ -615,11 +711,15 @@ svn_client__ra_cache_release_session(svn_client_ctx_t *ctx,
 
   APR_RING_INSERT_HEAD(&ra_cache->freelist, cache_entry,
                        cache_entry_t, freelist);
+  ++ra_cache->inactive_count;
 
   cache_entry->owner_pool = NULL;
   cache_entry->cb_table = NULL;
   cache_entry->cb_baton = NULL;
+  cache_entry->released = apr_time_now();
 
   RA_CACHE_LOG(("SESSION(%d): Released\n", cache_entry->id));
   RA_CACHE_STATS(++ra_cache->stat.release);
+
+  expunge_cache_entries(ra_cache, cache_entry->released);
 }
