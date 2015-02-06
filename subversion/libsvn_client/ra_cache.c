@@ -350,8 +350,8 @@ cleanup_ra_cache(void *data)
                           ra_cache->stat.open,
                           ra_cache->stat.close,
                           ra_cache->stat.release,
-                          ra_cache->stat.reuse
-                          ra_cache->stat.expunge
+                          ra_cache->stat.reuse,
+                          ra_cache->stat.expunge,
                           ra_cache->stat.expire)));
 
   return APR_SUCCESS;
@@ -452,9 +452,9 @@ remove_inactive_entry(svn_client__ra_cache_t *ra_cache,
                 (expired ? "expired" : "expunged")));
   RA_CACHE_STATS(
       if (expired)
-        ++ra_cache->stat.expired;
+        ++ra_cache->stat.expire;
       else
-        ++ra_cache->stat.expunged);
+        ++ra_cache->stat.expunge);
 }
 
 /* Limit the size of the inactive session list in RA_CACHE and remove
