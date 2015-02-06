@@ -34,7 +34,6 @@ from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import server_has_partial_replay
-from svnadmin_tests import test_create
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -61,15 +60,6 @@ mismatched_headers_re = re.compile(
 ######################################################################
 # Helper routines
 
-def build_repos(sbox):
-  """Build an empty sandbox repository"""
-
-  # Cleanup after the last run by removing any left-over repository.
-  svntest.main.safe_rmtree(sbox.repo_dir)
-
-  # Create an empty repository.
-  svntest.main.create_repos(sbox.repo_dir)
-
 def compare_repos_dumps(sbox, other_dumpfile,
                         bypass_prop_validation=False):
   """Compare two dumpfiles, one created from SBOX, and other given
@@ -83,8 +73,7 @@ def compare_repos_dumps(sbox, other_dumpfile,
 
   # Load and dump the other dumpfile (using svnadmin)
   other_sbox = sbox.clone_dependent()
-  svntest.main.safe_rmtree(other_sbox.repo_dir)
-  svntest.main.create_repos(other_sbox.repo_dir)
+  other_sbox.build(create_wc=False, empty=True)
   svntest.actions.run_and_verify_load(other_sbox.repo_dir, other_dumpfile,
                                       bypass_prop_validation)
   other_dumpfile = svntest.actions.run_and_verify_dump(other_sbox.repo_dir)
@@ -104,7 +93,7 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   array of optional additional options to pass to 'svnrdump dump'."""
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # This directory contains all the dump files
   svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
@@ -159,7 +148,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   dump' and check that the same dumpfile is produced"""
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -412,7 +401,7 @@ def reflect_dropped_renumbered_revs(sbox):
   "svnrdump renumbers dropped revs in mergeinfo"
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -476,7 +465,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   "don't drop mergeinfo revs in incremental svnrdump"
 
   # Create an empty repos.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -582,7 +571,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -617,7 +606,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -678,7 +667,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -723,7 +712,7 @@ def svnrdump_load_partial_incremental_dump(sbox):
   "svnrdump load partial incremental dump"
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -795,7 +784,7 @@ def load_prop_change_in_non_deltas_dump(sbox):
   dump = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
 
   # Try to load that dump.
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svnrdump(dump,
                                           [], [], 0,

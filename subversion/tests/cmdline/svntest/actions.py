@@ -129,7 +129,7 @@ def setup_pristine_greek_repository():
 
 ######################################################################
 
-def guarantee_empty_repository(path):
+def guarantee_empty_repository(path, minor_version):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing."""
 
@@ -139,7 +139,7 @@ def guarantee_empty_repository(path):
 
   # create an empty repository at PATH.
   main.safe_rmtree(path)
-  main.create_repos(path)
+  main.create_repos(path, minor_version)
 
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
@@ -338,28 +338,22 @@ def run_and_verify_load(repo_dir, dump_file_content,
   if not isinstance(dump_file_content, list):
     raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
+  args = ()
   if bypass_prop_validation:
-    exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
-      'load', '--force-uuid', '--quiet', '--bypass-prop-validation', repo_dir)
-  else:
-    exit_code, output, errput = main.run_command_stdin(
-      main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
-      'load', '--force-uuid', '--quiet', repo_dir)
-
-  verify.verify_outputs("Unexpected stderr output", None, errput,
-                        None, expected_stderr)
+    args += ('--bypass-prop-validation',)
+  main.run_command_stdin(
+    main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
+    'load', '--force-uuid', '--quiet', repo_dir, *args)
 
 
 def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
+  args = ()
   if deltas:
-    exit_code, output, errput = main.run_svnadmin('dump', '--deltas',
-                                                  repo_dir)
-  else:
-    exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
-  verify.verify_outputs("Missing expected output(s)", output, errput,
-                        verify.AnyOutput, verify.AnyOutput)
+    args += ('--deltas',)
+  exit_code, output, errput = run_and_verify_svnadmin(
+                                None, verify.AnyOutput, [],
+                                'dump', '--quiet', repo_dir, *args)
   return output
 
 
@@ -374,6 +368,8 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   if sys.platform == 'win32':
     err = map(lambda x : x.replace('\r\n', '\n'), err)
 
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
   for index, line in enumerate(err[:]):
     if re.search("warning: W200007", line):
       del err[index]
@@ -402,6 +398,34 @@ def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
+
+def run_and_verify_svnsync(expected_stdout, expected_stderr,
+                           *varargs):
+  """Run svnsync command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnsync2(expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnsync2(expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnmucc command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnsync(*varargs)
+
+  # Ignore "consider upgrade" warnings to allow regression tests to pass
+  # when run against a 1.6 mod_dav_svn.
+  for index, line in enumerate(err[:]):
+    if re.search("warning: W200007", line):
+      del err[index]
+
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 
@@ -1882,32 +1906,44 @@ def run_and_verify_revert(expected_paths, *args):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox, create_wc = True, read_only = False,
-                     minor_version = None):
-  """Create a fresh 'Greek Tree' repository and check out a WC from it.
+def make_repo_and_wc(sbox, create_wc=True, read_only=False, empty=False,
+                     minor_version=None):
+  """Create a fresh repository and check out a WC from it.  If EMPTY is
+  True, the repository and WC will be empty and at revision 0,
+  otherwise they will contain the 'Greek Tree' at revision 1.
 
   If READ_ONLY is False, a dedicated repository will be created, at the path
-  SBOX.repo_dir.  If READ_ONLY is True, the pristine repository will be used.
+  SBOX.repo_dir.  If READ_ONLY is True, a shared pristine repository may be
+  used or a dedicated repository may be created.  (Currently we use a shared
+  pristine 'Greek tree' repo but we create a dedicated empty repo.)
   In either case, SBOX.repo_url is assumed to point to the repository that
   will be used.
 
-  If create_wc is True, a dedicated working copy will be checked out from
+  If CREATE_WC is True, a dedicated working copy will be checked out from
   the repository, at the path SBOX.wc_dir.
 
   Returns on success, raises on failure."""
 
-  # Create (or copy afresh) a new repos with a greek tree in it.
-  if not read_only:
-    guarantee_greek_repository(sbox.repo_dir, minor_version)
+  # Create or copy or reference the appropriate kind of repository:
+  # if we want a non-empty, Greek repo, refer to the shared one; else
+  # if we want an empty repo or a writable Greek repo, create one.
+  # (We could have a shared empty repo for read-only use, but we don't.)
+  if empty:
+    guarantee_empty_repository(sbox.repo_dir, minor_version)
+    expected_state = svntest.wc.State('', {})
+  else:
+    if not read_only:
+      guarantee_greek_repository(sbox.repo_dir, minor_version)
+    expected_state = main.greek_state
 
   if create_wc:
     # Generate the expected output tree.
-    expected_output = main.greek_state.copy()
+    expected_output = expected_state.copy()
     expected_output.wc_dir = sbox.wc_dir
     expected_output.tweak(status='A ', contents=None)
 
     # Generate an expected wc tree.
-    expected_wc = main.greek_state
+    expected_wc = expected_state
 
     # Do a checkout, and verify the resulting output and disk contents.
     run_and_verify_checkout(sbox.repo_url,

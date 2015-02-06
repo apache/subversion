@@ -123,7 +123,7 @@
  * Use a simple mutex on Windows.  Because there is one mutex per segment,
  * large machines should (and usually can) be configured with large caches
  * such that read contention is kept low.  This is basically the situation
- * we head before 1.8.
+ * we had before 1.8.
  */
 #ifdef WIN32
 #  define USE_SIMPLE_MUTEX 1
@@ -587,16 +587,15 @@ struct svn_membuffer_t
    */
   apr_uint64_t total_hits;
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-#  if USE_SIMPLE_MUTEX
   svn_mutex__t *lock;
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+  /* Same for read-write lock. */
   apr_thread_rwlock_t *lock;
-#  endif
 
   /* If set, write access will wait until they get exclusive access.
    * Otherwise, they will become no-ops if the segment is currently
@@ -619,33 +618,32 @@ struct svn_membuffer_t
 static svn_error_t *
 read_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_rdlock(cache->lock);
     if (status)
       return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
   }
-#  endif
-#endif
+
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire a write lock for it.
+ * Set *SUCCESS to FALSE, if we couldn't acquire the write lock;
+ * leave it untouched otherwise.
  */
 static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
     {
       apr_status_t status;
@@ -668,9 +666,10 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
                                   _("Can't write-lock cache mutex"));
     }
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire an unconditional write lock
@@ -679,36 +678,29 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 static svn_error_t *
 force_write_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Can't write-lock cache mutex"));
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, release the current lock
- * (read or write).
+ * (read or write).  Return ERR upon success.
  */
 static svn_error_t *
 unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__unlock(cache->lock, err);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_unlock(cache->lock);
@@ -719,13 +711,14 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
       return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
   }
 
-#  endif
-#endif
   return err;
+#else
+  return err;
+#endif
 }
 
-/* If supported, guard the execution of EXPR with a read lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a read lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  */
 #define WITH_READ_LOCK(cache, expr)         \
 do {                                        \
@@ -733,8 +726,8 @@ do {                                        \
   SVN_ERR(unlock_cache(cache, (expr)));     \
 } while (0)
 
-/* If supported, guard the execution of EXPR with a write lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a write lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  *
  * The write lock process is complicated if we don't allow to wait for
  * the lock: If we didn't get the lock, we may still need to remove an
@@ -1797,17 +1790,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, "OOM");
         }
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
       /* A lock for intra-process synchronization to the cache, or NULL if
        * the cache's creator doesn't feel the cache needs to be
        * thread-safe.
        */
-#  if USE_SIMPLE_MUTEX
-
       SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+      /* Same for read-write lock. */
       c[seg].lock = NULL;
       if (thread_safe)
         {
@@ -1816,8 +1806,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           if (status)
             return svn_error_wrap_apr(status, _("Can't create cache mutex"));
         }
-
-#  endif
 
       /* Select the behavior of write operations.
        */

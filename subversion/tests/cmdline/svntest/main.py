@@ -763,7 +763,8 @@ def run_svnrdump(stdin_input, *varargs):
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, False, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
@@ -1229,12 +1230,9 @@ an appropriate list of mappings.
 """
   fp = open(sbox.authz_file, 'w')
 
-  # When the sandbox repository is read only it's name will be different from
+  # When the sandbox repository is read only its name will be different from
   # the repository name.
-  repo_name = sbox.repo_dir
-  while repo_name[-1] == '/':
-    repo_name = repo_name[:-1]
-  repo_name = os.path.basename(repo_name)
+  repo_name = os.path.basename(sbox.repo_dir.rstrip('/'))
 
   if sbox.repo_url.startswith("http"):
     default_prefix = repo_name + ":"
