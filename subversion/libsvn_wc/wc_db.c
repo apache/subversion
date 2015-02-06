@@ -5015,6 +5015,8 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
+  /* ### TODO: Did we handle ACTUAL as intended? */
+  
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
   if (conflict)
