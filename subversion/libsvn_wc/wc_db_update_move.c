@@ -1154,18 +1154,15 @@ tc_editor_delete(node_move_baton_t *nmb,
       if (!is_all_deletes)
         {
           /* No conflict means no NODES rows at the relpath op-depth
-             so it's easy to convert the modified tree into a copy. */
+             so it's easy to convert the modified tree into a copy.
 
-          /* ### Similar to svn_wc__db_op_make_copy(), except that this
-                 function doesn't support copy from working yet.
-                 
-             ### Note that this breaks DB consistency with the repository
-             ### until the layer is updated after the operation */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                            STMT_UPDATE_OP_DEPTH_RECURSIVE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isdd", b->wcroot->wc_id, relpath,
-                                    b->dst_op_depth, relpath_depth(relpath)));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+             Note the following assumptions for relpath:
+               * it is not shadowed
+               * it is not the/an op-root. (or we can't make us a copy)
+          */
+
+          SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath,
+                                                   NULL, NULL, scratch_pool));
 
           reason = svn_wc_conflict_reason_edited;
         }

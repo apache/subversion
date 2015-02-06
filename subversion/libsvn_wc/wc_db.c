@@ -14852,8 +14852,6 @@ static svn_error_t *
 make_copy_txn(svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               int op_depth,
-              const svn_skel_t *conflicts,
-              const svn_skel_t *work_items,
               apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -14934,21 +14932,68 @@ make_copy_txn(svn_wc__db_wcroot_t *wcroot,
 
       copy_relpath = svn_relpath_join(local_relpath, name, iterpool);
 
-      SVN_ERR(make_copy_txn(wcroot, copy_relpath, op_depth, NULL, NULL,
-                            iterpool));
+      SVN_ERR(make_copy_txn(wcroot, copy_relpath, op_depth, iterpool));
     }
 
-  SVN_ERR(flush_entries(wcroot, svn_dirent_join(wcroot->abspath, local_relpath,
-                                                iterpool),
-                                                svn_depth_empty, iterpool));
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 const svn_skel_t *conflicts,
+                                 const svn_skel_t *work_items,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int op_depth = -1;
+
+  /* The update editor is supposed to call this function when there is
+     no working node for LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    op_depth = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (have_row)
+    {
+      if (op_depth == relpath_depth(local_relpath))
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Modification of '%s' already exists"),
+                             path_for_error_message(wcroot,
+                                                    local_relpath,
+                                                    scratch_pool));
+
+      /* We have a working layer, but not one at the op-depth of local-relpath,
+         so we can create a copy by just copying the lower layer */
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_COPY_OP_DEPTH_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isdd", wcroot->wc_id, local_relpath,
+                                op_depth, relpath_depth(local_relpath)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      /* We don't allow copies to contain server-excluded nodes;
+         the update editor is going to have to bail out. */
+      SVN_ERR(catch_copy_of_server_excluded(wcroot, local_relpath, scratch_pool));
+
+      SVN_ERR(make_copy_txn(wcroot, local_relpath,
+                            relpath_depth(local_relpath), scratch_pool));
+    }
 
   if (conflicts)
     SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
-                                              conflicts, iterpool));
+                                              conflicts, scratch_pool));
 
-  SVN_ERR(add_work_items(wcroot->sdb, work_items, iterpool));
-
-  svn_pool_destroy(iterpool);
+  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -14963,8 +15008,6 @@ svn_wc__db_op_make_copy(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -14972,29 +15015,13 @@ svn_wc__db_op_make_copy(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* The update editor is supposed to call this function when there is
-     no working node for LOCAL_ABSPATH. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-  if (have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Modification of '%s' already exists"),
-                             path_for_error_message(wcroot,
-                                                    local_relpath,
-                                                    scratch_pool));
-
-  /* We don't allow copies to contain server-excluded nodes;
-     the update editor is going to have to bail out. */
-  SVN_ERR(catch_copy_of_server_excluded(wcroot, local_relpath, scratch_pool));
-
   SVN_WC__DB_WITH_TXN(
-    make_copy_txn(wcroot, local_relpath,
-                  relpath_depth(local_relpath), conflicts, work_items,
-                  scratch_pool),
+    svn_wc__db_op_make_copy_internal(wcroot, local_relpath, conflicts, work_items,
+                                     scratch_pool),
     wcroot);
+
+  SVN_ERR(flush_entries(wcroot, local_abspath,
+                        svn_depth_infinity, scratch_pool));
 
   return SVN_NO_ERROR;
 }
