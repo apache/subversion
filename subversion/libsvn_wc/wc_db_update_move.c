@@ -444,24 +444,19 @@ check_node_shadowed(svn_boolean_t *shadowed,
   return SVN_NO_ERROR;
 }
 
-/* If LOCAL_RELPATH is a child of the most recently raised
-   tree-conflict or is shadowed then set *IS_CONFLICTED to TRUE and
-   raise a tree-conflict ON THE ROOT OF THE OBSTRUCTION if such a
-   tree-conflict does not already exist.  KIND is the kind of the
-   incoming LOCAL_RELPATH. This relies on the non-Ev2, depth-first,
-   drive. */
+/* Set a tree conflict for the shadowed node LOCAL_RELPATH, on the
+   ROOT OF THE OBSTRUCTION if such a tree-conflict does not already
+   exist.  KIND is the kind of the incoming LOCAL_RELPATH. */
 static svn_error_t *
-check_tree_conflict(svn_boolean_t *is_conflicted,
-                    update_move_baton_t *b,
-                    const char *local_relpath,
-                    svn_node_kind_t old_kind,
-                    svn_node_kind_t new_kind,
-                    const char *old_repos_relpath,
-                    svn_wc_conflict_action_t action,
-                    apr_pool_t *scratch_pool)
+mark_tc_on_op_root(update_move_baton_t *b,
+                   const char *local_relpath,
+                   svn_node_kind_t old_kind,
+                   svn_node_kind_t new_kind,
+                   const char *old_repos_relpath,
+                   svn_wc_conflict_action_t action,
+                   apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   int dst_op_depth = relpath_depth(b->move_root_dst_relpath);
   int op_depth;
   const char *conflict_root_relpath = local_relpath;
@@ -473,18 +468,9 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", b->wcroot->wc_id, local_relpath,
                             dst_op_depth));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    op_depth = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__step_row(stmt));
+  op_depth = svn_sqlite__column_int(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (!have_row)
-    {
-      *is_conflicted = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  *is_conflicted = TRUE;
 
   while (relpath_depth(conflict_root_relpath) > op_depth)
     {
@@ -568,14 +554,13 @@ tc_editor_add_directory(svn_boolean_t *tree_conflicted,
 
   if (shadowed)
     {
-      /* Check for NODES tree-conflict. */
-      SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath,
-                                  old_kind, svn_node_dir,
-                                  move_dst_repos_relpath,
-                                  svn_wc_conflict_action_add,
-                                  scratch_pool));
+      SVN_ERR(mark_tc_on_op_root(b, relpath,
+                                 old_kind, svn_node_dir,
+                                 move_dst_repos_relpath,
+                                 svn_wc_conflict_action_add,
+                                 scratch_pool));
 
-      *tree_conflicted = is_conflicted;
+      *tree_conflicted = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -629,7 +614,6 @@ tc_editor_add_file(svn_boolean_t *tree_conflicted,
   const char *move_dst_repos_relpath;
   svn_node_kind_t move_dst_kind;
   svn_node_kind_t old_kind;
-  svn_boolean_t is_conflicted = FALSE;
   const char *local_abspath;
   svn_skel_t *work_item = NULL;
   svn_skel_t *conflict = NULL;
@@ -660,13 +644,13 @@ tc_editor_add_file(svn_boolean_t *tree_conflicted,
   /* Check for NODES tree-conflict. */
   if (shadowed)
     {
-      SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath,
-                                  old_kind, svn_node_file,
-                                  move_dst_repos_relpath,
-                                  svn_wc_conflict_action_add,
-                                  scratch_pool));
+      SVN_ERR(mark_tc_on_op_root(b, relpath,
+                                 old_kind, svn_node_file,
+                                 move_dst_repos_relpath,
+                                 svn_wc_conflict_action_add,
+                                 scratch_pool));
 
-      *tree_conflicted = is_conflicted;
+      *tree_conflicted = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -841,7 +825,6 @@ tc_editor_alter_directory(svn_boolean_t *tree_conflicted,
   svn_node_kind_t move_dst_kind;
   working_node_version_t old_version, new_version;
   svn_wc__db_status_t status;
-  svn_boolean_t is_conflicted = FALSE;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
 
@@ -862,14 +845,14 @@ tc_editor_alter_directory(svn_boolean_t *tree_conflicted,
   SVN_ERR_ASSERT(move_dst_kind == svn_node_dir);
   if (shadowed)
     {
-      SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
-                                  move_dst_kind,
-                                  svn_node_dir,
-                                  move_dst_repos_relpath,
-                                  svn_wc_conflict_action_edit,
-                                  scratch_pool));
+      SVN_ERR(mark_tc_on_op_root(b, dst_relpath,
+                                 move_dst_kind,
+                                 svn_node_dir,
+                                 move_dst_repos_relpath,
+                                 svn_wc_conflict_action_edit,
+                                 scratch_pool));
 
-      *tree_conflicted = is_conflicted;
+      *tree_conflicted = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -1061,7 +1044,6 @@ tc_editor_alter_file(svn_boolean_t *tree_conflicted,
   svn_revnum_t move_dst_revision;
   svn_node_kind_t move_dst_kind;
   working_node_version_t old_version, new_version;
-  svn_boolean_t is_conflicted = FALSE;
   svn_wc__db_status_t status;
 
   *tree_conflicted = FALSE;
@@ -1078,14 +1060,14 @@ tc_editor_alter_file(svn_boolean_t *tree_conflicted,
 
   if (shadowed)
     {
-      SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
-                                  move_dst_kind,
-                                  svn_node_file,
-                                  move_dst_repos_relpath,
-                                  svn_wc_conflict_action_edit,
-                                  scratch_pool));
+      SVN_ERR(mark_tc_on_op_root(b, dst_relpath,
+                                 move_dst_kind,
+                                 svn_node_file,
+                                 move_dst_repos_relpath,
+                                 svn_wc_conflict_action_edit,
+                                 scratch_pool));
 
-      *tree_conflicted = is_conflicted;
+      *tree_conflicted = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -1137,14 +1119,14 @@ tc_editor_delete(svn_boolean_t *tree_conflicted,
      children are caught as local modifications below.*/
   if (shadowed)
     {
-      SVN_ERR(check_tree_conflict(&is_conflicted, b, relpath,
-                                  move_dst_kind,
-                                  svn_node_unknown,
-                                  move_dst_repos_relpath,
-                                  svn_wc_conflict_action_delete,
-                                  scratch_pool));
+      SVN_ERR(mark_tc_on_op_root(b, relpath,
+                                 move_dst_kind,
+                                 svn_node_unknown,
+                                 move_dst_repos_relpath,
+                                 svn_wc_conflict_action_delete,
+                                 scratch_pool));
 
-      *tree_conflicted = is_conflicted;
+      *tree_conflicted = TRUE;
       return SVN_NO_ERROR;
     }
 
