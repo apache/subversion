@@ -30,6 +30,7 @@
 
 #include "jni_env.hpp"
 #include "jni_object.hpp"
+#include "jni_iterator.hpp"
 
 namespace Java {
 
@@ -123,30 +124,12 @@ private:
       }
   };
 
-  struct Iterator
+  class Iterator : public BaseIterator
   {
-    /**
-     * This object's implementation details.
-     */
-    class ClassImpl : public Object::ClassImpl
-    {
-      friend class ClassCacheImpl;
-
-    protected:
-      explicit ClassImpl(Env env, jclass cls);
-
-    public:
-      virtual ~ClassImpl();
-
-      const MethodID m_mid_has_next;
-      const MethodID m_mid_next;
-    };
-
-    static const char* const m_class_name;
-    static const ClassImpl& impl(Env env)
-      {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_iterator(env));
-      }
+    friend class BaseMap;
+    explicit Iterator(Env env, jobject jiterator)
+      : BaseIterator(env, jiterator)
+      {}
   };
 
   struct Entry

@@ -343,7 +343,7 @@ Java_org_apache_subversion_javahl_util_ConfigLib_nativeSearchCredentials(
         const char* const m_text_pattern;
 
         const ::Java::Env m_env;
-        ::Java::MutableList<JavaHL::Credential> m_credentials;
+        ::Java::List<JavaHL::Credential> m_credentials;
 
         bool match_array(const char* pattern,
                          const apr_array_header_t* hostnames)

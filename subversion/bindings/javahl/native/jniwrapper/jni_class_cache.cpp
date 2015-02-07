@@ -163,12 +163,18 @@ class ClassCacheImpl
       return pimpl;                                             \
     }
 
-  JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseList);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseMutableList);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(exc_index_out_of_bounds,
+                                 IndexOutOfBoundsException);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(exc_no_such_element,
+                                 NoSuchElementException);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(iterator, BaseIterator);
+
+  JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseImmutableList);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseList);
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseMap);
   JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseMap::Set);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(iterator, BaseMap::Iterator);
   JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseMap::Entry);
   JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMutableMap);
 
@@ -278,6 +284,9 @@ JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(object);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(classtype);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(throwable);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(string);
+
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(exc_index_out_of_bounds);
+JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(exc_no_such_element);
 
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(list);
 JNIWRAPPER_IMPL_CLASS_CACHE_ACCESSOR(array_list);
