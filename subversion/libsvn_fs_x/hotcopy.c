@@ -99,15 +99,15 @@ static svn_error_t *
 entry_name_to_utf8(const char **name_p,
                    const char *name,
                    const char *parent,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
-  svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
+  svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, result_pool);
   if (err && err->apr_err == APR_EINVAL)
     {
       return svn_error_createf(err->apr_err, err,
                                _("Error converting entry "
                                  "in directory '%s' to UTF-8"),
-                               svn_dirent_local_style(parent, pool));
+                               svn_dirent_local_style(parent, result_pool));
     }
   return err;
 }
