@@ -52,16 +52,6 @@ BaseMap::Set::ClassImpl::ClassImpl(Env env, jclass cls)
 
 BaseMap::Set::ClassImpl::~ClassImpl() {}
 
-const char* const BaseMap::Iterator::m_class_name = "java/util/Iterator";
-
-BaseMap::Iterator::ClassImpl::ClassImpl(Env env, jclass cls)
-  : Object::ClassImpl(env, cls),
-    m_mid_has_next(env.GetMethodID(cls, "hasNext", "()Z")),
-    m_mid_next(env.GetMethodID(cls, "next", "()Ljava/lang/Object;"))
-{}
-
-BaseMap::Iterator::ClassImpl::~ClassImpl() {}
-
 const char* const BaseMap::Entry::m_class_name = "java/util/Map$Entry";
 
 BaseMap::Entry::ClassImpl::ClassImpl(Env env, jclass cls)
@@ -95,18 +85,16 @@ BaseMap::somap BaseMap::convert_to_map(Env env, jobject jmap)
 
   // Get an iterator over the map's entry set
   const jobject entries = env.CallObjectMethod(jmap, pimpl->m_mid_entry_set);
-  const jobject iterator = env.CallObjectMethod(entries,
-                                                Set::impl(env).m_mid_iterator);
-
-  const Iterator::ClassImpl& iterimpl = Iterator::impl(env);
   const Entry::ClassImpl& entimpl = Entry::impl(env);
 
-  // Yterate over the map, filling the native map
+  Iterator iterator(env, env.CallObjectMethod(entries,
+                                              Set::impl(env).m_mid_iterator));
+
+  // Iterate over the map, filling the native map
   somap contents;
-  while (env.CallBooleanMethod(iterator, iterimpl.m_mid_has_next))
+  while (iterator.has_next())
     {
-      const jobject entry =
-        env.CallObjectMethod(iterator, iterimpl.m_mid_next);
+      const jobject entry = iterator.next();
       const String keystr(
           env, jstring(env.CallObjectMethod(entry, entimpl.m_mid_get_key)));
       const jobject value(
