@@ -686,7 +686,10 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                   &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_relpath_canonicalize(path, pool);
+
+  /* The PATH should be canonical .. but never trust incoming data. */
+  if (!svn_relpath_is_canonical(path))
+    path = svn_relpath_canonicalize(path, pool);
 
   /* Some operations pass COPY_PATH as a full URL (commits, etc.).
      Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
@@ -718,7 +721,11 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                   &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_relpath_canonicalize(path, pool);
+
+  /* The PATH should be canonical .. but never trust incoming data. */
+  if (!svn_relpath_is_canonical(path))
+    path = svn_relpath_canonicalize(path, pool);
+
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, ds->file_pool,
                                     &file_entry->baton));
