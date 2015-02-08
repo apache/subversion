@@ -793,6 +793,7 @@ create_conflict_markers(svn_skel_t **work_items,
                         const working_node_version_t *old_version,
                         const working_node_version_t *new_version,
                         svn_node_kind_t kind,
+                        svn_boolean_t set_operation,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -813,19 +814,22 @@ create_conflict_markers(svn_skel_t **work_items,
     = svn_relpath_join(conflicted_version->path_in_repos, part, scratch_pool);
   original_version->path_in_repos = repos_relpath;
 
-  if (operation == svn_wc_operation_update)
+  if (set_operation)
     {
-      SVN_ERR(svn_wc__conflict_skel_set_op_update(
-                conflict_skel, original_version,
-                conflicted_version,
-                scratch_pool, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__conflict_skel_set_op_switch(
-                conflict_skel, original_version,
-                conflicted_version,
-                scratch_pool, scratch_pool));
+      if (operation == svn_wc_operation_update)
+        {
+          SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                    conflict_skel, original_version,
+                    conflicted_version,
+                    scratch_pool, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                    conflict_skel, original_version,
+                    conflicted_version,
+                    scratch_pool, scratch_pool));
+        }
     }
 
   /* According to this func's doc string, it is "Currently only used for
@@ -910,10 +914,25 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
   svn_wc_notify_state_t prop_state;
   apr_hash_t *actual_props;
   apr_array_header_t *propchanges;
+  svn_node_kind_t wc_kind;
+  svn_boolean_t obstructed = FALSE;
 
   SVN_ERR(mark_node_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+  if (wc_kind != svn_node_none && wc_kind != svn_node_dir)
+    {
+      SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
+                                        wc_kind, svn_node_dir,
+                                        NULL /* local obstruction relpath */,
+                                        svn_wc_conflict_reason_obstructed,
+                                        svn_wc_conflict_action_edit,
+                                        NULL,
+                                        scratch_pool, scratch_pool));
+      obstructed = TRUE;
+    }
 
   old_version.location_and_kind = b->old_version;
   new_version.location_and_kind = b->new_version;
@@ -929,7 +948,7 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
                                 &old_version, &new_version,
                                 scratch_pool, scratch_pool));
 
-  if (conflict_skel)
+  if (prop_state == svn_wc_notify_state_conflicted)
     {
       const char *move_dst_repos_relpath;
 
@@ -945,7 +964,7 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
                                       b->db, move_dst_repos_relpath,
                                       conflict_skel, b->operation,
                                       &old_version, &new_version,
-                                      svn_node_dir,
+                                      svn_node_dir, !obstructed,
                                       scratch_pool, scratch_pool));
     }
 
@@ -998,10 +1017,25 @@ tc_editor_alter_file(node_move_baton_t *nmb,
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_wc_notify_state_t prop_state, content_state;
   svn_skel_t *work_item, *work_items = NULL;
+  svn_node_kind_t wc_kind;
+  svn_boolean_t obstructed = FALSE;
 
   SVN_ERR(mark_node_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+  if (wc_kind != svn_node_none && wc_kind != svn_node_file)
+    {
+      SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
+                                        wc_kind, svn_node_file,
+                                        NULL /* local obstruction relpath */,
+                                        svn_wc_conflict_reason_obstructed,
+                                        svn_wc_conflict_action_edit,
+                                        NULL,
+                                        scratch_pool, scratch_pool));
+      obstructed = TRUE;
+    }
 
   old_version.location_and_kind = b->old_version;
   new_version.location_and_kind = b->new_version;
@@ -1017,7 +1051,8 @@ tc_editor_alter_file(node_move_baton_t *nmb,
                                &old_version, &new_version,
                                scratch_pool, scratch_pool));
 
-  if (!svn_checksum_match(new_version.checksum, old_version.checksum))
+  if (!obstructed
+      && !svn_checksum_match(new_version.checksum, old_version.checksum))
     {
       svn_boolean_t is_locally_modified;
 
@@ -1097,7 +1132,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
       SVN_ERR(create_conflict_markers(&work_item, local_abspath, b->db,
                                       move_dst_repos_relpath, conflict_skel,
                                       b->operation, &old_version, &new_version,
-                                      svn_node_file,
+                                      svn_node_file, !obstructed,
                                       scratch_pool, scratch_pool));
 
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
