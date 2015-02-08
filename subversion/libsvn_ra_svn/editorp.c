@@ -891,11 +891,15 @@ static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Common function signature for all editor command handlers. */
+typedef svn_error_t *(*cmd_handler_t)(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const apr_array_header_t *params,
+                                      ra_svn_driver_state_t *ds);
+
 static const struct {
   const char *cmd;
-  svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                          const apr_array_header_t *params,
-                          ra_svn_driver_state_t *ds);
+  cmd_handler_t handler;
 } ra_svn_edit_cmds[] = {
   { "change-file-prop", ra_svn_handle_change_file_prop },
   { "open-file",        ra_svn_handle_open_file },
@@ -918,6 +922,20 @@ static const struct {
   { "close-edit",       ra_svn_handle_close_edit },
   { NULL }
 };
+
+/* Return the command handler function for the command name CMD.
+   Return NULL if no such handler exists */
+static cmd_handler_t
+cmd_lookup(const char *cmd)
+{
+  int i;
+
+  for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+    if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
+      return ra_svn_edit_cmds[i].handler;
+
+  return NULL;
+}
 
 static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   void *baton)
@@ -947,7 +965,6 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmd;
-  int i;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
 
@@ -966,13 +983,12 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       svn_pool_clear(subpool);
       if (editor)
         {
+          cmd_handler_t handler;
           SVN_ERR(svn_ra_svn__read_tuple(conn, subpool, "wl", &cmd, &params));
-          for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
-              if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
-                break;
+          handler = cmd_lookup(cmd);
 
-          if (ra_svn_edit_cmds[i].cmd)
-            err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+          if (handler)
+            err = (*handler)(conn, subpool, params, &state);
           else if (strcmp(cmd, "failure") == 0)
             {
               /* While not really an editor command this can occur when
