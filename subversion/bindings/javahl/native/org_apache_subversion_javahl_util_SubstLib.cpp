@@ -118,6 +118,8 @@ Java_org_apache_subversion_javahl_util_SubstLib_buildKeywords(
     jstring jurl, jstring jrepos_root_url,
     jobject jdate, jstring jauthor)
 {
+  typedef Java::Map<Java::ByteArray, jbyteArray> ByteArrayMap;
+
   SVN_JAVAHL_JNI_TRY(SubstLib, buildKeywords)
     {
       const Java::Env env(jenv);
@@ -130,8 +132,7 @@ Java_org_apache_subversion_javahl_util_SubstLib_buildKeywords(
           env, pool, jkeywords_value, jrevision,
           jurl, jrepos_root_url, jdate, jauthor);
 
-      Java::MutableMap<Java::ByteArray, jbyteArray>
-        keywords(env, jint(apr_hash_count(kw)));
+      ByteArrayMap keywords(env, jint(apr_hash_count(kw)));
       for (apr_hash_index_t* hi = apr_hash_first(pool.getPool(), kw);
            hi; hi = apr_hash_next(hi))
         {

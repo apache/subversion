@@ -65,9 +65,8 @@ protected:
   /**
    * Constructor used by BaseList
    */
-  explicit BaseImmutableList(Env env, const Object::ClassImpl* pimpl,
-                             jobject jlist)
-    : Object(env, pimpl, jlist)
+  explicit BaseImmutableList(Env env, const Object::ClassImpl* pimpl)
+    : Object(env, pimpl)
     {}
 
   /**
@@ -208,7 +207,7 @@ protected:
    * with initial allocation size @a length.
    */
   explicit BaseList(Env env, jint length)
-    : BaseImmutableList(env, ClassCache::get_array_list(env), NULL)
+    : BaseImmutableList(env, ClassCache::get_array_list(env))
     {
       set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
     }

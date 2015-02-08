@@ -173,10 +173,10 @@ class ClassCacheImpl
   JNIWRAPPER_DEFINE_CACHED_CLASS(list, BaseImmutableList);
   JNIWRAPPER_DEFINE_CACHED_CLASS(array_list, BaseList);
 
-  JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseMap);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseMap::Set);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseMap::Entry);
-  JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMutableMap);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map, BaseImmutableMap);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(set, BaseImmutableMap::Set);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(map_entry, BaseImmutableMap::Entry);
+  JNIWRAPPER_DEFINE_CACHED_CLASS(hash_map, BaseMap);
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(input_stream, InputStream);
   JNIWRAPPER_DEFINE_CACHED_CLASS(output_stream, OutputStream);
