@@ -129,19 +129,22 @@ ensure_gnome_keyring_is_unlocked(svn_boolean_t non_interactive,
         svn_hash_gets(parameters,
                       SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON);
 
-      char *keyring_password;
-
       if (unlock_prompt_func && check_keyring_is_locked(default_keyring))
         {
+          char *keyring_password;
+
           SVN_ERR((*unlock_prompt_func)(&keyring_password,
                                         default_keyring,
                                         unlock_prompt_baton,
                                         scratch_pool));
 
           /* If keyring is locked give up and try the next provider. */
-          if (! unlock_gnome_keyring(default_keyring, keyring_password,
-                                     scratch_pool))
-            return SVN_NO_ERROR;
+          if (keyring_password)
+            {
+              if (! unlock_gnome_keyring(default_keyring, keyring_password,
+                                         scratch_pool))
+                return SVN_NO_ERROR;
+            }
         }
     }
   else

@@ -138,6 +138,16 @@ Prompter::get_provider_client_ssl_password(SVN::Pool &in_pool)
   return provider;
 }
 
+void
+Prompter::get_gnome_keyring_unlock(
+              svn_auth_gnome_keyring_unlock_prompt_func_t *cb,
+              void **baton,
+              SVN::Pool &in_pool)
+{
+  *cb = gnome_keyring_unlock_prompt;
+  *baton = this;
+}
+
 svn_error_t *Prompter::simple_prompt(
     svn_auth_cred_simple_t **cred_p,
     void *baton,
@@ -219,6 +229,18 @@ svn_error_t *Prompter::ssl_client_cert_pw_prompt(
       err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_pw_prompt(
           env, cred_p, realm, may_save, pool));
   return err;
+}
+
+svn_error_t *Prompter::gnome_keyring_unlock_prompt(
+    char **keyring_password,
+    const char *keyring_name,
+    void *baton,
+    apr_pool_t *pool)
+{
+  /* ### TODO: Forward to Java */
+
+  *keyring_password = NULL; /* Don't attempt an unlock */
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *Prompter::plaintext_prompt(
