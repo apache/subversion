@@ -150,6 +150,7 @@ class SVNClient :public SVNBase
   void copy(CopySources &copySources, const char *destPath,
             CommitMessage *message, bool copyAsChild, bool makeParents,
             bool ignoreExternals, bool pinExternals,
+            jobject jexternalsToPin,
             PropertyTable &revprops, CommitCallback *callback);
   void commit(Targets &targets, CommitMessage *message, svn_depth_t depth,
               bool noUnlock, bool keepChangelist,

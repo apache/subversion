@@ -445,7 +445,8 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
-                     bool makeParents, bool ignoreExternals, bool pinExternals,
+                     bool makeParents, bool ignoreExternals,
+                     bool pinExternals, jobject jexternalsToPin,
                      PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -462,7 +463,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     SVN_JNI_ERR(svn_client_copy7(srcs, destinationPath.c_str(),
                                  copyAsChild, makeParents, ignoreExternals,
-                                 pinExternals,
+                                 pinExternals, /* FIXME: */NULL,
                                  revprops.hash(subPool),
                                  CommitCallback::callback, callback,
                                  ctx, subPool.getPool()), );
