@@ -39,8 +39,10 @@
 #include "svn_pools.h"
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_fspath.h"
 #include "private/svn_editor.h"
+#include "private/svn_subr_private.h"
 
 #include "ra_svn.h"
 
@@ -923,18 +925,90 @@ static const struct {
   { NULL }
 };
 
+/* All editor commands are kept in a collision-free hash table. */
+
+/* Hash table entry.
+   It is similar to ra_svn_edit_cmds but uses our SVN string type. */
+typedef struct cmd_t {
+  svn_string_t cmd;
+  cmd_handler_t handler;
+} cmd_t;
+
+/* The actual hash table.  It will be filled once before first usage.
+
+   If you add more commands, you may have to tweak the table size to
+   eliminate collisions.  Alternatively, you may modify the hash function.
+
+   Be sure to initialize all elements with 0 as the has conflict detection
+   will rely on it (see init_cmd_hash).
+ */
+#define CMD_HASH_SIZE 67
+static cmd_t cmd_hash[CMD_HASH_SIZE] = { { { NULL } } };
+
+/* Init flag that controls CMD_HASH's atomic initialization. */
+static volatile svn_atomic_t cmd_hash_initialized = FALSE;
+
+/* Super-fast hash function that works very well with the structure of our
+   command words.  It produces no conflicts for them.
+
+   Return the index within CMD_HASH that a command NAME of LEN chars would
+   be found.  LEN > 0.
+ */
+static apr_size_t
+cmd_hash_func(const char *name,
+              apr_size_t len)
+{
+  apr_size_t value =     (apr_byte_t)(name[0] - 'a') % 8
+                   + 1 * (apr_byte_t)(name[len - 1] - 'a') % 8
+                   + 10 * (len - 7);
+  return value % CMD_HASH_SIZE;
+}
+
+/* svn_atomic__init_once callback that fills the CMD_HASH table.  It will
+   error out on hash collisions.  BATON and POOL are not used. */
+static svn_error_t *
+init_cmd_hash(void *baton,
+              apr_pool_t *pool)
+{
+  int i;
+  for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+    {
+      apr_size_t len = strlen(ra_svn_edit_cmds[i].cmd);
+      apr_size_t value = cmd_hash_func(ra_svn_edit_cmds[i].cmd, len);
+      SVN_ERR_ASSERT(cmd_hash[value].cmd.data == NULL);
+
+      cmd_hash[value].cmd.data = ra_svn_edit_cmds[i].cmd;
+      cmd_hash[value].cmd.len = len;
+      cmd_hash[value].handler = ra_svn_edit_cmds[i].handler;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the command handler function for the command name CMD.
    Return NULL if no such handler exists */
 static cmd_handler_t
 cmd_lookup(const char *cmd)
 {
-  int i;
+  apr_size_t value;
+  apr_size_t len = strlen(cmd);
 
-  for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
-    if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
-      return ra_svn_edit_cmds[i].handler;
+  /* Malicious data that our hash function may not like? */
+  if (len == 0)
+    return NULL;
 
-  return NULL;
+  /* Hash lookup. */
+  value = cmd_hash_func(cmd, len);
+
+  /* Hit? */
+  if (cmd_hash[value].cmd.len != len)
+    return NULL;
+
+  if (memcmp(cmd_hash[value].cmd.data, cmd, len))
+    return NULL;
+
+  /* Yes! */
+  return cmd_hash[value].handler;
 }
 
 static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -967,6 +1041,9 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   const char *cmd;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
+
+  SVN_ERR(svn_atomic__init_once(&cmd_hash_initialized, init_cmd_hash, NULL,
+                                pool));
 
   state.editor = editor;
   state.edit_baton = edit_baton;
