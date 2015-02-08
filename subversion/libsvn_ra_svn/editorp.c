@@ -69,16 +69,10 @@ typedef struct ra_svn_baton_t {
   const char *token;
 } ra_svn_baton_t;
 
-/* Forward declaration. */
-typedef struct ra_svn_token_entry_t ra_svn_token_entry_t;
-
 typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
-
-  /* Entry for the last token seen.  May be NULL. */
-  ra_svn_token_entry_t *last_token;
   svn_boolean_t *aborted;
   svn_boolean_t done;
   apr_pool_t *pool;
@@ -96,13 +90,13 @@ typedef struct ra_svn_driver_state_t {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-struct ra_svn_token_entry_t {
+typedef struct ra_svn_token_entry_t {
   svn_string_t *token;
   void *baton;
   svn_boolean_t is_file;
   svn_stream_t *dstream;  /* svndiff stream for apply_textdelta */
   apr_pool_t *pool;
-};
+} ra_svn_token_entry_t;
 
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
@@ -486,7 +480,6 @@ static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
   entry->pool = pool;
 
   apr_hash_set(ds->tokens, entry->token->data, entry->token->len, entry);
-  ds->last_token = entry;
 
   return entry;
 }
@@ -496,16 +489,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds,
                                  svn_boolean_t is_file,
                                  ra_svn_token_entry_t **entry)
 {
-  if (ds->last_token && svn_string_compare(ds->last_token->token, token))
-    {
-      *entry = ds->last_token;
-    }
-  else
-    {
-      *entry = apr_hash_get(ds->tokens, token->data, token->len);
-      ds->last_token = *entry;
-    }
-
+  *entry = apr_hash_get(ds->tokens, token->data, token->len);
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Invalid file or dir token during edit"));
@@ -891,15 +875,11 @@ static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-/* Common function signature for all editor command handlers. */
-typedef svn_error_t *(*cmd_handler_t)(svn_ra_svn_conn_t *conn,
-                                      apr_pool_t *pool,
-                                      const apr_array_header_t *params,
-                                      ra_svn_driver_state_t *ds);
-
 static const struct {
   const char *cmd;
-  cmd_handler_t handler;
+  svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                          const apr_array_header_t *params,
+                          ra_svn_driver_state_t *ds);
 } ra_svn_edit_cmds[] = {
   { "change-file-prop", ra_svn_handle_change_file_prop },
   { "open-file",        ra_svn_handle_open_file },
@@ -922,20 +902,6 @@ static const struct {
   { "close-edit",       ra_svn_handle_close_edit },
   { NULL }
 };
-
-/* Return the command handler function for the command name CMD.
-   Return NULL if no such handler exists */
-static cmd_handler_t
-cmd_lookup(const char *cmd)
-{
-  int i;
-
-  for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
-    if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
-      return ra_svn_edit_cmds[i].handler;
-
-  return NULL;
-}
 
 static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   void *baton)
@@ -965,6 +931,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmd;
+  int i;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
 
@@ -983,12 +950,13 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       svn_pool_clear(subpool);
       if (editor)
         {
-          cmd_handler_t handler;
           SVN_ERR(svn_ra_svn__read_tuple(conn, subpool, "wl", &cmd, &params));
-          handler = cmd_lookup(cmd);
+          for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+              if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
+                break;
 
-          if (handler)
-            err = (*handler)(conn, subpool, params, &state);
+          if (ra_svn_edit_cmds[i].cmd)
+            err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
           else if (strcmp(cmd, "failure") == 0)
             {
               /* While not really an editor command this can occur when
