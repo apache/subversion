@@ -1,0 +1,3 @@
+The purpose of this branch is to keep work off /trunk for the time 1.9
+is being stabilized.  It collects various small improvements to the
+ra-svn protocol handling.
