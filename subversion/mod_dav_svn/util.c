@@ -857,7 +857,7 @@ dav_svn__parse_request_skel(svn_skel_t **skel,
   *skel = NULL;
   status = request_body_to_string(&skel_str, r, pool);
   if (status != OK)
-    return OK;
+    return status;
 
   *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
   return OK;
