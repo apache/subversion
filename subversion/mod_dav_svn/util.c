@@ -571,11 +571,12 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         "%s", purged_serr->message);
         }
 
-        svn_error_clear(serr);
-      }
-    return dav_svn__convert_err(safe_err, http_status,
-                                apr_psprintf(r->pool, "%s", safe_err->message),
-                                r->pool);
+      svn_error_clear(serr);
+    }
+
+  return dav_svn__convert_err(safe_err, http_status,
+                              apr_psprintf(r->pool, "%s", safe_err->message),
+                              r->pool);
 }
 
 
