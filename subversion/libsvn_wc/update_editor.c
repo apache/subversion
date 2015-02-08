@@ -2288,15 +2288,7 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
-      if (eb->conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
-                                                 tree_conflict,
-                                                 NULL /* merge_options */,
-                                                 eb->conflict_func,
-                                                 eb->conflict_baton,
-                                                 eb->cancel_func,
-                                                 eb->cancel_baton,
-                                                 scratch_pool));
+      db->edit_conflict = tree_conflict;
 
       db->already_notified = TRUE;
       do_notification(eb, db->local_abspath, svn_node_dir,
@@ -3295,7 +3287,7 @@ add_file(const char *path,
                                                       eb->db,
                                                       fb->local_abspath,
                                                       tree_conflict,
-                                                      fb->pool, fb->pool));
+                                                      fb->pool, scratch_pool));
 
           tree_conflict = svn_wc__conflict_skel_create(fb->pool);
 
@@ -3304,7 +3296,7 @@ add_file(const char *path,
                                         eb->db, fb->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
                                         move_src_op_root_abspath,
-                                        fb->pool, fb->pool));
+                                        fb->pool, scratch_pool));
 
           /* And now stop checking for conflicts here and just perform
              a shadowed update */
@@ -3401,7 +3393,7 @@ add_file(const char *path,
                                       fb->local_abspath,
                                       status, FALSE, svn_node_none,
                                       svn_wc_conflict_action_add,
-                                      scratch_pool, scratch_pool));
+                                      fb->pool, scratch_pool));
         }
 
       if (tree_conflict == NULL)
@@ -3463,15 +3455,7 @@ add_file(const char *path,
                                           tree_conflict, NULL,
                                           scratch_pool));
 
-      if (eb->conflict_func)
-        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
-                                                 tree_conflict,
-                                                 NULL /* merge_options */,
-                                                 eb->conflict_func,
-                                                 eb->conflict_baton,
-                                                 eb->cancel_func,
-                                                 eb->cancel_baton,
-                                                 scratch_pool));
+      fb->edit_conflict = tree_conflict;
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_file,
