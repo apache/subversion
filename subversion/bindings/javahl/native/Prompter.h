@@ -60,11 +60,6 @@ public:
   svn_auth_provider_object_t *get_provider_client_ssl(SVN::Pool &in_pool);
   svn_auth_provider_object_t *get_provider_client_ssl_password(SVN::Pool &in_pool);
 
-  void get_gnome_keyring_unlock(
-              svn_auth_gnome_keyring_unlock_prompt_func_t *cb,
-              void **baton,
-              SVN::Pool &in_pool);
-
 protected:
   explicit Prompter(::Java::Env env, jobject jprompter);
 
@@ -147,12 +142,6 @@ protected:
       void *baton,
       const char *realm,
       svn_boolean_t may_save,
-      apr_pool_t *pool);
-
-  static svn_error_t *gnome_keyring_unlock_prompt(
-      char **keyring_password,
-      const char *keyring_name,
-      void *baton,
       apr_pool_t *pool);
 
 protected:
