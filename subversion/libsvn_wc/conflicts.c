@@ -2769,7 +2769,7 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                                                             scratch_pool));
         }
       else if (reason == svn_wc_conflict_reason_moved_away
-              && action == svn_wc_conflict_action_edit)
+               && action == svn_wc_conflict_action_edit)
         {
           /* After updates, we can resolve local moved-away
            * vs. any incoming change, either by updating the
@@ -2824,6 +2824,34 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                                        "'%s' not resolved"),
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
+        }
+      else if (reason == svn_wc_conflict_reason_moved_away
+               && action != svn_wc_conflict_action_edit)
+        {
+          /* action added is impossible, because that would imply that
+             something was added, but before that already moved...
+             (which would imply a replace) */
+          SVN_ERR_ASSERT(action == svn_wc_conflict_action_delete
+                         || action == svn_wc_conflict_action_replace);
+
+          if (conflict_choice == svn_wc_conflict_choose_merged)
+            {
+              /* Whatever was moved is removed at its original location by the
+                 update. That must also remove the recording of the move, so
+                 we don't have to do anything here. */
+
+              *did_resolve = TRUE;
+            }
+          else if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
+            {
+              return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                   NULL,
+                                   _("Tree conflict can only be "
+                                     "resolved to 'working' state; "
+                                     "'%s' is no longer moved"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+            }
         }
     }
 
