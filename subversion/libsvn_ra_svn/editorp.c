@@ -91,7 +91,7 @@ typedef struct ra_svn_driver_state_t {
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
 typedef struct ra_svn_token_entry_t {
-  const char *token;
+  svn_string_t *token;
   void *baton;
   svn_boolean_t is_file;
   svn_stream_t *dstream;  /* svndiff stream for apply_textdelta */
@@ -465,27 +465,31 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
 /* Store a token entry.  The token string will be copied into pool. */
 static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
-                                         void *baton, const char *token,
+                                         void *baton,
+                                         svn_string_t *token,
                                          svn_boolean_t is_file,
                                          apr_pool_t *pool)
 {
   ra_svn_token_entry_t *entry;
 
   entry = apr_palloc(pool, sizeof(*entry));
-  entry->token = apr_pstrdup(pool, token);
+  entry->token = svn_string_dup(token, pool);
   entry->baton = baton;
   entry->is_file = is_file;
   entry->dstream = NULL;
   entry->pool = pool;
-  svn_hash_sets(ds->tokens, entry->token, entry);
+
+  apr_hash_set(ds->tokens, entry->token->data, entry->token->len, entry);
+
   return entry;
 }
 
-static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
+static svn_error_t *lookup_token(ra_svn_driver_state_t *ds,
+                                 svn_string_t *token,
                                  svn_boolean_t is_file,
                                  ra_svn_token_entry_t **entry)
 {
-  *entry = svn_hash_gets(ds->tokens, token);
+  *entry = apr_hash_get(ds->tokens, token->data, token->len);
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Invalid file or dir token during edit"));
@@ -511,10 +515,10 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
 {
   svn_revnum_t rev;
   apr_pool_t *subpool;
-  const char *token;
+  svn_string_t *token;
   void *root_baton;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)c", &rev, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?r)s", &rev, &token));
   subpool = svn_pool_create(ds->pool);
   SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool,
                                     &root_baton));
@@ -527,11 +531,12 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
                                                const apr_array_header_t *params,
                                                ra_svn_driver_state_t *ds)
 {
-  const char *path, *token;
+  const char *path;
+  svn_string_t *token;
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?r)c",
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?r)s",
                                   &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   path = svn_relpath_canonicalize(path, pool);
@@ -544,13 +549,14 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                           const apr_array_header_t *params,
                                           ra_svn_driver_state_t *ds)
 {
-  const char *path, *token, *child_token, *copy_path;
+  const char *path, *copy_path;
+  svn_string_t *token, *child_token;
   svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?cr)", &path, &token,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "css(?cr)", &path, &token,
                                   &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
@@ -577,13 +583,14 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                            const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
-  const char *path, *token, *child_token;
+  const char *path;
+  svn_string_t *token, *child_token;
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?r)", &path, &token,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "css(?r)", &path, &token,
                                   &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
@@ -599,11 +606,12 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
                                                   const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
-  const char *token, *name;
+  svn_string_t *token;
+  const char *name;
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc(?s)", &token, &name,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "sc(?s)", &token, &name,
                                   &value));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   SVN_CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value,
@@ -616,11 +624,11 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
                                             const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
 
   /* Parse and look up the directory token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "s", &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Close the directory and destroy the baton. */
@@ -636,11 +644,11 @@ static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
                                              ra_svn_driver_state_t *ds)
 {
   const char *path;
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
 
   /* Parse parameters and look up the directory token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cs", &path, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Call the editor. */
@@ -653,11 +661,12 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                            const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
-  const char *path, *token, *file_token, *copy_path;
+  const char *path, *copy_path;
+  svn_string_t *token, *file_token;
   svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?cr)", &path, &token,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "css(?cr)", &path, &token,
                                   &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
@@ -684,11 +693,12 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                             const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
-  const char *path, *token, *file_token;
+  const char *path;
+  svn_string_t *token, *file_token;
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry, *file_entry;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ccc(?r)", &path, &token,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "css(?r)", &path, &token,
                                   &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
@@ -704,14 +714,14 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
                                                   const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
   svn_txdelta_window_handler_t wh;
   void *wh_baton;
   char *base_checksum;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?c)",
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "s(?c)",
                                   &token, &base_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (entry->dstream)
@@ -729,12 +739,12 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
                                                   const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
   svn_string_t *str;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cs", &token, &str));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "ss", &token, &str));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -748,11 +758,11 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
                                                 const apr_array_header_t *params,
                                                 ra_svn_driver_state_t *ds)
 {
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
 
   /* Parse arguments and look up the token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "s", &token));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -768,11 +778,11 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
                                                    const apr_array_header_t *params,
                                                    ra_svn_driver_state_t *ds)
 {
-  const char *token, *name;
-  svn_string_t *value;
+  const char *name;
+  svn_string_t *token, *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc(?s)", &token, &name,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "sc(?s)", &token, &name,
                                   &value));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value, pool));
@@ -784,12 +794,12 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
                                              const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
   const char *text_checksum;
 
   /* Parse arguments and look up the file token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "c(?c)",
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "s(?c)",
                                   &token, &text_checksum));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
 
@@ -807,11 +817,11 @@ static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
                                               ra_svn_driver_state_t *ds)
 {
   const char *path;
-  const char *token;
+  svn_string_t *token;
   ra_svn_token_entry_t *entry;
 
   /* Parse parameters and look up the parent directory token. */
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "cs", &path, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
 
   /* Call the editor. */
