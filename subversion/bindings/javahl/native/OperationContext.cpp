@@ -218,27 +218,6 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open(&ab, providers, pool);
 
-  if (m_prompter.get())
-    {
-      svn_auth_gnome_keyring_unlock_prompt_func_t unlock_cb;
-      void *unlock_baton;
-
-      m_prompter->get_gnome_keyring_unlock(&unlock_cb, &unlock_baton,
-                                         in_pool);
-
-      if (unlock_cb)
-        {
-          svn_auth_set_parameter(
-                         ab,
-                         SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                         (const void*)unlock_cb);
-        svn_auth_set_parameter(
-                         ab,
-                         SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                         unlock_baton);
-      }
-    }
-
   /* Place any default --username or --password credentials into the
    * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
   if (!m_userName.empty())
