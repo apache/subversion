@@ -1,3 +1,8 @@
 TODO:
   - Write a proper BRANCH-README file.
+  - Split externals_tests.py:copy_pin_externals into separate test cases.
+    Right now it's a monolithic monster that's hard to understand and
+    interferes with parallel test execution; so, not suitable for trunk.
+
+DONE:
   - JavaHL test for ISVNClient.copy with explicit list of externals to pin.

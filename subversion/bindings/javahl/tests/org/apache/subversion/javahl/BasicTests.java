@@ -1085,6 +1085,178 @@ public class BasicTests extends SVNTests
                      update(thisTest), 3);
     }
 
+
+    // Set up externals references in the working copy for the
+    // pin-externals tests.
+    private void setupPinExternalsTest(OneTest thisTest) throws Throwable
+    {
+        byte[] extref = ("^/A/D/H ADHext\n" +
+                         "^/A/D/H@1 peggedADHext\n" +
+                         "-r1 ^/A/D/H revvedADHext\n").getBytes();
+        Set<String> paths = new HashSet<String>();
+        paths.add(thisTest.getWCPath() + "/A/B");
+
+        // Add an externals reference to the working copy.
+        client.propertySetLocal(paths, "svn:externals", extref,
+                                Depth.empty, null, false);
+
+        // Commit the externals definition
+        client.commit(thisTest.getWCPathSet(), Depth.infinity,
+                      false, false, null, null,
+                      new ConstMsg("Set svn:externals"), null);
+
+        // Update the working copy to bring in the external subtree.
+        client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                      Depth.unknown, false, false, false, false);
+    }
+
+    /**
+     * Test WC-to-WC copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_wc2wc() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
+        String target = thisTest.getWCPath() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, null, null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test WC-to-REPO copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_wc2repo() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-WC copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2wc() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
+        String target = thisTest.getWCPath() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, null, null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with implicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false,
+                    true,       // pinExternals
+                    null,       // externalsToPin
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H@2 revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with eplicit pinned externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo_explicit() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        String sourceUrl = thisTest.getUrl() + "/A/B";
+        Map<String, List<ExternalItem>> externalsToPin =
+            new HashMap<String, List<ExternalItem>>();
+        List<ExternalItem> items = new ArrayList<ExternalItem>(1);
+        items.add(new ExternalItem("ADHext", "^/A/D/H", null, null));
+        externalsToPin.put(sourceUrl, items);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(sourceUrl, null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false,
+                    true,       // pinExternals
+                    externalsToPin,
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
     /**
      * Test the {@link SVNClientInterface.move()} API.
      * @since 1.5
