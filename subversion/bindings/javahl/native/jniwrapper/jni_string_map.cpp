@@ -30,88 +30,12 @@
 
 namespace Java {
 
-// Class Java::BaseMap
+// Class Java::BaseImmutableMap
 
-const char* const BaseMap::m_class_name = "java/util/Map";
+const char* const BaseImmutableMap::m_class_name = "java/util/Map";
 
-BaseMap::ClassImpl::ClassImpl(Env env, jclass cls)
+BaseImmutableMap::ClassImpl::ClassImpl(Env env, jclass cls)
   : Object::ClassImpl(env, cls),
-    m_mid_size(env.GetMethodID(cls, "size", "()I")),
-    m_mid_entry_set(env.GetMethodID(cls, "entrySet", "()Ljava/util/Set;"))
-{}
-
-BaseMap::ClassImpl::~ClassImpl() {}
-
-const char* const BaseMap::Set::m_class_name = "java/util/Set";
-
-BaseMap::Set::ClassImpl::ClassImpl(Env env, jclass cls)
-  : Object::ClassImpl(env, cls),
-    m_mid_iterator(env.GetMethodID(cls, "iterator",
-                                   "()Ljava/util/Iterator;"))
-{}
-
-BaseMap::Set::ClassImpl::~ClassImpl() {}
-
-const char* const BaseMap::Entry::m_class_name = "java/util/Map$Entry";
-
-BaseMap::Entry::ClassImpl::ClassImpl(Env env, jclass cls)
-  : Object::ClassImpl(env, cls),
-    m_mid_get_key(env.GetMethodID(cls, "getKey", "()Ljava/lang/Object;")),
-    m_mid_get_value(env.GetMethodID(cls, "getValue", "()Ljava/lang/Object;"))
-{}
-
-BaseMap::Entry::ClassImpl::~ClassImpl() {}
-
-
-jobject BaseMap::operator[](const std::string& index) const
-{
-  somap::const_iterator it = m_contents.find(index);
-  if (it == m_contents.end())
-    {
-      std::string msg(_("Map does not contain key: "));
-      msg += index;
-      throw std::out_of_range(msg.c_str());
-    }
-  return it->second;
-}
-
-BaseMap::somap BaseMap::convert_to_map(Env env, jobject jmap)
-{
-  const ClassImpl* pimpl =
-    dynamic_cast<const ClassImpl*>(ClassCache::get_map(env));
-
-  if (!env.CallIntMethod(jmap, pimpl->m_mid_size))
-    return somap();
-
-  // Get an iterator over the map's entry set
-  const jobject entries = env.CallObjectMethod(jmap, pimpl->m_mid_entry_set);
-  const Entry::ClassImpl& entimpl = Entry::impl(env);
-
-  Iterator iterator(env, env.CallObjectMethod(entries,
-                                              Set::impl(env).m_mid_iterator));
-
-  // Iterate over the map, filling the native map
-  somap contents;
-  while (iterator.has_next())
-    {
-      const jobject entry = iterator.next();
-      const String keystr(
-          env, jstring(env.CallObjectMethod(entry, entimpl.m_mid_get_key)));
-      const jobject value(
-          env.CallObjectMethod(entry, entimpl.m_mid_get_value));
-      const String::Contents key(keystr);
-      contents.insert(somap::value_type(key.c_str(), value));
-    }
-  return contents;
-}
-
-// Class Java::BaseMutableMap
-
-const char* const BaseMutableMap::m_class_name = "java/util/HashMap";
-
-BaseMutableMap::ClassImpl::ClassImpl(Env env, jclass cls)
-  : Object::ClassImpl(env, cls),
-    m_mid_ctor(env.GetMethodID(cls, "<init>", "(I)V")),
     m_mid_put(env.GetMethodID(cls, "put",
                               "(Ljava/lang/Object;Ljava/lang/Object;)"
                               "Ljava/lang/Object;")),
@@ -120,12 +44,13 @@ BaseMutableMap::ClassImpl::ClassImpl(Env env, jclass cls)
                                   "(Ljava/lang/Object;)Z")),
     m_mid_get(env.GetMethodID(cls, "get",
                               "(Ljava/lang/Object;)Ljava/lang/Object;")),
-    m_mid_size(env.GetMethodID(cls, "size", "()I"))
+    m_mid_size(env.GetMethodID(cls, "size", "()I")),
+    m_mid_entry_set(env.GetMethodID(cls, "entrySet", "()Ljava/util/Set;"))
 {}
 
-BaseMutableMap::ClassImpl::~ClassImpl() {}
+BaseImmutableMap::ClassImpl::~ClassImpl() {}
 
-jobject BaseMutableMap::operator[](const std::string& index) const
+jobject BaseImmutableMap::operator[](const std::string& index) const
 {
   const String key(m_env, index);
   if (!m_env.CallBooleanMethod(m_jthis, impl().m_mid_has_key, key.get()))
@@ -136,5 +61,50 @@ jobject BaseMutableMap::operator[](const std::string& index) const
     }
   return m_env.CallObjectMethod(m_jthis, impl().m_mid_get, key.get());
 }
+
+BaseImmutableMap::Iterator BaseImmutableMap::get_iterator() const
+{
+  const jobject jentry_set =
+    m_env.CallObjectMethod(m_jthis, impl().m_mid_entry_set);
+  const jobject jiterator =
+    m_env.CallObjectMethod(jentry_set, Set::impl(m_env).m_mid_iterator);
+  return Iterator(m_env, jiterator);
+}
+
+// Class Java::BaseImmutableMap::Entry
+
+const char* const BaseImmutableMap::Entry::m_class_name = "java/util/Map$Entry";
+
+BaseImmutableMap::Entry::ClassImpl::ClassImpl(Env env, jclass cls)
+  : Object::ClassImpl(env, cls),
+    m_mid_get_key(env.GetMethodID(cls, "getKey", "()Ljava/lang/Object;")),
+    m_mid_get_value(env.GetMethodID(cls, "getValue", "()Ljava/lang/Object;"))
+{}
+
+BaseImmutableMap::Entry::ClassImpl::~ClassImpl() {}
+
+// Class Java::BaseImmutableMap::Set
+
+const char* const BaseImmutableMap::Set::m_class_name = "java/util/Set";
+
+BaseImmutableMap::Set::ClassImpl::ClassImpl(Env env, jclass cls)
+  : Object::ClassImpl(env, cls),
+    m_mid_iterator(env.GetMethodID(cls, "iterator",
+                                   "()Ljava/util/Iterator;"))
+{}
+
+BaseImmutableMap::Set::ClassImpl::~ClassImpl() {}
+
+
+// Class Java::BaseMap
+
+const char* const BaseMap::m_class_name = "java/util/HashMap";
+
+BaseMap::ClassImpl::ClassImpl(Env env, jclass cls)
+  : BaseImmutableMap::ClassImpl(env, cls),
+    m_mid_ctor(env.GetMethodID(cls, "<init>", "(I)V"))
+{}
+
+BaseMap::ClassImpl::~ClassImpl() {}
 
 } // namespace Java

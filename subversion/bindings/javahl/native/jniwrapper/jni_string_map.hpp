@@ -24,9 +24,7 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_STRING_MAP_HPP
 #define SVN_JAVAHL_JNIWRAPPER_STRING_MAP_HPP
 
-#include <map>
 #include <string>
-#include <algorithm>
 
 #include "jni_env.hpp"
 #include "jni_object.hpp"
@@ -37,32 +35,58 @@ namespace Java {
 /**
  * Non-template base for an immutable type-safe Java map with String keys.
  *
- * Converts the map to a @c std::map containing @c jobject references.
- *
  * @since New in 1.9.
  */
-class BaseMap : public Object
+class BaseImmutableMap : public Object
 {
-  typedef std::map<std::string, jobject> somap;
-
 public:
   /**
    * Returns the number of elements in the map.
    */
   jint length() const
     {
-      return jint(m_contents.size());
+      return m_env.CallIntMethod(m_jthis, impl().m_mid_size);
+    }
+
+  /**
+   * Checks if the map is empty.
+   */
+  bool is_empty() const
+    {
+      return (length() == 0);
     }
 
 protected:
   /**
-   * Constructs the map wrapper, converting the contents to an
-   * @c std::map.
+   * Constructs the map wrapper.
    */
-  explicit BaseMap(Env env, jobject jmap)
-    : Object(env, ClassCache::get_map(env), jmap),
-      m_contents(convert_to_map(env, m_jthis))
+  explicit BaseImmutableMap(Env env, jobject jmap)
+    : Object(env, ClassCache::get_map(env), jmap)
     {}
+
+  /**
+   * Constructor used by BaseMap.
+   */
+  explicit BaseImmutableMap(Env env, const Object::ClassImpl* pimpl)
+    : Object(env, pimpl)
+    {}
+
+  /**
+   * Clears the contents of the map.
+   */
+  void clear()
+    {
+      m_env.CallVoidMethod(m_jthis, impl().m_mid_clear);
+    }
+
+  /**
+   * Inserts @a obj identified by @a key into the map.
+   */
+  void put(const std::string& key, jobject obj)
+    {
+      m_env.CallObjectMethod(m_jthis, impl().m_mid_put,
+                             String(m_env, key).get(), obj);
+    }
 
   /**
    * Returns the object reference identified by @a index.
@@ -70,9 +94,6 @@ protected:
    */
   jobject operator[](const std::string& index) const;
 
-  const somap m_contents;
-
-private:
   /**
    * This object's implementation details.
    */
@@ -86,6 +107,10 @@ private:
   public:
     virtual ~ClassImpl();
 
+    const MethodID m_mid_put;
+    const MethodID m_mid_clear;
+    const MethodID m_mid_has_key;
+    const MethodID m_mid_get;
     const MethodID m_mid_size;
     const MethodID m_mid_entry_set;
   };
@@ -97,8 +122,64 @@ private:
 
   friend class ClassCacheImpl;
   static const char* const m_class_name;
-  static somap convert_to_map(Env env, jobject jmap);
 
+  class Iterator : public BaseIterator
+  {
+    friend class BaseImmutableMap;
+    explicit Iterator(Env env, jobject jiterator)
+      : BaseIterator(env, jiterator)
+      {}
+  };
+
+  Iterator get_iterator() const;
+
+  class Entry : public Object
+  {
+  public:
+    explicit Entry(Env env, jobject jentry)
+    : Object(env, ClassCache::get_map_entry(env), jentry)
+    {}
+
+    const std::string key() const
+      {
+        const jstring jkey =
+          jstring(m_env.CallObjectMethod(m_jthis, impl().m_mid_get_key));
+        const String::Contents key(String(m_env, jkey));
+        return std::string(key.c_str());
+      }
+
+    jobject value() const
+      {
+        return m_env.CallObjectMethod(m_jthis, impl().m_mid_get_value);
+      }
+
+  private:
+    /**
+     * This object's implementation details.
+     */
+    class ClassImpl : public Object::ClassImpl
+    {
+      friend class ClassCacheImpl;
+
+    protected:
+      explicit ClassImpl(Env env, jclass cls);
+
+    public:
+      virtual ~ClassImpl();
+
+      const MethodID m_mid_get_key;
+      const MethodID m_mid_get_value;
+    };
+
+    friend class ClassCacheImpl;
+    static const char* const m_class_name;
+    const ClassImpl& impl() const
+      {
+        return *dynamic_cast<const ClassImpl*>(m_impl);
+      }
+  };
+
+private:
   struct Set
   {
     /**
@@ -123,40 +204,6 @@ private:
         return *dynamic_cast<const ClassImpl*>(ClassCache::get_set(env));
       }
   };
-
-  class Iterator : public BaseIterator
-  {
-    friend class BaseMap;
-    explicit Iterator(Env env, jobject jiterator)
-      : BaseIterator(env, jiterator)
-      {}
-  };
-
-  struct Entry
-  {
-    /**
-     * This object's implementation details.
-     */
-    class ClassImpl : public Object::ClassImpl
-    {
-      friend class ClassCacheImpl;
-
-    protected:
-      explicit ClassImpl(Env env, jclass cls);
-
-    public:
-      virtual ~ClassImpl();
-
-      const MethodID m_mid_get_key;
-      const MethodID m_mid_get_value;
-    };
-
-    static const char* const m_class_name;
-    static const ClassImpl& impl(Env env)
-      {
-        return *dynamic_cast<const ClassImpl*>(ClassCache::get_map_entry(env));
-      }
-  };
 };
 
 /**
@@ -165,15 +212,15 @@ private:
  * @since New in 1.9.
  */
 template <typename T, typename NativeT=jobject>
-class Map : public BaseMap
+class ImmutableMap : public BaseImmutableMap
 {
 public:
   /**
    * Constructs the map wrapper, converting the contents to an
    * @c std::map.
    */
-  explicit Map(Env env, jobject jmap)
-    : BaseMap(env, jmap)
+  explicit ImmutableMap(Env env, jobject jmap)
+    : BaseImmutableMap(env, jmap)
     {}
 
   /**
@@ -182,7 +229,7 @@ public:
    */
   T operator[](const std::string& index) const
     {
-      return T(m_env, NativeT(BaseMap::operator[](index)));
+      return T(m_env, NativeT(BaseImmutableMap::operator[](index)));
     }
 
   /**
@@ -190,37 +237,22 @@ public:
    * each item.
    * @see std::for_each
    * @note Unlike std::for_each, which invokes the functor with a
-   *     single @c value_type argument, this iterator adapts it to cal
-   *     @a function with separate @c const references to the key and
-   *     value.
+   *       single @c value_type argument, this iterator calls
+   *       @a function with separate @c const references to the key
+   *       and value.
    */
   template<typename F>
   F for_each(F function) const
     {
-      const FunctorAdapter<F> adapter(m_env, function);
-      std::for_each(m_contents.begin(), m_contents.end(), adapter);
+      Iterator iter(get_iterator());
+      while (iter.has_next())
+        {
+          Entry entry(m_env, iter.next());
+          const std::string& key(entry.key());
+          function(key, T(m_env, NativeT(entry.value())));
+        }
       return function;
     }
-
-private:
-  template<typename F>
-  struct FunctorAdapter
-  {
-    explicit FunctorAdapter(const Env& env, F& function)
-      : m_env(env),
-        m_function(function)
-      {}
-
-    void operator()(const std::pair<std::string, jobject>& item) const
-      {
-        const std::string& key(item.first);
-        const T value(m_env, NativeT(item.second));
-        m_function(key, value);
-      }
-
-    const Env& m_env;
-    F& m_function;
-  };
 };
 
 /**
@@ -228,7 +260,7 @@ private:
  *
  * @since New in 1.9.
  */
-class BaseMutableMap : public Object
+class BaseMap : public BaseImmutableMap
 {
 public:
   /**
@@ -236,64 +268,32 @@ public:
    */
   void clear()
     {
-      m_env.CallVoidMethod(m_jthis, impl().m_mid_clear);
-    }
-
-  /**
-   * Returns the number of elements in the map.
-   */
-  jint length() const
-    {
-      return m_env.CallIntMethod(m_jthis, impl().m_mid_size);
-    }
-
-  /**
-   * Checks if the map is empty.
-   */
-  bool is_empty() const
-    {
-      return (length() == 0);
+      BaseImmutableMap::clear();
     }
 
 protected:
   /**
-   * Constructs the map wrapper, deriving the class from @a jmap.
+   * Constructs the map wrapper, treating @a jmap as a @c java.util.Map.
    */
-  explicit BaseMutableMap(Env env, jobject jmap)
-    : Object(env, ClassCache::get_hash_map(env), jmap)
+  explicit BaseMap(Env env, jobject jmap)
+    : BaseImmutableMap(env, jmap)
     {}
 
   /**
    * Constructs and wraps an empty map of type @c java.util.HashMap
    * with initial allocation size @a length.
    */
-  explicit BaseMutableMap(Env env, jint length)
-    : Object(env, ClassCache::get_hash_map(env))
+  explicit BaseMap(Env env, jint length)
+    : BaseImmutableMap(env, ClassCache::get_hash_map(env))
     {
       set_this(env.NewObject(get_class(), impl().m_mid_ctor, length));
     }
-
-
-  /**
-   * Inserts @a obj identified by @a key into the map.
-   */
-  void put(const std::string& key, jobject obj)
-    {
-      m_env.CallObjectMethod(m_jthis, impl().m_mid_put,
-                             String(m_env, key).get(), obj);
-    }
-
-  /**
-   * Returns the object reference identified by @a index.
-   * @throw std::out_of_range if there is no such element.
-   */
-  jobject operator[](const std::string& index) const;
 
 private:
   /**
    * This object's implementation details.
    */
-  class ClassImpl : public Object::ClassImpl
+  class ClassImpl : public BaseImmutableMap::ClassImpl
   {
     friend class ClassCacheImpl;
 
@@ -304,11 +304,6 @@ private:
     virtual ~ClassImpl();
 
     const MethodID m_mid_ctor;
-    const MethodID m_mid_put;
-    const MethodID m_mid_clear;
-    const MethodID m_mid_has_key;
-    const MethodID m_mid_get;
-    const MethodID m_mid_size;
   };
 
   const ClassImpl& impl() const
@@ -326,22 +321,22 @@ private:
  * @since New in 1.9.
  */
 template <typename T, typename NativeT=jobject>
-class MutableMap : public BaseMutableMap
+class Map : public BaseMap
 {
 public:
   /**
    * Constructs the map wrapper, deriving the class from @a jmap.
    */
-  explicit MutableMap(Env env, jobject jmap)
-    : BaseMutableMap(env, jmap)
+  explicit Map(Env env, jobject jmap)
+    : BaseMap(env, jmap)
     {}
 
   /**
    * Constructs and wraps an empty map of type @c java.util.HashMap
    * with initial allocation size @a length.
    */
-  explicit MutableMap(Env env, jint length = 0)
-    : BaseMutableMap(env, length)
+  explicit Map(Env env, jint length = 0)
+    : BaseMap(env, length)
     {}
 
   /**
@@ -349,7 +344,7 @@ public:
    */
   void put(const std::string& key, const T& obj)
     {
-      BaseMutableMap::put(key, obj.get());
+      BaseMap::put(key, obj.get());
     }
 
   /**
@@ -358,7 +353,29 @@ public:
    */
   T operator[](const std::string& index) const
     {
-      return T(m_env, NativeT(BaseMutableMap::operator[](index)));
+      return T(m_env, NativeT(BaseMap::operator[](index)));
+    }
+
+  /**
+   * Iterates over the items in the map, calling @a function for
+   * each item.
+   * @see std::for_each
+   * @note Unlike std::for_each, which invokes the functor with a
+   *       single @c value_type argument, this iterator calls
+   *       @a function with separate @c const references to the key
+   *       and value.
+   */
+  template<typename F>
+  F for_each(F function) const
+    {
+      Iterator iter(get_iterator());
+      while (iter.has_next())
+        {
+          Entry entry(m_env, iter.next());
+          const std::string& key(entry.key());
+          function(key, T(m_env, NativeT(entry.value())));
+        }
+      return function;
     }
 };
 
